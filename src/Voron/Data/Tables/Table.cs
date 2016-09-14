@@ -524,7 +524,7 @@ namespace Voron.Data.Tables
         private Tree GetTree(TableSchema.SchemaIndexDef idx)
         {
             if (idx.IsGlobal)
-                return _tx.ReadTree(idx.Name);
+                return _tx.ReadTree(idx.NameAsSlice.ToString());
             return GetTree(idx.NameAsSlice);
         }
 

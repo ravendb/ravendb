@@ -18,17 +18,22 @@ namespace Voron.Data.Tables
         BTree = 0x01,
     }
 
-    public unsafe class TableSchema : IDisposable
+    public unsafe class TableSchema
     {
         public static readonly Slice ActiveSection = Slice.From(StorageEnvironment.LabelsContext, "Active-Section", ByteStringType.Immutable);
         public static readonly Slice InactiveSection = Slice.From(StorageEnvironment.LabelsContext, "Inactive-Section", ByteStringType.Immutable);
         public static readonly Slice ActiveCandidateSection = Slice.From(StorageEnvironment.LabelsContext, "Active-Candidate-Section", ByteStringType.Immutable);
         public static readonly Slice Stats = Slice.From(StorageEnvironment.LabelsContext, "Stats", ByteStringType.Immutable);
         public static readonly Slice Schemas = Slice.From(StorageEnvironment.LabelsContext, "Schemas", ByteStringType.Immutable);
+        public static readonly Slice PkSlice = Slice.From(StorageEnvironment.LabelsContext, "PK", ByteStringType.Immutable);
 
-        public SchemaIndexDef Key => _pk;
-        public Dictionary<string, SchemaIndexDef> Indexes => _indexes;
-        public Dictionary<string, FixedSizeSchemaIndexDef> FixedSizeIndexes => _fixedSizeIndexes;
+        private SchemaIndexDef _primaryKey;
+        private readonly Dictionary<Slice, SchemaIndexDef> _indexes = new Dictionary<Slice, SchemaIndexDef>(SliceComparer.Instance);
+        private readonly Dictionary<Slice, FixedSizeSchemaIndexDef> _fixedSizeIndexes = new Dictionary<Slice, FixedSizeSchemaIndexDef>(SliceComparer.Instance);
+
+        public SchemaIndexDef Key => _primaryKey;
+        public Dictionary<Slice, SchemaIndexDef> Indexes => _indexes;
+        public Dictionary<Slice, FixedSizeSchemaIndexDef> FixedSizeIndexes => _fixedSizeIndexes;
 
         public class SchemaIndexDef
         {
@@ -41,10 +46,8 @@ namespace Voron.Data.Tables
             /// </summary>
             public int StartIndex = -1;
             public int Count = -1;
+            public bool IsGlobal;
             public Slice NameAsSlice;
-            public string Name;
-
-            public bool IsGlobal;                        
 
             public Slice GetSlice(ByteStringContext context, TableValueReader value)
             {
@@ -91,43 +94,14 @@ namespace Voron.Data.Tables
                                 NameAsSlice
                             };
 
-                    // It may -or not- have a string, so we have to serialize this conditionally, and do not
-                    // know the size beforehand
-                    var structure = new List<byte[]>();
+                    byte[] serialized = new byte[serializer.Size];
 
-                    bool hasName = Name != null;
-
-                    structure.Add(BitConverter.GetBytes(hasName));
-
-                    if (hasName)
+                    fixed (byte* destination = serialized)
                     {
-                        structure.Add(Encoding.UTF8.GetBytes(Name));
+                        serializer.CopyTo(destination);
                     }
 
-                    // Insert additional structure into TableValueBuilder
-                    var totalSize = structure.Select((bytes, i) => bytes.Length).Sum();
-                    var packed = new byte[totalSize];
-                    int position = 0;
-
-                    fixed (byte* ptr = packed)
-                    {
-                        foreach (var member in structure)
-                        {
-                            member.CopyTo(packed, position);
-                            serializer.Add(&ptr[position], member.Length);
-                            position += member.Length;
-                        }
-
-                        byte[] serialized = new byte[serializer.Size];
-
-                        fixed (byte* destination = serialized)
-                        {
-                            serializer.CopyTo(destination);
-                        }
-
-                        return serialized;
-
-                    }
+                    return serialized;
                 }
 
             }
@@ -153,14 +127,6 @@ namespace Voron.Data.Tables
                 currentPtr = input.Read(4, out currentSize);
                 indexDef.NameAsSlice = Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable);
 
-                currentPtr = input.Read(5, out currentSize);
-                var hasName = Convert.ToBoolean(*currentPtr);
-                if (hasName)
-                {
-                    currentPtr = input.Read(6, out currentSize);
-                    indexDef.Name = Encoding.UTF8.GetString(currentPtr, currentSize);
-                }
-
                 return indexDef;
             }
         }
@@ -168,10 +134,8 @@ namespace Voron.Data.Tables
         public class FixedSizeSchemaIndexDef
         {
             public int StartIndex = -1;
-            public Slice NameAsSlice;
-            public string Name;
-
             public bool IsGlobal;
+            public Slice NameAsSlice;
 
             public long GetValue(TableValueReader value)
             {
@@ -189,46 +153,17 @@ namespace Voron.Data.Tables
                     {
                         startIndex,
                         isGlobal,
-                        NameAsSlice,
+                        NameAsSlice
                     };
 
-                    // It may -or not- have a string, so we have to serialize this conditionally, and do not
-                    // know the size beforehand
-                    var structure = new List<byte[]>();
+                    byte[] serialized = new byte[serializer.Size];
 
-                    bool hasName = Name != null;
-
-                    structure.Add(BitConverter.GetBytes(hasName));
-
-                    if (hasName)
+                    fixed (byte* destination = serialized)
                     {
-                        structure.Add(Encoding.UTF8.GetBytes(Name));
+                        serializer.CopyTo(destination);
                     }
 
-                    // Insert additional structure into TableValueBuilder
-                    var totalSize = structure.Select((bytes, i) => bytes.Length).Sum();
-                    var packed = new byte[totalSize];
-                    int position = 0;
-
-                    fixed (byte* ptr = packed)
-                    {
-                        foreach (var member in structure)
-                        {
-                            member.CopyTo(packed, position);
-                            serializer.Add(&ptr[position], member.Length);
-                            position += member.Length;
-                        }
-
-                        byte[] serialized = new byte[serializer.Size];
-
-                        fixed (byte* destination = serialized)
-                        {
-                            serializer.CopyTo(destination);
-                        }
-
-                        return serialized;
-
-                    }
+                    return serialized;
                 }
             }
 
@@ -247,52 +182,44 @@ namespace Voron.Data.Tables
                 currentPtr = input.Read(2, out currentSize);
                 output.NameAsSlice = Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable);
 
-                currentPtr = input.Read(3, out currentSize);
-                var hasName = Convert.ToBoolean(*currentPtr);
-
-                if (hasName)
-                {
-                    currentPtr = input.Read(4, out currentSize);
-                    output.Name = Encoding.UTF8.GetString(currentPtr, currentSize);
-                }
-
                 return output;
             }
         }        
 
-        private SchemaIndexDef _pk;
-        private readonly Dictionary<string, SchemaIndexDef> _indexes = new Dictionary<string, SchemaIndexDef>();
-        private readonly Dictionary<string, FixedSizeSchemaIndexDef> _fixedSizeIndexes = new Dictionary<string, FixedSizeSchemaIndexDef>();
-
-        public TableSchema DefineIndex(string name, SchemaIndexDef index)
+        public TableSchema DefineIndex(SchemaIndexDef index)
         {
-            index.NameAsSlice = Slice.From(StorageEnvironment.LabelsContext, name, ByteStringType.Immutable);
-            _indexes[name] = index;
+            if (!index.NameAsSlice.HasValue || SliceComparer.Equals(Slices.Empty, index.NameAsSlice))
+                throw new ArgumentException("Index name must be non-empty", nameof(index));
+
+            _indexes[index.NameAsSlice] = index;
 
             return this;
         }
 
-
-        public TableSchema DefineFixedSizeIndex(string name, FixedSizeSchemaIndexDef index)
+        public TableSchema DefineFixedSizeIndex(FixedSizeSchemaIndexDef index)
         {
-            index.NameAsSlice = Slice.From(StorageEnvironment.LabelsContext, name, ByteStringType.Immutable); ;
-            _fixedSizeIndexes[name] = index;
+            if (!index.NameAsSlice.HasValue || SliceComparer.Equals(Slices.Empty, index.NameAsSlice))
+                throw new ArgumentException("Fixed size index name must be non-empty", nameof(index));
+
+            _fixedSizeIndexes[index.NameAsSlice] = index;
 
             return this;
         }
 
-        public TableSchema DefineKey(SchemaIndexDef pk)
+        public TableSchema DefineKey(SchemaIndexDef index)
         {
-            _pk = pk;
-            if (pk.IsGlobal && string.IsNullOrWhiteSpace(pk.Name))
-                throw new ArgumentException("When specifying global PK the name must be specified", nameof(pk));
+            bool hasEmptyName = !index.NameAsSlice.HasValue || SliceComparer.Equals(Slices.Empty, index.NameAsSlice);
 
-            if (string.IsNullOrWhiteSpace(_pk.Name))
-                _pk.Name = "PK";
-            _pk.NameAsSlice = Slice.From(StorageEnvironment.LabelsContext, _pk.Name, ByteStringType.Immutable);
+            if (index.IsGlobal && hasEmptyName)
+                throw new ArgumentException("Name must be non empty for global index as primary key", nameof(index));
 
-            if (_pk.Count > 1)
+            if (hasEmptyName)
+                index.NameAsSlice = PkSlice;
+
+            if (index.Count > 1)
                 throw new InvalidOperationException("Primary key must be a single field");
+
+            _primaryKey = index;
 
             return this;
         }
@@ -313,7 +240,7 @@ namespace Voron.Data.Tables
         /// </summary>
         public void Create(Transaction tx, string name)
         {
-            if (_pk == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0)
+            if (_primaryKey == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0)
                 throw new InvalidOperationException($"Cannot create table {name} without a primary key and no indexes");
 
             var tableTree = tx.CreateTree(name, RootObjectType.Table);
@@ -329,17 +256,17 @@ namespace Voron.Data.Tables
             var stats = (TableSchemaStats*)tableTree.DirectAdd(Stats, sizeof(TableSchemaStats));
             stats->NumberOfEntries = 0;
 
-            if (_pk != null)
+            if (_primaryKey != null)
             {
-                if (_pk.IsGlobal == false)
+                if (_primaryKey.IsGlobal == false)
                 {
                     var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                    var treeHeader = tableTree.DirectAdd(_pk.NameAsSlice, sizeof(TreeRootHeader));
+                    var treeHeader = tableTree.DirectAdd(_primaryKey.NameAsSlice, sizeof(TreeRootHeader));
                     indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
                 }
                 else
                 {
-                    tx.CreateTree(_pk.Name);
+                    tx.CreateTree(_primaryKey.NameAsSlice.ToString());
                 }
             }
 
@@ -353,7 +280,7 @@ namespace Voron.Data.Tables
                 }
                 else
                 {
-                    tx.CreateTree(indexDef.Name);
+                    tx.CreateTree(indexDef.NameAsSlice.ToString());
                 }
             }
 
@@ -382,28 +309,18 @@ namespace Voron.Data.Tables
         {
             // Create list of serialized substructures
             var structure = new List<byte[]>();
-            bool hasPrimaryKey = _pk != null;
+            bool hasPrimaryKey = _primaryKey != null;
 
             structure.Add(BitConverter.GetBytes(hasPrimaryKey));
 
             if (hasPrimaryKey)
-                structure.Add(_pk.Serialize());
+                structure.Add(_primaryKey.Serialize());
 
             structure.Add(BitConverter.GetBytes(_indexes.Count));
-
-            foreach (var pair in _indexes)
-            {
-                structure.Add(Encoding.UTF8.GetBytes(pair.Key));
-                structure.Add(pair.Value.Serialize());
-            }
+            structure.AddRange(_indexes.Values.Select(index => index.Serialize()));
 
             structure.Add(BitConverter.GetBytes(_fixedSizeIndexes.Count));
-
-            foreach (var pair in _fixedSizeIndexes)
-            {
-                structure.Add(Encoding.UTF8.GetBytes(pair.Key));
-                structure.Add(pair.Value.Serialize());
-            }
+            structure.AddRange(_fixedSizeIndexes.Values.Select(index => index.Serialize()));
 
             var totalSize = structure.Select((bytes, i) => bytes.Length).Sum();
             var packed = new byte[totalSize];
@@ -458,11 +375,8 @@ namespace Voron.Data.Tables
             while (indexCount > 0)
             {
                 currentPtr = input.Read(currentIndex++, out currentSize);
-                var indexName = Encoding.UTF8.GetString(currentPtr, currentSize);
-
-                currentPtr = input.Read(currentIndex++, out currentSize);
                 var indexSchemaDef = SchemaIndexDef.ReadFrom(context, currentPtr, currentSize);
-                schema.DefineIndex(indexName, indexSchemaDef);
+                schema.DefineIndex(indexSchemaDef);
 
                 indexCount--;
             }
@@ -474,46 +388,13 @@ namespace Voron.Data.Tables
             while (indexCount > 0)
             {
                 currentPtr = input.Read(currentIndex++, out currentSize);
-                var indexName = Encoding.UTF8.GetString(currentPtr, currentSize);
-
-                currentPtr = input.Read(currentIndex++, out currentSize);
                 var fixedIndexSchemaDef = FixedSizeSchemaIndexDef.ReadFrom(context, currentPtr, currentSize);
-                schema.DefineFixedSizeIndex(indexName, fixedIndexSchemaDef);
+                schema.DefineFixedSizeIndex(fixedIndexSchemaDef);
 
                 indexCount--;
             }
 
             return schema;
         }
-
-        #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    // We will release all the labels allocated for indexes.
-                    foreach ( var item in _indexes )
-                        item.Value.NameAsSlice.Release(StorageEnvironment.LabelsContext);
-
-                    // We will release all the labels allocated for fixed size indexes.
-                    foreach (var item in _fixedSizeIndexes)
-                        item.Value.NameAsSlice.Release(StorageEnvironment.LabelsContext);
-                }
-
-                disposedValue = true;
-            }
-        }
-
-        // This code added to correctly implement the disposable pattern.
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-        }
-        #endregion
     }
 }
