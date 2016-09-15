@@ -126,7 +126,7 @@ namespace Voron.Impl.Compaction
                             snd.Add(it.CurrentKey, it.Value);
                             transactionSize += fst.ValueSize + sizeof (long);
                             copiedEntries++;
-                        } while (transactionSize < compactedEnv.Options.MaxLogFileSize/2 && it.MoveNext());
+                        } while (transactionSize < compactedEnv.Options.MaxScratchBufferSize/2 && it.MoveNext());
 
                         txw.Commit();
                     }
@@ -199,7 +199,7 @@ namespace Voron.Impl.Compaction
                             }
 
                             copiedEntries++;
-                        } while (transactionSize < compactedEnv.Options.MaxLogFileSize / 2 && existingTreeIterator.MoveNext());
+                        } while (transactionSize < compactedEnv.Options.MaxScratchBufferSize / 2 && existingTreeIterator.MoveNext());
 
                         txw.Commit();
                     }
@@ -230,56 +230,96 @@ namespace Voron.Impl.Compaction
             // Load table into structure 
             var inputTable = txr.OpenTable(schema, treeName);
 
-            // Create the new table, and replay inserts
-            using (var txw = compactedEnv.WriteTransaction())
+            // The next three variables are used to know what our current
+            // progress is
+            var entriesLeft = inputTable.NumberOfEntries;
+
+            // It is very important that these slices be allocated in the
+            // txr.Allocator, as the intermediate write transactions on
+            // the compacted environment will be destroyed between each
+            // loop.
+            var lastSlice = Slices.BeforeAllKeys;
+            long lastFixedIndex = 0L;
+
+            while (entriesLeft > 0)
             {
-                schema.Create(txw, treeName);
-                var outputTable = txw.OpenTable(schema, treeName);
-
-                if (schema.Key == null)
+                using (var txw = compactedEnv.WriteTransaction())
                 {
-                    // There is no primary key, however, there must be at least one index
-                    if (schema.Indexes.Count > 0)
-                    {
-                        // We have a variable size index, use it
-                        var index = schema.Indexes.First().Value;
+                    long transactionSize = 0L;
 
-                        foreach (var result in inputTable.SeekForwardFrom(index, Slices.BeforeAllKeys))
+                    schema.Create(txw, treeName);
+                    var outputTable = txw.OpenTable(schema, treeName);
+
+                    if (schema.Key == null)
+                    {
+                        // There is no primary key, however, there must be at least one index
+                        if (schema.Indexes.Count > 0)
                         {
-                            foreach (var entry in result.Results)
+                            // We have a variable size index, use it
+                            var index = schema.Indexes.First().Value;
+
+                            foreach (var result in inputTable.SeekForwardFrom(index, lastSlice))
                             {
+                                foreach (var entry in result.Results)
+                                {
+                                    // The table will take care of reconstructing indexes automatically
+                                    outputTable.Insert(entry);
+                                    entriesLeft--;
+                                    transactionSize += entry.Size;
+                                }
+
+                                lastSlice = result.Key;
+
+                                // The transaction has surpassed the allowed
+                                // size before a flush
+                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            // Use a fixed size index
+                            var index = schema.FixedSizeIndexes.First().Value;
+
+                            foreach (var entry in inputTable.SeekForwardFrom(index, lastFixedIndex))
+                            {
+
                                 // The table will take care of reconstructing indexes automatically
                                 outputTable.Insert(entry);
+                                entriesLeft--;
+                                transactionSize += entry.Size;
+                                lastFixedIndex = index.GetValue(entry);
+
+                                // The transaction has surpassed the allowed
+                                // size before a flush
+                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
+                                    break;
                             }
                         }
                     }
                     else
                     {
-                        // Use a fixed size index
-                        var index = schema.FixedSizeIndexes.First().Value;
-
-                        foreach (var entry in inputTable.SeekForwardFrom(index, long.MinValue))
+                        // The table has a primary key, inserts in that order are expected to be faster
+                        foreach (var entry in inputTable.SeekByPrimaryKey(lastSlice))
                         {
-
                             // The table will take care of reconstructing indexes automatically
                             outputTable.Insert(entry);
+                            entriesLeft--;
+                            transactionSize += entry.Size;
+                            lastSlice = schema.Key.GetSlice(txr.Allocator, entry);
+
+                            // The transaction has surpassed the allowed
+                            // size before a flush
+                            if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
+                                break;
                         }
                     }
-                }
-                else
-                {
-                    // The table has a primary key, inserts in that order are expected to be faster
-                    foreach (var entry in inputTable.SeekByPrimaryKey(Slices.BeforeAllKeys))
-                    {
-                        // The table will take care of reconstructing indexes automatically
-                        outputTable.Insert(entry);
-                    }
+
+                    txw.Commit();
                 }
 
-                txw.Commit();
+                compactedEnv.FlushLogToDataFile();
             }
-
-            compactedEnv.FlushLogToDataFile();
 
             return copiedTrees;
         }
