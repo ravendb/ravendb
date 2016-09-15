@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes
         {
             StorageEnvironment environment = null;
 
-            var options = StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, indexId.ToString()));
+            var options = StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, indexId.ToString()), documentDatabase.Configuration.Storage.SupportLargeTransactions);
             try
             {
                 options.SchemaVersion = 1;
@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var options = documentDatabase.Configuration.Indexing.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly()
-                    : StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, IndexId.ToString()));
+                    : StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, IndexId.ToString()), documentDatabase.Configuration.Storage.SupportLargeTransactions);
 
                 options.SchemaVersion = 1;
                 try
@@ -1060,7 +1060,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 fixed (long* buffer = indexEtagBytes)
                 {
-                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, indexEtagBytes.Length * sizeof(long));
+                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, (ulong)(indexEtagBytes.Length * sizeof(long)));
                 }
             }
         }

@@ -174,7 +174,7 @@ namespace Raven.Server.Documents
 
             var options = _documentDatabase.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
-                : StorageEnvironmentOptions.ForPath(_documentDatabase.Configuration.Core.DataDirectory);
+                : StorageEnvironmentOptions.ForPath(_documentDatabase.Configuration.Core.DataDirectory, _documentDatabase.Configuration.Storage.SupportLargeTransactions);
 
             try
             {

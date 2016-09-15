@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     case Mode.SingleValue:
                         return _singleValueHash;
                     case Mode.MultipleValues:
-                        return Hashing.XXHash64.CalculateInline((byte*)_buffer.Address, _bufferPos);
+                        return Hashing.XXHash64.CalculateInline((byte*)_buffer.Address, (ulong)_bufferPos);
                     default:
                         throw new NotSupportedException($"Unknown reduce value processing mode: {_mode}");
                 }
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate(lsv.Buffer, lsv.Size);
+                        _singleValueHash = Hashing.XXHash64.Calculate(lsv.Buffer, (ulong)lsv.Size);
                         break;
                     case Mode.MultipleValues:
                         CopyToBuffer(lsv.Buffer, lsv.Size);
@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     switch (_mode)
                     {
                         case Mode.SingleValue:
-                            _singleValueHash = Hashing.XXHash64.Calculate((byte*)p, s.Length * sizeof(char));
+                            _singleValueHash = Hashing.XXHash64.Calculate((byte*)p, (ulong)s.Length * sizeof(char));
                             break;
                         case Mode.MultipleValues:
                             CopyToBuffer((byte*)p, s.Length * sizeof(char));
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate(lcsv.Buffer, lcsv.CompressedSize);
+                        _singleValueHash = Hashing.XXHash64.Calculate(lcsv.Buffer, (ulong)lcsv.CompressedSize);
                         break;
                     case Mode.MultipleValues:
                         CopyToBuffer(lcsv.Buffer, lcsv.CompressedSize);

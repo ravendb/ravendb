@@ -158,12 +158,12 @@ namespace Sparrow
         /// faster to call .Copy() directly.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void BulkCopy(byte* dest, byte* src, int n)
+        public static void BulkCopy(byte* dest, byte* src, long n)
         {
             UnmanagedMemory.Copy(dest, src, n);            
         }
 
-        public static void Copy(byte* dest, byte* src, int n)
+        public static void Copy(byte* dest, byte* src, long n)
         {
             CopyInline(dest, src, n);
         }
@@ -175,7 +175,7 @@ namespace Sparrow
         /// </summary>
         /// <remarks>This is a forced inline version, use with care.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void CopyInline(byte* dest, byte* src, int n)
+        public unsafe static void CopyInline(byte* dest, byte* src, long n)
         {
             if (n < 0)
                 throw new ArgumentOutOfRangeException(nameof(n), "Cannot be less than zero");
@@ -242,7 +242,7 @@ namespace Sparrow
 
             if (n <= 512)
             {
-                int count = n / 32;
+                long count = n / 32;
                 n -= (n / 32) * 32;
 
                 while (count > 0)
@@ -273,7 +273,7 @@ namespace Sparrow
             BulkCopy(dest, src, n);
         }
 
-        public unsafe static void Set(byte* dest, byte value, int n)
+        public unsafe static void Set(byte* dest, byte value, long n)
         {
             SetInline(dest, value, n);
         }
@@ -283,7 +283,7 @@ namespace Sparrow
         /// </summary>
         /// <remarks>This is a forced inline version, use with care.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void SetInline(byte* dest, byte value, int n)
+        public unsafe static void SetInline(byte* dest, byte value, long n)
         {
             if (n == 0) 
                 return;
@@ -291,8 +291,8 @@ namespace Sparrow
             if (n < 512)
             {
 
-                int block = 32, index = 0;
-                int length = Math.Min(block, n);
+                long block = 32, index = 0;
+                long length = Math.Min(block, n);
 
                 //Fill the initial array
                 while (index < length)

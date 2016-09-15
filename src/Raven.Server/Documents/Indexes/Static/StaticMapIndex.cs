@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 fixed (long* buffer = indexEtagBytes)
                 {
-                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, indexEtagBytes.Length * sizeof(long));
+                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, (ulong)(indexEtagBytes.Length * sizeof(long)));
                 }
             }
         }

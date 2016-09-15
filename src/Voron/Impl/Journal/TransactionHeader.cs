@@ -18,10 +18,10 @@ namespace Voron.Impl.Journal
         public long PageNumber; 
 
         [FieldOffset(8)]
-        public int Size;
+        public long Size;
 
-        [FieldOffset(12)]
-        public int DiffSize;
+        [FieldOffset(16)]
+        public long DiffSize;
     }
 
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
@@ -58,12 +58,12 @@ namespace Voron.Impl.Journal
         public bool Reserved2;
 
         [FieldOffset(112)]
-        public int CompressedSize;
-
-        [FieldOffset(116)]
-        public int UncompressedSize;
+        public long CompressedSize;
 
         [FieldOffset(120)]
+        public long UncompressedSize;
+
+        [FieldOffset(128)]
         public long TimeStampTicksUtc; // DateTime.UtcNow.Ticks when the tx happened
 
         public override string ToString()

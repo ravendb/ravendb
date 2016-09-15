@@ -35,7 +35,7 @@ namespace Raven.Server.Documents
             get
             {
                 if (_hash.HasValue == false)
-                    _hash = Hashing.XXHash64.Calculate(Data.BasePointer, Data.Size);
+                    _hash = Hashing.XXHash64.Calculate(Data.BasePointer, (ulong)Data.Size);
 
                 return _hash.Value;
             }

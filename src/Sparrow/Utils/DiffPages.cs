@@ -15,11 +15,11 @@ namespace Sparrow.Utils
     /// </summary>
     public unsafe class DiffPages
     {
-        public int Size;
+        public long Size;
         public byte* Original;
         public byte* Modified;
         public byte* Output;
-        public int OutputSize;
+        public long OutputSize;
         public bool IsDiff { get; private set; }
         private bool _allZeros;
 
@@ -29,10 +29,10 @@ namespace Sparrow.Utils
             var len = Size / sizeof(long);
             IsDiff = true;
 
-            var start = 0;
+            long start = 0;
             OutputSize = 0;
             _allZeros = true;
-            for (int i = 0; i < len; i++)
+            for (long i = 0; i < len; i++)
             {
                 var modifiedVal = ((long*)Modified)[i];
                 _allZeros &= modifiedVal == 0;
@@ -56,13 +56,13 @@ namespace Sparrow.Utils
         public void ComputeNew()
         {
             Debug.Assert(Size % sizeof(long) == 0);
-            var len = Size / sizeof(long);
+            long len = Size / sizeof(long);
             IsDiff = true;
 
-            var start = 0;
+            long start = 0;
             OutputSize = 0;
             _allZeros = true;
-            for (int i = 0; i < len; i++)
+            for (long i = 0; i < len; i++)
             {
                 var modifiedVal = ((long*)Modified)[i];
                 _allZeros &= modifiedVal == 0;
@@ -83,7 +83,7 @@ namespace Sparrow.Utils
             }
         }
 
-        private bool WriteDiff(int start, int count)
+        private bool WriteDiff(long start, long count)
         {
             Debug.Assert(start < Size);
             Debug.Assert(count != 0);
@@ -91,26 +91,26 @@ namespace Sparrow.Utils
             count *= sizeof(long);
             if (_allZeros)
             {
-                if (OutputSize + sizeof(int) * 2 > Size)
+                if (OutputSize + sizeof(long) * 2 > Size)
                 {
                     CopyFullBuffer();
                     return false;
                 }
 
-                ((int*)(Output + OutputSize))[0] = start;
-                ((int*)(Output + OutputSize))[1] = -count;
-                OutputSize += sizeof(int) * 2;
+                ((long*)(Output + OutputSize))[0] = start;
+                ((long*)(Output + OutputSize))[1] = -count;
+                OutputSize += sizeof(long) * 2;
                 return true;
             }
-            if (OutputSize + count + sizeof(int) * 2 > Size)
+            if (OutputSize + count + sizeof(long) * 2 > Size)
             {
                 CopyFullBuffer();
                 return false;
             }
 
-            ((int*)(Output + OutputSize))[0] = start;
-            ((int*)(Output + OutputSize))[1] = count;
-            OutputSize += sizeof(int) * 2;
+            ((long*)(Output + OutputSize))[0] = start;
+            ((long*)(Output + OutputSize))[1] = count;
+            OutputSize += sizeof(long) * 2;
             Memory.Copy(Output + OutputSize, Modified + start, count);
             OutputSize += count;
             return true;
@@ -137,20 +137,20 @@ namespace Sparrow.Utils
     {
         public byte* Diff;
         public byte* Destination;
-        public int DiffSize;
-        public int Size;
+        public long DiffSize;
+        public long Size;
 
         public void Apply()
         {
-            var pos = 0;
+            long pos = 0;
             while (pos < DiffSize)
             {
-                if (pos + (sizeof(int) * 2) > DiffSize)
-                    AssertInvalidDiffSize(pos, sizeof(int) * 2);
+                if (pos + (sizeof(long) * 2) > DiffSize)
+                    AssertInvalidDiffSize(pos, sizeof(long) * 2);
 
-                int start = ((int*)(Diff + pos))[0];
-                int count = ((int*)(Diff + pos))[1];
-                pos += sizeof(int) * 2;
+                long start = ((long*)(Diff + pos))[0];
+                long count = ((long*)(Diff + pos))[1];
+                pos += sizeof(long) * 2;
 
                 
                 if (count < 0)
@@ -173,13 +173,13 @@ namespace Sparrow.Utils
             }
         }
 
-        private void AssertInvalidSize(int start, int count)
+        private void AssertInvalidSize(long start, long count)
         {
             throw new ArgumentOutOfRangeException(nameof(Size),
                 $"Cannot apply diff to position {start + count} because it is bigger than {Size}");
         }
 
-        private void AssertInvalidDiffSize(int pos, int count)
+        private void AssertInvalidDiffSize(long pos, long count)
         {
             throw new ArgumentOutOfRangeException(nameof(Size),
                 $"Cannot apply diff because pos {pos} & count {count} are beyond the diff size: {DiffSize}");

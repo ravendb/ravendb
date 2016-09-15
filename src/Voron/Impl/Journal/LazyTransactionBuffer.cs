@@ -33,9 +33,11 @@ namespace Voron.Impl.Journal
             {
                 _firstPositionInJournalFile = position; // first lazy tx saves position to all lazy tx that comes afterwards
             }
-            _lazyTransactionPager.WriteDirect(pages.Base, _lastUsedPage, pages.NumberOfPages);
 
-            _lastUsedPage += pages.NumberOfPages;
+            Debug.Assert(pages.NumberOfPages < int.MaxValue);
+            _lazyTransactionPager.WriteDirect(pages.Base, _lastUsedPage, (int)pages.NumberOfPages);
+
+            _lastUsedPage += (int)pages.NumberOfPages;
         }
 
         public void EnsureHasExistingReadTransaction(LowLevelTransaction tx)

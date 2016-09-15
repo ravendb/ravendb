@@ -149,7 +149,8 @@ namespace Voron.Impl.Journal
 
             if (tx.IsLazyTransaction == false && (lazyTransactionScratch == null || lazyTransactionScratch.HasDataInBuffer() == false))
             {
-                _journalWriter.WritePages(position, pages.Base, pages.NumberOfPages);
+                Debug.Assert(pages.NumberOfPages < int.MaxValue);
+                _journalWriter.WritePages(position, pages.Base, (int)pages.NumberOfPages);
             }
             else
             {

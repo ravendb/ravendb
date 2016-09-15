@@ -89,7 +89,7 @@ namespace Voron.Impl.Journal
                 _currentJournalFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentJournalFileSize * 2);
             }
             var actualLogSize = _currentJournalFileSize;
-            var minRequiredSize = numberOfPages * _compressionPager.PageSize;
+            long minRequiredSize = numberOfPages * _compressionPager.PageSize;
             if (_currentJournalFileSize < minRequiredSize)
             {
                 actualLogSize = minRequiredSize;
@@ -710,7 +710,7 @@ namespace Voron.Impl.Journal
                 var readTxHeader = &txHeaders[0];
                 var lastReadTxHeader = txHeaders[1];
 
-                var txPos = 0;
+                long txPos = 0;
                 while (true)
                 {
                     if (file.ReadTransaction(txPos, readTxHeader) == false)
@@ -845,7 +845,7 @@ namespace Voron.Impl.Journal
             if (CurrentFile == null || CurrentFile.AvailablePages < pages.NumberOfPages)
             {
                 _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
-                CurrentFile = NextFile(pages.NumberOfPages);
+                CurrentFile = NextFile((int)pages.NumberOfPages);
             }
 
             CurrentFile.Write(tx, pages, _lazyTransactionBuffer, pageCount);
@@ -867,15 +867,21 @@ namespace Voron.Impl.Journal
 
             // We want to include the Transaction Header straight into the compression buffer.
             var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
-            var maxSizeRequiringCompression = pageCountIncludingAllOverflowPages * pageSize + sizeOfPagesHeader
+            long maxSizeRequiringCompression = ((long)pageCountIncludingAllOverflowPages * (long)pageSize) + sizeOfPagesHeader
                  + numberOfPages * sizeof(long);
-            var outputBufferSize = LZ4.MaximumOutputLength(maxSizeRequiringCompression);
+
+            long outputBufferSize;
+            if (maxSizeRequiringCompression > int.MaxValue)
+                outputBufferSize = maxSizeRequiringCompression + (maxSizeRequiringCompression / 255) + 16;
+            else
+                outputBufferSize = LZ4.MaximumOutputLength((int)maxSizeRequiringCompression);
+
             var outputBufferInPages = (outputBufferSize + sizeof(TransactionHeader)) / pageSize +
                                       ((outputBufferSize + sizeof(TransactionHeader)) % pageSize == 0 ? 0 : 1);
 
             // The pages required includes the intermediate pages and the required output pages. 
             var pagesRequired = (pageCountIncludingAllOverflowPages + outputBufferInPages);
-            var pagerState = compressionPager.EnsureContinuous(0, pagesRequired);
+            var pagerState = compressionPager.EnsureContinuous(0, (int)pagesRequired);
             tx.EnsurePagerStateReference(pagerState);
 
             var outputBuffer = compressionPager.AcquirePagePointer(tx, 0);
@@ -916,7 +922,7 @@ namespace Voron.Impl.Journal
 
             var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
 
-            var compressedLen = _lz4.Encode64(
+            var compressedLen = _lz4.Encode64LongBuffer(
                 outputBuffer,
                 compressionBuffer,
                 totalSizeWritten,
@@ -940,7 +946,7 @@ namespace Voron.Impl.Journal
             txHeader->CompressedSize = compressedLen;
             txHeader->UncompressedSize = totalSizeWritten;
             txHeader->PageCount = numberOfPages;
-            txHeader->Hash = Hashing.XXHash64.Calculate(compressionBuffer, compressedLen);
+            txHeader->Hash = Hashing.XXHash64.Calculate(compressionBuffer, (ulong)compressedLen);
 
             var prepreToWriteToJournal = new CompressedPagesResult
             {
@@ -967,7 +973,7 @@ namespace Voron.Impl.Journal
     public unsafe struct CompressedPagesResult
     {
         public byte* Base;
-        public int NumberOfPages;
+        public long NumberOfPages;
     }
 
 }

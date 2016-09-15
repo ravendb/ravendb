@@ -46,7 +46,7 @@ namespace Raven.Server.Documents
 
             var options = _db.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
-                : StorageEnvironmentOptions.ForPath(Path.Combine(_db.Configuration.Core.DataDirectory, "Subscriptions"));
+                : StorageEnvironmentOptions.ForPath(Path.Combine(_db.Configuration.Core.DataDirectory, "Subscriptions"), db.Configuration.Storage.SupportLargeTransactions);
             
 
             options.SchemaVersion = 1;

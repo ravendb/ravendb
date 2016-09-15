@@ -95,6 +95,8 @@ namespace Voron
 
         public long? MaxStorageSize { get; set; }
 
+        public bool SupportLargeTransactions { get; set; }
+
         public abstract string BasePath { get; }
 
         public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
@@ -145,14 +147,14 @@ namespace Voron
             return new PureMemoryStorageEnvironmentOptions(configTempPath);
         }
 
-        public static StorageEnvironmentOptions ForPath(string path, string tempPath = null, string journalPath = null)
+        public static StorageEnvironmentOptions ForPath(string path, bool supportLargeTransaction = false, string tempPath = null, string journalPath = null)
         {
             if (RunningOnPosix)
             {
                 path = PosixHelper.FixLinuxPath(path);
                 tempPath = PosixHelper.FixLinuxPath(tempPath);
             }
-            return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath);
+            return new DirectoryStorageEnvironmentOptions(path, supportLargeTransaction, tempPath, journalPath);
         }
 
         public IDisposable AllowManualFlushing()
@@ -174,10 +176,11 @@ namespace Voron
             private readonly ConcurrentDictionary<string, Lazy<IJournalWriter>> _journals =
                 new ConcurrentDictionary<string, Lazy<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
-            public DirectoryStorageEnvironmentOptions(string basePath, string tempPath, string journalPath) : base(string.IsNullOrEmpty(tempPath) == false ? Path.GetFullPath(tempPath) : Path.GetFullPath(basePath))
+            public DirectoryStorageEnvironmentOptions(string basePath, bool supportLargeTransactions, string tempPath, string journalPath) : base(string.IsNullOrEmpty(tempPath) == false ? Path.GetFullPath(tempPath) : Path.GetFullPath(basePath))
             {
                 _basePath = Path.GetFullPath(basePath);
                 _journalPath = !string.IsNullOrEmpty(journalPath) ? Path.GetFullPath(journalPath) : _basePath;
+                SupportLargeTransactions = supportLargeTransactions;
 
                 if (Directory.Exists(_basePath) == false)
                     Directory.CreateDirectory(_basePath);

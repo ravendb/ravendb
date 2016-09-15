@@ -206,8 +206,17 @@ namespace Voron.Impl.Scratch
 
                     createNextFile = true;
                 }
+                else if (_options.SupportLargeTransactions)
+                {
+                    // if we reached so far and weren't able to allocate space, 
+                    // we will increase the scratch over it's limit size to support large transactions (or intensive write burst)
+                    result = current.File.Allocate(tx, numberOfPages, size);
+                    _options.OnScratchBufferSizeChanged(sizeAfterAllocation);
+                    return result;
+                }
 
-                if (createNextFile)
+
+                    if (createNextFile)
                 {
                     // We need to ensure that _current stays constant through the codepath until return. 
                     current = NextFile();

@@ -274,7 +274,7 @@ namespace Voron.Impl.Backup
                         return;
                     foreach (var dir in package.Entries.GroupBy(entry => Path.GetDirectoryName(entry.FullName)))
                     {
-                        using (var options = StorageEnvironmentOptions.ForPath(Path.Combine(outPath, dir.Key)))
+                        using (var options = StorageEnvironmentOptions.ForPath(Path.Combine(outPath, dir.Key), false)) // TODO : should we support here large tx ?
                         {
                             using (var env = new StorageEnvironment(options))
                             {

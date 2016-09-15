@@ -79,6 +79,35 @@ namespace Sparrow.Compression
             public uint initCheck;
         }
 
+        public long Encode64LongBuffer(
+            byte* input,
+            byte* output,
+            long inputLength,
+            long outputLength,
+            int acceleration = ACCELERATION_DEFAULT)
+        {
+            if (inputLength < int.MaxValue && outputLength < int.MaxValue)
+            {
+                return Encode64(input, output, (int)inputLength, (int)outputLength, acceleration);
+            }
+
+            long totalOutputSize = 0;
+            long pos = 0;
+            while (pos < inputLength)
+            {
+                int partInputLength = int.MaxValue;
+                if (pos + partInputLength > inputLength)
+                    partInputLength = (int)(Int32.MaxValue - pos);
+
+                int partOutputLength = int.MaxValue;
+                totalOutputSize += Encode64(input, output, partInputLength, partOutputLength, acceleration);
+
+                pos += int.MaxValue;
+            }
+
+            return totalOutputSize;
+        }
+
         public int Encode64(
                 byte* input,
                 byte* output,
@@ -504,6 +533,35 @@ namespace Sparrow.Compression
         private const ulong ByU32HashMask = (1 << ByU32HashLog) - 1;
 
         private const ulong prime5bytes = 889523592379UL;
+
+        public static long Decode64LongBuffers(
+            byte* input,
+            long inputLength,
+            byte* output,
+            long outputLength,
+            bool knownOutputLength)
+        {
+            if (inputLength < int.MaxValue && outputLength < int.MaxValue)
+            {
+                return Decode64(input, (int) inputLength, output, (int) outputLength, knownOutputLength);
+            }
+
+            long totalOutputSize = 0;
+            long pos = 0;
+            while (pos < inputLength)
+            {
+                int partInputLength = int.MaxValue;
+                if (pos + partInputLength > inputLength)
+                    partInputLength = (int) (Int32.MaxValue - pos);
+
+                int partOutputLength = int.MaxValue;
+                totalOutputSize += Decode64(input, partInputLength, output, partOutputLength, false);
+
+                pos += int.MaxValue;
+            }
+
+            return totalOutputSize;
+        }
 
         public static int Decode64(
             byte* input,
