@@ -13,7 +13,11 @@ namespace Raven.Server.Documents.Transformers
     {
         public IndexingFunc TransformResults { get; set; }
 
-        public bool IsGroupBy { get; set; }
+        public bool HasGroupBy { get; set; }
+
+        public bool HasLoadDocument { get; set; }
+
+        public bool HasTransformWith { get; set; }
 
         public string Source { get; set; }
 

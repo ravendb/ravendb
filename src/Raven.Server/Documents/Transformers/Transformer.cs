@@ -41,6 +41,14 @@ namespace Raven.Server.Documents.Transformers
 
         public virtual string Name => Definition?.Name;
 
+        public virtual int Hash => Definition?.GetHashCode() ?? TransformerId;
+
+        public virtual bool HasLoadDocument => _transformer.HasLoadDocument;
+
+        public virtual bool HasTransformWith => _transformer.HasTransformWith;
+
+        public virtual bool HasGroupBy => _transformer.HasGroupBy;
+
         public readonly TransformerDefinition Definition;
 
         public virtual void SetLock(TransformerLockMode mode)

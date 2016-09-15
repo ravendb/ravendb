@@ -17,7 +17,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Transformers;
-using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -175,49 +174,60 @@ namespace Raven.Server.Documents.Handlers
                 includeDocs.Gather(document);
             }
 
-            long actualEtag = ComputeEtagsFor(documents);
-            if (GetLongFromHeaders("If-None-Match") == actualEtag)
+            var actualEtag = ComputeEtagsFor(documents, null);
+            if (transformer != null)
+                actualEtag ^= transformer.Hash;
+
+            var etag = GetLongFromHeaders("If-None-Match");
+            if (etag == actualEtag)
             {
-                HttpContext.Response.StatusCode = 304;
-                return;
+                if (transformer != null && transformer.HasLoadDocument == false && transformer.HasTransformWith == false)
+                {
+                    HttpContext.Response.StatusCode = 304;
+                    return;
+                }
             }
 
+            IEnumerable<Document> documentsToWrite;
+            if (transformer != null)
+            {
+                var transformerParameters = GetTransformerParameters(context);
+
+                using (var scope = transformer.OpenTransformationScope(transformerParameters, includeDocs, Database.DocumentsStorage, Database.TransformerStore, context))
+                {
+                    if (transformer.HasLoadDocument || transformer.HasTransformWith)
+                        documentsToWrite = scope.Transform(documents).ToList(); // no choice, we might loaded something that changed and we need to reflect that
+                    else
+                        documentsToWrite = scope.Transform(documents);
+
+                    if (scope.HasLoadedAnyDocument)
+                    {
+                        actualEtag = ComputeEtagsFor(documents, scope.LoadedDocumentEtags) ^ transformer.Hash;
+
+                        if (etag == actualEtag)
+                        {
+                            HttpContext.Response.StatusCode = 304;
+                            return;
+                        }
+                    }
+                }
+            }
+            else
+                documentsToWrite = documents;
+
             HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-            HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
+            HttpContext.Response.Headers[Constants.MetadataEtagField] = actualEtag.ToString();
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(GetDocumentResult.Results));
-
-                if (transformer != null)
-                {
-                    var transformerParameters = GetTransformerParameters(context);
-
-                    using (var scope = transformer.OpenTransformationScope(transformerParameters, includeDocs, Database.DocumentsStorage, Database.TransformerStore, context))
-                    {
-                        writer.WriteDocuments(context, scope.Transform(documents), metadataOnly);
-                    }
-                }
-                else
-                {
-                    writer.WriteDocuments(context, documents, metadataOnly);
-                }
+                writer.WriteDocuments(context, documentsToWrite, metadataOnly);
 
                 includeDocs.Fill(includes);
 
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentResult.Includes));
-
-                if (includePaths.Count > 0)
-                {
-                    writer.WriteDocuments(context, includes, metadataOnly);
-                }
-                else
-                {
-                    // TODO: Why is this needed? WriteDocuments will emit empty array
-                    writer.WriteStartArray();
-                    writer.WriteEndArray();
-                }
+                writer.WriteDocuments(context, includes, metadataOnly);
 
                 writer.WriteEndObject();
             }
@@ -243,27 +253,37 @@ namespace Raven.Server.Documents.Handlers
             };
         }
 
-        private unsafe long ComputeEtagsFor(List<Document> documents)
+        private static unsafe long ComputeEtagsFor(List<Document> documents, List<long> loadedDocumentEtags)
         {
             // This method is efficient because we aren't materializing any values
             // except the etag, which we need
-            if (documents.Count == 1)
-            {
+            if (documents.Count == 1 && (loadedDocumentEtags == null || loadedDocumentEtags.Count == 0))
                 return documents[0]?.Etag ?? -1;
-            }
+
+            var count = documents.Count;
+            if (loadedDocumentEtags != null)
+                count += loadedDocumentEtags.Count;
+
             // we do this in a loop to avoid either large long array allocation on the heap
             // or busting the stack if we used stackalloc long[ids.Count]
             var ctx = Hashing.Streamed.XXHash64.BeginProcess();
             long* buffer = stackalloc long[4];//32 bytes
             Memory.Set((byte*)buffer, 0, sizeof(long) * 4);// not sure is stackalloc force init
-            for (int i = 0; i < documents.Count; i += 4)
+            for (int i = 0; i < count; i += 4)
             {
                 for (int j = 0; j < 4; j++)
                 {
-                    if (i + j >= documents.Count)
+                    if (i + j >= count)
                         break;
-                    var document = documents[i + j];
-                    buffer[j] = document?.Etag ?? -1;
+
+                    if (i + j < documents.Count)
+                    {
+                        var document = documents[i + j];
+                        buffer[j] = document?.Etag ?? -1;
+                        continue;
+                    }
+
+                    buffer[j] = loadedDocumentEtags[i + j - documents.Count];
                 }
                 // we don't care if we didn't get to the end and have values from previous iteration
                 // it will still be consistent, and that is what we care here.

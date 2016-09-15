@@ -30,6 +30,10 @@ namespace Raven.Server.Documents.Transformers
                 Debug.Assert(CurrentTransformationScope.Current != null);
         }
 
+        public bool HasLoadedAnyDocument => LoadedDocumentEtags != null && LoadedDocumentEtags.Count > 0;
+
+        public List<long> LoadedDocumentEtags => CurrentTransformationScope.Current.LoadedDocumentEtags;
+
         public void Dispose()
         {
             CurrentTransformationScope.Current = null;
@@ -45,7 +49,7 @@ namespace Raven.Server.Documents.Transformers
 
         public IEnumerable<Document> Transform(IEnumerable<Document> documents)
         {
-            if (_transformer.IsGroupBy == false)
+            if (_transformer.HasGroupBy == false)
             {
                 var docsEnumerator = new StaticIndexDocsEnumerator(documents, _transformer.TransformResults, null,
                     StaticIndexDocsEnumerator.EnumerationType.Transformer);
