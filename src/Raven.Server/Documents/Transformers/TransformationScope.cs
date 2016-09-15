@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Transformers
 
                         foreach (var transformedResult in transformedResults)
                         {
-                            var value = TypeConverter.ConvertType(transformedResult, _context);
+                            var value = TypeConverter.ToBlittableSupportedType(transformedResult, _context);
                             values.Add(value);
                         }
 
@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Transformers
                         continue;
                     }
 
-                    var value = TypeConverter.ConvertType(transformedResult, _context);
+                    var value = TypeConverter.ToBlittableSupportedType(transformedResult, _context);
                     values.Add(value);
                 }
 

@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 foreach (var key in dict.Keys)
                 {
-                    djv[key.ToString()] = TypeConverter.ConvertType(dict[key], indexContext);
+                    djv[key.ToString()] = TypeConverter.ToBlittableSupportedType(dict[key], indexContext);
                 }
 
                 foreach (var dictField in GetRegularFields(field, indexContext.ReadObject(djv, "lucene field"), indexContext))

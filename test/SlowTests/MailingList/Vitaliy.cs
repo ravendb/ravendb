@@ -75,7 +75,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void Run()
         {
             using (var documentStore = GetDocumentStore())
@@ -99,6 +99,7 @@ namespace SlowTests.MailingList
                 }
 
                 new CgcAndProductionIndex().Execute(documentStore);
+                WaitForIndexing(documentStore);
 
                 using (var documentSession = documentStore.OpenSession())
                 {

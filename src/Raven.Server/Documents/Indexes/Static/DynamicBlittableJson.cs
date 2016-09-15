@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 return true;
             }
 
-            result = TypeConverter.DynamicConvert(result);
+            result = TypeConverter.ToDynamicType(result);
             return true;
         }
 
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             foreach (var propertyName in BlittableJson.GetPropertyNames())
             {
-                yield return new KeyValuePair<object, object>(propertyName, TypeConverter.DynamicConvert(BlittableJson[propertyName]));
+                yield return new KeyValuePair<object, object>(propertyName, TypeConverter.ToDynamicType(BlittableJson[propertyName]));
             }
         }
 

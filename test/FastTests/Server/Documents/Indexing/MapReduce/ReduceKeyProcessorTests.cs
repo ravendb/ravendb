@@ -1,6 +1,5 @@
 ﻿using Raven.Abstractions;
 using Raven.Server.Documents.Indexes.MapReduce;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -29,19 +28,19 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 {
                     sut.Process(lazyStringValue);
                 }
-                sut.Process(new DynamicBlittableJson(context.ReadObject(new DynamicJsonValue()
+                sut.Process(context.ReadObject(new DynamicJsonValue()
                 {
                     ["Name"] = "Arek",
                     ["Age"] = null
-                }, "foo")));
+                }, "foo"));
 
-                sut.Process(new DynamicArray(new DynamicJsonArray()
+                sut.Process(new DynamicJsonArray()
                 {
                     1,
                     2,
                     null,
                     3
-                }));
+                });
 
                 sut.Process(SystemTime.UtcNow);
 
