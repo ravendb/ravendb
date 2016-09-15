@@ -14,6 +14,7 @@ using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Bundles.MoreLikeThis;
 using Raven.Database.Data;
@@ -21,6 +22,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
+using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
 using Index = Raven.Database.Indexing.Index;
@@ -40,7 +42,7 @@ namespace Raven.Database.Queries
             this.database = database;
         }
 
-        public MoreLikeThisQueryResult ExecuteMoreLikeThisQuery(MoreLikeThisQuery query, TransactionInformation transactionInformation, int pageSize = 25)
+        public MoreLikeThisQueryResult ExecuteMoreLikeThisQuery(MoreLikeThisQuery query, TransactionInformation transactionInformation, int pageSize = 25, OrderedPartCollection<AbstractIndexQueryTrigger> databaseIndexQueryTriggers)
         {
             if (query == null) throw new ArgumentNullException("query");
 
@@ -130,6 +132,14 @@ namespace Raven.Database.Queries
                             {mltQuery, Occur.MUST},
                             {additionalQuery, Occur.MUST},
                         };
+                    }
+
+                    foreach (var databaseIndexQueryTrigger in databaseIndexQueryTriggers)
+                    {
+                        mltQuery = databaseIndexQueryTrigger.Value.ProcessQuery(index.PublicName, mltQuery, new IndexQuery
+                        {
+                            Query = query.AdditionalQuery
+                        });
                     }
 
                     searcher.Search(mltQuery, tsdc);
