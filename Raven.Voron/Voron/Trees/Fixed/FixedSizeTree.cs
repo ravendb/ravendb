@@ -959,7 +959,7 @@ namespace Voron.Trees.Fixed
                 // the current page is the leftmost one, so let us try steal some data
                 // from the one on the right
                 var siblingNum = PageValueFor(parentPage, 1);
-                var siblingPage = _tx.GetReadOnlyPage(siblingNum);
+                var siblingPage = _tx.ModifyPage(siblingNum, _parent, null);
                 if (siblingPage.Flags != page.Flags)
                     return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
 
