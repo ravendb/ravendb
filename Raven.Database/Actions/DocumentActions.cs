@@ -434,7 +434,8 @@ namespace Raven.Database.Actions
         }
 
         public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Func<JsonDocument, bool> addDocument, 
-            string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, long? maxSize = null, TimeSpan? timeout = null)
+            string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, 
+            long? maxSize = null, TimeSpan? timeout = null, HashSet<string> collections = null)
         {
             Etag lastDocumentReadEtag = null;
 
@@ -453,8 +454,8 @@ namespace Raven.Database.Actions
                     while (true)
                     {
                         var documents = etag == null
-                            ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-                            : actions.Documents.GetDocumentsAfter(etag, pageSize, token, maxSize: maxSize, timeout: timeout);
+                            ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize, entityNames: collections)
+                            : actions.Documents.GetDocumentsAfter(etag, pageSize, token, maxSize: maxSize, timeout: timeout, entityNames: collections);
 
                         var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
                         var docCount = 0;
@@ -511,7 +512,8 @@ namespace Raven.Database.Actions
             return lastDocumentReadEtag;
         }
 
-        public Etag GetDocumentsWithIdStartingWith(string idPrefix, int pageSize, Etag etag, CancellationToken token, Func<JsonDocument, bool> addDocument)
+        public Etag GetDocumentsWithIdStartingWith(string idPrefix, int pageSize, Etag etag, 
+            CancellationToken token, Func<JsonDocument, bool> addDocument, HashSet<string> collections)
         {
             Etag lastDocumentReadEtag = null;
 
@@ -520,7 +522,9 @@ namespace Raven.Database.Actions
                 var returnedDocs = false;
                 while (true)
                 {
-                    var documents = actions.Documents.GetDocumentsAfterWithIdStartingWith(etag, idPrefix, pageSize, token, timeout: TimeSpan.FromSeconds(2), lastProcessedDocument: x => lastDocumentReadEtag = x);
+                    var documents = actions.Documents.GetDocumentsAfterWithIdStartingWith(etag, idPrefix, pageSize, token, 
+                        timeout: TimeSpan.FromSeconds(2), lastProcessedDocument: x => lastDocumentReadEtag = x, entityNames: collections);
+
                     var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers);
 
                     var docCount = 0;

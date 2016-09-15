@@ -39,6 +39,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         private readonly Index metadataIndex;
 
+        private static readonly RavenJObject EmptyDocument = new RavenJObject();
+
         public DocumentsStorageActions(IUuidGenerator uuidGenerator,
             OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
             IDocumentCacher documentCacher,
@@ -60,7 +62,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         public bool SkipConsistencyCheck { get; set; }
 
-        public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
+        public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take, HashSet<string> entityNames = null)
         {
             if (start < 0)
                 throw new ArgumentException("must have zero or positive value", "start");
@@ -77,6 +79,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                 if (!iterator.Skip(-start))
                     yield break;
+
+                var hasEntityNames = entityNames != null && entityNames.Count > 0;
+                if (hasEntityNames)
+                    entityNames = new HashSet<string>(entityNames, StringComparer.OrdinalIgnoreCase);
+
+                var _ = false;
                 do
                 {
                     if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
@@ -84,10 +92,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                     var key = GetKeyFromCurrent(iterator);
 
-                    var document = DocumentByKey(key);
+                    
+                    var document = GetJsonDocument(hasEntityNames, key, entityNames, ref _);
                     if (document == null) //precaution - should never be true
                     {
-                        if (SkipConsistencyCheck) continue;
+                        if (SkipConsistencyCheck)
+                            continue;
+
                         throw new InvalidDataException(string.Format("Possible data corruption - the key = '{0}' was found in the documents index, but matching document was not found.", key));
                     }
 
@@ -154,7 +165,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, 
             CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, 
-            Action<Etag> lastProcessedDocument = null, Reference<bool> earlyExit = null, Action<List<DocumentFetchError>> failedToGetHandler = null)
+            Action<Etag> lastProcessedDocument = null, Reference<bool> earlyExit = null,
+            HashSet<string> entityNames = null, Action <List<DocumentFetchError>> failedToGetHandler = null)
         {
             if (earlyExit != null)
                 earlyExit.Value = false;
@@ -192,6 +204,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                 var errors = new List<DocumentFetchError>();
                 var skipDocumentGetErrors = failedToGetHandler != null;
+                var hasEntityNames = entityNames != null && entityNames.Count > 0;
+                if (hasEntityNames)
+                    entityNames = new HashSet<string>(entityNames, StringComparer.OrdinalIgnoreCase);
+
                 do
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -227,10 +243,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         }
                     }
 
+                    var skipCountingDocument = false;
                     JsonDocument document;
                     try
                     {
-                        document = DocumentByKey(key);
+                        document = GetJsonDocument(hasEntityNames, key, entityNames, ref skipCountingDocument); 
                     }
                     catch (Exception e)
                     {
@@ -249,7 +266,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                     if (document == null) //precaution - should never be true
                     {
-                        if (SkipConsistencyCheck) continue;
+                        if (SkipConsistencyCheck)
+                            continue;
+
                         throw new InvalidDataException(string.Format("Data corruption - the key = '{0}' was found in the documents index, but matching document was not found", key));
                     }
 
@@ -259,7 +278,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     }
 
                     fetchedDocumentTotalSize += document.SerializedSizeOnDisk;
-                    fetchedDocumentCount++;
+                    if (skipCountingDocument == false)
+                        fetchedDocumentCount++;
 
                     yield return document;
 
@@ -289,6 +309,50 @@ namespace Raven.Database.Storage.Voron.StorageActions
             // We notify the last that we considered.
             if (lastProcessedDocument != null)
                 lastProcessedDocument(lastDocEtag);
+        }
+
+        private JsonDocument GetJsonDocument(bool hasEntityNames, string key, 
+            HashSet<string> entityNames, ref bool isEmptyDocument)
+        {
+            if (hasEntityNames == false)
+            {
+                return DocumentByKey(key);
+            }
+
+            Debug.Assert(entityNames.Comparer.Equals(EqualityComparer<string>.Default) == false);
+
+            int metadataSize;
+            var sliceKey = (Slice)key;
+            var metadata = ReadDocumentMetadata(key, sliceKey, out metadataSize);
+            var entityName = metadata.Metadata.Value<string>(Constants.RavenEntityName);
+
+            if (string.IsNullOrEmpty(entityName) == false && entityNames.Contains(entityName))
+            {
+                int sizeOnDisk;
+                var documentData = ReadDocumentData(key, sliceKey, metadata.Etag, metadata.Metadata, out sizeOnDisk);
+                return new JsonDocument
+                {
+                    DataAsJson = documentData,
+                    Etag = metadata.Etag,
+                    Key = metadata.Key, //original key - with user specified casing, etc.
+                    Metadata = metadata.Metadata,
+                    SerializedSizeOnDisk = metadataSize,
+                    LastModified = metadata.LastModified
+                };
+            }
+
+            // this document will be filtered anyway
+            // there is no need to get the document data
+            isEmptyDocument = true;
+            return new JsonDocument
+            {
+                DataAsJson = EmptyDocument,
+                Etag = metadata.Etag,
+                Key = metadata.Key, //original key - with user specified casing, etc.
+                Metadata = metadata.Metadata,
+                SerializedSizeOnDisk = metadataSize,
+                LastModified = metadata.LastModified
+            };
         }
 
         public IEnumerable<string> GetDocumentIdsAfterEtag(Etag etag, int maxTake,
@@ -344,10 +408,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, 
             CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, 
-            Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null, Action<List<DocumentFetchError>> failedToGetHandler = null)
+            Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null, 
+            HashSet<string> entityNames = null, Action<List<DocumentFetchError>> failedToGetHandler = null)
         {
             return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, 
-                maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit, failedToGetHandler);
+                maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit, entityNames, failedToGetHandler);
         }
 
         private static string GetKeyFromCurrent(global::Voron.Trees.IIterator iterator)
@@ -745,7 +810,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     var originalKey = stream.ReadString();
                     var lastModifiedDateTimeBinary = stream.ReadInt64();
 
-                    var existingCachedDocument = documentCacher.GetCachedDocument(normalizedKey, etag);
+                    var existingCachedDocument = documentCacher.GetCachedDocument(normalizedKey, etag, metadataOnly: true);
                     size = (int)stream.Length;
                     var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
                     var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);

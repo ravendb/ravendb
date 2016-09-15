@@ -102,7 +102,7 @@ namespace Raven.Database.Impl
             return new DisposableAction(() => skipSetDocumentInCache = old);
         }
 
-        public CachedDocument GetCachedDocument(string key, Etag etag)
+        public CachedDocument GetCachedDocument(string key, Etag etag, bool metadataOnly = false)
         {
             if (skipSetAndGetDocumentInCache)
                 return null;
@@ -123,7 +123,7 @@ namespace Raven.Database.Impl
                 return null;
             return new CachedDocument
             {
-                Document = (RavenJObject)cachedDocument.Document.CreateSnapshot(),
+                Document = metadataOnly ? null : (RavenJObject)cachedDocument.Document.CreateSnapshot(),
                 Metadata = (RavenJObject)cachedDocument.Metadata.CreateSnapshot(),
                 Size = cachedDocument.Size
             };

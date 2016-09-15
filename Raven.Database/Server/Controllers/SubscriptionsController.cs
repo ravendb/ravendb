@@ -15,6 +15,7 @@ using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Json;
@@ -236,7 +237,7 @@ namespace Raven.Database.Server.Controllers
                     var processedDocuments = 0;
                     var hasMoreDocs = false;
                     var config = subscriptions.GetSubscriptionConfig(id);
-                    var startEtag =  config.AckEtag;
+                    var startEtag = config.AckEtag;
                     var criteria = config.Criteria;
 
                     bool isPrefixCriteria = !string.IsNullOrWhiteSpace(criteria.KeyStartsWith);
@@ -280,6 +281,8 @@ namespace Raven.Database.Server.Controllers
                         return true; // We get the next document
                     };
 
+                    var collections = criteria.BelongsToAnyCollection?.ToHashSet();
+
                     int retries = 0;
                     do
                     {
@@ -295,14 +298,14 @@ namespace Raven.Database.Server.Controllers
                                 if (isPrefixCriteria)
                                 {
                                     // If we don't get any document from GetDocumentsWithIdStartingWith it could be that we are in presence of a lagoon of uninteresting documents, so we are hitting a timeout.
-                                    lastProcessedDocEtag = Database.Documents.GetDocumentsWithIdStartingWith(criteria.KeyStartsWith, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+                                    lastProcessedDocEtag = Database.Documents.GetDocumentsWithIdStartingWith(criteria.KeyStartsWith, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument, collections);
 
                                     hasMoreDocs = false;
                                 }
                                 else
                                 {
                                     // It doesn't matter if we match the criteria or not, the document has been already processed.
-                                    lastProcessedDocEtag = Database.Documents.GetDocuments(-1, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+                                    lastProcessedDocEtag = Database.Documents.GetDocuments(-1, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument, collections: collections);
 
                                     // If we don't get any document from GetDocuments it may be a signal that something is wrong.
                                     if (lastProcessedDocEtag == null)

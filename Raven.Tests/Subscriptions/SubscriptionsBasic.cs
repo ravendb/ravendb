@@ -28,10 +28,11 @@ namespace Raven.Tests.Subscriptions
     {
         private readonly TimeSpan waitForDocTimeout = TimeSpan.FromSeconds(20);
 
-        [Fact]
-        public void CanCreateSubscription()
+        [Theory]
+        [PropertyData("Storages")]
+        public void CanCreateSubscription(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCriteria());
                 Assert.Equal(1, id);
@@ -41,10 +42,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void CanDeleteSubscription()
+        [Theory]
+        [PropertyData("Storages")]
+        public void CanDeleteSubscription(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var id1 = store.Subscriptions.Create(new SubscriptionCriteria());
                 var id2 = store.Subscriptions.Create(new SubscriptionCriteria());
@@ -62,20 +64,22 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldThrowWhenOpeningNoExisingSubscription()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldThrowWhenOpeningNoExisingSubscription(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var ex = Assert.Throws<SubscriptionDoesNotExistException>(() => store.Subscriptions.Open(1, new SubscriptionConnectionOptions()));
                 Assert.Equal("There is no subscription configuration for specified identifier (id: 1)", ex.Message);
             }
         }
 
-        [Fact]
-        public void ShouldThrowOnAttemptToOpenAlreadyOpenedSubscription()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldThrowOnAttemptToOpenAlreadyOpenedSubscription(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCriteria());
                 store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
@@ -85,10 +89,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldStreamAllDocumentsAfterSubscriptionCreation()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldStreamAllDocumentsAfterSubscriptionCreation(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -130,10 +135,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldSendAllNewAndModifiedDocs()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldSendAllNewAndModifiedDocs(string storage)
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = NewRemoteDocumentStore(requestedStorage: storage))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCriteria());
                 var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
@@ -173,10 +179,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldResendDocsIfAcknowledgmentTimeoutOccurred()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldResendDocsIfAcknowledgmentTimeoutOccurred(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCriteria());
                 var subscriptionZeroTimeout = store.Subscriptions.Open(id, new SubscriptionConnectionOptions
@@ -232,10 +239,11 @@ namespace Raven.Tests.Subscriptions
         }
 
 
-        [Fact]
-        public void ShouldRespectMaxDocCountInBatch()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldRespectMaxDocCountInBatch(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -275,10 +283,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldRespectMaxBatchSize()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldRespectMaxBatchSize(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -318,10 +327,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldRespectCollectionCriteria()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldRespectCollectionCriteria(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -358,10 +368,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldRespectStartsWithCriteria()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldRespectStartsWithCriteria(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -400,10 +411,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldRespectPropertiesCriteria()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldRespectPropertiesCriteria(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -449,10 +461,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldRespectPropertiesNotMatchCriteria()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldRespectPropertiesNotMatchCriteria(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -504,10 +517,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void CanGetSubscriptionsFromDatabase()
+        [Theory]
+        [PropertyData("Storages")]
+        public void CanGetSubscriptionsFromDatabase(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
 
@@ -540,10 +554,9 @@ namespace Raven.Tests.Subscriptions
 
         [Theory]
         [PropertyData("Storages")]
-
         public void CanFilterSubscriptionsWithSpecificPrefixes(string storage)
         {
-            using (var store = NewDocumentStore(requestedStorage:storage))
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var subscriptionDocuments = store.Subscriptions.GetSubscriptions(0, 10);
 
@@ -588,7 +601,6 @@ namespace Raven.Tests.Subscriptions
 
         [Theory]
         [PropertyData("Storages")]
-
         public void WillAcknowledgeEmptyBatches(string storage)
         {
             using (var store = NewDocumentStore(requestedStorage: storage))
@@ -628,8 +640,9 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldKeepPullingDocsAfterServerRestart()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldKeepPullingDocsAfterServerRestart(string storage)
         {
             var dataPath = NewDataPath("RavenDB_2627_after_restart");
 
@@ -638,7 +651,7 @@ namespace Raven.Tests.Subscriptions
             {
                 var serverDisposed = new ManualResetEventSlim(false);
 
-                var server = GetNewServer(dataDirectory: dataPath, runInMemory: false);
+                var server = GetNewServer(dataDirectory: dataPath, runInMemory: false, requestedStorage: storage);
                 
                 store = new DocumentStore()
                 {
@@ -683,7 +696,7 @@ namespace Raven.Tests.Subscriptions
 
 
                 //recreate the server
-                GetNewServer(dataDirectory: dataPath, runInMemory: false);
+                GetNewServer(dataDirectory: dataPath, runInMemory: false, requestedStorage: storage);
                 
                
                 using (var session = store.OpenSession())
@@ -709,10 +722,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldStopPullingDocsIfThereIsNoSubscriber()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldStopPullingDocsIfThereIsNoSubscriber(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCriteria());
 
@@ -754,10 +768,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldAllowToOpenSubscriptionIfClientDidntSentAliveNotificationOnTimeAndExceededACKTimeout()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldAllowToOpenSubscriptionIfClientDidntSentAliveNotificationOnTimeAndExceededACKTimeout(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -813,10 +828,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void CanReleaseSubscription()
+        [Theory]
+        [PropertyData("Storages")]
+        public void CanReleaseSubscription(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCriteria());
                 store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
@@ -830,10 +846,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldPullDocumentsAfterBulkInsert()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldPullDocumentsAfterBulkInsert(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCriteria());
                 var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
@@ -858,10 +875,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldStopPullingDocsAndCloseSubscriptionOnSubscriberErrorByDefault()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldStopPullingDocsAndCloseSubscriptionOnSubscriberErrorByDefault(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCriteria());
                 var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
@@ -893,10 +911,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void CanSetToIgnoreSubscriberErrors()
+        [Theory]
+        [PropertyData("Storages")]
+        public void CanSetToIgnoreSubscriberErrors(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCriteria());
                 var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
@@ -925,10 +944,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void CanUseNestedPropertiesInSubscriptionCriteria()
+        [Theory]
+        [PropertyData("Storages")]
+        public void CanUseNestedPropertiesInSubscriptionCriteria(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -986,10 +1006,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void RavenDB_3452_ShouldStopPullingDocsIfReleased()
+        [Theory]
+        [PropertyData("Storages")]
+        public void RavenDB_3452_ShouldStopPullingDocsIfReleased(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCriteria());
 
@@ -1036,10 +1057,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void RavenDB_3453_ShouldDeserializeTheWholeDocumentsAfterTypedSubscription()
+        [Theory]
+        [PropertyData("Storages")]
+        public void RavenDB_3453_ShouldDeserializeTheWholeDocumentsAfterTypedSubscription(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var id = store.Subscriptions.Create<User>(new SubscriptionCriteria<User>());
                 var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions());
@@ -1073,10 +1095,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void DisposingOneSubscriptionShouldNotAffectOnNotificationsOfOthers()
+        [Theory]
+        [PropertyData("Storages")]
+        public void DisposingOneSubscriptionShouldNotAffectOnNotificationsOfOthers(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var id1 = store.Subscriptions.Create(new SubscriptionCriteria<User>());
                 var id2 = store.Subscriptions.Create(new SubscriptionCriteria<User>());
@@ -1126,10 +1149,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldNotBeAbleToOpenSubscriptionWhileItIsStillBeingProcessedAndAckTimeoutWasNotReachedYet()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldNotBeAbleToOpenSubscriptionWhileItIsStillBeingProcessedAndAckTimeoutWasNotReachedYet(string storage)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 var id = store.Subscriptions.Create(new SubscriptionCriteria<User>() {});
 
@@ -1164,10 +1188,11 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void ShouldNotOverrideSubscriptionAckEtag()
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldNotOverrideSubscriptionAckEtag(string storage)
         {
-            using (EmbeddableDocumentStore store = NewDocumentStore())
+            using (EmbeddableDocumentStore store = NewDocumentStore(requestedStorage: storage))
             {
                 var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria());
                 var subscription = store.Subscriptions.Open(subscriptionId, new SubscriptionConnectionOptions());
