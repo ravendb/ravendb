@@ -42,7 +42,7 @@ namespace Raven.Database.Queries
             this.database = database;
         }
 
-        public MoreLikeThisQueryResult ExecuteMoreLikeThisQuery(MoreLikeThisQuery query, TransactionInformation transactionInformation, int pageSize = 25, OrderedPartCollection<AbstractIndexQueryTrigger> databaseIndexQueryTriggers)
+        public MoreLikeThisQueryResult ExecuteMoreLikeThisQuery(MoreLikeThisQuery query, TransactionInformation transactionInformation, int pageSize , OrderedPartCollection<AbstractIndexQueryTrigger> databaseIndexQueryTriggers)
         {
             if (query == null) throw new ArgumentNullException("query");
 
