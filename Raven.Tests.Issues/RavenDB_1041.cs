@@ -15,6 +15,7 @@ using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -123,7 +124,37 @@ namespace Raven.Tests.Issues
             Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
         }
 
-      
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task ShouldThrowTimeoutException(string storageName)
+        {
+            using (var store1 = CreateStore(requestedStorageType: storageName))
+            using (var store2 = CreateStore(requestedStorageType: storageName))
+            {
+                SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new ReplicatedItem {Id = "Replicated/1"});
+                    session.SaveChanges();
+                }
+
+                TimeoutException timeoutException = null;
+
+                try
+                {
+                    await ((DocumentStore) store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(5), replicas: 2);
+                }
+                catch (TimeoutException ex)
+                {
+                    timeoutException = ex;
+                }
+
+                Assert.NotNull(timeoutException);
+                Assert.Contains("So far, it only replicated to 1", timeoutException.Message);
+            }
+        }
+
         [Fact]
         public async Task ShouldThrowIfCannotReachEnoughDestinationServers()
         {
@@ -139,8 +170,8 @@ namespace Raven.Tests.Issues
                 session.SaveChanges();
             }
 
-            var exception = await AssertAsync.Throws<AggregateException>(async () => await store1.Replication.WaitAsync(timeout:TimeSpan.FromSeconds(15),replicas: 3));
-            Assert.Contains("Could not verify that etag", exception.InnerExceptions.First()?.Message);
+            var exception = await AssertAsync.Throws<TimeoutException>(async () => await store1.Replication.WaitAsync(timeout:TimeSpan.FromSeconds(15),replicas: 3));
+            Assert.Contains("Could not verify that etag", exception.Message);
         }
 
         [Fact]

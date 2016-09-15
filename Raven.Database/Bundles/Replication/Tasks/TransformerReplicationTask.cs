@@ -45,13 +45,16 @@ namespace Raven.Database.Bundles.Replication.Tasks
             timer = Database.TimerManager.NewTimer(x => Execute(), TimeSpan.Zero, replicationFrequency);
         }
 
-        private void OnTransformerChange(DocumentDatabase documentDatabase, TransformerChangeNotification eventArgs)
+        private void OnTransformerChange(DocumentDatabase documentDatabase, TransformerChangeNotification notification)
         {
-            switch (eventArgs.Type)
+            var transformerName = notification.Name;
+            switch (notification.Type)
             {
                 case TransformerChangeTypes.TransformerAdded:
                     //if created transformer with the same name as deleted one, we should prevent its deletion replication
-                    Database.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenReplicationTransformerTombstones, eventArgs.Name));
+                    Database.TransactionalStorage.Batch(accessor => 
+                        accessor.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerName));
+
                     break;
                 case TransformerChangeTypes.TransformerRemoved:
                     //If we don't have any destination to replicate to (we are probably slave node)
@@ -64,10 +67,12 @@ namespace Raven.Database.Bundles.Replication.Tasks
                     {
                         {Constants.RavenTransformerDeleteMarker, true},
                         {Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
-                        {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(Database)}
+                        {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(Database)},
+                        {"TransformerVersion", notification.Version }
                     };
 
-                    Database.TransactionalStorage.Batch(accessor => accessor.Lists.Set(Constants.RavenReplicationTransformerTombstones, eventArgs.Name, metadata, UuidType.Transformers));
+                    Database.TransactionalStorage.Batch(accessor => 
+                        accessor.Lists.Set(Constants.RavenReplicationTransformerTombstones, transformerName, metadata, UuidType.Transformers));
                     break;
             }
         }
@@ -89,17 +94,17 @@ namespace Raven.Database.Bundles.Replication.Tasks
 
                     foreach (var destination in replicationDestinations)
                     {
+                        var now = SystemTime.UtcNow;
+
+                        var transformerTombstones = GetTombstones(Constants.RavenReplicationTransformerTombstones, 0, 64,
+                            // we don't send out deletions immediately, we wait for a bit
+                            // to make sure that the user didn't reset the index or delete / create
+                            // things manually
+                            x => (now - x.CreatedAt) >= TimeToWaitBeforeSendingDeletesOfTransformersToSiblings);
+                        var replicatedTransformerTombstones = new Dictionary<string, int>();
+
                         try
                         {
-                            var now = SystemTime.UtcNow;
-
-                            var transformerTombstones = GetTombstones(Constants.RavenReplicationTransformerTombstones, 0, 64,
-                                // we don't send out deletions immediately, we wait for a bit
-                                // to make sure that the user didn't reset the index or delete / create
-                                // things manually
-                                x => (now - x.CreatedAt) >= TimeToWaitBeforeSendingDeletesOfTransformersToSiblings);
-                            var replicatedTransformerTombstones = new Dictionary<string, int>();
-
                             ReplicateTransformerDeletionIfNeeded(transformerTombstones, destination, replicatedTransformerTombstones);
 
                             if (Database.Transformers.Definitions.Length > 0)
@@ -107,25 +112,24 @@ namespace Raven.Database.Bundles.Replication.Tasks
                                 foreach (var definition in Database.Transformers.Definitions)
                                     ReplicateSingleTransformer(destination, definition);
                             }
-
-                            Database.TransactionalStorage.Batch(actions =>
-                            {
-                                foreach (var transformerTombstone in replicatedTransformerTombstones)
-                                {
-                                    var transfomerExists = Database.Transformers.GetTransformerDefinition(transformerTombstone.Key) != null;
-                                    if (transformerTombstone.Value != replicationDestinations.Count &&
-                                        transfomerExists == false)
-                                        continue;
-
-                                    actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
-                                }
-                            });
                         }
                         catch (Exception e)
                         {
                             Log.ErrorException("Failed to replicate transformers to " + destination, e);
                         }
 
+                        Database.TransactionalStorage.Batch(actions =>
+                        {
+                            foreach (var transformerTombstone in replicatedTransformerTombstones)
+                            {
+                                var transformerExists = Database.Transformers.GetTransformerDefinition(transformerTombstone.Key) != null;
+                                if (transformerTombstone.Value != replicationDestinations.Count &&
+                                    transformerExists == false)
+                                    continue;
+
+                                actions.Lists.Remove(Constants.RavenReplicationTransformerTombstones, transformerTombstone.Key);
+                            }
+                        });
                     }
                     return true;
                 }

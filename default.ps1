@@ -25,9 +25,20 @@ properties {
     $global:is_pull_request = $FALSE
     $global:buildlabel = Get-BuildLabel
     $global:uploadCategory = "RavenDB-Unstable"
+    
+    $global:validate = $FALSE
+    $global:validatePages = $FALSE
 }
 
 task default -depends Test, DoReleasePart1
+
+task Validate {
+    $global:validate = $TRUE
+}
+
+task ValidatePages {
+    $global:validatePages = $TRUE
+}
 
 task Verify40 {
     if( (ls "$env:windir\Microsoft.NET\Framework\v4.0*") -eq $null ) {
@@ -76,10 +87,17 @@ task Compile -depends Init, CompileHtml5 {
 
     $commit = Get-Git-Commit-Full
 
-    Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
+    $constants = "NET_4_0;TRACE"
+    if ($global:validate -eq $TRUE) {
+        $constants += ";VALIDATE"
+    }
+    if ($global:validatePages -eq $TRUE) {
+        $constants += ";VALIDATE_PAGES"
+    }
     
-    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
+    Write-Host "Compiling with '$global:configuration' configuration and '$constants' constants" -ForegroundColor Yellow
     
+    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" "/p:DefineConstants=`"$constants`"" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
 
     Write-Host "msbuild exit code: $LastExitCode"
 

@@ -1141,27 +1141,10 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpGet]
-        [RavenRoute("databases/{databaseName}/debug/thread-pool")]
         [RavenRoute("debug/thread-pool")]
         public HttpResponseMessage ThreadPool()
         {
-            return GetMessageWithObject(new[]
-            {
-                new
-                {
-                    Database.MappingThreadPool.Name,
-                    WaitingTasks = Database.MappingThreadPool.GetAllWaitingTasks().Select(x => x.Description),
-                    RunningTasks = Database.MappingThreadPool.GetRunningTasks().Select(x => x.Description),
-                    ThreadPoolStats = Database.MappingThreadPool.GetThreadPoolStats()
-                },
-                new
-                {
-                    Database.ReducingThreadPool.Name,
-                    WaitingTasks = Database.ReducingThreadPool.GetAllWaitingTasks().Select(x => x.Description),
-                    RunningTasks = Database.ReducingThreadPool.GetRunningTasks().Select(x => x.Description),
-                    ThreadPoolStats = Database.ReducingThreadPool.GetThreadPoolStats()
-    }
-            });
+            return GetMessageWithObject(Database.ThreadPool.GetDebugInfo());
         }
 
         [HttpGet]

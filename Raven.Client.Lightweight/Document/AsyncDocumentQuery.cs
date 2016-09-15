@@ -1137,15 +1137,15 @@ namespace Raven.Client.Document
         public virtual Lazy<Task<FacetResults>> GetFacetsLazyAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery(true);
-            var lazyFacetsOperation = new LazyFacetsOperation(AsyncIndexQueried, facetSetupDoc, q, start, pageSize);
-            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetResults>)null);
+            var lazyFacetsOperation = new LazyFacetsOperation(AsyncIndexQueried, facetSetupDoc, q, facetStart, facetPageSize);
+            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetResults>)null, token);
         }
 
         public virtual Lazy<Task<FacetResults>> GetFacetsLazyAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery(true);
-            var lazyFacetsOperation = new LazyFacetsOperation(AsyncIndexQueried, facets, q, start, pageSize);
-            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetResults>)null);
+            var lazyFacetsOperation = new LazyFacetsOperation(AsyncIndexQueried, facets, q, facetStart, facetPageSize);
+            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetResults>)null, token);
         }
 
         /// <summary>

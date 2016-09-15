@@ -466,12 +466,19 @@ namespace Raven.Client.Connection.Implementation
                         ProblematicText = ravenJObject.Value<string>("ProblematicText")
                     };
                 }
+                //else if (ravenJObject.ContainsKey())
                 if (ResponseStatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
                 {
                     throw new BadRequestException(ravenJObject.Value<string>("Message"), ErrorResponseException.FromResponseMessage(Response));
                 }
                 if (ravenJObject.ContainsKey("Error"))
                 {
+                    var errorValue = ravenJObject.Value<string>("Error");
+                    if (errorValue != null && errorValue.StartsWith("System.TimeoutException"))
+                    {
+                        throw new TimeoutException(errorValue.Substring("System.TimeoutException: ".Length));
+                    }
+
                     var sb = new StringBuilder();
                     foreach (var prop in ravenJObject)
                     {
@@ -483,7 +490,7 @@ namespace Raven.Client.Connection.Implementation
 
                     if (sb.Length > 0)
                         sb.AppendLine();
-                    sb.Append(ravenJObject.Value<string>("Error"));
+                    sb.Append(errorValue);
 
                     throw new ErrorResponseException(Response, sb.ToString(), readToEnd);
                 }

@@ -120,6 +120,7 @@ namespace Raven.Database.Config
                     CpuUsageCallsRecordsQueue.Enqueue(stats);
                 }
                 RunCpuUsageHandlers(handler => handler.HandleHighCpuUsage());
+             
             }
             else if (average < LowNotificationThreshold)
             {

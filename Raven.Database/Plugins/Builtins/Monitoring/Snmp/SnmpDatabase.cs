@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Lextm.SharpSnmpLib.Pipeline;
@@ -18,6 +19,7 @@ using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Requests;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics;
 using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Storage;
 using Raven.Database.Server.Tenancy;
+using Raven.Database.Storage;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
@@ -218,22 +220,41 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
 
         private long GetOrAddIndex(string name, MappingDocumentType mappingDocumentType, DocumentDatabase systemDatabase)
         {
-            var key = Constants.Monitoring.Snmp.DatabaseMappingDocumentPrefix + databaseName + "/" + mappingDocumentType;
-
-            var mappingDocument = systemDatabase.Documents.Get(key, null) ?? new JsonDocument();
-
-            RavenJToken value;
-            if (mappingDocument.DataAsJson.TryGetValue(name, out value))
-                return value.Value<int>();
-
-            var index = 0L;
-            systemDatabase.TransactionalStorage.Batch(actions =>
+            var tries = 0;
+            while (true)
             {
-                mappingDocument.DataAsJson[name] = index = actions.General.GetNextIdentityValue(key);
-                systemDatabase.Documents.Put(key, null, mappingDocument.DataAsJson, mappingDocument.Metadata, null);
-            });
+                try
+                {
+                    var key = Constants.Monitoring.Snmp.DatabaseMappingDocumentPrefix + databaseName + "/" + mappingDocumentType;
 
-            return index;
+                    var mappingDocument = systemDatabase.Documents.Get(key, null) ?? new JsonDocument();
+
+                    RavenJToken value;
+                    if (mappingDocument.DataAsJson.TryGetValue(name, out value))
+                        return value.Value<int>();
+
+                    var index = 0L;
+                    systemDatabase.TransactionalStorage.Batch(actions =>
+                    {
+                        mappingDocument.DataAsJson[name] = index = actions.General.GetNextIdentityValue(key);
+                        systemDatabase.Documents.Put(key, null, mappingDocument.DataAsJson, mappingDocument.Metadata, null);
+                    });
+
+                    return index;
+                }
+                catch (Exception e)
+                {
+                    Exception _;
+                    if (TransactionalStorageHelper.IsWriteConflict(e, out _) == false || tries >= 5)
+                        throw;
+
+                    Thread.Sleep(13);
+                }
+                finally
+                {
+                    tries++;
+                }
+            }
         }
 
         private enum MappingDocumentType

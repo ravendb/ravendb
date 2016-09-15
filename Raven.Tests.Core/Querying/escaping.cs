@@ -26,7 +26,8 @@ namespace Raven.Tests.Core.Querying
                 {
                     session.Store( new Employee() {Name = "Grisha Kotler", WorksAt = "Hibernating - Rhinos" });
                     session.SaveChanges();
-                    var employee = session.Query<Employee>().FirstOrDefault(x => x.WorksAt.Equals("Hibernating - Rhinos"));
+
+                    var employee = session.Query<Employee>().Customize(x=>x.WaitForNonStaleResults()).FirstOrDefault(x => x.WorksAt.Equals("Hibernating - Rhinos"));
                     Assert.Equal(employee?.Name, "Grisha Kotler");
                 }                            
             }

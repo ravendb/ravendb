@@ -392,15 +392,18 @@ namespace Raven.Tests.Issues
 
                 sourceReplicationTask.IndexReplication.Execute();
 
-                destinationDatabase.SpinBackgroundWorkers();
-                WaitForIndexing(destination);
+                var indexDefinition = destinationDatabase.Indexes.Definitions.First(x => x.Name == Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
+                destinationDatabase.IndexReplacer.ForceReplacement(indexDefinition);
 
                 //wait until the index will be replaced
                 SpinWait.SpinUntil(() =>
                 {
                     var index = destinationDatabase.Indexes.GetIndexDefinition(testIndex.IndexName);
                     return index != null;
-                }, 15000);
+                }, 5000);
+
+                var replacingIndex = destinationDatabase.Indexes.GetIndexDefinition(testIndex.IndexName);
+                Assert.True(replacingIndex != null);
 
                 var oldIndex = destinationDatabase.Indexes.GetIndexDefinition(testIndex.IndexName);
                 Assert.True(oldIndex.Equals(testIndex.CreateIndexDefinition(), false));

@@ -894,7 +894,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
         {
             try
             {
-                Database.Indexes.PutIndex(indexName, indexToUpdate);
+                Database.Indexes.PutIndex(indexName, indexToUpdate, isReplication: true);
                 return GetMessageWithObject(new
                 {
                     Index = indexToUpdate.Name,

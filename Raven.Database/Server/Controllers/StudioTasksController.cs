@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using CsvHelper;
 using Jint;
 using Jint.Parser;
 using Raven.Abstractions;
@@ -121,7 +122,7 @@ for(var customFunction in customFunctions) {{
             DriveInfo.GetDrives().ForEach(drive => rootPathToDriveInfo[drive.RootDirectory.FullName] = drive);
             DriveInfo tempFolderDrive;
             if (!rootPathToDriveInfo.TryGetValue(tempRoot, out tempFolderDrive) ||
-                tempFolderDrive.AvailableFreeSpace - (long) (tempFolderDrive.TotalSize*0.1) < fileSize)
+                tempFolderDrive.AvailableFreeSpace - (long)(tempFolderDrive.TotalSize * 0.1) < fileSize)
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
 
             return GetEmptyMessage();
@@ -189,12 +190,12 @@ for(var customFunction in customFunctions) {{
                         if (filtersPipeDelimited != null)
                         {
                             smugglerOptions.Filters.AddRange(filtersPipeDelimited
-                                .Split(new[] {"|||"}, StringSplitOptions.RemoveEmptyEntries)
-                                .Select(f => f.Split(new[] {";;;"}, StringSplitOptions.RemoveEmptyEntries))
-                                .Select(o => new FilterSetting {Path = o[0], Values = new List<string> {o[1]}, ShouldMatch = bool.Parse(o[2])}));
+                                .Split(new[] { "|||" }, StringSplitOptions.RemoveEmptyEntries)
+                                .Select(f => f.Split(new[] { ";;;" }, StringSplitOptions.RemoveEmptyEntries))
+                                .Select(o => new FilterSetting { Path = o[0], Values = new List<string> { o[1] }, ShouldMatch = bool.Parse(o[2]) }));
                         }
 
-                        await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> {FromStream = fileStream}).ConfigureAwait(false);
+                        await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = fileStream }).ConfigureAwait(false);
                     }
                     // use the last status which contains info about amount of doc/indexes imported
                     status.MarkCompleted(status.State.Value<string>("Progress"));
@@ -262,7 +263,7 @@ for(var customFunction in customFunctions) {{
             using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
             {
                 var serializer = JsonExtensions.CreateDefaultJsonSerializer();
-                smugglerOptions = (SmugglerDatabaseOptions) serializer.Deserialize(jsonReader, typeof (SmugglerDatabaseOptions));
+                smugglerOptions = (SmugglerDatabaseOptions)serializer.Deserialize(jsonReader, typeof(SmugglerDatabaseOptions));
             }
 
             var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefaultFileName) || (smugglerOptions.NoneDefaultFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
@@ -343,10 +344,10 @@ for(var customFunction in customFunctions) {{
                 return GetMessageWithString("You cannot create sample data in a database that already contains documents", HttpStatusCode.BadRequest);
             }
 
-            using (var sampleData = typeof (StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
+            using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
             {
-                var dataDumper = new DatabaseDataDumper(Database) {Options = {OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false}};
-                await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> {FromStream = sampleData}).ConfigureAwait(false);
+                var dataDumper = new DatabaseDataDumper(Database) { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false } };
+                await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = sampleData }).ConfigureAwait(false);
             }
 
             return GetEmptyMessage();
@@ -447,7 +448,7 @@ for(var customFunction in customFunctions) {{
         [RavenRoute("databases/{databaseName}/studio-tasks/createSampleDataClass")]
         public Task<HttpResponseMessage> CreateSampleDataClass()
         {
-            using (var sampleData = typeof (StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.NorthwindHelpData.cs"))
+            using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.NorthwindHelpData.cs"))
             {
                 if (sampleData == null)
                     return GetEmptyMessageAsTask();
@@ -512,7 +513,7 @@ for(var customFunction in customFunctions) {{
         public HttpResponseMessage GetLatestServerBuildVersion(bool stableOnly = true, int min = 35000, int max = 39999)
         {
             var args = string.Format("stableOnly={0}&min={1}&max={2}", stableOnly, min, max);
-            var request = (HttpWebRequest) WebRequest.Create("http://hibernatingrhinos.com/downloads/ravendb/latestVersion?" + args);
+            var request = (HttpWebRequest)WebRequest.Create("http://hibernatingrhinos.com/downloads/ravendb/latestVersion?" + args);
             try
             {
                 request.Timeout = 5000;
@@ -522,12 +523,12 @@ for(var customFunction in customFunctions) {{
                     var result = new StreamReader(stream).ReadToEnd();
                     var parts = result.Split('-');
                     var build = int.Parse(parts[0]);
-                    return GetMessageWithObject(new {LatestBuild = build});
+                    return GetMessageWithObject(new { LatestBuild = build });
                 }
             }
             catch (Exception e)
             {
-                return GetMessageWithObject(new {Exception = e.Message});
+                return GetMessageWithObject(new { Exception = e.Message });
             }
         }
 
@@ -572,14 +573,14 @@ for(var customFunction in customFunctions) {{
         private Task FlushBatch(IEnumerable<RavenJObject> batch)
         {
             var commands = (from doc in batch
-                let metadata = doc.Value<RavenJObject>("@metadata")
-                let removal = doc.Remove("@metadata")
-                select new PutCommandData
-                {
-                    Metadata = metadata,
-                    Document = doc,
-                    Key = metadata.Value<string>("@id")
-                }).ToArray();
+                            let metadata = doc.Value<RavenJObject>("@metadata")
+                            let removal = doc.Remove("@metadata")
+                            select new PutCommandData
+                            {
+                                Metadata = metadata,
+                                Document = doc,
+                                Key = metadata.Value<string>("@id")
+                            }).ToArray();
 
             Database.Batch(commands, CancellationToken.None);
             return new CompletedTask();
@@ -603,7 +604,7 @@ for(var customFunction in customFunctions) {{
         {
             const int csvImportBatchSize = 512;
 
-            if (!Request.Content.IsMimeMultipartContent())
+            if (Request.Content.IsMimeMultipartContent() == false)
                 throw new Exception(); // divided by zero
 
             var provider = new MultipartMemoryStreamProvider();
@@ -613,12 +614,16 @@ for(var customFunction in customFunctions) {{
             {
                 var filename = file.Headers.ContentDisposition.FileName.Trim('\"');
 
-                var stream = await file.ReadAsStreamAsync().ConfigureAwait(false);
-
-                using (var csvReader = new TextFieldParser(stream))
+                using (var stream = await file.ReadAsStreamAsync().ConfigureAwait(false))
+                using (var textReader = new StreamReader(stream))
+                using (var csvReader = new CsvReader(textReader))
                 {
-                    csvReader.SetDelimiters(",");
-                    var headers = csvReader.ReadFields();
+                    csvReader.Configuration.Delimiter = ",";
+
+                    if (csvReader.Read() == false)
+                        return GetEmptyMessage();
+
+                    var headers = csvReader.FieldHeaders;
                     var entity =
                         Inflector.Pluralize(CSharpClassName.ConvertToValidClassName(Path.GetFileNameWithoutExtension(filename)));
                     if (entity.Length > 0 && char.IsLower(entity[0]))
@@ -627,15 +632,15 @@ for(var customFunction in customFunctions) {{
                     var totalCount = 0;
                     var batch = new List<RavenJObject>();
 
-                    var validColumnIndexes = headers.Select((h, i) => new {Header = h, Index = i})
+                    var validColumnIndexes = headers.Select((h, i) => new { Header = h, Index = i })
                         .Where(x => x.Header.StartsWith("@") == false)
                         .Select(s => s.Index)
                         .ToArray();
 
                     batch.Clear();
-                    while (csvReader.EndOfData == false)
+                    do
                     {
-                        var record = csvReader.ReadFields();
+                        var record = csvReader.CurrentRecord;
                         var document = new RavenJObject();
                         string id = null;
                         RavenJObject metadata = null;
@@ -664,12 +669,11 @@ for(var customFunction in customFunctions) {{
                             }
                             else
                             {
-                                document[column] = SetValueInDocument(value);
+                                SetValueInDocumentForColumn(document, column, value);
                             }
                         }
 
-
-                        metadata = metadata ?? new RavenJObject {{"Raven-Entity-Name", entity}};
+                        metadata = metadata ?? new RavenJObject { { "Raven-Entity-Name", entity } };
                         document.Add("@metadata", metadata);
                         metadata.Add("@id", id ?? Guid.NewGuid().ToString());
 
@@ -681,7 +685,7 @@ for(var customFunction in customFunctions) {{
                             await FlushBatch(batch).ConfigureAwait(false);
                             batch.Clear();
                         }
-                    }
+                    } while (csvReader.Read());
 
                     if (batch.Count > 0)
                     {
@@ -691,6 +695,31 @@ for(var customFunction in customFunctions) {{
             }
 
             return GetEmptyMessage();
+        }
+
+        private static void SetValueInDocumentForColumn(RavenJObject document, string column, string value)
+        {
+            RavenJObject targetObject = document;
+            string targetProperty = column;
+
+            if (targetProperty.Contains('.'))
+            {
+                var innerProps = column.Split('.');
+                for (int i = 0; i < innerProps.Length - 1; i++)
+                {
+                    RavenJToken innerObject;
+                    targetProperty = innerProps[i];
+
+                    if (targetObject.TryGetValue(targetProperty, out innerObject) == false)
+                        targetObject[targetProperty] = innerObject = new RavenJObject();
+
+                    targetObject = (RavenJObject)innerObject;
+                }
+
+                targetProperty = innerProps[innerProps.Length - 1];
+            }
+
+            targetObject[targetProperty] = ParseToken(value);
         }
 
         [HttpGet]
@@ -718,9 +747,9 @@ for(var customFunction in customFunctions) {{
             {
                 var result = Database
                     .Queries
-                    .Query(Constants.DocumentsByEntityNameIndex, new IndexQuery {Query = "Tag:" + collectionName, PageSize = 0}, CancellationToken.None);
+                    .Query(Constants.DocumentsByEntityNameIndex, new IndexQuery { Query = "Tag:" + collectionName, PageSize = 0 }, CancellationToken.None);
 
-                results.Add(new CollectionNameAndCount {CollectionName = collectionName, Count = result.TotalResults});
+                results.Add(new CollectionNameAndCount { CollectionName = collectionName, Count = result.TotalResults });
             });
 
             return GetMessageWithObjectAsTask(results);
@@ -746,7 +775,7 @@ for(var customFunction in customFunctions) {{
                 using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, Database.WorkContext.CancellationToken))
                 {
                     bool stale;
-                    foreach (var documentId in Database.Queries.QueryDocumentIds("Raven/ConflictDocuments", new IndexQuery {PageSize = int.MaxValue}, linked, out stale))
+                    foreach (var documentId in Database.Queries.QueryDocumentIds("Raven/ConflictDocuments", new IndexQuery { PageSize = int.MaxValue }, linked, out stale))
                     {
                         var conflicts = accessor
                             .Documents
@@ -833,7 +862,7 @@ for(var customFunction in customFunctions) {{
             return GetEmptyMessage(HttpStatusCode.NoContent);
         }
 
-        private static RavenJToken SetValueInDocument(string value)
+        private static RavenJToken ParseToken(string value)
         {
             if (string.IsNullOrEmpty(value))
                 return value;

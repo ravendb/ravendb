@@ -55,6 +55,11 @@ namespace Raven.Database.Server.Controllers
             if (Database == null)
                 return GetEmptyMessage(HttpStatusCode.NotFound);
 
+            if (CanExposeConfigOverTheWire() == false && Database.Configuration.Studio.AllowNonAdminUsersToSetupPeriodicExport == false)
+            {
+                return GetEmptyMessage(HttpStatusCode.Forbidden);
+            }
+
             var configurationSettings = Database.ConfigurationRetriever.GetConfigurationSettings(GetQueryStringValues("key"));
             if (configurationSettings == null)
                 return GetEmptyMessage(HttpStatusCode.NotFound);

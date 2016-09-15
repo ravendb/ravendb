@@ -406,10 +406,10 @@ namespace Raven.Database.Indexing
 
                 var parallelProcessingStart = SystemTime.UtcNow;
 
-                if (context.Database.ReducingThreadPool == null)
+                if (context.Database.ThreadPool == null || context.RunReducing==false)
                     throw new OperationCanceledException();
 
-                context.Database.ReducingThreadPool.ExecuteBatch(keysToReduce, enumerator =>
+                context.Database.ThreadPool.ExecuteBatch(keysToReduce, enumerator =>
                 {
                     var parallelStats = new ParallelBatchStats
                     {
@@ -530,7 +530,7 @@ namespace Raven.Database.Indexing
 
                         parallelOperations.Enqueue(parallelStats);
                     }
-                }, description: $"Performing single step reduction for index {index.Index.PublicName} from etag {index.Index.GetLastEtagFromStats()} for {keysToReduce.Count} keys");
+                }, description: $"Performing single step reduction for index {index.Index.PublicName} from etag {index.Index.GetLastEtagFromStats()} for {keysToReduce.Count} keys", database: context.Database);
 
                 reduceLevelStats.Operations.Add(new ParallelPerformanceStats
                 {
@@ -682,12 +682,12 @@ namespace Raven.Database.Indexing
 
                 reducingBatchInfo = context.ReportReducingBatchStarted(indexesToWorkOn.Select(x => x.Index.PublicName).ToList());
 
-                if (context.Database.ReducingThreadPool == null)
+                if (context.Database.ThreadPool == null || context.RunReducing == false)
                     throw new OperationCanceledException();
 
                 var oomeErrorsCount = indexesToWorkOn.Select(x => x.Index).Sum(x => x.OutOfMemoryErrorsCount);
 
-                context.Database.ReducingThreadPool.ExecuteBatch(indexesToWorkOn, indexToWorkOn =>
+                context.Database.ThreadPool.ExecuteBatch(indexesToWorkOn, indexToWorkOn =>
                 {
                     if (currentlyProcessedIndexes.TryAdd(indexToWorkOn.IndexId, indexToWorkOn.Index) == false)
                     {
@@ -712,7 +712,7 @@ namespace Raven.Database.Indexing
                         currentlyProcessedIndexes.TryRemove(indexToWorkOn.IndexId, out _);
                     }
                 }, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, 
-                    description: $"Executing indexes reduction on {indexesToWorkOn.Count} indexes");
+                    description: $"Executing indexes reduction on {indexesToWorkOn.Count} indexes", database:context.Database);
             }
             finally
             {

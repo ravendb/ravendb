@@ -27,10 +27,10 @@ namespace Raven.Database.Server.Controllers
         public string DatabaseName
         {
             get
-        {
+            {
                 return ResourceName;
+            }
         }
-                    }
 
         public DocumentDatabase Database
         {
@@ -38,7 +38,7 @@ namespace Raven.Database.Server.Controllers
             {
                 return Resource;
             }
-            }
+        }
 
         public override ResourceType ResourceType
         {
@@ -46,20 +46,20 @@ namespace Raven.Database.Server.Controllers
             {
                 return ResourceType.Database;
             }
-            }
+        }
 
         public override void MarkRequestDuration(long duration)
-            {
+        {
             if (Resource == null)
                 return;
             Resource.WorkContext.MetricsCounters.RequestDurationMetric.Update(duration);
             Resource.WorkContext.MetricsCounters.RequestDurationLastMinute.AddRecord(duration);
-            }
+        }
 
         private string queryFromPostRequest;
 
         public void SetPostRequestQuery(string query)
-            {
+        {
             queryFromPostRequest = EscapingHelper.UnescapeLongDataString(query);
         }
 
@@ -71,7 +71,7 @@ namespace Raven.Database.Server.Controllers
                 Configuration = other.Configuration;
             ControllerContext = other.ControllerContext;
             ActionContext = other.ActionContext;
-            }
+        }
 
         public override HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
         {
@@ -108,7 +108,7 @@ namespace Raven.Database.Server.Controllers
             var parts = txInfo.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length != 2)
                 throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss'");
-            
+
             return new TransactionInformation
             {
                 Id = parts[0],
@@ -175,7 +175,7 @@ namespace Raven.Database.Server.Controllers
             if (!double.TryParse(GetQueryStringValue("distErrPrc"), NumberStyles.Any, CultureInfo.InvariantCulture, out distanceErrorPct))
                 distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
             SpatialRelation spatialRelation;
-            
+
             if (Enum.TryParse(GetQueryStringValue("spatialRelation"), false, out spatialRelation) && !string.IsNullOrWhiteSpace(queryShape))
             {
                 return new SpatialIndexQuery(query)
@@ -292,7 +292,7 @@ namespace Raven.Database.Server.Controllers
 
                     yield return highlightedField;
                 }
-                else 
+                else
                     throw new BadRequestException("Could not parse highlight query parameter as field highlight options");
             }
         }
@@ -319,7 +319,7 @@ namespace Raven.Database.Server.Controllers
             if (!bool.TryParse(GetQueryStringValue("overwriteExisting"), out result))
             {
                 // Check legacy key.
-                bool.TryParse(GetQueryStringValue("checkForUpdates"), out result);         
+                bool.TryParse(GetQueryStringValue("checkForUpdates"), out result);
             }
 
             return result;
@@ -485,7 +485,7 @@ namespace Raven.Database.Server.Controllers
             List<string> approvedResources = null;
             if (SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
             {
-                var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
+                var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
                 HttpResponseMessage authMsg;
                 if (authorizer.TryAuthorize(this, out authMsg) == false)
@@ -564,7 +564,7 @@ namespace Raven.Database.Server.Controllers
                 {
                     Remark = "Using windows auth",
                     User = windowsPrincipal.Identity.Name,
-                    IsAdminGlobal = windowsPrincipal.IsAdministrator("<system>") || 
+                    IsAdminGlobal = windowsPrincipal.IsAdministrator("<system>") ||
                                     windowsPrincipal.IsAdministrator(anonymousUserAccessMode)
                 };
 
@@ -580,7 +580,7 @@ namespace Raven.Database.Server.Controllers
                 {
                     Remark = "Using windows auth",
                     User = principalWithDatabaseAccess.Identity.Name,
-                    IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator("<system>") || 
+                    IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator("<system>") ||
                                     principalWithDatabaseAccess.IsAdministrator(anonymousUserAccessMode),
                     IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Resource),
                     Databases =
@@ -593,7 +593,7 @@ namespace Raven.Database.Server.Controllers
                                                        IsAdmin = principal.IsAdministrator(db),
                                                        IsReadOnly = principal.IsReadOnly(db),
                                                    }).ToList(),
-            
+
                     AdminDatabases = principalWithDatabaseAccess.AdminDatabases,
                     ReadOnlyDatabases = principalWithDatabaseAccess.ReadOnlyDatabases,
                     ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
@@ -607,7 +607,7 @@ namespace Raven.Database.Server.Controllers
             var oAuthPrincipal = principal as OAuthPrincipal;
             if (oAuthPrincipal != null)
             {
-        
+
                 var oAuth = new UserInfo
                 {
                     Remark = "Using OAuth",
@@ -622,7 +622,7 @@ namespace Raven.Database.Server.Controllers
                                                   IsReadOnly = db.ReadOnly
 
                                               } : null).ToList(),
-                    
+
                     AccessTokenBody = oAuthPrincipal.TokenBody,
 
                     AdminDatabases = oAuthPrincipal.AdminDatabases,

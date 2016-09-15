@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -9,6 +11,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Client.Document;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Server;
 using Raven.Smuggler;
 using Raven.Tests.Common;
@@ -73,61 +76,81 @@ namespace Raven.SlowTests.Issues
         {
             var existingData = new List<DummyDataEntry>();
             var backupFolder = new DirectoryInfo(Path.GetTempPath() + "\\periodic_backup_" + Guid.NewGuid());
-            if (!backupFolder.Exists)
+            if (backupFolder.Exists == false)
                 backupFolder.Create();
 
-            documentStore.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+            try
             {
-                Id = "SourceDB",
-                Settings =
+                documentStore.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
                 {
-                    {"Raven/ActiveBundles", "PeriodicBackup"},
-                    {"Raven/DataDir", "~\\Databases\\SourceDB"}
-                }
-            });
+                    Id = "SourceDB",
+                    Settings =
+                    {
+                        {"Raven/ActiveBundles", "PeriodicBackup"},
+                        {"Raven/DataDir", "~\\Databases\\SourceDB"}
+                    }
+                });
 
-            documentStore.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
-            {
-                Id = "DestDB",
-                Settings = {{"Raven/DataDir", "~\\Databases\\DestDB"}}
-            });
-            //setup periodic export
-            using (var session = documentStore.OpenSession("SourceDB"))
-            {
-                session.Store(new PeriodicExportSetup {LocalFolderName = backupFolder.FullName, IntervalMilliseconds = 500},
-                    PeriodicExportSetup.RavenDocumentKey);
-                session.SaveChanges();
-            }
-
-            //now enter dummy data
-            using (var session = documentStore.OpenSession())
-            {
-                for (int i = 0; i < 10000; i++)
+                documentStore.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
                 {
-                    var dummyDataEntry = new DummyDataEntry {Id = "Dummy/" + i, Data = "Data-" + i};
-                    existingData.Add(dummyDataEntry);
-                    session.Store(dummyDataEntry);
-                }
-                session.SaveChanges();
-            }
-
-            var connection = new RavenConnectionStringOptions {Url = documentStore.Url, DefaultDatabase = "DestDB"};
-            var smugglerApi = new SmugglerDatabaseApi { Options = { Incremental = true } };
-            await smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = backupFolder.FullName, To = connection });
-
-            using (var session = documentStore.OpenSession())
-            {
-                var fetchedData = new List<DummyDataEntry>();
-                using (var streamingQuery = session.Advanced.Stream<DummyDataEntry>("Dummy/"))
+                    Id = "TestDB",
+                    Settings = {{"Raven/DataDir", "~\\Databases\\TestDB"}}
+                });
+                
+                //now enter dummy data
+                using (var session = documentStore.OpenSession("SourceDB"))
                 {
-                    while (streamingQuery.MoveNext())
-                        fetchedData.Add(streamingQuery.Current.Document);
+                    for (int i = 0; i < 10000; i++)
+                    {
+                        var dummyDataEntry = new DummyDataEntry {Id = "Dummy/" + i, Data = "Data-" + i};
+                        existingData.Add(dummyDataEntry);
+                        session.Store(dummyDataEntry);
+                    }
+                    session.SaveChanges();
                 }
 
-                Assert.Equal(existingData.Count, fetchedData.Count);
-                Assert.True(existingData.Select(row => row.Data).ToHashSet().SetEquals(fetchedData.Select(row => row.Data)));
-            }
+                var etag = documentStore.DatabaseCommands.ForDatabase("SourceDB").Get("Dummy/9999").Etag;
+                //setup periodic export
+                using (var session = documentStore.OpenSession("SourceDB"))
+                {
+                    session.Store(new PeriodicExportSetup { LocalFolderName = backupFolder.FullName, IntervalMilliseconds = 500 },
+                        PeriodicExportSetup.RavenDocumentKey);
+                    session.SaveChanges();
+                }
 
+                var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(5);
+                SpinWait.SpinUntil(() =>
+                {
+                    var doc = documentStore.DatabaseCommands.ForDatabase("SourceDB").Get(PeriodicExportStatus.RavenDocumentKey);
+                    return doc != null && doc.Etag == etag;
+                }, timeout);
+                
+                var connection = new RavenConnectionStringOptions {Url = documentStore.Url, DefaultDatabase = "TestDB" };
+                var smugglerApi = new SmugglerDatabaseApi { Options = { Incremental = false } };
+
+                var actualBackupPath = Directory.GetDirectories(backupFolder.FullName)[0];
+                var fullBackupFilePath = Directory.GetFiles(actualBackupPath).FirstOrDefault(x => x.Contains("full"));
+                Assert.NotNull(fullBackupFilePath);
+                
+                await smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = fullBackupFilePath, To = connection });
+
+                using (var session = documentStore.OpenSession("TestDB"))
+                {
+                    var fetchedData = new List<DummyDataEntry>();
+                    using (var streamingQuery = session.Advanced.Stream<DummyDataEntry>("Dummy/"))
+                    {
+                        while (streamingQuery.MoveNext())
+                            fetchedData.Add(streamingQuery.Current.Document);
+                    }
+
+                    Assert.Equal(existingData.Count, fetchedData.Count);
+                    Assert.True(existingData.Select(row => row.Data).ToHashSet().SetEquals(fetchedData.Select(row => row.Data)));
+                }
+            }
+            finally
+            {
+                IOExtensions.DeleteDirectory(backupFolder.FullName);
+            }
         }
     }
 }

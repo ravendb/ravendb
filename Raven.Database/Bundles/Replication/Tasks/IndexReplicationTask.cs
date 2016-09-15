@@ -378,16 +378,17 @@ namespace Raven.Database.Bundles.Replication.Tasks
                 {
                     ReplicateSingleSideBySideIndex(destination, definition, sideBySideIndexDefinition);
                 }
-            }
-            else
-            {
-                foreach (var destination in destinations)
-                {
-                    var instance = Database.IndexStorage.GetIndexInstance(definition.Name);
-                    if (instance == null)
-                        continue;
 
-                    ReplicateIndexesMultiPut(destination, new List<IndexToAdd>
+                return;
+            }
+
+            foreach (var destination in destinations)
+            {
+                var instance = Database.IndexStorage.GetIndexInstance(definition.Name);
+                if (instance == null)
+                    continue;
+
+                ReplicateIndexesMultiPut(destination, new List<IndexToAdd>
                     {
                         new IndexToAdd
                         {
@@ -396,7 +397,6 @@ namespace Raven.Database.Bundles.Replication.Tasks
                             Priority = instance.Priority
                         }
                     });
-                }
             }
         }
 
@@ -406,31 +406,9 @@ namespace Raven.Database.Bundles.Replication.Tasks
             switch (notification.Type)
             {
                 case IndexChangeTypes.IndexAdded:
-                    if (notification.Version.HasValue == false)
-                        return;
-
-                    //if created index with the same name as deleted one, we should prevent its deletion replication
-                    Database.TransactionalStorage.Batch(
-                        accessor =>
-                        {
-                            var li = accessor.Lists.Read(Constants.RavenReplicationIndexesTombstones, indexName);
-                            if (li == null)
-                                return;
-
-                            int version;
-                            var versionStr = li.Data.Value<string>("IndexVersion");
-                            if (int.TryParse(versionStr, out version))
-                            {
-                                if (version < notification.Version.Value)
-                                {
-                                    accessor.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexName);
-                                }
-                            }
-                            else
-                            {
-                                Log.Error("Failed to parse index version of index {0}", indexName);
-                            }					        
-                        });
+                    //if we created index with the same name as deleted one, we should prevent its deletion replication
+                    Database.TransactionalStorage.Batch(accessor => 
+                        accessor.Lists.Remove(Constants.RavenReplicationIndexesTombstones, indexName));
                     break;
                 case IndexChangeTypes.IndexRemoved:
                     var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(indexName);
@@ -463,7 +441,7 @@ namespace Raven.Database.Bundles.Replication.Tasks
         private void ReplicateIndexesMultiPut(ReplicationStrategy destination, List<IndexToAdd> indexesToAdd)
         {
             var serializedIndexDefinitions = RavenJToken.FromObject(indexesToAdd.ToArray());
-            var url = string.Format("{0}/indexes?{1}", destination.ConnectionStringOptions.Url, GetDebugInformation());
+            var url = $"{destination.ConnectionStringOptions.Url}/indexes?{GetDebugInformation()}";
 
             var replicationRequest = HttpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, Replication.GetRequestBuffering(destination));
             replicationRequest.Write(serializedIndexDefinitions);
@@ -487,7 +465,7 @@ namespace Raven.Database.Bundles.Replication.Tasks
 
         private void ReplicateSingleSideBySideIndex(ReplicationStrategy destination, IndexDefinition indexDefinition, IndexDefinition sideBySideIndexDefinition)
         {
-            var url = string.Format("{0}/replication/side-by-side?{1}", destination.ConnectionStringOptions.Url, GetDebugInformation());
+            var url = $"{destination.ConnectionStringOptions.Url}/replication/side-by-side?{GetDebugInformation()}";
             IndexReplaceDocument indexReplaceDocument;
 
             try
