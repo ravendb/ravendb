@@ -841,7 +841,7 @@ interface smugglerOptionsDto {
     ShouldExcludeExpired: boolean;
     Filters: filterSettingDto[];
     TransformScript: string;
-    NoneDefualtFileName: string;
+    NoneDefaultFileName: string;
 }
 
 interface customColumnParamsDto {
@@ -1571,12 +1571,6 @@ interface filteredOutIndexStatDto {
 interface generatedCodeDto {
     Document: string;
     Code: string;
-}
-
-
-interface collectionsStatsDto {
-    NumberOfDocuments: number;
-    Collections: dictionary<number>;
 }
 
 

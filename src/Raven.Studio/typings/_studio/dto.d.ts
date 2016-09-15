@@ -24,3 +24,7 @@ interface menuItem {
 
 type dynamicHashType = KnockoutObservable<string> | (() => string);
 
+interface collectionsStatsDto {
+    NumberOfDocuments: number;
+    Collections: dictionary<number>;
+}

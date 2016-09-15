@@ -16,6 +16,16 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 {
     public class SmugglerHandler : DatabaseRequestHandler
     {
+
+        [RavenAction("/databases/*/smuggler/validateOptions", "POST")]
+        public Task PostValidateOptions()
+        {
+            //TODO: implement me!
+
+            
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/smuggler/export", "POST")]
         public Task PostExport()
         {

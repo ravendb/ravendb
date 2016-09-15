@@ -22,7 +22,6 @@ import customColumnParams = require("models/database/documents/customColumnParam
 import collectionsStats = require("models/database/documents/collectionsStats");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
 import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
 import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");

@@ -67,6 +67,7 @@ class downloader {
             });
     }
 
+    //TODO: this code is specific to export only, name is very misleading! - need to refactor
     private downloadStatusRetrieved(rs: resource, operationId: number, result: dataDumperOperationStatusDto,
         isDownloading: KnockoutObservable<boolean>, downloadStatus: KnockoutObservable<string>) {
         if (result.Completed) {
