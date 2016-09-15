@@ -7,16 +7,18 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using Xunit.Sdk;
 
 namespace SlowTests.Utils
 {
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    public class InlineDataWithRandomSeed : DataAttribute
+    public sealed class InlineDataWithRandomSeed : DataAttribute
     {
+        private static int _runs;
+
         public InlineDataWithRandomSeed(params object[] dataValues)
         {
-            this.DataValues = dataValues ?? new object[] {null};
+            DataValues = dataValues ?? new object[] { null };
         }
 
         public object[] DataValues { get; set; }
@@ -25,7 +27,14 @@ namespace SlowTests.Utils
         {
             var objects = new object[DataValues.Length + 1];
             Array.Copy(DataValues, 0, objects, 0, DataValues.Length);
-            objects[DataValues.Length] = Environment.TickCount;
+
+            // Using Environment.TickCount here is not appropiate, because
+            // tests are run in a multithreaded environment and this value is
+            // likely to be the same for all threads.
+            Interlocked.Increment(ref _runs);
+            var random = new Random(Environment.TickCount + _runs);
+            objects[DataValues.Length] = random.Next();
+
             yield return objects;
         }
     }

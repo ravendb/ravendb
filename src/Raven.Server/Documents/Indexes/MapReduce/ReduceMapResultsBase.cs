@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Json;
 using Voron;
@@ -19,6 +20,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public abstract unsafe class ReduceMapResultsBase<T> : IIndexingWork where T : IndexDefinitionBase
     {
+        public static readonly Slice PageNumberSlice = Slice.From(StorageEnvironment.LabelsContext, "PageNumber", ByteStringType.Immutable);
         private Logger _logger;
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
         protected readonly T _indexDefinition;
@@ -29,9 +31,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly TableSchema _reduceResultsSchema = new TableSchema()
             .DefineKey(new TableSchema.SchemaIndexDef
             {
-                Name = "PageNumber",
                 StartIndex = 0,
-                Count = 1
+                Count = 1,
+                Name = PageNumberSlice
             });
 
         protected ReduceMapResultsBase(T indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)

@@ -20,8 +20,7 @@ namespace FastTests.Voron.Tables
             {
                 Assert.Equal(expectedIndex.IsGlobal, actualIndex.IsGlobal);
                 Assert.Equal(expectedIndex.Count, actualIndex.Count);
-                Assert.Equal(expectedIndex.Name, actualIndex.Name);
-                Assert.True(SliceComparer.Equals(expectedIndex.NameAsSlice, actualIndex.NameAsSlice));
+                Assert.True(SliceComparer.Equals(expectedIndex.Name, actualIndex.Name));
                 Assert.Equal(expectedIndex.StartIndex, actualIndex.StartIndex);
                 Assert.Equal(expectedIndex.Type, actualIndex.Type);
             }
@@ -37,8 +36,7 @@ namespace FastTests.Voron.Tables
             else
             {
                 Assert.Equal(expectedIndex.IsGlobal, actualIndex.IsGlobal);
-                Assert.Equal(expectedIndex.Name, actualIndex.Name);
-                Assert.True(SliceComparer.Equals(expectedIndex.NameAsSlice, actualIndex.NameAsSlice));
+                Assert.True(SliceComparer.Equals(expectedIndex.Name, actualIndex.Name));
                 Assert.Equal(expectedIndex.StartIndex, actualIndex.StartIndex);
             }
         }
@@ -49,10 +47,10 @@ namespace FastTests.Voron.Tables
             SchemaIndexDefEqual(expected.Key, actual.Key);
             // Same keys for variable size indexes
             Assert.Equal(expected.Indexes.Keys.Count, actual.Indexes.Keys.Count);
-            Assert.Equal(expected.Indexes.Keys.Count, expected.Indexes.Keys.Intersect(actual.Indexes.Keys).Count());
+            Assert.Equal(expected.Indexes.Keys.Count, expected.Indexes.Keys.Intersect(actual.Indexes.Keys, SliceComparer.Instance).Count());
             // Same keys for fixed size indexes
             Assert.Equal(expected.FixedSizeIndexes.Keys.Count, actual.FixedSizeIndexes.Keys.Count);
-            Assert.Equal(expected.FixedSizeIndexes.Keys.Count, expected.FixedSizeIndexes.Keys.Intersect(actual.FixedSizeIndexes.Keys).Count());
+            Assert.Equal(expected.FixedSizeIndexes.Keys.Count, expected.FixedSizeIndexes.Keys.Intersect(actual.FixedSizeIndexes.Keys, SliceComparer.Instance).Count());
             // Same indexes
             foreach (var entry in expected.Indexes)
             {
@@ -76,8 +74,7 @@ namespace FastTests.Voron.Tables
                 {
                     StartIndex = 2,
                     Count = 1,
-                    Name = "Test Name",
-                    NameAsSlice = Slice.From(StorageEnvironment.LabelsContext, "Test Name", ByteStringType.Immutable)
+                    Name = Slice.From(tx.Allocator, "Test Name", ByteStringType.Immutable)
                 };
 
                 byte[] serialized = expectedIndex.Serialize();
@@ -87,29 +84,7 @@ namespace FastTests.Voron.Tables
                     var actualIndex = TableSchema.SchemaIndexDef.ReadFrom(tx.Allocator, serializedPtr, serialized.Length);
                     Assert.Equal(serialized, actualIndex.Serialize());
                     SchemaIndexDefEqual(expectedIndex, actualIndex);
-                }
-            }
-        }
-
-        [Fact]
-        public void CanSerializeNormalIndexWithoutName()
-        {
-            using (var tx = Env.WriteTransaction())
-            {
-                var expectedIndex = new TableSchema.SchemaIndexDef
-                {
-                    StartIndex = 3,
-                    Count = 5,
-                    NameAsSlice = Slice.From(StorageEnvironment.LabelsContext, "Test Name", ByteStringType.Immutable)
-                };
-
-                byte[] serialized = expectedIndex.Serialize();
-
-                fixed (byte* serializedPtr = serialized)
-                {
-                    var actualIndex = TableSchema.SchemaIndexDef.ReadFrom(tx.Allocator, serializedPtr, serialized.Length);
-                    Assert.Equal(serialized, actualIndex.Serialize());
-                    SchemaIndexDefEqual(expectedIndex, actualIndex);
+                    expectedIndex.Validate(actualIndex);
                 }
             }
         }
@@ -119,12 +94,11 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                var expectedIndex = new TableSchema.FixedSizeSchemaIndexDef()
+                var expectedIndex = new TableSchema.FixedSizeSchemaIndexDef
                 {
                     StartIndex = 2,
                     IsGlobal = true,
-                    Name = "Test Name 2",
-                    NameAsSlice = Slice.From(StorageEnvironment.LabelsContext, "Test Name 2", ByteStringType.Immutable)
+                    Name = Slice.From(tx.Allocator, "Test Name 2", ByteStringType.Immutable)
                 };
 
                 byte[] serialized = expectedIndex.Serialize();
@@ -134,29 +108,7 @@ namespace FastTests.Voron.Tables
                     var actualIndex = TableSchema.FixedSizeSchemaIndexDef.ReadFrom(tx.Allocator, serializedPtr, serialized.Length);
                     Assert.Equal(serialized, actualIndex.Serialize());
                     FixedSchemaIndexDefEqual(expectedIndex, actualIndex);
-                }
-            }
-        }
-
-        [Fact]
-        public void CanSerializeFixedIndexWithoutName()
-        {
-            using (var tx = Env.WriteTransaction())
-            {
-                var expectedIndex = new TableSchema.FixedSizeSchemaIndexDef()
-                {
-                    StartIndex = 2,
-                    IsGlobal = false,
-                    NameAsSlice = Slice.From(StorageEnvironment.LabelsContext, "Test Name 2", ByteStringType.Immutable)
-                };
-
-                byte[] serialized = expectedIndex.Serialize();
-
-                fixed (byte* serializedPtr = serialized)
-                {
-                    var actualIndex = TableSchema.FixedSizeSchemaIndexDef.ReadFrom(tx.Allocator, serializedPtr, serialized.Length);
-                    Assert.Equal(serialized, actualIndex.Serialize());
-                    FixedSchemaIndexDefEqual(expectedIndex, actualIndex);
+                    expectedIndex.Validate(actualIndex);
                 }
             }
         }
@@ -167,15 +119,17 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 var tableSchema = new TableSchema()
-                    .DefineIndex("Index 1", new TableSchema.SchemaIndexDef
+                    .DefineIndex(new TableSchema.SchemaIndexDef
                     {
                         StartIndex = 2,
                         Count = 1,
+                        Name = Slice.From(StorageEnvironment.LabelsContext, "Test Name 2", ByteStringType.Immutable)
                     })
-                    .DefineFixedSizeIndex("Index 2", new TableSchema.FixedSizeSchemaIndexDef()
+                    .DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef()
                     {
                         StartIndex = 2,
-                        IsGlobal = true
+                        IsGlobal = true,
+                        Name = Slice.From(StorageEnvironment.LabelsContext, "Test Name 1", ByteStringType.Immutable)
                     })
                     .DefineKey(new TableSchema.SchemaIndexDef
                     {
@@ -192,6 +146,7 @@ namespace FastTests.Voron.Tables
                     Assert.Equal(serialized, actualTableSchema.SerializeSchema());
                     // This checks that what was deserialized is correct
                     SchemaDefEqual(tableSchema, actualTableSchema);
+                    tableSchema.Validate(actualTableSchema);
                 }
             }
         }
@@ -202,20 +157,23 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 var tableSchema = new TableSchema()
-                    .DefineIndex("Index 1", new TableSchema.SchemaIndexDef
+                    .DefineIndex(new TableSchema.SchemaIndexDef
                     {
                         StartIndex = 2,
                         Count = 1,
+                        Name = Slice.From(StorageEnvironment.LabelsContext, "Test Name 1", ByteStringType.Immutable)
                     })
-                    .DefineIndex("Index 2", new TableSchema.SchemaIndexDef
+                    .DefineIndex(new TableSchema.SchemaIndexDef
                     {
                         StartIndex = 1,
                         Count = 1,
+                        Name = Slice.From(StorageEnvironment.LabelsContext, "Test Name 2", ByteStringType.Immutable)
                     })
-                    .DefineFixedSizeIndex("Index 3", new TableSchema.FixedSizeSchemaIndexDef()
+                    .DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef()
                     {
                         StartIndex = 2,
-                        IsGlobal = true
+                        IsGlobal = true,
+                        Name = Slice.From(StorageEnvironment.LabelsContext, "Test Name 3", ByteStringType.Immutable)
                     })
                     .DefineKey(new TableSchema.SchemaIndexDef
                     {
@@ -232,6 +190,7 @@ namespace FastTests.Voron.Tables
                     Assert.Equal(serialized, actualTableSchema.SerializeSchema());
                     // This checks that what was deserialized is correct
                     SchemaDefEqual(tableSchema, actualTableSchema);
+                    tableSchema.Validate(actualTableSchema);
                 }
             }
         }

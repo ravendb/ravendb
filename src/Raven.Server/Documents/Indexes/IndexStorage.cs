@@ -4,7 +4,6 @@ using System.Net;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Static;
@@ -21,6 +20,7 @@ namespace Raven.Server.Documents.Indexes
 {
     public class IndexStorage
     {
+
         protected readonly Logger _logger;
 
         private readonly Index _index;
@@ -51,11 +51,11 @@ namespace Raven.Server.Documents.Indexes
 
         private unsafe void CreateSchema()
         {
-            _errorsSchema.DefineIndex("ErrorTimestamps", new TableSchema.SchemaIndexDef
+            _errorsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
                 IsGlobal = true,
-                Name = "ErrorTimestamps"
+                Name = IndexSchema.ErrorTimestampsSlice
             });
 
             TransactionOperationContext context;
@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
-                foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slices.BeforeAllKeys))
+                foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys))
                 {
                     foreach (var tvr in sr.Results)
                     {
@@ -350,7 +350,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             var numberOfEntriesToDelete = table.NumberOfEntries - MaxNumberOfKeptErrors;
-            table.DeleteForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slices.BeforeAllKeys, numberOfEntriesToDelete);
+            table.DeleteForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys, numberOfEntriesToDelete);
         }
 
         public static IndexType ReadIndexType(int indexId, StorageEnvironment environment)
@@ -518,6 +518,8 @@ namespace Raven.Server.Documents.Indexes
             public static readonly Slice LastIndexingTimeSlice = Slice.From(StorageEnvironment.LabelsContext, "LastIndexingTime", ByteStringType.Immutable);
 
             public static readonly Slice PrioritySlice = Slice.From(StorageEnvironment.LabelsContext, "Priority", ByteStringType.Immutable);
+
+            public static readonly Slice ErrorTimestampsSlice = Slice.From(StorageEnvironment.LabelsContext, "ErrorTimestamps", ByteStringType.Immutable);
         }
 
         public StorageEnvironment Environment()
