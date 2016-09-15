@@ -354,7 +354,7 @@ namespace Voron.Trees
             var node = page.GetNode(0);
             Debug.Assert(node->Flags == (NodeFlags.PageRef));
 
-            var rootPage = _tx.GetReadOnlyPage(node->PageNumber);
+            var rootPage = _tx.ModifyPage(node->PageNumber, _tree, null);
             _tree.State.RootPageNumber = rootPage.PageNumber;
             _tree.State.Depth--;
 
