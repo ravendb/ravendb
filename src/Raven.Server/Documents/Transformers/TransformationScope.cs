@@ -15,13 +15,14 @@ namespace Raven.Server.Documents.Transformers
     {
         private readonly TransformerBase _transformer;
         private readonly DocumentsOperationContext _context;
+        private readonly bool _nested;
 
         public TransformationScope(TransformerBase transformer, BlittableJsonReaderObject transformerParameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, TransformerStore transformerStore, DocumentsOperationContext context, bool nested)
         {
             _transformer = transformer;
-
             _context = context;
-            if (nested == false)
+            _nested = nested;
+            if (_nested == false)
             {
                 Debug.Assert(CurrentTransformationScope.Current == null);
                 CurrentTransformationScope.Current = new CurrentTransformationScope(transformerParameters, include, documentsStorage, transformerStore, context);
@@ -36,7 +37,8 @@ namespace Raven.Server.Documents.Transformers
 
         public void Dispose()
         {
-            CurrentTransformationScope.Current = null;
+            if (_nested == false)
+                CurrentTransformationScope.Current = null;
         }
 
         public IEnumerable<dynamic> Transform(IEnumerable<dynamic> items)
