@@ -20,11 +20,11 @@ namespace Voron.Data.Tables
 
     public unsafe class TableSchema
     {
-        public static readonly Slice ActiveSection = Slice.From(StorageEnvironment.LabelsContext, "Active-Section", ByteStringType.Immutable);
-        public static readonly Slice InactiveSection = Slice.From(StorageEnvironment.LabelsContext, "Inactive-Section", ByteStringType.Immutable);
-        public static readonly Slice ActiveCandidateSection = Slice.From(StorageEnvironment.LabelsContext, "Active-Candidate-Section", ByteStringType.Immutable);
-        public static readonly Slice Stats = Slice.From(StorageEnvironment.LabelsContext, "Stats", ByteStringType.Immutable);
-        public static readonly Slice Schemas = Slice.From(StorageEnvironment.LabelsContext, "Schemas", ByteStringType.Immutable);
+        public static readonly Slice ActiveSectionSlice = Slice.From(StorageEnvironment.LabelsContext, "Active-Section", ByteStringType.Immutable);
+        public static readonly Slice InactiveSectionSlice = Slice.From(StorageEnvironment.LabelsContext, "Inactive-Section", ByteStringType.Immutable);
+        public static readonly Slice ActiveCandidateSectionSlice = Slice.From(StorageEnvironment.LabelsContext, "Active-Candidate-Section", ByteStringType.Immutable);
+        public static readonly Slice StatsSlice = Slice.From(StorageEnvironment.LabelsContext, "Stats", ByteStringType.Immutable);
+        public static readonly Slice SchemasSlice = Slice.From(StorageEnvironment.LabelsContext, "Schemas", ByteStringType.Immutable);
         public static readonly Slice PkSlice = Slice.From(StorageEnvironment.LabelsContext, "PK", ByteStringType.Immutable);
 
         private SchemaIndexDef _primaryKey;
@@ -47,7 +47,7 @@ namespace Voron.Data.Tables
             public int StartIndex = -1;
             public int Count = -1;
             public bool IsGlobal;
-            public Slice NameAsSlice;
+            public Slice Name;
 
             public Slice GetSlice(ByteStringContext context, TableValueReader value)
             {
@@ -91,7 +91,7 @@ namespace Voron.Data.Tables
                                 startIndex,
                                 count,
                                 isGlobal,
-                                NameAsSlice
+                                Name
                             };
 
                     byte[] serialized = new byte[serializer.Size];
@@ -125,9 +125,40 @@ namespace Voron.Data.Tables
                 indexDef.IsGlobal = Convert.ToBoolean(*currentPtr);
 
                 currentPtr = input.Read(4, out currentSize);
-                indexDef.NameAsSlice = Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable);
+                indexDef.Name = Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable);
 
                 return indexDef;
+            }
+
+            public void Validate(SchemaIndexDef actual)
+            {
+                if (actual == null)
+                    throw new ArgumentNullException(nameof(actual), "Expected an index but received null");
+
+                if (!SliceComparer.Equals(Name, actual.Name))
+                    throw new ArgumentException(
+                        $"Expected index to have Name='{Name}', got Name='{actual.Name}' instead",
+                        nameof(actual));
+
+                if (Type != actual.Type)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have Type='{Type}', got Type='{actual.Type}' instead",
+                        nameof(actual));
+
+                if (StartIndex != actual.StartIndex)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have StartIndex='{StartIndex}', got StartIndex='{actual.StartIndex}' instead",
+                        nameof(actual));
+
+                if (Count != actual.Count)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have Count='{Count}', got Count='{actual.Count}' instead",
+                        nameof(actual));
+
+                if (IsGlobal != actual.IsGlobal)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have IsGlobal='{IsGlobal}', got IsGlobal='{actual.IsGlobal}' instead",
+                        nameof(actual));
             }
         }
 
@@ -135,7 +166,7 @@ namespace Voron.Data.Tables
         {
             public int StartIndex = -1;
             public bool IsGlobal;
-            public Slice NameAsSlice;
+            public Slice Name;
 
             public long GetValue(TableValueReader value)
             {
@@ -153,7 +184,7 @@ namespace Voron.Data.Tables
                     {
                         startIndex,
                         isGlobal,
-                        NameAsSlice
+                        Name
                     };
 
                     byte[] serialized = new byte[serializer.Size];
@@ -180,41 +211,62 @@ namespace Voron.Data.Tables
                 output.IsGlobal = Convert.ToBoolean(*currentPtr);
 
                 currentPtr = input.Read(2, out currentSize);
-                output.NameAsSlice = Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable);
+                output.Name = Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable);
 
                 return output;
+            }
+
+            public void Validate(FixedSizeSchemaIndexDef actual)
+            {
+                if (actual == null)
+                    throw new ArgumentNullException(nameof(actual), "Expected an index but received null");
+
+                if (!SliceComparer.Equals(Name, actual.Name))
+                    throw new ArgumentException(
+                        $"Expected index to have Name='{Name}', got Name='{actual.Name}' instead",
+                        nameof(actual));
+
+                if (StartIndex != actual.StartIndex)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have StartIndex='{StartIndex}', got StartIndex='{actual.StartIndex}' instead",
+                        nameof(actual));
+
+                if (IsGlobal != actual.IsGlobal)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have IsGlobal='{IsGlobal}', got IsGlobal='{actual.IsGlobal}' instead",
+                        nameof(actual));
             }
         }        
 
         public TableSchema DefineIndex(SchemaIndexDef index)
         {
-            if (!index.NameAsSlice.HasValue || SliceComparer.Equals(Slices.Empty, index.NameAsSlice))
+            if (!index.Name.HasValue || SliceComparer.Equals(Slices.Empty, index.Name))
                 throw new ArgumentException("Index name must be non-empty", nameof(index));
 
-            _indexes[index.NameAsSlice] = index;
+            _indexes[index.Name] = index;
 
             return this;
         }
 
         public TableSchema DefineFixedSizeIndex(FixedSizeSchemaIndexDef index)
         {
-            if (!index.NameAsSlice.HasValue || SliceComparer.Equals(Slices.Empty, index.NameAsSlice))
+            if (!index.Name.HasValue || SliceComparer.Equals(Slices.Empty, index.Name))
                 throw new ArgumentException("Fixed size index name must be non-empty", nameof(index));
 
-            _fixedSizeIndexes[index.NameAsSlice] = index;
+            _fixedSizeIndexes[index.Name] = index;
 
             return this;
         }
 
         public TableSchema DefineKey(SchemaIndexDef index)
         {
-            bool hasEmptyName = !index.NameAsSlice.HasValue || SliceComparer.Equals(Slices.Empty, index.NameAsSlice);
+            bool hasEmptyName = !index.Name.HasValue || SliceComparer.Equals(Slices.Empty, index.Name);
 
             if (index.IsGlobal && hasEmptyName)
                 throw new ArgumentException("Name must be non empty for global index as primary key", nameof(index));
 
             if (hasEmptyName)
-                index.NameAsSlice = PkSlice;
+                index.Name = PkSlice;
 
             if (index.Count > 1)
                 throw new InvalidOperationException("Primary key must be a single field");
@@ -251,9 +303,9 @@ namespace Voron.Data.Tables
             var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name);
 
             Slice pageNumber = Slice.From(tx.Allocator, EndianBitConverter.Little.GetBytes(rawDataActiveSection.PageNumber), ByteStringType.Immutable);
-            tableTree.Add(ActiveSection, pageNumber);
+            tableTree.Add(ActiveSectionSlice, pageNumber);
             
-            var stats = (TableSchemaStats*)tableTree.DirectAdd(Stats, sizeof(TableSchemaStats));
+            var stats = (TableSchemaStats*)tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats));
             stats->NumberOfEntries = 0;
 
             if (_primaryKey != null)
@@ -261,12 +313,12 @@ namespace Voron.Data.Tables
                 if (_primaryKey.IsGlobal == false)
                 {
                     var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                    var treeHeader = tableTree.DirectAdd(_primaryKey.NameAsSlice, sizeof(TreeRootHeader));
+                    var treeHeader = tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader));
                     indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
                 }
                 else
                 {
-                    tx.CreateTree(_primaryKey.NameAsSlice.ToString());
+                    tx.CreateTree(_primaryKey.Name.ToString());
                 }
             }
 
@@ -275,18 +327,18 @@ namespace Voron.Data.Tables
                 if (indexDef.IsGlobal == false)
                 {
                     var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                    var treeHeader = tableTree.DirectAdd(indexDef.NameAsSlice, sizeof(TreeRootHeader));
+                    var treeHeader = tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader));
                     indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
                 }
                 else
                 {
-                    tx.CreateTree(indexDef.NameAsSlice.ToString());
+                    tx.CreateTree(indexDef.Name.ToString());
                 }
             }
 
             // Serialize the schema into the table's tree
             var serializer = SerializeSchema();
-            var schemaRepresentation = tableTree.DirectAdd(Schemas, serializer.Length);
+            var schemaRepresentation = tableTree.DirectAdd(SchemasSlice, serializer.Length);
 
             fixed (byte* source = serializer)
             {
@@ -300,9 +352,9 @@ namespace Voron.Data.Tables
         ///  1. Whether the schema has a primary key
         ///  2. The primary key (if present)
         ///  3. Number of composite indexes
-        ///  4. Key value pairs of the composite indexes
+        ///  4. Values of the composite indexes
         ///  5. Number of fixed size indexes
-        ///  6. Key value pairs of the fixed size indexes
+        ///  6. Values of the fixed size indexes
         /// </summary>
         /// <returns></returns>
         internal byte[] SerializeSchema()
@@ -395,6 +447,54 @@ namespace Voron.Data.Tables
             }
 
             return schema;
+        }
+
+        public void Validate(TableSchema actual)
+        {
+            if (actual == null)
+                throw new ArgumentNullException(nameof(actual), "Expected a schema but received null");
+
+            if (_primaryKey != null)
+                _primaryKey.Validate(actual._primaryKey);
+            else if (actual._primaryKey != null)
+                throw new ArgumentException(
+                    "Expected schema not to have a primary key",
+                    nameof(actual));
+
+            if (_indexes.Count != actual._indexes.Count)
+                throw new ArgumentException(
+                    "Expected schema to have the same number of variable size indexes, but it does not",
+                    nameof(actual));
+
+            foreach (var entry in _indexes)
+            {
+                SchemaIndexDef index;
+
+                if (!actual._indexes.TryGetValue(entry.Key, out index))
+                    throw new ArgumentException(
+                        $"Expected schema to have an index named {entry.Key}",
+                        nameof(actual));
+
+                entry.Value.Validate(index);
+            }
+
+            if (_fixedSizeIndexes.Count != actual._fixedSizeIndexes.Count)
+                throw new ArgumentException(
+                    "Expected schema to have the same number of fixed size indexes, but it does not",
+                    nameof(actual));
+
+            foreach (var entry in _fixedSizeIndexes)
+            {
+                FixedSizeSchemaIndexDef index;
+
+                if (!actual._fixedSizeIndexes.TryGetValue(entry.Key, out index))
+                    throw new ArgumentException(
+                        $"Expected schema to have an index named {entry.Key}",
+                        nameof(actual));
+
+                entry.Value.Validate(index);
+            }
+
         }
     }
 }

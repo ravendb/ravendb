@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 StartIndex = 0,
                 IsGlobal = true,
-                NameAsSlice = IndexSchema.ErrorTimestampsSlice
+                Name = IndexSchema.ErrorTimestampsSlice
             });
 
             TransactionOperationContext context;

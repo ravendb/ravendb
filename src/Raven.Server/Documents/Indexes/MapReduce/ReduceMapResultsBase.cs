@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 StartIndex = 0,
                 Count = 1,
-                NameAsSlice = PageNumberSlice
+                Name = PageNumberSlice
             });
 
         protected ReduceMapResultsBase(T indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)

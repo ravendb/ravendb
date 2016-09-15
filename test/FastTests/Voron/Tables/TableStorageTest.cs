@@ -13,8 +13,8 @@ namespace FastTests.Voron.Tables
 
     public class TableStorageTest : StorageTest
     {
-        public static readonly Slice Etags = Slice.From(StorageEnvironment.LabelsContext, "Etags", ByteStringType.Immutable);
-        public static readonly Slice EtagAndCollection = Slice.From(StorageEnvironment.LabelsContext, "Etag&Collection", ByteStringType.Immutable);
+        public static readonly Slice EtagsSlice = Slice.From(StorageEnvironment.LabelsContext, "Etags", ByteStringType.Immutable);
+        public static readonly Slice EtagAndCollectionSlice = Slice.From(StorageEnvironment.LabelsContext, "Etag&Collection", ByteStringType.Immutable);
 
         protected TableSchema DocsSchema;
 
@@ -27,13 +27,13 @@ namespace FastTests.Voron.Tables
                 {
                     StartIndex = 2,
                     Count = 1,
-                    NameAsSlice = Etags
+                    Name = EtagsSlice
                 })
                 .DefineIndex(new TableSchema.SchemaIndexDef
                 {
                     StartIndex = 1,
                     Count = 2,
-                    NameAsSlice = EtagAndCollection
+                    Name = EtagAndCollectionSlice
                 })
                 .DefineKey(new TableSchema.SchemaIndexDef
                 {

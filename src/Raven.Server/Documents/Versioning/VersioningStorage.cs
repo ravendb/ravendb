@@ -18,8 +18,8 @@ namespace Raven.Server.Documents.Versioning
 {
     public unsafe class VersioningStorage
     {
-        public static readonly Slice KeyAndEtag = Slice.From(StorageEnvironment.LabelsContext, "KeyAndEtag", ByteStringType.Immutable);
-        public static readonly Slice Etag = Slice.From(StorageEnvironment.LabelsContext, "Etag", ByteStringType.Immutable);
+        public static readonly Slice KeyAndEtagSlice = Slice.From(StorageEnvironment.LabelsContext, "KeyAndEtag", ByteStringType.Immutable);
+        public static readonly Slice EtagSlice = Slice.From(StorageEnvironment.LabelsContext, "Etag", ByteStringType.Immutable);
         private static Logger _logger;
 
         private static readonly TableSchema _docsSchema = CreateVersioningDocsSchema();
@@ -36,12 +36,12 @@ namespace Raven.Server.Documents.Versioning
             {
                 StartIndex = 0,
                 Count = 3,
-                NameAsSlice = KeyAndEtag
+                Name = KeyAndEtagSlice
             });
             schema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 2,
-                NameAsSlice = Etag
+                Name = EtagSlice
             });
             return schema;
         }
@@ -58,7 +58,6 @@ namespace Raven.Server.Documents.Versioning
             _versioningConfiguration = versioningConfiguration;
 
             _logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
-            
 
             using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
             {
@@ -191,7 +190,7 @@ namespace Raven.Server.Documents.Versioning
             if (numberOfRevisionsToDelete <= 0)
                 return;
 
-            var deletedRevisionsCount = table.DeleteForwardFrom(_docsSchema.Indexes[KeyAndEtag], prefixSlice, numberOfRevisionsToDelete);
+            var deletedRevisionsCount = table.DeleteForwardFrom(_docsSchema.Indexes[KeyAndEtagSlice], prefixSlice, numberOfRevisionsToDelete);
             Debug.Assert(numberOfRevisionsToDelete == deletedRevisionsCount);
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
         }
@@ -224,7 +223,7 @@ namespace Raven.Server.Documents.Versioning
             loweredKey.CopyTo(0, prefixKeyMem.Ptr, 0, loweredKey.Size);
             prefixKeyMem.Ptr[loweredKey.Size] = (byte)30; // the record separator
             var prefixSlice = new Slice(SliceOptions.Key, prefixKeyMem);
-            table.DeleteForwardFrom(_docsSchema.Indexes[KeyAndEtag], prefixSlice, long.MaxValue);
+            table.DeleteForwardFrom(_docsSchema.Indexes[KeyAndEtagSlice], prefixSlice, long.MaxValue);
             DeleteCountOfRevisions(context, prefixSlice);
         }
 
@@ -234,7 +233,7 @@ namespace Raven.Server.Documents.Versioning
 
             var prefixSlice = GetSliceFromKey(context, key);
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var sr in table.SeekForwardFrom(_docsSchema.Indexes[KeyAndEtag], prefixSlice, startsWith: true))
+            foreach (var sr in table.SeekForwardFrom(_docsSchema.Indexes[KeyAndEtagSlice], prefixSlice, startsWith: true))
             {
                 foreach (var tvr in sr.Results)
                 {
@@ -258,7 +257,7 @@ namespace Raven.Server.Documents.Versioning
         {
             var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, RevisionDocuments);
 
-            foreach (var tvr in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes[Etag], etag))
+            foreach (var tvr in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes[EtagSlice], etag))
             {
                 var document = TableValueToDocument(context, tvr);
                 yield return document;
@@ -269,7 +268,7 @@ namespace Raven.Server.Documents.Versioning
         {
             var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, RevisionDocuments);
 
-            foreach (var tvr in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes[Etag], etag))
+            foreach (var tvr in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes[EtagSlice], etag))
             {
                 var document = TableValueToDocument(context, tvr);
                 yield return document;
@@ -332,7 +331,7 @@ namespace Raven.Server.Documents.Versioning
         public long GetNumberOfRevisionDocuments(DocumentsOperationContext context)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, RevisionDocuments);
-            return table.GetNumberEntriesFor(_docsSchema.FixedSizeIndexes[Etag]);
+            return table.GetNumberEntriesFor(_docsSchema.FixedSizeIndexes[EtagSlice]);
         }
     }
 }

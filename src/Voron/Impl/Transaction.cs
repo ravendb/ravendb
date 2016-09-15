@@ -76,8 +76,10 @@ namespace Voron.Impl
             Table openTable;
             if (_tables.TryGetValue(name, out openTable))
                 return openTable;
-            openTable = new Table(schema, name, this,1);
+
+            openTable = new Table(schema, name, this, 1);
             _tables[name] = openTable;
+
             return openTable;
         }
 

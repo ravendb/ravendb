@@ -98,7 +98,7 @@ namespace FastTests.Voron.Tables
                     var docs = tx.OpenTable(DocsSchema, "docs");
 
                     var ids = new List<long>();
-                    foreach (var sr in docs.SeekForwardFrom(DocsSchema.Indexes[Etags], Slices.BeforeAllKeys))
+                    foreach (var sr in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], Slices.BeforeAllKeys))
                     {
                         foreach (var tvr in sr.Results)
                             ids.Add(tvr.Id);
@@ -114,7 +114,7 @@ namespace FastTests.Voron.Tables
                 {
                     var docs = tx.OpenTable(DocsSchema, "docs");
 
-                    var reader = docs.SeekForwardFrom(DocsSchema.Indexes[Etags], Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1)));
+                    var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1)));
                     Assert.Empty(reader);
                 }
             }

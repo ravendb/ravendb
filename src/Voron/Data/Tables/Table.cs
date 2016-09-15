@@ -37,7 +37,7 @@ namespace Voron.Data.Tables
             get
             {
                 if (_fstKey == null)
-                    _fstKey = GetFixedSizeTree(_tableTree, _schema.Key.NameAsSlice, sizeof(long));
+                    _fstKey = GetFixedSizeTree(_tableTree, _schema.Key.Name, sizeof(long));
 
                 return _fstKey;
             }
@@ -48,7 +48,7 @@ namespace Voron.Data.Tables
             get
             {
                 if (_inactiveSections == null)
-                    _inactiveSections = GetFixedSizeTree(_tableTree, TableSchema.InactiveSection, 0);
+                    _inactiveSections = GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0);
 
                 return _inactiveSections;
             }
@@ -60,7 +60,7 @@ namespace Voron.Data.Tables
             get
             {
                 if (_activeCandidateSection == null)
-                    _activeCandidateSection = GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSection, 0);
+                    _activeCandidateSection = GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSectionSlice, 0);
 
                 return _activeCandidateSection;
             }
@@ -72,7 +72,7 @@ namespace Voron.Data.Tables
             {
                 if (_activeDataSmallSection == null)
                 {
-                    var readResult = _tableTree.Read(TableSchema.ActiveSection);
+                    var readResult = _tableTree.Read(TableSchema.ActiveSectionSlice);
                     if (readResult == null)
                         throw new InvalidDataException($"Could not find active sections for {Name}");
 
@@ -97,7 +97,7 @@ namespace Voron.Data.Tables
         /// Using this constructor WILL NOT register the Table for commit in
         /// the Transaction, and hence changes WILL NOT be commited.
         /// </summary>
-        public Table(TableSchema schema, string name, Transaction tx, int tag)
+        public Table(TableSchema schema, string name, Transaction tx, int tag, bool doSchemaValidation = false)
         {
             Name = name;
 
@@ -109,11 +109,19 @@ namespace Voron.Data.Tables
             if (_tableTree == null)
                 throw new InvalidDataException($"Cannot find collection name {name}");
 
-            var stats = (TableSchemaStats*)_tableTree.DirectRead(TableSchema.Stats);
+            var stats = (TableSchemaStats*)_tableTree.DirectRead(TableSchema.StatsSlice);
             if (stats == null)
                 throw new InvalidDataException($"Cannot find stats value for table {name}");
 
             NumberOfEntries = stats->NumberOfEntries;
+
+            if (doSchemaValidation)
+            {
+                byte* writtenSchemaData = _tableTree.DirectRead(TableSchema.SchemasSlice);
+                int writtenSchemaDataSize = _tableTree.GetDataSize(TableSchema.SchemasSlice);
+                var actualSchema = TableSchema.ReadFrom(tx.Allocator, writtenSchemaData, writtenSchemaDataSize);
+                actualSchema.Validate(schema);
+            }
         }
 
         /// <summary>
@@ -238,7 +246,7 @@ namespace Voron.Data.Tables
             if (ptr == null)
                 return;
 
-            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.Stats, sizeof(TableSchemaStats));
+            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
             NumberOfEntries--;
             stats->NumberOfEntries = NumberOfEntries;
 
@@ -328,7 +336,7 @@ namespace Voron.Data.Tables
             // Any changes done to this method should be reproduced in the Insert below, as they're used when compacting.
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
-            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.Stats, sizeof(TableSchemaStats));
+            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
             NumberOfEntries++;
             stats->NumberOfEntries = NumberOfEntries;
 
@@ -369,7 +377,7 @@ namespace Voron.Data.Tables
         {
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
-            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.Stats, sizeof(TableSchemaStats));
+            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
             NumberOfEntries++;
             stats->NumberOfEntries = NumberOfEntries;
 
@@ -437,10 +445,10 @@ namespace Voron.Data.Tables
         private FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeSchemaIndexDef indexDef)
         {
             if (indexDef.IsGlobal)
-                return GetFixedSizeTree(_tx.LowLevelTransaction.RootObjects, indexDef.NameAsSlice, sizeof(long));
+                return GetFixedSizeTree(_tx.LowLevelTransaction.RootObjects, indexDef.Name, sizeof(long));
 
             var tableTree = _tx.ReadTree(Name);
-            return GetFixedSizeTree(tableTree, indexDef.NameAsSlice, sizeof(long));
+            return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long));
         }
 
         private FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize)
@@ -494,7 +502,7 @@ namespace Voron.Data.Tables
                 _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name);
                 _activeDataSmallSection.DataMoved += OnDataMoved;
                 var pageNumber = Slice.From(_tx.Allocator, EndianBitConverter.Little.GetBytes(_activeDataSmallSection.PageNumber), ByteStringType.Immutable);
-                _tableTree.Add(TableSchema.ActiveSection, pageNumber);
+                _tableTree.Add(TableSchema.ActiveSectionSlice, pageNumber);
 
                 var allocationResult = _activeDataSmallSection.TryAllocate(size, out id);
 
@@ -524,8 +532,8 @@ namespace Voron.Data.Tables
         private Tree GetTree(TableSchema.SchemaIndexDef idx)
         {
             if (idx.IsGlobal)
-                return _tx.ReadTree(idx.NameAsSlice.ToString());
-            return GetTree(idx.NameAsSlice);
+                return _tx.ReadTree(idx.Name.ToString());
+            return GetTree(idx.Name);
         }
 
          public void DeleteByKey(Slice key)

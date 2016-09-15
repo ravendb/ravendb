@@ -223,8 +223,8 @@ namespace Voron.Impl.Compaction
             var tableTree = txr.ReadTree(treeName, RootObjectType.Table);
 
             // Get the table schema
-            var schemaSize = tableTree.GetDataSize(TableSchema.Schemas);
-            var schemaPtr = tableTree.DirectRead(TableSchema.Schemas);
+            var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+            var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
             var schema = TableSchema.ReadFrom(txr.Allocator, schemaPtr, schemaSize);
 
             // Load table into structure 

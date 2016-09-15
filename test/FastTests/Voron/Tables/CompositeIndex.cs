@@ -32,7 +32,7 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                var seekResults = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollection], "Users").GetEnumerator();
+                var seekResults = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users").GetEnumerator();
                 Assert.True(seekResults.MoveNext());
                 var reader = seekResults.Current;
 
@@ -89,7 +89,7 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollection], "Users");
+                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users");
                 Assert.Empty(reader);
             }
         }
@@ -125,7 +125,7 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollection], "Users")
+                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users")
                                  .First();
 
                 var valueReader = reader.Key.CreateReader();
