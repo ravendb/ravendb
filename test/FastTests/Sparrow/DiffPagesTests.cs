@@ -61,7 +61,7 @@ namespace FastTests.Sparrow
 
                 diffPages.ComputeDiff();
 
-                Assert.Equal(32, diffPages.OutputSize);
+                Assert.Equal(48, diffPages.OutputSize);
             }
         }
 
@@ -86,7 +86,7 @@ namespace FastTests.Sparrow
 
                 diffPages.ComputeNew();
 
-                Assert.Equal(32, diffPages.OutputSize);
+                Assert.Equal(48, diffPages.OutputSize);
             }
         }
 
