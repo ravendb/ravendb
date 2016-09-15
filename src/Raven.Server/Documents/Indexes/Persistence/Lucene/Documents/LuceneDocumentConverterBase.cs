@@ -17,6 +17,7 @@ using Sparrow.Json;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -246,7 +247,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 foreach (var key in dict.Keys)
                 {
-                    djv[key.ToString()] = dict[key];
+                    djv[key.ToString()] = TypeConverter.ConvertType(dict[key], indexContext);
                 }
 
                 foreach (var dictField in GetRegularFields(field, indexContext.ReadObject(djv, "lucene field"), indexContext))
