@@ -8,6 +8,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -116,7 +117,7 @@ namespace Raven.Client.FileSystem.Connection
                 if (document == null)
                 {
                     lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
-                    ReplicationDestinations.Clear(); // clear destinations that could be retrieved from local storage
+                    ReplicationDestinations = new List<OperationMetadata>(); // clear destinations that could be retrieved from local storage
                     return;
                 }
 
