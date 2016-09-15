@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     array.Add(new DynamicJsonValue
                     {
-                        ["Key"] = conflict.Key.String,
+                        ["Key"] = conflict.Key,
                         ["ChangeVector"] = conflict.ChangeVector.ToJson(),
                     });					
                 }

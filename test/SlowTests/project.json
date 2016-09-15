@@ -34,7 +34,7 @@
   "dependencies": {
     "Microsoft.NETCore.App": {
       "type": "platform",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
 
     "dotnet-test-xunit": "2.2.0-preview2-build1029",
