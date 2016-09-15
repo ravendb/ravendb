@@ -49,6 +49,8 @@ namespace Raven.Server.Documents.Transformers
 
         public virtual bool HasGroupBy => _transformer.HasGroupBy;
 
+        public virtual bool HasInclude => _transformer.HasInclude;
+
         public readonly TransformerDefinition Definition;
 
         public virtual void SetLock(TransformerLockMode mode)

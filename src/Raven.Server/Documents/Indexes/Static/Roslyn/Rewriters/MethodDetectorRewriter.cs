@@ -21,6 +21,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "TransformWith":
                     Methods.HasTransformWith = true;
                     break;
+                case "this.Include":
+                case "Include":
+                    Methods.HasInclude = true;
+                    break;
                 case "results.GroupBy":
                     Methods.HasGroupBy = true;
                     break;

@@ -195,6 +195,9 @@ namespace Raven.Server.Documents.Indexes.Static
             if (methods.HasTransformWith)
                 statements.Add(RoslynHelper.This(nameof(TransformerBase.HasTransformWith)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
 
+            if (methods.HasInclude)
+                statements.Add(RoslynHelper.This(nameof(TransformerBase.HasInclude)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+
             var ctor = RoslynHelper.PublicCtor(name).AddBodyStatements(statements.ToArray());
 
             return RoslynHelper.PublicClass(name)
@@ -421,6 +424,8 @@ namespace Raven.Server.Documents.Indexes.Static
             public bool HasLoadDocument { get; set; }
             public bool HasTransformWith { get; set; }
             public bool HasGroupBy { get; set; }
+
+            public bool HasInclude { get; set; }
         }
     }
 }

@@ -154,16 +154,9 @@ namespace Raven.Server.Documents.Handlers
 
         private void GetDocumentsById(DocumentsOperationContext context, StringValues ids, Transformer transformer, bool metadataOnly)
         {
-            /* TODO: Call AddRequestTraceInfo
-            AddRequestTraceInfo(sb =>
-            {
-                foreach (var id in ids)
-                {
-                    sb.Append("\t").Append(id).AppendLine();
-                }
-            });*/
             var includePaths = HttpContext.Request.Query["include"];
             var documents = new List<Document>(ids.Count);
+            List<long> etags = null;
             var includes = new List<Document>(includePaths.Count * ids.Count);
             var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths);
             foreach (var id in ids)
@@ -174,20 +167,6 @@ namespace Raven.Server.Documents.Handlers
                 includeDocs.Gather(document);
             }
 
-            var actualEtag = ComputeEtagsFor(documents, null);
-            if (transformer != null)
-                actualEtag ^= transformer.Hash;
-
-            var etag = GetLongFromHeaders("If-None-Match");
-            if (etag == actualEtag)
-            {
-                if (transformer != null && transformer.HasLoadDocument == false && transformer.HasTransformWith == false)
-                {
-                    HttpContext.Response.StatusCode = 304;
-                    return;
-                }
-            }
-
             IEnumerable<Document> documentsToWrite;
             if (transformer != null)
             {
@@ -195,25 +174,25 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var scope = transformer.OpenTransformationScope(transformerParameters, includeDocs, Database.DocumentsStorage, Database.TransformerStore, context))
                 {
-                    if (transformer.HasLoadDocument || transformer.HasTransformWith)
-                        documentsToWrite = scope.Transform(documents).ToList(); // no choice, we might loaded something that changed and we need to reflect that
-                    else
-                        documentsToWrite = scope.Transform(documents);
-
-                    if (scope.HasLoadedAnyDocument)
-                    {
-                        actualEtag = ComputeEtagsFor(documents, scope.LoadedDocumentEtags) ^ transformer.Hash;
-
-                        if (etag == actualEtag)
-                        {
-                            HttpContext.Response.StatusCode = 304;
-                            return;
-                        }
-                    }
+                    documentsToWrite = scope.Transform(documents).ToList();
+                    etags = scope.LoadedDocumentEtags;
                 }
             }
             else
                 documentsToWrite = documents;
+
+            includeDocs.Fill(includes);
+
+            var actualEtag = ComputeEtagsFor(documents, includes, etags);
+            if (transformer != null)
+                actualEtag ^= transformer.Hash;
+
+            var etag = GetLongFromHeaders("If-None-Match");
+            if (etag == actualEtag)
+            {
+                HttpContext.Response.StatusCode = 304;
+                return;
+            }
 
             HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             HttpContext.Response.Headers[Constants.MetadataEtagField] = actualEtag.ToString();
@@ -253,16 +232,17 @@ namespace Raven.Server.Documents.Handlers
             };
         }
 
-        private static unsafe long ComputeEtagsFor(List<Document> documents, List<long> loadedDocumentEtags)
+        private static unsafe long ComputeEtagsFor(List<Document> documents, List<Document> includes, List<long> additionalEtags)
         {
             // This method is efficient because we aren't materializing any values
             // except the etag, which we need
-            if (documents.Count == 1 && (loadedDocumentEtags == null || loadedDocumentEtags.Count == 0))
+            if (documents.Count == 1 && (includes == null || includes.Count == 0) && (additionalEtags == null || additionalEtags.Count == 0))
                 return documents[0]?.Etag ?? -1;
 
-            var count = documents.Count;
-            if (loadedDocumentEtags != null)
-                count += loadedDocumentEtags.Count;
+            var documentsCount = documents.Count;
+            var includesCount = includes?.Count ?? 0;
+            var additionalEtagsCount = additionalEtags?.Count ?? 0;
+            var count = documentsCount + includesCount + additionalEtagsCount;
 
             // we do this in a loop to avoid either large long array allocation on the heap
             // or busting the stack if we used stackalloc long[ids.Count]
@@ -273,17 +253,25 @@ namespace Raven.Server.Documents.Handlers
             {
                 for (int j = 0; j < 4; j++)
                 {
-                    if (i + j >= count)
+                    var index = i + j;
+                    if (index >= count)
                         break;
 
-                    if (i + j < documents.Count)
+                    if (index < documentsCount)
                     {
-                        var document = documents[i + j];
+                        var document = documents[index];
                         buffer[j] = document?.Etag ?? -1;
                         continue;
                     }
 
-                    buffer[j] = loadedDocumentEtags[i + j - documents.Count];
+                    if (includesCount > 0 && index >= documentsCount && index < documentsCount + includesCount)
+                    {
+                        var document = includes[index - documentsCount];
+                        buffer[j] = document?.Etag ?? -1;
+                        continue;
+                    }
+
+                    buffer[j] = additionalEtags[i + j - documentsCount - includesCount];
                 }
                 // we don't care if we didn't get to the end and have values from previous iteration
                 // it will still be consistent, and that is what we care here.

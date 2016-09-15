@@ -19,6 +19,8 @@ namespace Raven.Server.Documents.Transformers
 
         public bool HasTransformWith { get; set; }
 
+        public bool HasInclude { get; set; }
+
         public string Source { get; set; }
 
         public dynamic LoadDocument(object keyOrEnumerable, string collectionName)
