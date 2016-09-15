@@ -145,10 +145,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             //if (shouldIncludeInResults(indexQueryResult) == false)
             //    return false;
+            if (document == null)
+                return false;
 
             if (_fieldsToFetch.IsDistinct)
                 return _alreadySeenProjections.Add(document.DataHash);
-
+            
             return true;
         }
     }

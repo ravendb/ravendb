@@ -17,8 +17,10 @@ using Raven.Abstractions.Data;
 using Raven.Client.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Server.Exceptions;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using LogManager = NLog.LogManager;
@@ -82,7 +84,6 @@ namespace Raven.Server
             {
                 if (context.RequestAborted.IsCancellationRequested)
                     return;
-
                 //TODO: special handling for argument exception (400 bad request)
                 //TODO: database not found (503)
                 //TODO: operaton cancelled (timeout)
@@ -92,13 +93,19 @@ namespace Raven.Server
                 //TODO: Proper json output, not like this
                 var response = context.Response;
 
-                if (response.HasStarted == false && response.StatusCode < 400)
-                    response.StatusCode = 500;
+                var documentConflictException = e as DocumentConflictException;
+                if (response.HasStarted == false)
+                {
+                    if (documentConflictException != null)
+                        response.StatusCode = 409;
+                    else if (response.StatusCode < 400)
+                        response.StatusCode = 500;
+                }
+                
 
                 JsonOperationContext ctx;
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
                 {
-                    // this should be changed to BlittableJson
                     var djv = new DynamicJsonValue
                     {
                         ["Url"] = $"{context.Request.Path}?{context.Request.QueryString}",
@@ -126,6 +133,13 @@ namespace Raven.Server
                             indexCompilationException.IndexDefinitionProperty;
                         djv[nameof(IndexCompilationException.ProblematicText)] =
                             indexCompilationException.ProblematicText;
+                    }
+
+                    if (documentConflictException != null)
+                    {
+                        djv["ConflictInfo"] = ReplicationUtils.GetJsonForConflicts(
+                            documentConflictException.DocId,
+                            documentConflictException.Conflicts);
                     }
 
                     using (var writer = new BlittableJsonTextWriter(ctx, response.Body))

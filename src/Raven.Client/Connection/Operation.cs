@@ -9,6 +9,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Data;
 using Raven.Client.Document;
+using Raven.Client.Exceptions;
 using Raven.Client.Platform;
 
 namespace Raven.Client.Connection
@@ -115,7 +116,10 @@ namespace Raven.Client.Connection
                     break;
                 case OperationStatus.Faulted:
                     var exceptionResult = notification.State.Result as OperationExceptionResult;
-                    _result.SetException(new InvalidOperationException(exceptionResult.Message));
+                    if(exceptionResult?.StatusCode == 409)
+                        _result.SetException(new DocumentInConflictException(exceptionResult.Message));
+                    else
+                        _result.SetException(new InvalidOperationException(exceptionResult?.Message));
                     break;
                 case OperationStatus.Canceled:
                     _result.SetException(new OperationCanceledException());

@@ -11,9 +11,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var x = new FastTests.Server.Documents.Versioning.Versioning())
+            using (var x = new FastTests.Server.Documents.Replication.ReplicationConflictsTests())
             {
-                x.WillDeleteRevisionsIfDeleted_OnlyIfPurgeOnDeleteIsTrue().Wait();
+                x.Conflict_then_load_by_id_will_return_409_and_conflict_data().Wait();
             }
         }
 

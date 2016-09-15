@@ -43,12 +43,10 @@ namespace Raven.Server.Documents.Handlers
             {
                 var document = Database.DocumentsStorage.Get(context, id);
                 if (document == null)
-                {
-                    var conflicts = Database.DocumentsStorage.GetConflictsFor(context, id);
-                    HttpContext.Response.StatusCode = conflicts.Count > 0 ? 409 : 404;
-                }
+                    HttpContext.Response.StatusCode = 404;
                 else
                     HttpContext.Response.Headers[Constants.MetadataEtagField] = document.Etag.ToString();
+
                 return Task.CompletedTask;
             }
         }
@@ -172,20 +170,7 @@ namespace Raven.Server.Documents.Handlers
             foreach (var id in ids)
             {
                 var document = Database.DocumentsStorage.Get(context, id);
-                if (document == null)
-                {
-                    var conflicts = Database.DocumentsStorage.GetConflictsFor(context, id);
-                    if (conflicts.Count > 0)
-                    {
-                        HttpContext.Response.StatusCode = 409;
-                        HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                        {
-                            context.Write(writer, GetJsonForConflicts(id, conflicts));
-                        }
-                        return;
-                    }
-                }
+
                 documents.Add(document);
                 includeDocs.Gather(document);
             }
@@ -423,7 +408,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "PATCH", "/databases/{databaseName:string}/docs?id={documentId:string}&test={isTestOnly:bool|optional(false)} body{ Patch:PatchRequest, PatchIfMissing:PatchRequest }")]
         public Task Patch()
         {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("ids");
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
             var etag = GetLongFromHeaders("If-Match");
             var isTestOnly = GetBoolValueQueryString("test", required: false) ?? false;

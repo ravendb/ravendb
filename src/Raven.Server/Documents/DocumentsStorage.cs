@@ -9,6 +9,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Replication.Messages;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -448,7 +449,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, string key)
+        public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, string key, bool throwOnConflict = true)
         {
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("Argument is null or whitespace", nameof(key));
@@ -456,20 +457,29 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
 
             var loweredKey = GetSliceFromKey(context, key);
-            return GetDocumentOrTombstone(context,loweredKey);
+            return GetDocumentOrTombstone(context,loweredKey,throwOnConflict);
         }
 
-        public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, Slice loweredKey)
+        public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, Slice loweredKey, bool throwOnConflict = true)
         {
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
 
-            var doc = Get(context, loweredKey);
-            if (doc != null)
-                return Tuple.Create<Document, DocumentTombstone>(doc, null);
+            try
+            {
+                var doc = Get(context, loweredKey);
+                if (doc != null)
+                    return Tuple.Create<Document, DocumentTombstone>(doc, null);
+            }
+            catch (DocumentConflictException)
+            {
+                if (throwOnConflict)
+                    throw;
+            }
 
             var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
             var tvr = tombstoneTable.ReadByKey(loweredKey);
+
             return Tuple.Create<Document, DocumentTombstone>(null, TableValueToTombstone(context, tvr));
         }
 
@@ -491,7 +501,10 @@ namespace Raven.Server.Documents
 
             var tvr = table.ReadByKey(loweredKey);
             if (tvr == null)
+            {
+                ThrowDocumentConflictIfNeeded(context, loweredKey);
                 return null;
+            }
 
             var doc = TableValueToDocument(context, tvr);
 
@@ -736,7 +749,7 @@ namespace Raven.Server.Documents
             ptr = tvr.Read(2, out size);
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
-
+            
             ptr = tvr.Read(1, out size);
             result.Etag = Bits.SwapBytes(*(long*)ptr);
 
@@ -747,6 +760,26 @@ namespace Raven.Server.Documents
             return result;
         }
 
+        private static DocumentConflict TableValueToConflictDocument(JsonOperationContext context, TableValueReader tvr)
+        {
+            var result = new DocumentConflict
+            {
+                StorageId = tvr.Id
+            };
+            int size;
+            // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
+            byte offset;
+            var ptr = tvr.Read(0, out size);
+            result.LoweredKey = new LazyStringValue(null, ptr, size, context);
+
+            ptr = tvr.Read(2, out size);
+            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
+            result.Key = new LazyStringValue(null, ptr + offset, size, context);
+            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 1);
+            result.Doc = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
+
+            return result;
+        }
 
         private static ChangeVectorEntry[] GetChangeVectorEntriesFromTableValueReader(TableValueReader tvr, int index)
         {
@@ -812,6 +845,7 @@ namespace Raven.Server.Documents
                     throw new ConcurrencyException(
                         $"Document {loweredKey} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
 
+                ThrowDocumentConflictIfNeeded(context, loweredKey);
                 return false;
             }
            
@@ -867,6 +901,21 @@ namespace Raven.Server.Documents
             return true;
         }
 
+        private void ThrowDocumentConflictIfNeeded(DocumentsOperationContext context, string key)
+        {
+            var conflicts = GetConflictsFor(context, key);
+            if (conflicts.Count > 0)
+                throw new DocumentConflictException(key, conflicts);
+        }
+
+
+        private void ThrowDocumentConflictIfNeeded(DocumentsOperationContext context, Slice loweredKey)
+        {
+            var conflicts = GetConflictsFor(context, loweredKey);
+            if (conflicts.Count > 0)
+                throw new DocumentConflictException(loweredKey.ToString(), conflicts);
+        }
+
         private void EnsureLastEtagIsPersisted(DocumentsOperationContext context, long docEtag)
         {
             if (docEtag != _lastEtag)
@@ -888,6 +937,9 @@ namespace Raven.Server.Documents
             int keySize;
             GetLowerKeySliceAndStorageKey(context,key,out lowerKey,out lowerSize,out keyPtr, out keySize);
             var loweredKey = Slice.External(context.Allocator, lowerKey, lowerSize);
+
+            ThrowDocumentConflictIfNeeded(context, loweredKey);
+
             var result = GetDocumentOrTombstone(context, loweredKey);
             if (result.Item2 != null) //already have a tombstone -> need to update the change vector
             {
@@ -1015,8 +1067,6 @@ namespace Raven.Server.Documents
 
                 table.Insert(tbv);
             }
-
-            return;
         }
 
         public void DeleteConflictsFor(DocumentsOperationContext context, string key)
@@ -1066,40 +1116,37 @@ namespace Raven.Server.Documents
         
         public IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context, string key)
         {
-            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
-
             byte* lowerKey;
             int lowerSize;
             byte* keyPtr;
             int keySize;
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            var loweredKey = Slice.External(context.Allocator, lowerKey, lowerSize);
 
-            var items = new List<DocumentConflict>();			
+            return GetConflictsFor(context, loweredKey);
+        }
+
+        private static IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context,  Slice loweredKey)
+        {
+            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            var items = new List<DocumentConflict>();
             foreach (var result in conflictsTable.SeekForwardFrom(
                 ConflictsSchema.Indexes["KeyAndChangeVector"],
-                Slice.External(context.Allocator, lowerKey, lowerSize),true))
+                loweredKey, true))
             {
                 foreach (var tvr in result.Results)
                 {
-
                     int conflictKeySize;
                     var conflictKey = tvr.Read(0, out conflictKeySize);
 
-                    if (conflictKeySize != lowerSize)
+                    if (conflictKeySize != loweredKey.Size)
                         break;
 
-                    var compare = Memory.Compare(lowerKey, conflictKey, lowerSize);
+                    var compare = Memory.Compare(loweredKey.Content.Ptr, conflictKey, loweredKey.Size);
                     if (compare != 0)
                         break;
 
-                    int size;
-                    items.Add(new DocumentConflict
-                    {
-                        ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 1),
-                        Key = new LazyStringValue(key, tvr.Read(2, out size), size, context),
-                        StorageId = tvr.Id,
-                        Doc = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context)
-                    });
+                    items.Add(TableValueToConflictDocument(context,tvr));
                 }
             }
 
@@ -1119,17 +1166,18 @@ namespace Raven.Server.Documents
             int keySize;
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
-            var existing = GetDocumentOrTombstone(context, key);
+            // ReSharper disable once ArgumentsStyleLiteral
+            var existing = GetDocumentOrTombstone(context, key, throwOnConflict:false);
             if (existing.Item1 != null)
             {
                 var existingDoc = existing.Item1;
                 fixed (ChangeVectorEntry* pChangeVector = existingDoc.ChangeVector)
-                {					
+                {				
                     conflictsTable.Set(new TableValueBuilder
                     {
                         {lowerKey, lowerSize},
                         {(byte*) pChangeVector, existingDoc.ChangeVector.Length*sizeof(ChangeVectorEntry)},
-                        {existingDoc.Key.Buffer, existingDoc.Key.Size},
+                        {keyPtr, keySize},
                         {existingDoc.Data.BasePointer, existingDoc.Data.Size}
                     });
 
@@ -1154,7 +1202,8 @@ namespace Raven.Server.Documents
                     {
                         {lowerKey, lowerSize},
                         {(byte*) pChangeVector, existingTombstone .ChangeVector.Length*sizeof(ChangeVectorEntry)},
-                        {existingTombstone .Key.Buffer, existingTombstone .Key.Size},
+                        {keyPtr, keySize},
+                        {null,0}
                     });
 
                     // we delete the data directly, without generating a tombstone, because we have a 
@@ -1167,17 +1216,22 @@ namespace Raven.Server.Documents
 
             fixed (ChangeVectorEntry* pChangeVector = incomingChangeVector)
             {
+                byte* doc = null;
+                int docSize = 0;
+                if (incomingDoc != null) // can be null if it is a tombstone
+                {
+                    doc = incomingDoc.BasePointer;
+                    docSize = incomingDoc.Size;
+                }
+
                 var tvb = new TableValueBuilder
                 {
                     {lowerKey, lowerSize},
                     {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*incomingChangeVector.Length},
                     {keyPtr, keySize},
+                    {doc, docSize}
                 };
 
-                if (incomingDoc != null) // can be null if it is a tombstone
-                {
-                    tvb.Add(incomingDoc.BasePointer, incomingDoc.Size);
-                }
 
                 conflictsTable.Set(tvb);
             }
@@ -1210,6 +1264,8 @@ namespace Raven.Server.Documents
             byte* keyPtr;
             int keySize;
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+
+            ThrowDocumentConflictIfNeeded(context, key);
 
             // delete a tombstone if it exists
             DeleteTombstoneIfNeeded(context, originalCollectionName, lowerKey, lowerSize);
