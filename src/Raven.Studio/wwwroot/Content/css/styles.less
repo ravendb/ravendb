@@ -242,7 +242,7 @@ a, .btn {
 }
 
 .btn {
-    border: none;
+    //border: none;
 
     &:not(.btn-sm) {
         [class^="icon-"], [class*=" icon-"] {
@@ -408,12 +408,6 @@ hr {
 
     &::-moz-selection {
         background: @brand-primary;
-    }
-}
-
-.input-group {
-    .input-group-addon-button {
-        display: table-cell;
     }
 }
 
@@ -861,7 +855,8 @@ hr {
         @media (min-width: @screen-md) {
             clear: none;
             background-color: transparent;
-            margin: 5px 120px 5px @menu-width;
+            margin-right:120px;
+            margin-left:@menu-width;
             max-height: none;
             position: relative;
 
