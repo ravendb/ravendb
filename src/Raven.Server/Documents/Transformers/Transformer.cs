@@ -51,6 +51,8 @@ namespace Raven.Server.Documents.Transformers
 
         public virtual bool HasInclude => _transformer.HasInclude;
 
+        public bool MightRequireTransaction => HasLoadDocument || HasInclude || HasTransformWith;
+
         public readonly TransformerDefinition Definition;
 
         public virtual void SetLock(TransformerLockMode mode)
