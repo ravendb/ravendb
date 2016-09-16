@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Utils;
 using Raven.Client.Data;
-using Raven.Json.Linq;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
@@ -17,31 +14,23 @@ namespace FastTests.Server.Documents.Operations
 {
     public class BasicOperationsTests : RavenLowLevelTestBase
     {
-
         [Fact]
-        public async Task Can_notify_about_operations_progress_and_completion()
+        public void Can_notify_about_operations_progress_and_completion()
         {
-            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var db = CreateDocumentDatabase())
             {
                 var token = new OperationCancelToken(TimeSpan.FromMinutes(2), CancellationToken.None);
 
                 var notifications = new BlockingCollection<OperationStatusChangeNotification>();
                 var mre = new ManualResetEventSlim(false);
-                var ws = new FakeWebSocket();
 
-                ws.OnMessageSent += message =>
-                {
-                    var msgAsObject = message.DeserializeMessage<OperationStatusChangeNotification>();
-                    notifications.Add(msgAsObject);
-                };
+                var operationId = db.DatabaseOperations.GetNextOperationId();
 
-                var runningOperation = db.DatabaseOperations.ExecuteOperation("Operations Test", (DatabaseOperations.PendingOperationType) 0, context,
+                db.Notifications.OnOperationStatusChange += notifications.Add;
+
+                db.DatabaseOperations.AddOperation("Operations Test", (DatabaseOperations.PendingOperationType) 0, 
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
-                        mre.Wait(token.Token);
-                        mre.Reset();
-
                         var p = new DeterminateProgress
                         {
                             Total = 1024,
@@ -60,18 +49,10 @@ namespace FastTests.Server.Documents.Operations
                         {
                             Message = "I'm done"
                         };
-                    }), ws, token);
+                    }), operationId, token);
 
                 OperationStatusChangeNotification notification;
-                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(10)));
-                Assert.NotNull(notification.OperationId);
-                Assert.Equal(OperationStatus.InProgress, notification.State.Status);
-                Assert.Null(notification.State.Result);
-                Assert.Null(notification.State.Progress);
-
-                mre.Set();
-
-                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(10)));
+                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(1)));
                 Assert.NotNull(notification.OperationId);
                 Assert.Equal(OperationStatus.InProgress, notification.State.Status);
                 Assert.Null(notification.State.Result);
@@ -82,7 +63,7 @@ namespace FastTests.Server.Documents.Operations
 
                 mre.Set();
 
-                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(10)));
+                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(1)));
                 Assert.NotNull(notification.OperationId);
                 Assert.Equal(OperationStatus.InProgress, notification.State.Status);
                 Assert.Null(notification.State.Result);
@@ -93,7 +74,7 @@ namespace FastTests.Server.Documents.Operations
 
                 mre.Set();
 
-                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(10)));
+                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(1)));
                 Assert.NotNull(notification.OperationId);
                 Assert.Equal(OperationStatus.Completed, notification.State.Status);
                 Assert.NotNull(notification.State.Result);
@@ -101,40 +82,29 @@ namespace FastTests.Server.Documents.Operations
                 var result = notification.State.Result as SampleOperationResult;
                 Assert.NotNull(result);
                 Assert.Equal("I'm done", result.Message);
-
-                await runningOperation;
             }
         }
 
         [Fact]
         public void Can_notify_about_exception_in_operation()
         {
-            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var db = CreateDocumentDatabase())
             {
+                long operationId = db.DatabaseOperations.GetNextOperationId();
+
                 var notifications = new BlockingCollection<OperationStatusChangeNotification>();
 
-                var ws = new FakeWebSocket();
+                db.Notifications.OnOperationStatusChange += notifications.Add;
 
-                ws.OnMessageSent += message =>
-                {
-                    var msgAsObject = message.DeserializeMessage<OperationStatusChangeNotification>();
-                    notifications.Add(msgAsObject);
-                };
-
-                var runningOperation = db.DatabaseOperations.ExecuteOperation("Operations Test", (DatabaseOperations.PendingOperationType)0, context,
+                db.DatabaseOperations.AddOperation("Operations Test", (DatabaseOperations.PendingOperationType)0,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                        throw new Exception("Something bad happened");
-                    }), ws, OperationCancelToken.None);
-
+                    }), operationId, OperationCancelToken.None);
 
                 OperationStatusChangeNotification notification;
 
-                // ignore first message (send to obtain notification id)
-                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(5)));
-
-                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(5)));
+                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(1)));
                 Assert.NotNull(notification.OperationId);
                 Assert.Equal(OperationStatus.Faulted, notification.State.Status);
                 Assert.NotNull(notification.State.Result);
@@ -143,54 +113,37 @@ namespace FastTests.Server.Documents.Operations
                 Assert.NotNull(result);
                 Assert.Equal("Something bad happened", result.Message);
                 Assert.IsType<string>(result.StackTrace);
-
-                Assert.Throws<AggregateException>(() => runningOperation.Result);
             }
         }
 
         [Fact]
         public void Should_be_able_to_cancel_operation()
         {
-            using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var db = CreateDocumentDatabase())
             {
-                var token = new OperationCancelToken(TimeSpan.FromMinutes(2), CancellationToken.None);
+                var token = new OperationCancelToken(TimeSpan.Zero, CancellationToken.None);
+                token.Cancel();
 
                 var notifications = new BlockingCollection<OperationStatusChangeNotification>();
 
-                var ws = new FakeWebSocket();
+                var operationId = db.DatabaseOperations.GetNextOperationId();
 
-                ws.OnMessageSent += message =>
-                {
-                    var msgAsObject = message.DeserializeMessage<OperationStatusChangeNotification>();
-                    notifications.Add(msgAsObject);
-                };
+                db.Notifications.OnOperationStatusChange += notifications.Add;
 
-                var runningOperation = db.DatabaseOperations.ExecuteOperation("Cancellation Test", (DatabaseOperations.PendingOperationType)0, context,
+                db.DatabaseOperations.AddOperation("Cancellation Test", (DatabaseOperations.PendingOperationType)0,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
-                        while (true)
-                        {
-                            token.Token.ThrowIfCancellationRequested();
-                            Thread.Sleep(100);
-                        }
-                    }, token.Token), ws, token);
+                        token.Token.ThrowIfCancellationRequested();
+                        return null;
+                    }, token.Token), operationId, token);
 
-                OperationStatusChangeNotification initialNotification;
+                OperationStatusChangeNotification notification;
 
-                Assert.True(notifications.TryTake(out initialNotification, TimeSpan.FromSeconds(5)));
-                Assert.NotNull(initialNotification.OperationId);
-
-                db.DatabaseOperations.KillRunningOperation(initialNotification.OperationId);
-
-                OperationStatusChangeNotification afterCancelationNotification;
-                Assert.True(notifications.TryTake(out afterCancelationNotification, TimeSpan.FromSeconds(5)));
-                Assert.NotNull(afterCancelationNotification.OperationId);
-                Assert.Equal(OperationStatus.Canceled, afterCancelationNotification.State.Status);
-                Assert.Null(afterCancelationNotification.State.Result);
-                Assert.Null(afterCancelationNotification.State.Progress);
-
-                Assert.Throws<AggregateException>(() => runningOperation.Result);
+                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(1)));
+                Assert.NotNull(notification.OperationId);
+                Assert.Equal(OperationStatus.Canceled, notification.State.Status);
+                Assert.Null(notification.State.Result);
+                Assert.Null(notification.State.Progress);
             }
         }
 

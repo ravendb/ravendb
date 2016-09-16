@@ -119,6 +119,18 @@ namespace Raven.Client.Shard
             return new ShardedObservableWithTask<DataSubscriptionChangeNotification>(observableWithTasks);
         }
 
+        public IObservableWithTask<OperationStatusChangeNotification> ForOperationId(long id)
+        {
+            var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForOperationId(id)).ToArray();
+            return new ShardedObservableWithTask<OperationStatusChangeNotification>(observableWithTasks);
+        }
+
+        public IObservableWithTask<OperationStatusChangeNotification> ForAllOperations()
+        {
+            var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForAllOperations()).ToArray();
+            return new ShardedObservableWithTask<OperationStatusChangeNotification>(observableWithTasks);
+        }
+
         public void WaitForAllPendingSubscriptions()
         {
             foreach (var shardedDatabaseChange in shardedDatabaseChanges)

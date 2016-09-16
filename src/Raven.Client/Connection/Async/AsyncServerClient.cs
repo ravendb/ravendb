@@ -36,7 +36,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,8 +44,6 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
-using Raven.Client.Platform;
-using Sparrow.Json;
 
 namespace Raven.Client.Connection.Async
 {
@@ -62,6 +59,8 @@ namespace Raven.Client.Connection.Async
 
         private readonly Func<string, RequestTimeMetric> requestTimeMetricGetter;
 
+        internal readonly Func<string, IDatabaseChanges> changesGetter;
+
         private readonly IRequestTimeMetric requestTimeMetric;
 
         private readonly string databaseName;
@@ -71,6 +70,8 @@ namespace Raven.Client.Connection.Async
         private readonly OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
 
         private readonly IRequestExecuter requestExecuter;
+
+        internal readonly Lazy<IDatabaseChanges> changes;
 
         internal readonly DocumentConvention convention;
 
@@ -96,6 +97,7 @@ namespace Raven.Client.Connection.Async
             Guid? sessionId,
             Func<AsyncServerClient, string, ClusterBehavior, bool, IRequestExecuter> requestExecuterGetter,
             Func<string, RequestTimeMetric> requestTimeMetricGetter,
+            Func<string, IDatabaseChanges> changesGetter, 
             string databaseName,
             IDocumentConflictListener[] conflictListeners,
             bool incrementReadStripe,
@@ -119,6 +121,9 @@ namespace Raven.Client.Connection.Async
 
             this.requestTimeMetricGetter = requestTimeMetricGetter;
             requestTimeMetric = requestTimeMetricGetter(databaseName);
+
+            this.changesGetter = changesGetter;
+            changes = new Lazy<IDatabaseChanges>(() => changesGetter(databaseName));
         }
 
         private IRequestTimeMetric GetRequestTimeMetric(string operationUrl)
@@ -463,21 +468,32 @@ namespace Raven.Client.Connection.Async
         {
             return ExecuteWithReplication(HttpMethod.Delete, async operationMetadata =>
             {
-
                 var notNullOptions = options ?? new QueryOperationOptions();
-                string path = queryToDelete.GetIndexQueryUrl(operationMetadata.Url, indexName, "queries-delete-by-index") + "&allowStale=" + notNullOptions.AllowStale
+                string path = queryToDelete.GetIndexQueryUrl(operationMetadata.Url, indexName, "queries") + "&allowStale=" + notNullOptions.AllowStale
                      + "&details=" + notNullOptions.RetrieveDetails;
                 if (notNullOptions.MaxOpsPerSecond != null)
                     path += "&maxOpsPerSec=" + notNullOptions.MaxOpsPerSecond;
                 if (notNullOptions.StaleTimeout != null)
                     path += "&staleTimeout=" + notNullOptions.StaleTimeout;
 
-                var uri = new Uri(path.ToWebSocketPath());
+                token.ThrowCancellationIfNotDefault(); //maybe the operation is canceled and we can spare the request..
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, HttpMethod.Delete, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
+                {
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    RavenJToken jsonResponse;
+                    try
+                    {
+                        jsonResponse = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    }
+                    catch (ErrorResponseException e)
+                    {
+                        if (e.StatusCode == HttpStatusCode.NotFound) throw new InvalidOperationException("There is no index named: " + indexName, e);
+                        throw;
+                    }
 
-                var webSocket = new RavenClientWebSocket();
-                await webSocket.ConnectAsync(uri, token);
-
-                return new Operation(webSocket, convention, token);
+                    var opId = ((RavenJObject)jsonResponse)["OperationId"];
+                    return new Operation(this, opId.Value<long>());
+                }
             }, token);
         }
 
@@ -604,7 +620,7 @@ namespace Raven.Client.Connection.Async
             if (databaseUrl == Url && ClusterBehavior == requestedClusterBehavior)
                 return this;
 
-            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, database, conflictListeners, false, requestedClusterBehavior) { operationsHeaders = operationsHeaders };
+            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, changesGetter, database, conflictListeners, false, requestedClusterBehavior) { operationsHeaders = operationsHeaders };
         }
 
         internal AsyncServerClient ForSystemDatabaseInternal()
@@ -613,7 +629,7 @@ namespace Raven.Client.Connection.Async
             if (databaseUrl == Url)
                 return this;
 
-            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, databaseName, conflictListeners, false, ClusterBehavior.None) { operationsHeaders = operationsHeaders };
+            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, changesGetter, databaseName, conflictListeners, false, ClusterBehavior.None) { operationsHeaders = operationsHeaders };
         }
 
         public NameValueCollection OperationsHeaders
@@ -851,7 +867,8 @@ namespace Raven.Client.Connection.Async
         public Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null, CancellationToken token = default(CancellationToken))
         {
             var notNullOptions = options ?? new QueryOperationOptions();
-            return UpdateByIndexImpl(indexName, queryToUpdate, notNullOptions, patch, token);
+            var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
+            return UpdateByIndexImpl(indexName, queryToUpdate, notNullOptions, requestData, token);
         }
 
         public Task<QueryResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken))
@@ -866,6 +883,15 @@ namespace Raven.Client.Connection.Async
                     return json.JsonDeserialization<QueryResult>();
                 }
             }, token);
+        }
+
+        private async Task<long> NextOperationId(OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
+        {
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/operations/next-operation-id", HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
+            {
+                var readResponseJson = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return readResponseJson.Value<long>();
+            }
         }
 
         public Task<long> NextIdentityForAsync(string name, CancellationToken token = default(CancellationToken))
@@ -893,33 +919,34 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        private Task<Operation> UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, QueryOperationOptions options, PatchRequest requestData, CancellationToken token = default(CancellationToken))
+        private Task<Operation> UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, QueryOperationOptions options, string requestData, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethods.Patch, async operationMetadata =>
             {
                 var notNullOptions = options ?? new QueryOperationOptions();
-                string path = queryToUpdate.GetIndexQueryUrl(operationMetadata.Url, indexName, "queries-update-by-index") + "&allowStale=" + notNullOptions.AllowStale
+                string path = queryToUpdate.GetIndexQueryUrl(operationMetadata.Url, indexName, "queries") + "&allowStale=" + notNullOptions.AllowStale
                     + "&maxOpsPerSec=" + notNullOptions.MaxOpsPerSecond + "&details=" + notNullOptions.RetrieveDetails;
                 if (notNullOptions.StaleTimeout != null)
                     path += "&staleTimeout=" + notNullOptions.StaleTimeout;
 
-                var uri = new Uri(path.ToWebSocketPath());
-
-                var webSocket = new RavenClientWebSocket();
-                await webSocket.ConnectAsync(uri, token);
-
-                using (var memoryStream = new MemoryStream())
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, HttpMethods.Patch, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
                 {
-                    memoryStream.SetLength(4096);
+                    request.AddOperationHeaders(OperationsHeaders);
+                    await request.WriteAsync(requestData).ConfigureAwait(false);
 
-                    RavenJObject.FromObject(requestData).WriteTo(memoryStream);
+                    RavenJToken jsonResponse;
+                    try
+                    {
+                        jsonResponse = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    }
+                    catch (ErrorResponseException e)
+                    {
+                        if (e.StatusCode == HttpStatusCode.NotFound) throw new InvalidOperationException("There is no index named: " + indexName);
+                        throw;
+                    }
 
-                    ArraySegment<byte> buffer;
-                    memoryStream.TryGetBuffer(out buffer);
-
-                    await webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, token);
-
-                    return new Operation(webSocket, convention, token);
+                    var opId = ((RavenJObject)jsonResponse)["OperationId"];
+                    return new Operation(this, opId.Value<long>());
                 }
             }, token);
         }
@@ -2209,7 +2236,7 @@ namespace Raven.Client.Connection.Async
         internal AsyncServerClient WithInternal(ICredentials credentialsForSession)
         {
             return new AsyncServerClient(Url, convention, new OperationCredentials(credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication.ApiKey, credentialsForSession), jsonRequestFactory, sessionId,
-                                         requestExecuterGetter, requestTimeMetricGetter, databaseName, conflictListeners, false, convention.ClusterBehavior);
+                                         requestExecuterGetter, requestTimeMetricGetter, changesGetter, databaseName, conflictListeners, false, convention.ClusterBehavior);
         }
 
         internal async Task<ReplicationDocumentWithClusterInformation> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata, TimeSpan? timeout = null)

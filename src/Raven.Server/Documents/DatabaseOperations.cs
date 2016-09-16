@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.IO;
-using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
@@ -17,12 +15,14 @@ namespace Raven.Server.Documents
     public class DatabaseOperations
     {
         private readonly Logger _logger;
+        private readonly DocumentDatabase _db;
         private readonly ConcurrentDictionary<long, PendingOperation> _pendingOperations = new ConcurrentDictionary<long, PendingOperation>();
 
         private long _pendingOperationsCounter;
 
         public DatabaseOperations(DocumentDatabase db)
         {
+            _db = db;
             _logger = LoggingSource.Instance.GetLogger<DatabaseOperations>(db.Name);
         }
 
@@ -30,18 +30,16 @@ namespace Raven.Server.Documents
         {
             foreach (var taskAndState in _pendingOperations)
             {
-                var status = taskAndState.Value.State.Status;
-                if (status != OperationStatus.InProgress)
+                var task = taskAndState.Value.Task;
+                if (task.IsCompleted || task.IsCanceled || task.IsFaulted)
                 {
                     PendingOperation value;
                     _pendingOperations.TryRemove(taskAndState.Key, out value);
                 }
-                if (status == OperationStatus.Faulted || status == OperationStatus.Canceled)
+                if (task.Exception != null)
                 {
-                    var exceptionResult = taskAndState.Value.State.Result as OperationExceptionResult;
-                    
-                    if (_logger.IsOperationsEnabled && exceptionResult != null)
-                        _logger.Operations($"Failed to execute background task {taskAndState.Key} {exceptionResult.Message} {exceptionResult.StackTrace}");
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Failed to execute background task {taskAndState.Key}", task.Exception);
                 }
             }
         }
@@ -58,12 +56,9 @@ namespace Raven.Server.Documents
             return null;
         }
 
-        public async Task<IOperationResult> ExecuteOperation(string description, PendingOperationType operationType, JsonOperationContext context, Func<Action<IOperationProgress>, 
-            Task<IOperationResult>> operation, WebSocket socket, OperationCancelToken token = null)
+        public Task<IOperationResult> AddOperation(string description, PendingOperationType opererationType, Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory, 
+            long id, OperationCancelToken token = null)
         {
-            var tcs = new TaskCompletionSource<IOperationResult>();
-            var id = GetNextOperationId();
-
             var operationState = new OperationState
             {
                 Status = OperationStatus.InProgress
@@ -74,79 +69,63 @@ namespace Raven.Server.Documents
                 OperationId = id,
                 State = operationState
             };
-            
+
+            Action<IOperationProgress> action = progress =>
+            {
+                notification.State.Progress = progress;
+                RaiseNotifications(notification);
+            };
+            var task = taskFactory(action);
+
             var operationDescription = new PendingOperationDescription
             {
                 Description = description,
-                TaskType = operationType,
+                TaskType = opererationType,
                 StartTime = SystemTime.UtcNow
             };
 
-            _pendingOperations.TryAdd(id, new PendingOperation
+            var pendingOperation = new PendingOperation
             {
+                Task = task,
                 Description = operationDescription,
                 Token = token,
-                State = operationState,
-                Task = tcs.Task
-            });
-
-            Action<IOperationProgress> action = async progress =>
-            {
-                notification.State.Progress = progress;
-                await SendOperationStatus(context, socket, notification, token);
+                State = operationState
             };
 
-            try
+            task.ContinueWith(taskResult =>
             {
-                // send intial operation progress to notify about operation id
-                await SendOperationStatus(context, socket, notification, token);
-
-                var operationResult = await operation(action).ConfigureAwait(false);
-
-                operationState.Result = operationResult;
-                operationState.Status = OperationStatus.Completed;
-                tcs.SetResult(operationResult);
-
-                return operationResult;
-            }
-            catch (OperationCanceledException e)
-            {
-                operationState.Status = OperationStatus.Canceled;
-                tcs.SetException(e);
-                throw;
-            }
-            catch (Exception e)
-            {
-                var documentConflictException = e as DocumentConflictException;
-                var status = documentConflictException != null ? 409 : 500;        
-                operationState.Result = new OperationExceptionResult(e, status);
-                operationState.Status = OperationStatus.Faulted;
-                tcs.SetException(e);
-                throw;
-            }
-            finally
-            {
-                operationState.Progress = null;
                 operationDescription.EndTime = SystemTime.UtcNow;
-                await SendOperationStatus(context, socket, notification, token);
-            }
-        }
-
-        private async Task SendOperationStatus(JsonOperationContext context, WebSocket webSocket, OperationStatusChangeNotification notification, OperationCancelToken token)
-        {
-            using (var ms = new MemoryStream())
-            {
-                using (var writer = new BlittableJsonTextWriter(context, ms))
+                operationState.Progress = null;
+                if (taskResult.IsCanceled)
                 {
-                    var notificationJson = notification.ToJson();
-                    context.Write(writer, notificationJson);
+                    operationState.Result = null;
+                    operationState.Status = OperationStatus.Canceled;
+                }
+                else if (taskResult.IsFaulted)
+                {
+                    var innerException = taskResult.Exception.ExtractSingleInnerException();
+
+                    var documentConflictException = innerException as DocumentConflictException;
+                    var status = documentConflictException != null ? 409 : 500;
+                    operationState.Result = new OperationExceptionResult(innerException, status);
+                    operationState.Status = OperationStatus.Faulted;
+                }
+                else
+                {
+                    operationState.Result = taskResult.Result;
+                    operationState.Status = OperationStatus.Completed;
                 }
 
-                ArraySegment<byte> bytes;
-                ms.TryGetBuffer(out bytes);
-                    
-                await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, token.Token);
-            }
+                RaiseNotifications(notification);
+            });
+
+            _pendingOperations.TryAdd(id, pendingOperation);
+            return task;
+        }
+
+        private void RaiseNotifications(OperationStatusChangeNotification notification)
+        {
+            _db.Notifications.RaiseNotifications(notification);
         }
 
         public void KillRunningOperation(long id)
@@ -154,7 +133,7 @@ namespace Raven.Server.Documents
             PendingOperation value;
             if (_pendingOperations.TryGetValue(id, out value))
             {
-                if (value.State.Status == OperationStatus.InProgress)
+                if (value.Task.IsCompleted == false)
                 {
                     value.Token?.Cancel();
                 }
@@ -194,10 +173,10 @@ namespace Raven.Server.Documents
 
         public class PendingOperation
         {
+            public Task Task;
             public PendingOperationDescription Description;
             public OperationCancelToken Token;
             public OperationState State;
-            public Task Task;
         }
 
         public class PendingOperationDescription
@@ -213,6 +192,10 @@ namespace Raven.Server.Documents
             UpdateByIndex,
 
             DeleteByIndex
+
+            //TODO: other operation types
         }
+
+       
     }
 }

@@ -1,106 +1,72 @@
 using System;
-using System.IO;
-using System.Net.WebSockets;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Json;
-using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection.Async;
 using Raven.Client.Data;
-using Raven.Client.Document;
 using Raven.Client.Exceptions;
-using Raven.Client.Platform;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-    public class Operation
+    public class Operation : IObserver<OperationStatusChangeNotification>
     {
+        private readonly AsyncServerClient _asyncServerClient;
+        private readonly long _id;
+        private IDisposable _subscription;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>();
-        private readonly RavenClientWebSocket _webSocket;
-        private readonly CancellationToken _token;
-        private readonly DocumentConvention _convention;
-
-        private static readonly ILog logger = LogManager.GetLogger(typeof(Operation));
+        private bool anyStatusReceived;
 
         public Operation(long id)
         {
+            _id = id;
             throw new NotImplementedException();
         }
 
-        public Operation(RavenClientWebSocket webSocket, DocumentConvention convention, CancellationToken token)
+        public Operation(AsyncServerClient asyncServerClient, long id)
         {
-            _webSocket = webSocket;
-            _token = token;
-            _convention = convention;
-
-            Task.Run(Receive);
+            _asyncServerClient = asyncServerClient;
+            _id = id;
+            Task.Run(Initialize);
         }
+
+        private async Task Initialize()
+        {
+            await _asyncServerClient.changes.Value.ConnectionTask.ConfigureAwait(false);
+            var observableWithTask = _asyncServerClient.changes.Value.ForOperationId(_id);
+            _subscription = observableWithTask.Subscribe(this);
+            await FetchOperationStatus();
+        }
+
+        /// <summary>
+        /// Since operation might complete before we subscribe to it, 
+        /// fetch operation status but only once  to avoid race condition
+        /// If we receive notification using changes API meanwhile, ignore fetched status
+        /// to avoid issues with non monotonic increasing progress
+        /// </summary>
+        private async Task FetchOperationStatus()
+        {
+            var operationStatusJson = await _asyncServerClient.GetOperationStatusAsync(_id);
+            var operationStatus = _asyncServerClient.convention
+                .CreateSerializer()
+                .Deserialize<OperationState>(new RavenJTokenReader(operationStatusJson)); // using deserializer from Conventions to properly handle $type mapping
+
+            if (anyStatusReceived == false)
+            {
+                OnNext(new OperationStatusChangeNotification
+                {
+                    OperationId = _id,
+                    State = operationStatus
+                });
+            }
+        }
+
+        internal long Id => _id;
 
         public Action<IOperationProgress> OnProgressChanged;
 
-
-        private async Task Receive()
+        public void OnNext(OperationStatusChangeNotification notification)
         {
-            try
-            {
-                using (var ms = new MemoryStream()) //TODO: consider merge this code as we have dupliate now
-                {
-                    ms.SetLength(4096);
-                    while (_webSocket.State == WebSocketState.Open)
-                    {
-                        if (ms.Length > 4096*16)
-                            ms.SetLength(4096);
-
-                        ms.Position = 0;
-                        ArraySegment<byte> bytes;
-                        ms.TryGetBuffer(out bytes);
-                        var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(bytes.Array, (int) ms.Position, (int) (ms.Length - ms.Position)), _token);
-                        ms.Position = result.Count;
-                        if (result.MessageType == WebSocketMessageType.Close)
-                        {
-                            await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
-                            return;
-                        }
-
-                        while (result.EndOfMessage == false)
-                        {
-                            if (ms.Length - ms.Position < 1024)
-                                ms.SetLength(ms.Length + 4096);
-                            ms.TryGetBuffer(out bytes);
-                            result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(bytes.Array, (int) ms.Position, (int) (ms.Length - ms.Position)), _token);
-                            ms.Position += result.Count;
-                        }
-
-                        ms.SetLength(ms.Position);
-                        ms.Position = 0;
-
-                        using (var reader = new StreamReader(ms, Encoding.UTF8, true, 1024, true))
-                        using (var jsonReader = new RavenJsonTextReader(reader)
-                        {
-                            SupportMultipleContent = true
-                        })
-                            while (jsonReader.Read())
-                            {
-                                var notification = _convention.CreateSerializer().Deserialize<OperationStatusChangeNotification>(jsonReader);
-                                HandleReceivedNotification(notification);
-                            }
-                    }
-                }
-            }
-            catch (WebSocketException ex)
-            {
-                logger.DebugException("Failed to receive a message, client was probably disconnected", ex);
-                _result.SetException(ex);
-            }
-            finally
-            {
-                 _webSocket.Dispose();
-            }
-        }
-
-        private void HandleReceivedNotification(OperationStatusChangeNotification notification)
-        {
+            anyStatusReceived = true;
             var onProgress = OnProgressChanged;
 
             switch (notification.State.Status)
@@ -112,9 +78,11 @@ namespace Raven.Client.Connection
                     }
                     break;
                 case OperationStatus.Completed:
+                    _subscription.Dispose();
                     _result.SetResult(notification.State.Result);
                     break;
                 case OperationStatus.Faulted:
+                    _subscription.Dispose();
                     var exceptionResult = notification.State.Result as OperationExceptionResult;
                     if(exceptionResult?.StatusCode == 409)
                         _result.SetException(new DocumentInConflictException(exceptionResult.Message));
@@ -122,9 +90,18 @@ namespace Raven.Client.Connection
                         _result.SetException(new InvalidOperationException(exceptionResult?.Message));
                     break;
                 case OperationStatus.Canceled:
+                    _subscription.Dispose();
                     _result.SetException(new OperationCanceledException());
                     break;
             }
+        }
+
+        public void OnError(Exception error)
+        {
+        }
+
+        public void OnCompleted()
+        {
         }
 
         public virtual Task<IOperationResult> WaitForCompletionAsync()
