@@ -207,7 +207,7 @@
             content: "";
             display: inline-block;
             position: absolute;
-            width: @line-height-computed/4*3;
+            width: floor(@line-height-computed/4*3);
             height: @line-height-computed/4*3;
             left: 0;
             top: 3px;
@@ -330,8 +330,8 @@
             content: "";
             display: inline-block;
             position: absolute;
-            width: @line-height-computed/4*3;
-            height: @line-height-computed/4*3;
+            width: floor(@line-height-computed/4*3);
+            height: floor(@line-height-computed/4*3);
             left: 0;
             margin-left: -22px;
             margin-top:2px;

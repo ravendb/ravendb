@@ -3,8 +3,14 @@
 .bg-variant(@color, @bg-text-color) {
   background-color: @color;
   color: @bg-text-color;
-  a&:hover,
-  a&:focus {
-    background-color: darken(@color, 10%);
+  background-image: @input-bg-disabled-image;
+
+
+  a {
+      color:#FFF;
+
+      &:hover, &:focus {
+        text-decoration:underline;
+      }
   }
 }

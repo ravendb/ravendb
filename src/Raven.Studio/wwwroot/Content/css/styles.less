@@ -226,18 +226,18 @@ a, .btn {
 }
 
 .padding {
-    padding: @grid-gutter-width / 2;
+    padding: (@grid-gutter-width / 2) (@grid-gutter-width / 4 * 3);
 
     &.padding-xs {
-        padding: @grid-gutter-width / 8;
+        padding: (@grid-gutter-width / 8) (@grid-gutter-width / 4);
     }
 
     &.padding-sm {
-        padding: @grid-gutter-width / 4;
+        padding: (@grid-gutter-width / 4) (@grid-gutter-width / 8 * 3);
     }
 
     &.padding-lg {
-        padding: @grid-gutter-width / 4 * 3;
+        padding: (@grid-gutter-width / 4 * 3) @grid-gutter-width;
     }
 }
 
@@ -278,6 +278,19 @@ hr {
         float: left;
     }
 }
+
+.pull-right-md {
+    @media (min-width: @screen-md) {
+        float: right;
+    }
+}
+
+.pull-left-md {
+    @media (min-width: @screen-md) {
+        float: left;
+    }
+}
+
 
 .text-right-sm {
     @media (min-width: @screen-sm) {
@@ -332,7 +345,6 @@ hr {
         width: auto;
         height: auto;
         padding: 0;
-        margin-left: -5px;
         font-size: inherit;
         line-height: inherit;
         color: #e9eaea;
