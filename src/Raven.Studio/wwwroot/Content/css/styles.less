@@ -666,7 +666,7 @@ hr {
 
         .resource-switcher-container, .search-container {
             position: relative;
-            top: 8px;
+            top: 2px;
 
             a {
                 color: @gray-lighter;
@@ -727,10 +727,12 @@ hr {
                 position: relative;
 
                 .database-filter {
-                    background-color: @gray !important;
+                    background-color: transparent;
+                    border-color:@gray-light !important;
                     padding: 2px (@grid-gutter-width / 2);
                     height: 34px;
                     margin-bottom: (@grid-gutter-width / 4);
+
 
                     &:focus {
                         box-shadow: none;
