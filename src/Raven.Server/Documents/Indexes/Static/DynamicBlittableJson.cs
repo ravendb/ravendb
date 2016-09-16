@@ -32,9 +32,9 @@ namespace Raven.Server.Documents.Indexes.Static
             BlittableJson = document.Data;
         }
 
-        public string[] GetPropertyNames()
+        public bool ContainsKey(string key)
         {
-            return BlittableJson.GetPropertyNames();
+            return BlittableJson.GetPropertyNames().Contains(key);
         }
 
         public override bool TryGetMember(GetMemberBinder binder, out object result)
