@@ -468,11 +468,6 @@ namespace Raven.Client.Connection.Async
         {
             return ExecuteWithReplication(HttpMethod.Delete, async operationMetadata =>
             {
-                var operationId = await NextOperationId(operationMetadata, token).ConfigureAwait(false);
-                var operation = new Operation(this, operationId);
-
-                await operation.Initialize().ConfigureAwait(false);
-
                 var notNullOptions = options ?? new QueryOperationOptions();
                 string path = queryToDelete.GetIndexQueryUrl(operationMetadata.Url, indexName, "queries") + "&allowStale=" + notNullOptions.AllowStale
                      + "&details=" + notNullOptions.RetrieveDetails;
@@ -481,15 +476,14 @@ namespace Raven.Client.Connection.Async
                 if (notNullOptions.StaleTimeout != null)
                     path += "&staleTimeout=" + notNullOptions.StaleTimeout;
 
-                path += "&operationId=" + operationId;
-
                 token.ThrowCancellationIfNotDefault(); //maybe the operation is canceled and we can spare the request..
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, HttpMethod.Delete, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    RavenJToken jsonResponse;
                     try
                     {
-                        await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+                        jsonResponse = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                     }
                     catch (ErrorResponseException e)
                     {
@@ -497,7 +491,8 @@ namespace Raven.Client.Connection.Async
                         throw;
                     }
 
-                    return operation;
+                    var opId = ((RavenJObject)jsonResponse)["OperationId"];
+                    return new Operation(this, opId.Value<long>());
                 }
             }, token);
         }
@@ -928,27 +923,21 @@ namespace Raven.Client.Connection.Async
         {
             return ExecuteWithReplication(HttpMethods.Patch, async operationMetadata =>
             {
-                var operationId = await NextOperationId(operationMetadata, token).ConfigureAwait(false);
-                var operation = new Operation(this, operationId);
-
-                await operation.Initialize().ConfigureAwait(false);
-
                 var notNullOptions = options ?? new QueryOperationOptions();
                 string path = queryToUpdate.GetIndexQueryUrl(operationMetadata.Url, indexName, "queries") + "&allowStale=" + notNullOptions.AllowStale
                     + "&maxOpsPerSec=" + notNullOptions.MaxOpsPerSecond + "&details=" + notNullOptions.RetrieveDetails;
                 if (notNullOptions.StaleTimeout != null)
                     path += "&staleTimeout=" + notNullOptions.StaleTimeout;
 
-                path += "&operationId=" + operationId;
-                
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, HttpMethods.Patch, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
                 {
                     request.AddOperationHeaders(OperationsHeaders);
                     await request.WriteAsync(requestData).ConfigureAwait(false);
 
+                    RavenJToken jsonResponse;
                     try
                     {
-                        await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+                        jsonResponse = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                     }
                     catch (ErrorResponseException e)
                     {
@@ -956,7 +945,8 @@ namespace Raven.Client.Connection.Async
                         throw;
                     }
 
-                    return operation;
+                    var opId = ((RavenJObject)jsonResponse)["OperationId"];
+                    return new Operation(this, opId.Value<long>());
                 }
             }, token);
         }

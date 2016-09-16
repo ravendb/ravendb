@@ -4,6 +4,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Data;
 using Raven.Client.Exceptions;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
@@ -13,6 +14,7 @@ namespace Raven.Client.Connection
         private readonly long _id;
         private IDisposable _subscription;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>();
+        private bool anyStatusReceived;
 
         public Operation(long id)
         {
@@ -24,13 +26,38 @@ namespace Raven.Client.Connection
         {
             _asyncServerClient = asyncServerClient;
             _id = id;
+            Task.Run(Initialize);
         }
 
-        public async Task Initialize()
+        private async Task Initialize()
         {
             await _asyncServerClient.changes.Value.ConnectionTask.ConfigureAwait(false);
             var observableWithTask = _asyncServerClient.changes.Value.ForOperationId(_id);
             _subscription = observableWithTask.Subscribe(this);
+            await FetchOperationStatus();
+        }
+
+        /// <summary>
+        /// Since operation might complete before we subscribe to it, 
+        /// fetch operation status but only once  to avoid race condition
+        /// If we receive notification using changes API meanwhile, ignore fetched status
+        /// to avoid issues with non monotonic increasing progress
+        /// </summary>
+        private async Task FetchOperationStatus()
+        {
+            var operationStatusJson = await _asyncServerClient.GetOperationStatusAsync(_id);
+            var operationStatus = _asyncServerClient.convention
+                .CreateSerializer()
+                .Deserialize<OperationState>(new RavenJTokenReader(operationStatusJson)); // using deserializer from Conventions to properly handle $type mapping
+
+            if (anyStatusReceived == false)
+            {
+                OnNext(new OperationStatusChangeNotification
+                {
+                    OperationId = _id,
+                    State = operationStatus
+                });
+            }
         }
 
         internal long Id => _id;
@@ -39,6 +66,7 @@ namespace Raven.Client.Connection
 
         public void OnNext(OperationStatusChangeNotification notification)
         {
+            anyStatusReceived = true;
             var onProgress = OnProgressChanged;
 
             switch (notification.State.Status)

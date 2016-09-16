@@ -233,12 +233,20 @@ namespace Raven.Server.Documents.Handlers
 
             var queryRunner = new QueryRunner(Database, context);
 
-            long operationId = GetLongQueryString("operationId").Value;
+            var operationId = Database.DatabaseOperations.GetNextOperationId();
 
             var task = Database.DatabaseOperations.AddOperation(indexName, operationType, onProgress => 
                     operation(queryRunner, indexName, query, options, onProgress, token), operationId, token);
 
             task.ContinueWith(_ => returnContextToPool.Dispose());
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("OperationId");
+                writer.WriteInteger(operationId);
+                writer.WriteEndObject();
+            }
         }
 
         private QueryOperationOptions GetQueryOperationOptions()
