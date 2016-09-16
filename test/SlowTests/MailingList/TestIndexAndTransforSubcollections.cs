@@ -9,7 +9,7 @@ namespace SlowTests.MailingList
 {
     public class TestIndexAndTransforSubcollections : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanTransformMultipleIndexResult()
         {
             using (var store = GetDocumentStore())
