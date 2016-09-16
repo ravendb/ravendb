@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -105,7 +106,7 @@ namespace Raven.Client.FileSystem.Connection
                 if (document == null)
                 {
                     LastReplicationUpdate = SystemTime.UtcNow; // checked and not found
-                    ReplicationDestinations.Clear(); // clear destinations that could be retrieved from local storage
+                    ReplicationDestinations = new List<OperationMetadata>(); // clear destinations that could be retrieved from local storage, but do not use clear because we might be in a middle of enumeration
                     return;
                 }
 
