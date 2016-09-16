@@ -8,6 +8,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Runtime.Caching;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Config.Settings;
 
@@ -33,6 +34,8 @@ namespace Raven.Database.Config
 
         public WebSocketsConfiguration WebSockets { get; set; }
 
+        public StudioConfiguration Studio { get; private set; }
+
         public StronglyTypedRavenSettings(NameValueCollection settings)
         {
             Replication = new ReplicationConfiguration();
@@ -43,6 +46,7 @@ namespace Raven.Database.Config
             Encryption = new EncryptionConfiguration();
             Indexing = new IndexingConfiguration();
             WebSockets = new WebSocketsConfiguration();
+            Studio = new StudioConfiguration();
 
             this.settings = settings;
         }
@@ -77,6 +81,14 @@ namespace Raven.Database.Config
             MemoryLimitForProcessing = new IntegerSetting(settings[Constants.MemoryLimitForProcessing] ?? settings[Constants.MemoryLimitForProcessing_BackwardCompatibility],
                 // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
                 Math.Min(1024, (int)(MemoryStatistics.AvailableMemoryInMb * 0.75)));
+
+            int workerThreads;
+            int completionThreads;
+            ThreadPool.GetMinThreads(out workerThreads, out completionThreads);
+            MinThreadPoolWorkerThreads =
+                new IntegerSettingWithMin(settings["Raven/MinThreadPoolWorkerThreads"], workerThreads, 2);
+            MinThreadPoolCompletionThreads =
+                new IntegerSettingWithMin(settings["Raven/MinThreadPoolCompletionThreads"], completionThreads, 2);
 
             MaxPageSize =
                 new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
@@ -268,6 +280,8 @@ namespace Raven.Database.Config
             Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
             Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
 
+            Studio.AllowNonAdminUsersToSetupPeriodicExport = new BooleanSetting(settings[Constants.AllowNonAdminUsersToSetupPeriodicExport], false);
+
             Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
             Indexing.DisableIndexingFreeSpaceThreshold = new IntegerSetting(settings[Constants.Indexing.DisableIndexingFreeSpaceThreshold], 2048);
             Indexing.DisableMapReduceInMemoryTracking = new BooleanSetting(settings[Constants.Indexing.DisableMapReduceInMemoryTracking], false);
@@ -293,6 +307,10 @@ namespace Raven.Database.Config
 
             CacheDocumentsInMemory = new BooleanSetting(settings["Raven/CacheDocumentsInMemory"], true);
         }
+
+        public IntegerSettingWithMin MinThreadPoolWorkerThreads { get; set; }
+
+        public IntegerSettingWithMin MinThreadPoolCompletionThreads { get; set; }
 
         private string GetDefaultWebDir()
         {
@@ -551,6 +569,11 @@ namespace Raven.Database.Config
             public StringSetting DefaultStorageTypeName { get; set; }
 
             public BooleanSetting PreventSchemaUpdate { get; set; }
+        }
+
+        public class StudioConfiguration
+        {
+            public BooleanSetting AllowNonAdminUsersToSetupPeriodicExport { get; set; }
         }
 
         public class EncryptionConfiguration

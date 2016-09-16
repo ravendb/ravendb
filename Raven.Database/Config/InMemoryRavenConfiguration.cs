@@ -53,6 +53,8 @@ namespace Raven.Database.Config
 
         public WebSocketsConfiguration WebSockets { get; set; }
 
+        public StudioConfiguration Studio { get; private set; }
+
         public InMemoryRavenConfiguration()
         {
             Replication = new ReplicationConfiguration();
@@ -62,6 +64,7 @@ namespace Raven.Database.Config
             Encryption = new EncryptionConfiguration();
             Indexing = new IndexingConfiguration();
             WebSockets = new WebSocketsConfiguration();
+            Studio = new StudioConfiguration();
 
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -102,6 +105,7 @@ namespace Raven.Database.Config
 
             WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
             FileSystem.InitializeFrom(this);
+            Studio.InitializeFrom(this);
 
             MaxPrecomputedBatchSizeForNewIndex = ravenSettings.MaxPrecomputedBatchSizeForNewIndex.Value;
 
@@ -132,6 +136,9 @@ namespace Raven.Database.Config
             PrefetchingDurationLimit = ravenSettings.PrefetchingDurationLimit.Value;
 
             // Core settings
+
+            MinThreadPoolCompletionThreads = ravenSettings.MinThreadPoolCompletionThreads.Value;
+            MinThreadPoolWorkerThreads = ravenSettings.MinThreadPoolWorkerThreads.Value;
             MaxPageSize = ravenSettings.MaxPageSize.Value;
 
             MemoryCacheLimitMegabytes = ravenSettings.MemoryCacheLimitMegabytes.Value;
@@ -325,6 +332,8 @@ namespace Raven.Database.Config
             if (string.IsNullOrEmpty(FileSystem.DefaultStorageTypeName))
                 FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
 
+            Studio.AllowNonAdminUsersToSetupPeriodicExport = ravenSettings.Studio.AllowNonAdminUsersToSetupPeriodicExport.Value;
+
             Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
             Indexing.MaxNumberOfItemsToProcessInTestIndexes = ravenSettings.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value;
@@ -347,6 +356,8 @@ namespace Raven.Database.Config
 
             return this;
         }
+
+       
 
         private static string CalculateWorkingDirectory(string workingDirectory)
         {
@@ -571,6 +582,21 @@ namespace Raven.Database.Config
         /// Checking the index may take some time on large databases
         /// </summary>
         public bool ResetIndexOnUncleanShutdown { get; set; }
+
+        /// <summary>
+        /// Minimum threads for .net thread pool worker threads
+        /// Default: system default
+        /// Min: 2
+        /// </summary>
+        public int MinThreadPoolWorkerThreads { get; set; }
+
+        /// <summary>
+        /// Minimum threads for .net thread pool async io completion threads
+        /// Default: system default
+        /// Min: 2
+        /// </summary>
+        public int MinThreadPoolCompletionThreads { get; set; }
+
 
         /// <summary>
         /// The maximum allowed page size for queries. 
@@ -1543,6 +1569,16 @@ namespace Raven.Database.Config
         public class WebSocketsConfiguration
         {
             public int InitialBufferPoolSize { get; set; }
+        }
+
+        public class StudioConfiguration
+        {
+            public void InitializeFrom(InMemoryRavenConfiguration configuration)
+            {
+                AllowNonAdminUsersToSetupPeriodicExport = configuration.Studio.AllowNonAdminUsersToSetupPeriodicExport;
+            }
+
+            public bool AllowNonAdminUsersToSetupPeriodicExport { get; set; }
         }
 
         public void UpdateDataDirForLegacySystemDb()

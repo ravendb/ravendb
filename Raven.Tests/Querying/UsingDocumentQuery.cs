@@ -47,8 +47,8 @@ namespace Raven.Tests.Querying
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
                 .WhereIn("Name", new[] { "ryan", "heath" });
-            Assert.Equal("@in<Name>:(ryan,heath)", q.ToString());
-        }
+            Assert.Equal("@in<Name>:(ryan , heath)", q.ToString());
+        } 
 
         [Fact]
         public void CanUnderstandArrayContains()
@@ -56,7 +56,7 @@ namespace Raven.Tests.Querying
             var array = new[] {"ryan", "heath"};
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
                 .WhereIn("Name", array);
-            Assert.Equal("@in<Name>:(ryan,heath)", q.ToString());
+            Assert.Equal("@in<Name>:(ryan , heath)", q.ToString());
         }
 
         [Fact]
@@ -65,7 +65,7 @@ namespace Raven.Tests.Querying
             var array = new[] { "ryan", "heath here" };
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
                 .WhereIn("Name", array);
-            Assert.Equal("@in<Name>:(ryan,\"heath here\")", q.ToString());
+            Assert.Equal("@in<Name>:(ryan , \"heath here\")", q.ToString());
         }
 
         [Fact]
@@ -92,7 +92,7 @@ namespace Raven.Tests.Querying
             IEnumerable<string> list = new[] { "ryan", "heath" };
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
                 .WhereIn("Name", list);
-            Assert.Equal("@in<Name>:(ryan,heath)", q.ToString());
+            Assert.Equal("@in<Name>:(ryan , heath)", q.ToString());
         }
 
         [Fact]

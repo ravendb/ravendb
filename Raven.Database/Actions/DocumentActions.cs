@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -19,7 +18,6 @@ using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
-using Raven.Database.Prefetching;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
@@ -34,8 +32,7 @@ namespace Raven.Database.Actions
         {
         }
 
-        public long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key,
-    IStorageActionsAccessor actions)
+        public long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, IStorageActionsAccessor actions)
         {
             int tries;
             return GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions, out tries);
@@ -97,10 +94,13 @@ namespace Raven.Database.Actions
                                                           string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null,
                                                           string skipAfter = null)
         {
-            var list = new RavenJArray();
-            GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, doc => list.Add(doc.ToJson()),
-                                           transformer, transformerParameters, skipAfter);
-            return list;
+            using (DocumentCacher.SkipSetDocumentsInDocumentCache())
+            {
+                var list = new RavenJArray();
+                GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, doc => list.Add(doc.ToJson()),
+                                               transformer, transformerParameters, skipAfter);
+                return list;
+            } 
         }
 
         public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize,
@@ -181,7 +181,7 @@ namespace Raven.Database.Actions
                                             ravenJObject = transformed[0];
                                             break;
                                         default:
-                                    ravenJObject = new RavenJObject { { "$values", new RavenJArray(transformed) } };
+                                            ravenJObject = new RavenJObject { { "$values", new RavenJArray(transformed) } };
                                             break;
                                     }
 
@@ -422,10 +422,11 @@ namespace Raven.Database.Actions
             return info;
         }
 
-        public RavenJArray GetDocumentsAsJson(int start, int pageSize, Etag etag, CancellationToken token)
+        public RavenJArray GetDocumentsAsJson(int start, int pageSize, Etag etag,
+            CancellationToken token, long? maxSize = null, TimeSpan? timeout = null)
         {
             var list = new RavenJArray();
-            GetDocuments(start, pageSize, etag, token, doc => { list.Add(doc.ToJson()); return true; });
+            GetDocuments(start, pageSize, etag, token, doc => { list.Add(doc.ToJson()); return true; }, maxSize, timeout);
             return list;
         }
 
@@ -434,60 +435,62 @@ namespace Raven.Database.Actions
             return GetDocuments(start, pageSize, etag, token, x => { addDocument(x); return true; });
         }
 
-        public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Func<JsonDocument, bool> addDocument)
+        public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token,
+            Func<JsonDocument, bool> addDocument, long? maxSize = null, TimeSpan? timeout = null)
         {
             Etag lastDocumentReadEtag = null;
 
-            TransactionalStorage.Batch(actions =>
-            {
-                bool returnedDocs = false;
-                while (true)
+            using (DocumentCacher.SkipSetDocumentsInDocumentCache())
+                TransactionalStorage.Batch(actions =>
                 {
-                    var documents = etag == null
-                        ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-                        : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
-
-                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers);
-                    int docCount = 0;
-                    foreach (var doc in documents)
+                    bool returnedDocs = false;
+                    while (true)
                     {
-                        docCount++;
+                        var documents = etag == null
+                            ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
+                            : actions.Documents.GetDocumentsAfter(etag, pageSize, token, maxSize: maxSize, timeout: timeout);
 
-                        token.ThrowIfCancellationRequested();
+                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers);
+                        var docCount = 0;
+                        foreach (var doc in documents)
+                        {
+                            docCount++;
 
-                        if (etag != null)
-                            etag = doc.Etag;
+                            token.ThrowIfCancellationRequested();
 
-                        JsonDocument.EnsureIdInMetadata(doc);
+                            if (etag != null)
+                                etag = doc.Etag;
 
-                        var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
-                        var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
+                            JsonDocument.EnsureIdInMetadata(doc);
 
-                        document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
-                        if (document == null)
-                            continue;
+                            var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+                            var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
 
-                        returnedDocs = true;
-                        Database.WorkContext.UpdateFoundWork();
+                            document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
+                            if (document == null)
+                                continue;
 
-                        bool canContinue = addDocument(document);
-                        if (!canContinue)
+                            returnedDocs = true;
+                            Database.WorkContext.UpdateFoundWork();
+
+                            bool canContinue = addDocument(document);
+                            if (!canContinue)
+                                break;
+
+                            lastDocumentReadEtag = etag;
+                        }
+
+                        if (returnedDocs || docCount == 0)
                             break;
 
-                        lastDocumentReadEtag = etag;
+                        // No document was found that matches the requested criteria
+                        // If we had a failure happen, we update the etag as we don't need to process those documents again (no matches there anyways).
+                        if (lastDocumentReadEtag != null)
+                            etag = lastDocumentReadEtag;
+
+                        start += docCount;
                     }
-
-                    if (returnedDocs || docCount == 0)
-                        break;
-
-                    // No document was found that matches the requested criteria
-                    // If we had a failure happen, we update the etag as we don't need to process those documents again (no matches there anyways).
-                    if (lastDocumentReadEtag != null)
-                        etag = lastDocumentReadEtag;
-
-                    start += docCount;
-                }
-            });
+                });
 
             return lastDocumentReadEtag;
         }

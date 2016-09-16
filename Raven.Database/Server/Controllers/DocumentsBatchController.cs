@@ -202,7 +202,10 @@ namespace Raven.Database.Server.Controllers
 
             var task = Task.Factory.StartNew(() =>
             {
-                status.State = batchOperation(index, indexQuery, option);
+                using (DocumentCacher.SkipSetDocumentsInDocumentCache())
+                {
+                    status.State = batchOperation(index, indexQuery, option);
+                }
             }).ContinueWith(t =>
             {
                 if (timeout != null)

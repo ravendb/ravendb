@@ -91,7 +91,7 @@ namespace Raven.Tests.MailingList
         }
 
         [Fact]
-        public void ShouldBeAbleToProjectIdOntoAnotherName_AndAnotherFieldNamedIdShouldNotBeAffected()
+        public void ShouldBeAbleToProjectIdOntoAnotherName_ButIdFieldWillBeFilledAnyway()
         {
             var foos = session.Query<Foo>()
                               .Customize(x => x.WaitForNonStaleResults())
@@ -103,8 +103,9 @@ namespace Raven.Tests.MailingList
                               })
                               .ToList();
 
-            Assert.Null(foos[0].Id);
+            Assert.NotNull(foos[0].Id);
             Assert.NotNull(foos[0].FooId);
+            Assert.Equal(foos[0].Id, foos[0].FooId);
         }
 
         private class Foo

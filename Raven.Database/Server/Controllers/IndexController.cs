@@ -83,10 +83,14 @@ namespace Raven.Database.Server.Controllers
                     return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
             }
 
+            var replicationQueryString = GetQueryStringValue(Constants.IsIndexReplicatedUrlParamName);
+            var isReplication = !string.IsNullOrWhiteSpace(replicationQueryString) &&
+                replicationQueryString.Equals("true", StringComparison.InvariantCultureIgnoreCase);
+
             string[] createdIndexes;
             try
             {
-                createdIndexes = Database.Indexes.PutIndexes(indexesToAdd);
+                createdIndexes = Database.Indexes.PutIndexes(indexesToAdd, isReplication);
             }
             catch (Exception ex)
             {
@@ -140,10 +144,14 @@ namespace Raven.Database.Server.Controllers
                     return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
             }
 
+            var replicationQueryString = GetQueryStringValue(Constants.IsIndexReplicatedUrlParamName);
+            var isReplication = !string.IsNullOrWhiteSpace(replicationQueryString) &&
+                replicationQueryString.Equals("true", StringComparison.InvariantCultureIgnoreCase);
+
             List<IndexActions.IndexInfo> createdIndexes;
             try
             {
-                createdIndexes = Database.Indexes.PutSideBySideIndexes(sideBySideIndexes);
+                createdIndexes = Database.Indexes.PutSideBySideIndexes(sideBySideIndexes, isReplication);
             }
             catch (Exception ex)
             {
@@ -740,6 +748,7 @@ namespace Raven.Database.Server.Controllers
                 return GetMessageWithString("Cannot find index : " + index, HttpStatusCode.NotFound);
             
             indexDefinition.LockMode = indexLockMode;
+            indexDefinition.IndexVersion = (indexDefinition.IndexVersion ?? 0) + 1;
             Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(indexDefinition);
 
             return GetEmptyMessage();

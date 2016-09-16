@@ -130,6 +130,7 @@ namespace Raven.Database.Server.Tenancy
             return null;
         }
 
+
         public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
             if (Locks.Contains(DisposingLock))
@@ -139,7 +140,7 @@ namespace Raven.Database.Server.Tenancy
                 throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed.");
 
             ManualResetEvent cleanupLock;
-            if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxSecondsForTaskToWaitForDatabaseToLoad * 1000) == false)
+            if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxSecondsForTaskToWaitForDatabaseToLoad*1000) == false)
                 throw new InvalidOperationException(string.Format("Database '{0}' is currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxSecondsForTaskToWaitForDatabaseToLoad));
 
             if (ResourcesStoresCache.TryGetValue(tenantId, out database))
@@ -161,25 +162,28 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
-            var hasAcquired = false;
-            try
-            {
-                if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
-                    throw new ConcurrentLoadTimeoutException("Too much databases loading concurrently, timed out waiting for them to load.");
 
-                hasAcquired = true;
-                database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+            if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
+                throw new ConcurrentLoadTimeoutException("Too much databases loading concurrently, timed out waiting for them to load.");
+
+
+            var didReleaseDuringWait = 0;
+            var createdNewTask = false;
+            database = ResourcesStoresCache.GetOrAdd(tenantId, __ =>
+            {
+                createdNewTask = true;
+                return Task.Factory.StartNew(() =>
                 {
-                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                    var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
                     AssertLicenseParameters(config);
                     var documentDatabase = new DocumentDatabase(config, transportState);
 
-                documentDatabase.SpinBackgroundWorkers(false);
-                documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
-                documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
-                documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
-                // register only DB that has incremental backup set.
+                    documentDatabase.SpinBackgroundWorkers(false);
+                    documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
+                    documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
+                    documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
+                    // register only DB that has incremental backup set.
                     documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
 
                     // if we have a very long init process, make sure that we reset the last idle time for this db.
@@ -191,14 +195,18 @@ namespace Raven.Database.Server.Tenancy
                     {
                         Logger.WarnException("Failed to create database " + tenantId, task.Exception);
                     }
-                    return task;
-                }).Unwrap());
-            }
-            finally
-            {
-                if (hasAcquired)
+
                     ResourceSemaphore.Release();
+
+                    return task;
+                }).Unwrap();
+            });
+
+            if (createdNewTask == false)
+            {
+                ResourceSemaphore.Release();
             }
+
 
             if (database.IsFaulted && database.Exception != null)
             {
@@ -346,6 +354,14 @@ namespace Raven.Database.Server.Tenancy
                             "But we detect: " + databases.Count + " databases" + Environment.NewLine +
                             "You can either upgrade your RavenDB license or delete a database from the server");
                 }
+            }
+
+            string boolAsString;
+            bool isHotSpare;
+            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("hotSpare", out boolAsString) &&
+                bool.TryParse(boolAsString, out isHotSpare) && isHotSpare)
+            {
+                throw new InvalidOperationException("You can use a Hot Spare license only in RavenDB v3.5 and above!");
             }
 
             foreach (var bundle in config.ActiveBundles.Where(bundle => bundle != "PeriodicExport"))

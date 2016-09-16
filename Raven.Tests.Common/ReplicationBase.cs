@@ -36,6 +36,7 @@ namespace Raven.Tests.Common
     {
         protected int PortRangeStart = 9000;
         protected int RetriesCount = 500;
+        private volatile bool hasWaitEnded;
 
         protected ReplicationBase()
         {
@@ -202,9 +203,14 @@ namespace Raven.Tests.Common
             return CreateStoreAtPort(previousServer.SystemDatabase.Configuration.Port, enableAuthentication, databaseName: databaseName);
         }
 
-        protected void TellFirstInstanceToReplicateToSecondInstance(string apiKey = null, string username = null, string password = null, string domain = null, string authenticationScheme = null)
+        protected void TellFirstInstanceToReplicateToSecondInstance(string apiKey = null, 
+            string username = null, 
+            string password = null, 
+            string domain = null, 
+            string authenticationScheme = null, 
+            bool skipIndexReplication = false)
         {
-            TellInstanceToReplicateToAnotherInstance(0, 1, apiKey, username, password, domain, authenticationScheme);
+            TellInstanceToReplicateToAnotherInstance(0, 1, apiKey, username, password, domain, authenticationScheme, skipIndexReplication);
         }
 
         protected void TellSecondInstanceToReplicateToFirstInstance(string apiKey = null, string username = null, string password = null, string domain = null, string authenticationScheme = null)
@@ -212,9 +218,16 @@ namespace Raven.Tests.Common
             TellInstanceToReplicateToAnotherInstance(1, 0, apiKey, username, password, domain);
         }
 
-        protected void TellInstanceToReplicateToAnotherInstance(int src, int dest, string apiKey = null, string username = null, string password = null, string domain = null, string authenticationScheme = null)
+        protected void TellInstanceToReplicateToAnotherInstance(int src, 
+            int dest, 
+            string apiKey = null, 
+            string username = null, 
+            string password = null, 
+            string domain = null, 
+            string authenticationScheme = null, 
+            bool skipIndexReplication = false)
         {
-            RunReplication(stores[src], stores[dest], apiKey: apiKey, username: username, password: password, domain: domain, authenticationScheme: authenticationScheme);
+            RunReplication(stores[src], stores[dest], apiKey: apiKey, username: username, password: password, domain: domain, authenticationScheme: authenticationScheme, skipIndexReplication: skipIndexReplication);
         }
 
         protected void RunReplication(IDocumentStore source, IDocumentStore destination,
@@ -227,7 +240,8 @@ namespace Raven.Tests.Common
             string password = null,
             string domain = null,
             ReplicationClientConfiguration clientConfiguration = null,
-            string authenticationScheme = null)
+            string authenticationScheme = null,
+            bool skipIndexReplication = false)
         {
             db = db ?? (destination is DocumentStore ? ((DocumentStore)destination).DefaultDatabase : null);
 
@@ -242,7 +256,7 @@ namespace Raven.Tests.Common
                     TransitiveReplicationBehavior = transitiveReplicationBehavior,
                     Disabled = disabled,
                     IgnoredClient = ignoredClient,
-                    SkipIndexReplication = false, //precaution
+                    SkipIndexReplication = skipIndexReplication,
                     AuthenticationScheme = authenticationScheme
                 };
                 if (db != null)
@@ -489,6 +503,52 @@ namespace Raven.Tests.Common
 
             if (waitToStart)
                 SpinWait.SpinUntil(() => replicationTask.IsRunning, TimeSpan.FromSeconds(10));
+        }
+
+        protected bool WaitForIndexToReplicate(IDatabaseCommands commands, string indexName, int timeoutInMilliseconds = 1500)
+        {
+            var mre = new ManualResetEventSlim();
+            hasWaitEnded = false;
+            Task.Run(() =>
+            {
+                while (hasWaitEnded == false)
+                {
+                    var stats = commands.GetStatistics();
+                    if (stats.Indexes.Any(x => x.Name == indexName))
+                    {
+                        mre.Set();
+                        break;
+                    }
+                    Thread.Sleep(25);
+                }
+            });
+
+            var success = mre.Wait(timeoutInMilliseconds);
+            hasWaitEnded = true;
+            return success;
+        }
+
+        protected bool WaitForIndexDeletionToReplicate(IDatabaseCommands commands, string indexName, int timeoutInMilliseconds = 1500)
+        {
+            var mre = new ManualResetEventSlim();
+            hasWaitEnded = false;
+            Task.Run(() =>
+            {
+                while (hasWaitEnded == false)
+                {
+                    var stats = commands.GetStatistics();
+                    if (stats.Indexes.Any(x => x.Name == indexName) == false)
+                    {
+                        mre.Set();
+                        break;
+                    }
+                    Thread.Sleep(25);
+                }
+            });
+
+            var success = mre.Wait(timeoutInMilliseconds);
+            hasWaitEnded = true;
+            return success;
         }
     }
 }

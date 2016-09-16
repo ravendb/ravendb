@@ -1,18 +1,11 @@
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
-using JetBrains.Annotations;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 
@@ -66,9 +59,13 @@ namespace Raven.Database.Server.Controllers
             if (data == null || string.IsNullOrEmpty(data.TransformResults))
                 return GetMessageWithString("Expected json document with 'TransformResults' property", HttpStatusCode.BadRequest);
 
+            var replicationQueryString = GetQueryStringValue(Constants.IsIndexReplicatedUrlParamName);
+            var isReplication = !string.IsNullOrWhiteSpace(replicationQueryString) &&
+                replicationQueryString.Equals("true", StringComparison.InvariantCultureIgnoreCase);
+
             try
             {
-                var transformerName = Database.Transformers.PutTransform(transformer, data);
+                var transformerName = Database.Transformers.PutTransform(transformer, data, isReplication);
                 return GetMessageWithObject(new { Transformer = transformerName }, HttpStatusCode.Created);
             }
             catch (Exception ex)
@@ -98,6 +95,8 @@ namespace Raven.Database.Server.Controllers
                 return GetMessageWithString("Cannot find transformer : " + transformer, HttpStatusCode.NotFound);
 
             transformerDefinition.LockMode = transformerLockMode;
+            transformerDefinition.TransformerVersion = (transformerDefinition.TransformerVersion ?? 0) + 1;
+
             Database.IndexDefinitionStorage.UpdateTransformerDefinitionWithoutUpdatingCompiledTransformer(transformerDefinition);
 
             return GetEmptyMessage();
@@ -120,7 +119,5 @@ namespace Raven.Database.Server.Controllers
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
         }
-
-
     }
 }

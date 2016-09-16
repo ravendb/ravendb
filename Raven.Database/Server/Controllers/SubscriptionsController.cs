@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -181,6 +182,8 @@ namespace Raven.Database.Server.Controllers
             var sentDocuments = false;
 
             var bufferStream = new BufferedStream(stream, 1024 * 64);
+
+            var lastBatchSentTime = Stopwatch.StartNew();
             using (var writer = new JsonTextWriter(new StreamWriter(bufferStream)))
             {
                 var options = subscriptions.GetBatchOptions(id);
@@ -196,7 +199,7 @@ namespace Raven.Database.Server.Controllers
 
                     var batchSize = 0;
                     var batchDocCount = 0;
-                    var processedDocuments = 0;
+                    var processedDocumentsCount = 0;
                     var hasMoreDocs = false;
                     var config = subscriptions.GetSubscriptionConfig(id);
                     var startEtag =  config.AckEtag;
@@ -206,8 +209,20 @@ namespace Raven.Database.Server.Controllers
 
                     Func<JsonDocument, bool> addDocument = doc =>
                     {
-                        processedDocuments++;
                         timeout.Delay();
+                        if (doc == null)
+                        {
+                            // we only have this heartbeat when the streaming has gone on for a long time
+                            // and we haven't sent anything to the user in a while (because of filtering, skipping, etc).
+                            writer.WriteRaw(Environment.NewLine);
+                            writer.Flush();
+                            if (lastBatchSentTime.ElapsedMilliseconds > 30000)
+                                return false;
+
+                            return true;
+                        }
+
+                        processedDocumentsCount++;
 
                         // We cant continue because we have already maxed out the batch bytes size.
                         if (options.MaxSize.HasValue && batchSize >= options.MaxSize)
@@ -234,10 +249,10 @@ namespace Raven.Database.Server.Controllers
                         return true; // We get the next document
                     };
 
-                    int retries = 0;
+                    var retries = 0;
                     do
                     {
-                        int lastIndex = processedDocuments;
+                        var lastProcessedDocumentsCount = processedDocumentsCount;
 
                         Database.TransactionalStorage.Batch(accessor =>
                         {
@@ -245,7 +260,7 @@ namespace Raven.Database.Server.Controllers
                             // of them aren't going to be relevant for other ops, so we are going to skip
                             // the cache for that, to avoid filling it up very quickly
                             using (DocumentCacher.SkipSetAndGetDocumentsInDocumentCache())
-                            {    
+                            {
                                 if (isPrefixCriteria)
                                 {
                                     // If we don't get any document from GetDocumentsWithIdStartingWith it could be that we are in presence of a lagoon of uninteresting documents, so we are hitting a timeout.
@@ -271,12 +286,19 @@ namespace Raven.Database.Server.Controllers
                                         startEtag = lastProcessedDocEtag;
                                     }
 
-                                    retries = lastIndex == batchDocCount ? retries : 0;
+                                    retries = lastProcessedDocumentsCount == batchDocCount ? retries : 0;
                                 }
                             }							
                         });
 
-                        if (lastIndex == processedDocuments)
+                        if (lastBatchSentTime.ElapsedMilliseconds >= 30000)
+                        {
+                            if (batchDocCount == 0)
+                                log.Warn("Subscription filtered out all possible documents for {0:#,#;;0} seconds in a row, stopping operation", lastBatchSentTime.Elapsed.TotalSeconds);
+                            break;
+                        }
+
+                        if (lastProcessedDocumentsCount == processedDocumentsCount)
                         {
                             if (retries == 3)
                             {
@@ -286,14 +308,14 @@ namespace Raven.Database.Server.Controllers
                             {
                                 log.Warn("Subscription processing did not end up replicating any documents, due to possible storage error, retry number: {0}", retries);
                             }
+
                             retries++;
                         }
-                    } 
-                    while (retries < 3 && hasMoreDocs && batchDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || batchSize < options.MaxSize));
+                    } while (retries < 3 && hasMoreDocs && batchDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || batchSize < options.MaxSize));
 
                     writer.WriteEndArray();
 
-                    if (batchDocCount > 0 || isPrefixCriteria)
+                    if (batchDocCount > 0 || processedDocumentsCount > 0 || isPrefixCriteria)
                     {
                         writer.WritePropertyName("LastProcessedEtag");
                         writer.WriteValue(lastProcessedDocEtag.ToString());

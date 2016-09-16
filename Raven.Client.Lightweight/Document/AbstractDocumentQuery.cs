@@ -1321,12 +1321,12 @@ If you really want to do in memory filtering on the data returned from the query
                 }
                 if (first == false)
                 {
-                    queryText.Append(",");
+                    queryText.Append(" , ");
                 }
                 first = false;
                 var nestedWhereParams = new WhereParams
                 {
-                    AllowWildcards = true,
+                    AllowWildcards = false,
                     IsAnalyzed = true,
                     FieldName = whereParams.FieldName,
                     FieldTypeForIdentifier = whereParams.FieldTypeForIdentifier,
