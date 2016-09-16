@@ -297,7 +297,7 @@ namespace FastTests.Voron.Compaction
 
             StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir), 
                 (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "Compacted")),
-                x => progressReport.Add(string.Format("Copied {0} of {1} records in '{2}' tree. Copied {3} of {4} trees.", x.CopiedTreeRecords, x.TotalTreeRecordsCount, x.TreeName, x.CopiedTrees, x.TotalTreeCount)));
+                x => progressReport.Add($"Copied {x.ObjectProgress} of {x.ObjectTotal} records in '{x.ObjectName}' tree. Copied {x.GlobalProgress} of {x.GlobalTotal} trees."));
 
             Assert.NotEmpty(progressReport);
             var lines = new[]
