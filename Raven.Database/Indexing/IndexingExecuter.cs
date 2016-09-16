@@ -343,7 +343,7 @@ namespace Raven.Database.Indexing
 
         public static HashSet<string> GetEntityNamesToIndex(List<IndexToWorkOn> indexes, DocumentDatabase database)
         {
-            var entityNames = new HashSet<string>();
+            var entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var indexIds = indexes.Select(x => x.IndexId).ToList();
             foreach (var indexId in indexIds)
@@ -353,7 +353,10 @@ namespace Raven.Database.Indexing
                     continue;
 
                 if (generator.ForEntityNames.Count == 0)
-                    continue;
+                {
+                    //an index that is running on all collections
+                    return null;
+                }
 
                 entityNames.UnionWith(generator.ForEntityNames);
             }

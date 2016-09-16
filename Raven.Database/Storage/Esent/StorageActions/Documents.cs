@@ -355,9 +355,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
             var errors = new List<DocumentFetchError>();
             var skipDocumentGetErrors = failedToGetHandler != null;
             var hasEntityNames = entityNames != null && entityNames.Count > 0;
-            if (hasEntityNames)
-                entityNames = new HashSet<string>(entityNames, StringComparer.OrdinalIgnoreCase);
-
             var skipCountingDocument = new Reference<bool> { Value = false };
 
             do

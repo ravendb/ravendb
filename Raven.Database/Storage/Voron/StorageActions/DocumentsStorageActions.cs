@@ -205,8 +205,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 var errors = new List<DocumentFetchError>();
                 var skipDocumentGetErrors = failedToGetHandler != null;
                 var hasEntityNames = entityNames != null && entityNames.Count > 0;
-                if (hasEntityNames)
-                    entityNames = new HashSet<string>(entityNames, StringComparer.OrdinalIgnoreCase);
 
                 do
                 {

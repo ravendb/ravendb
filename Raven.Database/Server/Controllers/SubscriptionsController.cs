@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -281,7 +282,8 @@ namespace Raven.Database.Server.Controllers
                         return true; // We get the next document
                     };
 
-                    var collections = criteria.BelongsToAnyCollection?.ToHashSet();
+                    var collections = criteria.BelongsToAnyCollection == null ? null :
+                        new HashSet<string>(criteria.BelongsToAnyCollection, StringComparer.OrdinalIgnoreCase);
 
                     int retries = 0;
                     do

@@ -1250,7 +1250,9 @@ namespace Raven.Bundles.Replication.Tasks
                     List<JsonDocument> docsToReplicate;
                     result.LastEtag = lastEtag;
                     var isEtl = destination.IsETL;
-                    var collections = isEtl == false ? null : destination.SpecifiedCollections?.Keys.ToHashSet();
+
+                    var collections = isEtl == false ? null :
+                        new HashSet<string>(destination.SpecifiedCollections.Keys, StringComparer.OrdinalIgnoreCase);
 
                     while (true)
                     {

@@ -247,7 +247,7 @@ namespace Raven.Database.Bundles.SqlReplication
                         var configsToWorkOn = sqlConfigGroup.ConfigsToWorkOn;
 
                         List<JsonDocument> documents;
-                        var entityNamesToIndex = configsToWorkOn?.Select(x => x.RavenEntityName).ToHashSet();
+                        var entityNamesToIndex = new HashSet<string>(configsToWorkOn.Select(x => x.RavenEntityName), StringComparer.OrdinalIgnoreCase);
                         using (prefetchingBehavior.DocumentBatchFrom(sqlConfigGroup.LastReplicatedEtag, out documents, entityNamesToIndex))
                         {
                             Etag latestEtag = null, lastBatchEtag = null;
@@ -459,7 +459,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
         private void SetPrefetcherForIndexingGroup(SqlConfigGroup sqlConfig, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
         {
-            var entityNames = sqlConfig.ConfigsToWorkOn.Select(x => x.RavenEntityName).ToHashSet();
+            var entityNames = new HashSet<string>(sqlConfig.ConfigsToWorkOn.Select(x => x.RavenEntityName), StringComparer.OrdinalIgnoreCase);
             sqlConfig.PrefetchingBehavior = TryGetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers, entityNames) ??
                                       TryGetDefaultPrefetcher(sqlConfig.LastReplicatedEtag, usedPrefetchers) ??
                                       GetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers);

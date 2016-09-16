@@ -164,6 +164,8 @@ namespace Raven.Database.Prefetching
 
         public List<JsonDocument> GetDocumentsBatchFrom(Etag etag, int? take = null, HashSet<string> entityNames = null)
         {
+            Debug.Assert(entityNames == null || entityNames.Comparer.Equals(EqualityComparer<string>.Default) == false);
+
             if (take != null && take.Value <= 0)
                 throw new ArgumentException("Take must be greater than 0.");
 
