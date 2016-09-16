@@ -268,12 +268,13 @@ namespace Voron.Impl.Compaction
                                     transactionSize += entry.Size;
                                 }
 
-                                lastSlice = result.Key;
-
                                 // The transaction has surpassed the allowed
                                 // size before a flush
-                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
+                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
+                                {
+                                    lastSlice = result.Key;
                                     break;
+                                }
                             }
                         }
                         else
@@ -288,12 +289,14 @@ namespace Voron.Impl.Compaction
                                 outputTable.Insert(entry);
                                 entriesLeft--;
                                 transactionSize += entry.Size;
-                                lastFixedIndex = index.GetValue(entry);
 
                                 // The transaction has surpassed the allowed
                                 // size before a flush
-                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
+                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
+                                {
+                                    lastFixedIndex = index.GetValue(entry);
                                     break;
+                                }
                             }
                         }
                     }
@@ -306,12 +309,14 @@ namespace Voron.Impl.Compaction
                             outputTable.Insert(entry);
                             entriesLeft--;
                             transactionSize += entry.Size;
-                            lastSlice = schema.Key.GetSlice(txr.Allocator, entry);
 
                             // The transaction has surpassed the allowed
                             // size before a flush
-                            if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
+                            if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
+                            {
+                                lastSlice = schema.Key.GetSlice(txr.Allocator, entry);
                                 break;
+                            }
                         }
                     }
 
