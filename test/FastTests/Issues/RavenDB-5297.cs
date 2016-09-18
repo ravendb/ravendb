@@ -1,10 +1,7 @@
 ﻿using Raven.Client.Data;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace FastTests.Issues
@@ -30,6 +27,7 @@ namespace FastTests.Issues
                            };
         }
     }
+
     public class RavenDB_5297: RavenTestBase
     {
         [Fact]
@@ -73,7 +71,7 @@ namespace FastTests.Issues
 
                 WaitForIndexing(store);
 
-                var query = store.DatabaseCommands.Query("Users/ByName", new IndexQuery { Query = "Name:* -Second" });
+                var query = store.DatabaseCommands.Query("Users/ByName", new IndexQuery { Query = "Name:* NOT Second" });
                 Assert.Equal(query.TotalResults, 1);
             }
         }
