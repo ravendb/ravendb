@@ -355,7 +355,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
             var errors = new List<DocumentFetchError>();
             var skipDocumentGetErrors = failedToGetHandler != null;
             var hasEntityNames = entityNames != null && entityNames.Count > 0;
-            var skipCountingDocument = new Reference<bool> { Value = false };
 
             do
             {
@@ -395,7 +394,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 JsonDocument document;
                 try
                 {
-                    document = GetJsonDocument(hasEntityNames, key, docEtag, entityNames, skipCountingDocument);
+                    document = GetJsonDocument(hasEntityNames, key, docEtag, entityNames);
                 }
                 catch (Exception e)
                 {
@@ -413,8 +412,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
 
                 totalSize += document.SerializedSizeOnDisk;
-                if (skipCountingDocument.Value == false)
-                    fetchedDocumentCount++;
+                fetchedDocumentCount++;
 
                 yield return document;
                 lastDocEtag = docEtag;  
@@ -445,8 +443,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 lastProcessedDocument(lastDocEtag);
         }
 
-        private JsonDocument GetJsonDocument(bool hasEntityNames, string key, 
-            Etag docEtag, HashSet<string> entityNames, Reference<bool> skipCountingDocument = null)
+        private JsonDocument GetJsonDocument(bool hasEntityNames, 
+            string key, Etag docEtag, HashSet<string> entityNames)
         {
             if (hasEntityNames == false)
             {
@@ -468,9 +466,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
             var entityName = metadata.Metadata.Value<string>(Constants.RavenEntityName);
             if (string.IsNullOrEmpty(entityName) == false && entityNames.Contains(entityName))
             {
-                if (skipCountingDocument != null)
-                    skipCountingDocument.Value = false;
-
                 RavenJObject dataAsJson;
                 var docSize = GetDocumentFromStorage(key, metadata.Metadata, docEtag, out dataAsJson);
                 return new JsonDocument
@@ -486,10 +481,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
 
             // this document will be filtered anyway
-            // there is point in getting the document data
-            if (skipCountingDocument != null)
-                skipCountingDocument.Value = true;
-
+            // there is no point in getting the document data
             return new JsonDocument
             {
                 SerializedSizeOnDisk = metadataSize,
@@ -498,7 +490,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 NonAuthoritativeInformation = false,
                 LastModified = metadata.LastModified,
                 Etag = metadata.Etag,
-                Metadata = metadata.Metadata
+                Metadata = metadata.Metadata,
+                IsIrrelevantForIndexing = true
             };
         }
 

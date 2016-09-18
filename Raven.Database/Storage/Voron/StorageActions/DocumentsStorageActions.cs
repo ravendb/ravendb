@@ -92,8 +92,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                     var key = GetKeyFromCurrent(iterator);
 
-                    
-                    var document = GetJsonDocument(hasEntityNames, key, entityNames, ref _);
+                    var document = GetJsonDocument(hasEntityNames, key, entityNames);
                     if (document == null) //precaution - should never be true
                     {
                         if (SkipConsistencyCheck)
@@ -241,11 +240,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         }
                     }
 
-                    var skipCountingDocument = false;
                     JsonDocument document;
                     try
                     {
-                        document = GetJsonDocument(hasEntityNames, key, entityNames, ref skipCountingDocument); 
+                        document = GetJsonDocument(hasEntityNames, key, entityNames); 
                     }
                     catch (Exception e)
                     {
@@ -276,8 +274,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     }
 
                     fetchedDocumentTotalSize += document.SerializedSizeOnDisk;
-                    if (skipCountingDocument == false)
-                        fetchedDocumentCount++;
+                    fetchedDocumentCount++;
 
                     yield return document;
 
@@ -309,8 +306,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 lastProcessedDocument(lastDocEtag);
         }
 
-        private JsonDocument GetJsonDocument(bool hasEntityNames, string key, 
-            HashSet<string> entityNames, ref bool isEmptyDocument)
+        private JsonDocument GetJsonDocument(bool hasEntityNames, string key, HashSet<string> entityNames)
         {
             if (hasEntityNames == false)
             {
@@ -340,8 +336,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
 
             // this document will be filtered anyway
-            // there is no need to get the document data
-            isEmptyDocument = true;
+            // there is no point in getting the document data
             return new JsonDocument
             {
                 DataAsJson = EmptyDocument,
@@ -349,7 +344,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 Key = metadata.Key, //original key - with user specified casing, etc.
                 Metadata = metadata.Metadata,
                 SerializedSizeOnDisk = metadataSize,
-                LastModified = metadata.LastModified
+                LastModified = metadata.LastModified,
+                IsIrrelevantForIndexing = true
             };
         }
 

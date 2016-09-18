@@ -19,13 +19,15 @@ namespace Raven.Database.Prefetching
 
         private readonly SortedList<Etag, JsonDocument> innerList;
 
+        private readonly Dictionary<Etag, JsonDocument> relevantDocuments;
+
         private int loadedSize;
 
         public ConcurrentJsonDocumentSortedList()
         {
             innerList = new SortedList<Etag, JsonDocument>();
+            relevantDocuments = new Dictionary<Etag, JsonDocument>();
         }
-
 
         public SortedList<Etag, JsonDocument> Clone()
         {
@@ -56,6 +58,22 @@ namespace Raven.Database.Prefetching
             }
         }
 
+        public int RelevantDocumentsCount
+        {
+            get
+            {
+                try
+                {
+                    slim.EnterReadLock();
+                    return relevantDocuments.Count;
+                }
+                finally
+                {
+                    slim.ExitReadLock();
+                }
+            }
+        }
+
         public IDisposable EnterWriteLock()
         {
             slim.EnterWriteLock();
@@ -65,6 +83,17 @@ namespace Raven.Database.Prefetching
         public void Add(JsonDocument value)
         {
             Debug.Assert(slim.IsWriteLockHeld);
+
+            JsonDocument savedDocument;
+            if (relevantDocuments.TryGetValue(value.Etag, out savedDocument))
+            {
+                relevantDocuments.Remove(value.Etag);
+
+                loadedSize -= savedDocument.SerializedSizeOnDisk;
+            }
+
+            if (value.IsIrrelevantForIndexing == false)
+                relevantDocuments[value.Etag] = value;
 
             innerList[value.Etag] = value;
 
@@ -113,6 +142,9 @@ namespace Raven.Database.Prefetching
                 {
                     innerList.RemoveAt(0);
                     loadedSize -= result.SerializedSizeOnDisk;
+
+                    if (result.IsIrrelevantForIndexing == false)
+                        relevantDocuments.Remove(result.Etag);
                 }
 
                 return result != null;
@@ -158,6 +190,9 @@ namespace Raven.Database.Prefetching
 
                     innerList.RemoveAt(i);
                     loadedSize -= doc.SerializedSizeOnDisk;
+
+                    if (doc.IsIrrelevantForIndexing == false)
+                        relevantDocuments.Remove(doc.Etag);
                 }
             }
             finally
@@ -172,6 +207,7 @@ namespace Raven.Database.Prefetching
             try
             {
                 innerList.Clear();
+                relevantDocuments.Clear();
                 loadedSize = 0;
             }
             finally
