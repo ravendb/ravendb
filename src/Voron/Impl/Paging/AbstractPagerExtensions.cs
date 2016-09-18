@@ -49,12 +49,7 @@ namespace Voron.Impl.Paging
         public static int GetNumberOfOverflowPages(this AbstractPager pager, long overflowSize)
         {
             overflowSize += Constants.TreePageHeaderSize;
-            long result = (overflowSize/pager.PageSize) + (overflowSize%pager.PageSize == 0 ? 0 : 1);
-            if (result > int.MaxValue)
-                throw new InvalidDataException(
-                    $"GetNumberOfOverflowPages returned number exceeding int.MaxValue : {result}");
-            int numOfPages = unchecked((int) result);
-            return numOfPages;
+            return checked((int)(overflowSize / pager.PageSize) + (overflowSize % pager.PageSize == 0 ? 0 : 1));
         }
     }
 }

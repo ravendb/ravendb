@@ -129,12 +129,7 @@ namespace Voron.Impl.Journal
         internal static int GetNumberOfPagesFromSize(StorageEnvironmentOptions options, long size)
         {
             var lastPage = (size % options.PageSize == 0 ? 0 : 1);
-            var result = (size/options.PageSize) + lastPage;
-            if (result > int.MaxValue)
-                throw new InvalidDataException(
-                    $"GetNumberOfOverflowPages returned number exceeding int.MaxValue : {result}");
-            int numOfPages = unchecked((int)result);
-            return numOfPages;
+            return checked((int)(size/options.PageSize) + lastPage);
         }
 
         public void RecoverAndValidate(StorageEnvironmentOptions options)

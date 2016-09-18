@@ -42,7 +42,7 @@ namespace Sparrow.Compression
         private const int LZ4_MEMORY_USAGE = 14;
         private const int LZ4_HASHLOG = LZ4_MEMORY_USAGE - 2;
         private const int HASH_SIZE_U32 = 1 << LZ4_HASHLOG;
-
+        private const int MAX_INPUT_LENGTH_PER_SEGMENT = int.MaxValue/2;
 
         private interface ILimitedOutputDirective { };
         private struct NotLimited : ILimitedOutputDirective { };
@@ -86,7 +86,8 @@ namespace Sparrow.Compression
             long outputLength,
             int acceleration = ACCELERATION_DEFAULT)
         {
-            if (inputLength < int.MaxValue && outputLength < int.MaxValue)
+            // LZ4 can handle less then 2GB. we will handle the compression/decompression devided to parts for above 1GB inputs
+            if (inputLength < MAX_INPUT_LENGTH_PER_SEGMENT && outputLength < MAX_INPUT_LENGTH_PER_SEGMENT)
             {
                 return Encode64(input, output, (int)inputLength, (int)outputLength, acceleration);
             }
@@ -95,14 +96,14 @@ namespace Sparrow.Compression
             long pos = 0;
             while (pos < inputLength)
             {
-                int partInputLength = int.MaxValue;
+                int partInputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
                 if (pos + partInputLength > inputLength)
-                    partInputLength = (int)(Int32.MaxValue - pos);
+                    partInputLength = (int)(MAX_INPUT_LENGTH_PER_SEGMENT - pos);
 
-                int partOutputLength = int.MaxValue;
-                totalOutputSize += Encode64(input, output, partInputLength, partOutputLength, acceleration);
+                int partOutputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
+                totalOutputSize += Encode64(input + pos, output + totalOutputSize, partInputLength, partOutputLength, acceleration);
 
-                pos += int.MaxValue;
+                pos += MAX_INPUT_LENGTH_PER_SEGMENT;
             }
 
             return totalOutputSize;
@@ -139,9 +140,9 @@ namespace Sparrow.Compression
         /// <summary>Gets maximum the length of the output.</summary>
         /// <param name="size">Length of the input.</param>
         /// <returns>Maximum number of bytes needed for compressed buffer.</returns>
-        public static int MaximumOutputLength(int size)
+        public static long MaximumOutputLength(long size)
         {
-            return size > LZ4_MAX_INPUT_SIZE ? 0 : size + (size / 255) + 16;
+            return size + (size / 255) + 16;
         }
 
         private int LZ4_compress_generic<TLimited, TTableType, TDictionaryType, TDictionaryIssue>(LZ4_stream_t_internal* dictPtr, byte* source, byte* dest, int inputSize, int maxOutputSize, int acceleration)
@@ -541,23 +542,23 @@ namespace Sparrow.Compression
             long outputLength,
             bool knownOutputLength)
         {
-            if (inputLength < int.MaxValue && outputLength < int.MaxValue)
+            if (inputLength < MAX_INPUT_LENGTH_PER_SEGMENT && outputLength < MAX_INPUT_LENGTH_PER_SEGMENT)
             {
-                return Decode64(input, (int) inputLength, output, (int) outputLength, knownOutputLength);
+                return Decode64(input, (int)inputLength, output, (int)outputLength, knownOutputLength);
             }
 
             long totalOutputSize = 0;
             long pos = 0;
             while (pos < inputLength)
             {
-                int partInputLength = int.MaxValue;
+                int partInputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
                 if (pos + partInputLength > inputLength)
-                    partInputLength = (int) (Int32.MaxValue - pos);
+                    partInputLength = (int) (MAX_INPUT_LENGTH_PER_SEGMENT - pos);
 
-                int partOutputLength = int.MaxValue;
-                totalOutputSize += Decode64(input, partInputLength, output, partOutputLength, false);
+                int partOutputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
+                totalOutputSize += Decode64(input + pos, partInputLength, output + totalOutputSize, partOutputLength, false);
 
-                pos += int.MaxValue;
+                pos += MAX_INPUT_LENGTH_PER_SEGMENT;
             }
 
             return totalOutputSize;

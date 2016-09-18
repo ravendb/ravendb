@@ -140,17 +140,23 @@ namespace Voron.Data.BTrees
 
         public void Add(Slice key, Stream value, ushort? version = null)
         {
-            if (value == null) throw new ArgumentNullException(nameof(value));
-            if (value.Length > int.MaxValue)
-                throw new ArgumentException("Cannot add a value that is over 2GB in size", nameof(value));
+            ValidateValueLength(value);
 
             State.IsModified = true;
 
-            var length = (int) value.Length;
+            var length = (int)value.Length;
 
             var pos = DirectAdd(key, length, version: version);
 
             CopyStreamToPointer(_llt, value, pos);
+        }
+
+        private static void ValidateValueLength(Stream value)
+        {
+            if (value == null) throw new ArgumentNullException(nameof(value));
+
+            if (value.Length > int.MaxValue)
+                throw new ArgumentException("Cannot add a value that is over 2GB in size", nameof(value));
         }
 
         public void Add(Slice key, byte[] value, ushort? version = null)

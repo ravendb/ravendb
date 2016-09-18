@@ -845,7 +845,7 @@ namespace Voron.Impl.Journal
             if (CurrentFile == null || CurrentFile.AvailablePages < pages.NumberOfPages)
             {
                 _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
-                CurrentFile = NextFile((int)pages.NumberOfPages);
+                CurrentFile = NextFile(pages.NumberOfPages);
             }
 
             CurrentFile.Write(tx, pages, _lazyTransactionBuffer, pageCount);
@@ -871,10 +871,7 @@ namespace Voron.Impl.Journal
                  + numberOfPages * sizeof(long);
 
             long outputBufferSize;
-            if (maxSizeRequiringCompression > int.MaxValue)
-                outputBufferSize = maxSizeRequiringCompression + (maxSizeRequiringCompression / 255) + 16;
-            else
-                outputBufferSize = LZ4.MaximumOutputLength((int)maxSizeRequiringCompression);
+            outputBufferSize = LZ4.MaximumOutputLength(maxSizeRequiringCompression);
 
             var outputBufferInPages = (outputBufferSize + sizeof(TransactionHeader)) / pageSize +
                                       ((outputBufferSize + sizeof(TransactionHeader)) % pageSize == 0 ? 0 : 1);
@@ -931,7 +928,7 @@ namespace Voron.Impl.Journal
             // We need to account for the transaction header as part of the total length.
             var totalLength = compressedLen + sizeof(TransactionHeader);
             var remainder = totalLength % pageSize;
-            var compressedPages = (totalLength / pageSize) + (remainder == 0 ? 0 : 1);
+            int compressedPages = checked((int)((totalLength/pageSize) + (remainder == 0 ? 0 : 1)));
 
             if (remainder != 0)
             {
@@ -973,7 +970,7 @@ namespace Voron.Impl.Journal
     public unsafe struct CompressedPagesResult
     {
         public byte* Base;
-        public long NumberOfPages;
+        public int NumberOfPages;
     }
 
 }
