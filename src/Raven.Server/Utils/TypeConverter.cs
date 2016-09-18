@@ -27,7 +27,7 @@ namespace Raven.Server.Utils
 
         private static readonly ConcurrentDictionary<Type, PropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, PropertyAccessor>();
 
-        public static object ConvertType(object value, JsonOperationContext context)
+        public static object ToBlittableSupportedType(object value, JsonOperationContext context)
         {
             if (value == null || value is DynamicNullObject)
                 return null;
@@ -58,12 +58,15 @@ namespace Raven.Server.Utils
             if (value is DateTime || value is DateTimeOffset || value is TimeSpan)
                 return value;
 
+            if (value is Guid)
+                return context.GetLazyString(((Guid)value).ToString("D"));
+
             var dictionary = value as IDictionary;
             if (dictionary != null)
             {
                 var @object = new DynamicJsonValue();
                 foreach (var key in dictionary.Keys)
-                    @object[key.ToString()] = ConvertType(dictionary[key], context);
+                    @object[key.ToString()] = ToBlittableSupportedType(dictionary[key], context);
 
                 return @object;
             }
@@ -83,9 +86,9 @@ namespace Raven.Server.Utils
                 {
                     var objectEnumerable = value as IEnumerable<object>;
                     if (objectEnumerable != null)
-                        return new DynamicJsonArray(objectEnumerable.Select(x => ConvertType(x, context)));
+                        return new DynamicJsonArray(objectEnumerable.Select(x => ToBlittableSupportedType(x, context)));
 
-                    return new DynamicJsonArray(enumerable.Cast<object>().Select(x => ConvertType(x, context)));
+                    return new DynamicJsonArray(enumerable.Cast<object>().Select(x => ToBlittableSupportedType(x, context)));
                 }
             }
 
@@ -98,17 +101,17 @@ namespace Raven.Server.Utils
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
                 if (propertyValueAsEnumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(propertyValue))
                 {
-                    inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ConvertType(x, context)));
+                    inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ToBlittableSupportedType(x, context)));
                     continue;
                 }
 
-                inner[property.Key] = ConvertType(propertyValue, context);
+                inner[property.Key] = ToBlittableSupportedType(propertyValue, context);
             }
 
             return inner;
         }
 
-        public static dynamic DynamicConvert(object value)
+        public static dynamic ToDynamicType(object value)
         {
             if (value == null)
                 return DynamicNullObject.Null;

@@ -165,7 +165,7 @@ namespace SlowTests.MailingList
             public string Title { get; set; }
         }
 
-        [Fact(Skip = "Missing feature: CreateField")]
+        [Fact]
         public void WillMapPropertiesOnMapIndexes()
         {
             new TranslatedEntities_Map().Execute(_store);
@@ -212,12 +212,6 @@ namespace SlowTests.MailingList
                 Assert.Equal("Ole mundo", results.First().Title);
                 TestHelper.AssertNoIndexErrors(_store);
             }
-        }
-
-        public override void Dispose()
-        {
-            base.Dispose();
-            _store.Dispose();
         }
     }
 }

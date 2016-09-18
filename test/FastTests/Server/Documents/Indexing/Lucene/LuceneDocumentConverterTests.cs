@@ -46,7 +46,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Name"] = null
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc, _ctx);
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.Equal(Constants.NullValue, result.GetField("Name").StringValue);
@@ -71,7 +71,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Name"] = string.Empty
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc, _ctx);
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.Equal(Constants.EmptyString, result.GetField("Name").StringValue);
@@ -96,7 +96,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Name"] = "Arek"
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc, _ctx);
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.NotNull(result.GetField("Name"));
@@ -121,7 +121,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Name"] = "Arek"
             }, "users/1");
 
-            var result1 = _sut.ConvertToCachedDocument(doc1.Key, doc1);
+            var result1 = _sut.ConvertToCachedDocument(doc1.Key, doc1, _ctx);
 
             Assert.Equal("Arek", result1.GetField("Name").ReaderValue.ReadToEnd());
             Assert.Equal("users/1", result1.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
@@ -131,7 +131,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Name"] = "Pawel"
             }, "users/2");
 
-            var result2 = _sut.ConvertToCachedDocument(doc2.Key, doc2);
+            var result2 = _sut.ConvertToCachedDocument(doc2.Key, doc2, _ctx);
 
             Assert.Equal("Pawel", result2.GetField("Name").ReaderValue.ReadToEnd());
             Assert.Equal("users/2", result2.GetField(Constants.Indexing.Fields.DocumentIdFieldName).StringValue);
@@ -166,7 +166,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Age"] = 25,
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc, _ctx);
 
             Assert.Equal(5, result.GetFields().Count);
             Assert.NotNull(result.GetField("Weight"));
@@ -202,7 +202,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 }
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc, _ctx);
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.Equal("NYC", result.GetField("Address_City").ReaderValue.ReadToEnd());
@@ -237,7 +237,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 }
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc, _ctx);
 
             Assert.Equal(4, result.GetFields().Count);
             Assert.Equal(2, result.GetFields("Friends_Name").Length);
@@ -294,7 +294,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 }
             }, "companies/1");
 
-            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc, _ctx);
 
             Assert.Equal(5, result.GetFields().Count);
             Assert.Equal(3, result.GetFields("Companies_Products_Name").Length);
@@ -339,7 +339,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 }
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc, _ctx);
 
             Assert.Equal(5, result.GetFields().Count);
             Assert.Equal(@"{""City"":""New York City""}", result.GetField("Address").StringValue);
@@ -360,7 +360,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 }
             }, "users/2");
 
-            result = _sut.ConvertToCachedDocument(doc.Key, doc);
+            result = _sut.ConvertToCachedDocument(doc.Key, doc, _ctx);
 
             Assert.Equal(5, result.GetFields().Count);
             Assert.Equal(@"{""City"":""NYC""}", result.GetField("Address").StringValue);
@@ -392,7 +392,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 }
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc, _ctx);
 
             Assert.Equal(4, result.GetFields().Count);
             Assert.Equal("Dave", result.GetFields("Friends")[0].ReaderValue.ReadToEnd());
@@ -429,7 +429,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 }
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc, _ctx);
 
             Assert.Equal(5, result.GetFields().Count);
             Assert.Equal(@"{""City"":""New York City""}", result.GetFields("Addresses")[0].StringValue);
