@@ -4,7 +4,7 @@ import eventsCollector = require("common/eventsCollector");
 
 class exportDatabase extends viewModelBase {
     batchSize = ko.observable(1024);
-    noneDefualtFileName = ko.observable<string>("");
+    noneDefaultFileName = ko.observable<string>("");
     chooseDifferntFileName = ko.observable<boolean>(false);
 
     constructor() {
@@ -25,7 +25,7 @@ class exportDatabase extends viewModelBase {
 
         var smugglerOptions = {
             BatchSize: this.batchSize(),
-            NoneDefualtFileName: this.noneDefualtFileName()
+            NoneDefaultFileName: this.noneDefaultFileName()
         };
         
         var url = "/studio-tasks/exportFilesystem";

@@ -153,9 +153,9 @@ namespace Raven.Database.FileSystem.Controllers
                 smugglerOptions = (SmugglerFilesOptions) serializer.Deserialize(jsonReader, typeof (SmugglerFilesOptions));
             }
 
-            var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
+            var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefaultFileName) || (smugglerOptions.NoneDefaultFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
                 $"Dump of {FileSystemName}, {DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}" :
-                smugglerOptions.NoneDefualtFileName;
+                smugglerOptions.NoneDefaultFileName;
 
             //create PushStreamContent object that will be called when the output stream will be ready.
             result.Content = new PushStreamContent(async (outputStream, content, arg3) =>

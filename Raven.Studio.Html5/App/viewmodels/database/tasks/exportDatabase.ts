@@ -31,7 +31,7 @@ class exportDatabase extends viewModelBase {
     filters = ko.observableArray<filterSetting>();
     transformScript = ko.observable<string>();
     exportActionUrl: KnockoutComputed<string>;
-    noneDefualtFileName = ko.observable<string>("");
+    noneDefaultFileName = ko.observable<string>("");
     chooseDifferntFileName = ko.observable<boolean>(false);
     exportCommand: KnockoutComputed<string>;
 
@@ -57,7 +57,7 @@ class exportDatabase extends viewModelBase {
 
         this.exportCommand = ko.computed(() => {
             var targetServer = appUrl.forServer();
-            var outputFilename = this.chooseDifferntFileName() ? exportDatabase.escapeForShell(this.noneDefualtFileName()) : "raven.dump"; 
+            var outputFilename = this.chooseDifferntFileName() ? exportDatabase.escapeForShell(this.noneDefaultFileName()) : "raven.dump"; 
             var commandTokens = ["Raven.Smuggler", "out", targetServer, outputFilename];
 
             var types = [];
@@ -185,7 +185,7 @@ class exportDatabase extends viewModelBase {
             ShouldExcludeExpired: !this.includeExpiredDocuments(),
             Filters: filtersToSend,
             TransformScript: this.transformScript(),
-            NoneDefualtFileName: this.noneDefualtFileName()
+            NoneDefaultFileName: this.noneDefaultFileName()
         };
 
         new validateExportDatabaseOptionsCommand(smugglerOptions, this.activeDatabase())
