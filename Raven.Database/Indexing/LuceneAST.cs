@@ -529,7 +529,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
             {
                 case Operator.AND:
                     LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
                     break;
                 case Operator.OR:
                     LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD));
@@ -547,7 +547,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
                             break;
                         case QueryOperator.And:
                             LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
-                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
+                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("defaultOperator");
@@ -555,7 +555,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
                     break;
                 case Operator.INTERSECT:
                     LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
