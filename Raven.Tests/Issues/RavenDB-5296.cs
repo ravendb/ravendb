@@ -76,7 +76,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                var query = store.DatabaseCommands.Query("Users/ByName", new IndexQuery { Query = "Name:* -Second" });
+                var query = store.DatabaseCommands.Query("Users/ByName", new IndexQuery { Query = "Name:* NOT Second" });
                 Assert.Equal(query.TotalResults, 1);
             }
         }
