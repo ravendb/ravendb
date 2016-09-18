@@ -753,7 +753,7 @@ interface smugglerOptionsDto {
     ShouldExcludeExpired: boolean;
     Filters: filterSettingDto[];
     TransformScript: string;
-    NoneDefualtFileName: string;
+    NoneDefaultFileName: string;
 }
 
 interface customColumnParamsDto {

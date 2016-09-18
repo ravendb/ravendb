@@ -7,7 +7,7 @@ import messagePublisher = require("common/messagePublisher");
 class exportDatabase extends viewModelBase {
     batchSize = ko.observable(1024);
     exportActionUrl:KnockoutComputed<string>;
-    noneDefualtFileName = ko.observable<string>("");
+    noneDefaultFileName = ko.observable<string>("");
     chooseDifferntFileName = ko.observable<boolean>(false);
     authToken = ko.observable<string>();
 
@@ -28,7 +28,7 @@ class exportDatabase extends viewModelBase {
     startExport() {
         var smugglerOptions = {
             BatchSize: this.batchSize(),
-            NoneDefualtFileName: this.noneDefualtFileName()
+            NoneDefaultFileName: this.noneDefaultFileName()
         };
         
         $("#SmugglerOptions").val(JSON.stringify(smugglerOptions));
