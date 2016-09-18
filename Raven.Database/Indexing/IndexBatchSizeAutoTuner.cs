@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Reactive.Disposables;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Indexing
 {
@@ -82,7 +82,7 @@ namespace Raven.Database.Indexing
                 return null;
 
             NumberOfItemsToProcessInSingleBatch = newValue;
-            return Disposable.Create(() => NumberOfItemsToProcessInSingleBatch = oldValue);
+            return new DisposableAction(() => NumberOfItemsToProcessInSingleBatch = oldValue);
         }
     }
 }
