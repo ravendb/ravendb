@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using FastTests.Voron.FixedSize;
 using Lucene.Net.Search;
 using Raven.Client.Linq;
 using Sparrow;
@@ -78,9 +80,9 @@ namespace FastTests.Voron.Compaction
         }
 
         [Theory]
-        [InlineData(1000, 9786)]
-        [InlineData(1000, 454645)]
-        [InlineData(1000, 3558)]
+        [InlineDataWithRandomSeed(250)]
+        [InlineDataWithRandomSeed(500)]
+        [InlineDataWithRandomSeed(1000)]
         public unsafe void ShouldPreserveTables(int entries, int seed)
         {
             // Create random docs to check everything is preserved
