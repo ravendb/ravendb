@@ -200,9 +200,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
         private Func<JsonDocument> ReadDocument(bool hasEntityNames, HashSet<string> entityNames)
         {
-            var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
-            var docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-            return () => GetJsonDocument(hasEntityNames, key, docEtag, entityNames);
+            return () =>
+            {
+                var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
+                var docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+                return GetJsonDocument(hasEntityNames, key, docEtag, entityNames);
+            };
         }
 
         private IEnumerable<JsonDocument> GetDocumentsWithoutBuffering(
