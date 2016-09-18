@@ -16,13 +16,13 @@ namespace Voron.Impl.Compaction
 {
     public class CompactionProgress
     {
-        public string TreeName;
+        public RootObjectType ObjectType;
+        public string ObjectName;
+        public long ObjectProgress;
+        public long ObjectTotal;
 
-        public long CopiedTrees;
-        public long TotalTreeCount;
-
-        public long CopiedTreeRecords;
-        public long TotalTreeRecordsCount;
+        public long GlobalProgress;
+        public long GlobalTotal;
     }
 
     public static unsafe class StorageCompaction
@@ -89,7 +89,8 @@ namespace Voron.Impl.Compaction
                                 copiedTrees++;// we don't copy the fixed size tree
                                 continue;
                             }
-                            copiedTrees = CopyFixedSizeTrees(compactedEnv, progressReport, txr, rootIterator, treeName, copiedTrees, totalTreesCount);
+
+                            copiedTrees = CopyFixedSizeTrees(compactedEnv, progressReport, txr, rootIterator, treeName, copiedTrees, totalTreesCount, objectType);
                             break;
                         case RootObjectType.Table:
                             copiedTrees = CopyTableTree(compactedEnv, progressReport, txr, treeName, copiedTrees, totalTreesCount);
@@ -103,18 +104,19 @@ namespace Voron.Impl.Compaction
         }
 
         private static long CopyFixedSizeTrees(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr,
-            TreeIterator rootIterator, string treeName, long copiedTrees, long totalTreesCount)
+            TreeIterator rootIterator, string treeName, long copiedTrees, long totalTreesCount, RootObjectType type)
         {
             
             var fst = txr.FixedTreeFor(rootIterator.CurrentKey.Clone(txr.Allocator), 0);
-            Report(treeName, copiedTrees, totalTreesCount, 0,
-                fst.NumberOfEntries,
-                progressReport);
+
+            Report(type, treeName, copiedTrees, totalTreesCount, 0, fst.NumberOfEntries, progressReport);
+
             using (var it = fst.Iterate())
             {
                 var copiedEntries = 0L;
                 if (it.Seek(Int64.MinValue) == false)
                     return copiedTrees;
+
                 do
                 {
                     using (var txw = compactedEnv.WriteTransaction())
@@ -133,9 +135,7 @@ namespace Voron.Impl.Compaction
                     if (fst.NumberOfEntries == copiedEntries)
                         copiedTrees++;
 
-                    Report(treeName, copiedTrees, totalTreesCount, copiedEntries,
-                        fst.NumberOfEntries,
-                        progressReport);
+                    Report(type, treeName, copiedTrees, totalTreesCount, copiedEntries, fst.NumberOfEntries, progressReport);
                     compactedEnv.FlushLogToDataFile();
                 } while (it.MoveNext());
             }
@@ -147,7 +147,7 @@ namespace Voron.Impl.Compaction
         {
             var existingTree = txr.ReadTree(treeName);
 
-            Report(treeName, copiedTrees, totalTreesCount, 0, existingTree.State.NumberOfEntries, progressReport);
+            Report(RootObjectType.VariableSizeTree, treeName, copiedTrees, totalTreesCount, 0, existingTree.State.NumberOfEntries, progressReport);
 
             using (var existingTreeIterator = existingTree.Iterate(true))
             {
@@ -207,8 +207,7 @@ namespace Voron.Impl.Compaction
                     if (copiedEntries == existingTree.State.NumberOfEntries)
                         copiedTrees++;
 
-                    Report(treeName, copiedTrees, totalTreesCount, copiedEntries, existingTree.State.NumberOfEntries,
-                        progressReport);
+                    Report(RootObjectType.VariableSizeTree, treeName, copiedTrees, totalTreesCount, copiedEntries, existingTree.State.NumberOfEntries, progressReport);
 
                     compactedEnv.FlushLogToDataFile();
                 } while (existingTreeIterator.MoveNext());
@@ -232,7 +231,7 @@ namespace Voron.Impl.Compaction
 
             // The next three variables are used to know what our current
             // progress is
-            var entriesLeft = inputTable.NumberOfEntries;
+            var copiedEntries = 0;
 
             // It is very important that these slices be allocated in the
             // txr.Allocator, as the intermediate write transactions on
@@ -241,7 +240,9 @@ namespace Voron.Impl.Compaction
             var lastSlice = Slices.BeforeAllKeys;
             long lastFixedIndex = 0L;
 
-            while (entriesLeft > 0)
+            Report(RootObjectType.Table, treeName, copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport);
+
+            while (copiedEntries < inputTable.NumberOfEntries)
             {
                 using (var txw = compactedEnv.WriteTransaction())
                 {
@@ -264,16 +265,17 @@ namespace Voron.Impl.Compaction
                                 {
                                     // The table will take care of reconstructing indexes automatically
                                     outputTable.Insert(entry);
-                                    entriesLeft--;
+                                    copiedEntries++;
                                     transactionSize += entry.Size;
                                 }
 
-                                lastSlice = result.Key;
-
                                 // The transaction has surpassed the allowed
                                 // size before a flush
-                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
+                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
+                                {
+                                    lastSlice = result.Key;
                                     break;
+                                }
                             }
                         }
                         else
@@ -286,14 +288,16 @@ namespace Voron.Impl.Compaction
 
                                 // The table will take care of reconstructing indexes automatically
                                 outputTable.Insert(entry);
-                                entriesLeft--;
+                                copiedEntries++;
                                 transactionSize += entry.Size;
-                                lastFixedIndex = index.GetValue(entry);
 
                                 // The transaction has surpassed the allowed
                                 // size before a flush
-                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
+                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
+                                {
+                                    lastFixedIndex = index.GetValue(entry);
                                     break;
+                                }
                             }
                         }
                     }
@@ -304,19 +308,26 @@ namespace Voron.Impl.Compaction
                         {
                             // The table will take care of reconstructing indexes automatically
                             outputTable.Insert(entry);
-                            entriesLeft--;
+                            copiedEntries++;
                             transactionSize += entry.Size;
-                            lastSlice = schema.Key.GetSlice(txr.Allocator, entry);
 
                             // The transaction has surpassed the allowed
                             // size before a flush
-                            if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
+                            if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
+                            {
+                                lastSlice = schema.Key.GetSlice(txr.Allocator, entry);
                                 break;
+                            }
                         }
                     }
 
                     txw.Commit();
                 }
+
+                if (copiedEntries == inputTable.NumberOfEntries)
+                    copiedTrees++;
+
+                Report(RootObjectType.Table, treeName, copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport);
 
                 compactedEnv.FlushLogToDataFile();
             }
@@ -324,18 +335,19 @@ namespace Voron.Impl.Compaction
             return copiedTrees;
         }
 
-        private static void Report(string treeName, long copiedTrees, long totalTreeCount, long copiedRecords, long totalTreeRecordsCount, Action<CompactionProgress> progressReport)
+        private static void Report(RootObjectType objectType, string objectName, long globalProgress, long globalTotal, long objectProgress, long objectTotal, Action<CompactionProgress> progressReport)
         {
             if (progressReport == null)
                 return;
 
             progressReport(new CompactionProgress
             {
-                TreeName = treeName,
-                CopiedTrees = copiedTrees,
-                TotalTreeCount = totalTreeCount,
-                CopiedTreeRecords = copiedRecords,
-                TotalTreeRecordsCount = totalTreeRecordsCount
+                ObjectType = objectType,
+                ObjectName = objectName,
+                ObjectProgress = objectProgress,
+                ObjectTotal = objectTotal,
+                GlobalProgress = globalProgress,
+                GlobalTotal = globalTotal
             });
         }
     }
