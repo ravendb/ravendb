@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Net;
+using Raven.Abstractions.Connection;
 using Raven.Client.Data;
 using Raven.Client.Exceptions;
 using Xunit;
@@ -10,7 +10,7 @@ namespace FastTests.Server.Documents.Replication
 {
     public class ManualConflictResolution : ReplicationTestsBase
     {
-        [Fact(Skip = "Client API needs to support changed protocol of replication conflicts before this would work")]
+        [Fact(Skip = "This needs to be refactored after ClientAPI will support the new conflict semantics")]
         public void CanManuallyResolveConflict()
         {
             using (var master = GetDocumentStore())
@@ -35,6 +35,7 @@ namespace FastTests.Server.Documents.Replication
                     }, "users/1");
                     session.SaveChanges();
                 }
+
                 System.Threading.Thread.Sleep(2000);
 
                 using (var session = slave.OpenSession())
@@ -43,18 +44,19 @@ namespace FastTests.Server.Documents.Replication
                     {
                         var item = session.Load<ReplicationConflictsTests.User>("users/1");
                     }
-                    catch (ConflictException e)
+                    catch (ErrorResponseException e)
                     {
-                        var list = new List<JsonDocument>();
-                        for (int i = 0; i < e.ConflictedVersionIds.Length; i++)
-                        {
-                            var doc = slave.DatabaseCommands.Get(e.ConflictedVersionIds[i]);
-                            list.Add(doc);
-                        }
+                        Assert.Equal(HttpStatusCode.Conflict, e.StatusCode);
+                        //var list = new List<JsonDocument>();
+                        //for (int i = 0; i < e.ConflictedVersionIds.Length; i++)
+                        //{
+                        //	var doc = slave.DatabaseCommands.Get(e.ConflictedVersionIds[i]);
+                        //	list.Add(doc);
+                        //}
 
-                        var resolved = list[0];
-                        //TODO : when client API is finished, refactor this so the test works as designed
-                        //resolved.Metadata.Remove(Constants.RavenReplicationConflictDocument);
+                        //var resolved = list[0];
+                        ////TODO : when client API is finished, refactor this so the test works as designed
+                        ////resolved.Metadata.Remove(Constants.RavenReplicationConflictDocument);
                         //slave.DatabaseCommands.Put("users/1", null, resolved.DataAsJson, resolved.Metadata);
                     }
                 }

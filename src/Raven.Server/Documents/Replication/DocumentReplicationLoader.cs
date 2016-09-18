@@ -100,8 +100,8 @@ namespace Raven.Server.Documents.Replication
                 });
                 writer.Flush();
             }
-           
 
+            
             var lazyIncomingHandler = new Lazy<IncomingReplicationHandler>(() =>
             {
                 //TODO: fix the disposable of the passed context and all the params cleanly
@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Replication
                     tcpConnectionOptions.TcpClient, 
                     tcpConnectionOptions.Stream, 
                     getLatestEtagMessage,
-                    _replicationDocument.DocumentConflictResolution);
+                    this);
                 newIncoming.Failed += OnIncomingReceiveFailed;
                 newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
                 if (_log.IsInfoEnabled)
@@ -302,7 +302,7 @@ namespace Raven.Server.Documents.Replication
                 _log.Info($"Replication configuration was changed: {notification.Key}");
         }
 
-        private ReplicationDocument GetReplicationDocument()
+        internal ReplicationDocument GetReplicationDocument()
         {
             DocumentsOperationContext context;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))

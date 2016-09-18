@@ -5,11 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.IO;
 using System.Threading;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
-using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -35,11 +32,12 @@ namespace FastTests.Server.Documents.Replication
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                SetupReplication(master, StraightforwardConflictResolution.ResolveToLatest, slave);
-
+                SetupReplication(master, slave);
+                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.ResolveToLatest);
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new User
+                
+                    session.Store(new User()
                     {
                         Name = "1st"
                     }, "users/1");
@@ -93,18 +91,84 @@ namespace FastTests.Server.Documents.Replication
                     var user1 = session.Load<User>("users/1");
                     var user2 = session.Load<User>("users/2");
 
-                    Assert.Equal("2nd", user1?.Name);
-                    Assert.Equal("2nd", user2?.Name);
+                    Assert.Equal("2nd", user1.Name);
+                    Assert.Equal("2nd", user2.Name);
                 }
             }
         }
+
+        //resolve conflict between incoming document and tombstone
+        [Fact]
+        public void Resolve_to_latest_version_tombstone_is_latest_the_incoming_document_is_replicated()
+        {
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
+            {
+                using (var session = master.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "1st"
+                    }, "users/1");
+
+                    session.SaveChanges();
+                }
+
+                Thread.Sleep(1000);
+
+                using (var session = slave.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "2nd"
+                    }, "users/1");
+
+                    session.SaveChanges();
+                }
+
+                Thread.Sleep(1000);
+
+                using (var session = slave.OpenSession())
+                {
+                    session.Delete("users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = master.OpenSession())
+                {
+                    session.Store(new
+                    {
+                        Foo = "marker"
+                    }, "marker");
+
+                    session.SaveChanges();
+                }
+
+                //the tombstone on the 'slave' node is latest, so after replication finishes,
+                //the doc should stay deleted since the replication is 'resolve to latest'
+                SetupReplication(master, slave);
+                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.ResolveToLatest);
+
+                var marker = WaitForDocument(slave, "marker");
+
+                Assert.NotNull(marker);
+
+                using (var session = slave.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.Equal("1st", user.Name);
+                }
+            }
+        }
+
 
         private void DocumentConflictResolveTest(StraightforwardConflictResolution docConflictResolution)
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                SetupReplication(master, docConflictResolution, slave);
+                SetupReplication(master, slave);
+                SetReplicationConflictResolution(slave, docConflictResolution);
 
                 using (var session = slave.OpenSession())
                 {

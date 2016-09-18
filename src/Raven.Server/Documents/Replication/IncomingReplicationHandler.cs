@@ -11,6 +11,7 @@ using Sparrow.Logging;
 using System.Text;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication
@@ -21,13 +22,13 @@ namespace Raven.Server.Documents.Replication
         private readonly DocumentDatabase _database;
         private readonly TcpClient _tcpClient;
         private readonly NetworkStream _stream;
-        private readonly StraightforwardConflictResolution _conflictResolution;
+        private readonly DocumentReplicationLoader _parent;
         private readonly DocumentsOperationContext _context;
         private Thread _incomingThread;
         private readonly CancellationTokenSource _cts;
         private readonly Logger _log;
         private readonly IDisposable _contextDisposable;
-
+        private ReplicationDocument _replicationDocument;
         public event Action<IncomingReplicationHandler, Exception> Failed;
         public event Action<IncomingReplicationHandler> DocumentsReceived;
 
@@ -37,14 +38,15 @@ namespace Raven.Server.Documents.Replication
             TcpClient tcpClient, 
             NetworkStream stream, 
             ReplicationLatestEtagRequest replicatedLastEtag,
-            StraightforwardConflictResolution conflictResolution)
+            DocumentReplicationLoader parent)
         {
+            
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
             _multiDocumentParser = multiDocumentParser;
             _database = database;
             _tcpClient = tcpClient;
             _stream = stream;
-            _conflictResolution = conflictResolution;
+            _parent = parent;
             _contextDisposable = _database.DocumentsStorage
                                           .ContextPool
                                           .AllocateOperationContext(out _context);
@@ -205,33 +207,7 @@ namespace Raven.Server.Documents.Replication
                                 _context.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_context, doc.Id);
                                 goto case ConflictStatus.Update;
                             case ConflictStatus.Conflict:
-                                switch (_conflictResolution)
-                                {
-                                    case StraightforwardConflictResolution.ResolveToLocal:
-                                        RespolveConflictToLocal(doc, conflictingVector);
-                                        break;
-                                    case StraightforwardConflictResolution.ResolveToRemote:
-                                        RespolveConflictToRemote(doc, json);
-                                        break;
-                                    case StraightforwardConflictResolution.ResolveToLatest:
-                                        if (conflictingVector == null) //precaution
-                                        {
-                                            throw new InvalidOperationException("Detected conflict on replication, but could not figure out conflicted vector. This is not supposed to happen and is likely a bug.");
-                                        }
-
-                                        if (conflictingVector.GreaterThan(_tempReplicatedChangeVector))
-                                        {
-                                            RespolveConflictToLocal(doc, conflictingVector);
-                                        }
-                                        else
-                                        {
-                                            RespolveConflictToRemote(doc, json);
-                                        }
-                                        break;
-                                    default:
-                                        _database.DocumentsStorage.AddConflict(_context, doc.Id, json, _tempReplicatedChangeVector);
-                                        break;
-                                }
+                                HandleConflict(doc, conflictingVector, json);
                                 break;
                             case ConflictStatus.AlreadyMerged:
                                 //nothing to do
@@ -255,10 +231,77 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void RespolveConflictToRemote(ReplicationDocumentsPositions doc, BlittableJsonReaderObject json)
+
+        private void HandleConflict(
+            ReplicationDocumentsPositions docPosition, 
+            ChangeVectorEntry[] conflictingVector,
+            BlittableJsonReaderObject doc)
         {
+            switch (ReplicationDocument?.DocumentConflictResolution ?? StraightforwardConflictResolution.None)
+            {
+                case StraightforwardConflictResolution.ResolveToLocal:
+                    RespolveConflictToLocal(docPosition, conflictingVector);
+                    break;
+                case StraightforwardConflictResolution.ResolveToRemote:
+                    RespolveConflictToRemote(docPosition, doc, conflictingVector);
+                    break;
+                case StraightforwardConflictResolution.ResolveToLatest:
+                    if (conflictingVector == null) //precaution
+                    {
+                        throw new InvalidOperationException(
+                            "Detected conflict on replication, but could not figure out conflicted vector. This is not supposed to happen and is likely a bug.");
+                    }
+                    
+                    DateTime localLastModified;
+                    var relevantLocalConflict = _context.DocumentDatabase.DocumentsStorage.GetConflictForChangeVector(_context, docPosition.Id, conflictingVector);
+                    if (relevantLocalConflict != null)
+                    {
+                        localLastModified = relevantLocalConflict.Doc.GetLastModified();
+                    }
+                    else //the conflict is with existing document/tombstone
+                    {
+                        var relevantLocalDoc = _context.DocumentDatabase.DocumentsStorage
+                            .GetDocumentOrTombstone(
+                                _context,
+                                docPosition.Id);
+                        if(relevantLocalDoc.Item1 != null)
+                            localLastModified = relevantLocalDoc.Item1.Data.GetLastModified();
+                        else if (relevantLocalDoc.Item2 != null)
+                        {
+                            RespolveConflictToRemote(docPosition, doc, conflictingVector);
+                            return;
+                        }
+                        else //precaution, not supposed to get here
+                        {
+                            throw new InvalidOperationException(
+                                $"Didn\'t find document neither tombstone for specified id ({docPosition.Id}), this is not supposed to happen and is likely a bug.");
+                        }
+                    }
+                    var remoteLastModified = doc.GetLastModified();
+                    if (remoteLastModified > localLastModified)
+                    {
+                        RespolveConflictToRemote(docPosition, doc, conflictingVector);
+                    }
+                    else
+                    {
+                        RespolveConflictToLocal(docPosition, conflictingVector);
+                    }
+                    break;
+                default:
+                    _database.DocumentsStorage.AddConflict(_context, docPosition.Id, doc, _tempReplicatedChangeVector);
+                    break;
+            }
+        }
+
+        
+
+        private void RespolveConflictToRemote(ReplicationDocumentsPositions doc, 
+            BlittableJsonReaderObject json, 
+            ChangeVectorEntry[] conflictingVector)
+        {
+            var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
             _context.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_context, doc.Id);
-            _database.DocumentsStorage.Put(_context, doc.Id, null, json, _tempReplicatedChangeVector);
+            _database.DocumentsStorage.Put(_context, doc.Id, null, json, merged);
         }
 
         private void RespolveConflictToLocal(ReplicationDocumentsPositions doc, ChangeVectorEntry[] conflictingVector)
@@ -269,31 +312,31 @@ namespace Raven.Server.Documents.Replication
                     doc.Id,
                     conflictingVector);
 
+            var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
+
             //if we reached the state of conflict, there must be at least one conflicting change vector locally
             //thus, should not happen
-            if (relevantLocalConflict == null) 
+            if (relevantLocalConflict != null)
             {
-                throw new InvalidOperationException(
-                    "Could not fetch conflict information for conflicting change vector. This is not supposed to happen and is likely a bug.");
-            }
-            _context.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_context, doc.Id);
+                _context.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_context, doc.Id);
 
-            if (relevantLocalConflict.Doc != null)
-            {
-                _database.DocumentsStorage.Put(
-                    _context,
-                    doc.Id,
-                    null,
-                    relevantLocalConflict.Doc,
-                    conflictingVector);
-            }
-            else //resolving to tombstone
-            {
-                _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
-                    _context,
-                    doc.Id,
-                    conflictingVector,
-                    doc.Collection);
+                if (relevantLocalConflict.Doc != null)
+                {
+                    _database.DocumentsStorage.Put(
+                        _context,
+                        doc.Id,
+                        null,
+                        relevantLocalConflict.Doc,
+                        merged);
+                }
+                else //resolving to tombstone
+                {
+                    _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
+                        _context,
+                        doc.Id,
+                        merged,
+                        doc.Collection);
+                }
             }
         }
 
@@ -363,6 +406,9 @@ namespace Raven.Server.Documents.Replication
 
         public string FromToString => $"from {ConnectionInfo.SourceDatabaseName} at {ConnectionInfo.SourceUrl} (into database {_database.Name})";
         public IncomingConnectionInfo ConnectionInfo { get; }
+
+        public ReplicationDocument ReplicationDocument => 
+            _replicationDocument ?? (_replicationDocument = _parent.GetReplicationDocument());
 
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private ChangeVectorEntry[] _tempReplicatedChangeVector = new ChangeVectorEntry[0];
@@ -483,7 +529,14 @@ namespace Raven.Server.Documents.Replication
             else
                 return ConflictStatus.Update; //document with 'key' doesnt exist locally, so just do PUT
 
-            return GetConflictStatus(remote, local);
+            
+            var status = GetConflictStatus(remote, local);
+            if (status == ConflictStatus.Conflict)
+            {
+                conflictingVector = local;
+            }			
+
+            return status;
         }
 
         public enum ConflictStatus

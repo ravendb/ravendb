@@ -27,7 +27,7 @@ namespace FastTests.Server.Documents.Replication
                 new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
             {
                 request.ExecuteRequest();
-                var conflictsJson = RavenJArray.Parse(await request.Response.Content.ReadAsStringAsync());
+                var conflictsJson = RavenJArray.Parse(await request.Response.Content.ReadAsStringAsync());				
                 var conflicts = conflictsJson.Select(x => new
                 {
                     Key = x.Value<string>("Key"),
@@ -139,6 +139,22 @@ namespace FastTests.Server.Documents.Replication
             }
 
             return default(T);
+        }
+
+        protected static void SetReplicationConflictResolution(DocumentStore store,
+            StraightforwardConflictResolution conflictResolution)
+        {
+            using (var session = store.OpenSession())
+            {
+                var destinations = new List<ReplicationDestination>();
+                session.Store(new ReplicationDocument
+                {
+                    Destinations = destinations,
+                    DocumentConflictResolution = conflictResolution
+                }, Constants.Replication.DocumentReplicationConfiguration);
+                session.SaveChanges();
+            }
+
         }
 
         protected static void SetupReplication(DocumentStore fromStore, StraightforwardConflictResolution builtinConflictResolution = StraightforwardConflictResolution.None, params DocumentStore[] toStores)

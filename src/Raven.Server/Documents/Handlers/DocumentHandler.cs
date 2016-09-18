@@ -17,14 +17,12 @@ using Raven.Client.Documents.Commands;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Transformers;
-using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Handlers
@@ -168,17 +166,17 @@ namespace Raven.Server.Documents.Handlers
             }
 
             IEnumerable<Document> documentsToWrite;
-            if (transformer != null)
-            {
-                var transformerParameters = GetTransformerParameters(context);
-
-                using (var scope = transformer.OpenTransformationScope(transformerParameters, includeDocs, Database.DocumentsStorage, Database.TransformerStore, context))
+                if (transformer != null)
                 {
+                    var transformerParameters = GetTransformerParameters(context);
+
+                    using (var scope = transformer.OpenTransformationScope(transformerParameters, includeDocs, Database.DocumentsStorage, Database.TransformerStore, context))
+                    {
                     documentsToWrite = scope.Transform(documents).ToList();
                     etags = scope.LoadedDocumentEtags;
+                    }
                 }
-            }
-            else
+                else
                 documentsToWrite = documents;
 
             includeDocs.Fill(includes);
@@ -189,10 +187,10 @@ namespace Raven.Server.Documents.Handlers
 
             var etag = GetLongFromHeaders("If-None-Match");
             if (etag == actualEtag)
-            {
+                {
                 HttpContext.Response.StatusCode = 304;
                 return;
-            }
+                }
 
             HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             HttpContext.Response.Headers[Constants.MetadataEtagField] = actualEtag.ToString();
@@ -206,30 +204,10 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentResult.Includes));
-                writer.WriteDocuments(context, includes, metadataOnly);
+                    writer.WriteDocuments(context, includes, metadataOnly);
 
                 writer.WriteEndObject();
             }
-        }
-
-        private DynamicJsonValue GetJsonForConflicts(string docId, IEnumerable<DocumentConflict> conflicts)
-        {
-            var conflictsArray = new DynamicJsonArray();
-            foreach (var c in conflicts)
-            {
-                conflictsArray.Add(new DynamicJsonValue
-                {
-                    ["ChangeVector"] = c.ChangeVector.ToJson(),
-                    ["Doc"] = c.Doc
-                });
-            }
-
-            return new DynamicJsonValue
-            {
-                ["Message"] = "Conflict detected on " + docId + ", conflict must be resolved before the document will be accessible",
-                ["DocId"] = docId,
-                ["Conflics"] = conflictsArray
-            };
         }
 
         private static unsafe long ComputeEtagsFor(List<Document> documents, List<Document> includes, List<long> additionalEtags)
@@ -260,9 +238,9 @@ namespace Raven.Server.Documents.Handlers
                     if (index < documentsCount)
                     {
                         var document = documents[index];
-                        buffer[j] = document?.Etag ?? -1;
+                    buffer[j] = document?.Etag ?? -1;
                         continue;
-                    }
+                }
 
                     if (includesCount > 0 && index >= documentsCount && index < documentsCount + includesCount)
                     {
