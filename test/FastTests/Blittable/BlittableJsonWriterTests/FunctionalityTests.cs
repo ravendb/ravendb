@@ -90,7 +90,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             fixed (byte* pb = bytes)
             {
                 var maximumOutputLength = LZ4.MaximumOutputLength(bytes.Length);
-                encodeOutput = (byte*)Marshal.AllocHGlobal((int)maximumOutputLength); // ADIADI
+                encodeOutput = (byte*)Marshal.AllocHGlobal((int)maximumOutputLength);
                 compressedSize = lz4.Encode64(pb, encodeOutput, bytes.Length, (int)maximumOutputLength);
             }
 

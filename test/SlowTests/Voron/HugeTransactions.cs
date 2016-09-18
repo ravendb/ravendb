@@ -26,11 +26,8 @@ namespace SlowTests.Voron
         public static Random Rand = new Random(123);
 
         [Theory]
-        [InlineData(1)]
         [InlineData(2)]
-        [InlineData(4)]
         [InlineData(6)]
-        [InlineData(9)]
         public unsafe void CanWriteBigTransactions(long transactionSizeInGb)
         {
             var tmpFile = $"{Path.GetTempPath()}{Path.DirectorySeparatorChar}TestBigTx" + transactionSizeInGb; // TODO :: what happens in parallel ?

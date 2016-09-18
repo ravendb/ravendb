@@ -60,7 +60,7 @@ namespace FastTests.Sparrow
                 *(uint*)(encodedOutputPtr + maximumOutputLength) = marker;
                 *(uint*)(outputPtr + size) = marker;
 
-                int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, size, (int)maximumOutputLength); // ADIADI
+                int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, size, (int) maximumOutputLength);
                 int uncompressedSize = LZ4.Decode64(encodedOutputPtr, compressedSize, outputPtr, size, true);
 
                 Assert.True(compressedSize <= maximumOutputLength);

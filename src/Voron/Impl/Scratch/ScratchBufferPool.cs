@@ -9,8 +9,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Voron.Exceptions;
-using Voron.Impl.Paging;
-using Voron.Util;
 
 namespace Voron.Impl.Scratch
 {
@@ -25,8 +23,6 @@ namespace Voron.Impl.Scratch
     /// </summary>
     public unsafe class ScratchBufferPool : IDisposable
     {
-        private const int InvalidScratchFileNumber = -1;
-
         // Immutable state. 
         private readonly long _sizeLimit;
         private readonly StorageEnvironmentOptions _options;
@@ -216,7 +212,7 @@ namespace Voron.Impl.Scratch
                 }
 
 
-                    if (createNextFile)
+                if (createNextFile) // TODO : remove this condition after deciding which strategy to take on max-scratch-buffer
                 {
                     // We need to ensure that _current stays constant through the codepath until return. 
                     current = NextFile();
@@ -346,9 +342,9 @@ namespace Voron.Impl.Scratch
 
             public ScratchBufferItem(int number, ScratchBufferFile file)
             {
-                this.Number = number;
-                this.File = file;
-                this.OldestTransactionWhenFlushWasForced = -1;
+                Number = number;
+                File = file;
+                OldestTransactionWhenFlushWasForced = -1;
             }
         }
 
