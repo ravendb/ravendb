@@ -76,7 +76,7 @@ namespace Raven.Server.ServerWide
 
             var options = Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
-                : StorageEnvironmentOptions.ForPath(Configuration.Core.DataDirectory, Configuration.Storage.SupportLargeTransactions);
+                : StorageEnvironmentOptions.ForPath(Configuration.Core.DataDirectory);
 
             options.SchemaVersion = 1;
 

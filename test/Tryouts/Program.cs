@@ -21,7 +21,7 @@ namespace Tryouts
 
             BUFF_SIZE = 900*MB;
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(@"C:\zzzzTest", true)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(@"C:\zzzzTest")))
             {
                 var value = new byte[BUFF_SIZE];
                 Console.WriteLine("Filling " + PrintSize(BUFF_SIZE) + " buffer with random values");

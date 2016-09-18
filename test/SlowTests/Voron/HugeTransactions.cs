@@ -41,9 +41,9 @@ namespace SlowTests.Voron
             catch (Exception)
             {
                 // ignored
-            } 
+            }
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(tmpFile, true)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(tmpFile)))
             {
                 var value = new byte[HalfGb];
                 new Random().NextBytes(value);
@@ -89,16 +89,16 @@ namespace SlowTests.Voron
                     fixed (byte* singleByte = new byte[1])
                     {
 
-                        for (int i = 0; i < transactionSizeInGb*2; i++)
+                        for (int i = 0; i < transactionSizeInGb * 2; i++)
                         {
                             var key = "bigTreeKey" + i;
                             var reader = tree.Read(key).Reader;
 
                             VerifyData(singleByte, reader, 0, 11);
-                            VerifyData(singleByte, reader, (int) HalfGb - 1, 22);
-                            VerifyData(singleByte, reader, ((int) HalfGb/3)*2, 33);
-                            VerifyData(singleByte, reader, (int) HalfGb/2, 44);
-                            VerifyData(singleByte, reader, (int) HalfGb/3, 55);
+                            VerifyData(singleByte, reader, (int)HalfGb - 1, 22);
+                            VerifyData(singleByte, reader, ((int)HalfGb / 3) * 2, 33);
+                            VerifyData(singleByte, reader, (int)HalfGb / 2, 44);
+                            VerifyData(singleByte, reader, (int)HalfGb / 3, 55);
                         }
                     }
                 }

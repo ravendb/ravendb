@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes
         {
             StorageEnvironment environment = null;
 
-            var options = StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, indexId.ToString()), documentDatabase.Configuration.Storage.SupportLargeTransactions);
+            var options = StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, indexId.ToString()));
             try
             {
                 options.SchemaVersion = 1;
@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var options = documentDatabase.Configuration.Indexing.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly()
-                    : StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, IndexId.ToString()), documentDatabase.Configuration.Storage.SupportLargeTransactions);
+                    : StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, IndexId.ToString()));
 
                 options.SchemaVersion = 1;
                 try

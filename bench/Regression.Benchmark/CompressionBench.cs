@@ -43,7 +43,7 @@ namespace Regression
                 fixed (byte* encodedOutputPtr = encodedOutput)
                 fixed (byte* outputPtr = input)
                 {
-                    int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, input.Length, maximumOutputLength);
+                    int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, input.Length, (int)maximumOutputLength); // ADIADI
                     int uncompressedSize = LZ4.Decode64(encodedOutputPtr, compressedSize, outputPtr, input.Length, true);
                 }
             });
@@ -68,7 +68,7 @@ namespace Regression
                 fixed (byte* encodedOutputPtr = encodedOutput)
                 fixed (byte* outputPtr = input)
                 {
-                    int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, input.Length, maximumOutputLength);
+                    int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, input.Length, (int)maximumOutputLength); // ADIADI
                     int uncompressedSize = LZ4.Decode64(encodedOutputPtr, compressedSize, outputPtr, input.Length, true);
                 }
             });

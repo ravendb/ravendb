@@ -206,7 +206,7 @@ namespace Voron.Impl.Scratch
 
                     createNextFile = true;
                 }
-                else if (_options.SupportLargeTransactions)
+                else // TODO : RavenDB - the following block is for 'Support large tx' however also deals with the problematic max-scratch-buffer, but with inflating scratch when bursting from bulkinsert for example..
                 {
                     // if we reached so far and weren't able to allocate space, 
                     // we will increase the scratch over it's limit size to support large transactions (or intensive write burst)
