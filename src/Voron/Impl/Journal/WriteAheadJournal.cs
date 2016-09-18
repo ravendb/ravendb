@@ -873,12 +873,12 @@ namespace Voron.Impl.Journal
             long outputBufferSize;
             outputBufferSize = LZ4.MaximumOutputLength(maxSizeRequiringCompression);
 
-            var outputBufferInPages = (outputBufferSize + sizeof(TransactionHeader)) / pageSize +
-                                      ((outputBufferSize + sizeof(TransactionHeader)) % pageSize == 0 ? 0 : 1);
+            int outputBufferInPages = checked((int)((outputBufferSize + sizeof(TransactionHeader)) / pageSize +
+                                      ((outputBufferSize + sizeof(TransactionHeader)) % pageSize == 0 ? 0 : 1)));
 
             // The pages required includes the intermediate pages and the required output pages. 
-            var pagesRequired = (pageCountIncludingAllOverflowPages + outputBufferInPages);
-            var pagerState = compressionPager.EnsureContinuous(0, (int)pagesRequired);
+            int pagesRequired = (pageCountIncludingAllOverflowPages + outputBufferInPages);
+            var pagerState = compressionPager.EnsureContinuous(0, pagesRequired);
             tx.EnsurePagerStateReference(pagerState);
 
             var outputBuffer = compressionPager.AcquirePagePointer(tx, 0);

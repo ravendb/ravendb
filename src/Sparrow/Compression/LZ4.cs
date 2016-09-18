@@ -98,7 +98,7 @@ namespace Sparrow.Compression
             {
                 int partInputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
                 if (pos + partInputLength > inputLength)
-                    partInputLength = (int)(MAX_INPUT_LENGTH_PER_SEGMENT - pos);
+                    partInputLength = (int)(inputLength - pos);
 
                 int partOutputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
                 totalOutputSize += Encode64(input + pos, output + totalOutputSize, partInputLength, partOutputLength, acceleration);
@@ -553,7 +553,7 @@ namespace Sparrow.Compression
             {
                 int partInputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
                 if (pos + partInputLength > inputLength)
-                    partInputLength = (int) (MAX_INPUT_LENGTH_PER_SEGMENT - pos);
+                    partInputLength = (int) (inputLength - pos);
 
                 int partOutputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
                 totalOutputSize += Decode64(input + pos, partInputLength, output + totalOutputSize, partOutputLength, false);
