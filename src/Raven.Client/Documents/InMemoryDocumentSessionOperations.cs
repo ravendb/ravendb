@@ -596,11 +596,11 @@ more responsive application.
             var documentMetadata = new DocumentInfo
             {
                 Id = id,
-                Metadata = Context.ReadObject(metadata, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk),
+                Metadata = Context.ReadObject(metadata, id),
                 ETag = etag,
                 ForceConcurrencyCheck = forceConcurrencyCheck,
                 Entity = entity,
-                Document = Context.ReadObject(entity, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk)
+                Document =  null
             };
 
             DocumentsByEntity.Add(entity, documentMetadata);
