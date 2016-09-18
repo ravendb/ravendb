@@ -198,12 +198,6 @@ namespace Sparrow.Json
             return ReadObjectInternal(obj, documentId, mode);
         }
 
-        public BlittableJsonReaderObject ReadObject(object obj, string documentId,
-         BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None)
-        {
-            return ReadObjectInternal(obj, documentId, mode);
-        }
-
         private BlittableJsonReaderObject ReadObjectInternal(object builder, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
