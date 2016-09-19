@@ -13,14 +13,12 @@ If your application uses one of the following NuGet packages
 - Microsoft.AspNet.WebApi.*
 - Microsoft.Owin.*
 - Newtonsoft.Json
-- Rx-*
 
 then, if 'EmbeddableDocumentStore' store is used, packages must be in following versions
 
 - Microsoft.AspNet.WebApi.* - 5.2.2 (or higher)
 - Microsoft.Owin.* - 3.0.0 (or higher)
 - Newtonsoft.Json - 6.0.6 (or higher)
-- Rx-* - 2.2.5 (or higher)
 
 with proper assembly binding redirect in application configuration file
 http://msdn.microsoft.com/en-us/library/7wd6ex19%28v=vs.110%29.aspx
