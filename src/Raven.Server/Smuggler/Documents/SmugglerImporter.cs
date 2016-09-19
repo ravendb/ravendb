@@ -210,7 +210,6 @@ namespace Raven.Server.Smuggler.Documents
                                     break;
                                 case "RevisionDocuments":
                                     await FinishBatchOfDocuments();
-                                    _batchPutCommand.IsRevision = false;
                                     break;
                                 case "Identities":
                                     if (identities.Count > 0)
