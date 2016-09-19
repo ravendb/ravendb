@@ -53,7 +53,7 @@
                 <ul class="nav navbar-nav navbar-right">
 
                     <li class="pull-left"><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" id="menu-toggle" data-target="#main-menu" data-class="show-menu"></a></li>
-                    <li><a href="#" class="icon-notifications btn-toggle" data-target="#notification-center" data-class="show-notifications"></a></li>
+                    <li><a href="#" class="btn-toggle" data-target="#notification-center" data-class="show-notifications"><span class="icon-notifications"></span><span class="notification-counter show" data-count="2">2</span></a></li>
                     <li><a href="#" class="icon-help"></a></li>
                     <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
                 </ul>
@@ -351,11 +351,11 @@
     <div id="notification-center">
         <div class="panel">
             <div class="panel-body">
-                <div class="icon-close"></div>
+                <a href="#" class="icon-cancel dismiss-notification"></a>
                 <h3>Importing progress</h3>
                 <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. In auctor varius sem, id tempor ex. </p>
                 <div class="progress">
-                    <div class="progress-bar" role="progressbar" aria-valuenow="70"
+                    <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="70"
                          aria-valuemin="0" aria-valuemax="100" style="width:70%">
                         <span class="sr-only">70% Complete</span>
                     </div>
@@ -369,6 +369,7 @@
 
         <div class="panel">
             <div class="panel-body">
+                <a href="#" class="icon-cancel dismiss-notification"></a>
                 <h3 class="text-warning"><span class="icon-database"></span> Your storage is full</h3>
                 <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. In auctor varius sem, id tempor ex. Nam hendrerit ultrices imperdiet. Ut metus nisl, posuere a mi et, lobortis commodo quam. Praesent a tortor a ante ultrices tempor. Nullam mattis nisl nisl, consectetur hendrerit tellus pellentesque id.</p>
             </div>

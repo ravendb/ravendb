@@ -5,6 +5,16 @@
 @import "checkbox-toggle.less";
 @import "icons.less";
 
+@import "animations.less";
+/*
+    Available animations (add "classname;" inside your class)
+    .bouncein-style
+    .spin-style
+    .slidein-style
+    .topexpand-style (used in expandable search)
+*/
+
+
 @import "testing-elements.less"; /* do not include in final build */
 
 /* LOCAL VARIABLES AND KEYFRAMES*/
@@ -22,126 +32,7 @@
 
 @layout-border: @gray-dark;
 
-@-moz-keyframes spin {
-    from {
-        -moz-transform: rotate(0deg);
-    }
 
-    to {
-        -moz-transform: rotate(360deg);
-    }
-}
-
-@-webkit-keyframes spin {
-    from {
-        -webkit-transform: rotate(0deg);
-    }
-
-    to {
-        -webkit-transform: rotate(360deg);
-    }
-}
-
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-@-moz-keyframes slidein {
-    from {
-        -moz-transform: translateY(-5px);
-        opacity: 0;
-    }
-
-    to {
-        -moz-transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@-webkit-keyframes slidein {
-    from {
-        -webkit-transform: translateY(-5px);
-        opacity: 0;
-    }
-
-    to {
-        -webkit-transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes slidein {
-    from {
-        transform: translateY(-5px);
-        opacity: 0;
-    }
-
-    to {
-        -moz-transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@-moz-keyframes topexpand {
-    from {
-        max-height: 0;
-    }
-
-    to {
-        max-height: 60vh;
-    }
-}
-
-@-webkit-keyframes topexpand {
-    from {
-        max-height: 0;
-    }
-
-    to {
-        max-height: 60vh;
-    }
-}
-
-@keyframes topexpand {
-    from {
-        max-height: 0;
-    }
-
-    to {
-        max-height: 60vh;
-    }
-}
-
-@spin-properties: spin .75s infinite cubic-bezier(0.6, 0.02, 0.4, 0.99);
-@slidein-properties: slidein .25s cubic-bezier(0, 0, 0, 1);
-@topexpand-properties: topexpand .25s cubic-bezier(0, 0, 0, 1);
-
-.spin-style {
-    -webkit-animation: @spin-properties;
-    -moz-animation: @spin-properties;
-    -ms-animation: @spin-properties;
-    animation: @spin-properties;
-}
-
-.slidein-style {
-    -webkit-animation: @slidein-properties;
-    -moz-animation: @slidein-properties;
-    -ms-animation: @slidein-properties;
-    animation: @slidein-properties;
-}
-
-.topexpand-style {
-    -webkit-animation: @topexpand-properties;
-    -moz-animation: @topexpand-properties;
-    -ms-animation: @topexpand-properties;
-    animation: @topexpand-properties;
-}
 
 .shadow-style {
     box-shadow: 0 10px 20px 2px rgba(0, 0, 0, 0.45);
@@ -243,12 +134,12 @@ a, .btn {
 
 .btn {
     //border: none;
-
     &:not(.btn-sm) {
         [class^="icon-"], [class*=" icon-"] {
             font-size: 170%;
             line-height: 60%;
             top: 4px;
+            margin-left: -3px;
         }
     }
 
@@ -257,6 +148,7 @@ a, .btn {
             font-size: 110%;
             line-height: 60%;
             top: 1px;
+            margin-left: -3px;
         }
     }
 }
@@ -610,6 +502,24 @@ hr {
 
         li {
             display: inline-block;
+            position: relative;
+
+            .notification-counter {
+                .bouncein-style;
+                position: absolute;
+                width: 18px;
+                height: 18px;
+                font-size: 11px;
+                line-height: 17px;
+                font-weight: 900;
+                color: #FFF;
+                text-align: center;
+                bottom: 2px;
+                right: 10px;
+                background-color: @brand-primary;
+                border-radius: 50%;
+                display: none;
+            }
         }
 
         [class^="icon-"], [class*=" icon-"] {
@@ -667,7 +577,6 @@ hr {
         .resource-switcher-container, .search-container {
             position: relative;
             top: 2px;
-            padding-top: 5px;
 
             a {
                 color: @gray-lighter;
@@ -692,6 +601,9 @@ hr {
                     &:before {
                         .icon-style;
                         content: "\e916";
+                        font-size: 110%;
+                        margin-right: 3px;
+                        top: 1px;
                     }
                 }
             }
@@ -729,7 +641,7 @@ hr {
 
                 .database-filter {
                     background-color: transparent;
-                    border-color:@gray-light !important;
+                    border-color: @gray-light !important;
                     padding: 2px (@grid-gutter-width / 2);
                     height: 34px;
                     margin-bottom: (@grid-gutter-width / 4);
@@ -743,7 +655,7 @@ hr {
 
             .box-container {
                 .shadow-style;
-                padding: 41px (@grid-gutter-width / 4) (@grid-gutter-width / 4);
+                padding: 36px (@grid-gutter-width / 4) (@grid-gutter-width / 4);
                 background-color: @gray-dark;
                 display: none;
                 width: 100%;
@@ -858,8 +770,8 @@ hr {
         @media (min-width: @screen-md) {
             clear: none;
             background-color: transparent;
-            margin-right:120px;
-            margin-left:@menu-width;
+            margin-right: 120px;
+            margin-left: @menu-width;
             max-height: none;
             position: relative;
 
@@ -890,13 +802,14 @@ hr {
             z-index: 21;
             padding-left: 45px;
             position: relative;
+            padding-top: 4px;
 
             & + .icon-search {
                 z-index: 22;
                 position: absolute;
                 font-size: 22px;
                 color: @gray-lighter;
-                top: 10px;
+                top: 7px;
                 left: 12px;
             }
 
@@ -910,6 +823,7 @@ hr {
             position: relative;
             z-index: 20;
             cursor: pointer;
+            padding-top: 4px;
 
             &:after {
                 .icon-style;
@@ -1576,7 +1490,7 @@ pre {
     position: absolute;
     width: @menu-width;
     top: @navbar-height-xs;
-    overflow-y:auto;
+    overflow-y: auto;
     right: 0;
     bottom: 0;
     padding: @grid-gutter-width / 8;
@@ -1600,6 +1514,11 @@ pre {
         margin-bottom: @grid-gutter-width / 8;
 
         .panel-body {
+            .dismiss-notification {
+                float: right;
+                color: inherit;
+            }
+
             .progress {
                 height: @line-height-computed / 4;
                 margin-bottom: @line-height-computed / 2;
