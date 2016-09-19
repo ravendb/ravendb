@@ -146,13 +146,13 @@ namespace SlowTests.Voron
                 // decode outputBuffer into checkedBuffer
                 var totalOutputSize = LZ4.Decode64LongBuffers(outputBuffer, compressedLen, checkedBuffer, inputSize, true);
 
-                Assert.Equal(inputSize, totalOutputSize);
+                Assert.Equal(compressedLen, totalOutputSize);
 
                 testNum = 0;
                 for (long testPoints = 0; testPoints < inputSize; testPoints += Gb)
                 {
                     var testPointer = (byte*) ((long) checkedBuffer + testPoints);
-                    Assert.Equal(testNum++, *testPointer);
+                    Assert.Equal(++testNum, *testPointer);
                 }
             }
         }

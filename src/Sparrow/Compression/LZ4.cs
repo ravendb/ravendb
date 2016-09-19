@@ -87,7 +87,7 @@ namespace Sparrow.Compression
             int acceleration = ACCELERATION_DEFAULT)
         {
             // LZ4 can handle less then 2GB. we will handle the compression/decompression devided to parts for above 1GB inputs
-            if (inputLength < MAX_INPUT_LENGTH_PER_SEGMENT && outputLength < MAX_INPUT_LENGTH_PER_SEGMENT)
+            if (inputLength < MAX_INPUT_LENGTH_PER_SEGMENT && outputLength < MAX_INPUT_LENGTH_PER_SEGMENT) // TODO [2GBLZ4] :: this is wrong. we should handle segments for any input size above max.  we have problematic place where input is smaller but output is bigger
             {
                 return Encode64(input, output, (int)inputLength, (int)outputLength, acceleration);
             }
@@ -101,6 +101,10 @@ namespace Sparrow.Compression
                     partInputLength = (int)(inputLength - pos);
 
                 int partOutputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
+                if (totalOutputSize + partOutputLength > outputLength)
+                {
+                    partOutputLength = checked((int)(outputLength - totalOutputSize));
+                }
                 totalOutputSize += Encode64(input + pos, output + totalOutputSize, partInputLength, partOutputLength, acceleration);
 
                 pos += MAX_INPUT_LENGTH_PER_SEGMENT;
@@ -542,26 +546,33 @@ namespace Sparrow.Compression
             long outputLength,
             bool knownOutputLength)
         {
-            if (inputLength < MAX_INPUT_LENGTH_PER_SEGMENT && outputLength < MAX_INPUT_LENGTH_PER_SEGMENT)
+            // here we get a single compressed segment or multiple segments
+            // we can read the segments only for a known size of output
+            if (outputLength < MAX_INPUT_LENGTH_PER_SEGMENT) // TODO [2GBLZ4] :: what about output smaller then input ? (rare but can happen)
             {
                 return Decode64(input, (int)inputLength, output, (int)outputLength, knownOutputLength);
             }
 
-            long totalOutputSize = 0;
-            long pos = 0;
-            while (pos < inputLength)
+
+            long totalReadSize = 0;
+            long totalWriteSize = 0;
+            while (totalReadSize < inputLength)
             {
                 int partInputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
-                if (pos + partInputLength > inputLength)
-                    partInputLength = (int) (inputLength - pos);
+                if (totalReadSize + partInputLength > inputLength)
+                    partInputLength = (int) (inputLength - totalReadSize); // TODO [2GBLZ4] :: else - problem. it might be a littlebit more then MAX_INPUT
 
-                int partOutputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
-                totalOutputSize += Decode64(input + pos, partInputLength, output + totalOutputSize, partOutputLength, false);
+                int partOutputLength = MAX_INPUT_LENGTH_PER_SEGMENT; // TODO [2GBLZ4] :: problematic - we need to add some more
+                if (totalWriteSize + partOutputLength > outputLength) // > or >= ? TODO [2GBLZ4] 
+                {
+                    partOutputLength = checked((int)(outputLength - totalWriteSize));
+                }
+                totalReadSize += Decode64(input + totalReadSize, partInputLength, output + totalWriteSize, partOutputLength, false);
 
-                pos += MAX_INPUT_LENGTH_PER_SEGMENT;
+                totalWriteSize += MAX_INPUT_LENGTH_PER_SEGMENT;
             }
 
-            return totalOutputSize;
+            return totalReadSize;
         }
 
         public static int Decode64(
