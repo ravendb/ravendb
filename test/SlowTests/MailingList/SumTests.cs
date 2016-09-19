@@ -106,7 +106,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "TODO Arek")]
+        [Fact]
         public void Can_get_application_counts_by_vacancy_id()
         {
             using (var session = _store.OpenSession())
@@ -120,7 +120,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "TODO Arek")]
+        [Fact]
         public void Can_get_application_counts_by_state()
         {
             using (var session = _store.OpenSession())

@@ -1398,12 +1398,13 @@ namespace Raven.Client.Connection.Async
                     try
                     {
                         await request.WriteAsync(jArray).WithCancellation(token).ConfigureAwait(false);
-                        var response = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                        var response = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                         if (response == null)
                         {
                             throw new InvalidOperationException("Got null response from the server after doing a batch, something is very wrong. Probably a garbled response. Posted: " + jArray);
                         }
-                        return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
+                        var arrayResponse = response["Results"];
+                        return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(arrayResponse));
                     }
                     catch (ErrorResponseException e)
                     {

@@ -18,7 +18,7 @@ namespace SlowTests.SlowTests.Faceted
             _data = GetCameras(NumCameras);
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedPagingSearchWithNoPageSizeNoMaxResults_HitsDesc()
         {
             //also specify more results than we have
@@ -60,7 +60,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedPagingSearchWithNoPageSizeWithMaxResults_HitsDesc()
         {
             //also specify more results than we have
@@ -101,7 +101,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedPagingSearchWithPageSize_HitsDesc()
         {
             //also specify more results than we have
@@ -142,7 +142,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedPagingSearchWithPageSize_HitsAsc()
         {
             //also specify more results than we have
@@ -183,7 +183,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedPagingSearchWithPageSize_TermDesc()
         {
             //also specify more results than we have
@@ -224,7 +224,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedPagingSearchWithPageSize_TermAsc()
         {
             //also specify more results than we have
@@ -265,7 +265,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedPagingSearchWithPageSize_HitsDesc_LuceneQuery()
         {
             //also specify more results than we have
@@ -306,7 +306,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedPagingSearchWithPageSize_HitsAsc_LuceneQuery()
         {
             //also specify more results than we have
@@ -347,7 +347,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedPagingSearchWithPageSize_TermDesc_LuceneQuery()
         {
             //also specify more results than we have
@@ -388,7 +388,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedPagingSearchWithPageSize_TermAsc_LuceneQuery()
         {
             //also specify more results than we have
@@ -429,7 +429,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedPagingSearchWithNoPageSizeNoMaxResults_HitsDesc_LuceneQuery()
         {
             //also specify more results than we have
@@ -471,7 +471,7 @@ namespace SlowTests.SlowTests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedPagingSearchWithNoPageSizeWithMaxResults_HitsDesc_LuceneQuery()
         {
             //also specify more results than we have

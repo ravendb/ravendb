@@ -2,13 +2,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Indexes;
+using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
     public class CastingInIndexDefinition : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanCastValuesToString()
         {
             using (var documentStore = GetDocumentStore())
@@ -30,15 +31,15 @@ namespace SlowTests.Tests.Indexes
                 {
                     var employee1 = session.Load<Employee>("employees/1");
                     var metadata1 = session.Advanced.GetMetadataFor(employee1);
-                    metadata1["test"] = "1";
+                    metadata1["Test"] = "1";
 
                     var employee2 = session.Load<Employee>("employees/2");
                     var metadata2 = session.Advanced.GetMetadataFor(employee2);
-                    metadata2["test"] = "2";
+                    metadata2["Test"] = "2";
 
                     var employee3 = session.Load<Employee>("employees/3");
                     var metadata3 = session.Advanced.GetMetadataFor(employee3);
-                    metadata3["test"] = "2";
+                    metadata3["Test"] = "2";
 
                     session.SaveChanges();
                 }
@@ -49,10 +50,9 @@ namespace SlowTests.Tests.Indexes
                     var result = session.Query<Employees_CurrentCount.Result, Employees_CurrentCount>()
                                         .Customize(x => x.WaitForNonStaleResults())
                                         .ToList();
-                    WaitForUserToContinueTheTest(documentStore);
+
                     Assert.Equal(2, result.FirstOrDefault().Count);
                 }
-
             }
         }
 

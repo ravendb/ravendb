@@ -26,7 +26,7 @@ namespace SlowTests.MailingList
             public Dictionary<string, string> Identify { get; set; }
         }
 
-        [Fact(Skip = "Missing feature: CreateField")]
+        [Fact]
         public void CanCreateIndex()
         {
             using (var store = GetDocumentStore())

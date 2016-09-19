@@ -135,6 +135,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_fieldsToFetch.IsProjection == false && _alreadySeenDocumentKeysInPreviousPage.Add(key) == false)
             {
                 HasMultipleIndexOutputs = true;
+                if (_fieldsToFetch.IsTransformation && _query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
+                    return true;
+
                 return false;
             }
 

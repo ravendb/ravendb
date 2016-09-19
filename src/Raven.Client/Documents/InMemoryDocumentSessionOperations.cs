@@ -75,17 +75,15 @@ namespace Raven.Client.Documents
             get { return externalState ?? (externalState = new Dictionary<string, object>()); }
         }
 
-        internal readonly Dictionary<string, BlittableJsonReaderObject> DocumentsById = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
-
         /// <summary>
         /// Translate between a key and its associated entity
         /// </summary>
-        internal readonly Dictionary<string, object> EntitiesById = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        internal readonly Dictionary<string, DocumentInfo> DocumentsById = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
         /// </summary>
-        protected internal readonly Dictionary<object, DocumentMetadata> DocumentsAndMetadata = new Dictionary<object, DocumentMetadata>(ObjectReferenceEqualityComparer<object>.Default);
+        protected internal readonly Dictionary<object, DocumentInfo> DocumentsByEntity = new Dictionary<object, DocumentInfo>(ObjectReferenceEqualityComparer<object>.Default);
 
         protected readonly string databaseName;
         private readonly DocumentStoreBase documentStore;
@@ -112,7 +110,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public int NumberOfEntitiesInUnitOfWork
         {
-            get { return DocumentsAndMetadata.Count; }
+            get { return DocumentsByEntity.Count; }
         }
 
         /// <summary>
@@ -197,10 +195,10 @@ namespace Raven.Client.Documents
             return GetDocumentMetadata(instance).Metadata;
         }
 
-        private DocumentMetadata GetDocumentMetadata<T>(T instance)
+        private DocumentInfo GetDocumentMetadata<T>(T instance)
         {
-            DocumentMetadata value;
-            if (DocumentsAndMetadata.TryGetValue(instance, out value) == false)
+            DocumentInfo value;
+            if (DocumentsByEntity.TryGetValue(instance, out value) == false)
             {
                 string id;
                 if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id)
@@ -226,11 +224,11 @@ namespace Raven.Client.Documents
         /// </summary>
         protected abstract JsonDocument GetJsonDocument(string documentKey);
 
-        protected DocumentMetadata GetDocumentMetadataValue<T>(T instance, string id, JsonDocument jsonDocument)
+        protected DocumentInfo GetDocumentMetadataValue<T>(T instance, string id, JsonDocument jsonDocument)
         {
             throw new NotImplementedException();
             //EntitiesById[id] = instance;
-            //return DocumentsAndMetadata[instance] = new DocumentMetadata
+            //return DocumentsAndMetadata[instance] = new DocumentInfo
             //{
             //    ETag = UseOptimisticConcurrency ? (long?) 0 : null,
             //    Id = id,
@@ -254,7 +252,9 @@ namespace Raven.Client.Documents
 
         internal bool IsLoadedOrDeleted(string id)
         {
-            return EntitiesById.ContainsKey(id) || DocumentsById.ContainsKey(id) || IsDeleted(id);
+            //TODO - Do we need to check for document being null? Can documentInfo exist without initialized document?
+            //return EntitiesById.ContainsKey(id) || DocumentsById.ContainsKey(id) || IsDeleted(id);
+            return DocumentsById.ContainsKey(id) || IsDeleted(id);
         }
 
         /// <summary>
@@ -275,8 +275,8 @@ namespace Raven.Client.Documents
         {
             if (instance == null)
                 return null;
-            DocumentMetadata value;
-            if (DocumentsAndMetadata.TryGetValue(instance, out value) == false)
+            DocumentInfo value;
+            if (DocumentsByEntity.TryGetValue(instance, out value) == false)
                 return null;
             return value.Id;
         }
@@ -379,8 +379,8 @@ more responsive application.
             if (ReferenceEquals(entity, null))
                 throw new ArgumentNullException("entity");
 
-            DocumentMetadata value;
-            if (DocumentsAndMetadata.TryGetValue(entity, out value) == false)
+            DocumentInfo value;
+            if (DocumentsByEntity.TryGetValue(entity, out value) == false)
             {
                 throw new InvalidOperationException(entity + " is not associated with the session, cannot delete unknown entity instance");
             }
@@ -407,14 +407,14 @@ more responsive application.
         public void Delete(string id)
         {
             if (id == null) throw new ArgumentNullException("id");
-            object entity;
-            if (EntitiesById.TryGetValue(id, out entity))
+            DocumentInfo documentInfo;
+            if (DocumentsById.TryGetValue(id, out documentInfo))
             {
                 /*if (EntityChanged(entity, DocumentsAndMetadata[entity]))
                 {
                     throw new InvalidOperationException("Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
                 }*/
-                Delete(entity);
+                Delete(documentInfo.Entity);
                 return;
             }
 
@@ -476,8 +476,8 @@ more responsive application.
             if (null == entity)
                 throw new ArgumentNullException("entity");
 
-            DocumentMetadata value;
-            if (DocumentsAndMetadata.TryGetValue(entity, out value))
+            DocumentInfo value;
+            if (DocumentsByEntity.TryGetValue(entity, out value))
             {
                 if (etag != null)
                     value.ETag = etag;
@@ -593,20 +593,24 @@ more responsive application.
             if (id != null)
                 KnownMissingIds.Remove(id);
 
-            DocumentsAndMetadata.Add(entity, new DocumentMetadata
+            var documentMetadata = new DocumentInfo
             {
                 Id = id,
-                Metadata = Context.ReadObject(metadata, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk),
+                Metadata = Context.ReadObject(metadata, id),
                 ETag = etag,
-                ForceConcurrencyCheck = forceConcurrencyCheck
-            });
+                ForceConcurrencyCheck = forceConcurrencyCheck,
+                Entity = entity,
+                Document =  null
+            };
+
+            DocumentsByEntity.Add(entity, documentMetadata);
             if (id != null)
-                EntitiesById[id] = entity;
+                DocumentsById[id] = documentMetadata;
         }
 
         protected virtual void AssertNoNonUniqueInstance(object entity, string id)
         {
-            if (id == null || id.EndsWith("/") || !EntitiesById.ContainsKey(id) || ReferenceEquals(EntitiesById[id], entity))
+            if (id == null || id.EndsWith("/") || !DocumentsById.ContainsKey(id) || ReferenceEquals(DocumentsById[id].Entity, entity))
                 return;
 
             throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");
@@ -633,9 +637,9 @@ more responsive application.
 
         private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
         {
-            DocumentMetadata documentMetadata = null;
-            var keysToDelete = DeletedEntities.Where(deletedEntity => DocumentsAndMetadata.TryGetValue(deletedEntity, out documentMetadata))
-                .Select(deletedEntity => documentMetadata.Id)
+            DocumentInfo documentInfo = null;
+            var keysToDelete = DeletedEntities.Where(deletedEntity => DocumentsByEntity.TryGetValue(deletedEntity, out documentInfo))
+                .Select(deletedEntity => documentInfo.Id)
                 .ToList();
 
             foreach (var key in keysToDelete)
@@ -656,24 +660,22 @@ more responsive application.
                 else
                 {
                     long? etag = null;
-                    object existingEntity;
-                    DocumentMetadata metadata = null;
-                    if (EntitiesById.TryGetValue(key, out existingEntity))
+                    DocumentInfo value = null;
+                    if (DocumentsById.TryGetValue(key, out value))
                     {
-                        if (DocumentsAndMetadata.TryGetValue(existingEntity, out metadata))
-                            etag = metadata.ETag;
-                        DocumentsAndMetadata.Remove(existingEntity);
-                        EntitiesById.Remove(key);
+                        etag = value.ETag;
+                        DocumentsByEntity.Remove(value.Entity);
+                        DocumentsById.Remove(key);
                     }
 
                     etag = UseOptimisticConcurrency ? etag : null;
-                    result.Entities.Add(existingEntity);
+                    result.Entities.Add(value.Entity);
 
-                    result.Commands.Add(new DeleteCommandData
+                    /*result.Commands.Add(new DeleteCommandData
                     {
                         Etag = etag,
                         Id = key,
-                    });
+                    });*/
                 }
 
             }
@@ -698,17 +700,13 @@ more responsive application.
         /// <param name="entity">The entity.</param>
         public void Evict<T>(T entity)
         {
-            DocumentMetadata value;
-            if (DocumentsAndMetadata.TryGetValue(entity, out value))
+            DocumentInfo value;
+            if (DocumentsByEntity.TryGetValue(entity, out value))
             {
-                DocumentsAndMetadata.Remove(entity);
-                EntitiesById.Remove(value.Id);
+                DocumentsByEntity.Remove(entity);
+                DocumentsById.Remove(value.Id);
             }
-            DocumentMetadata documentMetadata;
-            if (DocumentsAndMetadata.TryGetValue(entity, out documentMetadata))
-            {
-                EntitiesById.Remove(documentMetadata.Id);
-            }
+
             DeletedEntities.Remove(entity);
         }
 
@@ -718,10 +716,9 @@ more responsive application.
         /// </summary>
         public void Clear()
         {
-            DocumentsAndMetadata.Clear();
+            DocumentsByEntity.Clear();
             DeletedEntities.Clear();
-            EntitiesById.Clear();
-            DocumentsAndMetadata.Clear();
+            DocumentsById.Clear();
             KnownMissingIds.Clear();
         }
 
@@ -780,7 +777,7 @@ more responsive application.
         /// <summary>
         /// Metadata held about an entity by the session
         /// </summary>
-        public class DocumentMetadata
+        public class DocumentInfo
         {
             /// <summary>
             /// Gets or sets the id.
@@ -808,6 +805,10 @@ more responsive application.
 
             public BlittableJsonReaderObject Metadata { get; set; }
 
+            public BlittableJsonReaderObject Document { get; set; }
+
+            public object Entity { get; set; }
+
             public bool IsNewDocument { get; set; }
         }
 
@@ -818,7 +819,7 @@ more responsive application.
         {
             public SaveChangesData()
             {
-                Commands = new List<ICommandData>();
+                Commands = new List<SessionOperations.Commands.ICommandData>();
                 Entities = new List<object>();
             }
 
@@ -826,7 +827,7 @@ more responsive application.
             /// Gets or sets the commands.
             /// </summary>
             /// <value>The commands.</value>
-            public List<ICommandData> Commands { get; set; }
+            public List<SessionOperations.Commands.ICommandData> Commands { get; set; }
 
             public int DeferredCommandsCount { get; set; }
 
@@ -930,12 +931,12 @@ more responsive application.
                 if (KnownMissingIds.Contains(id))
                     continue;
 
-                object data;
-                if (EntitiesById.TryGetValue(id, out data) == false)
+                DocumentInfo documentInfo;
+                if (DocumentsById.TryGetValue(id, out documentInfo) == false)
                     return false;
-                DocumentMetadata value;
-                if (DocumentsAndMetadata.TryGetValue(data, out value) == false)
+                if (documentInfo.Entity == null)
                     return false;
+
                 foreach (var include in includes)
                 {
                     var hasAll = true;

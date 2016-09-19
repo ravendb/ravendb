@@ -5,7 +5,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Documents.Commands;
 using Sparrow.Json;
 using Sparrow.Logging;
-
+using DocumentInfo = Raven.Client.Documents.InMemoryDocumentSessionOperations.DocumentInfo;
 namespace Raven.Client.Documents.SessionOperations
 {
     public class LoadOperation
@@ -67,21 +67,27 @@ namespace Raven.Client.Documents.SessionOperations
             if (_session.IsDeleted(id))
                 return default(T);
 
-            object existingEntity;
-            if (_session.EntitiesById.TryGetValue(id, out existingEntity))
-                return (T) existingEntity;
-
-            BlittableJsonReaderObject document;
-            if (_session.DocumentsById.TryGetValue(id, out document) == false)
+            DocumentInfo documentInfo;
+            if (_session.DocumentsById.TryGetValue(id, out documentInfo) == false)
                 return default(T);
 
-            var entity = _session.ConvertToEntity(typeof(T), id, document);
+            if (documentInfo.Entity != null)
+                return (T)documentInfo.Entity;
+
+            if (documentInfo.Document == null)
+                return default(T);
+
+            var entity = _session.ConvertToEntity(typeof(T), id, documentInfo.Document);
+            var newMetadata = new DocumentInfo
+            {
+                //TODO - Add all DocumentInfo properties ??
+                Id = id,
+                Document = documentInfo.Document,
+                Entity = entity,
+            };
             try
             {
-                _session.DocumentsAndMetadata.Add(entity, new InMemoryDocumentSessionOperations.DocumentMetadata
-                {
-                    Id = id,
-                });
+                _session.DocumentsByEntity.Add(entity, newMetadata);
             }
             catch (Exception)
             {
@@ -91,7 +97,7 @@ namespace Raven.Client.Documents.SessionOperations
 
             try
             {
-                _session.EntitiesById.Add(id, entity);
+                _session.DocumentsById.Add(id, newMetadata);
             }
             catch (Exception)
             {
@@ -130,7 +136,16 @@ namespace Raven.Client.Documents.SessionOperations
                     string id;
                     if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
                         throw new InvalidOperationException("Document must have an id");
-                    _session.DocumentsById[id] = document;
+
+                    var newMetadata = new DocumentInfo
+                    {
+                        //TODO - Add all DocumentInfo properties ??
+                        Id = id,
+                        Document = document,
+                        Metadata = metadata
+                    };
+
+                    _session.DocumentsById[id] = newMetadata;
                 }
             }
 
@@ -149,7 +164,15 @@ namespace Raven.Client.Documents.SessionOperations
                 string id;
                 if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
                     throw new InvalidOperationException("Document must have an id");
-                _session.DocumentsById[id] = document;
+                var newMetadata = new DocumentInfo
+                {
+                    //TODO - Add all DocumentInfo properties ??
+                    Id = id,
+                    Document = document,
+                    Metadata = metadata
+                };
+
+                _session.DocumentsById[id] = newMetadata;
             }
         }
     }

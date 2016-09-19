@@ -79,6 +79,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 fields = input.GetFields()
                     .Where(x => x.Name != Constants.Indexing.Fields.DocumentIdFieldName)
+                    .Distinct(UniqueFieldNames.Instance)
                     .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, x.IsStored));
 
                 doc = _documentsStorage.Get(_context, id);
@@ -239,6 +240,21 @@ namespace Raven.Server.Documents.Queries.Results
                 return;
 
             toFill[fieldToFetch.Name.Value] = value;
+        }
+
+        private class UniqueFieldNames : IEqualityComparer<IFieldable>
+        {
+            public static UniqueFieldNames Instance = new UniqueFieldNames();
+
+            public bool Equals(IFieldable x, IFieldable y)
+            {
+                return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase);
+            }
+
+            public int GetHashCode(IFieldable obj)
+            {
+                return obj.Name.GetHashCode();
+            }
         }
     }
 }

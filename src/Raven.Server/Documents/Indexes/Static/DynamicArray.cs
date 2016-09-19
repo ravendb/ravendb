@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var i = (int)indexes[0];
             var resultObject = _inner.ElementAt(i);
 
-            result = TypeConverter.DynamicConvert(resultObject);
+            result = TypeConverter.ToDynamicType(resultObject);
             return true;
         }
 
@@ -505,7 +505,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return false;
 
 
-                Current = TypeConverter.DynamicConvert(_inner.Current);
+                Current = TypeConverter.ToDynamicType(_inner.Current);
                 return true;
             }
 
