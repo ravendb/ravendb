@@ -14,6 +14,8 @@ using Raven.Server.Documents.Transformers;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Abstractions.Data;
+using Lucene.Net.Documents;
 
 namespace Raven.Server.Utils
 {
@@ -60,6 +62,9 @@ namespace Raven.Server.Utils
 
             if (value is Guid)
                 return context.GetLazyString(((Guid)value).ToString("D"));
+
+            if (value is IEnumerable<IFieldable> || value is IFieldable)
+                return Constants.Indexing.Fields.IgnoredDynamicField;
 
             var dictionary = value as IDictionary;
             if (dictionary != null)

@@ -28,10 +28,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public string SourceCollection;
 
-        public CurrentIndexingScope(DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext)
+        public TransactionOperationContext IndexContext { get; }
+
+        public CurrentIndexingScope(DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
             _documentsStorage = documentsStorage;
             _documentsContext = documentsContext;
+            IndexContext = indexContext;
         }
 
         public unsafe dynamic LoadDocument(LazyStringValue keyLazy, string keyString, string collectionName)

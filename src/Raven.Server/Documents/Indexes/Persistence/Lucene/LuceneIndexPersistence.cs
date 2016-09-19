@@ -52,18 +52,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             switch (_index.Type)
             {
                 case IndexType.AutoMap:
-                case IndexType.AutoMapReduce:
-                case IndexType.MapReduce:
-                    if (_index.Type == IndexType.AutoMapReduce)
-                    {
-                        var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)_index.Definition;
-                        fields.AddRange(autoMapReduceIndexDefinition.GroupByFields.Values);
-                    }
-
-                    _converter = new LuceneDocumentConverter(fields, reduceOutput: _index.Type.IsMapReduce());
+                    _converter = new LuceneDocumentConverter(fields, reduceOutput: false);
                     break;
+                case IndexType.AutoMapReduce:
+                    var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)_index.Definition;
+                    fields.AddRange(autoMapReduceIndexDefinition.GroupByFields.Values);
+
+                    _converter = new LuceneDocumentConverter(fields, reduceOutput: true);
+                    break;
+                case IndexType.MapReduce:
                 case IndexType.Map:
-                    _converter = new AnonymousLuceneDocumentConverter(fields);
+                    _converter = new AnonymousLuceneDocumentConverter(fields, reduceOutput: _index.Type.IsMapReduce());
                     break;
                 case IndexType.Faulty:
                     _converter = null;

@@ -18,6 +18,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
+using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -31,6 +32,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private const string TrueString = "true";
 
         private const string FalseString = "false";
+        
+        private readonly Field _reduceValueField = new Field(Constants.Indexing.Fields.ReduceValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
         private static readonly FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
 
@@ -46,11 +49,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected readonly bool _reduceOutput;
 
+        private byte[] _reduceValueBuffer;
+
         protected LuceneDocumentConverterBase(ICollection<IndexField> fields, bool reduceOutput = false)
         {
             _fields = fields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
 
             _reduceOutput = reduceOutput;
+
+            if (reduceOutput)
+                _reduceValueBuffer = new byte[0];
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
@@ -497,6 +505,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return false;
 
             return true;
+        }
+
+        protected AbstractField GetReduceResultValueField(BlittableJsonReaderObject reduceResult)
+        {
+            _reduceValueField.SetValue(GetReduceResult(reduceResult), 0, reduceResult.Size);
+
+            return _reduceValueField;
+        }
+
+        private byte[] GetReduceResult(BlittableJsonReaderObject reduceResult)
+        {
+            var necessarySize = Bits.NextPowerOf2(reduceResult.Size);
+
+            if (_reduceValueBuffer.Length < necessarySize)
+                _reduceValueBuffer = new byte[necessarySize];
+
+            unsafe
+            {
+                fixed (byte* v = _reduceValueBuffer)
+                    reduceResult.CopyTo(v);
+            }
+
+            return _reduceValueBuffer;
         }
 
         public void Dispose()

@@ -6,7 +6,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -102,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (_createFieldsConverter == null)
                 _createFieldsConverter = new LuceneDocumentConverter(new IndexField[] {});
 
-            return _createFieldsConverter.GetRegularFields(field, value, null);
+            return _createFieldsConverter.GetRegularFields(field, value, CurrentIndexingScope.Current.IndexContext);
         }
 
         public IndexingFunc Reduce;
