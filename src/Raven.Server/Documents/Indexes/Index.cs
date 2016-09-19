@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -742,7 +743,23 @@ namespace Raven.Server.Documents.Indexes
             return Definition.ConvertToIndexDefinition(this);
         }
 
+        public async Task StreamQuery(HttpResponse response, BlittableJsonTextWriter writer, IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            using (var result = new StreamDocumentQueryResult(response, writer, documentsContext))
+            {
+                await QueryInternal(result, query, documentsContext, token);
+            }
+        }
+
         public async Task<DocumentQueryResult> Query(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            var result = new DocumentQueryResult();
+            await QueryInternal(result, query, documentsContext, token);
+            return result;
+        }
+
+        private async Task QueryInternal<TQueryResult>(TQueryResult resultToFill, IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+            where TQueryResult : QueryResultServerSide
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -762,13 +779,14 @@ namespace Raven.Server.Documents.Indexes
                     throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
             }
 
+            if (resultToFill.SupportsInclude == false && ((query.Includes != null && query.Includes.Length > 0) || (transformer != null && transformer.HasInclude)))
+                throw new NotSupportedException("Includes are not supported by this type of query.");
+
             TransactionOperationContext indexContext;
 
             using (MarkQueryAsRunning(query, token))
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                var result = new DocumentQueryResult();
-
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
 
@@ -797,7 +815,7 @@ namespace Raven.Server.Documents.Indexes
                             continue;
                         }
 
-                        FillQueryResult(result, isStale, documentsContext, indexContext);
+                        FillQueryResult(resultToFill, isStale, documentsContext, indexContext);
 
                         if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0) && (transformer == null || transformer.MightRequireTransaction == false))
                             documentsContext.CloseTransaction(); // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
@@ -827,17 +845,19 @@ namespace Raven.Server.Documents.Indexes
 
                                 foreach (var document in results)
                                 {
-                                    result.Results.Add(document);
+                                    resultToFill.TotalResults = totalResults.Value;
+                                    resultToFill.AddResult(document);
+
                                     includeDocumentsCommand.Gather(document);
                                 }
                             }
 
-                            includeDocumentsCommand.Fill(result.Includes);
-                            result.TotalResults = totalResults.Value;
-                            result.SkippedResults = skippedResults.Value;
+                            includeDocumentsCommand.Fill(resultToFill.Includes);
+                            resultToFill.TotalResults = totalResults.Value;
+                            resultToFill.SkippedResults = skippedResults.Value;
                         }
 
-                        return result;
+                        return;
                     }
                 }
             }

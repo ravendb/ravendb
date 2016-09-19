@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         _token.Token.ThrowIfCancellationRequested();
 
-                        result.Results.Add(document);
+                        result.AddResult(document);
                         includeDocumentsCommand.Gather(document);
                     }
                 }

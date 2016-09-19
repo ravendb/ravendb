@@ -1554,13 +1554,13 @@ namespace Raven.Client.Connection.Async
             HttpMethod method;
             if (query.Query != null && query.Query.Length > convention.MaxLengthOfQueryUsingGetUrl)
             {
-                path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false);
+                path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/queries", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false);
                 method = HttpMethod.Post;
             }
             else
             {
                 method = HttpMethod.Get;
-                path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false);
+                path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/queries", includePageSizeEvenIfNotExplicitlySet: false);
             }
 
             var request = jsonRequestFactory

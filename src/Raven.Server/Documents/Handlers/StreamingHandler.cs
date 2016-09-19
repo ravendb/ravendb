@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -29,6 +29,41 @@ namespace Raven.Server.Documents.Handlers
 
             }
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/streams/queries/$", "HEAD")]
+        public Task SteamQueryHead()
+        {
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/streams/queries/$", "GET")]
+        public Task StreamQueryGet()
+        {
+            var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+
+            DocumentsOperationContext context;
+            using (TrackRequestTime())
+            using (var token = CreateTimeLimitedOperationToken())
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(int.MaxValue), context);
+
+                var runner = new QueryRunner(Database, context);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    runner.ExecuteStreamQuery(indexName, query, HttpContext.Response, writer, token);
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/streams/queries/$", "POST")]
+        public Task StreamQueryPost()
+        {
+            throw new NotImplementedException();
         }
     }
 }

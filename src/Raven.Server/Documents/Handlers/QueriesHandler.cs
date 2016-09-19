@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -85,7 +84,6 @@ namespace Raven.Server.Documents.Handlers
             long? facetsEtag = null;
             if (query.FacetSetupDoc == null)
             {
-                string f;
                 KeyValuePair<List<Facet>, long> facets;
                 if (HttpContext.Request.Method == HttpMethod.Post.Method)
                 {
@@ -94,7 +92,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else if (HttpContext.Request.Method == HttpMethod.Get.Method)
                 {
-                    f = GetStringQueryString("facets");
+                    var f = GetStringQueryString("facets");
                     if (string.IsNullOrWhiteSpace(f))
                         throw new InvalidOperationException("One of the required parameters (facetDoc or facets) was not specified.");
 

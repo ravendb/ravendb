@@ -2,10 +2,15 @@
 
 namespace Raven.Server.Documents.Queries
 {
-    public class DocumentQueryResult : QueryResult<Document>
+    public class DocumentQueryResult : QueryResultServerSide
     {
         public static readonly DocumentQueryResult NotModifiedResult = new DocumentQueryResult { NotModified = true };
 
-        public bool NotModified { get; private set; }
+        public override bool SupportsInclude => true;
+
+        public override void AddResult(Document result)
+        {
+            Results.Add(result);
+        }
     }
 }

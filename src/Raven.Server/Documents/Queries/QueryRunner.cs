@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
@@ -14,7 +14,7 @@ using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-
+using Sparrow.Json;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries
@@ -55,6 +55,18 @@ namespace Raven.Server.Documents.Queries
             }
 
             return result;
+        }
+
+        public Task ExecuteStreamQuery(string indexName, IndexQueryServerSide query, HttpResponse response, BlittableJsonTextWriter writer, OperationCancelToken token)
+        {
+            if (indexName.StartsWith("dynamic", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new NotSupportedException("Query streaming is not supported for dynamic indexes"); // TODO [ppekrol]
+            }
+
+            var index = GetIndex(indexName);
+
+            return index.StreamQuery(response, writer, query, _documentsContext, token);
         }
 
         public Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQuery query, long? facetsEtag, long? existingResultEtag, OperationCancelToken token)
