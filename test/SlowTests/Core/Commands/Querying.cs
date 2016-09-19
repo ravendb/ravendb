@@ -93,7 +93,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Streaming")]
+        [Fact]
         public void CanStreamQueryResult()
         {
             using (var store = GetDocumentStore())

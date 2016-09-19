@@ -12,7 +12,7 @@ namespace SlowTests.SlowTests.MailingList
 {
     public class Jalchr3 : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Streaming")]
+        [Fact]
         public void Streaming_documents_will_respect_the_sorting_order()
         {
             using (var store = GetDocumentStore())
