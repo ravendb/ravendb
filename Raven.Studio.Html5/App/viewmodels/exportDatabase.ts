@@ -21,7 +21,7 @@ class exportDatabase extends viewModelBase {
     filters = ko.observableArray<filterSettingDto>();
     transformScript = ko.observable<string>();
     exportActionUrl:KnockoutComputed<string>;
-    noneDefualtFileName = ko.observable<string>("");
+    noneDefaultFileName = ko.observable<string>("");
     chooseDifferntFileName = ko.observable<boolean>(false);
     authToken = ko.observable<string>();
 
@@ -96,7 +96,7 @@ class exportDatabase extends viewModelBase {
             ShouldExcludeExpired: !this.includeExpiredDocuments(),
             Filters: filtersToSend,
             TransformScript: this.transformScript(),
-            NoneDefualtFileName: this.noneDefualtFileName()
+            NoneDefaultFileName: this.noneDefaultFileName()
         };
         
         $("#SmugglerOptions").val(JSON.stringify(smugglerOptions));
