@@ -17,7 +17,16 @@ namespace Raven.Server.Utils
             foreach (var entryA in vectorA)
             {
                 var etagA = entryA.Etag;
-                var etagB = vectorB.FirstOrDefault(e => e.DbId == entryA.DbId).Etag;
+                ChangeVectorEntry first = new ChangeVectorEntry();
+                foreach (var e in vectorB)
+                {
+                    if (e.DbId == entryA.DbId)
+                    {
+                        first = e;
+                        break;
+                    }
+                }
+                var etagB = first.Etag;
 
                 merged[inx++] = new ChangeVectorEntry
                 {

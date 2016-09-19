@@ -1133,7 +1133,7 @@ namespace Raven.Server.Documents
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             foreach (var result in conflictsTable.SeekForwardFrom(
-                ConflictsSchema.Indexes[Slice.From(context.Allocator, "KeyAndChangeVector")],
+                ConflictsSchema.Indexes[KeyAndChangeVectorSlice],
                 Slice.External(context.Allocator, lowerKey, lowerSize), true))
             {
                 foreach (var tvr in result.Results)
