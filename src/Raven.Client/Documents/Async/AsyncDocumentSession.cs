@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Async
         {
             AsyncDatabaseCommands = asyncDatabaseCommands;
             GenerateDocumentKeysOnStore = false;
-            asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, DocumentsAndMetadata.TryGetValue, (key, entity, metadata) => key);
+            asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, DocumentsByEntity.TryGetValue, (key, entity, metadata) => key);
         }
 
         /// <summary>
@@ -57,8 +57,8 @@ namespace Raven.Client.Documents.Async
 
         public string GetDocumentUrl(object entity)
         {
-            DocumentMetadata value;
-            if (DocumentsAndMetadata.TryGetValue(entity, out value) == false)
+            DocumentInfo value;
+            if (DocumentsByEntity.TryGetValue(entity, out value) == false)
                 throw new InvalidOperationException("Could not figure out identifier for transient instance");
 
             return AsyncDatabaseCommands.UrlFor(value.Id);
@@ -308,10 +308,10 @@ namespace Raven.Client.Documents.Async
             return metadata.Metadata;
         }
 
-        private async Task<DocumentMetadata> GetDocumentMetadataAsync<T>(T instance)
+        private async Task<DocumentInfo> GetDocumentMetadataAsync<T>(T instance)
         {
-            DocumentMetadata value;
-            if (DocumentsAndMetadata.TryGetValue(instance, out value) == false)
+            DocumentInfo value;
+            if (DocumentsByEntity.TryGetValue(instance, out value) == false)
             {
                 string id;
                 if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id)

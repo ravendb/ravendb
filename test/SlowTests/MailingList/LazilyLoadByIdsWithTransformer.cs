@@ -7,7 +7,7 @@ namespace SlowTests.MailingList
 {
     public class LazilyLoadByIdsWithTransformer : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void WithTransformer()
         {
             using (var store = GetDocumentStore())
@@ -37,7 +37,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void WithTransformer2()
         {
             using (var store = GetDocumentStore())

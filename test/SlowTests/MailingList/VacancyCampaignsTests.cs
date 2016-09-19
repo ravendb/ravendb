@@ -116,7 +116,7 @@ namespace SlowTests.MailingList
             base.Dispose();
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void Can_query_active_campaigns()
         {
             using (var session = Store.OpenSession())

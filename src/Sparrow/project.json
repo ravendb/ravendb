@@ -16,7 +16,7 @@
   },
 
   "dependencies": {
-    "DotNetCross.Memory.Unsafe": "0.2.3.2",
+    "DotNetCross.Memory.Unsafe": "0.2.3.4",
     "NETStandard.Library": "1.6.0",
     "NLog": "4.4.0-*",
     "Microsoft.AspNetCore.WebSockets.Server": "0.1.0",

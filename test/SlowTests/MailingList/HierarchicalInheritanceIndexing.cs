@@ -12,7 +12,7 @@ namespace SlowTests.MailingList
 {
     public class HierarchicalInheritanceIndexing : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanCreateIndex()
         {
             Guid rootId = Guid.NewGuid();

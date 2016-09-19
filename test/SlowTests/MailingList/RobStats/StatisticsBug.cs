@@ -80,7 +80,7 @@ namespace SlowTests.MailingList.RobStats
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void Should_get_stats_whe_using_lazy()
         {
             using (var store = GetDocumentStore())

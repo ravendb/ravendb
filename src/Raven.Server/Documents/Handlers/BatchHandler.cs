@@ -113,10 +113,15 @@ namespace Raven.Server.Documents.Handlers
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
                     throw;
                 }
-                HttpContext.Response.StatusCode = (int) HttpStatusCode.Created;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(readBatchCommandContext, ResponseBodyStream()))
-                    readBatchCommandContext.Write(writer, mergedCmd.Reply);
+                {
+                    readBatchCommandContext.Write(writer, new DynamicJsonValue
+                    {
+                        ["Results"] = mergedCmd.Reply
+                    });
+                }
             }
         }
 

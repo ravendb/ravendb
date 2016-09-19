@@ -15,7 +15,7 @@ namespace SlowTests.Tests.Indexes
 {
     public class WithNullableDateTime : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanCreate()
         {
             using (var documentStore = GetDocumentStore())

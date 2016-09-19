@@ -590,7 +590,7 @@ namespace Raven.Client.FileSystem
             if (fieldName == Constants.Indexing.Fields.DocumentIdFieldName)
                 return fieldName;
            
-            if (UsesRangeType(val) && fieldName.EndsWith("_Range"))
+            if (UsesRangeType(val) && fieldName.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
                 fieldName = fieldName.Substring(0, fieldName.Length - 6);
             return fieldName;
         }

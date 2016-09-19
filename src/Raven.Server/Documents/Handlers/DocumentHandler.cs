@@ -17,15 +17,12 @@ using Raven.Client.Documents.Commands;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Transformers;
-using Raven.Server.Exceptions;
-using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Handlers
@@ -43,12 +40,10 @@ namespace Raven.Server.Documents.Handlers
             {
                 var document = Database.DocumentsStorage.Get(context, id);
                 if (document == null)
-                {
-                    var conflicts = Database.DocumentsStorage.GetConflictsFor(context, id);
-                    HttpContext.Response.StatusCode = conflicts.Count > 0 ? 409 : 404;
-                }
+                    HttpContext.Response.StatusCode = 404;
                 else
                     HttpContext.Response.Headers[Constants.MetadataEtagField] = document.Etag.ToString();
+
                 return Task.CompletedTask;
             }
         }
@@ -157,128 +152,104 @@ namespace Raven.Server.Documents.Handlers
 
         private void GetDocumentsById(DocumentsOperationContext context, StringValues ids, Transformer transformer, bool metadataOnly)
         {
-            /* TODO: Call AddRequestTraceInfo
-            AddRequestTraceInfo(sb =>
-            {
-                foreach (var id in ids)
-                {
-                    sb.Append("\t").Append(id).AppendLine();
-                }
-            });*/
             var includePaths = HttpContext.Request.Query["include"];
             var documents = new List<Document>(ids.Count);
+            List<long> etags = null;
             var includes = new List<Document>(includePaths.Count * ids.Count);
             var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths);
             foreach (var id in ids)
             {
                 var document = Database.DocumentsStorage.Get(context, id);
-                if (document == null)
-                {
-                    var conflicts = Database.DocumentsStorage.GetConflictsFor(context, id);
-                    if (conflicts.Count > 0)
-                    {
-                        HttpContext.Response.StatusCode = 409;
-                        HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                        {
-                            context.Write(writer, GetJsonForConflicts(id, conflicts));
-                        }
-                        return;
-                    }
-                }
+
                 documents.Add(document);
                 includeDocs.Gather(document);
             }
 
-            long actualEtag = ComputeEtagsFor(documents);
-            if (GetLongFromHeaders("If-None-Match") == actualEtag)
-            {
-                HttpContext.Response.StatusCode = 304;
-                return;
-            }
-
-            HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-            HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName(nameof(GetDocumentResult.Results));
-
+            IEnumerable<Document> documentsToWrite;
                 if (transformer != null)
                 {
                     var transformerParameters = GetTransformerParameters(context);
 
                     using (var scope = transformer.OpenTransformationScope(transformerParameters, includeDocs, Database.DocumentsStorage, Database.TransformerStore, context))
                     {
-                        writer.WriteDocuments(context, scope.Transform(documents), metadataOnly);
+                    documentsToWrite = scope.Transform(documents).ToList();
+                    etags = scope.LoadedDocumentEtags;
                     }
                 }
                 else
+                documentsToWrite = documents;
+
+            includeDocs.Fill(includes);
+
+            var actualEtag = ComputeEtagsFor(documents, includes, etags);
+            if (transformer != null)
+                actualEtag ^= transformer.Hash;
+
+            var etag = GetLongFromHeaders("If-None-Match");
+            if (etag == actualEtag)
                 {
-                    writer.WriteDocuments(context, documents, metadataOnly);
+                HttpContext.Response.StatusCode = 304;
+                return;
                 }
+
+            HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+            HttpContext.Response.Headers[Constants.MetadataEtagField] = actualEtag.ToString();
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(GetDocumentResult.Results));
+                writer.WriteDocuments(context, documentsToWrite, metadataOnly);
 
                 includeDocs.Fill(includes);
 
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentResult.Includes));
-
-                if (includePaths.Count > 0)
-                {
                     writer.WriteDocuments(context, includes, metadataOnly);
-                }
-                else
-                {
-                    // TODO: Why is this needed? WriteDocuments will emit empty array
-                    writer.WriteStartArray();
-                    writer.WriteEndArray();
-                }
 
                 writer.WriteEndObject();
             }
         }
 
-        private DynamicJsonValue GetJsonForConflicts(string docId, IEnumerable<DocumentConflict> conflicts)
-        {
-            var conflictsArray = new DynamicJsonArray();
-            foreach (var c in conflicts)
-            {
-                conflictsArray.Add(new DynamicJsonValue
-                {
-                    ["ChangeVector"] = c.ChangeVector.ToJson(),
-                    ["Doc"] = c.Doc
-                });
-            }
-
-            return new DynamicJsonValue
-            {
-                ["Message"] = "Conflict detected on " + docId + ", conflict must be resolved before the document will be accessible",
-                ["DocId"] = docId,
-                ["Conflics"] = conflictsArray
-            };
-        }
-
-        private unsafe long ComputeEtagsFor(List<Document> documents)
+        private static unsafe long ComputeEtagsFor(List<Document> documents, List<Document> includes, List<long> additionalEtags)
         {
             // This method is efficient because we aren't materializing any values
             // except the etag, which we need
-            if (documents.Count == 1)
-            {
+            if (documents.Count == 1 && (includes == null || includes.Count == 0) && (additionalEtags == null || additionalEtags.Count == 0))
                 return documents[0]?.Etag ?? -1;
-            }
+
+            var documentsCount = documents.Count;
+            var includesCount = includes?.Count ?? 0;
+            var additionalEtagsCount = additionalEtags?.Count ?? 0;
+            var count = documentsCount + includesCount + additionalEtagsCount;
+
             // we do this in a loop to avoid either large long array allocation on the heap
             // or busting the stack if we used stackalloc long[ids.Count]
             var ctx = Hashing.Streamed.XXHash64.BeginProcess();
             long* buffer = stackalloc long[4];//32 bytes
             Memory.Set((byte*)buffer, 0, sizeof(long) * 4);// not sure is stackalloc force init
-            for (int i = 0; i < documents.Count; i += 4)
+            for (int i = 0; i < count; i += 4)
             {
                 for (int j = 0; j < 4; j++)
                 {
-                    if (i + j >= documents.Count)
+                    var index = i + j;
+                    if (index >= count)
                         break;
-                    var document = documents[i + j];
+
+                    if (index < documentsCount)
+                    {
+                        var document = documents[index];
                     buffer[j] = document?.Etag ?? -1;
+                        continue;
+                }
+
+                    if (includesCount > 0 && index >= documentsCount && index < documentsCount + includesCount)
+                    {
+                        var document = includes[index - documentsCount];
+                        buffer[j] = document?.Etag ?? -1;
+                        continue;
+                    }
+
+                    buffer[j] = additionalEtags[i + j - documentsCount - includesCount];
                 }
                 // we don't care if we didn't get to the end and have values from previous iteration
                 // it will still be consistent, and that is what we care here.
@@ -423,7 +394,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "PATCH", "/databases/{databaseName:string}/docs?id={documentId:string}&test={isTestOnly:bool|optional(false)} body{ Patch:PatchRequest, PatchIfMissing:PatchRequest }")]
         public Task Patch()
         {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("ids");
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
             var etag = GetLongFromHeaders("If-Match");
             var isTestOnly = GetBoolValueQueryString("test", required: false) ?? false;

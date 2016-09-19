@@ -35,6 +35,28 @@ namespace Sparrow
         }
     }
 
+    public class StringSegmentEqualityComparer : IEqualityComparer<StringSegment>
+    {
+        public static StringSegmentEqualityComparer Instance = new StringSegmentEqualityComparer();
+
+
+        public bool Equals(StringSegment x, StringSegment y)
+        {
+            if (x.Length != y.Length)
+                return false;
+            var compare = string.Compare(x.String, x.Start, y.String, y.Start, x.Length, StringComparison.Ordinal);
+            return compare == 0;
+        }
+
+        public unsafe int GetHashCode(StringSegment str)
+        {
+            fixed (char* p = str.String)
+            {
+                return (int)Hashing.XXHash32.CalculateInline((byte*)(p+str.Start), str.Length * sizeof(char));
+            }
+        }
+    }
+
     public struct StringSegment : IEquatable<StringSegment>
     {
         public readonly string String;

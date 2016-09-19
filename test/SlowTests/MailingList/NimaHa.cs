@@ -15,7 +15,7 @@ namespace SlowTests.MailingList
 {
     public class NimaHa : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void NullValueTest()
         {
             using (var store = GetDocumentStore())
@@ -37,7 +37,7 @@ namespace SlowTests.MailingList
 
                 store.DatabaseCommands.PutIndex("HouseByRent", new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Houses select new { Rent=doc.Inner.ContainsKey(\"Rent\")?doc.Rent:null}" },
+                    Maps = { "from doc in docs.Houses select new { Rent=doc.ContainsKey(\"Rent\")?doc.Rent:null}" },
 
                     Name = "HouseByRent"
                 });

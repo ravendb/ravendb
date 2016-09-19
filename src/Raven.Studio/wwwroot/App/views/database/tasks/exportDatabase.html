@@ -1,186 +1,139 @@
-<div class="panel panel-default">    
-    <div class="panel-heading">
-        <h3 class="panel-title">Export Database</h3>
-    </div>
+<h1>Export Database</h1>
+<div class="panel">
     <div class="panel-body">
-        <h4 class="pull-left">Export your database to a .ravendbdump file.</h4>
-        <br />
-        <br />
-        <div class="btn-toolbar">
-            <div>
-                <form class="navbar-form navbar-left" data-bind="submit: startExport">
-                    <!-- ko with: activeDatabase -->
-                    <button class="btn btn-primary" type="submit" data-bind="disable: isExporting" download>
-                        <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: isExporting"></i>
-                        <i class="fa fa-download" data-bind="visible: !isExporting()"></i>
-                        Export Database
-                    </button>
-                    <!-- /ko -->
-
-                    <div class="checkbox" data-bind="visible: !chooseDifferntFileName()">
-                        <input type="checkbox" class="styled" id="different_name" data-bind="checked: chooseDifferntFileName, disable: activeDatabase().isExporting()">
-                        <label for="different_name">Override file name</label>
+        <form data-bind="submit: startExport">
+            <p>Export your database to a .ravendbdump file.</p>
+            <div class="row">
+                <div class="col-sm-6">
+                    <div class="form-group">
+                        <div class="input-group">
+                            <div class="input-group-addon">Filename</div>
+                            <input class="form-control" data-bind="textInput: model.exportFileName"/>
+                        </div>
                     </div>
-                    <div data-bind="visible: chooseDifferntFileName" class="form-group">
-                        <input class="form-control" type="text" name="fileName" data-bind="visible: chooseDifferntFileName, value: noneDefualtFileName, disable: activeDatabase().isExporting()" title="Insert a file name to override the default one." placeholder="Exported File Name">
-                    </div>
-
-                    <!-- ko with: activeDatabase -->
-                    <div style="margin-top: 15px">
-                        <p data-bind="text: exportStatus"></p>
-                    </div>
-                    <!-- /ko -->
-                </form>
+                </div>
             </div>
-        </div>
-        <br />
-        <ul class="nav nav-tabs">
-            <li class="active" data-bind="css: { active: !showAdvancedOptions()}">
-                <a href="#" data-bind="click:function(){this.selectOptions()}">General</a>
-            </li>
-            <li data-bind="css: { active: showAdvancedOptions()}">
-                <a href="#" data-bind="click:function(){this.selectAdvancedOptions()}">Advanced</a>
-            </li>
-        </ul>
-        <br />
-        <div class="btn-group btn-group-vertical" data-bind="visible:!showAdvancedOptions()">
-
-            <label class="btn btn-default" data-bind="css:{active:includeDocuments() == true}, click: function(){$root.includeDocuments(!$root.includeDocuments()); return true;}, clickBubble: false">
-                <i data-bind="css: {'fa-check': includeDocuments }" class="fa fa-fw"></i> Include Documents
-            </label>
-            <label class="btn btn-default" data-bind="css:{active:includeIndexes() == true}, click: function(){$root.includeIndexes(!$root.includeIndexes()); return true;}, clickBubble: false">
-                <i data-bind="css: {'fa-check': includeIndexes }" class="fa fa-fw"></i> Include Indexes
-            </label>
-            <label class="btn btn-default" data-bind="css:{active:includeAttachments() == true}, click: function(){$root.includeAttachments(!$root.includeAttachments()); return true;}, clickBubble: false">
-                <i data-bind="css: {'fa-check': includeAttachments }" class="fa fa-fw"></i> Include Attachments
-            </label>
-            <label class="btn btn-default" data-bind="css:{active:includeTransformers() == true}, click: function(){$root.includeTransformers(!$root.includeTransformers()); return true;}, clickBubble: false">
-                <i data-bind="css: {'fa-check': includeTransformers }" class="fa fa-fw"></i> Include Transformers
-            </label>
-            <label class="btn btn-default" data-bind="css:{active:removeAnalyzers() == true}, click: function(){$root.removeAnalyzers(!$root.removeAnalyzers()); return true; }, clickBubble: false">
-                <i data-bind="css: {'fa-check': removeAnalyzers }" class="fa fa-fw"></i> Remove Analyzers
-            </label>
-
-        </div>
-        <div data-bind="visible:showAdvancedOptions()">
-            <form class="form-horizontal" role="form">
-                <div class="form-group">
-                    <label class="col-sm-2 control-label">Batch size</label>
-                    <div class="col-sm-2">
-                        <input class="form-control" type="number" min="0" data-bind="value: batchSize" />
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="col-sm-2 control-label">Expired documents</label>
-                    <div class="col-sm-10">
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                <span data-bind="visible: includeExpiredDocuments">Include</span>
-                                <span data-bind="visible: !includeExpiredDocuments()">Exclude</span>
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu" role="menu">
-                                <li><a href="#" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, true)">Include</a></li>
-                                <li><a href="#" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, false)">Exclude</a></li>
-                            </ul>
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="row" data-bind="with: model">
+                        <div class="col-sm-6 col-lg-4">
+                            <div class="toggle">
+                                <input id="toggle1" type="checkbox" data-bind="checked: includeDocuments">
+                                <label for="toggle1">
+                                    Include Documents
+                                </label>
+                            </div>
+                            <div class="toggle">
+                                <input id="toggle2" type="checkbox" data-bind="checked: includeIndexes">
+                                <label for="toggle2">
+                                    Include Indexes
+                                </label>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="col-sm-2 control-label">Collections</label>
-                    <div class="col-sm-10">
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                <span data-bind="visible: includeAllCollections">All collections</span>
-                                <span data-bind="visible: !includeAllCollections()">Specified collections only</span>
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu" role="menu">
-                                <li><a href="#" data-bind="click: includeAllCollections.bind(includeAllCollections, true)">All collections</a></li>
-                                <li><a href="#" data-bind="click: includeAllCollections.bind(includeAllCollections, false)">Specified collections only</a></li>
-                            </ul>
-                        </div>
-                        <div style="margin-left: 20px;" data-bind="visible: !includeAllCollections()">
-                            <p class="form-control-static">Choose collections:</p>
-                            <div class="btn-group-vertical" data-bind="foreach: includedCollections">
-                                <label class="btn btn-default" data-bind="click: isIncluded.bind(isIncluded, !isIncluded()), css: { active: isIncluded }">
-                                    <i class="fa fa-fw" data-bind="css: { 'fa-check': isIncluded }"></i>
-                                    <span data-bind="text: collection"></span>
+                        <div class="col-sm-6 col-lg-4">
+                            <div class="toggle">
+                                <input id="toggle4" type="checkbox" data-bind="checked: includeTransformers">
+                                <label for="toggle4">
+                                    Include Transformers
+                                </label>
+                            </div>
+                            <div class="toggle">
+                                <input id="toggle5" type="checkbox" data-bind="checked: removeAnalyzers">
+                                <label for="toggle5">
+                                    Remove Analyzers
                                 </label>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="col-sm-2 control-label">
-                        <span>Filters</span>
-                        <span class="help-block">
-                            <a class="text-muted" title="External link: RavenDB filters documentation" target="_blank" href="http://ravendb.net/docs/article-page/3.0/csharp/server/administration/exporting-and-importing-data">
-                                <i class="fa fa-question-circle"></i>
-                                Help
-                            </a>
-                        </span>
-                    </label>
-                    <div class="col-sm-10">
-                        <div class="btn-group">
-                            <table class="table table-striped" style="max-width: 500px;" data-bind="visible: filters().length">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 40%;">Path</th>
-                                        <th style="width: 45%;">Value</th>
-                                        <th style="width: 10%">Should Match</th>
-                                        <th>&nbsp;</th>
-                                    </tr>
-                                </thead>
-                                <tbody data-bind="foreach: filters">
-                                    <tr>
-                                        <td><input class="form-control" type="text" data-bind="value: path" /></td>
-                                        <td><input class="form-control" type="text" data-bind="value: value" /></td>
-                                        <td>
-                                            <div class="btn-group">
-                                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                                    <span data-bind="visible: shouldMatch">Should match</span>
-                                                    <span data-bind="visible: !shouldMatch()">Should <strong>not</strong> match</span>
-                                                    <span class="caret"></span>
-                                                </button>
-                                                <ul class="dropdown-menu" role="menu">
-                                                    <li><a href="#" style="text-decoration: none;" data-bind="click: shouldMatch.bind(shouldMatch, true)">Should match</a></li>
-                                                    <li><a href="#" style="text-decoration: none;" data-bind="click: shouldMatch.bind(shouldMatch, false)">Should <strong>not</strong> match</a></li>
-                                                </ul>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <button type="button" class="close" data-bind="click: $root.removeFilter.bind($root, $data)" title="Remove this filter">
-                                                <i class="fa fa-times"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <button class="btn btn-default" data-bind="click: addFilter">
-                                <i class="fa fa-plus"></i> Add filter
-                            </button>
+            </div>
+            <br/>
+
+            <div id="export-advanced" data-bind="collapse: showAdvancedOptions">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <div class="input-group">
+                                <div class="input-group-addon">Batch size</div>
+                                <input class="form-control" type="number" min="0" data-bind="textInput: model.batchSize">
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label id="transformScriptHelp" class="col-sm-2 control-label">
-                        Transform script&nbsp;
-                        <i class="fa fa-info-circle help-cursor"></i>
+                <div class="toggle">
+                    <input id="expiredDocuments" type="checkbox" data-bind="checked: model.includeExpiredDocuments">
+                    <label for="expiredDocuments">
+                        Include Expired documents
                     </label>
-                    <div class="col-sm-10">
-                        <pre style="height: 200px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript' }">
-                        </pre>
+                </div>
+                <div class="toggle">
+                    <input id="Collections" type="checkbox" data-bind="checked: model.includeAllCollections">
+                    <label for="Collections">
+                        Export all collections
+                    </label>
+                </div>
+                <div id="collapseCollections" data-bind="collapse: !model.includeAllCollections()">
+                    <div class="border">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <h2>Choose collections:</h2>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-addon"><span class="glyphicon glyphicon-filter" aria-hidden="true"></span></span>
+                                    <input class="form-control" placeholder="Filter" data-bind="textInput: filter"/>
+                                </div>
+                            </div>
+                        </div>
+                        <hr/>
+                        <div class="row limit-height" data-bind="foreach: filteredCollections">
+                            <div class="col-sm-6">
+                                <div class="toggle toggle-info">
+                                    <input class="styled" type="checkbox" data-bind="attr: { id: 'collection_' + $index() }, value: $data, checked: $root.model.includedCollections">
+                                    <label data-bind="attr: { for: 'collection_' + $index() }, text: $data">
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label class="col-sm-2 control-label">Command</label>
-                    <div class="col-sm-10">
-                        <pre data-bind="text: exportCommand"></pre>    
+                    <div class="toggle">
+                        <input id="useTransformScript" type="checkbox" data-bind="checked: showTransformScript">
+                        <label for="useTransformScript">
+                            Use Transform script <a id="transformScriptPopover" class="text-info">
+                                <span class="icon-help"></span>
+                            </a>
+                        </label>
+                    </div>
+
+                    <div data-bind="collapse: showTransformScript">
+                        <pre style="height: 200px;" data-bind="aceEditor: { code: model.transformScript, lang: 'ace/mode/javascript' }">
+                    </pre>
                     </div>
                 </div>
-            </form>
-        </div>
+                <div class="form-group">
+                    <label class="control-label">Command</label>
+                    <div class="input-group">
+                        <span class="input-group-btn">
+                        <button class="btn btn-default btn-sm" data-bind="click: copyCommandToClipboard"><span class="icon-copy"></span> Copy to clipboard</button>
+                    </span>
+                        <input onClick="this.select();" class="form-control input-sm" readonly data-bind="value: exportCommand">
+                    </div>
+                </div>
+            </div>
+            <hr/>
+
+            <button class="btn btn-info" type="button" data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions)">
+                Advanced
+            </button>
+            <button class="btn btn-success" type="submit" download data-bind="disable: isExporting"><span data-bind="attr: { class: isExporting() ? 'global-spinner' : 'glyphicon glyphicon-save' }"></span> Export Database</button>
+        </form>
     </div>
+</div>
+
+<div class="hidden">
+    <form method="post" id="exportDownloadForm">
+    </form>
 </div>

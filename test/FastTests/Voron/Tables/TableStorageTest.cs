@@ -13,6 +13,9 @@ namespace FastTests.Voron.Tables
 
     public class TableStorageTest : StorageTest
     {
+        public static readonly Slice EtagsSlice = Slice.From(StorageEnvironment.LabelsContext, "Etags", ByteStringType.Immutable);
+        public static readonly Slice EtagAndCollectionSlice = Slice.From(StorageEnvironment.LabelsContext, "Etag&Collection", ByteStringType.Immutable);
+
         protected TableSchema DocsSchema;
 
         protected override void Configure(StorageEnvironmentOptions options)
@@ -20,15 +23,17 @@ namespace FastTests.Voron.Tables
             base.Configure(options);
 
             DocsSchema = new TableSchema()
-                .DefineIndex("Etags", new TableSchema.SchemaIndexDef
+                .DefineIndex(new TableSchema.SchemaIndexDef
                 {
                     StartIndex = 2,
                     Count = 1,
+                    Name = EtagsSlice
                 })
-                .DefineIndex("Etag&Collection", new TableSchema.SchemaIndexDef
+                .DefineIndex(new TableSchema.SchemaIndexDef
                 {
                     StartIndex = 1,
                     Count = 2,
+                    Name = EtagAndCollectionSlice
                 })
                 .DefineKey(new TableSchema.SchemaIndexDef
                 {

@@ -92,7 +92,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void WeeklyStatsIndex_ReturnsCorrectStats()
         {
             using (var store = GetDocumentStore())

@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Primitives;
-
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
+using Raven.Client.Exceptions;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -36,9 +37,6 @@ namespace Raven.Server.Documents.Queries
 
             if (indexName.StartsWith("dynamic", StringComparison.OrdinalIgnoreCase))
             {
-                if (indexName.Length == "dynamic".Length)
-                    throw new InvalidOperationException("Dynamic query needs to specify collection that is applies to. The expected index name is 'dynamic/[collection-name]'.");
-
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
                 result = await runner.Execute(indexName, query, existingResultEtag).ConfigureAwait(false);
@@ -46,14 +44,59 @@ namespace Raven.Server.Documents.Queries
             else
             {
                 var index = GetIndex(indexName);
-                var etag = index.GetIndexEtag();
-                if (etag == existingResultEtag)
-                    return new DocumentQueryResult { NotModified = true };
+                if (existingResultEtag.HasValue)
+                {
+                    var etag = index.GetIndexEtag();
+                    if (etag == existingResultEtag)
+                        return DocumentQueryResult.NotModifiedResult;
+                }
 
                 return await index.Query(query, _documentsContext, token);
             }
 
             return result;
+        }
+
+        public Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQuery query, long? facetsEtag, long? existingResultEtag, OperationCancelToken token)
+        {
+            if (query.FacetSetupDoc != null)
+            {
+                FacetSetup facetSetup;
+                using (_documentsContext.OpenReadTransaction())
+                {
+                    var facetSetupAsJson = _database.DocumentsStorage.Get(_documentsContext, query.FacetSetupDoc);
+                    if (facetSetupAsJson == null)
+                        throw new DocumentDoesNotExistException(query.FacetSetupDoc);
+
+                    try
+                    {
+                        facetSetup = JsonDeserializationServer.FacetSetup(facetSetupAsJson.Data);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new DocumentParseException(query.FacetSetupDoc, typeof(FacetSetup), e);
+                    }
+
+                    facetsEtag = facetSetupAsJson.Etag;
+                }
+
+                query.Facets = facetSetup.Facets;
+            }
+
+            return ExecuteFacetedQuery(indexName, query, facetsEtag.Value, existingResultEtag, token);
+        }
+
+        private async Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQuery query, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
+        {
+            var index = GetIndex(indexName);
+            if (existingResultEtag.HasValue)
+            {
+                var etag = index.GetIndexEtag() ^ facetsEtag;
+                if (etag == existingResultEtag)
+                    return FacetedQueryResult.NotModifiedResult;
+            }
+
+            return await index.FacetedQuery(query, facetsEtag, _documentsContext, token);
         }
 
         public TermsQueryResult ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)
@@ -62,7 +105,7 @@ namespace Raven.Server.Documents.Queries
 
             var etag = index.GetIndexEtag();
             if (etag == existingResultEtag)
-                return new TermsQueryResult { NotModified = true };
+                return TermsQueryResult.NotModifiedResult;
 
             return index.GetTerms(field, fromValue, pageSize, context, token);
         }
@@ -79,7 +122,7 @@ namespace Raven.Server.Documents.Queries
 
             var etag = index.GetIndexEtag();
             if (etag == existingResultEtag)
-                return new MoreLikeThisQueryResultServerSide { NotModified = true };
+                return MoreLikeThisQueryResultServerSide.NotModifiedResult;
 
             context.OpenReadTransaction();
 
@@ -96,17 +139,18 @@ namespace Raven.Server.Documents.Queries
             return runner.ExplainIndexSelection(indexName, indexQuery);
         }
 
-        public Task ExecuteDeleteQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, OperationCancelToken token)
+        public Task<IOperationResult> ExecuteDeleteQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, key => _database.DocumentsStorage.Delete(context, key, null), token);
+            return ExecuteOperation(indexName, query, options, context, onProgress, key => _database.DocumentsStorage.Delete(context, key, null), token);
         }
 
-        public Task ExecutePatchQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, OperationCancelToken token)
+        public Task<IOperationResult> ExecutePatchQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, key => _database.Patch.Apply(context, key, null, patch, null), token);
+            return ExecuteOperation(indexName, query, options, context, onProgress, key => _database.Patch.Apply(context, key, null, patch, null), token);
         }
 
-        private async Task ExecuteOperation(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<string> action, OperationCancelToken token)
+        private async Task<IOperationResult> ExecuteOperation(string indexName, IndexQueryServerSide query, QueryOperationOptions options,
+            DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Action<string> action, OperationCancelToken token)
         {
             var index = GetIndex(indexName);
 
@@ -118,12 +162,27 @@ namespace Raven.Server.Documents.Queries
             const int BatchSize = 1024;
 
             RavenTransaction tx = null;
-            var operations = 0;
-            var results = await index.Query(query, context, token).ConfigureAwait(false);
-            context.CloseTransaction();
+            var operationsInCurrentBatch = 0;
+            DocumentQueryResult results;
+            try
+            {
+                results = await index.Query(query, context, token).ConfigureAwait(false);
+            }
+            finally //make sure to close tx if DocumentConflictException is thrown
+            {
+                context.CloseTransaction();
+            }
 
             if (options.AllowStale == false && results.IsStale)
                 throw new InvalidOperationException("Cannot perform delete operation. Query is stale.");
+
+            var progress = new DeterminateProgress
+            {
+                Total = results.Results.Count,
+                Processed = 0
+            };
+
+            onProgress(progress);
 
             using (var rateGate = options.MaxOpsPerSecond.HasValue ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1)) : null)
             {
@@ -143,14 +202,20 @@ namespace Raven.Server.Documents.Queries
 
                     if (tx == null)
                     {
-                        operations = 0;
+                        operationsInCurrentBatch = 0;
                         tx = context.OpenWriteTransaction();
                     }
 
                     action(document.Key);
-                    operations++;
+                    operationsInCurrentBatch++;
+                    progress.Processed++;
 
-                    if (operations < BatchSize)
+                    if (progress.Processed % 128 == 0)
+                    {
+                        onProgress(progress);
+                    }
+
+                    if (operationsInCurrentBatch < BatchSize)
                         continue;
 
                     using (tx)
@@ -166,6 +231,11 @@ namespace Raven.Server.Documents.Queries
             {
                 tx?.Commit();
             }
+
+            return new BulkOperationResult
+            {
+                Total = progress.Total
+            };
         }
 
         private static IndexQueryServerSide ConvertToOperationQuery(IndexQueryServerSide query, QueryOperationOptions options)

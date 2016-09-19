@@ -24,7 +24,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanCreate()
         {
             using (var store = GetDocumentStore())
@@ -33,7 +33,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void IgnoresLocale()
         {
             using (CultureHelper.EnsureCulture(new CultureInfo("de")))

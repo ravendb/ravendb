@@ -620,28 +620,36 @@ namespace Raven.Client.Document
             var indexQuery = GenerateIndexQuery(query);
             return indexQuery;
         }
-        public FacetResults GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize)
+        public FacetedQueryResult GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery(false);
-            return DatabaseCommands.GetFacets(indexName, q, facetSetupDoc, facetStart, facetPageSize);
+            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize);
+
+            return DatabaseCommands.GetFacets(query);
         }
 
-        public FacetResults GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
+        public FacetedQueryResult GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery(false);
-            return DatabaseCommands.GetFacets(indexName, q, facets, facetStart, facetPageSize);
+            var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize);
+
+            return DatabaseCommands.GetFacets(query);
         }
 
-        public Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
+        public Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery(true);
-            return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facetSetupDoc, facetStart, facetPageSize, token);
+            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize);
+
+            return AsyncDatabaseCommands.GetFacetsAsync(query, token);
         }
 
-        public Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
+        public Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery(true);
-            return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facets, facetStart, facetPageSize, token);
+            var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize);
+
+            return AsyncDatabaseCommands.GetFacetsAsync(query, token);
         }
 
         /// <summary>
@@ -1217,7 +1225,7 @@ If you really want to do in memory filtering on the data returned from the query
                 {
                     DynamicMapReduceField renamedField;
 
-                    if (whereParams.FieldName.EndsWith("_Range"))
+                    if (whereParams.FieldName.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
                     {
                         var name = whereParams.FieldName.Substring(0, whereParams.FieldName.Length - 6);
 
@@ -1225,7 +1233,7 @@ If you really want to do in memory filtering on the data returned from the query
 
                         if (renamedField != null)
                         {
-                            return whereParams.FieldName = renamedField.Name + "_Range";
+                            return whereParams.FieldName = renamedField.Name + Constants.Indexing.Fields.RangeFieldSuffix;
                         }
                     }
                     else
@@ -1439,8 +1447,8 @@ If you really want to do in memory filtering on the data returned from the query
                 return fieldName;
 
             var val = (start ?? end);
-            if (conventions.UsesRangeType(val) && !fieldName.EndsWith("_Range"))
-                fieldName = fieldName + "_Range";
+            if (conventions.UsesRangeType(val) && !fieldName.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
+                fieldName = fieldName + Constants.Indexing.Fields.RangeFieldSuffix;
             return fieldName;
         }
 
@@ -2307,7 +2315,7 @@ If you really want to do in memory filtering on the data returned from the query
             var memberQueryPath = GetMemberQueryPath(expression);
             var memberExpression = linqPathProvider.GetMemberExpression(expression);
             if (DocumentConvention.UsesRangeType(memberExpression.Type))
-                return memberQueryPath + "_Range";
+                return memberQueryPath + Constants.Indexing.Fields.RangeFieldSuffix;
             return memberQueryPath;
         }
 

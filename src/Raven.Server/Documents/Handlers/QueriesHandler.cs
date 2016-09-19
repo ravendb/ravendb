@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -19,6 +22,28 @@ namespace Raven.Server.Documents.Handlers
 {
     public class QueriesHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/queries/$", "POST")]
+        public async Task Post()
+        {
+            var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+
+            DocumentsOperationContext context;
+            using (TrackRequestTime())
+            using (var token = CreateTimeLimitedOperationToken())
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                var operation = GetStringQueryString("op", required: false);
+
+                if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
+                {
+                    await FacetedQuery(context, indexName, token).ConfigureAwait(false);
+                    return;
+                }
+
+                throw new NotSupportedException($"Operation '{operation}' is not supported.");
+            }
+        }
+
         [RavenAction("/databases/*/queries/$", "GET")]
         public async Task Get()
         {
@@ -42,7 +67,61 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
+                if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
+                {
+                    await FacetedQuery(context, indexName, token).ConfigureAwait(false);
+                    return;
+                }
+
                 await Query(context, indexName, token).ConfigureAwait(false);
+            }
+        }
+
+        private async Task FacetedQuery(DocumentsOperationContext context, string indexName, OperationCancelToken token)
+        {
+            var query = FacetQuery.Parse(HttpContext.Request.Query, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize));
+
+            var existingResultEtag = GetLongFromHeaders("If-None-Match");
+            long? facetsEtag = null;
+            if (query.FacetSetupDoc == null)
+            {
+                string f;
+                KeyValuePair<List<Facet>, long> facets;
+                if (HttpContext.Request.Method == HttpMethod.Post.Method)
+                {
+                    var json = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "facets", BlittableJsonDocumentBuilder.UsageMode.None);
+                    facets = FacetedQueryParser.ParseFromJson(json);
+                }
+                else if (HttpContext.Request.Method == HttpMethod.Get.Method)
+                {
+                    f = GetStringQueryString("facets");
+                    if (string.IsNullOrWhiteSpace(f))
+                        throw new InvalidOperationException("One of the required parameters (facetDoc or facets) was not specified.");
+
+                    facets = await FacetedQueryParser.ParseFromStringAsync(f, context);
+                }
+                else
+                    throw new NotSupportedException($"Unsupported HTTP method '{HttpContext.Request.Method}' for Faceted Query.");
+
+                facetsEtag = facets.Value;
+                query.Facets = facets.Key;
+            }
+
+            var runner = new QueryRunner(Database, context);
+
+            var result = await runner.ExecuteFacetedQuery(indexName, query, facetsEtag, existingResultEtag, token);
+
+            if (result.NotModified)
+            {
+                HttpContext.Response.StatusCode = 304;
+                return;
+            }
+
+            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteFacetedQueryResult(context, result);
             }
         }
 
@@ -122,26 +201,29 @@ namespace Raven.Server.Documents.Handlers
         public Task Delete()
         {
             DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                return ExecuteQueryOperation((runner, indexName, query, options, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, token), context);
-            }
+            var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
+            
+            ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, onProgress, token), 
+                context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByIndex);
+            return Task.CompletedTask;
+            
         }
 
         [RavenAction("/databases/*/queries/$", "PATCH")]
         public Task Patch()
         {
             DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
-                var patch = PatchRequest.Parse(reader);
+            var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
+            
+            var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
+            var patch = PatchRequest.Parse(reader);
 
-                return ExecuteQueryOperation((runner, indexName, query, options, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, token), context);
-            }
+            ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, onProgress, token), 
+                context, returnContextToPool, DatabaseOperations.PendingOperationType.UpdateByIndex);
+            return Task.CompletedTask;
         }
 
-        private async Task ExecuteQueryOperation(Func<QueryRunner, string, IndexQueryServerSide, QueryOperationOptions, OperationCancelToken, Task> operation, DocumentsOperationContext context)
+        private void ExecuteQueryOperation(Func<QueryRunner, string, IndexQueryServerSide, QueryOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
@@ -149,20 +231,20 @@ namespace Raven.Server.Documents.Handlers
             var options = GetQueryOperationOptions();
             var token = CreateTimeLimitedOperationToken();
 
-            // TODO [ppekrol] 
-            // implement Tasks
-            // support RetrieveDetails
+            var queryRunner = new QueryRunner(Database, context);
+
+            var operationId = Database.DatabaseOperations.GetNextOperationId();
+
+            var task = Database.DatabaseOperations.AddOperation(indexName, operationType, onProgress => 
+                    operation(queryRunner, indexName, query, options, onProgress, token), operationId, token);
+
+            task.ContinueWith(_ => returnContextToPool.Dispose());
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var queryRunner = new QueryRunner(Database, context);
-                await operation(queryRunner, indexName, query, options, token).ConfigureAwait(false);
-
                 writer.WriteStartObject();
-
                 writer.WritePropertyName("OperationId");
-                writer.WriteInteger(-1); // TODO [ppekrol]
-
+                writer.WriteInteger(operationId);
                 writer.WriteEndObject();
             }
         }

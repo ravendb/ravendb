@@ -1,4 +1,5 @@
 using System;
+using Raven.Client.Data;
 
 namespace Raven.Abstractions.Data
 {

@@ -55,20 +55,20 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Get the facets as per the specified facet document with the given start and pageSize
         /// </summary>
-        FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize);
+        FacetedQueryResult GetFacets(string facetSetupDoc, int start, int? pageSize);
 
         /// <summary>
         /// Get the facet results as per the specified facets with the given start and pageSize
         /// </summary>
-        FacetResults GetFacets(List<Facet> facets, int start, int? pageSize);
+        FacetedQueryResult GetFacets(List<Facet> facets, int start, int? pageSize);
         /// <summary>
         /// Get the facets as per the specified facet document with the given start and pageSize
         /// </summary>
-        Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken));
+        Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         /// Get the facet results as per the specified facets with the given start and pageSize
         /// </summary>
-        Task<FacetResults> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken));
+        Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken));
     }
 }

@@ -9,7 +9,7 @@ namespace SlowTests.MailingList
 {
     public class TomCabanski : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void CanEscapeGetFacets()
         {
             using (var store = GetDocumentStore())
@@ -36,10 +36,12 @@ namespace SlowTests.MailingList
                     s.SaveChanges();
                 }
 
-                store.DatabaseCommands.GetFacets("test", new IndexQuery
+                store.DatabaseCommands.GetFacets(new FacetQuery
                 {
-                    Query = "(IsActive:true)  AND (BookVendor:\"stroheim & romann\")"
-                }, "facets/test");
+                    IndexName = "test",
+                    Query = "(IsActive:true)  AND (BookVendor:\"stroheim & romann\")",
+                    FacetSetupDoc = "facets/test"
+                });
             }
         }
     }

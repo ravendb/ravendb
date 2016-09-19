@@ -13,6 +13,14 @@ namespace Raven.Server.Documents.Transformers
     {
         public IndexingFunc TransformResults { get; set; }
 
+        public bool HasGroupBy { get; set; }
+
+        public bool HasLoadDocument { get; set; }
+
+        public bool HasTransformWith { get; set; }
+
+        public bool HasInclude { get; set; }
+
         public string Source { get; set; }
 
         public dynamic LoadDocument(object keyOrEnumerable, string collectionName)

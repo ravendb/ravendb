@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 
 namespace Raven.Client.Changes
 {
@@ -30,6 +31,8 @@ namespace Raven.Client.Changes
         public event Action<ReplicationConflictNotification> OnReplicationConflictNotification;
 
         public event Action<DataSubscriptionChangeNotification> OnDataSubscriptionNotification;
+
+        public event Action<OperationStatusChangeNotification> OnOperationStatusChangeNotification;
 
         public void Send(DocumentChangeNotification documentChangeNotification)
         {
@@ -61,6 +64,11 @@ namespace Raven.Client.Changes
         public void Send(DataSubscriptionChangeNotification dataSubscriptionChangeNotification)
         {
             OnDataSubscriptionNotification?.Invoke(dataSubscriptionChangeNotification);
+        }
+
+        public void Send(OperationStatusChangeNotification operationStatusChangeNotification)
+        {
+            OnOperationStatusChangeNotification?.Invoke(operationStatusChangeNotification);
         }
     }
 }

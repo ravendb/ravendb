@@ -21,6 +21,8 @@ namespace Raven.Client.Data
     /// </summary>
     public class IndexQuery : IndexQuery<Dictionary<string, RavenJToken>>
     {
+        public static int DefaultPageSize = 128;
+
         public override bool Equals(IndexQuery<Dictionary<string, RavenJToken>> other)
         {
             return base.Equals(other) && DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters);
@@ -162,68 +164,12 @@ namespace Raven.Client.Data
         }
     }
 
-    public abstract class IndexQuery<T> : IEquatable<IndexQuery<T>>
+    public abstract class IndexQuery<T> : IndexQueryBase, IEquatable<IndexQuery<T>>
     {
-        public static int DefaultPageSize = 128;
-
-        private int _pageSize;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="IndexQuery"/> class.
-        /// </summary>
-        protected IndexQuery()
-        {
-            _pageSize = DefaultPageSize;
-        }
-
-        /// <summary>
-        /// Whatever the page size was explicitly set or still at its default value
-        /// </summary>
-        public bool PageSizeSet { get; private set; }
-
-        /// <summary>
-        /// Whatever we should apply distinct operation to the query on the server side
-        /// </summary>
-        public bool IsDistinct { get; set; }
-
-        /// <summary>
-        /// Actual query that will be performed (Lucene syntax).
-        /// </summary>
-        public string Query { get; set; }
-
         /// <summary>
         /// Parameters that will be passed to transformer (if specified).
         /// </summary>
         public T TransformerParameters { get; set; }
-
-        /// <summary>
-        /// Number of records that should be skipped.
-        /// </summary>
-        public int Start { get; set; }
-
-        /// <summary>
-        /// Maximum number of records that will be retrieved.
-        /// </summary>
-        public int PageSize
-        {
-            get
-            {
-                return _pageSize;
-            }
-            set
-            {
-                _pageSize = value;
-                PageSizeSet = true;
-            }
-        }
-
-        /// <summary>
-        /// Array of fields that will be fetched.
-        /// <para>Fetch order:</para>
-        /// <para>1. Stored index fields</para>
-        /// <para>2. Document</para>
-        /// </summary>
-        public string[] FieldsToFetch { get; set; }
 
         /// <summary>
         /// Array of fields containing sorting information.
@@ -234,48 +180,6 @@ namespace Raven.Client.Data
         /// Array of fields in a dynamic map reduce-query
         /// </summary>
         internal DynamicMapReduceField[] DynamicMapReduceFields { get; set; }
-
-        /// <summary>
-        /// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
-        /// </summary>
-        public bool WaitForNonStaleResultsAsOfNow { get; set; }
-
-        /// <summary>
-        /// CAUTION. Used by IDocumentSession ONLY. It will have NO effect if used with IDatabaseCommands or IAsyncDatabaseCommands.
-        /// </summary>
-        public bool WaitForNonStaleResults { get; set; }
-
-        public TimeSpan? WaitForNonStaleResultsTimeout { get; set; }
-
-        /// <summary>
-        /// Gets or sets the cutoff etag.
-        /// <para>Cutoff etag is used to check if the index has already process a document with the given</para>
-        /// <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
-        /// <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
-        /// <para>can work without it.</para>
-        /// <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
-        /// <para>etag belong to is actually considered for the results. </para>
-        /// <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
-        /// <para>Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is </para>
-        /// <para>considered to be an acceptable tradeoff.</para>
-        /// <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
-        /// <para>use the Cutoff date option, instead.</para>
-        /// </summary>
-        public long? CutoffEtag { get; set; }
-
-        /// <summary>
-        /// Default field to use when querying directly on the Lucene query
-        /// </summary>
-        public string DefaultField { get; set; }
-
-        /// <summary>
-        /// Changes the default operator mode we use for queries.
-        /// <para>When set to Or a query such as 'Name:John Age:18' will be interpreted as:</para>
-        /// <para> Name:John OR Age:18</para>
-        /// <para>When set to And the query will be interpreted as:</para>
-        ///	<para> Name:John AND Age:18</para>
-        /// </summary>
-        public QueryOperator DefaultOperator { get; set; }
 
         /// <summary>
         /// If set to <c>true</c>, this property will send multiple index entries from the same document (assuming the index project them)
@@ -348,11 +252,6 @@ namespace Raven.Client.Data
             return string.Empty;
         }
 
-        public override string ToString()
-        {
-            return Query;
-        }
-
         public virtual bool Equals(IndexQuery<T> other)
         {
             if (ReferenceEquals(null, other))
@@ -360,18 +259,8 @@ namespace Raven.Client.Data
             if (ReferenceEquals(this, other))
                 return true;
 
-            return PageSizeSet.Equals(other.PageSizeSet) &&
-                   string.Equals(Query, other.Query) &&
-                   Start == other.Start &&
-                   IsDistinct == other.IsDistinct &&
-                   EnumerableExtension.ContentEquals(FieldsToFetch, other.FieldsToFetch) &&
+            return base.Equals(other) &&
                    EnumerableExtension.ContentEquals(SortedFields, other.SortedFields) &&
-                   WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout &&
-                   WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
-                   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
-                   Equals(CutoffEtag, other.CutoffEtag) &&
-                   string.Equals(DefaultField, other.DefaultField) &&
-                   DefaultOperator == other.DefaultOperator &&
                    DebugOptionGetIndexEntries.Equals(other.DebugOptionGetIndexEntries) &&
                    EnumerableExtension.ContentEquals(HighlightedFields, other.HighlightedFields) &&
                    EnumerableExtension.ContentEquals(HighlighterPreTags, other.HighlighterPreTags) &&
@@ -394,18 +283,9 @@ namespace Raven.Client.Data
         {
             unchecked
             {
-                var hashCode = PageSizeSet.GetHashCode();
-                hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
+                var hashCode = base.GetHashCode();
                 hashCode = (hashCode * 397) ^ (TransformerParameters != null ? TransformerParameters.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ Start;
-                hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
-                hashCode = (hashCode * 397) ^ (FieldsToFetch?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (SortedFields?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout != null ? WaitForNonStaleResultsTimeout.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
-                hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (DefaultField?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (int)DefaultOperator;
                 hashCode = (hashCode * 397) ^ DebugOptionGetIndexEntries.GetHashCode();
                 hashCode = (hashCode * 397) ^ (HighlightedFields?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPreTags?.GetHashCode() ?? 0);
@@ -426,7 +306,166 @@ namespace Raven.Client.Data
 
         public static bool operator !=(IndexQuery<T> left, IndexQuery<T> right)
         {
-            return !Equals(left, right);
+            return Equals(left, right) == false;
+        }
+    }
+
+    public abstract class IndexQueryBase : IEquatable<IndexQueryBase>
+    {
+        private int _pageSize;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="IndexQueryBase"/> class.
+        /// </summary>
+        protected IndexQueryBase()
+        {
+            _pageSize = IndexQuery.DefaultPageSize;
+        }
+
+        /// <summary>
+        /// Whatever the page size was explicitly set or still at its default value
+        /// </summary>
+        protected bool PageSizeSet { get; private set; }
+
+        /// <summary>
+        /// Whatever we should apply distinct operation to the query on the server side
+        /// </summary>
+        public bool IsDistinct { get; set; }
+
+        /// <summary>
+        /// Actual query that will be performed (Lucene syntax).
+        /// </summary>
+        public string Query { get; set; }
+
+        /// <summary>
+        /// Number of records that should be skipped.
+        /// </summary>
+        public int Start { get; set; }
+
+        /// <summary>
+        /// Maximum number of records that will be retrieved.
+        /// </summary>
+        public int PageSize
+        {
+            get
+            {
+                return _pageSize;
+            }
+            set
+            {
+                _pageSize = value;
+                PageSizeSet = true;
+            }
+        }
+
+        /// <summary>
+        /// Array of fields that will be fetched.
+        /// <para>Fetch order:</para>
+        /// <para>1. Stored index fields</para>
+        /// <para>2. Document</para>
+        /// </summary>
+        public string[] FieldsToFetch { get; set; }
+
+        /// <summary>
+        /// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
+        /// </summary>
+        public bool WaitForNonStaleResultsAsOfNow { get; set; }
+
+        /// <summary>
+        /// CAUTION. Used by IDocumentSession ONLY. It will have NO effect if used with IDatabaseCommands or IAsyncDatabaseCommands.
+        /// </summary>
+        public bool WaitForNonStaleResults { get; set; }
+
+        public TimeSpan? WaitForNonStaleResultsTimeout { get; set; }
+
+        /// <summary>
+        /// Gets or sets the cutoff etag.
+        /// <para>Cutoff etag is used to check if the index has already process a document with the given</para>
+        /// <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
+        /// <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
+        /// <para>can work without it.</para>
+        /// <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
+        /// <para>etag belong to is actually considered for the results. </para>
+        /// <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
+        /// <para>Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is </para>
+        /// <para>considered to be an acceptable tradeoff.</para>
+        /// <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
+        /// <para>use the Cutoff date option, instead.</para>
+        /// </summary>
+        public long? CutoffEtag { get; set; }
+
+        /// <summary>
+        /// Default field to use when querying directly on the Lucene query
+        /// </summary>
+        public string DefaultField { get; set; }
+
+        /// <summary>
+        /// Changes the default operator mode we use for queries.
+        /// <para>When set to Or a query such as 'Name:John Age:18' will be interpreted as:</para>
+        /// <para> Name:John OR Age:18</para>
+        /// <para>When set to And the query will be interpreted as:</para>
+        ///	<para> Name:John AND Age:18</para>
+        /// </summary>
+        public QueryOperator DefaultOperator { get; set; }
+
+        public override string ToString()
+        {
+            return Query;
+        }
+
+        public virtual bool Equals(IndexQueryBase other)
+        {
+            if (ReferenceEquals(null, other))
+                return false;
+            if (ReferenceEquals(this, other))
+                return true;
+
+            return PageSizeSet.Equals(other.PageSizeSet) &&
+                   string.Equals(Query, other.Query) &&
+                   Start == other.Start &&
+                   IsDistinct == other.IsDistinct &&
+                   EnumerableExtension.ContentEquals(FieldsToFetch, other.FieldsToFetch) &&
+                   WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout &&
+                   WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
+                   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
+                   Equals(CutoffEtag, other.CutoffEtag) &&
+                   string.Equals(DefaultField, other.DefaultField) &&
+                   DefaultOperator == other.DefaultOperator;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj.GetType() == GetType() && Equals((IndexQuery)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = PageSizeSet.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ Start;
+                hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
+                hashCode = (hashCode * 397) ^ (FieldsToFetch?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout != null ? WaitForNonStaleResultsTimeout.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
+                hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (DefaultField?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (int)DefaultOperator;
+                return hashCode;
+            }
+        }
+
+        public static bool operator ==(IndexQueryBase left, IndexQueryBase right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(IndexQueryBase left, IndexQueryBase right)
+        {
+            return Equals(left, right) == false;
         }
     }
 

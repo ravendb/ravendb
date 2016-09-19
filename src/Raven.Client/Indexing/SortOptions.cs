@@ -24,6 +24,11 @@ namespace Raven.Abstractions.Indexing
         /// </summary>
         NumericDouble = 7,
 
+        /// <summary>Sort using term values as encoded Longs.  Sort values are Long and
+        /// lower values are at the front. 
+        /// </summary>
+        NumericLong = 6,
+
         /// <summary>Sort using term values as Strings, but comparing by
         /// value (using String.compareTo) for all comparisons.
         /// This is typically slower than {@link #STRING}, which

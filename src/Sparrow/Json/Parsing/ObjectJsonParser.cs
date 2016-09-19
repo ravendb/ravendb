@@ -5,12 +5,15 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using Raven.Abstractions.Extensions;
+using Sparrow.Extensions;
 using Sparrow.Utils;
 
 namespace Sparrow.Json.Parsing
 {
     public class DynamicJsonValue
     {
+        public const string TypeFieldName = "$type";
+
         public int SourceIndex = -1;
         public int[] SourceProperties;
 
@@ -21,7 +24,11 @@ namespace Sparrow.Json.Parsing
 
         public DynamicJsonValue()
         {
+        }
 
+        public DynamicJsonValue(Type explicitTypeInfo)
+        {
+            this[TypeFieldName] = explicitTypeInfo.GetTypeNameForSerialization();
         }
 
         public DynamicJsonValue(BlittableJsonReaderObject source)
@@ -43,7 +50,6 @@ namespace Sparrow.Json.Parsing
                 Removals = new HashSet<int>();
             Removals.Add(propertyIndex);
         }
-
 
         public object this[string name]
         {

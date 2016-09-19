@@ -9,6 +9,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 using Sparrow.Json;
+using DocumentInfo = Raven.Client.Documents.InMemoryDocumentSessionOperations.DocumentInfo;
 
 namespace Raven.Client.Documents.Async
 {
@@ -16,7 +17,7 @@ namespace Raven.Client.Documents.Async
     {
         private readonly LinkedList<object> entitiesStoredWithoutIDs = new LinkedList<object>();
 
-        public delegate bool TryGetValue(object key, out InMemoryDocumentSessionOperations.DocumentMetadata metadata);
+        public delegate bool TryGetValue(object key, out DocumentInfo documentInfo);
 
         public delegate string ModifyObjectId(string id, object entity, BlittableJsonReaderObject metadata);
 
@@ -38,11 +39,11 @@ namespace Raven.Client.Documents.Async
                 var entity = entitiesStoredWithoutIDs.First.Value;
                 entitiesStoredWithoutIDs.RemoveFirst();
 
-                InMemoryDocumentSessionOperations.DocumentMetadata metadata;
-                if (tryGetValue(entity, out metadata))
+                DocumentInfo documentInfo;
+                if (tryGetValue(entity, out documentInfo))
                 {
                     return session.GenerateDocumentKeyForStorageAsync(entity)
-                        .ContinueWith(task => metadata.Id = modifyObjectId(task.Result, entity, metadata.Metadata))
+                        .ContinueWith(task => documentInfo.Id = modifyObjectId(task.Result, entity, documentInfo.Metadata))
                         .ContinueWithTask(GenerateDocumentKeysForSaveChanges);
                 }
             }

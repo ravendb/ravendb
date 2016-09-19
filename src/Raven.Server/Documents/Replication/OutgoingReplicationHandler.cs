@@ -373,7 +373,7 @@ namespace Raven.Server.Documents.Replication
                     return;
                 }
                 // destination already has it
-                if (item.ChangeVector.GreaterThen(_parent._destinationLastKnownChangeVector) == false)
+                if (item.ChangeVector.GreaterThan(_parent._destinationLastKnownChangeVector) == false)
                 {
                     if (_log.IsInfoEnabled)
                     {

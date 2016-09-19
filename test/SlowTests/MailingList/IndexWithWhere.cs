@@ -38,7 +38,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanCreateIndex()
         {
             using (var store = GetDocumentStore())
@@ -54,7 +54,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanCreateIndex2()
         {
             using (var store = GetDocumentStore())

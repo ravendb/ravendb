@@ -99,6 +99,13 @@ namespace Raven.Client.Smuggler
             } while (File.Exists(filePath));
         }
 
+        public async Task ImportAsync(DatabaseSmugglerOptions options, Stream stream, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            ShowProgress("Starting to import from stream");
+            await ImportAsync(options, stream, _store.Url, options.Database ?? _store.DefaultDatabase,
+                cancellationToken).ConfigureAwait(false);
+        }
+
         private async Task ImportAsync(DatabaseSmugglerOptions options, Stream stream, string url, string database, CancellationToken cancellationToken)
         {
             var httpClient = GetHttpClient();
@@ -114,7 +121,9 @@ namespace Raven.Client.Smuggler
 
                 var response = await httpClient.PostAsync(uri, content, cancellationToken).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode == false)
-                    throw new InvalidOperationException("Import failed");
+                    throw new InvalidOperationException("Import failed with status code: " +  response.StatusCode + Environment.NewLine + 
+                        await response.Content.ReadAsStringAsync()
+                        );
 
                 if (response.IsSuccessStatusCode)
                 {

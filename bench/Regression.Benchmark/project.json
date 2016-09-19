@@ -1,4 +1,4 @@
-﻿{
+{
   "version": "4.0.0-*",
 
   "buildOptions": {
@@ -34,12 +34,10 @@
   "dependencies": {
     "Microsoft.NETCore.App": {
       "type": "platform",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
-
     "dotnet-test-xunit": "2.2.0-preview2-build1029",
-    "Microsoft.DotNet.xunit.performance": "1.0.0-alpha-build0038",
-
+    "Microsoft.DotNet.xunit.performance": "1.0.0-alpha-build0041",
     "Raven.Client": "4.0.0-*",
     "Raven.Server": "4.0.0-*",
     "Sparrow": "4.0.0-*",

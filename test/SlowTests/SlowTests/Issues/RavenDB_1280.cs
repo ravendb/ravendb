@@ -11,14 +11,13 @@ namespace SlowTests.SlowTests.Issues
 {
     public class RavenDB_1280 : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void Referenced_Docs_Are_Indexed_During_Heavy_Writing()
         {
             const int iterations = 6000;
 
             using (var documentStore = GetDocumentStore())
             {
-                Console.WriteLine("Making parallel inserts...");
                 var sp = Stopwatch.StartNew();
                 Parallel.For(0, iterations, i =>
                 {
@@ -37,12 +36,10 @@ namespace SlowTests.SlowTests.Issues
                     }
                 });
 
-                Console.WriteLine("Finished parallel inserts. Time: {0}.", sp.Elapsed);
 
                 new EmailIndex().Execute(documentStore);
 
                 var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : sp.Elapsed;
-                Console.WriteLine("Waiting for indexing. Timeout: " + timeout);
                 WaitForIndexing(documentStore, timeout: timeout);
 
                 using (var session = documentStore.OpenSession())
@@ -65,7 +62,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanHandleMultipleMissingDocumentsInMultipleIndexes()
         {
             using (var store = GetDocumentStore())

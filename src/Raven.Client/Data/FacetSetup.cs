@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data
 {
     public class FacetSetup
     {

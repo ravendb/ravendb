@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -15,7 +16,7 @@ namespace SlowTests.MailingList
     public class DynamicFieldNoAnalysisStillAnalyzesTest : RavenTestBase
     {
 
-        [Fact(Skip = "Missing feature: Facets & CreateField")]
+        [Fact(Skip = "Missing feature: CreateField")]
         public void ToFacets_UsingDynamicFieldsWithoutAnalysis_ReturnsFacetValuesInOriginalCasing()
         {
             using (var _store = GetDocumentStore())

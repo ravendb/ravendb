@@ -16,7 +16,7 @@ namespace SlowTests.MailingList
 {
     public class IndexCompilation : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanCompileIndex()
         {
             using (var store = GetDocumentStore())

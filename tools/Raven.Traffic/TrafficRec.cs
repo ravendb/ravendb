@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client;
-using Raven.Client.OAuth;
+using Raven.Client.Extensions;
 using Raven.Client.Platform;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -118,7 +118,7 @@ namespace Raven.Traffic
             using (var client = new RavenClientWebSocket())
             {
                 var url = store.Url + "/traffic-watch/websockets";
-                var uri = new Uri(url.Replace("http://", "ws://").Replace("https://", "wss://"));
+                var uri = new Uri(url.ToWebSocketPath());
 
                 await client.ConnectAsync(uri, CancellationToken.None)
                     .ConfigureAwait(false);

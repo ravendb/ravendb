@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
-
-using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
-
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
@@ -21,12 +17,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class IndexWriteOperation : IndexOperationBase
     {
-        private Logger _logger;
-
         private readonly Term _documentId = new Term(Constants.Indexing.Fields.DocumentIdFieldName, "Dummy");
         private readonly Term _reduceKeyHash = new Term(Constants.Indexing.Fields.ReduceKeyFieldName, "Dummy");
-
-        private readonly string _name;
 
         private readonly LuceneIndexWriter _writer;
         private readonly LuceneDocumentConverterBase _converter;
@@ -34,13 +26,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
 
-        public IndexWriteOperation(string name, Dictionary<string, IndexField> fields, 
-            LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, 
+        public IndexWriteOperation(string indexName, Dictionary<string, IndexField> fields,
+            LuceneVoronDirectory directory, LuceneDocumentConverterBase converter,
             Transaction writeTransaction, LuceneIndexPersistence persistence, DocumentDatabase documentDatabase)
+            : base(indexName, LoggingSource.Instance.GetLogger<IndexWriteOperation>(documentDatabase.Name))
         {
-            _name = name;
             _converter = converter;
-            _logger = LoggingSource.Instance.GetLogger<IndexWriteOperation>(documentDatabase.Name);
             try
             {
                 _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields);
@@ -59,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _locker = directory.MakeLock("writing-to-index.lock");
 
                 if (_locker.Obtain() == false)
-                    throw new InvalidOperationException($"Could not obtain the 'writing-to-index' lock for '{name}' index.");
+                    throw new InvalidOperationException($"Could not obtain the 'writing-to-index' lock for '{_indexName}' index.");
             }
             catch (Exception e)
             {
@@ -83,11 +74,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public void IndexDocument(LazyStringValue key, object document, IndexingStatsScope stats)
+        public void IndexDocument(LazyStringValue key, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             global::Lucene.Net.Documents.Document luceneDoc;
             using (stats.For("Lucene_ConvertTo"))
-                luceneDoc = _converter.ConvertToCachedDocument(key, document);
+                luceneDoc = _converter.ConvertToCachedDocument(key, document, indexContext);
 
             using (stats.For("Lucene_AddDocument"))
                 _writer.AddDocument(luceneDoc, _analyzer);
@@ -95,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             stats.RecordIndexingOutput(); // TODO [ppekrol] in future we will have to support multiple index outputs from single document
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Indexed document for '{_name}'. Key: {key}. Output: {luceneDoc}.");
+                _logger.Info($"Indexed document for '{_indexName}'. Key: {key}. Output: {luceneDoc}.");
         }
 
         public void Delete(LazyStringValue key, IndexingStatsScope stats)
@@ -104,7 +95,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _writer.DeleteDocuments(_documentId.CreateTerm(key));
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Deleted document for '{_name}'. Key: {key}.");
+                _logger.Info($"Deleted document for '{_indexName}'. Key: {key}.");
         }
 
         public void DeleteReduceResult(string reduceKeyHash, IndexingStatsScope stats)
@@ -113,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _writer.DeleteDocuments(_reduceKeyHash.CreateTerm(reduceKeyHash));
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Deleted document for '{_name}'. Reduce key hash: {reduceKeyHash}.");
+                _logger.Info($"Deleted document for '{_indexName}'. Reduce key hash: {reduceKeyHash}.");
         }
     }
 }

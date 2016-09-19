@@ -16,6 +16,9 @@ namespace Sparrow.Json
     /// </summary>
     public class JsonOperationContext : IDisposable
     {
+        private const int InitialStreamSize = 4096;
+        private const int MaxStreamSizeAfterReset = 16 * 1024 * 1024;
+
         private readonly int _initialSize;
         private readonly int _longLivedSize;
         private readonly ArenaMemoryAllocator _arenaAllocator;
@@ -32,7 +35,7 @@ namespace Sparrow.Json
 
         public CachedProperties CachedProperties;
 
-        private int _lastStreamSize = 4096;
+        private int _lastStreamSize = InitialStreamSize;
 
         public static JsonOperationContext ShortTermSingleUse()
         {
@@ -220,8 +223,8 @@ namespace Sparrow.Json
         }
 
         public async Task<BlittableJsonReaderObject> ReadFromWebSocket(
-            WebSocket webSocket, 
-            string debugTag, 
+            WebSocket webSocket,
+            string debugTag,
             CancellationToken cancellationToken)
         {
             var jsonParserState = new JsonParserState();
@@ -378,10 +381,10 @@ namespace Sparrow.Json
                 _parser = new UnmanagedJsonParser(context, _state, "parse/multi");
             }
 
-            public BlittableJsonReaderObject ParseToMemory(string debugTag = null) => 
+            public BlittableJsonReaderObject ParseToMemory(string debugTag = null) =>
                 Parse(BlittableJsonDocumentBuilder.UsageMode.None, debugTag);
 
-            public Task<BlittableJsonReaderObject> ParseToMemoryAsync(string debugTag = null) => 
+            public Task<BlittableJsonReaderObject> ParseToMemoryAsync(string debugTag = null) =>
                 ParseAsync(BlittableJsonDocumentBuilder.UsageMode.None, debugTag);
 
             public Task<int> ReadAsync(byte[] buffer, int offset, int count)
@@ -422,6 +425,7 @@ namespace Sparrow.Json
                 var writer = new BlittableJsonDocumentBuilder(_context, mode, debugTag, _parser, _state);
                 try
                 {
+                    _parser.NewDocument();
                     writer.ReadObject();
                     _context.CachedProperties.NewDocument();
                     while (true)
@@ -492,15 +496,17 @@ namespace Sparrow.Json
 
         public void LastStreamSize(int sizeInBytes)
         {
-            _lastStreamSize = Math.Max(_lastStreamSize, sizeInBytes);
+            if (_lastStreamSize >= sizeInBytes)
+                return;
+
+            _lastStreamSize = sizeInBytes;
         }
 
         public virtual void Reset()
         {
             if (_tempBuffer != null)
-            {
                 _tempBuffer.Address = IntPtr.Zero;
-            }
+
             _arenaAllocator.ResetArena();
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
             // When a context is re-used, the buffer containing those field names was not reset and the strings are still valid and alive.
@@ -519,10 +525,12 @@ namespace Sparrow.Json
 
 
             foreach (var disposable in _disposables)
-            {
                 disposable.Dispose();
-            }
+
             _disposables.Clear();
+
+            if (_lastStreamSize > MaxStreamSizeAfterReset)
+                _lastStreamSize = MaxStreamSizeAfterReset; // this must be done last, because _disposables can change this value
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
@@ -612,7 +620,7 @@ namespace Sparrow.Json
                 case JsonParserToken.String:
                     if (state.CompressedSize.HasValue)
                     {
-                        var lazyCompressedStringValue = new LazyCompressedStringValue(null, state.StringBuffer, 
+                        var lazyCompressedStringValue = new LazyCompressedStringValue(null, state.StringBuffer,
                             state.StringSize, state.CompressedSize.Value, this);
                         writer.WriteString(lazyCompressedStringValue);
                     }

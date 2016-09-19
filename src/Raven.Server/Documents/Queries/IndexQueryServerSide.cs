@@ -80,6 +80,9 @@ namespace Raven.Server.Documents.Queries
                         case "skipDuplicateChecking":
                             result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
                             break;
+                        case "allowMultipleIndexEntriesForSameDocumentToResultTransformer":
+                            result.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = bool.Parse(item.Value[0]);
+                            break;
                         default:
                             if (item.Key.StartsWith(TransformerParameter.Prefix, StringComparison.OrdinalIgnoreCase))
                             {
@@ -89,8 +92,8 @@ namespace Raven.Server.Documents.Queries
                                 transformerParameters[item.Key.Substring(TransformerParameter.Prefix.Length)] = item.Value[0];
                             }
                             break;
-                            // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ResultsTransformer, TransformerParameters, ExplainScores, IsDistinct
-                            // TODO: AllowMultipleIndexEntriesForSameDocumentToResultTransformer, ShowTimings and spatial stuff
+                            // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ExplainScores
+                            // TODO: ShowTimings and spatial stuff
                             // TODO: We also need to make sure that we aren't using headers
                     }
                 }

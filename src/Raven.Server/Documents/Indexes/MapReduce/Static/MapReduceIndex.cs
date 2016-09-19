@@ -185,11 +185,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     foreach (var field in _fields)
                     {
                         var value = accessor.Properties[field].GetValue(document);
-                        mapResult[field] = TypeConverter.ConvertType(value, _parent._indexContext);
+                        var blittableValue = TypeConverter.ToBlittableSupportedType(value, _parent._indexContext);
+                        mapResult[field] = blittableValue;
 
                         if (_groupByFields.Contains(field))
                         {
-                            _reduceKeyProcessor.Process(value);
+                            _reduceKeyProcessor.Process(blittableValue);
                         }
                     }
 

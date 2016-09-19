@@ -8,6 +8,7 @@ using System.Linq;
 using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -31,7 +32,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void ShouldNotMatterForFacets()
         {
             using (var store = GetDocumentStore())

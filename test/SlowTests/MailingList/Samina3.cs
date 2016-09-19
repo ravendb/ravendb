@@ -20,7 +20,7 @@ namespace SlowTests.MailingList
     public class Samina3 : RavenTestBase
     {
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void Querying_a_sub_collection_in_an_index()
         {
             DateTime startDate1 = DateTime.Now;
@@ -64,7 +64,12 @@ namespace SlowTests.MailingList
 
                     var result = query.ToList();
 
-                    var facetResults = store.DatabaseCommands.GetFacets("PropertiesSearchIndex", new IndexQuery { Query = query.ToString() }, "facets/PropertySearchingFacets");
+                    var facetResults = store.DatabaseCommands.GetFacets(new FacetQuery
+                    {
+                        IndexName = "PropertiesSearchIndex",
+                        Query = query.ToString(),
+                        FacetSetupDoc = "facets/PropertySearchingFacets"
+                    });
                     var facetedCount = facetResults.Results["Feature"];
 
 

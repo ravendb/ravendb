@@ -34,6 +34,8 @@ namespace Voron.Data.Tables
 
         public byte Count => _count;
 
+        public byte* Pointer => _ptr;
+
         public byte* Read(int index, out int size)
         {
             byte* ptr = _ptr + 1;

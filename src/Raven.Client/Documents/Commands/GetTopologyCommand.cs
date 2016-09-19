@@ -7,9 +7,9 @@ namespace Raven.Client.Documents.Commands
 {
     public class GetTopologyCommand : RavenCommand<Topology>
     {
-        public override HttpRequestMessage CreateRequest(out string url)
+        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"topology";
+            url = $"topology?url=" + node.Url;
             return new HttpRequestMessage
             {
                 Method = HttpMethod.Get,

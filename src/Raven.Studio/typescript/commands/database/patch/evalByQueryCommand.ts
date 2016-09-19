@@ -33,7 +33,8 @@ class evalByQueryCommand extends commandBase {
 
     private monitorPatching(operationId: number) {
         new getOperationStatusCommand(this.db, operationId)
-            .execute()
+            .execute();
+            /*TODO use notification center
             .done((result: bulkOperationStatusDto) => {
             this.updatePatchingProgress(result);
 
@@ -48,7 +49,7 @@ class evalByQueryCommand extends commandBase {
             } else {
                 setTimeout(() => this.monitorPatching(operationId), 500);
             }
-        });
+        });*/
     }
 
     public getPatchCompletedTask() {

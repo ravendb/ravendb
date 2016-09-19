@@ -1,5 +1,6 @@
 using System;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 
 namespace Raven.Client.Changes
 {
@@ -19,6 +20,18 @@ namespace Raven.Client.Changes
         /// Subscribe to changes for all documents.
         /// </summary>
         IObservableWithTask<DocumentChangeNotification> ForAllDocuments();
+
+        /// <summary>
+        /// Subscribe to changes for specified operation only.
+        /// </summary>
+        /// <returns></returns>
+        IObservableWithTask<OperationStatusChangeNotification> ForOperationId(long operationId);
+
+        /// <summary>
+        /// Subscribe to change for all operation statuses. 
+        /// </summary>
+        /// <returns></returns>
+        IObservableWithTask<OperationStatusChangeNotification> ForAllOperations();
 
         /// <summary>
         /// Subscribe to changes for all indexes.

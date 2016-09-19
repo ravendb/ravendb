@@ -1,90 +1,35 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions;
+using System.Net.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Connection;
-using Raven.Client.Connection.Async;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Client.Shard;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
 {
     public class LazyFacetsOperation : ILazyOperation
     {
-        private readonly string index;
-        private readonly List<Facet> facets;
-        private readonly string facetSetupDoc;
-        private readonly IndexQuery query;
-        private readonly int start;
-        private readonly int? pageSize;
+        private readonly FacetQuery _query;
 
-        public LazyFacetsOperation( string index, string facetSetupDoc, IndexQuery query, int start = 0, int? pageSize = null ) {
-            this.index = index;
-            this.facetSetupDoc = facetSetupDoc;
-            this.query = query;
-            this.start = start;
-            this.pageSize = pageSize;
-        }
-
-        public LazyFacetsOperation(string index, List<Facet> facets, IndexQuery query, int start = 0, int? pageSize = null)
+        public LazyFacetsOperation(FacetQuery query)
         {
-            this.index = index;
-            this.facets = facets;
-            this.query = query;
-            this.start = start;
-            this.pageSize = pageSize;
+            _query = query;
         }
 
         public GetRequest CreateRequest()
         {
-            string addition;
-            if (facetSetupDoc != null)
+            var method = _query.CalculateHttpMethod();
+            return new GetRequest
             {
-                addition = "facetDoc=" + facetSetupDoc;
-                return new GetRequest
-                {
-                    Url = "/facets/" + index,
-                    Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
-                                            query.GetQueryString(),
-                                            start,
-                                            pageSize,
-                                            addition)
-                };
-            }
-            var unescapedFacetsJson = AsyncServerClient.SerializeFacetsToFacetsJsonString(facets);
-            if (unescapedFacetsJson.Length < (32*1024)-1)
-            {
-                addition = "facets=" + Uri.EscapeDataString(unescapedFacetsJson);
-                return new GetRequest
-                {
-                    Url = "/facets/" + index,
-                    Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
-                                            query.GetQueryString(),
-                                            start,
-                                            pageSize,
-                                            addition)
-                };
-            }
-            
-            return new GetRequest()
-            {
-                Url = "/facets/" + index,
-                Method = "POST",
-                Content = unescapedFacetsJson,
-                Query = string.Format("{0}&facetStart={1}&facetPageSize={2}",
-                                            query.GetQueryString(),
-                                            start,
-                                            pageSize)
+                Url = "/queries/" + _query.IndexName,
+                Query = _query.GetQueryString(method),
+                Method = method.Method,
+                Content = method == HttpMethod.Post ? _query.GetFacetsAsJson() : null
             };
-
         }
-
-        
 
         public object Result { get; private set; }
         public QueryResult QueryResult { get; set; }
@@ -98,16 +43,16 @@ namespace Raven.Client.Document.Batches
             }
 
             var result = (RavenJObject)response.Result;
-            Result = result.JsonDeserialization<FacetResults>();
+            Result = result.JsonDeserialization<FacetedQueryResult>();
         }
 
         public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
         {
-            var result = new FacetResults();
+            var result = new FacetedQueryResult();
 
             foreach (var response in responses.Select(response => (RavenJObject)response.Result))
             {
-                var facet = response.JsonDeserialization<FacetResults>();
+                var facet = response.JsonDeserialization<FacetedQueryResult>();
                 foreach (var facetResult in facet.Results)
                 {
                     if (!result.Results.ContainsKey(facetResult.Key))

@@ -388,6 +388,26 @@ class extensions {
     }
 
     private static installBindingHandlers() {
+
+        ko.bindingHandlers["collapse"] = {
+            init: (element: any, valueAccessor: KnockoutObservable<boolean>) => {
+                var value = valueAccessor();
+                var valueUnwrapped = ko.unwrap(value);
+                var $element = $(element);
+                $element
+                    .addClass('collapse')
+                    .collapse({
+                        toggle: valueUnwrapped
+                    });
+            },
+
+            update: (element: any, valueAccessor: KnockoutObservable<boolean>) => {
+                var value = valueAccessor();
+                var valueUnwrapped = ko.unwrap(value);
+                $(element).collapse(valueUnwrapped ? "show" : "hide");
+            }
+        };
+
         ko.bindingHandlers["numericValue"] = {
             init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
                 var underlyingObservable = valueAccessor();

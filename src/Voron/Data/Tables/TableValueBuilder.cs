@@ -2,17 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using Sparrow;
+using Voron.Util;
 
 namespace Voron.Data.Tables
 {
     public unsafe class TableValueBuilder : IEnumerable
     {
-        private struct PtrSize
-        {
-            public byte* Ptr;
-            public int Size;
-        }
-
         private readonly List<PtrSize> _values = new List<PtrSize>();
         private int _size;
         private int _elementSize = 1;
@@ -29,14 +24,29 @@ namespace Voron.Data.Tables
             Add(slice.Content.Ptr, slice.Size);
         }
 
-        public void Add(ulong* ptr)
+        public void Add(ulong* value)
         {
-            Add((byte*)ptr, sizeof(ulong));
+            Add((byte*)value, sizeof(ulong));
         }
 
-        public void Add(long* ptr)
+        public void Add(long* value)
         {
-            Add((byte*)ptr, sizeof(long));
+            Add((byte*)value, sizeof(long));
+        }
+
+        public void Add(int* value)
+        {
+            Add((byte*)value, sizeof(int));
+        }
+
+        public void Add(uint* value)
+        {
+            Add((byte*)value, sizeof(uint));
+        }
+
+        public void Add(bool* value)
+        {
+            Add((byte*)value, sizeof(bool));
         }
 
         public void Add(byte* ptr, int size)

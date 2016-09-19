@@ -1,12 +1,9 @@
 import commandBase = require("commands/commandBase");
 import resource = require("models/resources/resource");
+import endpoints = require("endpoints");
 
 class getOperationStatusCommand extends commandBase {
 
-    /**
-    * @param db - The database the collection belongs to.
-    * @param operationId - The id of the operation.
-    */
     constructor(private rs: resource, private operationId: number) {
         super();
 
@@ -15,10 +12,10 @@ class getOperationStatusCommand extends commandBase {
         }
     }
 
-    execute(): JQueryPromise<any> {
-        var url = "/operation/status";//TODO: use endpoints
+    execute(): JQueryPromise<Raven.Client.Data.OperationState> {
+        const url = endpoints.databases.operations.operationsStatus;
 
-        var args = {
+        const args = {
             id: this.operationId
         }
 

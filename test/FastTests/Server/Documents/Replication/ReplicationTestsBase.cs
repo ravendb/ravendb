@@ -10,13 +10,35 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
+using Raven.Server.Extensions;
 using Xunit;
 
 namespace FastTests.Server.Documents.Replication
 {
     public class ReplicationTestsBase : RavenTestBase
     {
+        protected async Task<Dictionary<string, List<ChangeVectorEntry[]>>> GetConflicts(DocumentStore store,
+    string docId)
+        {
+            var url = $"{store.Url}/databases/{store.DefaultDatabase}/replication/conflicts?docId={docId}";
+            using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+            {
+                request.ExecuteRequest();
+                var conflictsJson = RavenJArray.Parse(await request.Response.Content.ReadAsStringAsync());				
+                var conflicts = conflictsJson.Select(x => new
+                {
+                    Key = x.Value<string>("Key"),
+                    ChangeVector = x.Value<RavenJArray>("ChangeVector").Select(c => c.FromJson()).ToArray()
+                }).GroupBy(x => x.Key).ToDictionary(x => x.Key, x => x.Select(i => i.ChangeVector).ToList());
+
+                return conflicts;
+            }
+        }
+
+
         protected bool WaitForDocumentDeletion(DocumentStore store,
             string docId,
             int timeout = 10000)
@@ -119,6 +141,45 @@ namespace FastTests.Server.Documents.Replication
             return default(T);
         }
 
+        protected static void SetReplicationConflictResolution(DocumentStore store,
+            StraightforwardConflictResolution conflictResolution)
+        {
+            using (var session = store.OpenSession())
+            {
+                var destinations = new List<ReplicationDestination>();
+                session.Store(new ReplicationDocument
+                {
+                    Destinations = destinations,
+                    DocumentConflictResolution = conflictResolution
+                }, Constants.Replication.DocumentReplicationConfiguration);
+                session.SaveChanges();
+            }
+
+        }
+
+        protected static void SetupReplication(DocumentStore fromStore, StraightforwardConflictResolution builtinConflictResolution = StraightforwardConflictResolution.None, params DocumentStore[] toStores)
+        {
+            using (var session = fromStore.OpenSession())
+            {
+                var destinations = new List<ReplicationDestination>();
+                foreach (var store in toStores)
+                    destinations.Add(
+                        new ReplicationDestination
+                        {
+                            Database = store.DefaultDatabase,
+                            Url = store.Url,
+
+                        });
+                session.Store(new ReplicationDocument
+                {
+                    Destinations = destinations,
+                    DocumentConflictResolution = builtinConflictResolution
+                }, Constants.Replication.DocumentReplicationConfiguration);
+                session.SaveChanges();
+            }
+        }
+
+
         protected static void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {
             using (var session = fromStore.OpenSession())
@@ -129,7 +190,8 @@ namespace FastTests.Server.Documents.Replication
                         new ReplicationDestination
                         {
                             Database = store.DefaultDatabase,
-                            Url = store.Url
+                            Url = store.Url,
+                            
                         });
                 session.Store(new ReplicationDocument
                 {

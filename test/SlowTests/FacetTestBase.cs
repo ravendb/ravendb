@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexing;
 
 namespace SlowTests
@@ -42,7 +43,7 @@ namespace SlowTests
             public override string IndexName => new CameraCostIndex().CreateIndexDefinition().Name;
         }
 
-        protected static void InsertCameraDataAndWaitForNonStaleResults(IDocumentStore store, IEnumerable<Camera> cameras)
+        protected static void InsertCameraData(IDocumentStore store, IEnumerable<Camera> cameras, bool waitForIndexing = true)
         {
             using (var session = store.OpenSession())
             {
@@ -52,11 +53,10 @@ namespace SlowTests
                 }
 
                 session.SaveChanges();
-
-                session.Query<Camera>(new CameraCostIndex().IndexName)
-                    .Customize(x => x.WaitForNonStaleResults())
-                    .ToList();
             }
+
+            if (waitForIndexing)
+                WaitForIndexing(store);
         }
 
         public static List<Facet> GetFacets()

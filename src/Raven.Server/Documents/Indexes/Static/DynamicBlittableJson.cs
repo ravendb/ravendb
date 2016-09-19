@@ -32,9 +32,9 @@ namespace Raven.Server.Documents.Indexes.Static
             BlittableJson = document.Data;
         }
 
-        public string[] GetPropertyNames()
+        public bool ContainsKey(string key)
         {
-            return BlittableJson.GetPropertyNames();
+            return BlittableJson.GetPropertyNames().Contains(key);
         }
 
         public override bool TryGetMember(GetMemberBinder binder, out object result)
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 return true;
             }
 
-            result = TypeConverter.DynamicConvert(result);
+            result = TypeConverter.ToDynamicType(result);
             return true;
         }
 
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             foreach (var propertyName in BlittableJson.GetPropertyNames())
             {
-                yield return new KeyValuePair<object, object>(propertyName, TypeConverter.DynamicConvert(BlittableJson[propertyName]));
+                yield return new KeyValuePair<object, object>(propertyName, TypeConverter.ToDynamicType(BlittableJson[propertyName]));
             }
         }
 

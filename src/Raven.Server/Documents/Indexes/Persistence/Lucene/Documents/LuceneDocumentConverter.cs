@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 _blittableTraverser = BlittableJsonTraverser.Default;
         }
 
-        protected override IEnumerable<AbstractField> GetFields(LazyStringValue key, object doc)
+        protected override IEnumerable<AbstractField> GetFields(LazyStringValue key, object doc, JsonOperationContext indexContext)
         {
             var document = (Document)doc;
             if (document.Key != null)
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 object value;
                 BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.Name, out value);
 
-                foreach (var luceneField in GetRegularFields(indexField, value))
+                foreach (var luceneField in GetRegularFields(indexField, value, indexContext))
                     yield return luceneField;
             }
         }

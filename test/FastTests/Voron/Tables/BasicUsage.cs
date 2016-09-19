@@ -7,6 +7,7 @@
 using System.Text;
 using Xunit;
 using Voron;
+using Voron.Data;
 using Voron.Data.Tables;
 
 
@@ -118,6 +119,22 @@ namespace FastTests.Voron.Tables
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
                 Assert.Null(docs.ReadByKey(Slice.From(tx.Allocator, "users/1")));
+            }
+        }
+
+        [Fact]
+        public void HasCorrespondingRootObjectType()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                DocsSchema.Create(tx, "docs");
+                Assert.Equal(RootObjectType.Table, tx.GetRootObjectType(Slice.From(tx.Allocator, "docs")));
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                Assert.Equal(RootObjectType.Table, tx.GetRootObjectType(Slice.From(tx.Allocator, "docs")));
             }
         }
 

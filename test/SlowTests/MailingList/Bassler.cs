@@ -17,7 +17,7 @@ namespace SlowTests.MailingList
 {
     public class Bassler : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void Test()
         {
             using (var store = GetDocumentStore())
@@ -32,6 +32,7 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
 
                     var list = session.Query<App_WaiverWaitlistItemSearch.IndexResult, App_WaiverWaitlistItemSearch>()
+                        .Customize(x=>x.WaitForNonStaleResults())
                         .ProjectFromIndexFieldsInto<App_WaiverWaitlistItemSearch.IndexResult>()
                         .ToList();
 

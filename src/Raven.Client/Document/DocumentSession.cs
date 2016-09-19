@@ -703,7 +703,7 @@ namespace Raven.Client.Document
                 .DatabaseCommands.DeleteByIndex(indexName, indexQuery);
         }
 
-        public FacetResults[] MultiFacetedSearch(params FacetQuery[] facetQueries)
+        public FacetedQueryResult[] MultiFacetedSearch(params FacetQuery[] facetQueries)
         {
             IncrementRequestCount();
             return DatabaseCommands.GetMultiFacets(facetQueries);

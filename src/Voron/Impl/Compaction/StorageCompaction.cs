@@ -5,8 +5,10 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Linq;
 using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Data.Tables;
 using Voron.Global;
 using Voron.Impl.FreeSpace;
 
@@ -14,13 +16,13 @@ namespace Voron.Impl.Compaction
 {
     public class CompactionProgress
     {
-        public string TreeName;
+        public RootObjectType ObjectType;
+        public string ObjectName;
+        public long ObjectProgress;
+        public long ObjectTotal;
 
-        public long CopiedTrees;
-        public long TotalTreeCount;
-
-        public long CopiedTreeRecords;
-        public long TotalTreeRecordsCount;
+        public long GlobalProgress;
+        public long GlobalTotal;
     }
 
     public static unsafe class StorageCompaction
@@ -87,7 +89,11 @@ namespace Voron.Impl.Compaction
                                 copiedTrees++;// we don't copy the fixed size tree
                                 continue;
                             }
-                            copiedTrees = CopyFixedSizeTrees(compactedEnv, progressReport, txr, rootIterator, treeName, copiedTrees, totalTreesCount);
+
+                            copiedTrees = CopyFixedSizeTrees(compactedEnv, progressReport, txr, rootIterator, treeName, copiedTrees, totalTreesCount, objectType);
+                            break;
+                        case RootObjectType.Table:
+                            copiedTrees = CopyTableTree(compactedEnv, progressReport, txr, treeName, copiedTrees, totalTreesCount);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("Unknown " + objectType);
@@ -98,18 +104,19 @@ namespace Voron.Impl.Compaction
         }
 
         private static long CopyFixedSizeTrees(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr,
-            TreeIterator rootIterator, string treeName, long copiedTrees, long totalTreesCount)
+            TreeIterator rootIterator, string treeName, long copiedTrees, long totalTreesCount, RootObjectType type)
         {
             
             var fst = txr.FixedTreeFor(rootIterator.CurrentKey.Clone(txr.Allocator), 0);
-            Report(treeName, copiedTrees, totalTreesCount, 0,
-                fst.NumberOfEntries,
-                progressReport);
+
+            Report(type, treeName, copiedTrees, totalTreesCount, 0, fst.NumberOfEntries, progressReport);
+
             using (var it = fst.Iterate())
             {
                 var copiedEntries = 0L;
                 if (it.Seek(Int64.MinValue) == false)
                     return copiedTrees;
+
                 do
                 {
                     using (var txw = compactedEnv.WriteTransaction())
@@ -121,16 +128,14 @@ namespace Voron.Impl.Compaction
                             snd.Add(it.CurrentKey, it.Value);
                             transactionSize += fst.ValueSize + sizeof (long);
                             copiedEntries++;
-                        } while (transactionSize < compactedEnv.Options.MaxLogFileSize/2 && it.MoveNext());
+                        } while (transactionSize < compactedEnv.Options.MaxScratchBufferSize/2 && it.MoveNext());
 
                         txw.Commit();
                     }
                     if (fst.NumberOfEntries == copiedEntries)
                         copiedTrees++;
 
-                    Report(treeName, copiedTrees, totalTreesCount, copiedEntries,
-                        fst.NumberOfEntries,
-                        progressReport);
+                    Report(type, treeName, copiedTrees, totalTreesCount, copiedEntries, fst.NumberOfEntries, progressReport);
                     compactedEnv.FlushLogToDataFile();
                 } while (it.MoveNext());
             }
@@ -142,7 +147,7 @@ namespace Voron.Impl.Compaction
         {
             var existingTree = txr.ReadTree(treeName);
 
-            Report(treeName, copiedTrees, totalTreesCount, 0, existingTree.State.NumberOfEntries, progressReport);
+            Report(RootObjectType.VariableSizeTree, treeName, copiedTrees, totalTreesCount, 0, existingTree.State.NumberOfEntries, progressReport);
 
             using (var existingTreeIterator = existingTree.Iterate(true))
             {
@@ -194,7 +199,7 @@ namespace Voron.Impl.Compaction
                             }
 
                             copiedEntries++;
-                        } while (transactionSize < compactedEnv.Options.MaxLogFileSize / 2 && existingTreeIterator.MoveNext());
+                        } while (transactionSize < compactedEnv.Options.MaxScratchBufferSize / 2 && existingTreeIterator.MoveNext());
 
                         txw.Commit();
                     }
@@ -202,8 +207,7 @@ namespace Voron.Impl.Compaction
                     if (copiedEntries == existingTree.State.NumberOfEntries)
                         copiedTrees++;
 
-                    Report(treeName, copiedTrees, totalTreesCount, copiedEntries, existingTree.State.NumberOfEntries,
-                        progressReport);
+                    Report(RootObjectType.VariableSizeTree, treeName, copiedTrees, totalTreesCount, copiedEntries, existingTree.State.NumberOfEntries, progressReport);
 
                     compactedEnv.FlushLogToDataFile();
                 } while (existingTreeIterator.MoveNext());
@@ -211,18 +215,139 @@ namespace Voron.Impl.Compaction
             return copiedTrees;
         }
 
-        private static void Report(string treeName, long copiedTrees, long totalTreeCount, long copiedRecords, long totalTreeRecordsCount, Action<CompactionProgress> progressReport)
+        private static long CopyTableTree(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr,
+            string treeName, long copiedTrees, long totalTreesCount)
+        {
+            // Load table
+            var tableTree = txr.ReadTree(treeName, RootObjectType.Table);
+
+            // Get the table schema
+            var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+            var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
+            var schema = TableSchema.ReadFrom(txr.Allocator, schemaPtr, schemaSize);
+
+            // Load table into structure 
+            var inputTable = txr.OpenTable(schema, treeName);
+
+            // The next three variables are used to know what our current
+            // progress is
+            var copiedEntries = 0;
+
+            // It is very important that these slices be allocated in the
+            // txr.Allocator, as the intermediate write transactions on
+            // the compacted environment will be destroyed between each
+            // loop.
+            var lastSlice = Slices.BeforeAllKeys;
+            long lastFixedIndex = 0L;
+
+            Report(RootObjectType.Table, treeName, copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport);
+
+            while (copiedEntries < inputTable.NumberOfEntries)
+            {
+                using (var txw = compactedEnv.WriteTransaction())
+                {
+                    long transactionSize = 0L;
+
+                    schema.Create(txw, treeName);
+                    var outputTable = txw.OpenTable(schema, treeName);
+
+                    if (schema.Key == null)
+                    {
+                        // There is no primary key, however, there must be at least one index
+                        if (schema.Indexes.Count > 0)
+                        {
+                            // We have a variable size index, use it
+                            var index = schema.Indexes.First().Value;
+
+                            foreach (var result in inputTable.SeekForwardFrom(index, lastSlice))
+                            {
+                                foreach (var entry in result.Results)
+                                {
+                                    // The table will take care of reconstructing indexes automatically
+                                    outputTable.Insert(entry);
+                                    copiedEntries++;
+                                    transactionSize += entry.Size;
+                                }
+
+                                // The transaction has surpassed the allowed
+                                // size before a flush
+                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
+                                {
+                                    lastSlice = result.Key;
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Use a fixed size index
+                            var index = schema.FixedSizeIndexes.First().Value;
+
+                            foreach (var entry in inputTable.SeekForwardFrom(index, lastFixedIndex))
+                            {
+
+                                // The table will take care of reconstructing indexes automatically
+                                outputTable.Insert(entry);
+                                copiedEntries++;
+                                transactionSize += entry.Size;
+
+                                // The transaction has surpassed the allowed
+                                // size before a flush
+                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
+                                {
+                                    lastFixedIndex = index.GetValue(entry);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // The table has a primary key, inserts in that order are expected to be faster
+                        foreach (var entry in inputTable.SeekByPrimaryKey(lastSlice))
+                        {
+                            // The table will take care of reconstructing indexes automatically
+                            outputTable.Insert(entry);
+                            copiedEntries++;
+                            transactionSize += entry.Size;
+
+                            // The transaction has surpassed the allowed
+                            // size before a flush
+                            if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
+                            {
+                                lastSlice = schema.Key.GetSlice(txr.Allocator, entry);
+                                break;
+                            }
+                        }
+                    }
+
+                    txw.Commit();
+                }
+
+                if (copiedEntries == inputTable.NumberOfEntries)
+                    copiedTrees++;
+
+                Report(RootObjectType.Table, treeName, copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport);
+
+                compactedEnv.FlushLogToDataFile();
+            }
+
+            return copiedTrees;
+        }
+
+        private static void Report(RootObjectType objectType, string objectName, long globalProgress, long globalTotal, long objectProgress, long objectTotal, Action<CompactionProgress> progressReport)
         {
             if (progressReport == null)
                 return;
 
             progressReport(new CompactionProgress
             {
-                TreeName = treeName,
-                CopiedTrees = copiedTrees,
-                TotalTreeCount = totalTreeCount,
-                CopiedTreeRecords = copiedRecords,
-                TotalTreeRecordsCount = totalTreeRecordsCount
+                ObjectType = objectType,
+                ObjectName = objectName,
+                ObjectProgress = objectProgress,
+                ObjectTotal = objectTotal,
+                GlobalProgress = globalProgress,
+                GlobalTotal = globalTotal
             });
         }
     }

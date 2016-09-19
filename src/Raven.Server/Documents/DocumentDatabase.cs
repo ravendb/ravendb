@@ -52,6 +52,7 @@ namespace Raven.Server.Documents
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
             SubscriptionStorage = new SubscriptionStorage(this);
+            DatabaseOperations = new DatabaseOperations(this);
             Metrics = new MetricsCountersManager();
             IoMetrics = ioMetrics;
             Patch = new PatchDocument(this);
@@ -80,6 +81,8 @@ namespace Raven.Server.Documents
         public DocumentTombstoneCleaner DocumentTombstoneCleaner { get; private set; }
 
         public DocumentsNotifications Notifications { get; }
+
+        public DatabaseOperations DatabaseOperations { get; private set; }
 
         public HugeDocuments HugeDocuments { get; }
 
@@ -248,6 +251,12 @@ namespace Raven.Server.Documents
 
             exceptionAggregator.Execute(() =>
             {
+                DatabaseOperations?.Dispose(exceptionAggregator);
+                DatabaseOperations = null;
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
                 SubscriptionStorage?.Dispose();
             });
             exceptionAggregator.Execute(() =>
@@ -267,6 +276,7 @@ namespace Raven.Server.Documents
             try
             {
                 IndexStore?.RunIdleOperations();
+                DatabaseOperations.ClearCompletedPendingTasks();
             }
 
             finally

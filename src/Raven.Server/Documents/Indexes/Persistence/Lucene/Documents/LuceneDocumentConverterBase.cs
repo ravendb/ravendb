@@ -17,6 +17,8 @@ using Sparrow.Json;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Utils;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -52,11 +54,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
-        public global::Lucene.Net.Documents.Document ConvertToCachedDocument(LazyStringValue key, object document)
+        public  global::Lucene.Net.Documents.Document ConvertToCachedDocument(LazyStringValue key, object document, JsonOperationContext indexContext)
         {
             _document.GetFields().Clear();
 
-            foreach (var field in GetFields(key, document))
+            foreach (var field in GetFields(key, document, indexContext))
             {
                 _document.Add(field);
             }
@@ -64,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return _document;
         }
 
-        protected abstract IEnumerable<AbstractField> GetFields(LazyStringValue key, object document);
+        protected abstract IEnumerable<AbstractField> GetFields(LazyStringValue key, object document, JsonOperationContext indexContext);
 
         /// <summary>
         /// This method generate the fields for indexing documents in lucene from the values.
@@ -77,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         ///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
         ///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
         /// </summary>
-        protected IEnumerable<AbstractField> GetRegularFields(IndexField field, object value, bool nestedArray = false)
+        public IEnumerable<AbstractField> GetRegularFields(IndexField field, object value, JsonOperationContext indexContext, bool nestedArray = false)
         {
             var path = field.Name;
 
@@ -97,6 +99,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 case ValueType.Boolean:
                 case ValueType.Double:
                 case ValueType.Null:
+                case ValueType.DynamicNull:
                 case ValueType.EmptyString:
                 case ValueType.Numeric:
                 case ValueType.BlittableJsonObject:
@@ -115,6 +118,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (valueType == ValueType.Null)
             {
                 yield return GetOrCreateField(path, Constants.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                yield break;
+            }
+
+            if (valueType == ValueType.DynamicNull)
+            {
+                var dynamicNull = (DynamicNullObject)value;
+                if (dynamicNull.IsExplicitNull)
+                {
+                    var sort = field.SortOption;
+                    if (sort == null
+                        || sort.Value == SortOptions.None
+                        || sort.Value == SortOptions.String
+                        || sort.Value == SortOptions.StringVal
+                        //|| sort.Value == SortOptions.Custom // TODO arek
+                        )
+                    {
+                        yield return GetOrCreateField(path, Constants.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                    }
+
+                    foreach (var numericField in GetOrCreateNumericField(field, GetNullValueForSorting(sort), storage))
+                        yield return numericField;
+                }
+
                 yield break;
             }
 
@@ -179,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (valueType == ValueType.BoostedValue)
             {
                 var boostedValue = (BoostedValue)value;
-                foreach (var fieldFromCollection in GetRegularFields(field, boostedValue.Value, nestedArray: false))
+                foreach (var fieldFromCollection in GetRegularFields(field, boostedValue.Value, indexContext, nestedArray: false))
                 {
                     fieldFromCollection.Boost = boostedValue.Boost;
                     fieldFromCollection.OmitNorms = false;
@@ -204,11 +230,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                     _multipleItemsSameFieldCount.Add(count++);
 
-                    foreach (var fieldFromCollection in GetRegularFields(field, itemToIndex, nestedArray: true))
+                    foreach (var fieldFromCollection in GetRegularFields(field, itemToIndex, indexContext, nestedArray: true))
                         yield return fieldFromCollection;
 
                     _multipleItemsSameFieldCount.RemoveAt(_multipleItemsSameFieldCount.Count - 1);
                 }
+
+                yield break;
+            }
+
+            if (valueType == ValueType.Dictionary)
+            {
+                var dict = (IDictionary) value;
+
+                var djv = new DynamicJsonValue();
+
+                foreach (var key in dict.Keys)
+                {
+                    djv[key.ToString()] = TypeConverter.ToBlittableSupportedType(dict[key], indexContext);
+                }
+
+                foreach (var dictField in GetRegularFields(field, indexContext.ReadObject(djv, "lucene field"), indexContext))
+                    yield return dictField;
 
                 yield break;
             }
@@ -262,7 +305,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private static ValueType GetValueType(object value)
         {
-            if (value == null || value is DynamicNullObject) return ValueType.Null;
+            if (value == null)
+                return ValueType.Null;
+
+            if (value is DynamicNullObject)
+                return ValueType.DynamicNull;
 
             var lazyStringValue = value as LazyStringValue;
             if (lazyStringValue != null)
@@ -288,6 +335,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (value is DynamicBlittableJson) return ValueType.DynamicJsonObject;
 
+            if (value is IDictionary) return ValueType.Dictionary;
+
             if (value is IEnumerable) return ValueType.Enumerable;
 
             if (value is LazyDoubleValue) return ValueType.Double;
@@ -299,6 +348,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (value is BlittableJsonReaderObject) return ValueType.BlittableJsonObject;
 
             return ValueType.Numeric;
+        }
+
+        private static object GetNullValueForSorting(SortOptions? sortOptions)
+        {
+            switch (sortOptions)
+            {
+                case SortOptions.NumericDouble:
+                    return double.MinValue;
+                default:
+                    return long.MinValue;
+            }
         }
 
         protected Field GetOrCreateKeyField(LazyStringValue key)
@@ -382,7 +442,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private IEnumerable<AbstractField> GetOrCreateNumericField(IndexField field, object value, Field.Store storage, Field.TermVector termVector = Field.TermVector.NO)
         {
-            var fieldName = field.Name + "_Range";
+            var fieldName = field.Name + Constants.Indexing.Fields.RangeFieldSuffix;
 
             var cacheKey = new FieldCacheKey(field.Name, null, storage, termVector, _multipleItemsSameFieldCount.ToArray());
 
@@ -407,7 +467,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             switch (BlittableNumber.Parse(value, out doubleValue, out longValue))
             {
                 case NumberParseResult.Double:
-                    yield return numericField.SetDoubleValue(doubleValue);
+                    if (field.SortOption == SortOptions.NumericLong)
+                        yield return numericField.SetLongValue((long)doubleValue);
+                    else
+                        yield return numericField.SetDoubleValue(doubleValue);
                     break;
                 case NumberParseResult.Long:
                     if (field.SortOption == SortOptions.NumericDouble)
@@ -448,6 +511,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             Null,
 
+            DynamicNull,
+
             EmptyString,
 
             String,
@@ -455,6 +520,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             LazyString,
 
             LazyCompressedString,
+
+            Dictionary,
 
             Enumerable,
 

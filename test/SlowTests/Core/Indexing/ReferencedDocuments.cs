@@ -24,7 +24,7 @@ namespace SlowTests.Core.Indexing
 {
     public class ReferencedDocuments : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanUseLoadDocumentToIndexReferencedDocs()
         {
             using (var store = GetDocumentStore())
@@ -218,13 +218,14 @@ namespace SlowTests.Core.Indexing
 
                 using (var session = store.OpenSession())
                 {
+                    // address from LoadDocument will be null so the City value will not get into index
+                    // we cannot expect to return any users here in that case
                     var users = session.Query<Users_ByCity.Result, Users_ByCity>()
                         .Where(x => x.City == null)
                         .OfType<User>()
                         .ToList();
 
-                    Assert.Equal(1, users.Count);
-                    Assert.Equal("Doe", users[0].LastName);
+                    Assert.Equal(0, users.Count);
                 }
 
                 using (var session = store.OpenSession())
@@ -258,7 +259,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void ShouldReindexOnReferencedDocumentChange()
         {
             using (var store = GetDocumentStore())
@@ -310,7 +311,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanProceedWhenReferencedDocumentsAreMissing()
         {
             using (var store = GetDocumentStore())

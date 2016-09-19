@@ -81,7 +81,7 @@ namespace SlowTests.Voron
         [InlineData(4031)]
         [InlineData(4041)]
         [InlineData(4234)]
-        [InlineDataWithRandomSeed()]
+        [InlineDataWithRandomSeed]
         public void ShouldHaveEnoughSpaceWhenSplittingPageInHalf(int seed)
         {
             using (var tx = Env.WriteTransaction())

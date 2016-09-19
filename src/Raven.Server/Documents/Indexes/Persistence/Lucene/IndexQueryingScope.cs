@@ -135,6 +135,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_fieldsToFetch.IsProjection == false && _alreadySeenDocumentKeysInPreviousPage.Add(key) == false)
             {
                 HasMultipleIndexOutputs = true;
+                if (_fieldsToFetch.IsTransformation && _query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
+                    return true;
+
                 return false;
             }
 
@@ -145,10 +148,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             //if (shouldIncludeInResults(indexQueryResult) == false)
             //    return false;
+            if (document == null)
+                return false;
 
             if (_fieldsToFetch.IsDistinct)
                 return _alreadySeenProjections.Add(document.DataHash);
-
+            
             return true;
         }
     }

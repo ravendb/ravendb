@@ -4,7 +4,9 @@ namespace Raven.Server.Documents.Queries
 {
     public class TermsQueryResult
     {
-        public bool NotModified { get; set; }
+        public static readonly TermsQueryResult NotModifiedResult = new TermsQueryResult { NotModified = true };
+
+        public bool NotModified { get; private set; }
 
         public HashSet<string> Terms { get; set; }
 

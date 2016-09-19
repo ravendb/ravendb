@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data
 {
     public enum FacetMode
     {

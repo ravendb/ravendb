@@ -33,7 +33,7 @@ namespace Voron.Impl
             get { return _lowLevelTransaction.Allocator; }
         }
 
-        public Tree ReadTree(string treeName)
+        public Tree ReadTree(string treeName, RootObjectType type = RootObjectType.VariableSizeTree)
         {
             Tree tree;
             if (_trees.TryGetValue(treeName, out tree))
@@ -44,10 +44,10 @@ namespace Voron.Impl
             var header = (TreeRootHeader*)_lowLevelTransaction.RootObjects.DirectRead(treeNameSlice);
             if (header != null)
             {
-                if (header->RootObjectType != RootObjectType.VariableSizeTree)
-                    throw new InvalidOperationException("Tried to opened " + treeName + " as a variable size tree, but it is actually a " + header->RootObjectType);
+                if (header->RootObjectType != type)
+                    throw new InvalidOperationException($"Tried to opened {treeName} as a { type }, but it is actually a " + header->RootObjectType);
 
-                tree = Tree.Open(_lowLevelTransaction, this, header);
+                tree = Tree.Open(_lowLevelTransaction, this, header, type);
                 tree.Name = treeName;
                 _trees.Add(treeName, tree);
                 return tree;
@@ -76,8 +76,10 @@ namespace Voron.Impl
             Table openTable;
             if (_tables.TryGetValue(name, out openTable))
                 return openTable;
-            openTable = new Table(schema, name, this,1);
+
+            openTable = new Table(schema, name, this, 1);
             _tables[name] = openTable;
+
             return openTable;
         }
 
@@ -222,9 +224,9 @@ namespace Voron.Impl
             AddTree(toName, fromTree);
         }
 
-        public Tree CreateTree(string name)
+        public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree)
         {
-            Tree tree = ReadTree(name);
+            Tree tree = ReadTree(name, type);
             if (tree != null)
                 return tree;
 
@@ -235,9 +237,11 @@ namespace Voron.Impl
 
             tree = Tree.Create(_lowLevelTransaction, this);
             tree.Name = name;
-            var space = _lowLevelTransaction.RootObjects.DirectAdd(key, sizeof(TreeRootHeader));
+            tree.State.RootObjectType = type;
 
-            tree.State.CopyTo((TreeRootHeader*)space);
+            var space = (TreeRootHeader*) _lowLevelTransaction.RootObjects.DirectAdd(key, sizeof(TreeRootHeader));
+            tree.State.CopyTo(space);
+
             tree.State.IsModified = true;
             AddTree(name, tree);
 
@@ -263,11 +267,11 @@ namespace Voron.Impl
 
         public RootObjectType GetRootObjectType(Slice name)
         {
-            var val = _lowLevelTransaction.RootObjects.DirectRead(name);
+            var val = (RootHeader*) _lowLevelTransaction.RootObjects.DirectRead(name);
             if (val == null)
                 return RootObjectType.None;
 
-            return ((RootHeader*)val)->RootObjectType;
+            return val->RootObjectType;
         }
     }
 

@@ -1,22 +1,20 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq.Expressions;
-using System.Linq;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
-using  Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data
 {
     public class Facet
     {
         [JsonIgnore]
-        private string displayName;
+        private string _displayName;
 
         /// <summary>
         /// Mode of a facet (Default, Ranges).
@@ -48,8 +46,8 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public string DisplayName
         {
-            get { return displayName ?? Name; }
-            set { displayName = value; }
+            get { return _displayName ?? Name; }
+            set { _displayName = value; }
         }
 
         /// <summary>
@@ -109,7 +107,7 @@ namespace Raven.Abstractions.Data
                                 other.Name.Body.Type != typeof(string);
             var mode = shouldUseRanges ? FacetMode.Ranges : FacetMode.Default;
 
-            var name = String.Empty;
+            var name = string.Empty;
             if (other.Name.Body is MemberExpression)
             {
                 name = (other.Name.Body as MemberExpression).Member.Name;
@@ -132,7 +130,7 @@ namespace Raven.Abstractions.Data
                     type == typeof(short) ||
                     type == typeof(float) ||
                     type == typeof(decimal))
-                    name += "_Range";
+                    name += Constants.Indexing.Fields.RangeFieldSuffix;
             }
 
             return new Facet
@@ -158,8 +156,6 @@ namespace Raven.Abstractions.Data
 
         public static string Parse(Expression<Func<T, bool>> expr)
         {
-            Expression body = expr.Body;
-
             var operation = (BinaryExpression)expr.Body;
 
             if (operation.Left is MemberExpression)
@@ -169,28 +165,42 @@ namespace Raven.Abstractions.Data
                 return expression;
             }
 
-            if (body is BinaryExpression)
-            {
-                var method = body as BinaryExpression;
-                var left = method.Left as BinaryExpression;
-                var right = method.Right as BinaryExpression;
-                if ((left == null || right == null) || method.NodeType != ExpressionType.AndAlso)
-                    throw new InvalidOperationException("Expression doesn't have the correct sub-expression(s) (expected \"&&\")");
+            var left = operation.Left as BinaryExpression;
+            var right = operation.Right as BinaryExpression;
+            if ((left == null || right == null) || operation.NodeType != ExpressionType.AndAlso)
+                throw new InvalidOperationException("Range can be only specified using: \"&&\". Cannot use: \"" + operation.NodeType + "\"");
 
-                var leftMember = left.Left as MemberExpression;
-                var rightMember = right.Left as MemberExpression;
-                var validOperators = ((left.NodeType == ExpressionType.LessThan || left.NodeType == ExpressionType.LessThanOrEqual)
-                    && (right.NodeType == ExpressionType.GreaterThan) || right.NodeType == ExpressionType.GreaterThanOrEqual) ||
-                    ((left.NodeType == ExpressionType.GreaterThan || left.NodeType == ExpressionType.GreaterThanOrEqual)
-                    && (right.NodeType == ExpressionType.LessThan || right.NodeType == ExpressionType.LessThanOrEqual));
-                var validMemberNames = leftMember != null && rightMember != null &&
-                                        GetFieldName(leftMember) == GetFieldName(rightMember);
-                if (validOperators && validMemberNames)
-                {
-                    return GetStringRepresentation(left.NodeType, right.NodeType, ParseSubExpression(left), ParseSubExpression(right));
-                }
+            var leftMember = left.Left as MemberExpression;
+            var rightMember = right.Left as MemberExpression;
+            if (leftMember == null || rightMember == null)
+            {
+                throw new InvalidOperationException("Expressions on both sides of \"&&\" must point to range field. Ex. x => x.Age > 18 && x.Age < 99");
             }
-            throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected \"<\" and \">\")");
+
+            if (GetFieldName(leftMember) != GetFieldName(rightMember))
+            {
+                throw new InvalidOperationException("Different range fields were detected: \"" + GetFieldName(leftMember) + "\" and \"" + GetFieldName(rightMember) + "\"");
+            }
+
+            // option #1: expression has form: x > 5 && x < 10
+            var hasForm1 = (left.NodeType == ExpressionType.GreaterThan || left.NodeType == ExpressionType.GreaterThanOrEqual)
+                           && (right.NodeType == ExpressionType.LessThan || right.NodeType == ExpressionType.LessThanOrEqual);
+
+            if (hasForm1)
+            {
+                return GetStringRepresentation(left.NodeType, right.NodeType, ParseSubExpression(left), ParseSubExpression(right));
+            }
+
+            // option #2: expression has form x < 10 && x > 5 --> reverse expression to end up with form #1
+            var hasForm2 = (left.NodeType == ExpressionType.LessThan || left.NodeType == ExpressionType.LessThanOrEqual)
+                           && (right.NodeType == ExpressionType.GreaterThan || right.NodeType == ExpressionType.GreaterThanOrEqual);
+
+            if (hasForm2)
+            {
+                return GetStringRepresentation(right.NodeType, left.NodeType, ParseSubExpression(right), ParseSubExpression(left));
+            }
+
+            throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected \"<\", \"<=\", \">\" or \">=\")");
         }
 
         private static string GetFieldName(MemberExpression left)
@@ -245,9 +255,15 @@ namespace Raven.Abstractions.Data
             //i.e. new DateTime(10, 4, 2001) || dateTimeVar.AddDays(2) || val +100
             if (operation.Right is NewExpression || operation.Right is MethodCallExpression || operation.Right is BinaryExpression)
             {
-                var invoke = Expression.Lambda(operation.Right).Compile();
-                var result = invoke.DynamicInvoke();
-                return result;
+                try
+                {
+                    var invoke = Expression.Lambda(operation.Right).Compile();
+                    return invoke.DynamicInvoke();
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Could not understand expression " + operation.Right, e);
+                }
             }
 
             throw new InvalidOperationException(string.Format("Unable to parse expression: {0} {1} {2}",
@@ -264,7 +280,7 @@ namespace Raven.Abstractions.Data
                 {
                     case ExpressionType.Constant:
                         var constant = (ConstantExpression)operand;
-                        var type = expression.Type.IsGenericType() ? expression.Type.GenericTypeArguments[0] : expression.Type;
+                        var type = expression.Type.GetTypeInfo().IsGenericType ? expression.Type.GenericTypeArguments[0] : expression.Type;
                         return Convert.ChangeType(constant.Value, type);
                     case ExpressionType.Convert:
                         return ParseUnaryExpression((UnaryExpression)operand);
@@ -278,22 +294,32 @@ namespace Raven.Abstractions.Data
         {
             var valueAsStr = GetStringValue(value);
             if (op == ExpressionType.LessThan)
-                return String.Format("[NULL TO {0}]", valueAsStr);
+                return string.Format("[NULL TO {0}]", valueAsStr);
             if (op == ExpressionType.GreaterThan)
-                return String.Format("[{0} TO NULL]", valueAsStr);
+                return string.Format("[{0} TO NULL]", valueAsStr);
             if (op == ExpressionType.LessThanOrEqual)
-                return String.Format("[NULL TO {0}}}", valueAsStr);
+                return string.Format("[NULL TO {0}}}", valueAsStr);
             if (op == ExpressionType.GreaterThanOrEqual)
-                return String.Format("{{{0} TO NULL]", valueAsStr);
-            throw new InvalidOperationException("Unable to parse the given operation " + op + ", into a facet range!!! ");
+                return string.Format("{{{0} TO NULL]", valueAsStr);
+            throw new InvalidOperationException("Cannot use " + op + " as facet range. Allowed operators: <, <=, >, >=.");
         }
 
         private static string GetStringRepresentation(ExpressionType leftOp, ExpressionType rightOp, object lValue, object rValue)
         {
+            var lValueAsComparable = lValue as IComparable;
+            var rValueAsComparable = rValue as IComparable;
+
+            if (lValueAsComparable != null && rValueAsComparable != null)
+            {
+                if (lValueAsComparable.CompareTo(rValueAsComparable) > 0)
+                {
+                    throw new InvalidOperationException("Invalid range: " + lValue + ".." + rValue);
+                }
+            }
             var lValueAsStr = GetStringValue(lValue);
             var rValueAsStr = GetStringValue(rValue);
             if (lValueAsStr != null && rValueAsStr != null)
-                return String.Format("{0}{1} TO {2}{3}", CalculateBraces(leftOp, true), lValueAsStr, rValueAsStr, CalculateBraces(rightOp, false));
+                return string.Format("{0}{1} TO {2}{3}", CalculateBraces(leftOp, true), lValueAsStr, rValueAsStr, CalculateBraces(rightOp, false));
             throw new InvalidOperationException("Unable to parse the given operation into a facet range!!! ");
         }
 

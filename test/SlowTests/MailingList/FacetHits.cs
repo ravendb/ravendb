@@ -5,6 +5,7 @@ using Lucene.Net.Support;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -44,7 +45,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: Facets")]
+        [Fact]
         public void CanSearchOnAllProperties()
         {
             using (var store = GetDocumentStore())
@@ -79,12 +80,12 @@ namespace SlowTests.MailingList
                             {
                                 Name = "Price_Range",
                                 Mode = FacetMode.Ranges,
-                                Ranges = new EquatableList<string>
+                                Ranges = new List<string>
                                 {
-                                    "[NULL TO Fx0]",
-                                    "[Fx0.001 TO Fx0.999]",
-                                    "[Fx0.999 TO Fx1.999]",
-                                    "[Fx1.999 TO NULL]"
+                                    "[NULL TO Dx0]",
+                                    "[Dx0.001 TO Dx0.999]",
+                                    "[Dx0.999 TO Dx1.999]",
+                                    "[Dx1.999 TO NULL]"
                                 }
                             }
                         }

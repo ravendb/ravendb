@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Lucene.Net.Store;
+using Raven.Server.Utils;
 using Voron.Impl;
 using Voron;
 
@@ -8,7 +9,7 @@ namespace Raven.Server.Indexing
 {
     public unsafe class VoronIndexOutput : BufferedIndexOutput
     {
-        public static readonly int MaxFileChunkSize = 128 * 1024 * 1024; // temporarily 128MB, 2GB eventually
+        public static readonly int MaxFileChunkSize = 128 * 1024 * 1024;
 
         private readonly string _name;
         private readonly Transaction _tx;
@@ -56,7 +57,7 @@ namespace Raven.Server.Indexing
 
             for (int i = 0; i < numberOfChunks; i++)
             {
-                tree.Add(Slice.From(_tx.Allocator, i.ToString("D9")), _file, count: MaxFileChunkSize);
+                tree.Add(Slice.From(_tx.Allocator, i.ToString("D9")), new LimitedStream(_file, _file.Position, Math.Min(_file.Position + MaxFileChunkSize, _file.Length)));
             }
 
             var files = _tx.ReadTree("Files");

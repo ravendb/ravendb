@@ -8,8 +8,6 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
-
-using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Raven.Server.Documents.Queries.Parse;
@@ -47,10 +45,10 @@ namespace Raven.Server.Documents.Queries
 
         public static Query BuildQuery(string query, Analyzer analyzer)
         {
-            return BuildQuery(query, new IndexQueryServerSide(), analyzer);
+            return BuildQuery(query, QueryOperator.Or, null, analyzer);
         }
 
-        public static Query BuildQuery(string query, IndexQueryServerSide indexQuery, Analyzer analyzer)
+        public static Query BuildQuery(string query, QueryOperator defaultOperator, string defaultField, Analyzer analyzer)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
@@ -64,8 +62,8 @@ namespace Raven.Server.Documents.Queries
                             new LuceneASTQueryConfiguration
                             {
                                 Analayzer = analyzer,
-                                DefaultOperator = indexQuery.DefaultOperator,
-                                FieldName = indexQuery.DefaultField ?? string.Empty
+                                DefaultOperator = defaultOperator,
+                                FieldName = defaultField ?? string.Empty
                             });
                         // The parser should throw ParseException in this case.
                         if (res == null) throw new GeoAPI.IO.ParseException("Could not parse query");
@@ -79,9 +77,9 @@ namespace Raven.Server.Documents.Queries
                 var originalQuery = query;
                 try
                 {
-                    var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer)
+                    var queryParser = new RangeQueryParser(Version.LUCENE_29, defaultField ?? string.Empty, analyzer)
                     {
-                        DefaultOperator = indexQuery.DefaultOperator == QueryOperator.Or
+                        DefaultOperator = defaultOperator == QueryOperator.Or
                             ? QueryParser.Operator.OR
                             : QueryParser.Operator.AND,
                         AllowLeadingWildcard = true
