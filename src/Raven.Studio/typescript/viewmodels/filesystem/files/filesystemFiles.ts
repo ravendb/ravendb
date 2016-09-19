@@ -194,7 +194,7 @@ class filesystemFiles extends viewModelBase {
         if (!newFolder) {
             newFolder = "/";
         }
-
+        /* TODO
         if (!this.folderNotificationSubscriptions[newFolder] && changesContext.currentResourceChangesApi() != null) {
             this.folderNotificationSubscriptions[newFolder] = changesContext.currentResourceChangesApi()
                 .watchFsFolders(newFolder, (e: fileChangeNotification) => {
@@ -266,7 +266,7 @@ class filesystemFiles extends viewModelBase {
                         console.error("unknown notification action");
                     }
                 });
-        }
+        }*/
     }
 
     createPagedList(directory: string): pagedList {

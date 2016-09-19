@@ -28,8 +28,8 @@ class ioTestCommand extends commandBase {
 
     private monitorIoTest(parentPromise: JQueryDeferred<any>, operationId: number) {
         new getOperationStatusCommand(null, operationId)
-            .execute()
-            .done((result: operationStatusDto) => {
+            .execute();
+            /* TODO.done((result: operationStatusDto) => {
                 if (result.Completed) {
                     if (result.Faulted || result.Canceled) {
                         this.reportError("Failed to perform disk IO test!", result.State.Error);
@@ -42,7 +42,7 @@ class ioTestCommand extends commandBase {
                     this.onStatus(result.State);
                     setTimeout(() => this.monitorIoTest(parentPromise, operationId), 500);
                 }
-            });
+            });*/
     }
 }
 

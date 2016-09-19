@@ -16,26 +16,26 @@
   &.focus {
     color: @color;
     background-color: saturate(lighten(@background, 5%), 0%);
-        border-color: lighten(@border, 15%);
+        border-color: saturate(lighten(@border, 5%), 0%);
   }
   &:hover {
     color: @color;
     background-color: saturate(lighten(@background, 5%),0%);
-        border-color: lighten(@border, 8%);
+    border-color: saturate(lighten(@border, 5%),0%);
   }
   &:active,
   &.active,
   .open > .dropdown-toggle& {
     color: @color;
     background-color: desaturate(darken(@background, 8%),0%);
-        border-color: lighten(@border, 8%);
+    border-color: desaturate(darken(@border, 8%),0%);
 
     &:hover,
     &:focus,
     &.focus {
       color: @color;
       background-color: saturate(darken(@background, 8%),10%);
-          border-color: lighten(@border, 5%);
+      border-color: saturate(darken(@border, 8%),10%);
     }
   }
   &:active,
@@ -62,8 +62,8 @@
 
 // Button sizes
 .button-size(@padding-vertical; @padding-horizontal; @font-size; @line-height; @border-radius) {
-  padding: @padding-vertical @padding-horizontal;
-  font-size: 13px;
+  padding: (@padding-vertical - 1) @padding-horizontal;
+  font-size: @font-size;
   line-height: @line-height;
   border-radius: @border-radius;
 

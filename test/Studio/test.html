@@ -23,18 +23,22 @@
     <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/Content/css/styles.css" />
     <link rel="stylesheet" href="../../src/Raven.Studio/wwwroot/lib/animate.css/animate.css" />
     
-    <script type="text/javascript" src="../../src/Raven.Studio/wwwroot/lib/es6-promise/promise.js"></script>
+    <script type="text/javascript" src="../../src/Raven.Studio/wwwroot/lib/es6-shim/es6-shim.js"></script>
     <script type="text/javascript" src="../../src/Raven.Studio/wwwroot/lib/jquery/dist/jquery.js"></script>
+    <script type="text/javascript" src="../../src/Raven.Studio/wwwroot/lib/bootstrap/dist/js/bootstrap.js"></script>
     <script type="text/javascript" src="../../src/Raven.Studio/wwwroot/lib/knockout/dist/knockout.debug.js"></script>
     <script type="text/javascript" src="../../src/Raven.Studio/wwwroot/lib/knockout.dirtyFlag/index.js"></script>
     <script type="text/javascript" src="../../src/Raven.Studio/wwwroot/lib/jwerty/jwerty.js"></script>
     <script type="text/javascript" src="../../src/Raven.Studio/wwwroot/lib/knockout-postbox/build/knockout-postbox.js"></script>
+    
+
     <script src="setup/requireConfig.js"></script>
 
     <script src="../../src/Raven.Studio/wwwroot/lib/requirejs/require.js"></script>
     
     <script type="text/javascript">
-        define("knockout", [], function() { return ko; });
+        define("knockout", [], function () { return ko; });
+        define("jquery", [], function() { return jQuery; });
     </script>
 </head>
 <body>

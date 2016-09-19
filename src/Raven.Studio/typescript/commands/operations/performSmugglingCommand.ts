@@ -25,7 +25,7 @@ class performSmugglingCommand extends commandBase {
     private monitorOperation(parentPromise: JQueryDeferred<any>, operationId: number) {
         new getOperationStatusCommand(appUrl.getDatabase(), operationId)
             .execute()
-            .done((result: serverSmugglingOperationStateDto) => {
+            /* TODO.done((result: serverSmugglingOperationStateDto) => {
             this.updateMigrationStatus(result);
             if (result.Completed) {
                 if (result.Faulted || result.Canceled) {
@@ -38,7 +38,7 @@ class performSmugglingCommand extends commandBase {
             } else {
                 setTimeout(() => this.monitorOperation(parentPromise, operationId), 500);
             }
-        });
+        });*/
     }
 
 

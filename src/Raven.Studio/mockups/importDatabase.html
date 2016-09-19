@@ -43,17 +43,19 @@
 </head>
 <body>
     <nav class="navbar navbar-inverse navbar-fixed-top">
+
         <div class="container-fluid">
             <div class="navbar-header">
-                <a class="navbar-brand" href="#">RavenDB</a>
-                <a class="menu-collapse-button icon-menu-collapse" title="collapse menu"></a>
+
+                <a class="navbar-brand hidden-xs" href="#">RavenDB</a>
             </div>
             <div id="navbar">
                 <ul class="nav navbar-nav navbar-right">
+
+                    <li class="pull-left"><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" id="menu-toggle" data-target="#main-menu" data-class="show-menu"></a></li>
                     <li><a href="#" class="icon-notifications btn-toggle" data-target=".notifications-container" data-class="show-notifications"></a></li>
                     <li><a href="#" class="icon-help"></a></li>
-                    <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
-                    <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
+                    <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
                 </ul>
                 <div class="inputs-container hidden-xs">
                     <div class="search-container active">
@@ -346,189 +348,139 @@
         </div>
     </nav>
 
-    <div class="container-fluid content-container enable-right-options-panel">
+    <div class="container-fluid content-container">
         <div class="content-container-margin">
-            <div id="right-options-panel" class="flex-window">
-                <div class="panel flex-window-head">
-                    <div class="panel-body">
-                        <h3 class="margin-none">Properties</h3>
-                        <hr class="small" />
-                        <dl class="dl-horizontal small">
-                            <dt>Etag:</dt>
-                            <dd>452345346345656</dd>
-                            <dt>Modified:</dt>
-                            <dd> 09/08/2016 08:30 (UTC)</dd>
-                            <dt>Size:</dt>
-                            <dd>0.52.KB</dd>
-                        </dl>
-                    </div>
-                </div>
-                <div class="panel flex-window-scroll flex-window margin-none">
-                    <div class="flex-window-head">
-                        <div class="btn-group btn-group-justified" role="group" aria-label="...">
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-xs btn-default active">
-                                    <div class="icon-link"></div>
-                                    Related
-                                </button>
-                            </div>
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-xs btn-default">
-                                    <div class="icon-document-group"></div>
-                                    Collection
-                                </button>
-                            </div>
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-xs btn-default">
-                                    <div class="icon-recent"></div>
-                                    Recent
-                                </button>
-                            </div>
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-xs btn-default">
-                                    <div class="icon-star"></div>
-                                    Starred
-                                </button>
+            <h1>Import Database</h1>
+            <div class="panel">
+                <div class="panel-body">
+                    <p>Import data from a .ravendbdump file into the current database.</p>
+                    <p class="text-warning"><span class="icon-warning"></span> Note: Importing will overwrite any existing documents and indexes.</p>
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="input-group">
+                                <input type="text" value="filename.ravendbdump" class="form-control">
+                                <span class="input-group-btn">
+                                    <button class="btn btn-default btn-success input-group-addon-button"><span class="icon-document"></span> Choose File</button>
+                                </span>
                             </div>
                         </div>
-                        <div class="search-documents">
-                            <input type="search" class="form-control" placeholder="search" /><span class="icon-search"></span>
-                        </div>
                     </div>
-                    <div class="flex-window-scroll">
-                        <div class="panel-body">
-                            <ul class="objects-list">
-                                <li><a href="#" class="document">brickpile</a></li>
-                                <li><a href="#" class="document">brics</a></li>
-                                <li><a href="#" class="document">fs</a></li>
-                                <li><a href="#" class="document">IdentityTests</a></li>
-                                <li><a href="#" class="document">IdentityTryOuts</a></li>
-                                <li><a href="#" class="document">jspatchtest</a></li>
-                                <li><a href="#" class="document">logs</a></li>
-                                <li><a href="#" class="document">Media</a></li>
-                                <li><a href="#" class="document">Northwind</a></li>
-                                <li><a href="#" class="document">QuartzDemo</a></li>
-                                <li><a href="#" class="document">r1</a></li>
-                                <li><a href="#" class="document">rep1</a></li>
-                                <li><a href="#" class="document">rep2</a></li>
-                                <li><a href="#" class="document">sortings</a></li>
-                                <li><a href="#" class="document">T1</a></li>
-                                <li><a href="#" class="document">test</a></li>
-                                <li><a href="#" class="document">test2</a></li>
-                                <li><a href="#" class="document">ThisIsTest</a></li>
-                                <li><a href="#" class="document">brickpile</a></li>
-                                <li><a href="#" class="document">brics</a></li>
-                                <li><a href="#" class="document">fs</a></li>
-                                <li><a href="#" class="document">IdentityTests</a></li>
-                                <li><a href="#" class="document">IdentityTryOuts</a></li>
-                                <li><a href="#" class="document">jspatchtest</a></li>
-                                <li><a href="#" class="document">logs</a></li>
-                                <li><a href="#" class="document">Media</a></li>
-                                <li><a href="#" class="document">Northwind</a></li>
-                                <li><a href="#" class="document">QuartzDemo</a></li>
-                                <li><a href="#" class="document">r1</a></li>
-                                <li><a href="#" class="document">rep1</a></li>
-                                <li><a href="#" class="document">rep2</a></li>
-                                <li><a href="#" class="document">sortings</a></li>
-                                <li><a href="#" class="document">T1</a></li>
-                                <li><a href="#" class="document">test</a></li>
-                                <li><a href="#" class="document">test2</a></li>
-                                <li><a href="#" class="document">ThisIsTest</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    <br />
+                    <div class="row">
+                        <div class="col-lg-12">
 
-            <div class="flex-window">
-                <div class="flex-winddow-head">
-                    <div class="clearfix">
-                        <h2 class="pull-left-md">
-                            <a class="reset-color btn-toggle" data-target=".fav-object" data-class="icon-star-filled favorite">
-                                <span class="icon-star fav-object"></span>
-                            </a>
-                            <span id="obj-name">
-                                <span class="static-name">Orders/123123123</span>
-                                <input type="text" class="edit-inline" value="Orders/123123123" />
-                                <a class="icon-edit reset-color btn-toggle small" data-target="#obj-name" data-class="edit"></a>
-                            </span>
-                        </h2>
-                        <p class="pull-right-md bg-warning padding padding-xs"><small><span class="icon-warning"></span> Document has beend modified outside of studio 1 minute ago. <a href="#">click here to refresh</a></small></p>
-                    </div>
-                    <div class="btn-bar">
-                        <div class="pull-left-sm">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-success"><span class="icon-save"></span> Save</button>
-                                <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    <span class="caret"></span>
-                                    <span class="sr-only">Toggle Dropdown</span>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a href="#">Save as new Order</a></li>
-                                    <li><a href="#">Save as...</a></li>
-                                </ul>
+                            <div class="row">
+                                <div class="col-sm-6 col-lg-4">
+                                    <div class="toggle">
+                                        <input id="toggle1" type="checkbox">
+                                        <label for="toggle1">
+                                            Include Documents
+                                        </label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="toggle2" type="checkbox">
+                                        <label for="toggle2">
+                                            Include Indexes
+                                        </label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="toggle3" type="checkbox">
+                                        <label for="toggle3">
+                                            Include Attachments
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-lg-4">
+                                    <div class="toggle">
+                                        <input id="toggle4" type="checkbox">
+                                        <label for="toggle4">
+                                            Include Transformers
+                                        </label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="toggle5" type="checkbox">
+                                        <label for="toggle5">
+                                            Remove Analyzers
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
-                            <button type="button" class="btn btn-danger"><span class="icon-trash"></span> Delete</button>
-                        </div>
-                        <div class="pull-right-sm">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-default"><span class="icon-copy"></span> Copy</button>
-                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    <span class="caret"></span>
-                                    <span class="sr-only">Toggle Dropdown</span>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a href="#">Copy as C# class</a></li>
 
-                                </ul>
+                        </div>
+
+                    </div>
+                    <br />
+
+
+                    <div class="collapse" id="collapseExample">
+                        <form role="form">
+
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <div class="input-group-addon">Batch size</div>
+                                            <input class="form-control" type="number" min="0" data-bind="value: batchSize">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+
+                            <div class="toggle">
+                                <input id="expiredDocuments" type="checkbox">
+                                <label for="expiredDocuments">
+                                    Strip replication information from documents metadata
+                                </label>
+                            </div>
+                            <div class="toggle">
+                                <input id="expiredDocuments" type="checkbox">
+                                <label for="expiredDocuments">
+                                    Disable versioning bundle during import
+                                </label>
+                            </div>
+                            <div class="toggle">
+                                <input id="expiredDocuments" type="checkbox">
+                                <label for="expiredDocuments">
+
+                                    Include Expired documents
+                                </label>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="toggle">
+                                    <input id="useTransformScript" type="checkbox" data-collapse="#collapseTransformScript">
+                                    <label for="useTransformScript">
+                                        Use Transform script <a class="text-info" target="_blank" href="#">
+                                            <span class="icon-help"></span>
+                                        </a>
+                                    </label>
+                                </div>
+                                <div class="collapse" id="collapseTransformScript">
+                                    <pre style="height: 200px; font-size: 16px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript' }" class="ace_editor ui-resizable ace-xcode">
+<textarea class="ace_text-input" wrap="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="opacity: 0; height: 19px; width: 8.79688px; left: 46px; top: 0px;"></textarea>
+</pre>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">Command</label>
+                                <div class="input-group">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default btn-sm"><span class="icon-copy"></span> Copy to clipboard</button>
+                                    </span>
+                                    <input onClick="this.select();" class="form-control input-sm" readonly value='Raven.Smuggler out http://live-test.ravendb.net raven.dump --operate-on-types=Documents,Indexes,Transformers --database="Media" --batch-size=1024 --excludeexpired'>
+                                </div>
+                            </div>
+                        </form>
                     </div>
-                    <hr class="small" />
-                    <div class="clearfix">
-                        <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
-                            <button type="button" class="btn btn-default"><span class="icon-indent"></span> Format</button>
-                            <button type="button" class="btn btn-default"><span class="icon-collapse"></span> Toggle collapse</button>
-                            <button type="button" class="btn btn-default"><span class="icon-newline"></span> Toggle new lines</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex-window-scroll">
-                    <div id="docEditor">
-                        {
-                        "Company": "companies/65",
-                        "Employee": "employees/1",
-                        "OrderedAt": "1998-05-06T00:00:00.0000000",
-                        "RequireAt": "1998-06-03T00:00:00.0000000",
-                        "ShippedAt": null,
-                        "ShipTo": {
-                        "Line1": "2817 Milton Dr.",
-                        "Line2": null,
-                        "City": "Albuquerque",
-                        "Region": "NM",
-                        "PostalCode": "87110",
-                        "Country": "USA"
-                        },
-                        "ShipVia": "shippers/2",
-                        "Freight": 8.53,
-                        "Lines": [
-                        {
-                        "Product": "products/2",
-                        "ProductName": "Chang",
-                        "PricePerUnit": 19,
-                        "Quantity": 24,
-                        "Discount": 0.2
-                        },
-                        {
-                        "Product": "products/3",
-                        "ProductName": "Aniseed Syrup",
-                        "PricePerUnit": 10,
-                        "Quantity": 4,
-                        "Discount": 0
-                        }
-                        ]
-                        }
-                    </div>
+                    <hr />
+
+                    <div class="progress"> <div class="progress-bar progress-bar-primary progress-bar-striped" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width:60%"> <span class="sr-only">60% Complete (warning)</span> </div> </div>
+                    <button class="btn btn-info" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+                        Advanced
+                    </button>
+                    <button class="btn btn-primary" disabled><span class="glyphicon glyphicon-open"></span> Import Database</button>
+                    <button class="btn btn-primary"><span class="global-spinner"></span> Import Database</button>
                 </div>
             </div>
         </div>

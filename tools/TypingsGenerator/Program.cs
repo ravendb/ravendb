@@ -57,6 +57,9 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(IndexDefinition));
+            scripter.AddType(typeof(OperationStatusChangeNotification));
+            scripter.AddType(typeof(DeterminateProgress));
+            scripter.AddType(typeof(IndeterminateProgress));
 
             return scripter;
         }

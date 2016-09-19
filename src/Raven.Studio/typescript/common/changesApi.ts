@@ -5,16 +5,10 @@ import appUrl = require("common/appUrl");
 import changeSubscription = require("common/changeSubscription");
 import changesCallback = require("common/changesCallback");
 import commandBase = require("commands/commandBase");
-import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
-import idGenerator = require("common/idGenerator");
-import messagePublisher = require("common/messagePublisher");
 
 class changesApi {
 
-    private eventsId: string;
-    private coolDownWithDataLoss: number;
-    private isMultyTenantTransport:boolean;
     private resourcePath: string;
     public connectToChangesApiTask: JQueryDeferred<any>;
     private webSocket: WebSocket;
@@ -27,17 +21,21 @@ class changesApi {
     private normalClosureMessage = "CLOSE_NORMAL";
     static messageWasShownOnce: boolean = false;
     private successfullyConnectedOnce: boolean = false;
-    private sentMessages: any[] = [];
+    private sentMessages: chagesApiConfigureRequestDto[] = [];
     private commandBase = new commandBase();
 
     private allReplicationConflicts = ko.observableArray<changesCallback<replicationConflictNotificationDto>>();
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
     private allTransformersHandlers = ko.observableArray<changesCallback<transformerChangeNotificationDto>>();
-    private watchedDocuments: dictionary<KnockoutObservableArray<changesCallback<documentChangeNotificationDto>>> = {};
-    private watchedPrefixes: dictionary<KnockoutObservableArray<changesCallback<documentChangeNotificationDto>>> = {};
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
+    private allOperationsHandlers = ko.observableArray<changesCallback<Raven.Client.Data.OperationStatusChangeNotification>>();
 
+    private watchedDocuments = new Map<string, KnockoutObservableArray<changesCallback<documentChangeNotificationDto>>>();
+    private watchedPrefixes = new Map<string, KnockoutObservableArray<changesCallback<documentChangeNotificationDto>>>();
+    private watchedOperations = new Map<number, KnockoutObservableArray<changesCallback<Raven.Client.Data.OperationStatusChangeNotification>>>();
+
+    /* TODO:
     private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
     private allFsConflictsHandlers = ko.observableArray<changesCallback<synchronizationConflictNotification>>();
     private allFsConfigHandlers = ko.observableArray<changesCallback<filesystemConfigNotification>>();
@@ -51,12 +49,9 @@ class changesApi {
 
     private allTimeSeriesHandlers = ko.observableArray<changesCallback<timeSeriesKeyChangeNotification>>();
     private watchedTimeSeries: dictionary<KnockoutObservableArray<changesCallback<timeSeriesKeyChangeNotification>>> = {};
-    private allTimeSeriesBulkOperationsHandlers = ko.observableArray<changesCallback<timeSeriesBulkOperationNotificationDto>>();
+    private allTimeSeriesBulkOperationsHandlers = ko.observableArray<changesCallback<timeSeriesBulkOperationNotificationDto>>();*/
     
-    constructor(private rs: resource, coolDownWithDataLoss: number = 0, isMultyTenantTransport:boolean = false) {
-        this.eventsId = idGenerator.generateId();
-        this.coolDownWithDataLoss = coolDownWithDataLoss;
-        this.isMultyTenantTransport = isMultyTenantTransport;
+    constructor(private rs: resource) {
         this.resourcePath = appUrl.forResourceQuery(this.rs);
         this.connectToChangesApiTask = $.Deferred();
 
@@ -86,7 +81,7 @@ class changesApi {
             .done((tokenObject: singleAuthToken) => {
                 this.rs.isLoading(false);
                 var token = tokenObject.Token;
-                var connectionString = "singleUseAuthToken=" + token + "&id=" + this.eventsId + "&coolDownWithDataLoss=" + this.coolDownWithDataLoss + "&isMultyTenantTransport=" + this.isMultyTenantTransport;
+                var connectionString = "singleUseAuthToken=" + token;
                 action.call(this, connectionString);
             })
             .fail((e) => {
@@ -128,7 +123,7 @@ class changesApi {
                 this.onError(e);
             }
         };
-        this.webSocket.onclose = (e: CloseEvent) => {
+        this.webSocket.onclose = () => {
             if (this.isCleanClose === false) {
                 // Connection has closed uncleanly, so try to reconnect.
                 this.connect(this.connectWebSocket);
@@ -146,7 +141,7 @@ class changesApi {
     private reconnect() {
         if (this.successfullyConnectedOnce) {
             //send changes connection args after reconnecting
-            this.sentMessages.forEach(args => this.send(args.command, args.value, false));
+            this.sentMessages.forEach(args => this.send(args.Command, args.Param, false));
             
             ko.postbox.publish("ChangesApiReconnected", this.rs);
 
@@ -165,27 +160,25 @@ class changesApi {
     }
 
     private send(command: string, value?: string, needToSaveSentMessages: boolean = true) {
-        /* TODO:
         this.connectToChangesApiTask.done(() => {
-            var args = {
-                id: this.eventsId,
-                command: command
+            var args: chagesApiConfigureRequestDto = {
+                Command: command
             };
             if (value !== undefined) {
-                args["value"] = value;
+                args.Param = value;
             }
 
-            //TODO: exception handling?
-            this.commandBase.query("/changes/config", args, this.rs)
-                .done(() => this.saveSentMessages(needToSaveSentMessages, command, args));
-        });*/
+            let payload = JSON.stringify(args, null, 2);
+            this.webSocket.send(payload);
+            this.saveSentMessages(needToSaveSentMessages, command, args);
+        });
     }
 
-    private saveSentMessages(needToSaveSentMessages: boolean, command: string, args: any) {
+    private saveSentMessages(needToSaveSentMessages: boolean, command: string, args: chagesApiConfigureRequestDto) {
         if (needToSaveSentMessages) {
             if (command.slice(0, 2) === "un") {
                 var commandName = command.slice(2, command.length);
-                this.sentMessages = this.sentMessages.filter(msg => msg.command != commandName);
+                this.sentMessages = this.sentMessages.filter(msg => msg.Command !== commandName);
             } else {
                 this.sentMessages.push(args);
             }
@@ -201,62 +194,72 @@ class changesApi {
     }
 
     private onMessage(e: any) {
-        var eventDto: changesApiEventDto = JSON.parse(e.data);
-        var eventType = eventDto.Type;
-        if (eventType === "Heartbeat") // ignore heartbeat
-            return;
+        let eventDto: changesApiEventDto = JSON.parse(e.data);
+        let eventType = eventDto.Type;
+        let value = eventDto.Value;
 
-        var value = eventDto.Value;
-        if (eventType === "DocumentChangeNotification") {
-            this.fireEvents(this.allDocsHandlers(), value, () => true);
+        switch (eventType) {
+            case "DocumentChangeNotification":
+                this.fireEvents(this.allDocsHandlers(), value, () => true);
 
-            for (var key in this.watchedDocuments) {
-                var docCallbacks = this.watchedDocuments[key];
-                this.fireEvents(docCallbacks(), value, (event) => event.Id != null && event.Id === key);
-            }
-
-            for (var key in this.watchedPrefixes) {
-                var docCallbacks = this.watchedPrefixes[key];
-                this.fireEvents(docCallbacks(), value, (event) => event.Id != null && event.Id.match("^" + key));
-            }
-        } else if (eventType === "IndexChangeNotification") {
-            this.fireEvents(this.allIndexesHandlers(), value, () => true);
-        } else if (eventType === "TransformerChangeNotification") {
-            this.fireEvents(this.allTransformersHandlers(), value, () => true);
-        } else if (eventType === "BulkInsertChangeNotification") {
-            this.fireEvents(this.allBulkInsertsHandlers(), value, () => true);
-        } else if (eventType === "SynchronizationUpdateNotification") {
-            this.fireEvents(this.allFsSyncHandlers(), value, () => true);
-        } else if (eventType === "ReplicationConflictNotification") {
-            this.fireEvents(this.allReplicationConflicts(), value, () => true);
-        } else if (eventType === "ConflictNotification") {
-            this.fireEvents(this.allFsConflictsHandlers(), value, () => true);
-        } else if (eventType === "FileChangeNotification") {
-            for (var key in this.watchedFolders) {
-                var folderCallbacks = this.watchedFolders[key];
-                this.fireEvents(folderCallbacks(), value, (event) => {
-                    var notifiedFolder = folder.getFolderFromFilePath(event.File);
-                    var match: string[] = null;
-                    if (notifiedFolder && notifiedFolder.path) {
-                        match = notifiedFolder.path.match(key);
-                    }
-                    return match && match.length > 0;
+                this.watchedDocuments.forEach((callbacks, key) => {
+                    this.fireEvents(callbacks(), value, (event) => event.Id != null && event.Id === key);
                 });
-            }
-        } else if (eventType === "ConfigurationChangeNotification") {
-            if (value.Name.indexOf("Raven/Synchronization/Destinations") >= 0) {
-                this.fireEvents(this.allFsDestinationsHandlers(), value, () => true);
-            }
-            this.fireEvents(this.allFsConfigHandlers(), value, () => true);
-        } else if (eventType === "ChangeNotification") {
-            this.fireEvents(this.allCountersHandlers(), value, () => true);
-            //TODO: send events to other subscriptions
-        } else if (eventType === "KeyChangeNotification") {
-            this.fireEvents(this.allTimeSeriesHandlers(), value, () => true);
-            //TODO: send events to other subscriptions
-        } else {
-            console.log("Unhandled Changes API notification type: " + eventType);
+
+                this.watchedPrefixes.forEach((callbacks, key) => {
+                    this.fireEvents(callbacks(), value, (event) => event.Id != null && event.Id.match("^" + key));
+                });
+                break;
+            case "IndexChangeNotification":
+                this.fireEvents(this.allIndexesHandlers(), value, () => true);
+                break;
+            case "TransformerChangeNotification":
+                this.fireEvents(this.allTransformersHandlers(), value, () => true);
+                break;
+            case "BulkInsertChangeNotification":
+                this.fireEvents(this.allBulkInsertsHandlers(), value, () => true);
+                break;
+            case "OperationStatusChangeNotification":
+                this.fireEvents(this.allOperationsHandlers(), value, () => true);
+
+                this.watchedOperations.forEach((callbacks, key) =>
+                {
+                    this.fireEvents(callbacks(), value, (event) => event.OperationId === key);
+                });
+                break;
+            default: 
+                console.log("Unhandled Changes API notification type: " + eventType);
         }
+
+            /* TODO:} else if (eventType === "SynchronizationUpdateNotification") {
+                this.fireEvents(this.allFsSyncHandlers(), value, () => true);
+            } else if (eventType === "ReplicationConflictNotification") {
+                this.fireEvents(this.allReplicationConflicts(), value, () => true);
+            } else if (eventType === "ConflictNotification") {
+                this.fireEvents(this.allFsConflictsHandlers(), value, () => true);
+            } else if (eventType === "FileChangeNotification") {
+                for (var key in this.watchedFolders) {
+                    var folderCallbacks = this.watchedFolders[key];
+                    this.fireEvents(folderCallbacks(), value, (event) => {
+                        var notifiedFolder = folder.getFolderFromFilePath(event.File);
+                        var match: string[] = null;
+                        if (notifiedFolder && notifiedFolder.path) {
+                            match = notifiedFolder.path.match(key);
+                        }
+                        return match && match.length > 0;
+                    });
+                }
+            } else if (eventType === "ConfigurationChangeNotification") {
+                if (value.Name.indexOf("Raven/Synchronization/Destinations") >= 0) {
+                    this.fireEvents(this.allFsDestinationsHandlers(), value, () => true);
+                }
+                this.fireEvents(this.allFsConfigHandlers(), value, () => true);
+            } else if (eventType === "ChangeNotification") {
+                this.fireEvents(this.allCountersHandlers(), value, () => true);
+                //TODO: send events to other subscriptions
+            } else if (eventType === "KeyChangeNotification") {
+                this.fireEvents(this.allTimeSeriesHandlers(), value, () => true);
+                //TODO: send events to other subscriptions*/
     }
 
     watchAllIndexes(onChange: (e: indexChangeNotificationDto) => void) {
@@ -303,10 +306,13 @@ class changesApi {
 
     watchAllDocs(onChange: (e: documentChangeNotificationDto) => void) {
         var callback = new changesCallback<documentChangeNotificationDto>(onChange);
+
         if (this.allDocsHandlers().length === 0) {
             this.send("watch-docs");
         }
+
         this.allDocsHandlers.push(callback);
+
         return new changeSubscription(() => {
             this.allDocsHandlers.remove(callback);
             if (this.allDocsHandlers().length === 0) {
@@ -316,43 +322,91 @@ class changesApi {
     }
 
     watchDocument(docId: string, onChange: (e: documentChangeNotificationDto) => void): changeSubscription {
-        var callback = new changesCallback<documentChangeNotificationDto>(onChange);
-        if (typeof (this.watchedDocuments[docId]) === "undefined") {
+        let callback = new changesCallback<documentChangeNotificationDto>(onChange);
+
+        if (!this.watchedDocuments.has(docId)) {
             this.send("watch-doc", docId);
-            this.watchedDocuments[docId] = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
+            this.watchedDocuments.set(docId, ko.observableArray<changesCallback<documentChangeNotificationDto>>());
         }
-        this.watchedDocuments[docId].push(callback);
+
+        let callbacks = this.watchedDocuments.get(docId)
+        callbacks.push(callback);
+
         return new changeSubscription(() => {
-            this.watchedDocuments[docId].remove(callback);
-            if (this.watchedDocuments[docId]().length === 0) {
-                delete this.watchedDocuments[docId];
+            callbacks.remove(callback);
+            if (callbacks().length === 0) {
+                this.watchedDocuments.delete(docId);
                 this.send("unwatch-doc", docId);
             }
         });
     }
 
     watchDocsStartingWith(docIdPrefix: string, onChange: (e: documentChangeNotificationDto) => void): changeSubscription {
-        var callback = new changesCallback<documentChangeNotificationDto>(onChange);
-        if (typeof (this.watchedPrefixes[docIdPrefix]) === "undefined") {
+        let callback = new changesCallback<documentChangeNotificationDto>(onChange);
+
+        if (!this.watchedPrefixes.has(docIdPrefix)) {
             this.send("watch-prefix", docIdPrefix);
-            this.watchedPrefixes[docIdPrefix] = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
+            this.watchedPrefixes.set(docIdPrefix, ko.observableArray<changesCallback<documentChangeNotificationDto>>());
         }
-        this.watchedPrefixes[docIdPrefix].push(callback);
+
+        let callbacks = this.watchedPrefixes.get(docIdPrefix);
+        callbacks.push(callback);
+
         return new changeSubscription(() => {
-            this.watchedPrefixes[docIdPrefix].remove(callback);
-            if (this.watchedPrefixes[docIdPrefix]().length === 0) {
-                delete this.watchedPrefixes[docIdPrefix];
+            callbacks.remove(callback);
+            if (callbacks().length === 0) {
+                this.watchedPrefixes.delete(docIdPrefix);
                 this.send("unwatch-prefix", docIdPrefix);
             }
         });
     }
 
+    watchOperation(operationId: number, onChange: (e: Raven.Client.Data.OperationStatusChangeNotification) => void): changeSubscription {
+        let callback = new changesCallback<Raven.Client.Data.OperationStatusChangeNotification>(onChange);
+
+        if (!this.watchedOperations.has(operationId)) {
+            this.send("watch-operation", operationId.toString());
+            this.watchedOperations.set(operationId, ko.observableArray<changesCallback<Raven.Client.Data.OperationStatusChangeNotification>>());
+        }
+
+        let callbacks = this.watchedOperations.get(operationId);
+        callbacks.push(callback);
+
+        return new changeSubscription(() => {
+            callbacks.remove(callback);
+            if (callbacks().length === 0) {
+                this.watchedOperations.delete(operationId);
+                this.send("unwatch-operation", operationId.toString());
+            }
+        });
+    }
+
+    watchOperations(onChange: (e: Raven.Client.Data.OperationStatusChangeNotification) => void): changeSubscription {
+        const callback = new changesCallback<Raven.Client.Data.OperationStatusChangeNotification>(onChange);
+
+        if (this.allOperationsHandlers().length === 0) {
+            this.send("watch-operations");
+        }
+
+        this.allOperationsHandlers.push(callback);
+
+        return new changeSubscription(() => {
+            this.allOperationsHandlers.remove(callback);
+            if (this.allOperationsHandlers().length === 0) {
+                this.send("unwatch-operations");
+            }
+        });
+    }
+
     watchBulks(onChange: (e: bulkInsertChangeNotificationDto) => void) {
-        var callback = new changesCallback<bulkInsertChangeNotificationDto>(onChange);
+        let callback = new changesCallback<bulkInsertChangeNotificationDto>(onChange);
+
         if (this.allBulkInsertsHandlers().length === 0) {
             this.send("watch-bulk-operation");
         }
+
         this.allBulkInsertsHandlers.push(callback);
+
         return new changeSubscription(() => {
             this.allBulkInsertsHandlers.remove(callback);
             if (this.allDocsHandlers().length === 0) {
@@ -361,6 +415,7 @@ class changesApi {
         });
     }
 
+    /* TODO:
     watchFsSync(onChange: (e: synchronizationUpdateNotification) => void): changeSubscription {
         var callback = new changesCallback<synchronizationUpdateNotification>(onChange);
         if (this.allFsSyncHandlers().length === 0) {
@@ -537,7 +592,7 @@ class changesApi {
                 this.send("unwatch-bulk-operation");
             }
         });
-    }
+    }*/
     
     dispose() {
         this.isDisposing = true;
@@ -564,3 +619,4 @@ class changesApi {
 }
 
 export = changesApi;
+

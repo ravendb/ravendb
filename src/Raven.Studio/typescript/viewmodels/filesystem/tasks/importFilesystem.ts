@@ -97,10 +97,10 @@ class importDatabase extends viewModelBase {
             .always(() => this.isUploading(false));
     }
 
-    private waitForOperationToComplete(fs: filesystem, operationId: number) {        
+    private waitForOperationToComplete(fs: filesystem, operationId: number) {
         new getOperationStatusCommand(fs, operationId)
-            .execute()
-            .done((result: dataDumperOperationStatusDto) => this.importStatusRetrieved(fs, operationId, result));
+            .execute();
+        //TODO: .done((result: dataDumperOperationStatusDto) => this.importStatusRetrieved(fs, operationId, result));
     }
 
     private importStatusRetrieved(fs: filesystem, operationId: number, result: dataDumperOperationStatusDto) {

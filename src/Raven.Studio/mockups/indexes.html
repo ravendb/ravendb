@@ -1,0 +1,823 @@
+﻿<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="theme-color" content="#FFF">
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <title>Title</title>
+
+    <!--  <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+      <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+      <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+      <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+      <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+      <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+      <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+      <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+      <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+      <link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png">
+      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+      <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+      <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+      <link rel="manifest" href="/manifest.json">
+      <meta name="msapplication-TileColor" content="#ffffff">
+      <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+      <meta name="theme-color" content="#ffffff">
+      <link rel="shortcut icon" href="favicon.ico">
+      <link rel="icon" href="favicon.ico">-->
+
+    <link href='https://fonts.googleapis.com/css?family=Lato:400,300,700,900,400italic,700italic' rel='stylesheet' type='text/css'>
+
+    <link rel="stylesheet" type="text/less" href="../wwwroot/Content/css/bootstrap/bootstrap.less" />
+    <link rel="stylesheet" type="text/less" href="../wwwroot/Content/css/styles.less">
+
+    <!--[if IE 8]>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+</head>
+<body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+
+        <div class="container-fluid">
+            <div class="navbar-header">
+
+                <a class="navbar-brand hidden-xs" href="#">RavenDB</a>
+            </div>
+            <div id="navbar">
+                <ul class="nav navbar-nav navbar-right">
+
+                    <li class="pull-left"><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" id="menu-toggle" data-target="#main-menu" data-class="show-menu"></a></li>
+                    <li><a href="#" class="icon-notifications btn-toggle" data-target="#notification-center" data-class="show-notifications"></a></li>
+                    <li><a href="#" class="icon-help"></a></li>
+                    <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
+                </ul>
+                <div class="inputs-container hidden-xs">
+                    <div class="search-container active">
+                        <input type="search" class="form-control omnisearch" placeholder="search" />
+                        <div class="icon-search"></div>
+                        <div class="autocomplete-list box-container">
+                            <div class="scroller">
+                                <section>
+                                    <h4>Menu</h4>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-documents"></span>Compact</a></li>
+                                    </ul>
+                                </section>
+                                <section>
+                                    <h4>Documents</h4>
+                                    <ul>
+                                        <li>
+                                            <a href="#"><span class="icon-document-group" style="color:#93278f;"></span>Companies</a>
+                                            <ul>
+                                                <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/1</a></li>
+                                                <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/2</a></li>
+                                                <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/3</a></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <a href="#"><span class="icon-document-group" style="color:#ff0351;"></span>Computers</a>
+                                            <ul>
+                                                <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Computers/1</a></li>
+                                                <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/2</a></li>
+                                                <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/3</a></li>
+                                            </ul>
+                                        </li>
+                                        <li><a href="#" class="more">MORE</a></li>
+                                    </ul>
+                                </section>
+                                <section>
+                                    <h4>Indexes</h4>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/ByCompany</a></li>
+                                    </ul>
+                                </section>
+                                <section>
+                                    <h4>Transformers</h4>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/Company</a></li>
+                                    </ul>
+                                </section>
+                                <section>
+                                    <div class="global-spinner"></div>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="resource-switcher-container active">
+                        <div class="form-control btn-toggle resource-switcher">
+                            <span class="database">db/IdentityTryOuts</span>
+                        </div>
+                        <div class="box-container">
+                            <div class="database-filter-container">
+                                <input type="search" class="database-filter form-control" placeholder="filter" />
+                            </div>
+                            <div class="scroller">
+                                <section>
+                                    <ul class="database-list">
+                                        <li><a href="#" class="database">brickpile</a></li>
+                                        <li><a href="#" class="database">brics</a></li>
+                                        <li><a href="#" class="database">fs</a></li>
+                                        <li><a href="#" class="database">IdentityTests</a></li>
+                                        <li><a href="#" class="database">IdentityTryOuts</a></li>
+                                        <li><a href="#" class="filesystem">jspatchtest</a></li>
+                                        <li><a href="#" class="database">logs</a></li>
+                                        <li><a href="#" class="database">Media</a></li>
+                                        <li><a href="#" class="database">Northwind</a></li>
+                                        <li><a href="#" class="database">QuartzDemo</a></li>
+                                        <li><a href="#" class="database">r1</a></li>
+                                        <li><a href="#" class="database">rep1</a></li>
+                                        <li><a href="#" class="filesystem">rep2</a></li>
+                                        <li><a href="#" class="filesystem">sortings</a></li>
+                                        <li><a href="#" class="database">T1</a></li>
+                                        <li><a href="#" class="database">test</a></li>
+                                        <li><a href="#" class="counter">test2</a></li>
+                                        <li><a href="#" class="timeseries">ThisIsTest</a></li>
+                                        <li><a href="#" class="database">brickpile</a></li>
+                                        <li><a href="#" class="database">brics</a></li>
+                                        <li><a href="#" class="database">fs</a></li>
+                                        <li><a href="#" class="database">IdentityTests</a></li>
+                                        <li><a href="#" class="database">IdentityTryOuts</a></li>
+                                        <li><a href="#" class="filesystem">jspatchtest</a></li>
+                                        <li><a href="#" class="database">logs</a></li>
+                                        <li><a href="#" class="database">Media</a></li>
+                                        <li><a href="#" class="database">Northwind</a></li>
+                                        <li><a href="#" class="database">QuartzDemo</a></li>
+                                        <li><a href="#" class="database">r1</a></li>
+                                        <li><a href="#" class="database">rep1</a></li>
+                                        <li><a href="#" class="filesystem">rep2</a></li>
+                                        <li><a href="#" class="filesystem">sortings</a></li>
+                                        <li><a href="#" class="database">T1</a></li>
+                                        <li><a href="#" class="database">test</a></li>
+                                        <li><a href="#" class="counter">test2</a></li>
+                                        <li><a href="#" class="timeseries">ThisIsTest</a></li>
+                                    </ul>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div><!--/.nav-collapse -->
+        </div>
+    </nav>
+
+    <nav id="main-menu" class="main-menu">
+        <div class="level-0" data-level-name="Menu">
+            <ul>
+                <li class="arrow-right">
+                    <a href="#" title="Documents"><span class="icon-documents"></span>Documents</a>
+                    <div class="level level-1">
+                        <h2>Documents</h2>
+                        <a class="back" href="#" title="back">back</a>
+                        <ul>
+                            <li><a href="#" title="Documents"><span class="icon-plus"></span>Documents</a></li>
+                            <li><a href="#" title="Conflicts"><span class="icon-plus"></span>Conflicts</a></li>
+                            <li><a href="#" title="Patch"><span class="icon-plus"></span>Patch</a></li>
+                        </ul>
+                    </div>
+                </li>
+                <li class="arrow-right">
+                    <a href="#" title="Indexes"><span class="icon-indexes"></span>Indexes</a>
+                    <div class="level level-1" data-level-name="Indexes">
+                        <h2>Indexes</h2>
+                        <a class="back" href="#" title="back">back</a>
+                        <ul>
+                            <li><a href="#" title="Indexes"><span class="icon-plus"></span>Indexes</a></li>
+                            <li><a href="#" title="Transformers"><span class="icon-plus"></span>Transformers</a></li>
+                        </ul>
+                    </div>
+                </li>
+                <li class="arrow-right">
+                    <a href="#" title="Querry"><span class="icon-query"></span>Query</a>
+                    <div class="level level-1" data-level-name="Query">
+                        <h2>Query</h2>
+                        <a class="back" href="#" title="back">back</a>
+                        <ul>
+                            <li><a href="#" title="Query"><span class="icon-plus"></span>Query</a></li>
+                            <li><a href="#" title="Reporting"><span class="icon-plus"></span>Reporting</a></li>
+                            <li><a href="#" title="Data exploration"><span class="icon-plus"></span>Data exploration</a></li>
+                        </ul>
+                    </div>
+                </li>
+                <li class="arrow-right">
+                    <a href="#" title="New"><span class="icon-new"></span>New</a>
+                    <div class="level level-1" data-level-name="New">
+                        <h2>New</h2>
+                        <a class="back" href="#">back</a>
+                        <ul>
+                            <li><a href="#"><span class="icon-plus"></span>Document</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Index</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Transformer</a></li>
+                        </ul>
+                    </div>
+                </li>
+                <h3>MANAGE</h3>
+                <li class="arrow-right">
+                    <a href="#" title="Tasks"><span class="icon-tasks"></span>Tasks</a>
+                    <div class="level level-1" data-level-name="Tasks">
+                        <h2>Tasks</h2>
+                        <a class="back" href="#" title="back">back</a>
+                        <ul>
+                            <li><a href="#"><span class="icon-plus"></span>Import Database</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Export Database</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Toggle Indexing</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Subscriptions</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Create Sample Data</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>CSV Import</a></li>
+                        </ul>
+                    </div>
+                </li>
+                <li class="arrow-right">
+                    <a href="#" title="Settings"><span class="icon-settings"></span>Settings</a>
+                    <div class="level level-1" data-level-name="Settings">
+                        <h2>Settings</h2>
+                        <a class="back" href="#">back</a>
+                        <ul>
+                            <li><a href="#"><span class="icon-plus"></span>Database Settings</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Replication</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>ETL</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Custom Functions</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Studio Config</a></li>
+                        </ul>
+                    </div>
+                </li>
+
+                <li class="arrow-right">
+                    <a href="#" title="Stats"><span class="icon-stats"></span>Stats</a>
+                    <div class="level level-1" data-level-name="Stats">
+                        <h2>Stats</h2>
+                        <a class="back" href="#" title="back">back</a>
+                        <ul>
+                            <li><a href="#"><span class="icon-plus"></span>Stats</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Indexing</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Request Tracking</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Logs</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Running Tasks</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Alerts</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Index Errors</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Replication Stats</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>User Info</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Map/Reduce Visualizer</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Debug</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Storage</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Gather Debug Info</a></li>
+                        </ul>
+                    </div>
+                </li>
+
+                <li class="arrow-right">
+                    <a href="#" title="Manage server"><span class="icon-manage-server"></span>Manage server</a>
+                    <div class="level level-1" data-level-name="Manage server">
+                        <h2>Manage server</h2>
+                        <a class="back" href="#" title="back">back</a>
+                        <ul>
+                            <li><a href="#"><span class="icon-plus"></span>API Keys</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Windows Authentication</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Cluster</a></li>
+                            <li class="arrow-right">
+                                <a href="#"><span class="icon-plus"></span>Global Configuration</a>
+                                <div class="level level-2" data-level-name="Global Configuration">
+                                    <h2>Global Configuration</h2>
+                                    <a class="back" href="#">back</a>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-plus"></span>Periodic export</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>Cluster-wide database settings</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>Replication</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>SQL Replication</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>Quotas</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>Custom functions</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>Versioning</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li><a href="#"><span class="icon-plus"></span>Server Smuggling</a></li>
+                            <li class="arrow-right">
+                                <a href="#"><span class="icon-plus"></span>Backup</a>
+                                <div class="level level-2" data-level-name="Backup">
+                                    <h2>Backup</h2>
+                                    <a class="back" href="#">back</a>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-plus"></span>Database</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>File System</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="arrow-right">
+                                <a href="#"><span class="icon-plus"></span>Compact</a>
+                                <div class="level level-2" data-level-name="Compact">
+                                    <h2>Compact</h2>
+                                    <a class="back" href="#">back</a>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-plus"></span>Database</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>File System</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="arrow-right">
+                                <a href="#"><span class="icon-plus"></span>Restore</a>
+                                <div class="level level-2" data-level-name="Restore">
+                                    <h2>Restore</h2>
+                                    <a class="back" href="#">back</a>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-plus"></span>Database</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>File System</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li><a href="#"><span class="icon-plus"></span>Admin Logs</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Server Topology</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Traffic Watch</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>License Information</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Gather Debug Info</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>IO Test</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Disk IO Viewer</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Administrator JS Console</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Studio Config</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>To System Database</a></li>
+                        </ul>
+                    </div>
+                </li>
+                <li><a href="#" title="License"><span class="icon-license"></span>License</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div id="notification-center">
+        <div class="panel">
+            <div class="panel-body">
+                <div class="icon-close"></div>
+                <h3>Importing progress</h3>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. In auctor varius sem, id tempor ex. </p>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" aria-valuenow="70"
+                         aria-valuemin="0" aria-valuemax="100" style="width:70%">
+                        <span class="sr-only">70% Complete</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <a href="#" class="btn btn-sm btn-default">Details</a>
+                    <a href="#" class="btn btn-sm btn-danger"><span class="icon-cancel"></span>Cancel</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-body">
+                <h3 class="text-warning"><span class="icon-database"></span> Your storage is full</h3>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. In auctor varius sem, id tempor ex. Nam hendrerit ultrices imperdiet. Ut metus nisl, posuere a mi et, lobortis commodo quam. Praesent a tortor a ante ultrices tempor. Nullam mattis nisl nisl, consectetur hendrerit tellus pellentesque id.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid content-container">
+        <div class="content-container-margin">
+            <h1>Export Database</h1>
+            <div class="panel">
+                <div class="panel-body">
+                    <p>Export your database to a .ravendbdump file.</p>
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="form-group">
+                                <div class="input-group">
+                                    <div class="input-group-addon">Filename</div>
+                                    <input class="form-control" value="mockup.ravendump" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-12">
+
+                            <div class="row">
+                                <div class="col-sm-6 col-lg-4">
+                                    <div class="toggle">
+                                        <input id="toggle1" type="checkbox">
+                                        <label for="toggle1">
+                                            Include Documents
+                                        </label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="toggle2" type="checkbox">
+                                        <label for="toggle2">
+                                            Include Indexes
+                                        </label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="toggle3" type="checkbox">
+                                        <label for="toggle3">
+                                            Include Attachments
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-lg-4">
+                                    <div class="toggle">
+                                        <input id="toggle4" type="checkbox">
+                                        <label for="toggle4">
+                                            Include Transformers
+                                        </label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="toggle5" type="checkbox">
+                                        <label for="toggle5">
+                                            Remove Analyzers
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+                    <br />
+
+
+                    <div class="collapse" id="collapseExample">
+                        <form role="form">
+
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <div class="input-group-addon">Batch size</div>
+                                            <input class="form-control" type="number" min="0" data-bind="value: batchSize">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="toggle">
+                                <input id="expiredDocuments" type="checkbox">
+                                <label for="expiredDocuments">
+                                    Include Expired documents
+                                </label>
+                            </div>
+                            <div class="toggle">
+                                <input id="Collections" type="checkbox" checked data-collapse="#collapseCollections">
+                                <label for="Collections">
+                                    Export all collections
+                                </label>
+                            </div>
+                            <div class="collapse" id="collapseCollections">
+                                <div class="border">
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <h2>Choose collections:</h2>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-addon"><span class="glyphicon glyphicon-filter" aria-hidden="true"></span></span>
+                                                <input class="form-control" placeholder="Filter" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <hr />
+                                    <div class="row limit-height">
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection1" class="styled" type="checkbox" checked>
+                                                <label for="Collection1">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection2" class="styled" type="checkbox">
+                                                <label for="Collection2">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection3" class="styled" type="checkbox">
+                                                <label for="Collection3">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection4" class="styled" type="checkbox">
+                                                <label for="Collection4">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection5" class="styled" type="checkbox">
+                                                <label for="Collection5">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection6" class="styled" type="checkbox" checked>
+                                                <label for="Collection6">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection1" class="styled" type="checkbox" checked>
+                                                <label for="Collection1">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection2" class="styled" type="checkbox">
+                                                <label for="Collection2">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection3" class="styled" type="checkbox">
+                                                <label for="Collection3">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection4" class="styled" type="checkbox">
+                                                <label for="Collection4">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection5" class="styled" type="checkbox">
+                                                <label for="Collection5">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection6" class="styled" type="checkbox" checked>
+                                                <label for="Collection6">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection1" class="styled" type="checkbox" checked>
+                                                <label for="Collection1">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection2" class="styled" type="checkbox">
+                                                <label for="Collection2">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection3" class="styled" type="checkbox">
+                                                <label for="Collection3">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection4" class="styled" type="checkbox">
+                                                <label for="Collection4">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection5" class="styled" type="checkbox">
+                                                <label for="Collection5">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection6" class="styled" type="checkbox" checked>
+                                                <label for="Collection6">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection1" class="styled" type="checkbox" checked>
+                                                <label for="Collection1">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection2" class="styled" type="checkbox">
+                                                <label for="Collection2">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection3" class="styled" type="checkbox">
+                                                <label for="Collection3">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection4" class="styled" type="checkbox">
+                                                <label for="Collection4">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection5" class="styled" type="checkbox">
+                                                <label for="Collection5">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection6" class="styled" type="checkbox" checked>
+                                                <label for="Collection6">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection1" class="styled" type="checkbox" checked>
+                                                <label for="Collection1">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection2" class="styled" type="checkbox">
+                                                <label for="Collection2">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection3" class="styled" type="checkbox">
+                                                <label for="Collection3">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection4" class="styled" type="checkbox">
+                                                <label for="Collection4">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection5" class="styled" type="checkbox">
+                                                <label for="Collection5">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection6" class="styled" type="checkbox" checked>
+                                                <label for="Collection6">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection1" class="styled" type="checkbox" checked>
+                                                <label for="Collection1">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection2" class="styled" type="checkbox">
+                                                <label for="Collection2">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection3" class="styled" type="checkbox">
+                                                <label for="Collection3">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection4" class="styled" type="checkbox">
+                                                <label for="Collection4">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection5" class="styled" type="checkbox">
+                                                <label for="Collection5">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="toggle toggle-info">
+                                                <input id="Collection6" class="styled" type="checkbox" checked>
+                                                <label for="Collection6">
+                                                    ApplicationUsers
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="toggle">
+                                    <input id="useTransformScript" type="checkbox" data-collapse="#collapseTransformScript">
+                                    <label for="useTransformScript">
+                                        Use Transform script <a class="text-info" target="_blank" href="#">
+                                            <span class="icon-help"></span>
+                                        </a>
+                                    </label>
+                                </div>
+                                <div class="collapse" id="collapseTransformScript">
+                                    <pre style="height: 200px; font-size: 16px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript' }" class="ace_editor ui-resizable ace-xcode">
+<textarea class="ace_text-input" wrap="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="opacity: 0; height: 19px; width: 8.79688px; left: 46px; top: 0px;"></textarea>
+</pre>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">Command</label>
+                                <div class="input-group">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default btn-sm"><span class="icon-copy"></span> Copy to clipboard</button>
+                                    </span>
+                                    <input onClick="this.select();" class="form-control input-sm" readonly value='Raven.Smuggler out http://live-test.ravendb.net raven.dump --operate-on-types=Documents,Indexes,Transformers --database="Media" --batch-size=1024 --excludeexpired'>
+                                </div>
+                            </div>
+
+                        </form>
+                    </div>
+                    <hr />
+
+                    <div class="progress"> <div class="progress-bar progress-bar-success progress-bar-striped" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width:60%"> <span class="sr-only">60% Complete (warning)</span> </div> </div>
+                    <button class="btn btn-info" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+                        Advanced
+                    </button>
+                    <button class="btn btn-success"><span class="glyphicon glyphicon-save"></span> Export Database</button>
+                    <button class="btn btn-success"><span class="global-spinner"></span> Export Database</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="text/javascript" src="js/setup.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/less.js/2.7.1/less.min.js"></script>
+    <script src="../wwwroot/Content/ace/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script>
+        var editor = ace.edit("docEditor");
+        editor.setTheme("ace/theme/pastel_on_dark");
+        editor.getSession().setMode("ace/mode/json");
+    </script>
+</body>
+</html>

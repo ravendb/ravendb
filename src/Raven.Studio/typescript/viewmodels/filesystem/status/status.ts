@@ -38,7 +38,7 @@ class status extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [changesContext.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e)) ];
+        return [ /* TODO changesContext.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e))  */];
     }
 
     showException(exception: any) {
