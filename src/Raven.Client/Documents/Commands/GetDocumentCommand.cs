@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
+using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
 
@@ -24,7 +25,7 @@ namespace Raven.Client.Documents.Commands
 
         public JsonOperationContext Context;
 
-        public override HttpRequestMessage CreateRequest(out string url)
+        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             var pathBuilder = new StringBuilder("docs?");
 

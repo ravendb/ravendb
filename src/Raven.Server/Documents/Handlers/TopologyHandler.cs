@@ -13,13 +13,13 @@ namespace Raven.Server.Documents.Handlers
         {
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using ( var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue
                 {
                     [nameof(Topology.LeaderNode)] = new DynamicJsonValue
                     {
-                        [nameof(ServerNode.Url)] = Server.Configuration.Core.ServerUrl,
+                        [nameof(ServerNode.Url)] = GetStringQueryString("url", required: false) ?? Server.Configuration.Core.ServerUrl,
                         [nameof(ServerNode.Database)] = Database.Name,
                     },
                     [nameof(Topology.Nodes)] = new DynamicJsonArray(),
