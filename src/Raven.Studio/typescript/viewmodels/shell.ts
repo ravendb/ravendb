@@ -50,7 +50,6 @@ import getSupportCoverageCommand = require("commands/auth/getSupportCoverageComm
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import getCounterStoragesCommand = require("commands/counter/getCounterStoragesCommand");
-import getCounterStorageStatsCommand = require("commands/counter/getCounterStorageStatsCommand");
 import getTimeSeriesCommand = require("commands/timeSeries/getTimeSeriesCommand");
 import getTimeSeriesStatsCommand = require("commands/timeSeries/getTimeSeriesStatsCommand");
 import getSystemDocumentCommand = require("commands/database/documents/getSystemDocumentCommand");
@@ -150,13 +149,13 @@ class shell extends viewModelBase {
         ko.postbox.subscribe(EVENTS.Resource.Activate, ({ type, resource }: resourceActivatedEventArgs) => {
            if (type === TenantType.Database) {
                return this.activateDatabase(resource as database);
-           } else if (type === TenantType.FileSystem) {
+           } /* TODO else if (type === TenantType.FileSystem) {
                return this.activateFileSystem(resource as fileSystem);
            } else if (type === TenantType.CounterStorage) {
                return this.activateCounterStorage(resource as counterStorage);
            } else if (type === TenantType.TimeSeries) {
                return this.activateTimeSeries(resource as timeSeries);
-            }
+            }*/
 
             throw new Error(`Invalid resource type ${ type }`);
         });
@@ -461,8 +460,8 @@ class shell extends viewModelBase {
 
         var changeSubscriptionArray = () => [
             changesContext.currentResourceChangesApi().watchAllDocs(() => this.fetchDbStats(db)),
-            changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchDbStats(db)),
-            changesContext.currentResourceChangesApi().watchBulks(() => this.fetchDbStats(db))
+            /* TODO: changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchDbStats(db)),
+            changesContext.currentResourceChangesApi().watchBulks(() => this.fetchDbStats(db))*/
         ];
         var isNotADatabase = this.isPreviousDifferentKind(TenantType.Database);
         this.updateChangesApi(db, isNotADatabase, () => this.fetchDbStats(db), changeSubscriptionArray);
@@ -483,6 +482,7 @@ class shell extends viewModelBase {
         }
     }
 
+    /*TODO
     private activateFileSystem(fs: fileSystem) {
         if (fs == null) {
             this.disconnectFromCurrentResource();
@@ -498,7 +498,7 @@ class shell extends viewModelBase {
         this.updateChangesApi(fs, isNotAFileSystem, () => this.fetchFsStats(fs), changesSubscriptionArray);
 
         this.setSelectedResourceInCollection(fs);
-    }
+    }*/
 
     private fetchFsStats(fs: fileSystem) {
         if (!!fs && !fs.disabled() && fs.isLicensed()) {
@@ -514,7 +514,7 @@ class shell extends viewModelBase {
         activeResourceTracker.default.resource(null);
         this.currentConnectedResource = null; //TODO
     }
-
+    /* TODO
     private activateCounterStorage(cs: counterStorage) {
         var changesSubscriptionArray = () => [
             changesContext.currentResourceChangesApi().watchAllCounters(() => this.fetchCsStats(cs)),
@@ -531,7 +531,8 @@ class shell extends viewModelBase {
                 .execute()
                 .done((result: counterStorageStatisticsDto) => cs.saveStatistics(result));
         }
-    }
+    }*/
+    /*TODO:
 
     private activateTimeSeries(ts: timeSeries) {
         var changesSubscriptionArray = () => [
@@ -542,7 +543,7 @@ class shell extends viewModelBase {
         this.updateChangesApi(ts, isNotATimeSeries, () => this.fetchTsStats(ts), changesSubscriptionArray);
 
         this.setSelectedResourceInCollection(ts);
-    }
+    }*/
 
     private setSelectedResourceInCollection(toSelect: resource) {
         shell.resources()
@@ -567,17 +568,16 @@ class shell extends viewModelBase {
             this.currentConnectedResource = rs;
         }
 
-        /*TODO:
         if ((!rs.disabled() && rs.isLicensed()) &&
             (isPreviousDifferentKind || changesContext.currentResourceChangesApi() == null)) {
             // connect to changes api, if it's not disabled and the changes api isn't already connected
-            var changes = new changesApi(rs, 5000);
+            var changes = new changesApi(rs);
             changes.connectToChangesApiTask.done(() => {
                 fetchStats();
                 changesContext.currentResourceChangesApi(changes);
                 shell.changeSubscriptionArray = subscriptionsArray();
             });
-        }*/
+        }
     }
 
     setupApiKey() {

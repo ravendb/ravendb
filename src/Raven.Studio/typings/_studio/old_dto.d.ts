@@ -842,6 +842,7 @@ interface smugglerOptionsDto {
     Filters: filterSettingDto[];
     TransformScript: string;
     NoneDefaultFileName: string;
+    OperationId: number;
 }
 
 interface customColumnParamsDto {
@@ -1156,10 +1157,6 @@ interface timeSeriesDto extends tenantDto {
 
 interface customFunctionsDto {
     Functions: string;
-}
-
-interface singleAuthToken {
-    Token: string;
 }
 
 interface suggestionsDto {

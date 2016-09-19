@@ -234,9 +234,9 @@ class documents extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            changesContext.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
+            //TODO: changesContext.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
             changesContext.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
-            changesContext.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
+            //TODO: changesContext.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
         ];
     }
 
@@ -368,7 +368,7 @@ class documents extends viewModelBase {
     private updateGridAfterOperationComplete(collection: collection, operationId: number) {
         var getOperationStatusTask = new getOperationStatusCommand(collection.ownerDatabase, operationId);
         getOperationStatusTask.execute()
-            .done((result: bulkOperationStatusDto) => {
+            /* TODO .done((result: bulkOperationStatusDto) => {
                 if (result.Completed) {
                     var selectedCollection: collection = this.selectedCollection();
 
@@ -382,7 +382,7 @@ class documents extends viewModelBase {
                 } else {
                     setTimeout(() => this.updateGridAfterOperationComplete(collection, operationId), 500);
                 }
-            });
+            });*/
     }
 
     private updateCollections(receivedCollections: Array<collection>) {

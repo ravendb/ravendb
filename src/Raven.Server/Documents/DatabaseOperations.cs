@@ -191,7 +191,9 @@ namespace Raven.Server.Documents
         {
             UpdateByIndex,
 
-            DeleteByIndex
+            DeleteByIndex,
+
+            DatabaseExport
 
             //TODO: other operation types
         }

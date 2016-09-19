@@ -6,12 +6,16 @@ import copyToClipboard = require("common/copyToClipboard");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import notificationCenter = require("common/notificationCenter");
+import database = require("models/resources/database");
 
 import exportDatabaseModel = require("models/database/tasks/exportDatabaseModel");
 import collectionsStats = require("models/database/documents/collectionsStats");
 
 import validateExportDatabaseOptionsCommand = require("commands/database/studio/validateExportDatabaseOptionsCommand");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
+import getNextOperationId = require("commands/database/studio/getNextOperationId");
 
 
 class exportDatabase extends viewModelBase {
@@ -145,21 +149,60 @@ class exportDatabase extends viewModelBase {
     }
 
     startExport() {
-        var db = this.activeDatabase();
         exportDatabase.isExporting(true);
 
         var exportArg = this.model.toDto();
 
         new validateExportDatabaseOptionsCommand(exportArg, this.activeDatabase())
             .execute()
-            .done(() => {
-                var url = endpoints.databases.smuggler.smugglerExport;
-                //TODO: pass progress object - or even stop using downloader 
-                this.downloader.downloadByPost(db, url, exportArg, exportDatabase.isExporting, ko.observable<string>());
-            })
+            .done(() => this.startDownload(exportArg))
             .fail((response: JQueryXHR) => {
                 messagePublisher.reportError("Invalid export options", response.responseText, response.statusText);
                 exportDatabase.isExporting(false);
+            });
+    }
+
+    private getNextOperationId(db: database): JQueryPromise<number> {
+        return new getNextOperationId(db).execute()
+            .fail((qXHR, textStatus, errorThrown) => {
+                messagePublisher.reportError("Could not get next task id.", errorThrown);
+                exportDatabase.isExporting(false);
+            });
+    }
+
+    private getAuthToken(db: database): JQueryPromise<singleAuthToken> {
+        return new getSingleAuthTokenCommand(db).execute()
+            .fail((qXHR, textStatus, errorThrown) => {
+                messagePublisher.reportError("Could not get single auth token for download.", errorThrown);
+                exportDatabase.isExporting(false);
+            });
+    }
+
+    private startDownload(args: smugglerOptionsDto) {
+        const $form = $("#exportDownloadForm");
+        const db = this.activeDatabase();
+
+        $.when<any>(this.getNextOperationId(db), this.getAuthToken(db))
+            .then(([operationId]:[number], [token]:[singleAuthToken]) => {
+                var url = endpoints.databases.smuggler.smugglerExport;
+                var authToken = (url.indexOf("?") === -1 ? "?" : "&") + "singleUseAuthToken=" + token.Token;
+                const operationPart = "&operationId=" + operationId;
+                $form.attr("action", appUrl.forResourceQuery(db) + url + authToken + operationPart);
+                $form.empty();
+                for (let key in args) {
+                    if (args.hasOwnProperty(key)) {
+                        $form.append($("<input />")
+                            .attr({
+                                type: "hidden",
+                                name: key,
+                                value: JSON.stringify((<any>args)[key], null, 2)
+                            }));
+                    }
+                }
+                $form.submit();
+
+                notificationCenter.instance.monitorOperation(db, operationId)
+                    .always(() => exportDatabase.isExporting(false));
             });
     }
 }

@@ -296,7 +296,7 @@ class indexes extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
+            //TODO: changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
             changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent())
         ];
     }
