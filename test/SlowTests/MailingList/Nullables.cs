@@ -24,7 +24,7 @@ namespace SlowTests.MailingList
             public Dictionary<string, object> Map { get; set; }
         }
 
-        [Fact(Skip = "Missing feature: CreateField")]
+        [Fact]
         public void InvalidShirt()
         {
             using (var store = GetDocumentStore())
