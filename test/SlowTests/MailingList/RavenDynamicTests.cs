@@ -54,7 +54,7 @@ namespace SlowTests.MailingList
                 base.Dispose();
             }
 
-            [Fact(Skip = "Missing feature: CreateField")]
+            [Fact]
             public void It_should_be_stored_in_index()
             {
                 using (var session = _store.OpenSession())
@@ -73,7 +73,7 @@ namespace SlowTests.MailingList
             }
 
 
-            [Fact(Skip = "Missing feature: CreateField")]
+            [Fact]
             public void It_should_be_stored_be_able_to_be_searched()
             {
                 using (var session = _store.OpenSession())
@@ -133,7 +133,7 @@ namespace SlowTests.MailingList
                 base.Dispose();
             }
 
-            [Fact(Skip = "Missing feature: CreateField")]
+            [Fact]
             public void It_should_be_stored_in_index()
             {
                 using (var session = _store.OpenSession())
@@ -152,7 +152,7 @@ namespace SlowTests.MailingList
             }
 
 
-            [Fact(Skip = "Missing feature: CreateField")]
+            [Fact]
             public void It_should_be_stored_be_able_to_be_searched()
             {
                 using (var session = _store.OpenSession())

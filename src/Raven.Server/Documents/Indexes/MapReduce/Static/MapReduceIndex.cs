@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, staticIndex.GroupByFields);
+            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, staticIndex.GroupByFields, staticIndex.HasDynamicFields);
             var instance = new MapReduceIndex(indexId, staticMapIndexDefinition, staticIndex);
 
             return instance;

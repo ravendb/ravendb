@@ -41,6 +41,8 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexLockMode LockMode { get; set; }
 
+        public virtual bool HasDynamicFields => false;
+
         public void Persist(TransactionOperationContext context, StorageEnvironmentOptions options)
         {
             if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)

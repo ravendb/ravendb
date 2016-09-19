@@ -34,12 +34,12 @@ namespace Raven.Server.Documents.Queries
             IsProjection = Fields != null && Fields.Count > 0;
             IsDistinct = false;
 
-            if (transformer == null)
-                return;
-
-            AnyExtractableFromIndex = true;
-            ExtractAllFromIndexAndDocument = Fields == null || Fields.Count == 0; // extracting all from index only if fields are not specified
-            IsTransformation = true;
+            if (transformer != null)
+            {
+                AnyExtractableFromIndex = true;
+                ExtractAllFromIndexAndDocument = Fields == null || Fields.Count == 0; // extracting all from index only if fields are not specified
+                IsTransformation = true;
+            }
         }
 
         private static Dictionary<string, FieldToFetch> GetFieldsToFetch(string[] fieldsToFetch, IndexDefinitionBase indexDefinition, out bool anyExtractableFromIndex)
@@ -59,8 +59,10 @@ namespace Raven.Server.Documents.Queries
                 if (extract)
                     anyExtractableFromIndex = true;
 
-                result[fieldToFetch] = new FieldToFetch(fieldToFetch, extract);
+                result[fieldToFetch] = new FieldToFetch(fieldToFetch, extract | indexDefinition.HasDynamicFields);
             }
+
+            anyExtractableFromIndex |= indexDefinition.HasDynamicFields;
 
             return result;
         }
