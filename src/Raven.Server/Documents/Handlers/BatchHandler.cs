@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     readBatchCommandContext.Write(writer, new DynamicJsonValue
                     {
-                        ["Commands"] = mergedCmd.Reply
+                        ["Results"] = mergedCmd.Reply
                     });
                 }
             }
