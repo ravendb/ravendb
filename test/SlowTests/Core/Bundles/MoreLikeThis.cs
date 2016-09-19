@@ -56,7 +56,7 @@ namespace SlowTests.Core.Bundles
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanUseMoreLikeThisWithTransformer()
         {
             using (var store = GetDocumentStore())

@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var query = GetMoreLikeThisQuery(context);
+            var query = MoreLikeThisQueryServerSide.Create(HttpContext, GetPageSize(Database.Configuration.Core.MaxPageSize), context);
             var runner = new QueryRunner(Database, context);
 
             var result = runner.ExecuteMoreLikeThisQuery(indexName, query, context, existingResultEtag, token);
@@ -258,42 +258,6 @@ namespace Raven.Server.Documents.Handlers
                 StaleTimeout = GetTimeSpanQueryString("staleTimeout", required: false),
                 RetrieveDetails = GetBoolValueQueryString("details", required: false) ?? false
             };
-        }
-
-        private MoreLikeThisQueryServerSide GetMoreLikeThisQuery(JsonOperationContext context)
-        {
-            var result = new MoreLikeThisQueryServerSide
-            {
-                Fields = GetStringValuesQueryString("fields", required: false),
-                Boost = GetBoolValueQueryString("boost", required: false),
-                BoostFactor = GetFloatValueQueryString("boostFactor", required: false),
-                MaximumNumberOfTokensParsed = GetIntValueQueryString("maxNumTokens", required: false),
-                MaximumQueryTerms = GetIntValueQueryString("maxQueryTerms", required: false),
-                MaximumWordLength = GetIntValueQueryString("maxWordLen", required: false),
-                MinimumDocumentFrequency = GetIntValueQueryString("minDocFreq", required: false),
-                MaximumDocumentFrequency = GetIntValueQueryString("maxDocFreq", required: false),
-                MaximumDocumentFrequencyPercentage = GetIntValueQueryString("maxDocFreqPct", required: false),
-                MinimumTermFrequency = GetIntValueQueryString("minTermFreq", required: false),
-                MinimumWordLength = GetIntValueQueryString("minWordLen", required: false),
-                StopWordsDocumentId = GetStringQueryString("stopWords", required: false),
-                AdditionalQuery = GetStringQueryString("query", required: false),
-                Includes = GetStringValuesQueryString("include", required: false),
-                DocumentId = GetStringQueryString("docId", required: false),
-                Transformer = GetStringValuesQueryString("transformer", required: false),
-                PageSize = GetPageSize(Database.Configuration.Core.MaxPageSize)
-            };
-
-            result.TransformerParameters = new Dictionary<string, object>();
-            foreach (var tp in HttpContext.Request.Query.Where(x => x.Key.StartsWith("tp-", StringComparison.OrdinalIgnoreCase)))
-            {
-                throw new NotImplementedException();
-            }
-
-            result.MapGroupFields = new Dictionary<string, string>();
-            foreach (var mgf in HttpContext.Request.Query.Where(x => x.Key.StartsWith("mgf-", StringComparison.OrdinalIgnoreCase)))
-                result.MapGroupFields[mgf.Key.Substring(4)] = mgf.Value[0];
-
-            return result;
         }
     }
 }

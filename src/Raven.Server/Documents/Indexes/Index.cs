@@ -926,39 +926,57 @@ namespace Raven.Server.Documents.Indexes
 
         public MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
+            Transformer transformer = null;
+            if (string.IsNullOrEmpty(query.Transformer) == false)
+            {
+                transformer = DocumentDatabase.TransformerStore.GetTransformer(query.Transformer);
+                if (transformer == null)
+                    throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
+            }
+
+            HashSet<string> stopWords = null;
+            if (string.IsNullOrWhiteSpace(query.StopWordsDocumentId) == false)
+            {
+                var stopWordsDoc = DocumentDatabase.DocumentsStorage.Get(documentsContext, query.StopWordsDocumentId);
+                if (stopWordsDoc == null)
+                    throw new InvalidOperationException("Stop words document " + query.StopWordsDocumentId + " could not be found");
+
+                BlittableJsonReaderArray value;
+                if (stopWordsDoc.Data.TryGet(nameof(StopWordsSetup.StopWords), out value) && value != null)
+                {
+                    stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    for (var i = 0; i < value.Length; i++)
+                        stopWords.Add(value.GetStringByIndex(i));
+                }
+            }
+
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenReadTransaction())
             {
-                HashSet<string> stopWords = null;
-                if (string.IsNullOrWhiteSpace(query.StopWordsDocumentId) == false)
-                {
-                    var stopWordsDoc = DocumentDatabase.DocumentsStorage.Get(documentsContext, query.StopWordsDocumentId);
-                    if (stopWordsDoc == null)
-                        throw new InvalidOperationException("Stop words document " + query.StopWordsDocumentId + " could not be found");
-
-                    BlittableJsonReaderArray value;
-                    if (stopWordsDoc.Data.TryGet(nameof(StopWordsSetup.StopWords), out value) && value != null)
-                    {
-                        stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                        for (var i = 0; i < value.Length; i++)
-                            stopWords.Add(value.GetStringByIndex(i));
-                    }
-                }
-
                 var result = new MoreLikeThisQueryResultServerSide();
 
                 var isStale = IsStale(documentsContext, indexContext);
 
                 FillQueryResult(result, isStale, documentsContext, indexContext);
 
+                if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0) && (transformer == null || transformer.MightRequireTransaction == false))
+                    documentsContext.CloseTransaction(); // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
+
                 using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                 {
                     var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
-                    foreach (var document in reader.MoreLikeThis(query, stopWords, fieldsToFetch => GetQueryResultRetriever(documentsContext, indexContext, new FieldsToFetch(fieldsToFetch, Definition, null)), token.Token))
+
+                    using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, includeDocumentsCommand, DocumentDatabase.DocumentsStorage, DocumentDatabase.TransformerStore, documentsContext))
                     {
-                        result.Results.Add(document);
-                        includeDocumentsCommand.Gather(document);
+                        var documents = reader.MoreLikeThis(query, stopWords, fieldsToFetch => GetQueryResultRetriever(documentsContext, indexContext, new FieldsToFetch(fieldsToFetch, Definition, null)), token.Token);
+                        var results = scope != null ? scope.Transform(documents) : documents;
+
+                        foreach (var document in results)
+                        {
+                            result.Results.Add(document);
+                            includeDocumentsCommand.Gather(document);
+                        }
                     }
 
                     includeDocumentsCommand.Fill(result.Includes);
