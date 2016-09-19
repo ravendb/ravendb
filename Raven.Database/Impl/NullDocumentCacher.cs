@@ -9,7 +9,7 @@ namespace Raven.Database.Impl
         {
         }
 
-        public CachedDocument GetCachedDocument(string key, Etag etag)
+        public CachedDocument GetCachedDocument(string key, Etag etag, bool metadataOnly = false)
         {
             return null;
         }

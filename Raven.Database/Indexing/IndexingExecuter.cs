@@ -295,6 +295,7 @@ namespace Raven.Database.Indexing
             public List<JsonDocument> JsonDocs;
             private IDisposable prefetchDisposable;
             public IndexingBatchInfo BatchInfo { get; set; }
+            public WorkContext Context { get; set; }
             private int disposed = 0;
             private int indexedAmount = 0;
 
@@ -319,10 +320,12 @@ namespace Raven.Database.Indexing
                 /*prefetchDisposable = new WeakReference<IDisposable>(
                     PrefetchingBehavior.DocumentBatchFrom(LastIndexedEtag, out JsonDocs));*/
 
+                var entityNamesToIndex = GetEntityNamesToIndex(Indexes, Context.Database);
+
                 prefetchDisposable =
-                    PrefetchingBehavior.DocumentBatchFrom(LastIndexedEtag, out JsonDocs);
+                    PrefetchingBehavior.DocumentBatchFrom(LastIndexedEtag, out JsonDocs, entityNamesToIndex);
             }
-            
+
             ~IndexingGroup()
             {
                 if (Thread.VolatileRead(ref disposed) == 0)
@@ -336,6 +339,29 @@ namespace Raven.Database.Indexing
                 prefetchDisposable?.Dispose();
                 Interlocked.Increment(ref disposed);
             }
+        }
+
+        public static HashSet<string> GetEntityNamesToIndex(List<IndexToWorkOn> indexes, DocumentDatabase database)
+        {
+            var entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var indexIds = indexes.Select(x => x.IndexId).ToList();
+            foreach (var indexId in indexIds)
+            {
+                var generator = database.IndexDefinitionStorage.GetViewGenerator(indexId);
+                if (generator == null)
+                    continue;
+
+                if (generator.ForEntityNames.Count == 0)
+                {
+                    //an index that is running on all collections
+                    return null;
+                }
+
+                entityNames.UnionWith(generator.ForEntityNames);
+            }
+
+            return entityNames.Count == 0 ? null : entityNames;
         }
 
         public class IndexingBatchOperation
@@ -403,7 +429,8 @@ namespace Raven.Database.Indexing
 
         private void SetPrefetcherForIndexingGroup(IndexingGroup groupIndex, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
         {
-            groupIndex.PrefetchingBehavior = TryGetPrefetcherFor(groupIndex.LastIndexedEtag, usedPrefetchers) ??
+            var entityNamesToIndex = GetEntityNamesToIndex(groupIndex.Indexes, context.Database);
+            groupIndex.PrefetchingBehavior = TryGetPrefetcherFor(groupIndex.LastIndexedEtag, usedPrefetchers, entityNamesToIndex) ??
                                       TryGetDefaultPrefetcher(groupIndex.LastIndexedEtag, usedPrefetchers) ??
                                       GetPrefetcherFor(groupIndex.LastIndexedEtag, usedPrefetchers);
 
@@ -411,11 +438,12 @@ namespace Raven.Database.Indexing
             groupIndex.PrefetchingBehavior.LastIndexedEtag = groupIndex.LastIndexedEtag;
         }
 
-        private PrefetchingBehavior TryGetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        private PrefetchingBehavior TryGetPrefetcherFor(Etag fromEtag, 
+            ConcurrentSet<PrefetchingBehavior> usedPrefetchers, HashSet<string> entityNames)
         {
             foreach (var prefetchingBehavior in prefetchingBehaviors)
             {
-                if (prefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag) &&
+                if (prefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag, entityNames) &&
                     usedPrefetchers.TryAdd(prefetchingBehavior))
                 {
                     return prefetchingBehavior;
@@ -605,7 +633,8 @@ namespace Raven.Database.Indexing
                 {
                     Indexes = indexingGroup.Value,
                     LastIndexedEtag = indexingGroup.Key,
-                    LastQueryTime = indexingGroup.Value.Max(y => y.Index.LastQueryTime)
+                    LastQueryTime = indexingGroup.Value.Max(y => y.Index.LastQueryTime),
+                    Context = context
                 };
 
                 SetPrefetcherForIndexingGroup(result, usedPrefetchers);

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -16,6 +17,7 @@ using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Json;
@@ -236,6 +238,7 @@ namespace Raven.Database.Server.Controllers
 
                     var batchSize = 0;
                     var batchDocCount = 0;
+                    
                     var processedDocumentsCount = 0;
                     var hasMoreDocs = false;
                     var config = subscriptions.GetSubscriptionConfig(id);
@@ -258,6 +261,7 @@ namespace Raven.Database.Server.Controllers
                                 return false;
                             return true;
                         }
+                      
                         processedDocumentsCount++;
                         
 
@@ -286,9 +290,13 @@ namespace Raven.Database.Server.Controllers
                         return true; // We get the next document
                     };
 
+                    var collections = criteria.BelongsToAnyCollection == null ? null :
+                        new HashSet<string>(criteria.BelongsToAnyCollection, StringComparer.OrdinalIgnoreCase);
+
                     int retries = 0;
                     do
                     {
+                      
                         int lastProccessedDocumentsCount = processedDocumentsCount;
                         int lastBatchCount = batchDocCount;
 
@@ -302,14 +310,14 @@ namespace Raven.Database.Server.Controllers
                                 if (isPrefixCriteria)
                                 {
                                     // If we don't get any document from GetDocumentsWithIdStartingWith it could be that we are in presence of a lagoon of uninteresting documents, so we are hitting a timeout.
-                                    lastProcessedDocEtag = Database.Documents.GetDocumentsWithIdStartingWith(criteria.KeyStartsWith, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+                                    lastProcessedDocEtag = Database.Documents.GetDocumentsWithIdStartingWith(criteria.KeyStartsWith, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument, collections);
 
                                     hasMoreDocs = false;
                                 }
                                 else
                                 {
                                     // It doesn't matter if we match the criteria or not, the document has been already processed.
-                                    lastProcessedDocEtag = Database.Documents.GetDocuments(-1, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument);
+                                    lastProcessedDocEtag = Database.Documents.GetDocuments(-1, options.MaxDocCount - batchDocCount, startEtag, cts.Token, addDocument, collections: collections);
 
                                     // If we don't get any document from GetDocuments it may be a signal that something is wrong.
                                     if (lastProcessedDocEtag == null)
@@ -324,12 +332,12 @@ namespace Raven.Database.Server.Controllers
                                         startEtag = lastProcessedDocEtag;
                                     }
 
-                                    retries = lastProccessedDocumentsCount == batchDocCount ? retries : 0;
+                                   retries = lastProccessedDocumentsCount == batchDocCount ? retries : 0;
                                 }
                             }
                         });
 
-                        if (lastBatchSentTime.ElapsedMilliseconds >= 30000)
+                       if (lastBatchSentTime.ElapsedMilliseconds >= 30000)
                         {
                             if (batchDocCount == 0)
                                 log.Warn("Subscription filtered out all possible documents for {0:#,#;;0} seconds in a row, stopping operation", lastBatchSentTime.Elapsed.TotalSeconds);
@@ -350,10 +358,12 @@ namespace Raven.Database.Server.Controllers
 
                             retries++;
                         }
+                    
                     } while (retries < 3 && hasMoreDocs && batchDocCount < options.MaxDocCount && (options.MaxSize.HasValue == false || batchSize < options.MaxSize));
 
                     writer.WriteEndArray();
 
+                    
                     if (batchDocCount > 0 || processedDocumentsCount>0 || isPrefixCriteria)
                     {
                         writer.WritePropertyName("LastProcessedEtag");

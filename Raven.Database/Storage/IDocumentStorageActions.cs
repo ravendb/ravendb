@@ -20,7 +20,7 @@ namespace Raven.Database.Storage
 
     public interface IDocumentStorageActions 
     {
-        IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take);
+        IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take, HashSet<string> entityNames = null);
         IEnumerable<JsonDocument> GetDocumentsAfter(
             Etag etag, int take, 
             CancellationToken cancellationToken, 
@@ -29,10 +29,18 @@ namespace Raven.Database.Storage
             TimeSpan? timeout = null, 
             Action<Etag> lastProcessedDocument = null,
             Reference<bool> earlyExit = null,
+            HashSet<string> entityNames = null,
             Action<List<DocumentFetchError>> failedToGetHandler = null);
-        IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, 
-            CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, 
-            Action<Etag> lastProcessedDocument = null, Reference<bool> earlyExit = null, Action<List<DocumentFetchError>> failedToGetHandler = null);
+        IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(
+            Etag etag, string idPrefix, int take, 
+            CancellationToken cancellationToken, 
+            long? maxSize = null, 
+            Etag untilEtag = null, 
+            TimeSpan? timeout = null, 
+            Action<Etag> lastProcessedDocument = null, 
+            Reference<bool> earlyExit = null,
+            HashSet<string> entityNames = null,
+            Action<List<DocumentFetchError>> failedToGetHandler = null);
         IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter);
         Etag GetEtagAfterSkip(Etag etag, int skip, CancellationToken cancellationToken, out int skipped);
         IEnumerable<string> GetDocumentIdsAfterEtag(Etag etag, int maxTake,

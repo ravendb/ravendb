@@ -247,7 +247,8 @@ namespace Raven.Database.Bundles.SqlReplication
                         var configsToWorkOn = sqlConfigGroup.ConfigsToWorkOn;
 
                         List<JsonDocument> documents;
-                        using (prefetchingBehavior.DocumentBatchFrom(sqlConfigGroup.LastReplicatedEtag, out documents))
+                        var entityNamesToIndex = new HashSet<string>(configsToWorkOn.Select(x => x.RavenEntityName), StringComparer.OrdinalIgnoreCase);
+                        using (prefetchingBehavior.DocumentBatchFrom(sqlConfigGroup.LastReplicatedEtag, out documents, entityNamesToIndex))
                         {
                             Etag latestEtag = null, lastBatchEtag = null;
                             if (documents.Count != 0)
@@ -458,7 +459,8 @@ namespace Raven.Database.Bundles.SqlReplication
 
         private void SetPrefetcherForIndexingGroup(SqlConfigGroup sqlConfig, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
         {
-            sqlConfig.PrefetchingBehavior = TryGetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers) ??
+            var entityNames = new HashSet<string>(sqlConfig.ConfigsToWorkOn.Select(x => x.RavenEntityName), StringComparer.OrdinalIgnoreCase);
+            sqlConfig.PrefetchingBehavior = TryGetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers, entityNames) ??
                                       TryGetDefaultPrefetcher(sqlConfig.LastReplicatedEtag, usedPrefetchers) ??
                                       GetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers);
 
@@ -469,11 +471,12 @@ namespace Raven.Database.Bundles.SqlReplication
                 sqlConfig.LastReplicatedEtag);
         }
 
-        private PrefetchingBehavior TryGetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        private PrefetchingBehavior TryGetPrefetcherFor(Etag fromEtag, 
+            ConcurrentSet<PrefetchingBehavior> usedPrefetchers, HashSet<string> entityNames)
         {
             foreach (var prefetchingBehavior in prefetchingBehaviors)
             {
-                if (prefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag) &&
+                if (prefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag, entityNames) &&
                     usedPrefetchers.TryAdd(prefetchingBehavior))
                 {
                     return prefetchingBehavior;

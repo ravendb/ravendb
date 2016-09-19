@@ -1251,11 +1251,15 @@ namespace Raven.Bundles.Replication.Tasks
                     result.LastEtag = lastEtag;
                     var isEtl = destination.IsETL;
 
+                    var collections = isEtl == false ? null :
+                        new HashSet<string>(destination.SpecifiedCollections.Keys, StringComparer.OrdinalIgnoreCase);
+
                     while (true)
                     {
                         _cts.Token.ThrowIfCancellationRequested();
 
-                        fetchedDocs = GetDocsToReplicate(actions, prefetchingBehavior, result.LastEtag, maxNumberOfItemsToReceiveInSingleBatch);
+                        fetchedDocs = GetDocsToReplicate(actions, prefetchingBehavior, 
+                            result.LastEtag, maxNumberOfItemsToReceiveInSingleBatch, collections);
 
                         IEnumerable<JsonDocument> handled = fetchedDocs;
 
@@ -1360,9 +1364,11 @@ namespace Raven.Bundles.Replication.Tasks
             return result;
         }
 
-        private List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, PrefetchingBehavior prefetchingBehavior, Etag from, int? maxNumberOfItemsToReceiveInSingleBatch)
+        private List<JsonDocument> GetDocsToReplicate(IStorageActionsAccessor actions, 
+            PrefetchingBehavior prefetchingBehavior, Etag from, 
+            int? maxNumberOfItemsToReceiveInSingleBatch, HashSet<string> entityNames)
         {
-            var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(from, maxNumberOfItemsToReceiveInSingleBatch);
+            var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(from, maxNumberOfItemsToReceiveInSingleBatch, entityNames);
             Etag lastEtag = null;
             if (docsToReplicate.Count > 0)
                 lastEtag = docsToReplicate[docsToReplicate.Count - 1].Etag;
