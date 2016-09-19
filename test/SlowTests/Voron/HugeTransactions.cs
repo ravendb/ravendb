@@ -124,15 +124,15 @@ namespace SlowTests.Voron
         [InlineData(0)] // special case : in = Exactly 1GB, out > 1GB
         public unsafe void LZ4TestAbove2GB(long devider)
         {
-            var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "bigLz4-test.data"));
+            var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, $"bigLz4-test-{devider}.data"));
             using (var env = new StorageEnvironment(options))
             {
                 long Gb = 1024*1024*1024;
                 long inputSize = 3L*Gb;
                 byte* outputBuffer, inputBuffer, checkedBuffer;
-                var outputBufferSize = CreateScratchFile("output", env, inputSize, out outputBuffer);
-                var inputBufferSize = CreateScratchFile("input", env, inputSize, out inputBuffer);
-                var checkedBufferSize = CreateScratchFile("checked", env, inputSize, out checkedBuffer);
+                var outputBufferSize = CreateScratchFile($"output-{devider}", env, inputSize, out outputBuffer);
+                var inputBufferSize = CreateScratchFile($"input-{devider}", env, inputSize, out inputBuffer);
+                var checkedBufferSize = CreateScratchFile($"checked-{devider}", env, inputSize, out checkedBuffer);
 
                 var random = new Random(123);
 
@@ -145,7 +145,7 @@ namespace SlowTests.Voron
                 }
                 else
                 {
-                    inputSize = int.MaxValue / 2; // MAX_INPUT_LENGTH_PER_SEGMENT
+                    inputSize = int.MaxValue / 2 - 1; // MAX_INPUT_LENGTH_PER_SEGMENT
                     for (long p = 0; p < inputSize; p++)
                     {
                         (*(byte*)((long)inputBuffer + p)) = Convert.ToByte(random.Next(0, 255));

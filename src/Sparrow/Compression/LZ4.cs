@@ -542,7 +542,7 @@ namespace Sparrow.Compression
         {
             // here we get a single compressed segment or multiple segments
             // we can read the segments only for a known size of output
-            if (outputLength < MAX_INPUT_LENGTH_PER_SEGMENT)
+            if (outputLength < MAX_INPUT_LENGTH_PER_SEGMENT && inputLength < MAX_INPUT_LENGTH_PER_SEGMENT)
             {
                 return Decode64(input, (int)inputLength, output, (int)outputLength, knownOutputLength);
             }
