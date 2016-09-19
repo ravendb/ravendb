@@ -32,6 +32,7 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
 
                     var list = session.Query<App_WaiverWaitlistItemSearch.IndexResult, App_WaiverWaitlistItemSearch>()
+                        .Customize(x=>x.WaitForNonStaleResults())
                         .ProjectFromIndexFieldsInto<App_WaiverWaitlistItemSearch.IndexResult>()
                         .ToList();
 
