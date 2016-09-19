@@ -117,8 +117,12 @@ namespace SlowTests.Voron
             Assert.Equal(desired, val);
         }
 
-        [Fact]
-        public unsafe void LZ4TestAbove2GB()
+        [Theory]
+        [InlineData(3L*1024*1024*1024)] // in = 3GB, out ~= 4MB
+        [InlineData(2)] // in = 3GB, out ~= 1.5GB
+        [InlineData(1)] // in = 3GB, out > 3GB (rare case)
+        [InlineData(0)] // special case : in = Exactly 1GB, out > 1GB
+        public unsafe void LZ4TestAbove2GB(long devider)
         {
             var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "bigLz4-test.data"));
             using (var env = new StorageEnvironment(options))
@@ -129,6 +133,26 @@ namespace SlowTests.Voron
                 var outputBufferSize = CreateScratchFile("output", env, inputSize, out outputBuffer);
                 var inputBufferSize = CreateScratchFile("input", env, inputSize, out inputBuffer);
                 var checkedBufferSize = CreateScratchFile("checked", env, inputSize, out checkedBuffer);
+
+                var random = new Random(123);
+
+                if (devider != 0)
+                {
+                    for (long p = 0; p < inputSize/devider; p++)
+                    {
+                        (*(byte*) ((long) inputBuffer + p)) = Convert.ToByte(random.Next(0, 255));
+                    }
+                }
+                else
+                {
+                    inputSize = int.MaxValue / 2; // MAX_INPUT_LENGTH_PER_SEGMENT
+                    for (long p = 0; p < inputSize; p++)
+                    {
+                        (*(byte*)((long)inputBuffer + p)) = Convert.ToByte(random.Next(0, 255));
+                    }
+                }
+
+                outputBufferSize = LZ4.MaximumOutputLength(inputSize);
 
                 // write some data in known places in inputBuffer
                 long compressedLen = 0;

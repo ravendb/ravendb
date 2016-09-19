@@ -870,8 +870,7 @@ namespace Voron.Impl.Journal
             long maxSizeRequiringCompression = ((long)pageCountIncludingAllOverflowPages * (long)pageSize) + sizeOfPagesHeader
                  + numberOfPages * sizeof(long);
 
-            long outputBufferSize;
-            outputBufferSize = LZ4.MaximumOutputLength(maxSizeRequiringCompression);
+            var outputBufferSize = LZ4.MaximumOutputLength(maxSizeRequiringCompression);
 
             int outputBufferInPages = checked((int)((outputBufferSize + sizeof(TransactionHeader)) / pageSize +
                                       ((outputBufferSize + sizeof(TransactionHeader)) % pageSize == 0 ? 0 : 1)));

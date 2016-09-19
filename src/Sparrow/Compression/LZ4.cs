@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Sparrow.Global;
 using System.Runtime.InteropServices;
 using Sparrow.Binary;
@@ -86,8 +83,8 @@ namespace Sparrow.Compression
             long outputLength,
             int acceleration = ACCELERATION_DEFAULT)
         {
-            // LZ4 can handle less then 2GB. we will handle the compression/decompression devided to parts for above 1GB inputs
-            if (inputLength < MAX_INPUT_LENGTH_PER_SEGMENT && outputLength < MAX_INPUT_LENGTH_PER_SEGMENT) // TODO [2GBLZ4] :: this is wrong. we should handle segments for any input size above max.  we have problematic place where input is smaller but output is bigger
+            // LZ4 can handle a bit less then 2GB. we will handle the compression/decompression devided to parts for above 1GB inputs
+            if (inputLength < MAX_INPUT_LENGTH_PER_SEGMENT && outputLength < MAX_INPUT_LENGTH_PER_SEGMENT)
             {
                 return Encode64(input, output, (int)inputLength, (int)outputLength, acceleration);
             }
@@ -100,12 +97,9 @@ namespace Sparrow.Compression
                 if (pos + partInputLength > inputLength)
                     partInputLength = (int)(inputLength - pos);
 
-                int partOutputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
-                if (totalOutputSize + partOutputLength > outputLength)
-                {
-                    partOutputLength = checked((int)(outputLength - totalOutputSize));
-                }
-                totalOutputSize += Encode64(input + pos, output + totalOutputSize, partInputLength, partOutputLength, acceleration);
+                int remaining = (outputLength - totalOutputSize) > int.MaxValue ? int.MaxValue : (int)(outputLength - totalOutputSize);
+
+                totalOutputSize += Encode64(input + pos, output + totalOutputSize, partInputLength, remaining, acceleration);
 
                 pos += MAX_INPUT_LENGTH_PER_SEGMENT;
             }
@@ -548,11 +542,10 @@ namespace Sparrow.Compression
         {
             // here we get a single compressed segment or multiple segments
             // we can read the segments only for a known size of output
-            if (outputLength < MAX_INPUT_LENGTH_PER_SEGMENT) // TODO [2GBLZ4] :: what about output smaller then input ? (rare but can happen)
+            if (outputLength < MAX_INPUT_LENGTH_PER_SEGMENT)
             {
                 return Decode64(input, (int)inputLength, output, (int)outputLength, knownOutputLength);
             }
-
 
             long totalReadSize = 0;
             long totalWriteSize = 0;
@@ -560,10 +553,10 @@ namespace Sparrow.Compression
             {
                 int partInputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
                 if (totalReadSize + partInputLength > inputLength)
-                    partInputLength = (int) (inputLength - totalReadSize); // TODO [2GBLZ4] :: else - problem. it might be a littlebit more then MAX_INPUT
+                    partInputLength = (int) (inputLength - totalReadSize);
 
-                int partOutputLength = MAX_INPUT_LENGTH_PER_SEGMENT; // TODO [2GBLZ4] :: problematic - we need to add some more
-                if (totalWriteSize + partOutputLength > outputLength) // > or >= ? TODO [2GBLZ4] 
+                int partOutputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
+                if (totalWriteSize + partOutputLength > outputLength)
                 {
                     partOutputLength = checked((int)(outputLength - totalWriteSize));
                 }
