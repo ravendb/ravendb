@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Net;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -38,7 +40,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/streams/queries/$", "GET")]
-        public Task StreamQueryGet()
+        public async Task StreamQueryGet()
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
@@ -53,11 +55,16 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    runner.ExecuteStreamQuery(indexName, query, HttpContext.Response, writer, token);
+                    try
+                    {
+                        await runner.ExecuteStreamQuery(indexName, query, HttpContext.Response, writer, token).ConfigureAwait(false);
+                    }
+                    catch (IndexDoesNotExistsException)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    }
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/streams/queries/$", "POST")]

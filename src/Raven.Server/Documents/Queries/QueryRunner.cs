@@ -57,16 +57,18 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public Task ExecuteStreamQuery(string indexName, IndexQueryServerSide query, HttpResponse response, BlittableJsonTextWriter writer, OperationCancelToken token)
+        public async Task ExecuteStreamQuery(string indexName, IndexQueryServerSide query, HttpResponse response, BlittableJsonTextWriter writer, OperationCancelToken token)
         {
             if (indexName.StartsWith("dynamic", StringComparison.OrdinalIgnoreCase))
             {
-                throw new NotSupportedException("Query streaming is not supported for dynamic indexes"); // TODO [ppekrol]
+                var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
+
+                await runner.ExecuteStream(response, writer, indexName, query).ConfigureAwait(false);
             }
 
             var index = GetIndex(indexName);
 
-            return index.StreamQuery(response, writer, query, _documentsContext, token);
+            await index.StreamQuery(response, writer, query, _documentsContext, token);
         }
 
         public Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQuery query, long? facetsEtag, long? existingResultEtag, OperationCancelToken token)
