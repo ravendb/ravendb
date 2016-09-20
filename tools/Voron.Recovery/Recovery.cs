@@ -18,14 +18,13 @@ namespace Voron.Recovery
     {
         public Recovery(VoronRecoveryConfiguration config)
         {
-            _databaseDirectory = config.DataFileDirectory;
-            _datafile = config.PathToDataFile;
+]            _datafile = config.PathToDataFile;
             _output = config.OutputFileName;
             _pageSize = config.PageSizeInKb*Constants.Size.Kilobyte;
             _numberOfFieldsInDocumentTable = config.NumberOfFiledsInDocumentTable;
             _initialContextSize = config.InitialContextSizeInMB * Constants.Size.Megabyte;
             _initialContextLongLivedSize = config.InitialContextLongLivedSizeInKB*Constants.Size.Kilobyte;
-            _option = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(_databaseDirectory, null, null);
+            _option = StorageEnvironmentOptions.ForPath(config.DataFileDirectory);
             _progressIntervalInSeconds = config.ProgressIntervalInSeconds;
         }
 
@@ -48,7 +47,7 @@ namespace Voron.Recovery
             var eof = mem + (fileSize / _pageSize) * _pageSize; 
             DateTime lastProgressReport = DateTime.MinValue;
             using (var destinationStream = File.OpenWrite(_output))
-            using (var logFile = File.CreateText(Path.Combine(Path.GetDirectoryName(_output), _logFileName)))
+            using (var logFile = File.CreateText(Path.Combine(Path.GetDirectoryName(_output), LogFileName)))
             using (var gZipStream = new GZipStream(destinationStream, CompressionMode.Compress, true))
             using (var context = new JsonOperationContext(_initialContextSize, _initialContextLongLivedSize))
             using (var writer = new BlittableJsonTextWriter(context, gZipStream))
@@ -75,8 +74,7 @@ namespace Voron.Recovery
                             lastProgressReport = now;
                             var currPos = GetFilePosition(startOffest, mem);
                             var eofPos = GetFilePosition(startOffest, eof);
-                            Console.WriteLine($"Recovering page at position {currPos}/{eofPos} ({(double)currPos/eofPos:p})");
-                            Console.WriteLine($"Last recovered document key is {_lastRecoveredDocumentKey}");
+                            Console.WriteLine($"{now:hh:MM:ss}: Recovering page at position {currPos:#,#;;0}/{eofPos:#,#;;0} ({(double)currPos/eofPos:p}) - Last recovered doc is {_lastRecoveredDocumentKey}");
                         }
                         var pageHeader = (PageHeader*)mem;
                         //this page is not raw data section move on
@@ -95,7 +93,7 @@ namespace Voron.Recovery
                         if (pageHeader->Flags.HasFlag(PageFlags.Overflow))
                         {
 
-                            var endOfOverflow = pageHeader + Constants.TreePageHeaderSize + pageHeader->OverflowSize;
+                            var endOfOverflow = pageHeader + Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize) * _pageSize;
                             // the endOfOeverFlow can be equal to eof if the last page is overflow
                             if (endOfOverflow > eof)
                             {
@@ -176,10 +174,7 @@ namespace Voron.Recovery
                                 break;
                             }
                             pos += entry->AllocatedSize + sizeof(RawDataSection.RawDataEntrySizes);
-                            //not sure if there could be zero allocated entries? if it could be valid we should probably continue rather then break
-                            if (entry->AllocatedSize == 0)
-                                break;
-                            if (entry->UsedSize == -1)
+                            if (entry->AllocatedSize == 0 || entry->UsedSize == -1)
                                 continue;                            
                             if ( WriteDocument(currMem + sizeof(RawDataSection.RawDataEntrySizes), entry->UsedSize, writer, logFile, context, startOffest) == false)
                                 break;
@@ -194,8 +189,8 @@ namespace Voron.Recovery
                 }
                 writer.WriteEndArray();
                 writer.WriteEndObject();
-                logFile.WriteLine($"Discovered a total of {_numberOfDocumentsRetrived:n0} documents within {sw.Elapsed.TotalSeconds:n1} seconds.");
-                logFile.WriteLine($"Discovered a total of {_numberOfFaultedPages:n0} faulted pages.");                
+                logFile.WriteLine($"Discovered a total of {_numberOfDocumentsRetrived:#,#;00} documents within {sw.Elapsed.TotalSeconds::#,#.#;;00} seconds.");
+                logFile.WriteLine($"Discovered a total of {_numberOfFaultedPages::#,#;00} faulted pages.");                
             }
             if (_cancellationRequested)
                 return RecoveryStatus.CancellationRequested;
@@ -247,8 +242,8 @@ namespace Voron.Recovery
                 catch (Exception e)
                 {
                     logWriter.WriteLine(
-                        $"Found invalid blittable document at pos={GetFilePosition(startOffest, mem)} with key={document.Key ?? "null"}{Environment.NewLine}" +
-                        $"Validation message:{e.Message}");
+                        $"Found invalid blittable document at pos={GetFilePosition(startOffest, mem)} with key={document?.Key ?? "null"}{Environment.NewLine}{e}");
+                    return false;
                 }
                 context.Write(writer, document.Data);
                 _numberOfDocumentsRetrived++;
@@ -271,24 +266,21 @@ namespace Voron.Recovery
             return mem + _pageSize;
         }
 
-        private readonly string _databaseDirectory;
         private readonly string _output;
         private readonly int _pageSize;
         private AbstractPager Pager => _option.DataPager;
-        private string _datafileDirectory;
-        private readonly string _logFileName = "recovery.log";
-        private readonly string DataFileName = "Raven.voron";
+        private const string LogFileName = "recovery.log";
         private long _numberOfFaultedPages;
         private long _numberOfDocumentsRetrived;
-        private int _numberOfFieldsInDocumentTable;
-        private int _initialContextSize;
-        private int _initialContextLongLivedSize;
+        private readonly int _numberOfFieldsInDocumentTable;
+        private readonly int _initialContextSize;
+        private readonly int _initialContextLongLivedSize;
         private bool _firstDoc = true;
-        private StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions _option;
-        private int _progressIntervalInSeconds;
+        private readonly StorageEnvironmentOptions _option;
+        private readonly int _progressIntervalInSeconds;
         private bool _cancellationRequested;
         private string _lastRecoveredDocumentKey = "No documents recovered yet";
-        private string _datafile;
+        private readonly string _datafile;
 
 
         public enum RecoveryStatus

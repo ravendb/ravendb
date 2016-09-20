@@ -22,7 +22,7 @@ namespace Voron.Recovery
             config = null;
             if (args.Length < 2)
                 return VoronRecoveryArgsProcessStatus.NotEnoughArguments;
-            if (!Directory.Exists(args[0]) || !File.Exists(Path.Combine(args[0],DatafileName)))
+            if (!Directory.Exists(args[0]) || !File.Exists(Path.Combine(args[0], DatafileName)))
                 return VoronRecoveryArgsProcessStatus.MissingDataFile;
             try
             {
@@ -36,8 +36,13 @@ namespace Voron.Recovery
             {
                 return VoronRecoveryArgsProcessStatus.CantWriteToOutputDirectory;
             }
-            config = new VoronRecoveryConfiguration() { DataFileDirectory = args[0], PathToDataFile = Path.Combine(args[0], DatafileName) ,OutputFileName = Path.Combine(args[1], RecoveryFileName) };
-            if (args.Length > 2 && args.Length%2 != 0)
+            config = new VoronRecoveryConfiguration()
+            {
+                DataFileDirectory = args[0],
+                PathToDataFile = Path.Combine(args[0], DatafileName),
+                OutputFileName = Path.Combine(args[1], RecoveryFileName)
+            };
+            if (args.Length > 2 && args.Length % 2 != 0)
             {
                 return VoronRecoveryArgsProcessStatus.WrongNumberOfArgs;
             }
