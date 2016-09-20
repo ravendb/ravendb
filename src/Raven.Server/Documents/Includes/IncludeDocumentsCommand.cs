@@ -24,6 +24,9 @@ namespace Raven.Server.Documents.Includes
 
         public void Add(string id)
         {
+            if (_includedIds == null)
+                _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             _includedIds.Add(id);
         }
 
