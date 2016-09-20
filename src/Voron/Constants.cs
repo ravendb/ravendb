@@ -1,4 +1,5 @@
-﻿using Voron.Data.BTrees;
+﻿using Sparrow;
+using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 
 namespace Voron.Global
@@ -46,10 +47,13 @@ namespace Voron.Global
         public const int CurrentVersion = 7;
 
         public const string RootTreeName = "$Root";
+        public static readonly Slice RootTreeNameSlice = Slice.From(StorageEnvironment.LabelsContext, RootTreeName, ByteStringType.Immutable);
 
         public const string MetadataTreeName = "$Database-Metadata";
+        public static readonly Slice MetadataTreeNameSlice = Slice.From(StorageEnvironment.LabelsContext, MetadataTreeName, ByteStringType.Immutable);
 
         public const string DatabaseFilename = "Raven.voron";
+        public static readonly Slice DatabaseFilenameSlice = Slice.From(StorageEnvironment.LabelsContext, DatabaseFilename, ByteStringType.Immutable);
 
         public const int DefaultMaxLogLengthBeforeCompaction = 64; //how much entries in log to keep before compacting it into snapshot
     }

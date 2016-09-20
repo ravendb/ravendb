@@ -104,7 +104,7 @@ namespace Voron.Debugging
                 var treeReport = new TreeReport
                 {
                     Type = RootObjectType.FixedSizeTree,
-                    Name = fst.Name.ToString(),
+                    Name = fst.Name,
                     BranchPages = -1,
                     Depth = fst.Depth,
                     NumberOfEntries = fst.NumberOfEntries,

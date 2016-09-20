@@ -166,7 +166,7 @@ namespace Voron.Impl
             if (_state.Root != null)
             {
                 _state.Root.InWriteTransaction = Flags == TransactionFlags.ReadWrite;
-                _root = new Tree(this, null, _state.Root) { Name = Constants.RootTreeName };
+                _root = new Tree(this, null, _state.Root) { Name = Constants.RootTreeNameSlice };
             }
         }
 

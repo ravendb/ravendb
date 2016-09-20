@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Data.Fixed;
 using Voron.Debugging;
@@ -14,7 +15,7 @@ namespace Voron.Data.BTrees
 {
     public unsafe partial class Tree
     {
-        private Dictionary<string, FixedSizeTree> _fixedSizeTrees;
+        private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
         private readonly TreeMutableState _state;
 
         public event Action<long> PageModified;
@@ -22,7 +23,7 @@ namespace Voron.Data.BTrees
 
         private readonly RecentlyFoundTreePages _recentlyFoundPages;
 
-        public string Name { get; set; }
+        public Slice Name { get; set; }
 
         public TreeMutableState State
         {
@@ -1050,16 +1051,21 @@ namespace Voron.Data.BTrees
                 _recentlyFoundPages.Clear();
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public FixedSizeTree FixedTreeFor(string key, byte valSize = 0)
         {
+            return FixedTreeFor(Slice.From(_llt.Allocator, key, ByteStringType.Immutable), valSize);
+        }
+
+        public FixedSizeTree FixedTreeFor(Slice key, byte valSize = 0)
+        {
             if (_fixedSizeTrees == null)
-                _fixedSizeTrees = new Dictionary<string, FixedSizeTree>();
+                _fixedSizeTrees = new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
 
             FixedSizeTree fixedTree;
             if (_fixedSizeTrees.TryGetValue(key, out fixedTree) == false)
             {
-                var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-                _fixedSizeTrees[key] = fixedTree = new FixedSizeTree(_llt, this, keySlice, valSize);
+                _fixedSizeTrees[key] = fixedTree = new FixedSizeTree(_llt, this, key, valSize);
             }
 
             State.Flags |= TreeFlags.FixedSizeTrees;
@@ -1067,7 +1073,13 @@ namespace Voron.Data.BTrees
             return fixedTree;
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public long DeleteFixedTreeFor(string key, byte valSize = 0)
+        {
+            return DeleteFixedTreeFor(Slice.From(_llt.Allocator, key, ByteStringType.Immutable), valSize);
+        }
+
+        public long DeleteFixedTreeFor(Slice key, byte valSize = 0)
         {
             var fixedSizeTree = FixedTreeFor(key, valSize);
             var numberOfEntries = fixedSizeTree.NumberOfEntries;
