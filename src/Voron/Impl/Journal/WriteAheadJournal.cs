@@ -9,6 +9,7 @@ using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using Sparrow.Compression;
@@ -870,7 +871,7 @@ namespace Voron.Impl.Journal
             long maxSizeRequiringCompression = ((long)pageCountIncludingAllOverflowPages * (long)pageSize) + sizeOfPagesHeader
                  + numberOfPages * sizeof(long);
 
-            var outputBufferSize = LZ4.MaximumOutputLength(maxSizeRequiringCompression);
+            var outputBufferSize = LZ4.MaximumOutputLength(maxSizeRequiringCompression) + pageSize; // + extra pageSize for fullTxBuffer to point to aligned address
 
             int outputBufferInPages = checked((int)((outputBufferSize + sizeof(TransactionHeader)) / pageSize +
                                       ((outputBufferSize + sizeof(TransactionHeader)) % pageSize == 0 ? 0 : 1)));
@@ -911,10 +912,10 @@ namespace Voron.Impl.Journal
                 pagesInfo[pageSequencialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
                 ++pageSequencialNumber;
             }
-            var totalSizeWritten = (int)(write - outputBuffer + sizeOfPagesHeader);
+            var totalSizeWritten = (write - outputBuffer) + sizeOfPagesHeader;
 
 
-            var fullTxBuffer = outputBuffer + pageCountIncludingAllOverflowPages * pageSize;
+            var fullTxBuffer = outputBuffer + (pageCountIncludingAllOverflowPages*(long)pageSize);
 
             var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
 
