@@ -560,7 +560,7 @@ namespace Voron.Data.BTrees
         }
 
         [Conditional("VALIDATE")]
-        public void DebugValidate(LowLevelTransaction tx, long root)
+        public void DebugValidate(Tree tree, long root)
         {
             if (NumberOfEntries == 0)
                 return;
@@ -570,16 +570,16 @@ namespace Voron.Data.BTrees
                 throw new InvalidOperationException("The branch page " + PageNumber + " has " + NumberOfEntries + " entry");
             }
 
-            var prev = GetNodeKey(tx, 0);
+            var prev = GetNodeKey(tree.Llt, 0);
             var pages = new HashSet<long>();
             for (int i = 1; i < NumberOfEntries; i++)
             {
                 var node = GetNode(i);
-                var current = GetNodeKey(tx, i);
+                var current = GetNodeKey(tree.Llt, i);
 
                 if (SliceComparer.CompareInline(prev,current) >= 0)
                 {
-                    DebugStuff.RenderAndShowTree(tx, root);
+                    DebugStuff.RenderAndShowTree(tree, root);
                     throw new InvalidOperationException("The page " + PageNumber + " is not sorted");
                 }
 
@@ -587,7 +587,7 @@ namespace Voron.Data.BTrees
                 {
                     if (pages.Add(node->PageNumber) == false)
                     {
-                        DebugStuff.RenderAndShowTree(tx, root);
+                        DebugStuff.RenderAndShowTree(tree, root);
                         throw new InvalidOperationException("The page " + PageNumber + " references same page multiple times");
                     }
                 }

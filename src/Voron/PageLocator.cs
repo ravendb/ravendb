@@ -21,7 +21,7 @@ namespace Voron
             _cache = new PageHandlePtr[cacheSize];
         }
 
-        public Page GetReadOnlyPage (long pageNumber)
+        public Page GetReadOnlyPage(long pageNumber)
         {
             int position = _current;
 
