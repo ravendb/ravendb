@@ -1624,7 +1624,6 @@ namespace Raven.Client.Connection.Async
                 Index = response.Headers.GetFirstValue("Raven-Index"),
                 IndexTimestamp = DateTime.ParseExact(response.Headers.GetFirstValue("Raven-Index-Timestamp"), Default.DateTimeFormatsToRead,
                                                                 CultureInfo.InvariantCulture, DateTimeStyles.None),
-                IndexEtag = long.Parse(response.Headers.GetFirstValue("Raven-Index-Etag")),
                 ResultEtag = long.Parse(response.Headers.GetFirstValue("Raven-Result-Etag")),
                 IsStale = bool.Parse(response.Headers.GetFirstValue("Raven-Is-Stale")),
                 TotalResults = int.Parse(response.Headers.GetFirstValue("Raven-Total-Results"))

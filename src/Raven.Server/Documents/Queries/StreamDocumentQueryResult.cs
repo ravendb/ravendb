@@ -60,7 +60,6 @@ namespace Raven.Server.Documents.Queries
         private void WriteHeaders()
         {
             _response.Headers.Add("Raven-Result-Etag", ResultEtag.ToString());
-            _response.Headers.Add("Raven-Index-Etag", ResultEtag.ToString()); // TODO [ppekrol]
             _response.Headers.Add("Raven-Is-Stale", IsStale ? "true" : "false");
             _response.Headers.Add("Raven-Index", IndexName);
             _response.Headers.Add("Raven-Total-Results", TotalResults.ToInvariantString());
