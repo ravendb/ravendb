@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Commands
         public int AuthenticationRetries;
         public bool IsReadRequest = true;
 
-        public abstract HttpRequestMessage CreateRequest(out string url);
+        public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
         public abstract void SetResponse(BlittableJsonReaderObject response);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

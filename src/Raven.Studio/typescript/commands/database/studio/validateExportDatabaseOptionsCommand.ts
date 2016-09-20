@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class validateExportDatabaseOptionsCommand extends commandBase {
 
@@ -7,8 +8,8 @@ class validateExportDatabaseOptionsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {
-        return this.post("/studio-tasks/validateExportOptions", JSON.stringify(this.smugglerOptions), this.db);//TODO: use endpoints
+    execute(): JQueryPromise<void> {
+        return this.post(endpoints.databases.smuggler.smugglerValidateOptions, JSON.stringify(this.smugglerOptions), this.db, { dataType: undefined });
     }
 }
 

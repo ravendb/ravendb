@@ -14,7 +14,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client;
 using Raven.Client.Extensions;
-using Raven.Client.OAuth;
 using Raven.Client.Platform;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;

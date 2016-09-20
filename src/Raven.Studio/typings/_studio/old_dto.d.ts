@@ -1,5 +1,4 @@
 /// <reference path="../../typescript/common/constants.ts"/>
-/// <reference path="../server/include.ts"/>
 
 interface collectionInfoDto extends indexResultsDto<documentDto> {
 }
@@ -842,7 +841,8 @@ interface smugglerOptionsDto {
     ShouldExcludeExpired: boolean;
     Filters: filterSettingDto[];
     TransformScript: string;
-    NoneDefualtFileName: string;
+    NoneDefaultFileName: string;
+    OperationId: number;
 }
 
 interface customColumnParamsDto {
@@ -1157,10 +1157,6 @@ interface timeSeriesDto extends tenantDto {
 
 interface customFunctionsDto {
     Functions: string;
-}
-
-interface singleAuthToken {
-    Token: string;
 }
 
 interface suggestionsDto {
@@ -1572,12 +1568,6 @@ interface filteredOutIndexStatDto {
 interface generatedCodeDto {
     Document: string;
     Code: string;
-}
-
-
-interface collectionsStatsDto {
-    NumberOfDocuments: number;
-    Collections: dictionary<number>;
 }
 
 

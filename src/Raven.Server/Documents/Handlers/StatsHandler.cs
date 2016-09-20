@@ -42,13 +42,15 @@ namespace Raven.Server.Documents.Handlers
                 for (var i = 0; i < indexes.Count; i++)
                 {
                     var index = indexes[i];
+                    long lastProcessedEtag;
                     stats.Indexes[i] = new IndexInformation
                     {
                         Priority = index.Priority,
-                        IsStale = index.IsStale(context),
+                        IsStale = index.IsStale(context, out lastProcessedEtag),
                         Name = index.Name,
                         IndexId = index.IndexId,
-                        LockMode = index.Definition.LockMode
+                        LockMode = index.Definition.LockMode,
+                        LastProcessedEtag = lastProcessedEtag
                     };
                 }
 

@@ -232,7 +232,7 @@ namespace Raven.Client.Http
 
         private static HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)
         {
-            var request = command.CreateRequest(out url);
+            var request = command.CreateRequest(node, out url);
             url = $"{node.Url}/databases/{node.Database}/{url}";
             request.RequestUri = new Uri(url);
 

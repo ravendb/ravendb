@@ -5,6 +5,11 @@
     var $selectDatabaseContainer = $('.resource-switcher-container');
     var $searchContainer = $('.search-container');
 
+    $('input[type=checkbox]').change(function () {
+        var $collapse = $($(this).data('collapse'));
+        $collapse.collapse('toggle');
+    });
+
     $selectDatabaseContainer.removeClass('active');
     $searchContainer.removeClass('active');
 

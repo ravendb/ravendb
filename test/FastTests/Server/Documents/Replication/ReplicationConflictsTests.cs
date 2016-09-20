@@ -243,7 +243,7 @@ namespace FastTests.Server.Documents.Replication
                 {
                     s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
-                }
+        }
 
                 var userIndex = new UserIndex();
                 store2.ExecuteIndex(userIndex);
@@ -301,8 +301,8 @@ namespace FastTests.Server.Documents.Replication
                 });
 
                 Assert.Throws<DocumentInConflictException>(() => op.WaitForCompletion());
+                }
             }
-        }
 
         //TODO: this probably needs to be refactored when operations related functionality is finished
         protected async Task AssertOperationFaultsAsync(DocumentStore store,int operationId)
@@ -357,13 +357,13 @@ namespace FastTests.Server.Documents.Replication
                 {
                     Query = String.Empty
                 }, new Raven.Client.Data.PatchRequest
-                {
-                    Script = String.Empty
-                });
+                    {
+                        Script = String.Empty
+                    });
 
                 Assert.Throws<DocumentInConflictException>(() => op.WaitForCompletion());
+                }
             }
-        }
 
         [Fact]
         public async Task Conflict_then_load_by_id_will_return_409_and_conflict_data()
@@ -577,26 +577,6 @@ namespace FastTests.Server.Documents.Replication
             return conflicts;
         }
 
-        private async Task<Dictionary<string, List<ChangeVectorEntry[]>>> GetConflicts(DocumentStore store,
-            string docId)
-        {
-            var url = $"{store.Url}/databases/{store.DefaultDatabase}/replication/conflicts?docId={docId}";
-            using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
-            {
-                request.ExecuteRequest();
-                var conflictsJson = RavenJArray.Parse(await request.Response.Content.ReadAsStringAsync());
-              
-                var conflicts = conflictsJson.Select(x => new
-                {
-                    Key = x.Value<string>("Key"),
-                    ChangeVector = x.Value<RavenJArray>("ChangeVector").Select(c => c.FromJson()).ToArray()
-                }).GroupBy(x => x.Key).ToDictionary(x => x.Key, x => x.Select(i => i.ChangeVector).ToList());
-
-                return conflicts;
-            }
-        }
-
         public class UserIndex : AbstractIndexCreationTask<User>
         {
             public UserIndex()
@@ -617,3 +597,4 @@ namespace FastTests.Server.Documents.Replication
         }
     }
 }
+

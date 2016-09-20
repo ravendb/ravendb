@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Indexes
             var numberOfOutputs = 0;
             foreach (var mapResult in mapResults)
             {
-                writer.IndexDocument(key, mapResult, stats);
+                writer.IndexDocument(key, mapResult, stats, indexContext);
                 numberOfOutputs++;
 
                 if (EnsureValidNumberOfOutputsForDocument(numberOfOutputs))

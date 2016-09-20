@@ -16,6 +16,9 @@ namespace Raven.Abstractions.Replication
     public class ReplicationDocument<TClass>
         where TClass : ReplicationDestination
     {
+
+        public StraightforwardConflictResolution DocumentConflictResolution { get; set; }
+
         /// <summary>
         /// Gets or sets the list of replication destinations.
         /// </summary>

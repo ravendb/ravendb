@@ -37,6 +37,7 @@ class synchronizationDestinations extends viewModelBase {
         this.updateHelpLink("KW8LAF");
        
         if (!this.subscription) {
+            /* TODO
             this.subscription = changesContext.currentResourceChangesApi()
                 .watchFsDestinations((e: filesystemConfigNotification) => {
                     if (e.Name.indexOf("Raven/Synchronization/Destinations") < 0)
@@ -51,7 +52,7 @@ class synchronizationDestinations extends viewModelBase {
                     }
                     else
                         console.error("Unknown notification action.");
-                });
+                });*/
         }
 
         this.dirtyFlag = new ko.DirtyFlag([this.replicationsSetup]);

@@ -41,6 +41,18 @@ namespace Raven.Server.Documents.Transformers
 
         public virtual string Name => Definition?.Name;
 
+        public virtual int Hash => Definition?.GetHashCode() ?? TransformerId;
+
+        public virtual bool HasLoadDocument => _transformer.HasLoadDocument;
+
+        public virtual bool HasTransformWith => _transformer.HasTransformWith;
+
+        public virtual bool HasGroupBy => _transformer.HasGroupBy;
+
+        public virtual bool HasInclude => _transformer.HasInclude;
+
+        public bool MightRequireTransaction => HasLoadDocument || HasInclude || HasTransformWith;
+
         public readonly TransformerDefinition Definition;
 
         public virtual void SetLock(TransformerLockMode mode)
@@ -130,7 +142,7 @@ namespace Raven.Server.Documents.Transformers
 
         public virtual TransformationScope OpenTransformationScope(BlittableJsonReaderObject parameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, TransformerStore transformerStore, DocumentsOperationContext context, bool nested = false)
         {
-            return new TransformationScope(_transformer.TransformResults, parameters, include, documentsStorage, transformerStore, context, nested);
+            return new TransformationScope(_transformer, parameters, include, documentsStorage, transformerStore, context, nested);
         }
 
         public static bool TryReadIdFromFile(string name, out int transformerId)

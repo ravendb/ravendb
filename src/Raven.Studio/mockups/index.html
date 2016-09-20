@@ -43,17 +43,19 @@
 </head>
 <body>
     <nav class="navbar navbar-inverse navbar-fixed-top">
+
         <div class="container-fluid">
             <div class="navbar-header">
-                <a class="navbar-brand" href="#">RavenDB</a>
-                <a class="menu-collapse-button icon-menu-collapse" title="collapse menu"></a>
+
+                <a class="navbar-brand hidden-xs" href="#">RavenDB</a>
             </div>
             <div id="navbar">
                 <ul class="nav navbar-nav navbar-right">
+
+                    <li class="pull-left"><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" id="menu-toggle" data-target="#main-menu" data-class="show-menu"></a></li>
                     <li><a href="#" class="icon-notifications btn-toggle" data-target=".notifications-container" data-class="show-notifications"></a></li>
                     <li><a href="#" class="icon-help"></a></li>
-                    <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
-                    <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
+                    <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
                 </ul>
                 <div class="inputs-container hidden-xs">
                     <div class="search-container active">
@@ -740,6 +742,33 @@
                             </div>
                         </div>
                     </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-tick"></div>
+                                <hr />
+                                <span>.icon-tick</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-toggle-on"></div>
+                                <hr />
+                                <span>.icon-toggle-on</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-toggle-off"></div>
+                                <hr />
+                                <span>.icon-toggle-off</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
             <hr />
@@ -773,6 +802,12 @@
                                     <button class="btn btn-default">default</button>
                                     <button class="btn btn-lg btn-default">.btn-lg</button>
                                 </p>
+                                <h5>Addons:</h5>
+                                <p class="text-center">
+                                    <button class="btn btn-default"><span class="icon-info"></span> icon-*</button>
+                                    <button class="btn btn-default"><span class="global-spinner"></span> global spinner</button>
+
+                                </p>
                                 <hr />
                                 <h5>description:</h5>
                                 <p>Hilights interactive buttons and links</p>
@@ -802,10 +837,421 @@
                         </div>
                     </div>
             </section>
-        </div>
+            <h2>forms</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-sm-3">
+                            <p>.form-control</p>
+                        </div>
+                        <div class="col-sm-9">
+                            <input class="form-control" placeholder="placeholder" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-3">
+                            <p>.input-group with .input-group-addon</p>
+                        </div>
+                        <div class="col-sm-9">
+                            <div class="form-group">
+                                <div class="input-group">
+                                    <div class="input-group-addon">addon</div>
+                                    <input class="form-control" placeholder="placeholder">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
+            <h2>Toggles</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <form role="form">
+                        <div class="row">
+                            <div class="col-md-4">
+
+                                <h3>
+                                    Basic
+                                </h3>
+                                <hr />
+                                <p>
+                                    Supports bootstrap brand colors: <code>.toggle-primary</code>, <code>.toggle-info</code> etc.
+                                </p>
+                                <div class="toggle">
+                                    <input id="toggle1" class="styled" type="checkbox">
+                                    <label for="toggle1">
+                                        Default
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-primary">
+                                    <input id="toggle2" class="styled" type="checkbox" checked>
+                                    <label for="toggle2">
+                                        Primary
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-success">
+                                    <input id="toggle3" class="styled" type="checkbox">
+                                    <label for="toggle3">
+                                        Success
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-info">
+                                    <input id="toggle4" class="styled" type="checkbox">
+                                    <label for="toggle4">
+                                        Info
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-warning">
+                                    <input id="toggle5" type="checkbox" class="styled" checked>
+                                    <label for="toggle5">
+                                        Warning
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-danger">
+                                    <input id="toggle6" type="checkbox" class="styled" checked>
+                                    <label for="toggle6">
+                                        Check me out
+                                    </label>
+                                </div>
+                                <p>Checkboxes without label text</p>
+                                <div class="toggle">
+                                    <input type="checkbox" class="styled" id="singletoggle1" value="option1" aria-label="Single toggle One">
+                                    <label></label>
+                                </div>
+                                <div class="toggle toggle-primary">
+                                    <input type="checkbox" class="styled styled-primary" id="singletoggle2" value="option2" checked aria-label="Single toggle Two">
+                                    <label></label>
+                                </div>
+                                <p>Checkboxes with indeterminate state</p>
+                                <div class="toggle toggle-primary">
+                                    <input id="indeterminatetoggle" class="styled" type="checkbox" onclick="changeState(this)">
+                                    <label></label>
+                                </div>
+                                <p>Inline togglees</p>
+                                <div class="toggle toggle-inline">
+                                    <input type="checkbox" class="styled" id="inlinetoggle1" value="option1">
+                                    <label for="inlinetoggle1"> Inline One </label>
+                                </div>
+                                <div class="toggle toggle-success toggle-inline">
+                                    <input type="checkbox" class="styled" id="inlinetoggle2" value="option1" checked>
+                                    <label for="inlinetoggle2"> Inline Two </label>
+                                </div>
+                                <div class="toggle toggle-inline">
+                                    <input type="checkbox" class="styled" id="inlinetoggle3" value="option1">
+                                    <label for="inlinetoggle3"> Inline Three </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <h3>
+                                    Disabled
+                                </h3>
+                                <hr />
+                                <p>
+                                    Disabled state also supported.
+                                </p>
+                                <div class="toggle">
+                                    <input class="styled" id="toggle9" type="checkbox" disabled>
+                                    <label for="toggle9">
+                                        Can't check this
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-success">
+                                    <input class="styled styled" id="toggle10" type="checkbox" disabled checked>
+                                    <label for="toggle10">
+                                        This too
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-warning toggle-circle">
+                                    <input class="styled" id="toggle11" type="checkbox" disabled checked>
+                                    <label for="toggle11">
+                                        And this
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+            <h2>Checkboxes</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <form role="form">
+                        <div class="row">
+                            <div class="col-md-4">
+
+                                <h3>
+                                    Basic
+                                </h3>
+                                <hr />
+                                <p>
+                                    Supports bootstrap brand colors: <code>.checkbox-primary</code>, <code>.checkbox-info</code> etc.
+                                </p>
+                                <div class="checkbox">
+                                    <input id="checkbox1" class="styled" type="checkbox">
+                                    <label for="checkbox1">
+                                        Default
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-primary">
+                                    <input id="checkbox2" class="styled" type="checkbox" checked>
+                                    <label for="checkbox2">
+                                        Primary
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-success">
+                                    <input id="checkbox3" class="styled" type="checkbox">
+                                    <label for="checkbox3">
+                                        Success
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-info">
+                                    <input id="checkbox4" class="styled" type="checkbox">
+                                    <label for="checkbox4">
+                                        Info
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-warning">
+                                    <input id="checkbox5" type="checkbox" class="styled" checked>
+                                    <label for="checkbox5">
+                                        Warning
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-danger">
+                                    <input id="checkbox6" type="checkbox" class="styled" checked>
+                                    <label for="checkbox6">
+                                        Check me out
+                                    </label>
+                                </div>
+                                <p>Checkboxes without label text</p>
+                                <div class="checkbox">
+                                    <input type="checkbox" class="styled" id="singleCheckbox1" value="option1" aria-label="Single checkbox One">
+                                    <label></label>
+                                </div>
+                                <div class="checkbox checkbox-primary">
+                                    <input type="checkbox" class="styled styled-primary" id="singleCheckbox2" value="option2" checked aria-label="Single checkbox Two">
+                                    <label></label>
+                                </div>
+                                <p>Checkboxes with indeterminate state</p>
+                                <div class="checkbox checkbox-primary">
+                                    <input id="indeterminateCheckbox" class="styled" type="checkbox" onclick="changeState(this)">
+                                    <label></label>
+                                </div>
+                                <p>Inline checkboxes</p>
+                                <div class="checkbox checkbox-inline">
+                                    <input type="checkbox" class="styled" id="inlineCheckbox1" value="option1">
+                                    <label for="inlineCheckbox1"> Inline One </label>
+                                </div>
+                                <div class="checkbox checkbox-success checkbox-inline">
+                                    <input type="checkbox" class="styled" id="inlineCheckbox2" value="option1" checked>
+                                    <label for="inlineCheckbox2"> Inline Two </label>
+                                </div>
+                                <div class="checkbox checkbox-inline">
+                                    <input type="checkbox" class="styled" id="inlineCheckbox3" value="option1">
+                                    <label for="inlineCheckbox3"> Inline Three </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h3>
+                                    Circled
+                                </h3>
+                                <hr />
+                                <p>
+                                    <code>.checkbox-circle</code> for roundness.
+                                </p>
+                                <div class="checkbox checkbox-circle">
+                                    <input id="checkbox7" class="styled" type="checkbox">
+                                    <label for="checkbox7">
+                                        Simply Rounded
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-info checkbox-circle">
+                                    <input id="checkbox8" class="styled" type="checkbox" checked>
+                                    <label for="checkbox8">
+                                        Me too
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h3>
+                                    Disabled
+                                </h3>
+                                <hr />
+                                <p>
+                                    Disabled state also supported.
+                                </p>
+                                <div class="checkbox">
+                                    <input class="styled" id="checkbox9" type="checkbox" disabled>
+                                    <label for="checkbox9">
+                                        Can't check this
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-success">
+                                    <input class="styled styled" id="checkbox10" type="checkbox" disabled checked>
+                                    <label for="checkbox10">
+                                        This too
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-warning checkbox-circle">
+                                    <input class="styled" id="checkbox11" type="checkbox" disabled checked>
+                                    <label for="checkbox11">
+                                        And this
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+            <h2>Radios</h2>
+            <section class="panel">
+                <div class="panel-body">
+
+                    <form role="form">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <fieldset>
+                                    <h3>
+                                        Basic
+                                    </h3>
+                                    <hr />
+                                    <p>
+                                        Supports bootstrap brand colors: <code>.radio-primary</code>, <code>.radio-danger</code> etc.
+                                    </p>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <div class="radio">
+                                                <input type="radio" name="radio1" id="radio1" value="option1" checked>
+                                                <label for="radio1">
+                                                    Small
+                                                </label>
+                                            </div>
+                                            <div class="radio">
+                                                <input type="radio" name="radio1" id="radio2" value="option2">
+                                                <label for="radio2">
+                                                    Big
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="radio radio-danger">
+                                                <input type="radio" name="radio2" id="radio3" value="option1">
+                                                <label for="radio3">
+                                                    Next
+                                                </label>
+                                            </div>
+                                            <div class="radio radio-danger">
+                                                <input type="radio" name="radio2" id="radio4" value="option2" checked>
+                                                <label for="radio4">
+                                                    One
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p>Radios without label text</p>
+                                    <div class="radio">
+                                        <input type="radio" id="singleRadio1" value="option1" name="radioSingle1" aria-label="Single radio One">
+                                        <label></label>
+                                    </div>
+                                    <div class="radio radio-success">
+                                        <input type="radio" id="singleRadio2" value="option2" name="radioSingle1" checked aria-label="Single radio Two">
+                                        <label></label>
+                                    </div>
+                                    <p>Inline radios</p>
+                                    <div class="radio radio-info radio-inline">
+                                        <input type="radio" id="inlineRadio1" value="option1" name="radioInline" checked>
+                                        <label for="inlineRadio1"> Inline One </label>
+                                    </div>
+                                    <div class="radio radio-inline">
+                                        <input type="radio" id="inlineRadio2" value="option2" name="radioInline">
+                                        <label for="inlineRadio2"> Inline Two </label>
+                                    </div>
+                                </fieldset>
+                            </div>
+                            <div class="col-md-4">
+                                <h3>
+                                    Disabled
+                                </h3>
+                                <hr />
+                                <p>
+                                    Disabled state also supported.
+                                </p>
+                                <div class="radio radio-danger">
+                                    <input type="radio" name="radio3" id="radio5" value="option1" disabled>
+                                    <label for="radio5">
+                                        Next
+                                    </label>
+                                </div>
+                                <div class="radio">
+                                    <input type="radio" name="radio3" id="radio6" value="option2" checked disabled>
+                                    <label for="radio6">
+                                        One
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h3>
+                                    As Checkboxes
+                                </h3>
+                                <hr />
+                                <p>
+                                    Radios can be made to look like checkboxes.
+                                </p>
+                                <div class="checkbox checkbox">
+                                    <input type="radio" name="radio4" id="radio7" value="option1" checked>
+                                    <label for="radio7">
+                                        Default
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-success">
+                                    <input type="radio" name="radio4" id="radio8" value="option2">
+                                    <label for="radio8">
+                                        Success
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-danger">
+                                    <input type="radio" name="radio4" id="radio9" value="option3">
+                                    <label for="radio9">
+                                        Danger
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <h2>Helper classes</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <h3>Contextual colors</h3>
+                    <p class="text-muted">.text-muted</p>
+                    <p class="text-primary">.text-primary</p>
+                    <p class="text-success">.text-success</p>
+                    <p class="text-info">.text-info</p>
+                    <p class="text-warning">.text-warning</p>
+                    <p class="text-danger">.text-danger</p>
+                    <hr />
+                    <h3>Contextual backgrounds and padding classes</h3>
+                    <p class="bg-primary padding padding-lg">.bg-primary & .padding.padding-lg</p>
+                    <p class="bg-success padding">.bg-success .padding</p>
+                    <p class="bg-info padding padding-sm">.bg-info & .padding.padding-sm</p>
+                    <p class="bg-warning padding padding-xs">.bg-warning & .padding.padding-xs</p>
+                    <p class="bg-danger">.bg-danger</p>
+                </div>
+            </section>
+
+        </div>
     </div>
-    </div>
+
+    <script type="text/javascript">
+        function changeState(el) {
+            if (el.readOnly) el.checked = el.readOnly = false;
+            else if (!el.checked) el.readOnly = el.indeterminate = true;
+        }
+    </script>
+
     <script type="text/javascript" src="js/setup.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/less.js/2.7.1/less.min.js"></script>
 </body>

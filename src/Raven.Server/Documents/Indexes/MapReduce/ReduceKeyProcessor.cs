@@ -6,6 +6,7 @@ using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
@@ -204,38 +205,36 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 return;
             }
 
-            var dynamicJson = value as DynamicBlittableJson;
+            var json = value as BlittableJsonReaderObject;
 
-            if (dynamicJson != null)
+            if (json != null)
             {
-                var obj = dynamicJson.BlittableJson;
-
                 _mode = Mode.MultipleValues;
 
                 if (_buffer == null)
                     _buffer = _buffersPool.Allocate(16);
-                
-                for (int i = 0; i < obj.Count; i++)
+
+                for (int i = 0; i < json.Count; i++)
                 {
                     // this call ensures properties to be returned in the same order, regardless their storing order
-                    var property = obj.GetPropertyByIndex(i); 
-                    
+                    var property = json.GetPropertyByIndex(i);
+
                     Process(property.Item2);
                 }
-                
+
                 return;
             }
 
-            var dynamicArray = value as DynamicArray;
+            var array = value as DynamicJsonArray;
 
-            if (dynamicArray != null)
+            if (array != null)
             {
                 _mode = Mode.MultipleValues;
 
                 if (_buffer == null)
                     _buffer = _buffersPool.Allocate(16);
-                
-                foreach (var item in dynamicArray)
+
+                foreach (var item in array)
                 {
                     Process(item);
                 }

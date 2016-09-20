@@ -70,7 +70,7 @@ namespace Raven.Server.Documents
             });
 
             // The documents schema is as follows
-            // 4 fields (lowered key, etag, lazy string key, document, change vector)
+            // 5 fields (lowered key, etag, lazy string key, document, change vector)
             // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
             DocsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -739,7 +739,7 @@ namespace Raven.Server.Documents
                 nameof(str));
         }
 
-        private static Document TableValueToDocument(JsonOperationContext context, TableValueReader tvr)
+        public static Document TableValueToDocument(JsonOperationContext context, TableValueReader tvr)
         {
             var result = new Document
             {
@@ -1118,7 +1118,54 @@ namespace Raven.Server.Documents
                     return list;
             }
         }
-        
+
+        public DocumentConflict GetConflictForChangeVector(
+            DocumentsOperationContext context, 
+            string key,
+            ChangeVectorEntry[] changeVector)
+        {
+            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+
+            byte* lowerKey;
+            int lowerSize;
+            byte* keyPtr;
+            int keySize;
+            GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+
+            foreach (var result in conflictsTable.SeekForwardFrom(
+                ConflictsSchema.Indexes[KeyAndChangeVectorSlice],
+                Slice.External(context.Allocator, lowerKey, lowerSize), true))
+            {
+                foreach (var tvr in result.Results)
+                {
+
+                    int conflictKeySize;
+                    var conflictKey = tvr.Read(0, out conflictKeySize);
+
+                    if (conflictKeySize != lowerSize)
+                        break;
+
+                    var compare = Memory.Compare(lowerKey, conflictKey, lowerSize);
+                    if (compare != 0)
+                        break;
+
+                    var currentChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 1);
+                    if (currentChangeVector.Equals(changeVector))
+                    {
+                        int size;
+                        return new DocumentConflict
+                        {
+                            ChangeVector = currentChangeVector,
+                            Key = new LazyStringValue(key, tvr.Read(2, out size), size, context),
+                            StorageId = tvr.Id,
+                            Doc = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context)
+                        };
+                    }
+                }
+            }
+            return null;
+        }
+
         public IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context, string key)
         {
             byte* lowerKey;

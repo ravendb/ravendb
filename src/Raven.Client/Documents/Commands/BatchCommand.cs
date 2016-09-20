@@ -6,6 +6,7 @@ using System.Text;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
+using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -17,7 +18,7 @@ namespace Raven.Client.Documents.Commands
         public JsonOperationContext Context;
         public List<DynamicJsonValue> Commands;
 
-        public override HttpRequestMessage CreateRequest(out string url)
+        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             var request = new HttpRequestMessage
             {

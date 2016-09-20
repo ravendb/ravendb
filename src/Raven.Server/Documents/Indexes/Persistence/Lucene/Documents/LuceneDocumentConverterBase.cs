@@ -17,6 +17,8 @@ using Sparrow.Json;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Utils;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -52,11 +54,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
-        public global::Lucene.Net.Documents.Document ConvertToCachedDocument(LazyStringValue key, object document)
+        public  global::Lucene.Net.Documents.Document ConvertToCachedDocument(LazyStringValue key, object document, JsonOperationContext indexContext)
         {
             _document.GetFields().Clear();
 
-            foreach (var field in GetFields(key, document))
+            foreach (var field in GetFields(key, document, indexContext))
             {
                 _document.Add(field);
             }
@@ -64,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return _document;
         }
 
-        protected abstract IEnumerable<AbstractField> GetFields(LazyStringValue key, object document);
+        protected abstract IEnumerable<AbstractField> GetFields(LazyStringValue key, object document, JsonOperationContext indexContext);
 
         /// <summary>
         /// This method generate the fields for indexing documents in lucene from the values.
@@ -77,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         ///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
         ///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
         /// </summary>
-        protected IEnumerable<AbstractField> GetRegularFields(IndexField field, object value, bool nestedArray = false)
+        public IEnumerable<AbstractField> GetRegularFields(IndexField field, object value, JsonOperationContext indexContext, bool nestedArray = false)
         {
             var path = field.Name;
 
@@ -203,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (valueType == ValueType.BoostedValue)
             {
                 var boostedValue = (BoostedValue)value;
-                foreach (var fieldFromCollection in GetRegularFields(field, boostedValue.Value, nestedArray: false))
+                foreach (var fieldFromCollection in GetRegularFields(field, boostedValue.Value, indexContext, nestedArray: false))
                 {
                     fieldFromCollection.Boost = boostedValue.Boost;
                     fieldFromCollection.OmitNorms = false;
@@ -228,11 +230,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                     _multipleItemsSameFieldCount.Add(count++);
 
-                    foreach (var fieldFromCollection in GetRegularFields(field, itemToIndex, nestedArray: true))
+                    foreach (var fieldFromCollection in GetRegularFields(field, itemToIndex, indexContext, nestedArray: true))
                         yield return fieldFromCollection;
 
                     _multipleItemsSameFieldCount.RemoveAt(_multipleItemsSameFieldCount.Count - 1);
                 }
+
+                yield break;
+            }
+
+            if (valueType == ValueType.Dictionary)
+            {
+                var dict = (IDictionary) value;
+
+                var djv = new DynamicJsonValue();
+
+                foreach (var key in dict.Keys)
+                {
+                    djv[key.ToString()] = TypeConverter.ToBlittableSupportedType(dict[key], indexContext);
+                }
+
+                foreach (var dictField in GetRegularFields(field, indexContext.ReadObject(djv, "lucene field"), indexContext))
+                    yield return dictField;
 
                 yield break;
             }
@@ -315,6 +334,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (value is BoostedValue) return ValueType.BoostedValue;
 
             if (value is DynamicBlittableJson) return ValueType.DynamicJsonObject;
+
+            if (value is IDictionary) return ValueType.Dictionary;
 
             if (value is IEnumerable) return ValueType.Enumerable;
 
@@ -499,6 +520,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             LazyString,
 
             LazyCompressedString,
+
+            Dictionary,
 
             Enumerable,
 

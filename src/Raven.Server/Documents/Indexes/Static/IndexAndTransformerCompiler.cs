@@ -181,8 +181,24 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static MemberDeclarationSyntax CreateClass(string name, TransformerDefinition definition)
         {
-            var ctor = RoslynHelper.PublicCtor(name)
-                .AddBodyStatements(HandleTransformResults(definition.TransformResults));
+            var statements = new List<StatementSyntax>();
+
+            IndexAndTransformerMethods methods;
+            statements.Add(HandleTransformResults(definition.TransformResults, out methods));
+
+            if (methods.HasGroupBy)
+                statements.Add(RoslynHelper.This(nameof(TransformerBase.HasGroupBy)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+
+            if (methods.HasLoadDocument)
+                statements.Add(RoslynHelper.This(nameof(TransformerBase.HasLoadDocument)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+
+            if (methods.HasTransformWith)
+                statements.Add(RoslynHelper.This(nameof(TransformerBase.HasTransformWith)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+
+            if (methods.HasInclude)
+                statements.Add(RoslynHelper.This(nameof(TransformerBase.HasInclude)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+
+            var ctor = RoslynHelper.PublicCtor(name).AddBodyStatements(statements.ToArray());
 
             return RoslynHelper.PublicClass(name)
                 .WithBaseClass<TransformerBase>()
@@ -220,7 +236,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));
         }
 
-        private static StatementSyntax HandleTransformResults(string transformResults)
+        private static StatementSyntax HandleTransformResults(string transformResults, out IndexAndTransformerMethods methods)
         {
             try
             {
@@ -228,11 +244,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
-                    return HandleSyntaxInTransformResults(new QuerySyntaxTransformResultsRewriter(), queryExpression);
+                    return HandleSyntaxInTransformResults(new QuerySyntaxTransformResultsRewriter(), queryExpression, out methods);
 
                 var invocationExpression = expression as InvocationExpressionSyntax;
                 if (invocationExpression != null)
-                    return HandleSyntaxInTransformResults(new MethodSyntaxTransformResultsRewriter(), invocationExpression);
+                    return HandleSyntaxInTransformResults(new MethodSyntaxTransformResultsRewriter(), invocationExpression, out methods);
 
                 throw new InvalidOperationException("Not supported expression type.");
             }
@@ -280,7 +296,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
 
-                fieldNamesValidator.Validate(reduce, expression);
+                fieldNamesValidator?.Validate(reduce, expression);
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
@@ -318,9 +334,10 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleSyntaxInTransformResults(TransformResultsRewriterBase transformResultsRewriter, ExpressionSyntax expression)
+        private static StatementSyntax HandleSyntaxInTransformResults(TransformResultsRewriterBase transformResultsRewriter, ExpressionSyntax expression, out IndexAndTransformerMethods methods)
         {
             var rewrittenExpression = (CSharpSyntaxNode)transformResultsRewriter.Visit(expression);
+            methods = transformResultsRewriter.Methods;
 
             var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("results")), rewrittenExpression);
 
@@ -400,6 +417,15 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             public Type Type { get; set; }
             public string Code { get; set; }
+        }
+
+        public class IndexAndTransformerMethods
+        {
+            public bool HasLoadDocument { get; set; }
+            public bool HasTransformWith { get; set; }
+            public bool HasGroupBy { get; set; }
+
+            public bool HasInclude { get; set; }
         }
     }
 }

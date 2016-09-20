@@ -6,6 +6,7 @@ using Lucene.Net.Documents;
 using Raven.Client.Data;
 using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
         }
 
-        protected override IEnumerable<AbstractField> GetFields(LazyStringValue key, object document)
+        protected override IEnumerable<AbstractField> GetFields(LazyStringValue key, object document, JsonOperationContext indexContext)
         {
             if (key != null)
                 yield return GetOrCreateKeyField(key);
@@ -48,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     throw new NotImplementedException("Dynamic fields are not supported yet"); // TODO arek - output of CreateField() will be probably AbstractField - just add it to the result
                 }
 
-                foreach (var luceneField in GetRegularFields(field, value))
+                foreach (var luceneField in GetRegularFields(field, value, indexContext))
                 {
                     if (boostedValue != null)
                     {

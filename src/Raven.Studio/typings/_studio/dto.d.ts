@@ -24,3 +24,16 @@ interface menuItem {
 
 type dynamicHashType = KnockoutObservable<string> | (() => string);
 
+interface collectionsStatsDto {
+    NumberOfDocuments: number;
+    Collections: dictionary<number>;
+}
+
+interface singleAuthToken {
+    Token: string;
+}
+
+interface chagesApiConfigureRequestDto {
+    Command: string;
+    Param?: string;
+}

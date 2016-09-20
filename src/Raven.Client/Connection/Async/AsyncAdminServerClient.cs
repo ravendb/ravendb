@@ -60,8 +60,7 @@ namespace Raven.Client.Connection.Async
             using (var req = adminRequest.CompactDatabase(databaseName))
             {
                 var json = await req.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                //TODO: return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), json.Value<long>("OperationId"));
-                throw new NotImplementedException("Use web sockets for operations");
+                return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), json.Value<long>("OperationId"));
             }
         }
 
@@ -148,8 +147,7 @@ namespace Raven.Client.Connection.Async
 
                 var jsonResponse = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 
-                //TODO:return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), jsonResponse.Value<long>("OperationId"));
-                throw new NotImplementedException("Use web sockets for operations");
+                return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), jsonResponse.Value<long>("OperationId"));
             }
         }
 

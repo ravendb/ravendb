@@ -32,6 +32,8 @@ namespace Raven.Client.Changes
 
         public event Action<DataSubscriptionChangeNotification> OnDataSubscriptionNotification;
 
+        public event Action<OperationStatusChangeNotification> OnOperationStatusChangeNotification;
+
         public void Send(DocumentChangeNotification documentChangeNotification)
         {
             OnDocumentChangeNotification?.Invoke(documentChangeNotification);
@@ -64,5 +66,9 @@ namespace Raven.Client.Changes
             OnDataSubscriptionNotification?.Invoke(dataSubscriptionChangeNotification);
         }
 
+        public void Send(OperationStatusChangeNotification operationStatusChangeNotification)
+        {
+            OnOperationStatusChangeNotification?.Invoke(operationStatusChangeNotification);
+        }
     }
 }

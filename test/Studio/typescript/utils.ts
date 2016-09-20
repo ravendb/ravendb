@@ -1,7 +1,6 @@
 ﻿/// <reference path="../../../src/Raven.Studio/typings/tsd.d.ts" />
 
 import Squire = require("Squire");
-import jquery = require("jquery");
 import activator = require("durandal/activator");
 import extensions = require("src/Raven.Studio/typescript/common/extensions");
 import commandBaseMock = require("mocks/commandBaseMock");
@@ -53,6 +52,7 @@ class Utils {
             Utils.injector = new Squire();
             Utils.injector
                 .mock('knockout', ko)
+                .mock('jquery', jQuery)
                 .mock('commands/commandBase', commandBaseMock);
 
             return this.aceEditorFacade(Utils.injector)
@@ -103,7 +103,7 @@ class Utils {
 
     static runViewmodelTest<T>(viewModelName: string, opts: viewmodelTestOpts<T>): Promise<void> {
         var activatorInstance = activator.create();
-        var $test = jquery("#test");
+        var $test = $("#test");
 
         var testPromise = new Promise<void>((resolve, reject) => {
             Utils.injector.
@@ -136,7 +136,7 @@ class Utils {
     }
 
     private static composeViewForTest<T>(vm: T, opts: viewmodelTestOpts<T>, viewModelName: string, resolve: Function, reject: Function) {
-        var $test = jquery("#test");
+        var $test = $("#test");
 
         composition.compose($test[0], <any>{
             activate: false, // we use external activator 

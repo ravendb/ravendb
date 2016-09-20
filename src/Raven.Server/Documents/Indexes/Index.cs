@@ -344,7 +344,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public bool IsStale(DocumentsOperationContext databaseContext)
+        public bool IsStale(DocumentsOperationContext databaseContext, out long lastProcessedEtag)
         {
             Debug.Assert(databaseContext.Transaction != null);
 
@@ -352,6 +352,12 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (indexContext.OpenReadTransaction())
             {
+                lastProcessedEtag = 0;
+                foreach (var collection in Collections)
+                {
+                    var collectionEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+                    lastProcessedEtag = Math.Max(lastProcessedEtag, collectionEtag);
+                }
                 return IsStale(databaseContext, indexContext);
             }
         }
@@ -793,7 +799,7 @@ namespace Raven.Server.Documents.Indexes
 
                         FillQueryResult(result, isStale, documentsContext, indexContext);
 
-                        if (Type.IsMapReduce() && transformer == null)
+                        if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0) && (transformer == null || transformer.MightRequireTransaction == false))
                             documentsContext.CloseTransaction(); // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
 
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))

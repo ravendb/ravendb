@@ -126,9 +126,9 @@ class counters extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [
+        return [/* TODO
             changesContext.currentResourceChangesApi().watchAllCounters((e: counterChangeNotification) => this.refreshGroups()),
-            changesContext.currentResourceChangesApi().watchCounterBulkOperation(() => this.refreshGroups())
+            changesContext.currentResourceChangesApi().watchCounterBulkOperation(() => this.refreshGroups()) */
         ];
     }
 

@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "Voron.Recovery": {
+      "commandName": "Project"
+    }
+  }
+}

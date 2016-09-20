@@ -22,6 +22,18 @@ namespace Raven.Client.Changes
         IObservableWithTask<DocumentChangeNotification> ForAllDocuments();
 
         /// <summary>
+        /// Subscribe to changes for specified operation only.
+        /// </summary>
+        /// <returns></returns>
+        IObservableWithTask<OperationStatusChangeNotification> ForOperationId(long operationId);
+
+        /// <summary>
+        /// Subscribe to change for all operation statuses. 
+        /// </summary>
+        /// <returns></returns>
+        IObservableWithTask<OperationStatusChangeNotification> ForAllOperations();
+
+        /// <summary>
         /// Subscribe to changes for all indexes.
         /// </summary>
         IObservableWithTask<IndexChangeNotification> ForAllIndexes();

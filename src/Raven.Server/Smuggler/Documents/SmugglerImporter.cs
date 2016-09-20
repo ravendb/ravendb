@@ -189,18 +189,24 @@ namespace Raven.Server.Smuggler.Documents
                                 }
                             }
                             break;
+                        case JsonParserToken.StartArray:
+                            switch (operateOnType)
+                            {
+                                case "RevisionDocuments":
+                                    // We are taking a reference here since the documents import can activate or disable the versioning.
+                                    // We hold a local copy because the user can disable the bundle during the import process, exteranly.
+                                    // In this case we want to continue to import the revisions documents.
+                                    versioningStorage = _database.BundleLoader.VersioningStorage;
+                                    _batchPutCommand.IsRevision = true;
+                                    break;
+                            }
+                            break;
                         case JsonParserToken.EndArray:
                             switch (operateOnType)
                             {
                                 case "Docs":
                                     await FinishBatchOfDocuments();
                                     _batchPutCommand = new MergedBatchPutCommand(_database, buildVersion);
-
-                                    // We are taking a reference here since the documents import can activate or disable the versioning.
-                                    // We holad a local copy because the user can disable the bundle during the import process, exteranly.
-                                    // In this case we want to continue to import the revisions documents.
-                                    versioningStorage = _database.BundleLoader.VersioningStorage;
-                                    _batchPutCommand.IsRevision = true;
                                     break;
                                 case "RevisionDocuments":
                                     await FinishBatchOfDocuments();
