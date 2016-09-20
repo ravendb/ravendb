@@ -16,7 +16,7 @@ namespace SlowTests.MailingList
     public class DynamicFieldNoAnalysisStillAnalyzesTest : RavenTestBase
     {
 
-        [Fact(Skip = "Missing feature: CreateField")]
+        [Fact]
         public void ToFacets_UsingDynamicFieldsWithoutAnalysis_ReturnsFacetValuesInOriginalCasing()
         {
             using (var _store = GetDocumentStore())
