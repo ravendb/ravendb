@@ -14,6 +14,7 @@ using System.Text;
 using SlowTests.Utils;
 using Voron;
 using Voron.Util.Conversion;
+using Voron.Impl.Paging;
 using Xunit;
 using Sparrow.Compression;
 using Sparrow;
@@ -34,7 +35,7 @@ namespace SlowTests.Voron
         [InlineData(6)]
         public unsafe void CanWriteBigTransactions(long transactionSizeInGb)
         {
-            var tmpFile = $"{Path.GetTempPath()}{Path.DirectorySeparatorChar}TestBigTx" + transactionSizeInGb;
+            var tmpFile = Path.Combine(Path.GetTempPath(), "TestBigTx" + transactionSizeInGb);
             try
             {
                 Directory.Delete(tmpFile, true);
@@ -50,15 +51,15 @@ namespace SlowTests.Voron
                 new Random().NextBytes(value);
                 value[0] = 11;
                 value[HalfGb - 1] = 22;
-                value[(HalfGb/3)*2] = 33;
-                value[HalfGb/2] = 44;
-                value[HalfGb/3] = 55;
+                value[(HalfGb / 3) * 2] = 33;
+                value[HalfGb / 2] = 44;
+                value[HalfGb / 3] = 55;
 
                 using (var tx = env.WriteTransaction())
                 {
                     var tree = tx.CreateTree("bigTree");
 
-                    for (int i = 0; i < transactionSizeInGb*2; i++)
+                    for (int i = 0; i < transactionSizeInGb * 2; i++)
                     {
                         var ms1 = new MemoryStream(value);
                         ms1.Position = 0;
@@ -90,16 +91,16 @@ namespace SlowTests.Voron
                     fixed (byte* singleByte = new byte[1])
                     {
 
-                        for (int i = 0; i < transactionSizeInGb*2; i++)
+                        for (int i = 0; i < transactionSizeInGb * 2; i++)
                         {
                             var key = "bigTreeKey" + i;
                             var reader = tree.Read(key).Reader;
 
                             VerifyData(singleByte, reader, 0, 11);
-                            VerifyData(singleByte, reader, (int) HalfGb - 1, 22);
-                            VerifyData(singleByte, reader, ((int) HalfGb/3)*2, 33);
-                            VerifyData(singleByte, reader, (int) HalfGb/2, 44);
-                            VerifyData(singleByte, reader, (int) HalfGb/3, 55);
+                            VerifyData(singleByte, reader, (int)HalfGb - 1, 22);
+                            VerifyData(singleByte, reader, ((int)HalfGb / 3) * 2, 33);
+                            VerifyData(singleByte, reader, (int)HalfGb / 2, 44);
+                            VerifyData(singleByte, reader, (int)HalfGb / 3, 55);
                         }
                     }
                 }
@@ -130,9 +131,9 @@ namespace SlowTests.Voron
                 long Gb = 1024*1024*1024;
                 long inputSize = 3L*Gb;
                 byte* outputBuffer, inputBuffer, checkedBuffer;
-                var outputBufferSize = CreateScratchFile($"output-{devider}", env, inputSize, out outputBuffer);
-                var inputBufferSize = CreateScratchFile($"input-{devider}", env, inputSize, out inputBuffer);
-                var checkedBufferSize = CreateScratchFile($"checked-{devider}", env, inputSize, out checkedBuffer);
+                var outputPager = CreateScratchFile($"output-{devider}", env, inputSize, out outputBuffer);
+                var inputPager = CreateScratchFile($"input-{devider}", env, inputSize, out inputBuffer);
+                var checkedPager = CreateScratchFile($"checked-{devider}", env, inputSize, out checkedBuffer);
 
                 var random = new Random(123);
 
@@ -152,7 +153,7 @@ namespace SlowTests.Voron
                     }
                 }
 
-                outputBufferSize = LZ4.MaximumOutputLength(inputSize);
+                var outputBufferSize = LZ4.MaximumOutputLength(inputSize);
 
                 // write some data in known places in inputBuffer
                 long compressedLen = 0;
@@ -178,10 +179,14 @@ namespace SlowTests.Voron
                     var testPointer = (byte*) ((long) checkedBuffer + testPoints);
                     Assert.Equal(++testNum, *testPointer);
                 }
+
+                outputPager.Dispose();
+                inputPager.Dispose();
+                checkedPager.Dispose();
             }
         }
 
-        private static unsafe long CreateScratchFile(string scratchName, StorageEnvironment env, long inputSize, out byte* buffer)
+        private static unsafe AbstractPager CreateScratchFile(string scratchName, StorageEnvironment env, long inputSize, out byte* buffer)
         {
             var filename = $"{Path.GetTempPath()}{Path.DirectorySeparatorChar}TestBigCompression-{scratchName}";
             var pager = env.Options.CreateScratchPager(filename);
@@ -189,7 +194,7 @@ namespace SlowTests.Voron
             int bufferSizeInPages = checked((int) (bufferSize/env.Options.PageSize));
             pager.EnsureContinuous(0, bufferSizeInPages);
             buffer = pager.AcquirePagePointer(null, 0);
-            return bufferSize;
+            return pager;
         }
     }
 }

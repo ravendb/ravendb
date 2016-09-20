@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using SlowTests.Voron;
 using Voron;
 
 namespace Tryouts
@@ -15,6 +16,31 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
+            for (int i = 0; i < 10; i++)
+            {
+                Console.WriteLine("Run #" + i);
+                var test = new HugeTransactions();
+                test.LZ4TestAbove2GB(3L * 1024 * 1024);
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                Console.WriteLine("Run BT 2 #" + i);
+                var test = new HugeTransactions();
+                test.CanWriteBigTransactions(2);
+            }
+
+            for (int i = 0; i < 3; i++)
+            {
+                Console.WriteLine("Run BT 6 #" + i);
+                var test = new HugeTransactions();
+                test.CanWriteBigTransactions(6);
+            }
+
+
+            Console.WriteLine("Press any key for next test");
+            Console.ReadKey();
+
 
             if (args.Length == 1)
                 BUFF_SIZE = Convert.ToInt32(args[0]) * MB;
