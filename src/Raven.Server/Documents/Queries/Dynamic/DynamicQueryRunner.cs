@@ -39,8 +39,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = MatchIndex(dynamicIndexName, query, false, out collection);
             if (index == null)
             {
-                var result = new StreamDocumentQueryResult(response, writer, _context);
-                ExecuteCollectionQuery(result, query, collection);
+                using (var result = new StreamDocumentQueryResult(response, writer, _context))
+                    ExecuteCollectionQuery(result, query, collection);
+
                 return Task.CompletedTask;
             }
 
