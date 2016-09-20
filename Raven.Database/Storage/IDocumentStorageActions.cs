@@ -51,7 +51,7 @@ namespace Raven.Database.Storage
 
         long GetDocumentsCount();
 
-        JsonDocument DocumentByKey(string key);
+        JsonDocument DocumentByKey(string key, bool useDifferentTable = false);
 
         Stream RawDocumentByKey(string key);
 
