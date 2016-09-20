@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Sparrow.Global;
 using System.Runtime.InteropServices;
 using Sparrow.Binary;
@@ -40,6 +41,7 @@ namespace Sparrow.Compression
         private const int LZ4_HASHLOG = LZ4_MEMORY_USAGE - 2;
         private const int HASH_SIZE_U32 = 1 << LZ4_HASHLOG;
         private const int MAX_INPUT_LENGTH_PER_SEGMENT = int.MaxValue/2;
+        private const int INPUT_LENGTH_GAP = MAX_INPUT_LENGTH_PER_SEGMENT/4;
 
         private interface ILimitedOutputDirective { };
         private struct NotLimited : ILimitedOutputDirective { };
@@ -93,15 +95,18 @@ namespace Sparrow.Compression
             long pos = 0;
             while (pos < inputLength)
             {
-                int partInputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
+                int partInputLength = MAX_INPUT_LENGTH_PER_SEGMENT - INPUT_LENGTH_GAP;
                 if (pos + partInputLength > inputLength)
                     partInputLength = (int)(inputLength - pos);
 
                 int remaining = (outputLength - totalOutputSize) > int.MaxValue ? int.MaxValue : (int)(outputLength - totalOutputSize);
 
+                var tmpTotalSize = totalOutputSize;
                 totalOutputSize += Encode64(input + pos, output + totalOutputSize, partInputLength, remaining, acceleration);
 
-                pos += MAX_INPUT_LENGTH_PER_SEGMENT;
+                Debug.Assert(totalOutputSize - tmpTotalSize <= MAX_INPUT_LENGTH_PER_SEGMENT);
+
+                pos += MAX_INPUT_LENGTH_PER_SEGMENT - INPUT_LENGTH_GAP;
             }
 
             return totalOutputSize;
@@ -555,14 +560,14 @@ namespace Sparrow.Compression
                 if (totalReadSize + partInputLength > inputLength)
                     partInputLength = (int) (inputLength - totalReadSize);
 
-                int partOutputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
+                int partOutputLength = MAX_INPUT_LENGTH_PER_SEGMENT - INPUT_LENGTH_GAP;
                 if (totalWriteSize + partOutputLength > outputLength)
                 {
                     partOutputLength = checked((int)(outputLength - totalWriteSize));
                 }
                 totalReadSize += Decode64(input + totalReadSize, partInputLength, output + totalWriteSize, partOutputLength, false);
 
-                totalWriteSize += MAX_INPUT_LENGTH_PER_SEGMENT;
+                totalWriteSize += MAX_INPUT_LENGTH_PER_SEGMENT - INPUT_LENGTH_GAP;
             }
 
             return totalReadSize;
