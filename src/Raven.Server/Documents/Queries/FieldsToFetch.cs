@@ -54,15 +54,22 @@ namespace Raven.Server.Documents.Queries
             {
                 var fieldToFetch = fieldsToFetch[i];
 
+                if (indexDefinition == null)
+                {
+                    result[fieldToFetch] = new FieldToFetch(fieldToFetch, false);
+                    continue;
+                }
+
                 IndexField value;
-                var extract = indexDefinition != null && indexDefinition.TryGetField(fieldToFetch, out value) && value.Storage == FieldStorage.Yes;
+                var extract = indexDefinition.TryGetField(fieldToFetch, out value) && value.Storage == FieldStorage.Yes;
                 if (extract)
                     anyExtractableFromIndex = true;
 
                 result[fieldToFetch] = new FieldToFetch(fieldToFetch, extract | indexDefinition.HasDynamicFields);
             }
 
-            anyExtractableFromIndex |= indexDefinition.HasDynamicFields;
+            if (indexDefinition != null)
+                anyExtractableFromIndex |= indexDefinition.HasDynamicFields;
 
             return result;
         }
