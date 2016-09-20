@@ -16,23 +16,23 @@ namespace SlowTests.MailingList
 {
     public class Tobias : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Collation and https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact(Skip = "Missing feature: Collation")]
         public void CanWork()
         {
-            using(var Store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
 
-                new Data_Search().Execute(Store);
-                new Data_SearchTransformer().Execute(Store);
+                new Data_Search().Execute(store);
+                new Data_SearchTransformer().Execute(store);
 
-                using (var session = Store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     foreach (var d in data) session.Store(d);
                     foreach (var d in mydata) session.Store(d);
                     session.SaveChanges();
                 }
 
-                using (var session = Store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     RavenQueryStatistics stats;
 
@@ -172,14 +172,14 @@ namespace SlowTests.MailingList
             public Data_SearchTransformer()
             {
                 TransformResults = ts => from t in ts
-                                               where t.MyDataIds.Count() > 0
-                                               select new
-                                               {
-                                                   Data = LoadDocument<Data_Search.Data>(t.DataId),
-                                                   MyDatas = LoadDocument<Data_Search.MyData>(t.MyDataIds)
-                                               };
+                                         where t.MyDataIds.Count() > 0
+                                         select new
+                                         {
+                                             Data = LoadDocument<Data_Search.Data>(t.DataId),
+                                             MyDatas = LoadDocument<Data_Search.MyData>(t.MyDataIds)
+                                         };
             }
         }
-    
+
     }
 }
