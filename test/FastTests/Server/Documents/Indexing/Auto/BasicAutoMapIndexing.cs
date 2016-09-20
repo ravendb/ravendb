@@ -941,7 +941,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact(Skip = "There is a race condition here that needs fixing")]
+        [Fact]
         public async Task AutoIndexesShouldBeMarkedAsIdleAndDeleted()
         {
             using (var database = CreateDocumentDatabase())
@@ -979,7 +979,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexingPriority.Normal, index1.Priority);
                 Assert.Equal(IndexingPriority.Normal, index2.Priority);
 
-                SystemTime.UtcDateTime = () => DateTime.UtcNow.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
@@ -994,8 +994,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexingPriority.Normal, index1.Priority);
                 Assert.Equal(IndexingPriority.Idle, index2.Priority);
 
-                var now = SystemTime.UtcNow;
-                SystemTime.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
+                var now = database.Time.GetUtcNow();
+                database.Time.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
 
                 database.IndexStore.RunIdleOperations(); // nothing should happen here, because age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
 
@@ -1005,8 +1005,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexingPriority.Normal, index1.Priority);
                 Assert.Equal(IndexingPriority.Idle, index2.Priority);
 
-                now = SystemTime.UtcNow;
-                SystemTime.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan);
+                now = database.Time.GetUtcNow();
+                database.Time.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan);
 
                 database.IndexStore.RunIdleOperations(); // this will delete index2
 
