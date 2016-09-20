@@ -164,7 +164,7 @@ namespace SlowTests.Voron
             {
                 for (var i = 0; i < number; i++)
                 {
-                    results.Add(tx.CreateTree(prefix + i).Name);
+                    results.Add(tx.CreateTree(prefix + i).Name.ToString());
                 }
 
                 tx.Commit();

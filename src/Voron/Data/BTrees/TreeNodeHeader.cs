@@ -55,7 +55,7 @@ namespace Voron.Data.BTrees
         {
             if (node->Flags == (TreeNodeFlags.PageRef))
             {
-                var overFlowPage = tx.GetReadOnlyTreePage(node->PageNumber);
+                var overFlowPage = tx.GetPage(node->PageNumber).ToTreePage();
                 return overFlowPage.Base + Constants.TreePageHeaderSize;
             }
             return (byte*) node + node->KeySize + Constants.NodeHeaderSize;

@@ -304,17 +304,4 @@ namespace Voron.Impl
             return val->RootObjectType;
         }
     }
-
-    public static class TransactionLegacyExtensions
-    {
-        public static TreePage GetReadOnlyTreePage(this LowLevelTransaction tx, long pageNumber)
-        {
-            return tx.GetPage(pageNumber).ToTreePage();
-        }
-
-        public static FixedSizeTreePage GetReadOnlyFixedSizeTreePage(this LowLevelTransaction tx, long pageNumber)
-        {
-            return tx.GetPage(pageNumber).ToFixedSizeTreePage();
-        }
-    }
 }

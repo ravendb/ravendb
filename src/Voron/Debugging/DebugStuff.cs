@@ -159,7 +159,7 @@ namespace Voron.Debugging
                     writer.WriteLine("<p>Number of entries: {0:#,#;;0}, val size: {1:#,#;;0}.</p>", header->NumberOfEntries, header->ValueSize);
                     writer.WriteLine("<div class='css-treeview'><ul>");
 
-                    var page = tx.GetReadOnlyFixedSizeTreePage(header->RootPageNumber);
+                    var page = fst.GetReadOnlyPage(header->RootPageNumber);
 
                     RenderFixedSizeTreePage(tx, page, writer, header, "Root", true);
 
@@ -220,7 +220,7 @@ namespace Voron.Debugging
                     if (i == 0)
                         s = "[smallest]";
 
-                    RenderFixedSizeTreePage(tx, tx.GetReadOnlyFixedSizeTreePage(pageNum), sw, header, s, false);
+                    RenderFixedSizeTreePage(tx, tx.GetPage(pageNum).ToFixedSizeTreePage(), sw, header, s, false);
                 }
             }
 
@@ -243,7 +243,7 @@ namespace Voron.Debugging
                     writer.WriteLine(headerData);
                 writer.WriteLine("<div class='css-treeview'><ul>");
 
-                var page = tx.GetReadOnlyTreePage(startPageNumber);
+                var page = tx.GetPage(startPageNumber).ToTreePage();
                 RenderPage(tx, page, writer, "Root", true);
 
                 writer.WriteLine("</ul></div>");
@@ -260,7 +260,7 @@ namespace Voron.Debugging
                 writer.WriteLine(headerData);
                 writer.WriteLine("<div class='css-treeview'><ul>");
 
-                var page = tree.Llt.GetReadOnlyTreePage(tree.State.RootPageNumber);
+                var page = tree.GetReadOnlyPage(tree.State.RootPageNumber);
                 RenderPage(tree.Llt, page, writer, "Root", true);
 
                 writer.WriteLine("</ul></div>");
@@ -297,7 +297,7 @@ namespace Voron.Debugging
                     if (i == 0)
                         key = "[smallest]";
 
-                    RenderPage(tx, tx.GetReadOnlyTreePage(pageNum), sw, key, false);
+                    RenderPage(tx, tx.GetPage(pageNum).ToTreePage(), sw, key, false);
                 }
             }
             sw.WriteLine("</ul></li></ul>");

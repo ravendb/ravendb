@@ -114,7 +114,7 @@ namespace Voron.Data.BTrees
                     {
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
-                        _currentPage = _tx.GetReadOnlyTreePage(node->PageNumber);
+                        _currentPage = _tree.GetReadOnlyPage(node->PageNumber);
                         _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
 
                         if (_prefetch && _currentPage.IsLeaf)
@@ -160,7 +160,7 @@ namespace Voron.Data.BTrees
                     {
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
-                        _currentPage = _tx.GetReadOnlyTreePage(node->PageNumber);
+                        _currentPage = _tree.GetReadOnlyPage(node->PageNumber);
 
                         _currentPage.LastSearchPosition = 0;
                     }
