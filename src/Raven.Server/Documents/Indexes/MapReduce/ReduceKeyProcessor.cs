@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             _singleValueHash = Hashing.XXHash64.Calculate((byte*)p, (ulong)s.Length * sizeof(char));
                             break;
                         case Mode.MultipleValues:
-                            CopyToBuffer((byte*)p, s.Length);
+                            CopyToBuffer((byte*)p, s.Length * sizeof(char));
                             break;
                     }
                 }

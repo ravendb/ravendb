@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Handlers
         //get conflicts for specified document
         [RavenAction("/databases/*/replication/conflicts", "GET", 
             "/databases/{databaseName:string}/replication/conflicts?docId={documentId:string}")]
-        public Task GetReplicationConflictsByDocument()
+        public Task GetReplicationConflictsById()
         {
             var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
             DocumentsOperationContext context;
@@ -64,6 +64,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         ["Key"] = conflict.Key,
                         ["ChangeVector"] = conflict.ChangeVector.ToJson(),
+                        ["Doc"] = conflict.Doc
                     });					
                 }
 
@@ -72,7 +73,7 @@ namespace Raven.Server.Documents.Handlers
                 HttpContext.Response.StatusCode = 200;
                 return Task.CompletedTask;
             }
-        }
+        }		
 
         [RavenAction("/databases/*/replication/topology", "GET")]
         public Task GetReplicationTopology()

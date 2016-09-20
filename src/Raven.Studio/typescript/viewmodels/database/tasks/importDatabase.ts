@@ -153,10 +153,10 @@ class importDatabase extends viewModelBase {
             .always(() => this.isUploading(false));
     }
 
-    private waitForOperationToComplete(db: database, operationId: number) {        
+    private waitForOperationToComplete(db: database, operationId: number) {
         new getOperationStatusCommand(db, operationId)
-            .execute()
-            .done((result: dataDumperOperationStatusDto) => this.importStatusRetrieved(db, operationId, result));
+            .execute();
+            //TODO: .done((result: dataDumperOperationStatusDto) => this.importStatusRetrieved(db, operationId, result));
     }
 
     private importStatusRetrieved(db: database, operationId: number, result: dataDumperOperationStatusDto) {

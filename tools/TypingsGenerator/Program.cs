@@ -22,27 +22,27 @@ namespace TypingsGenerator
         public const string TargetDirectory = "../../src/Raven.Studio/typings/server/";
         public static void Main(string[] args)
         {
-            //Directory.CreateDirectory(TargetDirectory);
+            Directory.CreateDirectory(TargetDirectory);
 
-            //var scripter = new Scripter()
-            //    .UsingFormatter(new TsFormatter
-            //        {
-            //            EnumsAsString = true
-            //        });
+            var scripter = new Scripter()
+                .UsingFormatter(new TsFormatter
+                {
+                    EnumsAsString = true
+                });
 
-            //scripter
-            //   .WithTypeMapping(TsPrimitive.String, typeof(Guid))
-            //   .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
-            //   .WithTypeMapping(TsPrimitive.Any, typeof(RavenJObject))
-            //   .WithTypeMapping(TsPrimitive.Any, typeof(RavenJValue))
-            //   .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(RavenJArray))
-            //   .WithTypeMapping(TsPrimitive.Any, typeof(RavenJToken));
+            scripter
+               .WithTypeMapping(TsPrimitive.String, typeof(Guid))
+               .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
+               .WithTypeMapping(TsPrimitive.Any, typeof(RavenJObject))
+               .WithTypeMapping(TsPrimitive.Any, typeof(RavenJValue))
+               .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(RavenJArray))
+               .WithTypeMapping(TsPrimitive.Any, typeof(RavenJToken));
 
-            //scripter = ConfigureTypes(scripter);
-            //Directory.Delete(TargetDirectory, true);
-            //Directory.CreateDirectory(TargetDirectory);
-            //scripter
-            //    .SaveToDirectory(TargetDirectory);
+            scripter = ConfigureTypes(scripter);
+            Directory.Delete(TargetDirectory, true);
+            Directory.CreateDirectory(TargetDirectory);
+            scripter
+                .SaveToDirectory(TargetDirectory);
         }
 
         private static Scripter ConfigureTypes(Scripter scripter)
@@ -57,6 +57,9 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(IndexDefinition));
+            scripter.AddType(typeof(OperationStatusChangeNotification));
+            scripter.AddType(typeof(DeterminateProgress));
+            scripter.AddType(typeof(IndeterminateProgress));
 
             return scripter;
         }

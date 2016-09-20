@@ -71,7 +71,7 @@ namespace Raven.Abstractions.Extensions
         /// <param name="dt"></param>
         /// <param name="isUtc"></param>
         /// <returns></returns>
-        public unsafe static string GetDefaultRavenFormat(this DateTime dt, bool isUtc = false)
+        public static unsafe string GetDefaultRavenFormat(this DateTime dt, bool isUtc = false)
         {
             string result = new string('Z', 27 + (isUtc ? 1 : 0));
 

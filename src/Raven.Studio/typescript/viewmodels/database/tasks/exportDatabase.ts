@@ -1,78 +1,106 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
-import collection = require("models/database/documents/collection");
-import validateExportDatabaseOptionsCommand = require("commands/database/studio/validateExportDatabaseOptionsCommand");
+
+import endpoints = require("endpoints");
+import moment = require("moment");
+import copyToClipboard = require("common/copyToClipboard");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import notificationCenter = require("common/notificationCenter");
+import database = require("models/resources/database");
 
-class filterSetting {
-    path = ko.observable<string>("");
-    value = ko.observable<string>("");
-    shouldMatch = ko.observable<boolean>(false);
+import exportDatabaseModel = require("models/database/tasks/exportDatabaseModel");
+import collectionsStats = require("models/database/documents/collectionsStats");
 
-    static empty() {
-        return new filterSetting();
-    }
-}
+import validateExportDatabaseOptionsCommand = require("commands/database/studio/validateExportDatabaseOptionsCommand");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
+import getNextOperationId = require("commands/database/studio/getNextOperationId");
+
 
 class exportDatabase extends viewModelBase {
-    includeDocuments = ko.observable(true);
-    includeIndexes = ko.observable(true);
-    includeTransformers = ko.observable(true);
-    includeAttachments = ko.observable(false);
-    includeExpiredDocuments = ko.observable(false);
-    includeAllCollections = ko.observable(true);
-    removeAnalyzers = ko.observable(false);
+
+    model = new exportDatabaseModel();
+
+    static isExporting = ko.observable(false);
+    isExporting = exportDatabase.isExporting;
+
     showAdvancedOptions = ko.observable(false);
-    batchSize = ko.observable(1024);
-    includedCollections = ko.observableArray<{ collection: string; isIncluded: KnockoutObservable<boolean>; }>();
-    filters = ko.observableArray<filterSetting>();
-    transformScript = ko.observable<string>();
-    exportActionUrl: KnockoutComputed<string>;
-    noneDefualtFileName = ko.observable<string>("");
-    chooseDifferntFileName = ko.observable<boolean>(false);
+    showTransformScript = ko.observable(false);
+
+    collections = ko.observableArray<string>();
+    filter = ko.observable<string>("");
+    filteredCollections: KnockoutComputed<Array<string>>;
+
     exportCommand: KnockoutComputed<string>;
 
     constructor() {
         super();
         aceEditorBindingHandler.install();
+
+        this.setupDefaultExportFilename();
     }
 
-    activate(args: any) {
+    activate(args: any): void {
         super.activate(args);
-        this.updateHelpLink('YD9M1R');
+        this.updateHelpLink("YD9M1R");
 
-        new getCollectionsCommand(this.activeDatabase())
-            .execute()
-            .done((collections: collection[]) => {
-                this.includedCollections(collections.map(c => {
-                    return {
-                        collection: c.name,
-                        isIncluded: ko.observable(false)
-                    }
-                }));
+        this.initializeObservables();
+
+        this.fetchCollections()
+            .done((collections: string[]) => {
+                this.collections(collections);
             });
+    }
 
-        this.exportCommand = ko.computed(() => {
+    private fetchCollections(): JQueryPromise<Array<string>> {
+        const collectionsTask = $.Deferred<Array<string>>();
+
+        new getCollectionsStatsCommand(this.activeDatabase())
+            .execute()
+            .done((stats: collectionsStats) => {
+                collectionsTask.resolve(stats.collections.map(x => x.name));
+            })
+            .fail(() => collectionsTask.reject());
+
+        return collectionsTask;
+    }
+
+    private setupDefaultExportFilename(): void {
+        const dbName = this.activeDatabase().name;
+        const date = moment().format("YYYY-MM-DD HH:mm");
+        this.model.exportFileName(`Dump of ${dbName}, ${date}.ravendbdump`);
+    }
+
+    private initializeObservables(): void {
+        this.filteredCollections = ko.pureComputed(() => {
+            const filter = this.filter();
+            const collections = this.collections();
+            if (!filter) {
+                return collections;
+            }
+            const filterLowerCase = filter.toLowerCase();
+
+            return collections.filter(x => x.toLowerCase().contains(filterLowerCase));
+        });
+
+        this.exportCommand = ko.pureComputed<string>(() => {
             var targetServer = appUrl.forServer();
-            var outputFilename = this.chooseDifferntFileName() ? exportDatabase.escapeForShell(this.noneDefualtFileName()) : "raven.dump"; 
+            var model = this.model;
+            var outputFilename = exportDatabase.escapeForShell(model.exportFileName());
             var commandTokens = ["Raven.Smuggler", "out", targetServer, outputFilename];
 
             var types: Array<string> = [];
-            if (this.includeDocuments()) {
-                 types.push("Documents");
+            if (model.includeDocuments()) {
+                types.push("Documents");
             }
-            if (this.includeIndexes()) {
+            if (model.includeIndexes()) {
                 types.push("Indexes");
             }
-            if (this.includeAttachments()) {
-                types.push("Attachments");
-            }
-            if (this.includeTransformers()) {
+            if (model.includeTransformers()) {
                 types.push("Transformers");
             }
-            if (this.removeAnalyzers()) {
+            if (model.removeAnalyzers()) {
                 types.push("RemoveAnalyzers");
             }
             if (types.length > 0) {
@@ -82,53 +110,28 @@ class exportDatabase extends viewModelBase {
             var databaseName = this.activeDatabase().name;
             commandTokens.push("--database=" + exportDatabase.escapeForShell(databaseName));
 
-            var batchSize = this.batchSize();
+            var batchSize = model.batchSize();
             commandTokens.push("--batch-size=" + batchSize);
 
-            if (!this.includeExpiredDocuments()) {
+            if (!model.includeExpiredDocuments()) {
                 commandTokens.push("--excludeexpired");
             }
 
-            if (!this.includeAllCollections()) {
-                var collections = this.includedCollections().filter((collection) => collection.isIncluded()).map((collection) => collection.collection);
+            if (!model.includeAllCollections()) {
+                const collections = model.includedCollections();
                 commandTokens.push("--metadata-filter=Raven-Entity-Name=" + exportDatabase.escapeForShell(collections.toString()));
             }
 
-            var filters = exportDatabase.convertFiltersToDto(this.filters());
-            for (var i = 0; i < filters.length; i++) {
-                var filter = filters[i];
-                var parameterName = filter.ShouldMatch ? "--filter=" : "--negative-filter=";
-                commandTokens.push(parameterName + filter.Path + "=" + exportDatabase.escapeForShell(filter.Values.toString()));
+            if (model.transformScript()) {
+                commandTokens.push("--transform=" + exportDatabase.escapeForShell(model.transformScript()));
             }
 
-            if (this.transformScript()) {
-                commandTokens.push("--transform=" + exportDatabase.escapeForShell(this.transformScript())); 
-            }
-            
             return commandTokens.join(" ");
         });
     }
 
-    /**
-     * Groups filters by key
-     */
-    private static convertFiltersToDto(filters: filterSetting[]): filterSettingDto[] {
-        var output: filterSettingDto[] = [];
-        for (var i = 0; i < filters.length; i++) {
-            var filter = filters[i];
-
-            var existingOutput = output.first(x => filter.shouldMatch() === x.ShouldMatch && filter.path() === x.Path);
-            if (existingOutput) {
-                existingOutput.Values.push(filter.value());
-            } else {
-                output.push({
-                    ShouldMatch: filter.shouldMatch(),
-                    Path: filter.path(),
-                    Values: [filter.value()]
-                });
-            }
-        }
-        return output;
+    copyCommandToClipboard() {
+        copyToClipboard.copy(this.exportCommand(), "Command was copied to clipboard.");
     }
 
     static escapeForShell(input: string) {
@@ -137,87 +140,71 @@ class exportDatabase extends viewModelBase {
 
     attached() {
         super.attached();
-        $("#transformScriptHelp").popover({
+
+        $("#transformScriptPopover").popover({
             html: true,
-            trigger: 'hover',
+            trigger: "hover",
             content: "Transform scripts are written in JavaScript. <br /><br/>Example:<pre><span class=\"code-keyword\">function</span>(doc) {<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">return null</span>;<br /><br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">return</span> doc;<br />}</pre>"
         });
     }
 
     startExport() {
-        var db = this.activeDatabase();
-        db.isExporting(true);
-        db.exportStatus("");
+        exportDatabase.isExporting(true);
 
-        var operateOnTypes = 0;
-        if (this.includeDocuments()) {
-            operateOnTypes += 1;
-        }
-        if (this.includeIndexes()) {
-            operateOnTypes += 2;
-        }
-        if (this.includeAttachments()) {
-            operateOnTypes += 4;
-        }
-        if (this.includeTransformers()) {
-            operateOnTypes += 8;
-        }
-        if (this.removeAnalyzers()) {
-            operateOnTypes += 8000;
-        }
+        var exportArg = this.model.toDto();
 
-        var filtersToSend = exportDatabase.convertFiltersToDto(this.filters());
-
-        if (!this.includeAllCollections()) {
-            filtersToSend.push(
-                {
-                    ShouldMatch: true,
-                    Path: "@metadata.Raven-Entity-Name",
-                    Values: this.includedCollections().filter((curCol) => curCol.isIncluded()).map((curCol) => curCol.collection)
-                });
-        }
-
-        var smugglerOptions: smugglerOptionsDto = {
-            OperateOnTypes: operateOnTypes,
-            BatchSize: this.batchSize(),
-            ShouldExcludeExpired: !this.includeExpiredDocuments(),
-            Filters: filtersToSend,
-            TransformScript: this.transformScript(),
-            NoneDefualtFileName: this.noneDefualtFileName()
-        };
-
-        new validateExportDatabaseOptionsCommand(smugglerOptions, this.activeDatabase())
+        new validateExportDatabaseOptionsCommand(exportArg, this.activeDatabase())
             .execute()
-            .done(() => {
-                var url = "/studio-tasks/exportDatabase"; //TODO: use endpoint
-                this.downloader.downloadByPost(db, url, smugglerOptions,
-                    db.isExporting, db.exportStatus);
-            })
+            .done(() => this.startDownload(exportArg))
             .fail((response: JQueryXHR) => {
                 messagePublisher.reportError("Invalid export options", response.responseText, response.statusText);
-                db.isExporting(false);
+                exportDatabase.isExporting(false);
             });
-
     }
 
-    selectOptions() {
-        this.showAdvancedOptions(false);
+    private getNextOperationId(db: database): JQueryPromise<number> {
+        return new getNextOperationId(db).execute()
+            .fail((qXHR, textStatus, errorThrown) => {
+                messagePublisher.reportError("Could not get next task id.", errorThrown);
+                exportDatabase.isExporting(false);
+            });
     }
 
-    selectAdvancedOptions() {
-        this.showAdvancedOptions(true);
+    private getAuthToken(db: database): JQueryPromise<singleAuthToken> {
+        return new getSingleAuthTokenCommand(db).execute()
+            .fail((qXHR, textStatus, errorThrown) => {
+                messagePublisher.reportError("Could not get single auth token for download.", errorThrown);
+                exportDatabase.isExporting(false);
+            });
     }
 
-    private removeFilter(filter: filterSetting) {
-        this.filters.remove(filter);
-    }
+    private startDownload(args: smugglerOptionsDto) {
+        const $form = $("#exportDownloadForm");
+        const db = this.activeDatabase();
 
-    addFilter() {
-        var setting = filterSetting.empty();
-        setting.shouldMatch(true);
-        this.filters.unshift(setting);
-    }
+        $.when<any>(this.getNextOperationId(db), this.getAuthToken(db))
+            .then(([operationId]:[number], [token]:[singleAuthToken]) => {
+                var url = endpoints.databases.smuggler.smugglerExport;
+                var authToken = (url.indexOf("?") === -1 ? "?" : "&") + "singleUseAuthToken=" + token.Token;
+                const operationPart = "&operationId=" + operationId;
+                $form.attr("action", appUrl.forResourceQuery(db) + url + authToken + operationPart);
+                $form.empty();
+                for (let key in args) {
+                    if (args.hasOwnProperty(key)) {
+                        $form.append($("<input />")
+                            .attr({
+                                type: "hidden",
+                                name: key,
+                                value: JSON.stringify((<any>args)[key], null, 2)
+                            }));
+                    }
+                }
+                $form.submit();
 
+                notificationCenter.instance.monitorOperation(db, operationId)
+                    .always(() => exportDatabase.isExporting(false));
+            });
+    }
 }
 
 export = exportDatabase;

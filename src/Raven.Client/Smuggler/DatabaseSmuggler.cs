@@ -121,7 +121,9 @@ namespace Raven.Client.Smuggler
 
                 var response = await httpClient.PostAsync(uri, content, cancellationToken).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode == false)
-                    throw new InvalidOperationException("Import failed");
+                    throw new InvalidOperationException("Import failed with status code: " +  response.StatusCode + Environment.NewLine + 
+                        await response.Content.ReadAsStringAsync()
+                        );
 
                 if (response.IsSuccessStatusCode)
                 {

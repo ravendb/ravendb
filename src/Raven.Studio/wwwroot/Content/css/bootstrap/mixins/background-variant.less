@@ -1,9 +1,16 @@
 // Contextual backgrounds
 
-.bg-variant(@color) {
-  background-color: @color;
-  a&:hover,
-  a&:focus {
-    background-color: darken(@color, 10%);
+.bg-variant(@color, @bg-text-color) {
+  background-color: fadeout(@color, 70%);
+  color: @bg-text-color;
+  background-image: @input-bg-disabled-image;
+
+
+  a {
+      color:#FFF;
+
+      &:hover, &:focus {
+        text-decoration:underline !important;
+      }
   }
 }

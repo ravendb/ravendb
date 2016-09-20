@@ -36,20 +36,20 @@ class conflictsResolveCommand extends commandBase {
 
     private monitorOperation(parentPromise: JQueryDeferred<any>, operationId: number) {
         new getOperationStatusCommand(this.ownerDb, operationId)
-            .execute()
-            .done((result: operationStatusDto) => {
-            if (result.Completed) {
-                if (result.Faulted || result.Canceled) {
-                    this.reportError("Failed to perform conflict resolution!", result.State.Error);
-                    parentPromise.reject();
-                } else {
-                    this.reportSuccess("Conflict resolution was completed");
-                    parentPromise.resolve();
-                }
+            .execute();
+        /* TODO.done((result: operationStatusDto) => {
+        if (result.Completed) {
+            if (result.Faulted || result.Canceled) {
+                this.reportError("Failed to perform conflict resolution!", result.State.Error);
+                parentPromise.reject();
             } else {
-                setTimeout(() => this.monitorOperation(parentPromise, operationId), 500);
+                this.reportSuccess("Conflict resolution was completed");
+                parentPromise.resolve();
             }
-        });
+        } else {
+            setTimeout(() => this.monitorOperation(parentPromise, operationId), 500);
+        }
+    });*/
     }
 }
 

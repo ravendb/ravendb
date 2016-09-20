@@ -41,7 +41,7 @@ class indexMergeSuggestions extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchIndexMergeSuggestions()) ];
+        return [ /* TODO changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchIndexMergeSuggestions()) */ ];
     }
 
     private fetchStats(): JQueryPromise<databaseStatisticsDto> {

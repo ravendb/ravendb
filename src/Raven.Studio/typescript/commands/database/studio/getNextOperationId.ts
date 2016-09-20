@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import resource = require("models/resources/resource");
+import endpoints = require("endpoints");
 
 class getNextOperationId extends commandBase {
 
@@ -7,9 +8,8 @@ class getNextOperationId extends commandBase {
         super();
     }
 
-    execute() {
-        var operationId = this.query("/studio-tasks/next-operation-id", null, this.rs);//TODO: use endpoints
-        return operationId;
+    execute(): JQueryPromise<number> {
+        return this.query(endpoints.databases.operations.operationsNextOperationId, null, this.rs);
     }
 }
 
