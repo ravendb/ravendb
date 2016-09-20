@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Exceptions;
@@ -11,6 +12,8 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StreamingHandler : DatabaseRequestHandler
     {
+        private string _postQuery;
+
         [RavenAction("/databases/*/streams/docs", "HEAD", "/databases/{databaseName:string}/streams/docs")]
         public Task StreamDocsHead()
         {
@@ -50,6 +53,8 @@ namespace Raven.Server.Documents.Handlers
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(int.MaxValue), context);
+                if (string.IsNullOrWhiteSpace(query.Query))
+                    query.Query = _postQuery;
 
                 var runner = new QueryRunner(Database, context);
 
@@ -70,7 +75,10 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/streams/queries/$", "POST")]
         public Task StreamQueryPost()
         {
-            throw new NotImplementedException();
+            using (var sr = new StreamReader(RequestBodyStream()))
+                _postQuery = sr.ReadToEnd();
+
+            return StreamQueryGet();
         }
     }
 }
