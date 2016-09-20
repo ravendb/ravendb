@@ -14,9 +14,9 @@ namespace Raven.Server.Documents.Queries.Results
     public abstract class QueryResultRetrieverBase : IQueryResultRetriever
     {
         protected readonly FieldsToFetch _fieldsToFetch;
-        JsonOperationContext _context;
+        private readonly JsonOperationContext _context;
 
-        public QueryResultRetrieverBase(FieldsToFetch fieldsToFetch, JsonOperationContext context)
+        protected QueryResultRetrieverBase(FieldsToFetch fieldsToFetch, JsonOperationContext context)
         {
             _context = context;
             _fieldsToFetch = fieldsToFetch;
