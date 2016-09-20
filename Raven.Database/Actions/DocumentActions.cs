@@ -100,7 +100,7 @@ namespace Raven.Database.Actions
                 GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, doc => list.Add(doc.ToJson()),
                                                transformer, transformerParameters, skipAfter);
                 return list;
-            } 
+            }
         }
 
         public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize,
@@ -120,16 +120,21 @@ namespace Raven.Database.Actions
             TransactionalStorage.Batch(
                 actions =>
                 {
+                    List<JsonDocument> documentsToTransform = null;
                     var docsToSkip = canPerformRapidPagination ? 0 : start;
                     int docCount;
 
                     AbstractTransformer storedTransformer = null;
-                    if (transformer != null)
+                    var hasTransformer = transformer != null;
+                    if (hasTransformer)
                     {
+                        documentsToTransform = new List<JsonDocument>();
                         storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
                         if (storedTransformer == null)
                             throw new InvalidOperationException("No transformer with the name: " + transformer);
                     }
+
+                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
 
                     do
                     {
@@ -137,7 +142,6 @@ namespace Raven.Database.Actions
 
                         docCount = 0;
                         var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize, string.IsNullOrEmpty(skipAfter) ? null : skipAfter);
-                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
 
                         foreach (var doc in docs)
                         {
@@ -163,39 +167,9 @@ namespace Raven.Database.Actions
 
                             token.ThrowIfCancellationRequested();
 
-                            if (storedTransformer != null)
+                            if (hasTransformer)
                             {
-                                using (new CurrentTransformationScope(Database, documentRetriever))
-                                {
-                                    var transformed =
-                                        storedTransformer.TransformResultsDefinition(new[] { new DynamicJsonObject(document.ToJson()) })
-                                                         .Select(x => JsonExtensions.ToJObject(x))
-                                                         .ToArray();
-
-                                    RavenJObject ravenJObject;
-                                    switch (transformed.Length)
-                                    {
-                                        case 0:
-                                            throw new InvalidOperationException("The transform results function failed on a document: " + document.Key);
-                                        case 1:
-                                            ravenJObject = transformed[0];
-                                            break;
-                                        default:
-                                            ravenJObject = new RavenJObject { { "$values", new RavenJArray(transformed) } };
-                                            break;
-                                    }
-
-                                    var transformedJsonDocument = new JsonDocument
-                                    {
-                                        Etag = document.Etag.HashWith(storedTransformer.GetHashCodeBytes()).HashWith(documentRetriever.Etag),
-                                        NonAuthoritativeInformation = document.NonAuthoritativeInformation,
-                                        LastModified = document.LastModified,
-                                        DataAsJson = ravenJObject,
-                                    };
-
-                                    addDoc(transformedJsonDocument);
-                                }
-
+                                documentsToTransform.Add(document);
                             }
                             else
                             {
@@ -211,6 +185,43 @@ namespace Raven.Database.Actions
                         actualStart += pageSize;
                     }
                     while (docCount > 0 && addedDocs < pageSize && actualStart > 0 && actualStart < int.MaxValue);
+
+                    if (hasTransformer == false)
+                        return;
+
+                    foreach (var document in documentsToTransform)
+                    {
+                        using (new CurrentTransformationScope(Database, documentRetriever))
+                        {
+                            var transformed =
+                                storedTransformer.TransformResultsDefinition(new[] { new DynamicJsonObject(document.ToJson()) })
+                                    .Select(x => JsonExtensions.ToJObject(x))
+                                    .ToArray();
+
+                            RavenJObject ravenJObject;
+                            switch (transformed.Length)
+                            {
+                                case 0:
+                                    throw new InvalidOperationException("The transform results function failed on a document: " + document.Key);
+                                case 1:
+                                    ravenJObject = transformed[0];
+                                    break;
+                                default:
+                                    ravenJObject = new RavenJObject { { "$values", new RavenJArray(transformed) } };
+                                    break;
+                            }
+
+                            var transformedJsonDocument = new JsonDocument
+                            {
+                                Etag = document.Etag.HashWith(storedTransformer.GetHashCodeBytes()).HashWith(documentRetriever.Etag),
+                                NonAuthoritativeInformation = document.NonAuthoritativeInformation,
+                                LastModified = document.LastModified,
+                                DataAsJson = ravenJObject
+                            };
+
+                            addDoc(transformedJsonDocument);
+                        }
+                    }
                 });
 
             if (addedDocs != pageSize)
@@ -280,7 +291,7 @@ namespace Raven.Database.Actions
                         TransactionalStorage.Batch(accessor =>
                         {
                             var inserts = 0;
-                            
+
                             foreach (var doc in docsToInsert)
                             {
                                 try
@@ -395,8 +406,8 @@ namespace Raven.Database.Actions
             if (RavenJToken.DeepEquals(doc.DataAsJson, existingDoc.DataAsJson) == false)
                 return false;
 
-            var existingMetadata = (RavenJObject) existingDoc.Metadata.CloneToken();
-            var newMetadata = (RavenJObject) doc.Metadata.CloneToken();
+            var existingMetadata = (RavenJObject)existingDoc.Metadata.CloneToken();
+            var newMetadata = (RavenJObject)doc.Metadata.CloneToken();
             // in order to compare metadata we need to remove metadata records created by triggers
             foreach (var trigger in Database.PutTriggers)
             {
@@ -504,22 +515,22 @@ namespace Raven.Database.Actions
                 bool returnedDocs = false;
                 while (true)
                 {
-                    var documents = actions.Documents.GetDocumentsAfterWithIdStartingWith(etag, idPrefix, pageSize, token, timeout: TimeSpan.FromSeconds(2), lastProcessedDocument: x => lastDocumentReadEtag = x );
+                    var documents = actions.Documents.GetDocumentsAfterWithIdStartingWith(etag, idPrefix, pageSize, token, timeout: TimeSpan.FromSeconds(2), lastProcessedDocument: x => lastDocumentReadEtag = x);
                     var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers);
-                    
+
                     int docCount = 0;
                     foreach (var doc in documents)
                     {
-                        docCount++;                        
+                        docCount++;
                         token.ThrowIfCancellationRequested();
-                        
+
                         etag = doc.Etag;
-                        
+
                         JsonDocument.EnsureIdInMetadata(doc);
-                        
+
                         var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
                         var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
-                       
+
                         document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
                         if (document == null)
                             continue;
@@ -527,7 +538,7 @@ namespace Raven.Database.Actions
                         returnedDocs = true;
                         Database.WorkContext.UpdateFoundWork();
 
-                        bool canContinue = addDocument(document);                                                                          
+                        bool canContinue = addDocument(document);
                         if (!canContinue)
                             break;
                     }
@@ -536,7 +547,7 @@ namespace Raven.Database.Actions
                         break;
 
                     // No document was found that matches the requested criteria
-                    if ( docCount == 0 )
+                    if (docCount == 0)
                     {
                         // If we had a failure happen, we update the etag as we don't need to process those documents again (no matches there anyways).
                         if (lastDocumentReadEtag != null)
@@ -591,11 +602,11 @@ namespace Raven.Database.Actions
                     var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocumentMetadata>(transactionInformation, key);
 
                     document = actions.Documents.DocumentMetadataByKey(key);
-                    
+
                     if (nonAuthoritativeInformationBehavior != null)
                         document = nonAuthoritativeInformationBehavior(document);
                 });
-                
+
             }
 
             JsonDocument.EnsureIdInMetadata(document);
@@ -645,7 +656,7 @@ namespace Raven.Database.Actions
                     var transformed = storedTransformer.TransformResultsDefinition(new[] { new DynamicJsonObject(document.ToJson()) })
                                      .Select(x => JsonExtensions.ToJObject(x))
                                      .ToArray();
-                   
+
                     if (transformed.Length == 0)
                         return;
 
@@ -709,7 +720,7 @@ namespace Raven.Database.Actions
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
                         }, documents =>
                         {
-                            if(Database.IndexDefinitionStorage.IndexesCount == 0 || Database.WorkContext.RunIndexing == false)
+                            if (Database.IndexDefinitionStorage.IndexesCount == 0 || Database.WorkContext.RunIndexing == false)
                                 return;
 
                             Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
@@ -721,7 +732,7 @@ namespace Raven.Database.Actions
                             .ExecuteImmediatelyOrRegisterForSynchronization(() =>
                             {
                                 Database.PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
-                                
+
                                 var newDocumentChangeNotification =
                                     new DocumentChangeNotification
                                     {
@@ -731,7 +742,7 @@ namespace Raven.Database.Actions
                                         CollectionName = metadata.Value<string>(Constants.RavenEntityName),
                                         Etag = newEtag
                                     };
-                                
+
                                 Database.Notifications.RaiseNotifications(newDocumentChangeNotification, metadata);
                             });
 
@@ -793,7 +804,7 @@ namespace Raven.Database.Actions
                             Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions, participatingIds);
 
                             collection = metadataVar.Value<string>(Constants.RavenEntityName);
-                            
+
                             DeleteDocumentFromIndexesForCollection(key, collection, actions);
                             if (deletedETag != null)
                                 Database.Prefetcher.AfterDelete(key, deletedETag);
@@ -849,14 +860,14 @@ namespace Raven.Database.Actions
 
                 if (collection != null && // the document has a entity name
                     abstractViewGenerator.ForEntityNames.Count > 0)
-                    // the index operations on specific entities
+                // the index operations on specific entities
                 {
                     if (abstractViewGenerator.ForEntityNames.Contains(collection) == false)
                         continue;
                 }
 
                 var instance = IndexDefinitionStorage.GetIndexDefinition(indexName);
-                var task = actions.GetTask(x => x.Index == instance.IndexId, 
+                var task = actions.GetTask(x => x.Index == instance.IndexId,
                     new RemoveFromIndexTask(instance.IndexId));
                 task.AddKey(key);
             }
