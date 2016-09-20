@@ -83,10 +83,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     switch (_mode)
                     {
                         case Mode.SingleValue:
-                            _singleValueHash = Hashing.XXHash64.Calculate((byte*)p, s.Length);
+                            _singleValueHash = Hashing.XXHash64.Calculate((byte*)p, s.Length * sizeof(char));
                             break;
                         case Mode.MultipleValues:
-                            CopyToBuffer((byte*)p, s.Length);
+                            CopyToBuffer((byte*)p, s.Length * sizeof(char));
                             break;
                     }
                 }
