@@ -843,12 +843,22 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 var results = scope != null ? scope.Transform(documents) : documents;
 
-                                foreach (var document in results)
+                                try
                                 {
-                                    resultToFill.TotalResults = totalResults.Value;
-                                    resultToFill.AddResult(document);
+                                    foreach (var document in results)
+                                    {
+                                        resultToFill.TotalResults = totalResults.Value;
+                                        resultToFill.AddResult(document);
 
-                                    includeDocumentsCommand.Gather(document);
+                                        includeDocumentsCommand.Gather(document);
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    if (resultToFill.SupportsExceptionHandling == false)
+                                        throw;
+
+                                    resultToFill.HandleException(e);
                                 }
                             }
 

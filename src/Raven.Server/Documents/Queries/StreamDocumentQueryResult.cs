@@ -13,6 +13,7 @@ namespace Raven.Server.Documents.Queries
         private readonly BlittableJsonTextWriter _writer;
         private readonly JsonOperationContext _context;
         private bool _anyWrites;
+        private bool _anyExceptions;
 
         public StreamDocumentQueryResult(HttpResponse response, BlittableJsonTextWriter writer, JsonOperationContext context)
         {
@@ -27,12 +28,7 @@ namespace Raven.Server.Documents.Queries
         public override void AddResult(Document result)
         {
             if (_anyWrites == false)
-            {
-                WriteHeaders();
-                StartResponse();
-
-                _anyWrites = true;
-            }
+                StartResponseIfNeeded();
             else
                 _writer.WriteComma();
 
@@ -42,17 +38,39 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
+        public override void HandleException(Exception e)
+        {
+            StartResponseIfNeeded();
+
+            _anyExceptions = true;
+
+            _writer.WriteEndArray();
+            _writer.WriteComma();
+
+            _writer.WritePropertyName("Error");
+            _writer.WriteString(e.ToString());
+
+            throw e;
+        }
+
+        private void StartResponseIfNeeded()
+        {
+            if (_anyWrites)
+                return;
+
+            WriteHeaders();
+            StartResponse();
+
+            _anyWrites = true;
+        }
+
+        public override bool SupportsExceptionHandling => true;
+
         public override bool SupportsInclude => false;
 
         public void Dispose()
         {
-            if (_anyWrites == false)
-            {
-                WriteHeaders();
-                StartResponse();
-
-                _anyWrites = true;
-            }
+            StartResponseIfNeeded();
 
             EndResponse();
         }
@@ -75,7 +93,9 @@ namespace Raven.Server.Documents.Queries
 
         private void EndResponse()
         {
-            _writer.WriteEndArray();
+            if (_anyExceptions == false)
+                _writer.WriteEndArray();
+
             _writer.WriteEndObject();
         }
     }

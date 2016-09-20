@@ -99,12 +99,23 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 var results = scope != null ? scope.Transform(documents) : documents;
 
-                foreach (var document in results)
+                try
                 {
-                    _token.Token.ThrowIfCancellationRequested();
+                    foreach (var document in results)
+                    {
+                        _token.Token.ThrowIfCancellationRequested();
 
-                    resultToFill.AddResult(document);
-                    includeDocumentsCommand.Gather(document);
+                        resultToFill.AddResult(document);
+
+                        includeDocumentsCommand.Gather(document);
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (resultToFill.SupportsExceptionHandling == false)
+                        throw;
+
+                    resultToFill.HandleException(e);
                 }
             }
 
