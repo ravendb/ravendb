@@ -78,12 +78,6 @@ namespace Raven.Server.Config.Categories
         [LegacyConfigurationEntry("Raven/TransactionsModeDuration")]
         public int TransactionsModeDuration { get; set; }
 
-        [Description("Should voron support large transactions")]
-        [DefaultValue(false)]
-        [ConfigurationEntry("Raven/Storage/SupportLargeTransactions")]
-        [LegacyConfigurationEntry("Raven/SupportLargeTransactions")]
-        public bool SupportLargeTransactions { get; set; }
-
         public override void Initialize(IConfigurationRoot settings)
         {
             base.Initialize(settings);
