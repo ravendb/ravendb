@@ -70,7 +70,7 @@ namespace Raven.Server.Documents
             });
 
             // The documents schema is as follows
-            // 4 fields (lowered key, etag, lazy string key, document, change vector)
+            // 5 fields (lowered key, etag, lazy string key, document, change vector)
             // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
             DocsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -739,7 +739,7 @@ namespace Raven.Server.Documents
                 nameof(str));
         }
 
-        private static Document TableValueToDocument(JsonOperationContext context, TableValueReader tvr)
+        public static Document TableValueToDocument(JsonOperationContext context, TableValueReader tvr)
         {
             var result = new Document
             {
