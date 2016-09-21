@@ -14,8 +14,8 @@ namespace FastTests.NewClient
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store( new User { Name = "RavenDB"} , "users/1"); 
-                    session.SaveChanges();  
+                    session.Store(new User { Name = "RavenDB" }, "users/1");
+                    session.SaveChanges();
                 }
 
                 using (var newSession = store.OpenNewSession())
@@ -41,7 +41,7 @@ namespace FastTests.NewClient
 
                 using (var newSession = store.OpenNewSession())
                 {
-                    var user = newSession.Load<User>(new [] { "users/1", "users/2" });
+                    var user = newSession.Load<User>(new[] { "users/1", "users/2" });
                     Assert.Equal(user.Length, 2);
                 }
             }
@@ -102,9 +102,9 @@ namespace FastTests.NewClient
 
                 using (var newSession = store.OpenNewSession())
                 {
-                    var users = newSession.Load<User>(new List<System.ValueType> {1,2});
+                    var users = newSession.Load<User>(new List<System.ValueType> { 1, 2 });
                     Assert.Equal(users.Length, 2);
-                    
+
                 }
             }
         }

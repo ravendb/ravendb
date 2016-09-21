@@ -84,6 +84,7 @@ namespace Raven.Client.Documents.SessionOperations
                 Id = id,
                 Document = documentInfo.Document,
                 Entity = entity,
+                Metadata = documentInfo.Metadata
             };
             try
             {

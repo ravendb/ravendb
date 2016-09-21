@@ -17,7 +17,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents
 {
-    public class EntityToJson
+    public class EntityToBlittable
     {
         private readonly IDocumentStore documentStore;
         private readonly JsonOperationContext _context;
@@ -25,7 +25,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// All the listeners for this session
         /// </summary>
-        public EntityToJson(IDocumentStore documentStore, JsonOperationContext context)
+        public EntityToBlittable(IDocumentStore documentStore, JsonOperationContext context)
         {
             this.documentStore = documentStore;
             _context = context;
@@ -33,28 +33,17 @@ namespace Raven.Client.Documents
 
         public readonly Dictionary<object, Dictionary<string, JToken>> MissingDictionary = new Dictionary<object, Dictionary<string, JToken>>(ObjectReferenceEqualityComparer<object>.Default);
 
-        public BlittableJsonReaderObject ConvertEntityToJson(string id, object entity, DynamicJsonValue metadata)
+        public BlittableJsonReaderObject ConvertEntityToBlittable(string id, object entity, BlittableJsonReaderObject metadata)
         {
-            var entityType = entity.GetType();
-            var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
-
-            var objectAsJson = GetObjectAsJson(entity, metadata, _context);
-            if (identityProperty != null)
-            {
-                objectAsJson.Modifications.Remove(identityProperty.Name);
-            }
-            
-            SetClrType(entityType, objectAsJson);
-
-            return objectAsJson;
+           return GetObjectAsBlittable(entity, metadata, _context); 
         }
 
-        public RavenJObject ConvertEntityToJson(string id, object entity, RavenJObject metadata)
+        public RavenJObject ConvertEntityToBlittable(string id, object entity, RavenJObject metadata)
         {
             var entityType = entity.GetType();
             var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
 
-            var objectAsJson = GetObjectAsJson(entity);
+            var objectAsJson = GetObjectAsBlittable(entity);
             if (identityProperty != null)
             {
                 objectAsJson.Remove(identityProperty.Name);
@@ -67,7 +56,7 @@ namespace Raven.Client.Documents
 
         public IDictionary<object, RavenJObject> CachedJsonDocs { get; private set; }
 
-        private RavenJObject GetObjectAsJson(object entity)
+        private RavenJObject GetObjectAsBlittable(object entity)
         {
             var jObject = entity as RavenJObject;
             if (jObject != null)
@@ -111,12 +100,16 @@ namespace Raven.Client.Documents
             return jObject;
         }
 
-        private BlittableJsonReaderObject GetObjectAsJson(object entity, DynamicJsonValue documentMetadata, JsonOperationContext context)
+        private BlittableJsonReaderObject GetObjectAsBlittable(object entity, BlittableJsonReaderObject documentMetadata, JsonOperationContext context)
         {
             var json = documentStore.Conventions.JsonSerialize(entity, context);
-// set metadata here
-            //json.Modifications.
-            return json;
+
+            if (json.Modifications == null)
+            {
+                json.Modifications = new DynamicJsonValue(documentMetadata);
+                json.Modifications.Properties.Enqueue(new Tuple<string, object>(Constants.Metadata.Key, documentMetadata));
+            }
+            return context.ReadObject(json, json["Id"].ToString());
         }
 
         private void SetClrType(Type entityType, RavenJObject metadata)
@@ -142,8 +135,8 @@ namespace Raven.Client.Documents
 
             BlittableJsonReaderObject metadata;
             json.TryGet(Constants.Metadata.Key, out metadata);
-
             metadata.Modifications[Constants.Headers.RavenClrType] = documentStore.Conventions.GetClrTypeName(entityType);
+            
         }
 
         /// <summary>
