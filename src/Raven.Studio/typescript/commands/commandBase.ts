@@ -9,8 +9,6 @@ import oauthContext = require("common/oauthContext");
 import forge = require("forge");
 import router = require("plugins/router");
 
-
-
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
 

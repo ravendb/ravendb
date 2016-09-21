@@ -63,6 +63,15 @@ namespace Raven.Server.Documents
             return null;
         }
 
+        public void KillOperation(long id)
+        {
+            var operation = GetOperation(id);
+            if (operation?.Token != null && operation.Task.IsCompleted == false)
+            {
+                operation.Token.Cancel();
+            }
+        }
+
         public void DismissOperation(long id)
         {
             var operation = GetOperation(id);

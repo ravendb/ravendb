@@ -2,6 +2,7 @@ import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
+//TODO: delete me?
 class viewSystemDatabaseConfirm extends dialogViewModelBase {
 
     public viewTask = $.Deferred();

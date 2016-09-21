@@ -2,10 +2,10 @@
 
 requirejs.config({
     paths: {
-        text: '../lib/requirejs-text/text',
-        durandal: '../lib/Durandal/js',
-        plugins: '../lib/Durandal/js/plugins',
-        ace: '../Content/ace'
+        text: "../lib/requirejs-text/text",
+        durandal: "../lib/Durandal/js",
+        plugins: "../lib/Durandal/js/plugins",
+        ace: "../Content/ace"
     },
 
     map: {
@@ -23,8 +23,8 @@ requirejs.config({
     waitSeconds: 30
 });
 
-define('jquery', () => jQuery);//TODO: consider using jquery + deps using requirejs
-define('knockout', () => ko); //TODO: condider using requirejs
+define("jquery", () => jQuery);
+define("knockout", () => ko); 
 /* TODO
 define('nvd3', ['d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], (d3, nv, timelines, chart) => nv);
 define('dagre', ['d3', 'd3/dagre'], (d3, dagre) => dagre);
@@ -34,8 +34,8 @@ define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dial
     
     NProgress.configure({ showSpinner: false });
 
-    app.title = 'Raven.Studio';
-    dialog.MessageBox.setViewUrl('views/dialog.html');
+    app.title = "Raven.Studio";
+    dialog.MessageBox.setViewUrl("views/dialog.html");
 
     app.configurePlugins({
         router: true,

@@ -423,11 +423,11 @@ class editDocument extends viewModelBase {
         this.isSaving(true);
         saveCommand
             .execute()
-            .done((saveResult: bulkDocumentDto[]) => this.onDocumentSaved(saveResult));
+            .done((saveResult: saveDocumentResponseDto) => this.onDocumentSaved(saveResult));
     }
 
-    private onDocumentSaved(saveResult: bulkDocumentDto[]) {
-        var savedDocumentDto: bulkDocumentDto = saveResult[0];
+    private onDocumentSaved(saveResult: saveDocumentResponseDto) {
+        var savedDocumentDto: saveDocumentResponseItemDto = saveResult.Results[0];
         var currentSelection = this.docEditor.getSelectionRange();
         this.loadDocument(savedDocumentDto.Key)
             .always(() => {

@@ -66,10 +66,11 @@ class studioConfig extends viewModelBase {
     saveStudioConfig(newDocument: documentClass) {
         return new saveDocumentCommand(studioConfig.documentId, newDocument, this.activeDatabase())
             .execute()
+            /* TODO
             .done((saveResult: bulkDocumentDto[]) => {
                 this.configDocument(newDocument);
                 (<any>this.configDocument()).__metadata['@etag'] = saveResult[0].Etag;
-            });
+            });*/
     }
 }
 

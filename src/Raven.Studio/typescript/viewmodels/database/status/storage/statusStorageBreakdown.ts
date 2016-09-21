@@ -1,6 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getStatusStorageBreakdownCommand = require("commands/database/debug/getStatusStorageBreakdownCommand");
-import killRunningTaskCommand = require("commands/operations/killRunningTaskCommand");
+import killOperationComamnd = require('commands/operations/killOperationCommand');
 import shell = require('viewmodels/shell');
 import accessHelper = require("viewmodels/shell/accessHelper");
 
@@ -17,7 +17,7 @@ class statusStorageOnDisk extends viewModelBase {
 
     cancelOperation() {
         if (this.operationId()) {
-            new killRunningTaskCommand(this.activeDatabase(), this.operationId())
+            new killOperationComamnd(this.activeDatabase(), this.operationId())
                 .execute();
         }
     }

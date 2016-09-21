@@ -42,3 +42,17 @@ interface localStorageOperationsDto {
     ServerStartTime: string;
     Operations: Array<number>;    
 }
+
+interface saveDocumentResponseDto {
+    Results: Array<saveDocumentResponseItemDto>;
+}
+
+interface saveDocumentResponseItemDto {
+    Key: string;
+    Etag: number;
+    Method: string;
+    AdditionalData: any;
+    Metadata?: documentMetadataDto; 
+    PatchResult: string;
+    Deleted: boolean;
+}

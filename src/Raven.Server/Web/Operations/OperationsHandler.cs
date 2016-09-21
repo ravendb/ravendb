@@ -26,6 +26,16 @@ namespace Raven.Server.Web.Operations
             return Task.CompletedTask;
         }
 
+        [RavenAction("/databases/*/operation/kill", "POST")]
+        public Task OperationKill()
+        {
+            var id = GetLongQueryString("id");
+            // ReSharper disable once PossibleInvalidOperationException
+            Database.DatabaseOperations.KillOperation(id.Value);
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/operation/dismiss", "GET")]
         public Task OperationDismiss()
         {

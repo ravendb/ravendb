@@ -27,8 +27,6 @@ import environmentColor = require("models/resources/environmentColor");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
-import alertArgs = require("common/alertArgs");
-import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
@@ -59,7 +57,6 @@ import getClusterTopologyCommand = require("commands/database/cluster/getCluster
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import licensingStatus = require("viewmodels/common/licensingStatus");
-import recentErrors = require("viewmodels/common/recentErrors");
 import enterApiKey = require("viewmodels/common/enterApiKey");
 import recentQueriesStorage = require("common/recentQueriesStorage");
 
@@ -92,8 +89,6 @@ class shell extends viewModelBase {
     notificationCenter = notificationCenter.instance;
 
     currentConnectedResource: resource;
-    currentAlert = ko.observable<alertArgs>(); //TODO:
-    queuedAlert: alertArgs; //TODO:
 
     static clusterMode = ko.observable<boolean>(false); //TODO: extract from shell
     isInCluster = ko.computed(() => shell.clusterMode()); //TODO: extract from shell
@@ -103,7 +98,6 @@ class shell extends viewModelBase {
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
 
     windowHeightObservable: KnockoutObservable<number>; //TODO: delete?
-    recordedErrors = ko.observableArray<alertArgs>(); //TODO: 
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     showSplash = viewModelBase.showSplash;
@@ -137,8 +131,7 @@ class shell extends viewModelBase {
              this.notifications = this.createNotifications();*/
         });
 
-        ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
-        ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
+        
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
         ko.postbox.subscribe("SelectNone", () => this.selectNone());
@@ -695,7 +688,6 @@ class shell extends viewModelBase {
             this.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage, TenantType.CounterStorage)),
             this.globalChangesApi.watchDocsStartingWith("Raven/TimeSeries/", (e) => this.changesApiFiredForResource(e, shell.timeSeries, this.activeTimeSeries, TenantType.TimeSeries)),
             //TODO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),
-            this.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts())
         ];
     }
 
@@ -943,70 +935,6 @@ class shell extends viewModelBase {
         });
     }
 
-    dataLoadProgress(splashType?: alertType) {
-        if (!splashType) {
-            NProgress.configure({ showSpinner: false });
-            NProgress.done();
-        } else if (splashType === alertType.warning) {
-            NProgress.configure({ showSpinner: true });
-            NProgress.start();
-        } else {
-            NProgress.done();
-            NProgress.configure({ showSpinner: false });
-            $.blockUI({ message: '<div id="longTimeoutMessage"><span> This is taking longer than usual</span><br/><span>(Waiting for server to respond)</span></div>' });
-        }
-    }
-
-    //TODO: move to notification center code
-    showAlert(alert: alertArgs) {
-        if (alert.displayInRecentErrors && (alert.type === alertType.danger || alert.type === alertType.warning)) {
-            this.recordedErrors.unshift(alert);
-        }
-
-        var currentAlert = this.currentAlert();
-        if (currentAlert) {
-            this.queuedAlert = alert;
-            this.closeAlertAndShowNext(currentAlert);
-        } else {
-            this.currentAlert(alert);
-            var fadeTime = 2000; // If there are no pending alerts, show it for 2 seconds before fading out.
-            /*            if (alert.title.indexOf("Changes stream was disconnected.") == 0) {
-                            fadeTime = 100000000;
-                        }*/
-            if (alert.type === alertType.danger || alert.type === alertType.warning) {
-                fadeTime = 5000; // If there are pending alerts, show the error alert for 4 seconds before fading out.
-            }
-            setTimeout(() => {
-                this.closeAlertAndShowNext(alert);
-            }, fadeTime);
-        }
-    }
-
-    //TODO: move to notifcation center
-    closeAlertAndShowNext(alertToClose: alertArgs) {
-        var alertElement = $('#' + alertToClose.id);
-        if (alertElement.length === 0) {
-            return;
-        }
-
-        // If the mouse is over the alert, keep it around.
-        if (alertElement.is(":hover")) {
-            setTimeout(() => this.closeAlertAndShowNext(alertToClose), 1000);
-        } else {
-            alertElement.alert("close");
-        }
-    }
-
-    //TODO: move to notification center
-    onAlertHidden() {
-        this.currentAlert(null);
-        var nextAlert = this.queuedAlert;
-        if (nextAlert) {
-            this.queuedAlert = null;
-            this.showAlert(nextAlert);
-        }
-    }
-
     private activateDatabaseWithName(databaseName: string) {
         if (this.databasesLoadedTask) {
             this.databasesLoadedTask.done(() => {
@@ -1098,11 +1026,6 @@ class shell extends viewModelBase {
         return app.showDialog(dialog).then(() => window.location.href = "#resources");
     }
 
-    showErrorsDialog() {
-        var errorDetails: recentErrors = new recentErrors(this.recordedErrors);
-        app.showDialog(errorDetails);
-    }
-
     uploadStatusChanged(item: uploadItem) {
         var queue: uploadItem[] = uploadQueueHelper.parseUploadQueue(window.localStorage[uploadQueueHelper.localStorageUploadQueueKey + item.filesystem.name], item.filesystem);
         uploadQueueHelper.updateQueueStatus(item.id(), item.status(), queue);
@@ -1112,15 +1035,6 @@ class shell extends viewModelBase {
     showLicenseStatusDialog() {
         var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage(), license.hotSpare());
         app.showDialog(dialog);
-    }
-
-    fetchSystemDatabaseAlerts() {
-        /* TODO
-        new getDocumentWithMetadataCommand("Raven/Alerts", this.systemDatabase)
-            .execute()
-            .done((doc: documentClass) => {
-                //
-            });*/
     }
 
     logOut() {

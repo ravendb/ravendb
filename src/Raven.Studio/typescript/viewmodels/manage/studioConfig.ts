@@ -108,10 +108,10 @@ class studioConfig extends viewModelBase {
         var newDocument = this.configDocument();
         (<any>newDocument)["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);
-        saveTask.done(() => {
+        /* TODOsaveTask.done(() => {
             //TODO:shell.selectedEnvironmentColorStatic(this.selectedColor());
             this.pickColor();
-        });
+        }); */
     }
 
     private pickColor() {
@@ -128,12 +128,12 @@ class studioConfig extends viewModelBase {
     }
 
     saveStudioConfig(newDocument: documentClass) {
-        return new saveDocumentCommand(this.documentId, newDocument, null)
+        /* TODO:return new saveDocumentCommand(this.documentId, newDocument, null)
             .execute()
             .done((saveResult: bulkDocumentDto[]) => {
                 this.configDocument(newDocument);
                 this.configDocument().__metadata['etag'] = saveResult[0].Etag;
-            });
+            });*/
     }
 }
 

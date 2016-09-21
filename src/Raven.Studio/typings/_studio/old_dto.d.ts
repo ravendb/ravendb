@@ -552,12 +552,12 @@ interface transformerDto {
 
 interface indexDefinitionListItemDto {
     name: string;
-    definition: indexDefinitionDto
+    definition: indexDefinitionDto;
 }
 
 interface saveTransformerDto {
-    'Name': string;
-    'TransformResults': string;
+    Name: string;
+    TransformResults: string;
 }
 
 interface getTransformerResultDto {

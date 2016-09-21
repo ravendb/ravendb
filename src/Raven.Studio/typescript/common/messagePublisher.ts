@@ -1,5 +1,6 @@
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
+import EVENTS = require("common/constants/events");
 
 class messagePublisher {
     static reportInfo(title: string, details?: string) {
@@ -8,9 +9,7 @@ class messagePublisher {
 
     static reportError(title: string, details?: string, httpStatusText?: string, displayInRecentErrors: boolean = true) {
         this.reportProgress(alertType.danger, title, details, httpStatusText, displayInRecentErrors);
-        if (console && console.log && typeof console.log === "function") {
-            console.log("Error during command execution", title, details, httpStatusText);
-        }
+        console.log("Error during command execution", title, details, httpStatusText);
     }
 
     static reportSuccess(title: string, details?: string) {
@@ -24,11 +23,11 @@ class messagePublisher {
     static reportWarningWithButton(title: string, details: string, buttonName: string, action: () => any) {
         var alert = new alertArgs(alertType.warning, title, details, null, true);
         alert.setupButtton(buttonName, action);
-        ko.postbox.publish("Alert", alert);
+        ko.postbox.publish(EVENTS.NotificationCenter.Alert, alert);
     }
 
     private static reportProgress(type: alertType, title: string, details?: string, httpStatusText?: string, displayInRecentErrors: boolean = true) {
-        ko.postbox.publish("Alert", new alertArgs(type, title, details, httpStatusText, displayInRecentErrors));
+        ko.postbox.publish(EVENTS.NotificationCenter.Alert, new alertArgs(type, title, details, httpStatusText, displayInRecentErrors));
     }
 }
 

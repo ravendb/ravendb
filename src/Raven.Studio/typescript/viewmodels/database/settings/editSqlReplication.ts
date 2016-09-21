@@ -274,6 +274,7 @@ class editSqlReplication extends viewModelBase {
 
         var saveCommand = new saveDocumentCommand(editSqlReplication.sqlReplicationDocumentPrefix + currentDocumentId, newDoc, this.activeDatabase());
         var saveTask = saveCommand.execute();
+        /* TODO
         saveTask.done((saveResult: bulkDocumentDto[]) => {
             var savedDocumentDto: bulkDocumentDto = saveResult[0];
             var sqlReplicationKey = savedDocumentDto.Key.substring(editSqlReplication.sqlReplicationDocumentPrefix.length);
@@ -283,7 +284,7 @@ class editSqlReplication extends viewModelBase {
 
             this.isEditingNewReplication(false);
             this.initialReplicationId = currentDocumentId;
-        });
+        });*/
     }
 
 

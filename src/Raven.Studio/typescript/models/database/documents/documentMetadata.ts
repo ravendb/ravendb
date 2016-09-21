@@ -91,7 +91,7 @@ class documentMetadata {
         for (var property in metaDto) {
             if (metaDto.hasOwnProperty(property) && metaPropsToRemove.contains(property)) {
                 if ((<any>metaDto)[property] && removedProps) {
-                    removedProps.push({ name: property, value: (<any>metaDto)[property].toString() });
+                    removedProps.push({ name: property, value: (<any>metaDto)[property] });
                 }
                 delete (<any>metaDto)[property];
             }
