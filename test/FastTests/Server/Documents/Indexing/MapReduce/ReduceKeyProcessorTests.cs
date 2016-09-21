@@ -15,7 +15,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("ReduceKeyProcessorTests"))
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var sut = new ReduceKeyProcessor(10, bufferPool);
+                var sut = new ReduceKeyProcessor(9, bufferPool);
 
                 sut.Reset();
 
