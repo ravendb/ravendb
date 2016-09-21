@@ -55,8 +55,6 @@ namespace FastTests.Server.Documents.Replication
                     session.SaveChanges();
                 }
 
-                Thread.Sleep(2000);
-
                 using (var session = slave.OpenSession())
                 {
                     session.Store(new User()
@@ -114,8 +112,6 @@ namespace FastTests.Server.Documents.Replication
                     session.SaveChanges();
                 }
 
-                Thread.Sleep(1000);
-
                 using (var session = slave.OpenSession())
                 {
                     session.Store(new User()
@@ -125,8 +121,6 @@ namespace FastTests.Server.Documents.Replication
 
                     session.SaveChanges();
                 }
-
-                Thread.Sleep(1000);
 
                 using (var session = slave.OpenSession())
                 {

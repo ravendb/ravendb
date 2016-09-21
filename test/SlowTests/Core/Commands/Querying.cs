@@ -71,16 +71,7 @@ namespace SlowTests.Core.Commands
                         Maps = { "from doc in docs.Companies select new { doc.Name }" }
                     }, true);
 
-                    QueryResult query;
-                    while (true)
-                    {
-                        query = session.Advanced.DocumentStore.DatabaseCommands.Query("Test", new IndexQuery());
-
-                        if (query.IsStale == false)
-                            break;
-
-                        Thread.Sleep(100);
-                    }
+                    WaitForIndexing(store);
                 }
 
                 var stringBuilder = new StringBuilder();
