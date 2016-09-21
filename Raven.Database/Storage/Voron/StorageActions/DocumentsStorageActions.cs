@@ -494,7 +494,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             return documentReadResult.Reader.AsStream();
         }
 
-        public JsonDocument DocumentByKey(string key)
+        public JsonDocument DocumentByKey(string key, bool useDifferentTable = false)
         {
             if (string.IsNullOrEmpty(key))
             {

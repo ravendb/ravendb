@@ -126,7 +126,8 @@ namespace Raven.Database.Actions
                     int docCount;
 
                     AbstractTransformer storedTransformer = null;
-                    if (transformer != null)
+                    var hasTransformer = transformer != null;
+                    if (hasTransformer)
                     {
                         storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
                         if (storedTransformer == null)
@@ -139,7 +140,7 @@ namespace Raven.Database.Actions
 
                         docCount = 0;
                         var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize, string.IsNullOrEmpty(skipAfter) ? null : skipAfter);
-                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
+                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters, hasTransformer: hasTransformer);
 
                         foreach (var doc in docs)
                         {
@@ -443,7 +444,8 @@ namespace Raven.Database.Actions
                 TransactionalStorage.Batch(actions =>
                 {
                     AbstractTransformer storedTransformer = null;
-                    if (transformer != null)
+                    var hasTransformer = transformer != null;
+                    if (hasTransformer)
                     {
                         storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
                         if (storedTransformer == null)
@@ -457,7 +459,7 @@ namespace Raven.Database.Actions
                             ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize, entityNames: collections)
                             : actions.Documents.GetDocumentsAfter(etag, pageSize, token, maxSize: maxSize, timeout: timeout, entityNames: collections);
 
-                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
+                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters, hasTransformer: hasTransformer);
                         var docCount = 0;
                         var docCountOnLastAdd = 0;
                         foreach (var doc in documents)

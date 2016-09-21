@@ -15,6 +15,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
             get { return documents ?? (documents = new Table(session, dbid, "documents", OpenTableGrbit.None)); }
         }
 
+        private Table duplicatedDocuments;
+        protected Table DuplicatedDocuments
+        {
+            get { return duplicatedDocuments ?? (duplicatedDocuments = new Table(session, dbid, "documents", OpenTableGrbit.None)); }
+        }
+
         private Table queue;
         protected Table Queue
         {
