@@ -12,7 +12,7 @@ namespace SlowTests.MailingList
 {
     public class ItemsBySetIdIndexTests : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: CreateField")]
+        [Fact]
         public void CanQuery()
         {
             using (var store = GetDocumentStore())
