@@ -32,8 +32,9 @@ namespace FastTests.Server.Documents.Replication
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                SetupReplication(master, slave);
                 SetReplicationConflictResolution(slave, StraightforwardConflictResolution.ResolveToLatest);
+                SetupReplication(master, slave);
+
                 using (var session = slave.OpenSession())
                 {
                 
@@ -140,8 +141,8 @@ namespace FastTests.Server.Documents.Replication
 
                 //the tombstone on the 'slave' node is latest, so after replication finishes,
                 //the doc should stay deleted since the replication is 'resolve to latest'
-                SetupReplication(master, slave);
                 SetReplicationConflictResolution(slave, StraightforwardConflictResolution.ResolveToLatest);
+                SetupReplication(master, slave);
 
                 var marker = WaitForDocument(slave, "marker");
 
@@ -161,8 +162,8 @@ namespace FastTests.Server.Documents.Replication
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                SetupReplication(master, slave);
                 SetReplicationConflictResolution(slave, docConflictResolution);
+                SetupReplication(master, slave);
 
                 using (var session = slave.OpenSession())
                 {
