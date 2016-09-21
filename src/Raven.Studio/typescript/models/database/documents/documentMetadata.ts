@@ -8,7 +8,7 @@ class documentMetadata {
     tempIndexScore: number;
     lastModified: string;
     ravenLastModified: string;
-    etag: string;
+    etag: number;
     nonStandardProps: Array<string>;
 
     lastModifiedFullDate: KnockoutComputed<string>;

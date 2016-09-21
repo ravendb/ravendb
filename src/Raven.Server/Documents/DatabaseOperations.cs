@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -8,6 +9,8 @@ using Raven.Client.Data;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
@@ -26,15 +29,21 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<DatabaseOperations>(db.Name);
         }
 
-        internal void ClearCompletedPendingTasks()
+        internal void CleanupOperations()
         {
+            var twoDaysAgo = SystemTime.UtcNow.AddDays(-2);
+
             foreach (var taskAndState in _pendingOperations)
             {
-                var task = taskAndState.Value.Task;
-                if (task.IsCompleted || task.IsCanceled || task.IsFaulted)
+                var state = taskAndState.Value;
+                var task = state.Task;
+                if (task.IsCompleted)
                 {
-                    PendingOperation value;
-                    _pendingOperations.TryRemove(taskAndState.Key, out value);
+                    if (state.Dismissed || state.Description.EndTime < twoDaysAgo)
+                    {
+                        PendingOperation value;
+                        _pendingOperations.TryRemove(taskAndState.Key, out value);
+                    }
                 }
                 if (task.Exception != null)
                 {
@@ -44,14 +53,29 @@ namespace Raven.Server.Documents
             }
         }
 
-        //TODO: get all
-
         public OperationState GetOperationState(long id)
         {
             PendingOperation operation;
             if (_pendingOperations.TryGetValue(id, out operation))
             {
                 return operation.State;
+            }
+            return null;
+        }
+
+        public void DismissOperation(long id)
+        {
+            var operation = GetOperation(id);
+            if (operation != null)
+                operation.Dismissed = true;
+        }
+
+        public PendingOperation GetOperation(long id)
+        {
+            PendingOperation operation;
+            if (_pendingOperations.TryGetValue(id, out operation))
+            {
+                return operation;
             }
             return null;
         }
@@ -86,6 +110,7 @@ namespace Raven.Server.Documents
 
             var pendingOperation = new PendingOperation
             {
+                Id = id,
                 Task = task,
                 Description = operationDescription,
                 Token = token,
@@ -171,12 +196,40 @@ namespace Raven.Server.Documents
             _pendingOperations.Clear();
         }
 
+        public ICollection<PendingOperation> GetAll()
+        {
+            return _pendingOperations.Values;
+        }
+
         public class PendingOperation
         {
+            public long Id;
+
+            [JsonIgnore]
             public Task Task;
-            public PendingOperationDescription Description;
+            
+            [JsonIgnore]
             public OperationCancelToken Token;
+
+            public PendingOperationDescription Description;
             public OperationState State;
+
+            public bool Dismissed;
+
+            public bool Killable => Token != null;
+            
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    ["Id"] = Id,
+                    ["Description"] = Description.ToJson(),
+                    ["Killable"] = Killable,
+                    ["State"] = State.ToJson(),
+                    ["Dismissed"] = Dismissed
+                };
+            }
         }
 
         public class PendingOperationDescription
@@ -185,6 +238,17 @@ namespace Raven.Server.Documents
             public PendingOperationType TaskType;
             public DateTime StartTime;
             public DateTime EndTime;
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    ["Description"] = Description,
+                    ["TaskType"] = TaskType.ToString(),
+                    ["StartTime"] = StartTime,
+                    ["EndTime"] = EndTime
+                };
+            }
         }
 
         public enum PendingOperationType 
@@ -197,7 +261,5 @@ namespace Raven.Server.Documents
 
             //TODO: other operation types
         }
-
-       
     }
 }

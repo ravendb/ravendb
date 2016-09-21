@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
@@ -41,6 +42,7 @@ namespace Raven.Server.Documents
 
         public DocumentDatabase(string name, RavenConfiguration configuration, IoMetrics ioMetrics)
         {
+            StartTime = SystemTime.UtcNow;
             Name = name;
             Configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
@@ -59,7 +61,6 @@ namespace Raven.Server.Documents
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
             HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments,
                 configuration.Databases.MaxWarnSizeHugeDocuments);
-
         }
 
         public SubscriptionStorage SubscriptionStorage { get; set; }
@@ -99,6 +100,8 @@ namespace Raven.Server.Documents
         public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
 
         public ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
+
+        public DateTime StartTime { get; }
 
         public void Initialize()
         {
@@ -276,7 +279,7 @@ namespace Raven.Server.Documents
             try
             {
                 IndexStore?.RunIdleOperations();
-                DatabaseOperations.ClearCompletedPendingTasks();
+                DatabaseOperations.CleanupOperations();
             }
 
             finally

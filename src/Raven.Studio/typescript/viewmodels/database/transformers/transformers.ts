@@ -55,10 +55,10 @@ class transformers extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [changesContext.currentResourceChangesApi().watchAllTransformers((e: transformerChangeNotificationDto) => this.processTransformerEvent(e))];
+        return [changesContext.currentResourceChangesApi().watchAllTransformers((e: Raven.Abstractions.Data.TransformerChangeNotification) => this.processTransformerEvent(e))];
     }
 
-    private processTransformerEvent(e: transformerChangeNotificationDto) {
+    private processTransformerEvent(e: Raven.Abstractions.Data.TransformerChangeNotification) {
         if (e.Type === "TransformerRemoved") {
             this.removeTransformersFromAllGroups(this.findTransformersByName(e.Name));
         } else {

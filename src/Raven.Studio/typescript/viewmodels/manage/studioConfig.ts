@@ -50,9 +50,9 @@ class studioConfig extends viewModelBase {
             return "mute for a week"; 
         });
 
-        var color = this.environmentColors.filter((color) => color.name === shell.selectedEnvironmentColorStatic().name);
+        /*TODO: var color = this.environmentColors.filter((color) => color.name === shell.selectedEnvironmentColorStatic().name);
         var selectedColor = !!color[0] ? color[0] : this.environmentColors[0];
-        this.selectedColor(selectedColor);
+        this.selectedColor(selectedColor);*/
         
         var self = this;
         this.selectedColor.subscribe((newValue) => self.setEnvironmentColor(newValue));
@@ -109,7 +109,7 @@ class studioConfig extends viewModelBase {
         (<any>newDocument)["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);
         saveTask.done(() => {
-            shell.selectedEnvironmentColorStatic(this.selectedColor());
+            //TODO:shell.selectedEnvironmentColorStatic(this.selectedColor());
             this.pickColor();
         });
     }

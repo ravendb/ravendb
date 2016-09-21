@@ -96,6 +96,7 @@ class runningTasks extends viewModelBase {
     fetchTasks(): JQueryPromise<runningTaskDto[]> {
         var db = this.activeDatabase();
         if (db) {
+            /* TODO
             var deferred = $.Deferred();
             new getRunningTasksCommand(db)
                 .execute()
@@ -103,7 +104,7 @@ class runningTasks extends viewModelBase {
                     this.processRunningTasksResults(results);
                     deferred.resolve(results);
                 });
-            return deferred;
+            return deferred; */
         }
 
         return null;

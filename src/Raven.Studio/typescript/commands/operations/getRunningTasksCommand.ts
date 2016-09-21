@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class getRunningTasksCommand extends commandBase {
 
@@ -7,9 +8,9 @@ class getRunningTasksCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<runningTaskDto[]> {
-        var url = "/operations";//TODO: use endpoints
-        return this.query<runningTaskDto[]>(url, null, this.db);
+    execute(): JQueryPromise<Raven.Server.Documents.PendingOperation[]> {
+        const url = endpoints.databases.operations.operations;
+        return this.query<Raven.Server.Documents.PendingOperation[]>(url, null, this.db);
     }
 }
 

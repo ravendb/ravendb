@@ -273,6 +273,7 @@ class patch extends viewModelBase {
         if (this.runningPatchesPollingHandle)
             return;
 
+        /* TODO:
         new getRunningTasksCommand(this.activeDatabase())
             .execute()
             .done((tasks: runningTaskDto[]) => {
@@ -288,7 +289,7 @@ class patch extends viewModelBase {
                 } else {
                     this.runningPatchesPollingHandle = null;
                 }
-            });
+            });*/
     }
 
     private fetchRecentPatches() {

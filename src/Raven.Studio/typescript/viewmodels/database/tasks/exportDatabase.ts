@@ -6,7 +6,7 @@ import copyToClipboard = require("common/copyToClipboard");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import notificationCenter = require("common/notificationCenter");
+import notificationCenter = require("common/notifications/notificationCenter");
 import database = require("models/resources/database");
 
 import exportDatabaseModel = require("models/database/tasks/exportDatabaseModel");

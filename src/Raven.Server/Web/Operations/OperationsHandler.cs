@@ -26,6 +26,69 @@ namespace Raven.Server.Web.Operations
             return Task.CompletedTask;
         }
 
+        [RavenAction("/databases/*/operation/dismiss", "GET")]
+        public Task OperationDismiss()
+        {
+            var id = GetLongQueryString("id");
+            // ReSharper disable once PossibleInvalidOperationException
+            Database.DatabaseOperations.DismissOperation(id.Value);
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/operations", "GET")]
+        public Task OperationsGet()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartArray();
+
+                    var first = true;
+
+                    foreach (var operation in Database.DatabaseOperations.GetAll())
+                    {
+                        if (first == false)
+                            writer.WriteComma();
+                        first = false;
+
+                        writer.WriteObject(context.ReadObject(operation.ToJson(), "operation"));
+                    }
+
+                    writer.WriteEndArray();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/operation", "GET")]
+        public Task Operation()
+        {
+            var id = GetLongQueryString("id");
+            // ReSharper disable once PossibleInvalidOperationException
+            var operation = Database.DatabaseOperations.GetOperation(id.Value);
+
+            if (operation == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
+            }
+
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteObject(context.ReadObject(operation.ToJson(), "operation"));
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/operations/status", "GET")]
         public Task Operations()
         {

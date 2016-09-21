@@ -37,3 +37,8 @@ interface chagesApiConfigureRequestDto {
     Command: string;
     Param?: string;
 }
+
+interface localStorageOperationsDto {
+    ServerStartTime: string;
+    Operations: Array<number>;    
+}

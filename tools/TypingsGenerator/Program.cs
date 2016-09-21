@@ -7,6 +7,7 @@ using Raven.Abstractions;
 using Raven.Client.Connection;
 using Raven.Client.Data;
 using System.Reflection;
+using Raven.Abstractions.Data;
 using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 using Raven.Json.Linq;
@@ -35,6 +36,7 @@ namespace TypingsGenerator
                .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
                .WithTypeMapping(TsPrimitive.Any, typeof(RavenJObject))
                .WithTypeMapping(TsPrimitive.Any, typeof(RavenJValue))
+               .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
                .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(RavenJArray))
                .WithTypeMapping(TsPrimitive.Any, typeof(RavenJToken));
 
@@ -57,9 +59,16 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(IndexDefinition));
+
+            // notifications
             scripter.AddType(typeof(OperationStatusChangeNotification));
             scripter.AddType(typeof(DeterminateProgress));
             scripter.AddType(typeof(IndeterminateProgress));
+            scripter.AddType(typeof(DocumentChangeNotification));
+            scripter.AddType(typeof(IndexChangeNotification));
+            scripter.AddType(typeof(TransformerChangeNotification));
+            scripter.AddType(typeof(DatabaseOperations.PendingOperation));
+
 
             return scripter;
         }

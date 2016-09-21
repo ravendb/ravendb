@@ -18,23 +18,6 @@ interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
 }
 
-interface replicationConflictNotificationDto {
-    ItemType: string;
-    Id: string;
-    Etag: string;
-    OperationType: string;
-    Conflicts: string[];
-}
-
-interface documentChangeNotificationDto {
-    Type: string;
-    Id: string;
-    CollectionName: string;
-    TypeName: string;
-    Etag: string;
-    Message: string;
-}
-
 interface logNotificationDto {
     Level: string;
     TimeStamp: string;
@@ -51,20 +34,6 @@ interface logNotificationDto {
     QueryTimings: any;
 
 }
-interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
-    OperationId: string;
-}
-
-interface indexChangeNotificationDto {
-    Type: string;
-    Name: string;
-    Etag: string;
-}
-
-interface transformerChangeNotificationDto {
-    Type: string;
-    Name: string;
-}
 
 interface documentMetadataDto {
     'Raven-Entity-Name'?: string;
@@ -74,7 +43,7 @@ interface documentMetadataDto {
     'Temp-Index-Score'?: number;
     'Last-Modified'?: string;
     'Raven-Last-Modified'?: string;
-    '@etag'?: string;
+    '@etag'?: number;
 }
 
 interface databaseStatisticsDto {
@@ -646,7 +615,7 @@ interface bulkDocumentDto {
     AdditionalData?: any[];
     Document?: documentDto; // Can be null when Method == "DELETE"
     Metadata?: documentMetadataDto; // Can be null when Method == "DELETE"
-    Etag?: string; // Often is null on sending to server, non-null when returning from server.
+    Etag?: number; // Often is null on sending to server, non-null when returning from server.
     PatchResult?: any;
     Deleted?: any;
     DebugMode?: boolean;
@@ -660,7 +629,7 @@ interface scriptedPatchRequestDto {
 
 interface databaseDocumentSaveDto {
     Key: string;
-    ETag: string
+    ETag: number;
 }
 
 interface backupRequestDto {
