@@ -16,7 +16,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 {
     public class DynamicQueryRunner
     {
-        private const string DynamicIndexPrefix = "dynamic/";
+        public const string DynamicIndex = "dynamic";
+
+        public const string DynamicIndexPrefix = "dynamic/";
 
         private readonly IndexStore _indexStore;
         private readonly TransformerStore _transformerStore;
@@ -31,6 +33,20 @@ namespace Raven.Server.Documents.Queries.Dynamic
             _context = context;
             _token = token;
             _documents = documents;
+        }
+
+        public static bool IsDynamicIndex(string indexName)
+        {
+            if (indexName == null || indexName.Length < DynamicIndex.Length)
+                return false;
+
+            if (indexName.StartsWith(DynamicIndex, StringComparison.OrdinalIgnoreCase) == false)
+                return false;
+
+            if (indexName.Length == DynamicIndex.Length)
+                return true;
+
+            return indexName[DynamicIndex.Length] == '/';
         }
 
         public Task ExecuteStream(HttpResponse response, BlittableJsonTextWriter writer, string dynamicIndexName, IndexQueryServerSide query)
@@ -124,7 +140,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private Index MatchIndex(string dynamicIndexName, IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, out string collection)
         {
-            collection = dynamicIndexName.Length == "dynamic".Length
+            collection = dynamicIndexName.Length == DynamicIndex.Length
                 ? Constants.Indexing.AllDocumentsCollection
                 : dynamicIndexName.Substring(DynamicIndexPrefix.Length);
 

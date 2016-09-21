@@ -14,6 +14,7 @@ using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Utils;
 
 using Voron.Platform.Posix;
@@ -261,12 +262,12 @@ namespace Raven.Server.Documents.Indexes
 
         private void ValidateIndexName(string name)
         {
-            if (name.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
+            if (name.StartsWith(DynamicQueryRunner.DynamicIndexPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 throw new ArgumentException($"Index name '{name.Replace("//", "__")}' not permitted. Index names starting with dynamic_ or dynamic/ are reserved!", nameof(name));
             }
 
-            if (name.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
+            if (name.Equals(DynamicQueryRunner.DynamicIndex, StringComparison.OrdinalIgnoreCase))
             {
                 throw new ArgumentException($"Index name '{name.Replace("//", "__")}' not permitted. Index name dynamic is reserved!", nameof(name));
             }

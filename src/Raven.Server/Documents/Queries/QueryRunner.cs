@@ -33,33 +33,27 @@ namespace Raven.Server.Documents.Queries
 
         public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQueryServerSide query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
         {
-            DocumentQueryResult result;
-
-            if (indexName.StartsWith("dynamic", StringComparison.OrdinalIgnoreCase))
+            if (DynamicQueryRunner.IsDynamicIndex(indexName))
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
-                result = await runner.Execute(indexName, query, existingResultEtag).ConfigureAwait(false);
+                return await runner.Execute(indexName, query, existingResultEtag).ConfigureAwait(false);
             }
-            else
+
+            var index = GetIndex(indexName);
+            if (existingResultEtag.HasValue)
             {
-                var index = GetIndex(indexName);
-                if (existingResultEtag.HasValue)
-                {
-                    var etag = index.GetIndexEtag();
-                    if (etag == existingResultEtag)
-                        return DocumentQueryResult.NotModifiedResult;
-                }
-
-                return await index.Query(query, _documentsContext, token);
+                var etag = index.GetIndexEtag();
+                if (etag == existingResultEtag)
+                    return DocumentQueryResult.NotModifiedResult;
             }
 
-            return result;
+            return await index.Query(query, _documentsContext, token);
         }
 
         public async Task ExecuteStreamQuery(string indexName, IndexQueryServerSide query, HttpResponse response, BlittableJsonTextWriter writer, OperationCancelToken token)
         {
-            if (indexName.StartsWith("dynamic", StringComparison.OrdinalIgnoreCase))
+            if (DynamicQueryRunner.IsDynamicIndex(indexName))
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
@@ -145,7 +139,7 @@ namespace Raven.Server.Documents.Queries
 
         public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(string indexName, IndexQueryServerSide indexQuery)
         {
-            if (string.IsNullOrWhiteSpace(indexName) || (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) == false && indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase) == false))
+            if (DynamicQueryRunner.IsDynamicIndex(indexName) == false)
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
             var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, OperationCancelToken.None);
