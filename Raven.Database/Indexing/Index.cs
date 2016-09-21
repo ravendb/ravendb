@@ -101,6 +101,7 @@ namespace Raven.Database.Indexing
         protected readonly WorkContext context;
 
         private readonly object writeLock = new object();
+        private readonly object writeInMemoryToDiskLock = new object();
         private volatile bool disposed;
         private RavenIndexWriter indexWriter;
         private SnapshotDeletionPolicy snapshotter;
@@ -284,7 +285,7 @@ namespace Raven.Database.Indexing
 
                 try
                 {
-                    EnsureIndexWriter();
+                    EnsureIndexWriter(useWriteLock: true);
                     ForceWriteToDisk();
                     WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
                 }
@@ -295,25 +296,28 @@ namespace Raven.Database.Indexing
 
                 if (indexWriter != null) // just in case, WriteInMemoryIndexToDiskIfNecessary recreates writer
                 {
-                    var writer = indexWriter;
-                    indexWriter = null;
+                    lock (writeLock)
+                    {
+                        var writer = indexWriter;
+                        indexWriter = null;
 
-                    try
-                    {
-                        writer.Analyzer.Close();
-                    }
-                    catch (Exception e)
-                    {
-                        logIndexing.ErrorException("Error while closing the index (closing the analyzer failed)", e);
-                    }
+                        try
+                        {
+                            writer.Analyzer.Close();
+                        }
+                        catch (Exception e)
+                        {
+                            logIndexing.ErrorException("Error while closing the index (closing the analyzer failed)", e);
+                        }
 
-                    try
-                    {
-                        writer.Dispose();
-                    }
-                    catch (Exception e)
-                    {
-                        logIndexing.ErrorException("Error when closing the index", e);
+                        try
+                        {
+                            writer.Dispose();
+                        }
+                        catch (Exception e)
+                        {
+                            logIndexing.ErrorException("Error when closing the index", e);
+                        }
                     }
                 }
 
@@ -332,17 +336,33 @@ namespace Raven.Database.Indexing
             }
         }
 
-        public void EnsureIndexWriter()
+        public void EnsureIndexWriter(bool useWriteLock)
         {
+            if (indexWriter != null)
+                return;
+
+            var lockTaken = false;
             try
             {
-                if (indexWriter == null)
-                    CreateIndexWriter();
+                if (useWriteLock)
+                {
+                    Monitor.Enter(writeLock, ref lockTaken);
+                }
+
+                if (indexWriter != null)
+                    return;
+
+                CreateIndexWriter();
             }
             catch (IOException e)
             {
                 var msg = string.Format("Error when trying to create the index writer for index '{0}'.", this.PublicName);
                 throw new IOException(msg, e);
+            }
+            finally
+            {
+                if (lockTaken)
+                    Monitor.Exit(writeLock);
             }
         }
 
@@ -397,7 +417,7 @@ namespace Raven.Database.Indexing
                     logIndexing.Info("Starting merge of {0}", PublicName);
                     var sp = Stopwatch.StartNew();
 
-                    EnsureIndexWriter();
+                    EnsureIndexWriter(useWriteLock: false);
 
                     try
                     {
@@ -564,7 +584,7 @@ namespace Raven.Database.Indexing
                         throw;
                     }
 
-                    EnsureIndexWriter();
+                    EnsureIndexWriter(useWriteLock: false);
 
                     var locker = directory.MakeLock("writing-to-index.lock");
                     try
@@ -803,17 +823,28 @@ namespace Raven.Database.Indexing
 
             if (forceWriteToDisk || toobig || !stale || tooOld)
             {
-                indexWriter.Commit(highestETag);
-                var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition);
-                IndexStorage.WriteIndexVersion(fsDir, indexDefinition);
-                directory = fsDir;
+                // fix a race condition when trying to write the in memory index to disk concurrently
+                lock (writeInMemoryToDiskLock)
+                {
+                    dir = indexWriter.Directory as RAMDirectory;
+                    if (dir == null)
+                        return;
 
-                indexWriter.Dispose(true);
-                dir.Dispose();
+                    lock (writeLock)
+                    {
+                        indexWriter.Commit(highestETag);
+                        var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition);
+                        IndexStorage.WriteIndexVersion(fsDir, indexDefinition);
+                        directory = fsDir;
 
-                CreateIndexWriter();
+                        indexWriter.Dispose(true);
+                        dir.Dispose();
 
-                ResetWriteErrors();
+                        CreateIndexWriter();
+
+                        ResetWriteErrors();
+                    }
+                }
             }
         }
 
