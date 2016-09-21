@@ -17,9 +17,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private AllocatedMemoryData _buffer;
         private int _bufferPos;
         private ulong _singleValueHash;
+        private int _numberOfReduceFields;
+        private int _processedFields;
 
         public ReduceKeyProcessor(int numberOfReduceFields, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool)
         {
+            _numberOfReduceFields = numberOfReduceFields;
             _buffersPool = buffersPool;
             if (numberOfReduceFields == 1)
             {
@@ -36,12 +39,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public void Reset()
         {
             _bufferPos = 0;
+            _processedFields = 0;
         }
 
         public ulong Hash
         {
             get
             {
+                if (_processedFields != _numberOfReduceFields)
+                    throw new InvalidOperationException($"It processed {_processedFields} while expected to get {_numberOfReduceFields}");
+
                 switch (_mode)
                 {
                     case Mode.SingleValue:
@@ -54,8 +61,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        public void Process(object value)
+        public void Process(object value, bool internalCall = false)
         {
+            if (internalCall == false)
+                _processedFields++;
+
             if (value == null || value is DynamicNullObject)
                 return;
 
@@ -219,7 +229,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     // this call ensures properties to be returned in the same order, regardless their storing order
                     var property = json.GetPropertyByIndex(i);
 
-                    Process(property.Item2);
+                    Process(property.Item2, true);
                 }
 
                 return;
@@ -236,7 +246,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 foreach (var item in array)
                 {
-                    Process(item);
+                    Process(item, true);
                 }
 
                 return;
