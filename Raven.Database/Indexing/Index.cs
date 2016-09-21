@@ -284,9 +284,9 @@ namespace Raven.Database.Indexing
 
                 try
                 {
-                    EnsureIndexWriter();
+                    EnsureIndexWriter(useWriteLock: false);
                     ForceWriteToDisk();
-                    WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
+                    WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats(), useWriteLock: false);
                 }
                 catch (Exception e)
                 {
@@ -332,17 +332,33 @@ namespace Raven.Database.Indexing
             }
         }
 
-        public void EnsureIndexWriter()
+        public void EnsureIndexWriter(bool useWriteLock)
         {
+            if (indexWriter != null)
+                return;
+
+            var lockTaken = false;
             try
             {
-                if (indexWriter == null)
-                    CreateIndexWriter();
+                if (useWriteLock)
+                {
+                    Monitor.Enter(writeLock, ref lockTaken);
+                }
+
+                if (indexWriter != null)
+                    return;
+
+                CreateIndexWriter();
             }
             catch (IOException e)
             {
                 var msg = string.Format("Error when trying to create the index writer for index '{0}'.", this.PublicName);
                 throw new IOException(msg, e);
+            }
+            finally
+            {
+                if (lockTaken)
+                    Monitor.Exit(writeLock);
             }
         }
 
@@ -397,7 +413,7 @@ namespace Raven.Database.Indexing
                     logIndexing.Info("Starting merge of {0}", PublicName);
                     var sp = Stopwatch.StartNew();
 
-                    EnsureIndexWriter();
+                    EnsureIndexWriter(useWriteLock: false);
 
                     try
                     {
@@ -564,7 +580,7 @@ namespace Raven.Database.Indexing
                         throw;
                     }
 
-                    EnsureIndexWriter();
+                    EnsureIndexWriter(useWriteLock: false);
 
                     var locker = directory.MakeLock("writing-to-index.lock");
                     try
@@ -624,7 +640,7 @@ namespace Raven.Database.Indexing
                         {
                             using (StopwatchScope.For(flushToDiskDuration))
                             {
-                                WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
+                                WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag, useWriteLock: false);
 
                                 if (indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
                                 {
@@ -786,7 +802,7 @@ namespace Raven.Database.Indexing
             }
         }
 
-        internal void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag)
+        internal void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag, bool useWriteLock)
         {
             if (context.Configuration.RunInMemory ||
                 context.IndexDefinitionStorage == null) // may happen during index startup
@@ -803,17 +819,37 @@ namespace Raven.Database.Indexing
 
             if (forceWriteToDisk || toobig || !stale || tooOld)
             {
-                indexWriter.Commit(highestETag);
-                var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition);
-                IndexStorage.WriteIndexVersion(fsDir, indexDefinition);
-                directory = fsDir;
+                // fix a race condition when trying to write the in memory index to disk concurrently
+                var lockTaken = false;
+                try
+                {
+                    if (useWriteLock)
+                    {
+                        Monitor.Enter(writeLock, ref lockTaken);
+                    }
 
-                indexWriter.Dispose(true);
-                dir.Dispose();
+                    dir = indexWriter.Directory as RAMDirectory;
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                    if (dir == null)
+                        return;
 
-                CreateIndexWriter();
+                    indexWriter.Commit(highestETag);
+                    var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition);
+                    IndexStorage.WriteIndexVersion(fsDir, indexDefinition);
+                    directory = fsDir;
 
-                ResetWriteErrors();
+                    indexWriter.Dispose(true);
+                    dir.Dispose();
+
+                    CreateIndexWriter();
+
+                    ResetWriteErrors();
+                }
+                finally
+                {
+                    if (lockTaken)
+                        Monitor.Exit(writeLock);
+                }
             }
         }
 
@@ -2248,7 +2284,7 @@ namespace Raven.Database.Indexing
                     if (indexWriter != null)
                     {
                         ForceWriteToDisk();
-                        WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
+                        WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats(), useWriteLock: true);
                     }
                 }
                 catch (Exception e)

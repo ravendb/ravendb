@@ -1050,9 +1050,9 @@ namespace Raven.Database.Indexing
                             actions.Enqueue(new Tuple<Action<IStorageActionsAccessor>, IndexToWorkOn>(accessor =>
                             {
                                 accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified);
-                                accessor.AfterStorageCommit += () =>
+                                accessor.BeforeStorageCommit += () =>
                                 {
-                                    indexToWorkOn.Index.EnsureIndexWriter();
+                                    indexToWorkOn.Index.EnsureIndexWriter(useWriteLock: true);
                                     indexToWorkOn.Index.Flush(lastEtag);
                                 };
                             }, indexToWorkOn));

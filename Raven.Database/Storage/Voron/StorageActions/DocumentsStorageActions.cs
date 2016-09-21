@@ -81,10 +81,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     yield break;
 
                 var hasEntityNames = entityNames != null && entityNames.Count > 0;
-                if (hasEntityNames)
-                    entityNames = new HashSet<string>(entityNames, StringComparer.OrdinalIgnoreCase);
 
-                var _ = false;
                 do
                 {
                     if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
