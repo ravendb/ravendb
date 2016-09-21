@@ -461,13 +461,17 @@ namespace Raven.Server.Documents.Indexes
                     if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)
                         exceptions = new List<Exception>();
 
+                    Index index = null;
+
                     try
                     {
-                        var index = Index.Open(indexId, _documentDatabase);
+                        index = Index.Open(indexId, _documentDatabase);
+                        index.Start();
                         _indexes.Add(index);
                     }
                     catch (Exception e)
                     {
+                        index?.Dispose();
                         exceptions?.Add(e);
 
                         // TODO arek: I think we can ignore auto indexes here, however for static ones try to retrieve names

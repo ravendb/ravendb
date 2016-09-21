@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Indexes
                     case IndexType.MapReduce:
                         return MapReduceIndex.Open(indexId, environment, documentDatabase);
                     default:
-                        throw new NotImplementedException();
+                        throw new ArgumentException($"Uknown index type {type} for index {indexId}");
                 }
             }
             catch (Exception)
