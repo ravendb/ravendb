@@ -184,8 +184,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 return Enumerable.Empty<JsonDocument>();
 
             var hasEntityNames = entityNames != null && entityNames.Count > 0;
-            if (hasEntityNames)
-                entityNames = new HashSet<string>(entityNames, StringComparer.OrdinalIgnoreCase);
 
             if (take < 1024 * 4)
             {
@@ -214,7 +212,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
         private IEnumerable<JsonDocument> GetDocumentsWithoutBuffering(
             int take, bool hasEntityNames, HashSet<string> entityNames)
         {
-            var _ = false;
             while (Api.TryMovePrevious(session, Documents) && take >= 0)
             {
                 take--;
