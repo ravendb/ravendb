@@ -40,9 +40,23 @@ namespace Raven.Server.Documents
         private static readonly Slice DeletedEtagsSlice = Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable);
         private static readonly TableSchema ConflictsSchema = new TableSchema();
         private static readonly TableSchema TombstonesSchema = new TableSchema();
+        private static readonly TableSchema CollectionsSchema = new TableSchema();
+
 
         static DocumentsStorage()
         {
+            /*
+             Collection schema is:
+             lower case name, full name, collection id
+             collections are never deleted from the collections table
+             */
+            CollectionsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 0,
+                Count = 1,
+                IsGlobal = false,
+            });
+
             /*
              The structure of conflicts table starts with the following fields:
              [ Conflicted Doc Id | Change Vector | ... the rest of fields ... ]
@@ -209,6 +223,8 @@ namespace Raven.Server.Documents
                     tx.CreateTree("ChangeVector");
                     DocsSchema.Create(tx, Document.SystemDocumentsCollection);
                     ConflictsSchema.Create(tx, "Conflicts");
+                    CollectionsSchema.Create(tx, "Collections");
+
                     _lastEtag = ReadLastEtag(tx);
 
                     tx.Commit();
@@ -1299,9 +1315,8 @@ namespace Raven.Server.Documents
 
             string originalCollectionName;
             bool isSystemDocument;
-            var collectionName = GetCollectionName(key, document, out originalCollectionName, out isSystemDocument);
-            DocsSchema.Create(context.Transaction.InnerTransaction, collectionName);
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName);
+            var collectionName = GetCollectionName(context, key, document, out originalCollectionName, out isSystemDocument);
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.TableName);
 
             if (string.IsNullOrWhiteSpace(key))
                 key = Guid.NewGuid().ToString();
@@ -1547,15 +1562,56 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static string GetCollectionName(string key, BlittableJsonReaderObject document, out string originalCollectionName, out bool isSystemDocument)
+        private class CollectionName
         {
-            var collectionName = Document.GetCollectionName(key, document, out isSystemDocument);
+            public string Name;
+            public long Id;
+            public string TableName;
 
-            originalCollectionName = collectionName;
+            public override string ToString()
+            {
+                return $"Collection #{Id:#,#;;0}: '{Name}'";
+            }
+        }
 
-            // TODO: we have to have some way to distinguish between dynamic tree names
-            // and our fixed ones, otherwise a collection call Docs will corrupt our state
-            return "@" + collectionName;
+        private Dictionary<string, CollectionName> _collectionsCache =
+            new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
+
+        private CollectionName GetCollectionName(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, out string originalCollectionName, out bool isSystemDocument)
+        {
+            originalCollectionName = Document.GetCollectionName(key, document, out isSystemDocument);
+
+            CollectionName name;
+            if (_collectionsCache.TryGetValue(originalCollectionName, out name))
+                return name;
+
+            var collections = context.Transaction.InnerTransaction.OpenTable(CollectionsSchema, "Collections");
+
+            var collectionId = collections.NumberOfEntries;
+            name = new CollectionName
+            {
+                Id = collectionId,
+                Name = originalCollectionName,
+                TableName = "Collection." + name.Id + "." + name.Name
+            };
+
+            var tvr = new TableValueBuilder
+            {
+                Slice.From(context.Allocator, originalCollectionName.ToLowerInvariant()),
+                Slice.From(context.Allocator, originalCollectionName),
+                &collectionId
+            };
+            collections.Set(tvr);
+            DocsSchema.Create(context.Transaction.InnerTransaction, name.TableName);
+
+            // safe to do, other transactions will see it, but we are under write lock here
+            _collectionsCache = new Dictionary<string, CollectionName>(_collectionsCache,
+                StringComparer.OrdinalIgnoreCase)
+            {
+                {name.Name, name}
+            };
+
+            return name;
         }
 
         private static string GetCollectionName(Slice key, BlittableJsonReaderObject document, out string originalCollectionName, out bool isSystemDocument)
