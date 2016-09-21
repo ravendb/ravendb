@@ -1701,7 +1701,7 @@ namespace Raven.Database.Indexing
         {
             var index = GetIndexByName(indexName);
             index.ForceWriteToDisk();
-            index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
+            index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty, useWriteLock: true);
         }
 
         internal bool TryReplaceIndex(string indexName, string indexToReplaceName)
