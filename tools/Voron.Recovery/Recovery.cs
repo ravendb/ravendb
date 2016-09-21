@@ -18,7 +18,7 @@ namespace Voron.Recovery
     {
         public Recovery(VoronRecoveryConfiguration config)
         {
-]            _datafile = config.PathToDataFile;
+            _datafile = config.PathToDataFile;
             _output = config.OutputFileName;
             _pageSize = config.PageSizeInKb*Constants.Size.Kilobyte;
             _numberOfFieldsInDocumentTable = config.NumberOfFiledsInDocumentTable;
