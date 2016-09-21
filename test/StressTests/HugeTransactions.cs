@@ -5,21 +5,14 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using SlowTests.Utils;
-using Voron;
-using Voron.Util.Conversion;
-using Voron.Impl.Paging;
+using SlowTests.Voron;
 using Xunit;
+using Voron;
+using Voron.Impl.Paging;
 using Sparrow.Compression;
-using Sparrow;
 
-namespace SlowTests.Voron
+namespace StressTests
 {
     public class HugeTransactions : StorageTest
     {
