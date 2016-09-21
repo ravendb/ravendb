@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Compression;
 using Sparrow.Utils;
@@ -868,16 +869,16 @@ namespace Voron.Impl.Journal
 
             // We want to include the Transaction Header straight into the compression buffer.
             var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
-            long maxSizeRequiringCompression = ((long)pageCountIncludingAllOverflowPages * (long)pageSize) + sizeOfPagesHeader
-                 + numberOfPages * sizeof(long);
-
-            var outputBufferSize = LZ4.MaximumOutputLength(maxSizeRequiringCompression) + pageSize; // + extra pageSize for fullTxBuffer to point to aligned address
+            var diffOverhead = (long)sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
+            var diffOverheadInPages = checked((int) (diffOverhead/pageSize + (diffOverhead%pageSize == 0 ? 0 : 1)));
+            long maxSizeRequiringCompression = ((long) pageCountIncludingAllOverflowPages*(long) pageSize) + diffOverhead;
+            var outputBufferSize = LZ4.MaximumOutputLength(maxSizeRequiringCompression);
 
             int outputBufferInPages = checked((int)((outputBufferSize + sizeof(TransactionHeader)) / pageSize +
                                       ((outputBufferSize + sizeof(TransactionHeader)) % pageSize == 0 ? 0 : 1)));
 
             // The pages required includes the intermediate pages and the required output pages. 
-            int pagesRequired = (pageCountIncludingAllOverflowPages + outputBufferInPages);
+            int pagesRequired = (pageCountIncludingAllOverflowPages + diffOverheadInPages + outputBufferInPages);
             var pagerState = compressionPager.EnsureContinuous(0, pagesRequired);
             tx.EnsurePagerStateReference(pagerState);
 
@@ -915,7 +916,8 @@ namespace Voron.Impl.Journal
             var totalSizeWritten = (write - outputBuffer) + sizeOfPagesHeader;
 
 
-            var fullTxBuffer = outputBuffer + (pageCountIncludingAllOverflowPages*(long)pageSize);
+            var fullTxBuffer = outputBuffer + (pageCountIncludingAllOverflowPages*(long) pageSize) +
+                               diffOverheadInPages*(long) pageSize;
 
             var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
 

@@ -69,7 +69,7 @@ namespace Voron.Platform.Win32
                 WriteFile(position, p, numberOfPages);
         }
 
-        public void WriteFile(long position, byte* p, int numberOfPages)
+        private void WriteFile(long position, byte* p, int numberOfPages)
         {
             _nativeOverlapped->OffsetLow = (int)(position & 0xffffffff);
             _nativeOverlapped->OffsetHigh = (int)(position >> 32);
