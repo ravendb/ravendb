@@ -85,8 +85,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private void ExecuteCollectionQuery(QueryResultServerSide resultToFill, IndexQueryServerSide query, string collection)
         {
+            var isAllDocsCollection = collection == Constants.Indexing.AllDocumentsCollection;
+
             // we optimize for empty queries without sorting options
-            resultToFill.IndexName = collection;
+            resultToFill.IndexName = isAllDocsCollection ? "AllDocs" : collection;
             resultToFill.IsStale = false;
             resultToFill.ResultEtag = Environment.TickCount;
             resultToFill.LastQueryTime = DateTime.MinValue;
@@ -94,9 +96,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             _context.OpenReadTransaction();
 
-            var collectionStats = _documents.GetCollection(collection, _context);
-
-            resultToFill.TotalResults = (int)collectionStats.Count;
+            if (isAllDocsCollection)
+            {
+                resultToFill.TotalResults = (int)_documents.GetNumberOfDocuments(_context);
+            }
+            else
+            {
+                var collectionStats = _documents.GetCollection(collection, _context);
+                resultToFill.TotalResults = (int)collectionStats.Count;
+            }
 
             var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Includes);
 
