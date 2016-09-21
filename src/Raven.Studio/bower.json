@@ -6,7 +6,6 @@
     "knockout": "^3.4.0",
     "requirejs": "^2.1.22",
     "blockUI": "blockui#*",
-    "nprogress": "^0.2.0",
     "knockout.dirtyFlag": "https://raw.githubusercontent.com/CodeSeven/KoLite/86525c983dcc6f895f17391e03cfaf994a29e9b4/knockout.dirtyFlag.js",
     "knockout-delegatedEvents": "^0.6.1",
     "knockout-postbox": "^0.5.2",

@@ -171,8 +171,6 @@ class shell extends viewModelBase {
 
         oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
 
-        NProgress.set(.7);
-
         this.setupRouting();
 
         var self = this;
@@ -194,8 +192,8 @@ class shell extends viewModelBase {
         let routes = this.getRoutesForNewLayout();
         routes.pushAll(routes);
         router.map(routes).buildNavigationModel();
-        router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-        router.on('router:navigation:cancelled', () => this.showNavigationProgress(false));
+        //TODO: do we indicate this? router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
+        //TODO: do we indicated this? router.on('router:navigation:cancelled', () => this.showNavigationProgress(false));
 
         appUrl.mapUnknownRoutes(router);
     }
@@ -589,18 +587,6 @@ class shell extends viewModelBase {
          new getDatabaseStatsCommand(null).execute();*/
     }
 
-    showNavigationProgress(isNavigating: boolean) {
-        if (isNavigating) {
-            NProgress.start();
-
-            var currentProgress = parseFloat(NProgress.status);
-            var newProgress = isNaN(currentProgress) ? 0.5 : currentProgress + (currentProgress / 2);
-            NProgress.set(newProgress);
-        } else {
-            NProgress.done();
-        }
-    }
-
     static reloadDatabases = () => shell.reloadResources(() => new getDatabasesCommand().execute(), shell.databases);
     static reloadFileSystems = () => shell.reloadResources(() => new getFileSystemsCommand().execute(), shell.fileSystems);
     static reloadCounterStorages = () => shell.reloadResources(() => new getCounterStoragesCommand().execute(), shell.counterStorages);
@@ -917,8 +903,6 @@ class shell extends viewModelBase {
     }
 
     private handleRavenConnectionFailure(result: any) {
-        NProgress.done();
-
         if (result.status === 401) {
             // Unauthorized might be caused by invalid credentials. 
             // Remove them from both local storage and oauth context.
@@ -930,7 +914,6 @@ class shell extends viewModelBase {
         var tryAgain = "Try again";
         var messageBoxResultPromise = this.confirmationMessage(':-(', "Couldn't connect to Raven. Details in the browser console.", [tryAgain]);
         messageBoxResultPromise.done(() => {
-            NProgress.start();
             this.connectToRavenServer();
         });
     }

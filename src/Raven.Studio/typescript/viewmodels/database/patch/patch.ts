@@ -357,7 +357,6 @@ class patch extends viewModelBase {
     fetchAllCollections(): JQueryPromise<any> {
         return new getCollectionsCommand(this.activeDatabase())
             .execute()
-            .always(() => NProgress.done())
             .done((colls: collection[]) => {
                 var currentlySelectedCollection: collection = null;
 

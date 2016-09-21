@@ -1,6 +1,5 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
-import alertType = require("common/alertType");
 import messagePublisher = require("common/messagePublisher");
 import database = require("models/resources/database");
 import resource = require("models/resources/resource");
@@ -9,17 +8,14 @@ import oauthContext = require("common/oauthContext");
 import forge = require("forge");
 import router = require("plugins/router");
 
+import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
+
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
 
     // TODO: better place for this?
     static ravenClientVersion = '4.0.0.0';
-    static splashTimerHandle = 0;
-    static alertTimeout = 0;
-    static loadingCounter = 0;
-    static biggestTimeToAlert = 0;
-
-    private oauthHandler = new oauthHandler();
+    private oauthHandler = new oauthHandler(); //TODO: consider static handler?
 
     execute<T>(): JQueryPromise<T> {
         throw new Error("Execute must be overridden.");
@@ -34,12 +30,13 @@ class commandBase {
     }
 
     query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
-        var ajax = this.ajax(relativeUrl, args, "GET", resource, options, timeToAlert);
+        const ajax = this.ajax(relativeUrl, args, "GET", resource, options, timeToAlert);
         if (resultsSelector) {
-            var task = $.Deferred();
+            var task = $.Deferred<T>();
             ajax.done((results, status, xhr) => {
+
                 //if we fetched a database document, save the etag from the header
-                if (results.hasOwnProperty('SecuredSettings')) {
+                if (results.hasOwnProperty('SecuredSettings')) { //TODO: delete this as it is specific
                     results['__metadata'] = { '@etag': xhr.getResponseHeader('Etag') };
                 }
                 var transformedResults = resultsSelector(results);
@@ -135,10 +132,9 @@ class commandBase {
                     if (evt.lengthComputable) {
                         var percentComplete = (evt.loaded / evt.total) * 100;
                         if (percentComplete < 100) {
-                            // waiting for upload progress to complete
-                            clearTimeout(commandBase.alertTimeout);
-                            commandBase.alertTimeout = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
+                            protractedCommandsDetector.instance.progressReceived(timeToAlert);
                         }
+                        //TODO: use event
                         ko.postbox.publish("UploadProgress", percentComplete);
                     }
                 }, false);
@@ -153,22 +149,15 @@ class commandBase {
             }
         }
 
-        var isBiggestTimeToAlertUpdated = timeToAlert > commandBase.biggestTimeToAlert;
-        if ((commandBase.loadingCounter === 0 && timeToAlert > 0) || isBiggestTimeToAlertUpdated) {
-            commandBase.biggestTimeToAlert = timeToAlert;
-            clearTimeout(commandBase.splashTimerHandle);
-            commandBase.splashTimerHandle = setTimeout(commandBase.showSpin, 1000, timeToAlert, isBiggestTimeToAlertUpdated); 
-        }
-
-        if (oauthContext.apiKey()) {
+        if (oauthContext.apiKey()) { //TODO: move to oauth handler!
             if (!defaultOptions.headers) {
                 var newHeaders: any = {};
                 defaultOptions.headers = newHeaders;
             }
-            defaultOptions.headers["Has-Api-Key"] = "True";
+            defaultOptions.headers["Has-Api-Key"] = "True"; 
         }
 
-        if (oauthContext.authHeader()) {
+        if (oauthContext.authHeader()) { //TODO: move to oauth handler
             if (!defaultOptions.headers) {
                 var newHeaders: any = {};
                 defaultOptions.headers = newHeaders;
@@ -176,17 +165,12 @@ class commandBase {
             defaultOptions.headers["Authorization"] = oauthContext.authHeader();
         }
 
-        commandBase.loadingCounter++;
+        protractedCommandsDetector.instance.requestStarted(timeToAlert);
+
         var ajaxTask = $.Deferred();
 
         $.ajax(defaultOptions).always(() => {
-            --commandBase.loadingCounter;
-            if (commandBase.loadingCounter === 0) {
-                clearTimeout(commandBase.splashTimerHandle);
-                clearTimeout(commandBase.alertTimeout);
-                commandBase.alertTimeout = 0;
-                commandBase.hideSpin();
-            }
+            protractedCommandsDetector.instance.requestCompleted();
         }).done((results, status, xhr) => {
             ajaxTask.resolve(results, status, xhr);
         }).fail((request, status, error) => {
@@ -213,24 +197,6 @@ class commandBase {
         }).fail((request: any, status: any, error: any) => {
             task.reject(request, status, error);
         });
-    }
-
-    private static showSpin(timeToAlert: number, isBiggestTimeToAlertUpdated: boolean) {
-        ko.postbox.publish("LoadProgress", alertType.warning);
-        if (commandBase.alertTimeout == 0 || isBiggestTimeToAlertUpdated) {
-            clearTimeout(commandBase.alertTimeout);
-            commandBase.biggestTimeToAlert = timeToAlert;
-            commandBase.alertTimeout = setTimeout(commandBase.showServerNotRespondingAlert, timeToAlert);
-        }
-    }
-
-    private static showServerNotRespondingAlert() {
-        ko.postbox.publish("LoadProgress", alertType.danger);
-    }
-
-    private static hideSpin() {
-        ko.postbox.publish("LoadProgress", null);
-        $.unblockUI();
     }
 
     reportInfo(title: string, details?: string) {

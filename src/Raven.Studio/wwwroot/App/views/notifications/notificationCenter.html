@@ -1,5 +1,5 @@
 
-<div class="studio-alerts" data-bind="with: currentAlert">
+<div class="studio-alerts" data-bind="with: notificationCenter.recentErrors.currentAlert">
     <div class="alert alert-dismissable fade in" data-bind="attr: { id: id }, css: { 'alert-info': type === 0, 'alert-success': type === 1, 'alert-warning': type === 2, 'alert-danger': type === 3 || type === 4 }, event: { 'closed.bs.alert': $root.onAlertHidden.bind($root) }">
         <button type="button" class="close" data-dismiss="alert" aria-hidden="true">
             <i class="fa fa-times"></i>
@@ -14,7 +14,7 @@
 
 <div id="notification-center" data-bind="css: { 'show-notifications': showNotifications() }, with: notificationCenter">
     
-    <div data-bind="foreach: watchedOperations()">
+    <div data-bind="foreach: operations.watchedOperations()">
         <div data-bind="if: visible()">
             <div class="panel">
                 <div class="panel-body">

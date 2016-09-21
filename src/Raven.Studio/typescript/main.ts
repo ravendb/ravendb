@@ -32,8 +32,6 @@ define('dagre', ['d3', 'd3/dagre'], (d3, dagre) => dagre);
 define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dialog", "durandal/composition"], (system: any, app: any, viewLocator: any, dialog: any, composition: any) => {
     system.debug(true);
     
-    NProgress.configure({ showSpinner: false });
-
     app.title = "Raven.Studio";
     dialog.MessageBox.setViewUrl("views/dialog.html");
 
@@ -55,7 +53,6 @@ define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dial
         } else {
             //The browser doesn't support WebSocket
             app.showMessage("Your browser isn't supported. Please use a modern browser!", ":-(", []);
-            NProgress.done();
         }
     });
 });

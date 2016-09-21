@@ -16,7 +16,7 @@ class notificationCenterRecentErrors {
         ko.postbox.subscribe(EVENTS.NotificationCenter.Alert, (alert: alertArgs) => this.showAlert(alert));
 
 
-        ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));//TODO:
+        
         //TODO: this.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts()) //TODO:
     }
 
@@ -35,19 +35,7 @@ class notificationCenterRecentErrors {
     }
 
     //TODO:
-    dataLoadProgress(splashType?: alertType) {
-        if (!splashType) {
-            NProgress.configure({ showSpinner: false });
-            NProgress.done();
-        } else if (splashType === alertType.warning) {
-            NProgress.configure({ showSpinner: true });
-            NProgress.start();
-        } else {
-            NProgress.done();
-            NProgress.configure({ showSpinner: false });
-            $.blockUI({ message: '<div id="longTimeoutMessage"><span> This is taking longer than usual</span><br/><span>(Waiting for server to respond)</span></div>' });
-        }
-    }
+   
 
     //TODO: move to notification center code
     showAlert(alert: alertArgs) {
