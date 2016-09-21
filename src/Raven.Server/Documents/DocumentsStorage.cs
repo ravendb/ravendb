@@ -14,7 +14,6 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
-using Voron.Data;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
@@ -224,7 +223,6 @@ namespace Raven.Server.Documents
                     tx.CreateTree("LastReplicatedEtags");
                     tx.CreateTree("Identities");
                     tx.CreateTree("ChangeVector");
-                    DocsSchema.Create(tx, CollectionName.SystemCollection);
                     ConflictsSchema.Create(tx, "Conflicts");
                     CollectionsSchema.Create(tx, "Collections");
 
@@ -1568,22 +1566,15 @@ namespace Raven.Server.Documents
 
         public IEnumerable<CollectionStat> GetCollections(DocumentsOperationContext context)
         {
-            using (var it = context.Transaction.InnerTransaction.LowLevelTransaction.RootObjects.Iterate(false))
+            foreach (var kvp in _collectionsCache)
             {
-                if (it.Seek(Slices.BeforeAllKeys) == false)
-                    yield break;
-                do
+                var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, kvp.Value.GetTableName(CollectionTableType.Documents));
+
+                yield return new CollectionStat
                 {
-                    if (context.Transaction.InnerTransaction.GetRootObjectType(it.CurrentKey) != RootObjectType.VariableSizeTree)
-                        continue;
-
-                    if (it.CurrentKey[0] != '@') // collection prefix
-                        continue;
-
-                    var collectionTableName = it.CurrentKey.ToString();
-
-                    yield return GetCollection(collectionTableName, context);
-                } while (it.MoveNext());
+                    Name = kvp.Key,
+                    Count = collectionTable.NumberOfEntries
+                };
             }
         }
 
