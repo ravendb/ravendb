@@ -1,26 +1,23 @@
-﻿import resource = require("models/resources/resource");
-
-import alertArgs = require("common/alertArgs");
+﻿import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 import EVENTS = require("common/constants/events");
+import app = require("durandal/app");
 
 import recentErrors = require("viewmodels/common/recentErrors");
 
 class notificationCenterRecentErrors {
 
-    recordedErrors = ko.observableArray<alertArgs>(); //TODO: 
-    currentAlert = ko.observable<alertArgs>(); //TODO:
-    queuedAlert: alertArgs; //TODO:
+    recordedErrors = ko.observableArray<alertArgs>();
+    currentAlert = ko.observable<alertArgs>();
+
+    private queuedAlerts: Array<alertArgs> = [];
 
     constructor() {
         ko.postbox.subscribe(EVENTS.NotificationCenter.Alert, (alert: alertArgs) => this.showAlert(alert));
-
-
-        
-        //TODO: this.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts()) //TODO:
+        //TODO: this.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts())  - do we need watch for this document - it depends on RavenDB-5313
     }
 
-    fetchSystemDatabaseAlerts() { //TODO:
+    private fetchSystemDatabaseAlerts() { //TODO: maybe we should use name: fetchGlobalAlerts as we don't have notation of sys db right now
         /* TODO
         new getDocumentWithMetadataCommand("Raven/Alerts", this.systemDatabase)
             .execute()
@@ -29,42 +26,35 @@ class notificationCenterRecentErrors {
             });*/
     }
 
-    showErrorsDialog() { //TODO:
-        var errorDetails: recentErrors = new recentErrors(this.recordedErrors);
-        //TODO: app.showDialog(errorDetails);
+    dismissRecentError(alert: alertArgs) {
+        this.recordedErrors.remove(alert);
     }
 
-    //TODO:
-   
+    showErrorsDialog() {
+        const errorDetails: recentErrors = new recentErrors(this.recordedErrors);
+        app.showDialog(errorDetails);
+    }
 
-    //TODO: move to notification center code
     showAlert(alert: alertArgs) {
-        if (alert.displayInRecentErrors && (alert.type === alertType.danger || alert.type === alertType.warning)) {
+        if (alert.displayInRecentErrors && !this.recordedErrors.contains(alert)) {
             this.recordedErrors.unshift(alert);
         }
 
-        var currentAlert = this.currentAlert();
+        const currentAlert = this.currentAlert();
         if (currentAlert) {
-            this.queuedAlert = alert;
+            this.queuedAlerts.unshift(alert);
             this.closeAlertAndShowNext(currentAlert);
         } else {
             this.currentAlert(alert);
-            var fadeTime = 2000; // If there are no pending alerts, show it for 2 seconds before fading out.
-            /*            if (alert.title.indexOf("Changes stream was disconnected.") == 0) {
-                            fadeTime = 100000000;
-                        }*/
-            if (alert.type === alertType.danger || alert.type === alertType.warning) {
-                fadeTime = 5000; // If there are pending alerts, show the error alert for 4 seconds before fading out.
-            }
-            setTimeout(() => {
-                this.closeAlertAndShowNext(alert);
-            }, fadeTime);
+
+            const fadeTime = alert.type === alertType.danger || alert.type === alertType.warning ? 5000 : 2000;
+
+            setTimeout(() => this.closeAlertAndShowNext(alert), fadeTime);
         }
     }
 
-    //TODO: move to notifcation center
-    closeAlertAndShowNext(alertToClose: alertArgs) {
-        var alertElement = $('#' + alertToClose.id);
+    private closeAlertAndShowNext(alertToClose: alertArgs) {
+        const alertElement = $('#' + alertToClose.id);
         if (alertElement.length === 0) {
             return;
         }
@@ -77,17 +67,13 @@ class notificationCenterRecentErrors {
         }
     }
 
-    //TODO: move to notification center
     onAlertHidden() {
         this.currentAlert(null);
-        var nextAlert = this.queuedAlert;
+        const nextAlert = this.queuedAlerts.shift();
         if (nextAlert) {
-            this.queuedAlert = null;
             this.showAlert(nextAlert);
         }
     }
-
-    
 
 }
 

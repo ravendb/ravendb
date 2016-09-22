@@ -3,7 +3,7 @@
 import alertType = require("common/alertType");
 
 class alertArgs {
-    public id: string;
+    id: string;
     private detailsObject: any;
     private parsedErrorInfo: any;
 
@@ -11,7 +11,7 @@ class alertArgs {
     onClickAction: () => any = null;
 
     constructor(public type: alertType, public title: string, public details: string = "", public httpStatusText: string = "", public displayInRecentErrors: boolean = true) {
-        var hashString = (title + details)
+        const hashString = (title + details)
             .hashCode()
             .toString();
 
@@ -24,7 +24,7 @@ class alertArgs {
     }
 
     get errorMessage(): string {
-        var error = this.errorInfo;
+        const error = this.errorInfo;
         if (error && error.message) {
             return error.message;
         }
@@ -42,11 +42,11 @@ class alertArgs {
         }
 
         // See if we can tease out an error message from the details string.
-        var detailsObj = this.getDetailsObject();
+        const detailsObj = this.getDetailsObject();
         if (detailsObj) {
-            var error: string = detailsObj.Error;
+            const error: string = detailsObj.Error;
             if (error && typeof error === "string") {
-                var indexOfStackTrace = error.indexOf("\r\n");
+                const indexOfStackTrace = error.indexOf("\r\n");
 
                 if (indexOfStackTrace !== -1) {
                     this.parsedErrorInfo = {

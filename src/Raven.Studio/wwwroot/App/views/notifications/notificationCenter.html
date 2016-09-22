@@ -1,14 +1,17 @@
 
-<div class="studio-alerts" data-bind="with: notificationCenter.recentErrors.currentAlert">
-    <div class="alert alert-dismissable fade in" data-bind="attr: { id: id }, css: { 'alert-info': type === 0, 'alert-success': type === 1, 'alert-warning': type === 2, 'alert-danger': type === 3 || type === 4 }, event: { 'closed.bs.alert': $root.onAlertHidden.bind($root) }">
-        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">
-            <i class="fa fa-times"></i>
-        </button>
-        <div class="alert-text">
-            <strong data-bind="text: title, attr:{title:title}"></strong>
-        </div>
-        <span data-bind="visible: errorMessage, text: errorMessage"></span>
-        <a class="alert alert-link" href="#" data-bind="visible: details, click: $root.showErrorsDialog.bind($root)">Details</a>
+<div class="studio-alerts" data-bind="with: notificationCenter.recentErrors">
+    <div data-bind="with: currentAlert">
+        <div class="alert alert-dismissable fade in"
+             data-bind="attr: { id: id }, css: { 'alert-info': type === 0, 'alert-success': type === 1, 'alert-warning': type === 2, 'alert-danger': type === 3 || type === 4 }, event: { 'closed.bs.alert': $parent.onAlertHidden.bind($parent) }">
+            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">
+                <i class="fa fa-times"></i>
+            </button>
+            <div class="alert-text">
+                <strong data-bind="text: title, attr:{title:title}"></strong>
+            </div>
+            <span data-bind="visible: errorMessage, text: errorMessage"></span>
+            <a class="alert alert-link" href="#" data-bind="visible: details, click: $parent.showErrorsDialog.bind($parent)">Details</a>
+        </div>     
     </div>
 </div>
 
@@ -18,8 +21,6 @@
         <div data-bind="if: visible()">
             <div class="panel">
                 <div class="panel-body">
-                    
-                    
                     <div data-bind="if: completed()">
                         <h3 data-bind="text: description().Description"></h3>
                         
@@ -53,14 +54,21 @@
             </div>
         </div>
     </div>
-
-    <div class="panel">
-        <div class="panel-body">
-            <h3 class="text-warning"><span class="icon-database"></span> Your storage is full
-            </h3>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. In auctor varius sem, id tempor ex. Nam hendrerit ultrices imperdiet. Ut metus nisl, posuere a mi et, lobortis commodo quam. Praesent a tortor a ante ultrices tempor. Nullam mattis nisl nisl, consectetur hendrerit tellus pellentesque id.</p>
+    
+    <div data-bind="foreach: recentErrors.recordedErrors">
+        <div class="panel">
+            <div class="panel-body">
+                <h3 class="text-warning">
+                    <span class="icon-database"></span> <span data-bind="text: title"></span>
+                </h3>
+                <div class="text-right">
+                    <a href="#" class="btn btn-sm btn-default">Details</a>
+                    <a href="#" data-bind="click: $parent.dismissRecentError.bind($parent, $data)" class="btn btn-sm btn-danger"><span class="icon-cancel dismiss-notification"></span>Dismiss</a>
+                </div>
+            </div>
         </div>
     </div>
+   
 </div>
 
 

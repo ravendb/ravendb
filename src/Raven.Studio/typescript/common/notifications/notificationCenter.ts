@@ -1,5 +1,6 @@
 ﻿import resource = require("models/resources/resource");
 
+import alertArgs = require("common/alertArgs");
 import notificationCenterOperations = require("common/notifications/notificationCenterOperations");
 import notificationCenterRecentErrors = require("common/notifications/notificationCenterRecentErrors");
 
@@ -22,6 +23,10 @@ class notificationCenter {
 
     dismissOperation(operationId: number, saveOperations: boolean = true) {
         this.operations.dismissOperation(operationId, saveOperations);
+    }
+
+    dismissRecentError(alert: alertArgs) {
+        this.recentErrors.dismissRecentError(alert);
     }
 
 }
