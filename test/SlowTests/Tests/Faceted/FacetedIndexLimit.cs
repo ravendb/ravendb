@@ -26,7 +26,7 @@ namespace SlowTests.Tests.Faceted
             _data = GetCameras(NumCameras);
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformSearchWithTwoDefaultFacets()
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer" }, new Facet { Name = "Model" } };
@@ -80,7 +80,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedLimitSearch_TermAsc()
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, IncludeRemainingTerms = true } };
@@ -122,7 +122,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedLimitSearch_TermDesc()
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc, IncludeRemainingTerms = true } };
@@ -165,7 +165,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedLimitSearch_HitsAsc()
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsAsc, IncludeRemainingTerms = true } };
@@ -227,7 +227,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedLimitSearch_HitsDesc()
         {
             //also specify more results than we have
@@ -273,7 +273,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformSearchWithTwoDefaultFacets_LuceneQuery()
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer" }, new Facet { Name = "Model" } };
@@ -327,7 +327,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedLimitSearch_TermAsc_LuceneQuery()
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, IncludeRemainingTerms = true } };
@@ -369,7 +369,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedLimitSearch_TermDesc_LuceneQuery()
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc, IncludeRemainingTerms = true } };
@@ -412,7 +412,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedLimitSearch_HitsAsc_LuceneQuery()
         {
             var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsAsc, IncludeRemainingTerms = true } };
@@ -460,7 +460,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact(Skip = "RavenDB-4519")]
+        [Fact]
         public void CanPerformFacetedLimitSearch_HitsDesc_LuceneQuery()
         {
             //also specify more results than we have

@@ -18,7 +18,7 @@ namespace SlowTests.Core.Streaming
 {
     public class QueryStreaming : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Query streaming")]
+        [Fact]
         public void CanStreamQueryResults()
         {
             using (var store = GetDocumentStore())

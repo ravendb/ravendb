@@ -23,7 +23,6 @@ namespace Raven.Server.Documents.Expiration
     {
         private readonly DocumentDatabase _database;
 
-        public Func<DateTime> UtcNow = () => DateTime.UtcNow;
 
         private static Logger _logger;
         private const string DocumentsByExpiration = "DocumentsByExpiration";
@@ -105,11 +104,9 @@ namespace Raven.Server.Documents.Expiration
             DocumentsOperationContext context;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
-                var currentTime = UtcNow();
-
                 while (exitWriteTransactionAndContinueAgain)
                 {
-                    exitWriteTransactionAndContinueAgain = CleanupDocumentsOnce(context, currentTime);
+                    exitWriteTransactionAndContinueAgain = CleanupDocumentsOnce(context, _database.Time.GetUtcNow());
 
                     if (exitWriteTransactionAndContinueAgain)
                         Thread.Sleep(16); // give up the thread for a short while, to let other transactions run
@@ -214,7 +211,7 @@ namespace Raven.Server.Documents.Expiration
 
             DateTime date;
             if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date) == false)
-                throw new InvalidOperationException($"The expiration date format is not valid: '{expirationDate}'. Use the following format: {UtcNow().ToString("O")}");
+                throw new InvalidOperationException($"The expiration date format is not valid: '{expirationDate}'. Use the following format: {_database.Time.GetUtcNow().ToString("O")}");
 
             // We explicitly enable adding documents that have already been expired, we have to, because if the time lag is short, it is possible
             // that we add a document that expire in 1 second, but by the time we process it, it already expired. The user did nothing wrong here

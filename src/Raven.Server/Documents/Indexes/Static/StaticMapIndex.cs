@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
             var staticMapIndexDefinition = new StaticMapIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(),
-                staticIndex.OutputFields);
+                staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new StaticMapIndex(indexId, staticMapIndexDefinition, staticIndex);
             return instance;
         }

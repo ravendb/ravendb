@@ -6,7 +6,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Collation;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.SqlReplication;
@@ -27,15 +26,13 @@ namespace Raven.Server.Documents
 {
     public class DocumentDatabase : IResourceStore
     {
-        private Logger _logger;
+        private readonly Logger _logger;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
-        public readonly PatchDocument Patch;
 
         private readonly object _idleLocker = new object();
         private Task _indexStoreTask;
         private Task _transformerStoreTask;
-        public TransactionOperationsMerger TxMerger;
 
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
@@ -63,7 +60,13 @@ namespace Raven.Server.Documents
                 configuration.Databases.MaxWarnSizeHugeDocuments);
         }
 
-        public SubscriptionStorage SubscriptionStorage { get; set; }
+        public SystemTime Time = new SystemTime();
+
+        public readonly PatchDocument Patch;
+
+        public TransactionOperationsMerger TxMerger;
+
+        public SubscriptionStorage SubscriptionStorage { get; }
 
         public string Name { get; }
 
@@ -322,7 +325,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     etag = document.Etag;
-                    var existingAlert = (BlittableJsonReaderObject) document.Data[alert.UniqueKey];
+                    var existingAlert = (BlittableJsonReaderObject)document.Data[alert.UniqueKey];
                     alerts = new DynamicJsonValue(document.Data)
                     {
                         [alert.UniqueKey] = new DynamicJsonValue

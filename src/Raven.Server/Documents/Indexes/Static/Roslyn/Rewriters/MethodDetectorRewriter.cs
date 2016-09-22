@@ -28,6 +28,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "results.GroupBy":
                     Methods.HasGroupBy = true;
                     break;
+                case "this.CreateField":
+                case "CreateField":
+                    Methods.HasCreateField = true;
+                    break;
             }
 
             return base.VisitInvocationExpression(node);
