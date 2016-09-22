@@ -274,7 +274,9 @@ namespace Raven.Database.Server.Controllers
             nvc = HttpUtility.ParseQueryString(req.RequestUri.Query);
             if (!ClientIsV3OrHigher(req))
             {
-                nvc["query"] = nvc["query"]?.Replace("+", "%2B");
+                var originalQuery = nvc["query"];
+                if(originalQuery != null)
+                    nvc["query"] = originalQuery.Replace("+", "%2B");
                 foreach (var queryKey in nvc.AllKeys)
                     nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey]);
             }
