@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 
+//TODO: do we need it?
 class tryRecoverCorruptedIndexes extends commandBase {
 
     constructor(private db:database) {

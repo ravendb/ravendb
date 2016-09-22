@@ -32,6 +32,11 @@ namespace Raven.Server.Documents
             return new OperationCancelToken(Database.Configuration.Core.DatabaseOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
         }
 
+        protected OperationCancelToken CreateOperationToken()
+        {
+            return new OperationCancelToken(Database.DatabaseShutdown);
+        }
+
         protected BlittableJsonReaderObject GetTransformerParameters(JsonOperationContext context)
         {
             var transformerParameters = new DynamicJsonValue();

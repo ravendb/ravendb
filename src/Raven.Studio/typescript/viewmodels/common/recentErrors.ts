@@ -3,6 +3,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 
+//TODO: integrate to notification center
 class recentErrors extends dialogViewModelBase {
     constructor(private errors: KnockoutObservableArray<alertArgs>) {
         super();

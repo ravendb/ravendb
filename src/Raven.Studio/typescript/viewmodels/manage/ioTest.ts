@@ -5,7 +5,6 @@ import appUrl = require("common/appUrl");
 import performanceTestRequest = require("models/database/debug/performanceTestRequest");
 import performanceTestResultWrapped = require("models/database/debug/performanceTestResultWrapped");
 import ioTestCommand = require("commands/database/debug/ioTestCommand");
-import killRunningTaskCommand = require("commands/operations/killRunningTaskCommand");
 import d3 = require('d3');
 import nv = require('nvd3');
 import shell = require("viewmodels/shell");

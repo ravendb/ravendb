@@ -13,17 +13,7 @@ class dataExplorationCommand extends commandBase {
 
     execute(): JQueryPromise<indexQueryResultsDto> {
         var self = this;
-        var options: JQueryAjaxSettings = {
-            xhr: () => {
-                self.xhr = new XMLHttpRequest();
-                // disable alerts as this request might take a while 
-                clearTimeout(commandBase.alertTimeout);
-                clearTimeout(commandBase.splashTimerHandle);
-                return self.xhr;
-            }
-
-        };
-        var queryTask = this.query(this.getUrl(), null, this.db, null, options);
+        var queryTask = this.query(this.getUrl(), null, this.db);
         queryTask.fail((response: JQueryXHR) => this.reportError("Error during query", response.responseText, response.statusText));
         return queryTask;
     }

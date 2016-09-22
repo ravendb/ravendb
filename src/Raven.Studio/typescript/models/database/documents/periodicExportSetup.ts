@@ -300,11 +300,11 @@ class periodicExportSetup {
         return this.dbSettingsDto;
     }
 
-    getEtag() {
+    getEtag(): number {
         return this.toDatabaseSettingsDto()["@metadata"]["@etag"];
     }
 
-    setEtag(newEtag: string) {
+    setEtag(newEtag: number) {
         this.toDatabaseSettingsDto()["@metadata"]["@etag"] = newEtag;
     }
 

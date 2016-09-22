@@ -3,11 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 
+using System;
 using Raven.Client.Data;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
