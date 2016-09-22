@@ -39,6 +39,8 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        public override bool HasBoostedFields => _compiled.HasBoostedFields;
+
         protected override void InitializeInternal()
         {
             _maxNumberOfIndexOutputs = Definition.IndexDefinition.MaxIndexOutputsPerDocument ?? DocumentDatabase.Configuration.Indexing.MaxMapIndexOutputsPerDocument;

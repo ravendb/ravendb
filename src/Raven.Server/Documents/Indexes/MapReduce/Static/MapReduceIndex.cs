@@ -29,6 +29,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             _compiled = compiled;
         }
 
+        public override bool HasBoostedFields => _compiled.HasBoostedFields;
+
         protected override void InitializeInternal()
         {
             _maxNumberOfIndexOutputs = Definition.IndexDefinition.MaxIndexOutputsPerDocument ?? DocumentDatabase.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument;
