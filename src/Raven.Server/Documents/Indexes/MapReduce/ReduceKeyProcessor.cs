@@ -17,9 +17,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private AllocatedMemoryData _buffer;
         private int _bufferPos;
         private ulong _singleValueHash;
+        private int _numberOfReduceFields;
+        private int _processedFields;
 
         public ReduceKeyProcessor(int numberOfReduceFields, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool)
         {
+            _numberOfReduceFields = numberOfReduceFields;
             _buffersPool = buffersPool;
             if (numberOfReduceFields == 1)
             {
@@ -36,26 +39,33 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public void Reset()
         {
             _bufferPos = 0;
+            _processedFields = 0;
         }
 
         public ulong Hash
         {
             get
             {
+                if (_processedFields != _numberOfReduceFields)
+                    throw new InvalidOperationException($"It processed {_processedFields} while expected to get {_numberOfReduceFields}");
+
                 switch (_mode)
                 {
                     case Mode.SingleValue:
                         return _singleValueHash;
                     case Mode.MultipleValues:
-                        return Hashing.XXHash64.CalculateInline((byte*)_buffer.Address, _bufferPos);
+                        return Hashing.XXHash64.CalculateInline((byte*)_buffer.Address, (ulong)_bufferPos);
                     default:
                         throw new NotSupportedException($"Unknown reduce value processing mode: {_mode}");
                 }
             }
         }
 
-        public void Process(object value)
+        public void Process(object value, bool internalCall = false)
         {
+            if (internalCall == false)
+                _processedFields++;
+
             if (value == null || value is DynamicNullObject)
                 return;
 
@@ -65,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate(lsv.Buffer, lsv.Size);
+                        _singleValueHash = Hashing.XXHash64.Calculate(lsv.Buffer, (ulong)lsv.Size);
                         break;
                     case Mode.MultipleValues:
                         CopyToBuffer(lsv.Buffer, lsv.Size);
@@ -83,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     switch (_mode)
                     {
                         case Mode.SingleValue:
-                            _singleValueHash = Hashing.XXHash64.Calculate((byte*)p, s.Length * sizeof(char));
+                            _singleValueHash = Hashing.XXHash64.Calculate((byte*)p, (ulong)s.Length * sizeof(char));
                             break;
                         case Mode.MultipleValues:
                             CopyToBuffer((byte*)p, s.Length * sizeof(char));
@@ -100,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = Hashing.XXHash64.Calculate(lcsv.Buffer, lcsv.CompressedSize);
+                        _singleValueHash = Hashing.XXHash64.Calculate(lcsv.Buffer, (ulong)lcsv.CompressedSize);
                         break;
                     case Mode.MultipleValues:
                         CopyToBuffer(lcsv.Buffer, lcsv.CompressedSize);
@@ -219,7 +229,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     // this call ensures properties to be returned in the same order, regardless their storing order
                     var property = json.GetPropertyByIndex(i);
 
-                    Process(property.Item2);
+                    Process(property.Item2, true);
                 }
 
                 return;
@@ -236,7 +246,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 foreach (var item in array)
                 {
-                    Process(item);
+                    Process(item, true);
                 }
 
                 return;

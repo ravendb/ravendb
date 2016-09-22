@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Diagnostics;
 using Sparrow.Global;
 using System.Runtime.InteropServices;
 using Sparrow.Binary;
@@ -42,7 +40,7 @@ namespace Sparrow.Compression
         private const int LZ4_MEMORY_USAGE = 14;
         private const int LZ4_HASHLOG = LZ4_MEMORY_USAGE - 2;
         private const int HASH_SIZE_U32 = 1 << LZ4_HASHLOG;
-
+        private const int MAX_INPUT_LENGTH_PER_SEGMENT = int.MaxValue/2;
 
         private interface ILimitedOutputDirective { };
         private struct NotLimited : ILimitedOutputDirective { };
@@ -79,6 +77,37 @@ namespace Sparrow.Compression
             public uint initCheck;
         }
 
+        public long Encode64LongBuffer(
+            byte* input,
+            byte* output,
+            long inputLength,
+            long outputLength,
+            int acceleration = ACCELERATION_DEFAULT)
+        {
+            // LZ4 can handle a bit less then 2GB. we will handle the compression/decompression devided to parts for above 1GB inputs
+            if (inputLength < MAX_INPUT_LENGTH_PER_SEGMENT && outputLength < MAX_INPUT_LENGTH_PER_SEGMENT)
+            {
+                return Encode64(input, output, (int)inputLength, (int)outputLength, acceleration);
+            }
+
+            long totalOutputSize = 0;
+            long readPosition = 0;
+            while (readPosition < inputLength)
+            {
+                int partInputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
+                if (readPosition + partInputLength > inputLength)
+                    partInputLength = (int)(inputLength - readPosition);
+
+                int remaining = (outputLength - totalOutputSize) > int.MaxValue ? int.MaxValue : (int)(outputLength - totalOutputSize);
+
+                totalOutputSize += Encode64(input + readPosition, output + totalOutputSize, partInputLength, remaining, acceleration);
+
+                readPosition += MAX_INPUT_LENGTH_PER_SEGMENT;
+            }
+
+            return totalOutputSize;
+        }
+
         public int Encode64(
                 byte* input,
                 byte* output,
@@ -110,9 +139,9 @@ namespace Sparrow.Compression
         /// <summary>Gets maximum the length of the output.</summary>
         /// <param name="size">Length of the input.</param>
         /// <returns>Maximum number of bytes needed for compressed buffer.</returns>
-        public static int MaximumOutputLength(int size)
+        public static long MaximumOutputLength(long size)
         {
-            return size > LZ4_MAX_INPUT_SIZE ? 0 : size + (size / 255) + 16;
+            return size + (size / 255) + 16;
         }
 
         private int LZ4_compress_generic<TLimited, TTableType, TDictionaryType, TDictionaryIssue>(LZ4_stream_t_internal* dictPtr, byte* source, byte* dest, int inputSize, int maxOutputSize, int acceleration)
@@ -504,6 +533,41 @@ namespace Sparrow.Compression
         private const ulong ByU32HashMask = (1 << ByU32HashLog) - 1;
 
         private const ulong prime5bytes = 889523592379UL;
+
+        public static long Decode64LongBuffers(
+            byte* input,
+            long inputLength,
+            byte* output,
+            long outputLength,
+            bool knownOutputLength)
+        {
+            // here we get a single compressed segment or multiple segments
+            // we can read the segments only for a known size of output
+            if (outputLength < MAX_INPUT_LENGTH_PER_SEGMENT && inputLength < MAX_INPUT_LENGTH_PER_SEGMENT)
+            {
+                return Decode64(input, (int)inputLength, output, (int)outputLength, knownOutputLength);
+            }
+
+            long totalReadSize = 0;
+            long totalWriteSize = 0;
+            while (totalReadSize < inputLength)
+            {
+                int partInputLength = int.MaxValue;
+                if (totalReadSize + partInputLength > inputLength)
+                    partInputLength = (int) (inputLength - totalReadSize);
+
+                int partOutputLength = MAX_INPUT_LENGTH_PER_SEGMENT;
+                if (totalWriteSize + partOutputLength > outputLength)
+                {
+                    partOutputLength = checked((int)(outputLength - totalWriteSize));
+                }
+                totalReadSize += Decode64(input + totalReadSize, partInputLength, output + totalWriteSize, partOutputLength, false);
+
+                totalWriteSize += MAX_INPUT_LENGTH_PER_SEGMENT;
+            }
+
+            return totalReadSize;
+        }
 
         public static int Decode64(
             byte* input,

@@ -19,19 +19,21 @@ namespace Raven.Server.Documents.Queries
         private readonly DocumentsOperationContext _context;
         private readonly string _collection;
         private readonly IndexQueryServerSide _query;
+        private readonly bool _isAllDocsCollection;
 
         public CollectionQueryEnumerable(DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, IndexQueryServerSide query, DocumentsOperationContext context)
         {
             _documents = documents;
             _fieldsToFetch = fieldsToFetch;
             _collection = collection;
+            _isAllDocsCollection = collection == Constants.Indexing.AllDocumentsCollection;
             _query = query;
             _context = context;
         }
 
         public IEnumerator<Document> GetEnumerator()
         {
-            return new Enumerator(_documents, _fieldsToFetch, _collection, _query, _context);
+            return new Enumerator(_documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _context);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -49,6 +51,7 @@ namespace Raven.Server.Documents.Queries
             private readonly FieldsToFetch _fieldsToFetch;
             private readonly DocumentsOperationContext _context;
             private readonly string _collection;
+            private readonly bool _isAllDocsCollection;
             private readonly IndexQueryServerSide _query;
 
             private bool _initialized;
@@ -60,13 +63,14 @@ namespace Raven.Server.Documents.Queries
             private IEnumerator<Document> _inner;
             private int _innerCount;
             private readonly List<Slice> _ids;
-            private Sort _sort;
+            private readonly Sort _sort;
 
-            public Enumerator(DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, IndexQueryServerSide query, DocumentsOperationContext context)
+            public Enumerator(DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection, IndexQueryServerSide query, DocumentsOperationContext context)
             {
                 _documents = documents;
                 _fieldsToFetch = fieldsToFetch;
                 _collection = collection;
+                _isAllDocsCollection = isAllDocsCollection;
                 _query = query;
                 _context = context;
 
@@ -186,8 +190,8 @@ namespace Raven.Server.Documents.Queries
 
                     _innerCount++;
 
-                    var doc = _fieldsToFetch.IsProjection 
-                        ? MapQueryResultRetriever.GetProjectionFromDocument(_inner.Current, 0f, _fieldsToFetch, _context) 
+                    var doc = _fieldsToFetch.IsProjection
+                        ? MapQueryResultRetriever.GetProjectionFromDocument(_inner.Current, 0f, _fieldsToFetch, _context)
                         : _inner.Current;
 
                     if (_query.SkipDuplicateChecking || _fieldsToFetch.IsDistinct == false)
@@ -211,9 +215,13 @@ namespace Raven.Server.Documents.Queries
 
             private IEnumerable<Document> GetDocuments()
             {
-                var documents = _ids != null && _ids.Count > 0
-                    ? _documents.GetDocuments(_context, _ids, _start, _query.PageSize)
-                    : _documents.GetDocumentsAfter(_context, _collection, 0, _start, _query.PageSize);
+                IEnumerable<Document> documents;
+                if (_ids != null && _ids.Count > 0)
+                    documents = _documents.GetDocuments(_context, _ids, _start, _query.PageSize);
+                else if (_isAllDocsCollection)
+                    documents = _documents.GetDocumentsAfter(_context, 0, _start, _query.PageSize);
+                else
+                    documents = _documents.GetDocumentsAfter(_context, _collection, 0, _start, _query.PageSize);
 
                 return ApplySorting(documents);
             }
@@ -248,8 +256,8 @@ namespace Raven.Server.Documents.Queries
                     {
                         count++;
 
-                        var doc = _fieldsToFetch.IsProjection 
-                            ? MapQueryResultRetriever.GetProjectionFromDocument(document, 0f, _fieldsToFetch, _context) 
+                        var doc = _fieldsToFetch.IsProjection
+                            ? MapQueryResultRetriever.GetProjectionFromDocument(document, 0f, _fieldsToFetch, _context)
                             : _inner.Current;
 
                         if (doc.Data.Count <= 0)

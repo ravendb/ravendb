@@ -210,12 +210,12 @@ namespace Voron.Impl.Paging
             return current + Bits.NextPowerOf2(actualIncrease);
         }
 
-        public int WriteDirect(byte* p, long pagePosition, int pagesToWrite)
+        public long WriteDirect(byte* p, long pagePosition, int pagesToWrite)
         {
             if (Disposed)
                 ThrowAlreadyDisposedException();
 
-            int toCopy = pagesToWrite*_pageSize;
+            long toCopy = pagesToWrite*_pageSize;
             Memory.BulkCopy(PagerState.MapBase + pagePosition*_pageSize, p, toCopy);
 
             return toCopy;

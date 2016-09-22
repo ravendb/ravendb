@@ -23,7 +23,7 @@ namespace Voron.Platform.Win32
         private SafeFileHandle _handle;
         private SafeFileHandle _readHandle;
         private NativeOverlapped* _nativeOverlapped;
-        private readonly int _maxNumberOfPages;
+        private readonly int _maxNumberOfPagesPerSingleWrite;
         private volatile bool _disposed;
 
         public Win32FileJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize)
@@ -38,7 +38,7 @@ namespace Voron.Platform.Win32
             if (_handle.IsInvalid)
                 throw new Win32Exception();
 
-            _maxNumberOfPages = int.MaxValue/_options.PageSize;
+            _maxNumberOfPagesPerSingleWrite = int.MaxValue/_options.PageSize;
 
             Win32NativeFileMethods.SetFileLength(_handle, journalSize);
 
@@ -55,11 +55,22 @@ namespace Voron.Platform.Win32
             if (Disposed)
                 throw new ObjectDisposedException("Win32JournalWriter");
 
-            if (numberOfPages > _maxNumberOfPages)
-                throw new ArgumentException(
-                    "Cannot write " + numberOfPages + " pages in a single write, the size is too large",
-                    nameof(numberOfPages));
+            while (numberOfPages > _maxNumberOfPagesPerSingleWrite)
+            {
+                WriteFile(position, p, _maxNumberOfPagesPerSingleWrite);
 
+                var nextChunkPosition = _maxNumberOfPagesPerSingleWrite*_options.PageSize;
+                position += nextChunkPosition;
+                p += nextChunkPosition;
+                numberOfPages -= _maxNumberOfPagesPerSingleWrite;
+            }
+
+            if (numberOfPages > 0)
+                WriteFile(position, p, numberOfPages);
+        }
+
+        private void WriteFile(long position, byte* p, int numberOfPages)
+        {
             _nativeOverlapped->OffsetLow = (int)(position & 0xffffffff);
             _nativeOverlapped->OffsetHigh = (int)(position >> 32);
             _nativeOverlapped->EventHandle = IntPtr.Zero;

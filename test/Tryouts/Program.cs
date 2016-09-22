@@ -1,40 +1,44 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
+using System.IO;
 using System.Threading;
-using Raven.Abstractions.Data;
+using FastTests.Server.Documents.Replication;
 using Raven.Client.Document;
-using Raven.Client.Indexes;
 using Raven.Client.Smuggler;
-using SlowTests.Smuggler;
+using SlowTests.Voron;
+using Voron;
 
 namespace Tryouts
 {
     public class Program
     {
+       
         public static void Main(string[] args)
         {
-            using (var s = new FastTests.Smuggler.SmugglerApiTests())
+            for (int i = 0; i < 1000; i++)
             {
-                s.CanExportAndImportWithVersioingRevisionDocuments().Wait();
+                using (var x = new AutomaticConflictResolution())
+                {
+                    x.Resolve_to_latest_version_tombstone_is_latest_the_incoming_document_is_replicated();
+                }
+                Console.WriteLine(i + 1);
             }
-
-            //using (var x = new DocumentStore
+            //Console.WriteLine("Starting");
+            //var sp = Stopwatch.StartNew();
+            //using (var store = new DocumentStore
             //{
-            //    Url = "http://localhost:8080",
-            //    DefaultDatabase = "licensing"
+            //    DefaultDatabase = "licensing",
+            //    Url = "http://localhost:8080"
             //})
             //{
-            //    x.Initialize();
-            //    var sp = Stopwatch.StartNew();
-            //    x.Smuggler.ImportAsync(new DatabaseSmugglerOptions(),
-            //            @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-19 13-00.ravendbdump.gzip",
-            //            CancellationToken.None)
+            //    store.Initialize();
+
+            //    store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-19 13-00.ravendbdump.gzip", CancellationToken.None)
             //        .Wait();
 
-            //    Console.WriteLine(sp.Elapsed);
             //}
+            //    Console.WriteLine(sp.Elapsed);
         }
+
     }
 }
-

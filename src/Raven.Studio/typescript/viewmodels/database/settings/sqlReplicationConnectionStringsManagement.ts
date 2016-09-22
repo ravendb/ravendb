@@ -75,7 +75,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     }
 
     attachReservedMetaProperties(id: string, target: documentMetadata) {
-        target.etag = '';
+        target.etag = 0;
         target.ravenEntityName = !target.ravenEntityName ? document.getEntityNameFromId(id) : target.ravenEntityName;
         target.id = id;
     }

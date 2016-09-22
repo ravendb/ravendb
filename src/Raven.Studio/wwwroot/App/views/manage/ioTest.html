@@ -5,7 +5,6 @@
 <form class="form-horizontal" role="form" data-bind="submit: startPerformanceTest, visible: isForbidden() == false">
     <div class="panel panel-default">
         <div class="panel-heading panel-info">
-            <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
             <button type="submit" title="IO Test" class="btn btn-primary" data-bind="disable: isBusy">
                 <i class="fa fa-gears fa-fw"></i>
                 <span>Test Disk Performance</span>

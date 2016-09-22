@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -15,7 +16,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 {
     public class DynamicQueryRunner
     {
-        private const string DynamicIndexPrefix = "dynamic/";
+        public const string DynamicIndex = "dynamic";
+
+        public const string DynamicIndexPrefix = "dynamic/";
 
         private readonly IndexStore _indexStore;
         private readonly TransformerStore _transformerStore;
@@ -32,69 +35,134 @@ namespace Raven.Server.Documents.Queries.Dynamic
             _documents = documents;
         }
 
+        public static bool IsDynamicIndex(string indexName)
+        {
+            if (indexName == null || indexName.Length < DynamicIndex.Length)
+                return false;
+
+            if (indexName.StartsWith(DynamicIndex, StringComparison.OrdinalIgnoreCase) == false)
+                return false;
+
+            if (indexName.Length == DynamicIndex.Length)
+                return true;
+
+            return indexName[DynamicIndex.Length] == '/';
+        }
+
+        public Task ExecuteStream(HttpResponse response, BlittableJsonTextWriter writer, string dynamicIndexName, IndexQueryServerSide query)
+        {
+            string collection;
+            var index = MatchIndex(dynamicIndexName, query, false, out collection);
+            if (index == null)
+            {
+                using (var result = new StreamDocumentQueryResult(response, writer, _context))
+                    ExecuteCollectionQuery(result, query, collection);
+
+                return Task.CompletedTask;
+            }
+
+            return index.StreamQuery(response, writer, query, _context, _token);
+        }
+
         public Task<DocumentQueryResult> Execute(string dynamicIndexName, IndexQueryServerSide query, long? existingResultEtag)
         {
             string collection;
-
-            if (dynamicIndexName.Length == "dynamic".Length)
-                collection = Constants.Indexing.AllDocumentsCollection;
-            else
-                collection = dynamicIndexName.Substring(DynamicIndexPrefix.Length);
-
-            var map = DynamicQueryMapping.Create(collection, query);
-
-            if (map.MapFields.Length == 0 && map.SortDescriptors.Length == 0 && map.GroupByFields.Length == 0)
+            var index = MatchIndex(dynamicIndexName, query, true, out collection);
+            if (index == null)
             {
-                // we optimize for empty queries without sorting options
-                var result = new DocumentQueryResult
-                {
-                    IndexName = collection,
-                    IsStale = false,
-                    ResultEtag = Environment.TickCount,
-                    LastQueryTime = DateTime.MinValue,
-                    IndexTimestamp = DateTime.MinValue
-                };
+                var result = new DocumentQueryResult();
+                ExecuteCollectionQuery(result, query, collection);
+                return new CompletedTask<DocumentQueryResult>(result);
+            }
 
-                _context.OpenReadTransaction();
+            var currentIndexEtag = index.GetIndexEtag();
 
+            if (existingResultEtag == currentIndexEtag)
+                return new CompletedTask<DocumentQueryResult>(DocumentQueryResult.NotModifiedResult);
+
+            return index.Query(query, _context, _token);
+        }
+
+        private void ExecuteCollectionQuery(QueryResultServerSide resultToFill, IndexQueryServerSide query, string collection)
+        {
+            var isAllDocsCollection = collection == Constants.Indexing.AllDocumentsCollection;
+
+            // we optimize for empty queries without sorting options
+            resultToFill.IndexName = isAllDocsCollection ? "AllDocs" : collection;
+            resultToFill.IsStale = false;
+            resultToFill.ResultEtag = Environment.TickCount;
+            resultToFill.LastQueryTime = DateTime.MinValue;
+            resultToFill.IndexTimestamp = DateTime.MinValue;
+
+            _context.OpenReadTransaction();
+
+            if (isAllDocsCollection)
+            {
+                resultToFill.TotalResults = (int)_documents.GetNumberOfDocuments(_context);
+            }
+            else
+            {
                 var collectionStats = _documents.GetCollection(collection, _context);
+                resultToFill.TotalResults = (int)collectionStats.Count;
+            }
 
-                result.TotalResults = (int)collectionStats.Count;
+            var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Includes);
 
-                var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Includes);
+            Transformer transformer = null;
+            if (string.IsNullOrEmpty(query.Transformer) == false)
+            {
+                transformer = _transformerStore.GetTransformer(query.Transformer);
+                if (transformer == null)
+                    throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
+            }
 
-                Transformer transformer = null;
-                if (string.IsNullOrEmpty(query.Transformer) == false)
+            using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, includeDocumentsCommand, _documents, _transformerStore, _context))
+            {
+                var fieldsToFetch = new FieldsToFetch(query, null, transformer);
+                var documents = new CollectionQueryEnumerable(_documents, fieldsToFetch, collection, query, _context);
+
+                var results = scope != null ? scope.Transform(documents) : documents;
+
+                try
                 {
-                    transformer = _transformerStore.GetTransformer(query.Transformer);
-                    if (transformer == null)
-                        throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
-                }
-
-                using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, includeDocumentsCommand, _documents, _transformerStore, _context))
-                {
-                    var fieldsToFetch = new FieldsToFetch(query, null, transformer);
-                    var documents = new CollectionQueryEnumerable(_documents, fieldsToFetch, collection, query, _context);
-
-                    var results = scope != null ? scope.Transform(documents) : documents;
-
                     foreach (var document in results)
                     {
                         _token.Token.ThrowIfCancellationRequested();
 
-                        result.Results.Add(document);
+                        resultToFill.AddResult(document);
+
                         includeDocumentsCommand.Gather(document);
                     }
                 }
+                catch (Exception e)
+                {
+                    if (resultToFill.SupportsExceptionHandling == false)
+                        throw;
 
-                includeDocumentsCommand.Fill(result.Includes);
-
-                return new CompletedTask<DocumentQueryResult>(result);
+                    resultToFill.HandleException(e);
+                }
             }
+
+            includeDocumentsCommand.Fill(resultToFill.Includes);
+        }
+
+        private Index MatchIndex(string dynamicIndexName, IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, out string collection)
+        {
+            collection = dynamicIndexName.Length == DynamicIndex.Length
+                ? Constants.Indexing.AllDocumentsCollection
+                : dynamicIndexName.Substring(DynamicIndexPrefix.Length);
+
+            var map = DynamicQueryMapping.Create(collection, query);
+
+            if (map.MapFields.Length == 0 && map.SortDescriptors.Length == 0 && map.GroupByFields.Length == 0)
+                return null; // use collection query
 
             Index index;
             if (TryMatchExistingIndexToQuery(map, out index) == false)
             {
+                if (createAutoIndexIfNoMatchIsFound == false)
+                    throw new IndexDoesNotExistsException("Could not find index for a given query.");
+
                 var definition = map.CreateAutoIndexDefinition();
 
                 var id = _indexStore.CreateIndex(definition);
@@ -103,19 +171,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
                     query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
             }
-            else
-            {
-                var currentIndexEtag = index.GetIndexEtag();
 
-                if (existingResultEtag == currentIndexEtag)
-                {
-                    return new CompletedTask<DocumentQueryResult>(DocumentQueryResult.NotModifiedResult);
-                }
-            }
+            EnsureValidQuery(query, map);
 
-            query = EnsureValidQuery(query, map);
-
-            return index.Query(query, _context, _token);
+            return index;
         }
 
         public List<DynamicQueryToIndexMatcher.Explanation> ExplainIndexSelection(string dynamicIndexName, IndexQueryServerSide query)
@@ -158,14 +217,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return false;
         }
 
-        private static IndexQueryServerSide EnsureValidQuery(IndexQueryServerSide query, DynamicQueryMapping map)
+        private static void EnsureValidQuery(IndexQueryServerSide query, DynamicQueryMapping map)
         {
             foreach (var field in map.MapFields)
             {
                 query.Query = query.Query.Replace(field.Name, IndexField.ReplaceInvalidCharactersInFieldName(field.Name));
             }
-
-            return query;
         }
     }
 }

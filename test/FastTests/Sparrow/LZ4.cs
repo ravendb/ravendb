@@ -60,7 +60,7 @@ namespace FastTests.Sparrow
                 *(uint*)(encodedOutputPtr + maximumOutputLength) = marker;
                 *(uint*)(outputPtr + size) = marker;
 
-                int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, size, maximumOutputLength);
+                int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, size, (int) maximumOutputLength);
                 int uncompressedSize = LZ4.Decode64(encodedOutputPtr, compressedSize, outputPtr, size, true);
 
                 Assert.True(compressedSize <= maximumOutputLength);
@@ -113,7 +113,7 @@ namespace FastTests.Sparrow
             LZ4 lz4 = new LZ4();
 
             byte[] input = new byte[] { 3, 3, 2, 2, 3, 0, 2, 0, 2, 1, 0, 1, 3, 1, 3, 0, 3, 0, 2, 0, 2, 1, 3, 1, 0, 3, 0, 0, 2, 0, 1, 2, 2, 2, 3, 2, 0, 0, 2, 1, 2, 2, 0, 3, 0, 0, 3, 2, 0, 2, 1, 2, 3, 2, 2, 1, 3, 0, 1, 0, 3, 1, 1, 2, 0, 2, 2, 1, 2, 1, 0, 3, 2, 0, 2, 0, 1, 3, 1, 3, 3, 2, 3, 0, 2, 2, 2, 0, 3, 2, 2, 0, 2, 2, 2, 0, 0, 1, 3, 1 };
-            int maximumOutputLength = LZ4.MaximumOutputLength(input.Length);            
+            var maximumOutputLength = LZ4.MaximumOutputLength(input.Length);
             byte[] encodedOutput = new byte[maximumOutputLength + sizeof(uint)];
             byte[] output = new byte[input.Length + sizeof(uint)];
 
@@ -125,7 +125,7 @@ namespace FastTests.Sparrow
                 *(uint*)(encodedOutputPtr + maximumOutputLength) = marker;
                 *(uint*)(outputPtr + input.Length) = marker;
 
-                int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, input.Length, maximumOutputLength);
+                int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, input.Length, (int)maximumOutputLength);
                 int uncompressedSize = LZ4.Decode64(encodedOutputPtr, compressedSize, outputPtr, input.Length, true);
 
                 Assert.True(compressedSize <= maximumOutputLength);

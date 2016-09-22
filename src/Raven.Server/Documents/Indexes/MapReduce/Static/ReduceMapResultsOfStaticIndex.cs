@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             _blittableToDynamicWrapper.InitializeForEnumeration(aggregationBatch);
             
-            var resultObjects = new List<BlittableJsonReaderObject>();
+            var resultObjects = new List<object>();
 
             foreach (var output in _reducingFunc(_blittableToDynamicWrapper))
             {
@@ -37,18 +37,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 if (_propertyAccessor == null)
                     _propertyAccessor = PropertyAccessor.Create(output.GetType());
 
-                var djv = new DynamicJsonValue();
-
-                foreach (var property in _propertyAccessor.Properties)
-                {
-                    var value = property.Value.GetValue(output);
-                    djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, indexContext);
-                }
-
-                resultObjects.Add(indexContext.ReadObject(djv, "map/reduce"));
+                resultObjects.Add(output);
             }
 
-            return new AggregationResult(resultObjects);
+            return new AggregatedAnonymousObjects(resultObjects, _propertyAccessor, indexContext);
         }
 
         private class DynamicIterationOfAggregationBatchWrapper : IEnumerable<DynamicBlittableJson>

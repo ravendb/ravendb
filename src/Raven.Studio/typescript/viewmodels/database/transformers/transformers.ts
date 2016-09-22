@@ -1,7 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import transformer = require("models/database/index/transformer");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
-import saveTransformerLockModeCommand = require("commands/saveTransformerLockModeCommand");
+import saveTransformerLockModeCommand = require("commands/database/transformers/saveTransformerLockModeCommand");
 import appUrl = require("common/appUrl");
 import deleteTransformerConfirm = require("viewmodels/database/transformers/deleteTransformerConfirm");
 import app = require("durandal/app");
@@ -55,10 +55,10 @@ class transformers extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [changesContext.currentResourceChangesApi().watchAllTransformers((e: transformerChangeNotificationDto) => this.processTransformerEvent(e))];
+        return [changesContext.currentResourceChangesApi().watchAllTransformers((e: Raven.Abstractions.Data.TransformerChangeNotification) => this.processTransformerEvent(e))];
     }
 
-    private processTransformerEvent(e: transformerChangeNotificationDto) {
+    private processTransformerEvent(e: Raven.Abstractions.Data.TransformerChangeNotification) {
         if (e.Type === "TransformerRemoved") {
             this.removeTransformersFromAllGroups(this.findTransformersByName(e.Name));
         } else {

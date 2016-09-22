@@ -553,7 +553,6 @@ class query extends viewModelBase {
         var indexQuery = query.getIndexUrlPartFromIndexName(indexName);
         var url = appUrl.forQuery(this.activeDatabase(), indexQuery);
         this.updateUrl(url);
-        NProgress.done();
     }
 
     static getIndexUrlPartFromIndexName(indexNameOrCollectionName: string) {

@@ -5,73 +5,69 @@
 // -----------------------------------------------------------------------
 
 using System;
+using Sparrow.Json;
 
 namespace Voron.Data.Tables
 {
-
     public unsafe class TableValueReader
     {
-        private readonly byte* _ptr;
-        private readonly int _size;
+        private readonly byte* _dataPtr;
+        private readonly int _dataSize;
         private readonly int _elementSize = 1;
-        private readonly byte _count;
+
+        public long Id;
 
         public TableValueReader(byte* ptr, int size)
         {
-            _ptr = ptr;
-            _size = size;
+            Pointer = ptr;
+            Size = size;
             if (size > byte.MaxValue)
                 _elementSize = 2;
             if (size > ushort.MaxValue)
                 _elementSize = 4;
 
-            _count = _ptr[0];
+            byte offset;
+            Count = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
+            _dataPtr = Pointer + offset;
+            _dataSize = Size - offset;
         }
 
-        public long Id;
+        public int Size { get; }
 
-        public int Size => _size;
+        public int Count { get; }
 
-        public byte Count => _count;
-
-        public byte* Pointer => _ptr;
+        public byte* Pointer { get; }
 
         public byte* Read(int index, out int size)
         {
-            byte* ptr = _ptr + 1;
-            bool hasNext = index + 1 < _count;
+            var hasNext = index + 1 < Count;
 
-            if (index < 0 || index >= _count)
+            if ((index < 0) || (index >= Count))
                 throw new ArgumentOutOfRangeException(nameof(index));
 
             int position;
-            int nextPos;                        
+            int nextPos;
 
-            switch ( _elementSize )
+            switch (_elementSize)
             {
                 case 1:
-                    position = ptr[index];
-                    nextPos = hasNext ? ptr[index + 1] : _size;
+                    position = _dataPtr[index];
+                    nextPos = hasNext ? _dataPtr[index + 1] : _dataSize;
                     break;
                 case 2:
-                    position = ((ushort*)ptr)[index];
-                    nextPos = hasNext ? ((ushort*)ptr)[index + 1] : _size;
+                    position = ((ushort*) _dataPtr)[index];
+                    nextPos = hasNext ? ((ushort*) _dataPtr)[index + 1] : _dataSize;
                     break;
                 case 4:
-                    position = ((int*)ptr)[index];
-                    nextPos = hasNext ? ((int*)ptr)[index + 1] : _size;
+                    position = ((int*) _dataPtr)[index];
+                    nextPos = hasNext ? ((int*) _dataPtr)[index + 1] : _dataSize;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(_elementSize), "Unknown element size " + _elementSize);
             }
 
             size = nextPos - position;
-            return _ptr + position;
-        }
-
-        public long* Read(int index, out object size)
-        {
-            throw new NotImplementedException();
+            return _dataPtr + position;
         }
     }
 }

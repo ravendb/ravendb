@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 fixed (long* buffer = indexEtagBytes)
                 {
-                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, indexEtagBytes.Length * sizeof(long));
+                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, (ulong)(indexEtagBytes.Length * sizeof(long)));
                 }
             }
         }
@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
             var staticMapIndexDefinition = new StaticMapIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(),
-                staticIndex.OutputFields);
+                staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new StaticMapIndex(indexId, staticMapIndexDefinition, staticIndex);
             return instance;
         }

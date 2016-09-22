@@ -20,9 +20,9 @@ class studioConfig extends viewModelBase {
 
     constructor() {
         super();
-        var color = this.environmentColors.filter((color) => color.name === shell.selectedEnvironmentColorStatic().name);
+        /* TODOvar color = this.environmentColors.filter((color) => color.name === shell.selectedEnvironmentColorStatic().name);
         var selectedColor = !!color[0] ? color[0] : this.environmentColors[0];
-        this.selectedColor(selectedColor);
+        this.selectedColor(selectedColor); */
 
         var self = this;
         this.selectedColor.subscribe((newValue) => self.setEnvironmentColor(newValue));
@@ -55,7 +55,7 @@ class studioConfig extends viewModelBase {
         var saveTask = this.saveStudioConfig(newDocument);
         saveTask.done(() => {
             this.pickColor();
-            shell.selectedEnvironmentColorStatic(envColor);
+            //TODO: shell.selectedEnvironmentColorStatic(envColor);
         });
     }
 
@@ -66,10 +66,11 @@ class studioConfig extends viewModelBase {
     saveStudioConfig(newDocument: documentClass) {
         return new saveDocumentCommand(studioConfig.documentId, newDocument, this.activeDatabase())
             .execute()
+            /* TODO
             .done((saveResult: bulkDocumentDto[]) => {
                 this.configDocument(newDocument);
                 (<any>this.configDocument()).__metadata['@etag'] = saveResult[0].Etag;
-            });
+            });*/
     }
 }
 

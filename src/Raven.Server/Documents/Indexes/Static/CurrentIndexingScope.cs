@@ -13,8 +13,6 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly DocumentsStorage _documentsStorage;
         private readonly DocumentsOperationContext _documentsContext;
 
-        private DynamicBlittableJson _document;
-
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, Dictionary<string, HashSet<Slice>>> ReferencesByCollection;
 
@@ -28,10 +26,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public string SourceCollection;
 
-        public CurrentIndexingScope(DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext)
+        public TransactionOperationContext IndexContext { get; }
+
+        public CurrentIndexingScope(DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
             _documentsStorage = documentsStorage;
             _documentsContext = documentsContext;
+            IndexContext = indexContext;
         }
 
         public unsafe dynamic LoadDocument(LazyStringValue keyLazy, string keyString, string collectionName)
@@ -89,16 +90,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
             MaybeUpdateReferenceEtags(referenceEtags, collectionSlice, document.Etag);
 
-            if (_document == null)
-            {
-                _document = new DynamicBlittableJson(document);
-            }
-            else
-            {
-                _document.Set(document);
-            }
-
-            return _document;
+            // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
+            return new DynamicBlittableJson(document);
         }
 
         public void Dispose()

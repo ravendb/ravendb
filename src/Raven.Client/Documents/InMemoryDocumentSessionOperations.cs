@@ -9,22 +9,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
-using System.Reflection;
 using Raven.Client.Document.Batches;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
-using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
-using Raven.Client.Linq;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
@@ -41,7 +36,7 @@ namespace Raven.Client.Documents
     {
         public readonly RequestExecuter RequestExecuter;
         private readonly IDisposable _releaseOperationContext;
-        protected readonly JsonOperationContext Context;
+        public readonly JsonOperationContext Context;
 
         private static readonly ILog log = LogManager.GetLogger(typeof(InMemoryDocumentSessionOperations));
 
@@ -70,10 +65,7 @@ namespace Raven.Client.Documents
 
         private Dictionary<string, object> externalState;
 
-        public IDictionary<string, object> ExternalState
-        {
-            get { return externalState ?? (externalState = new Dictionary<string, object>()); }
-        }
+        public IDictionary<string, object> ExternalState => externalState ?? (externalState = new Dictionary<string, object>());
 
         /// <summary>
         /// Translate between a key and its associated entity
@@ -93,10 +85,7 @@ namespace Raven.Client.Documents
         ///<summary>
         /// The document store associated with this session
         ///</summary>
-        public IDocumentStore DocumentStore
-        {
-            get { return documentStore; }
-        }
+        public IDocumentStore DocumentStore => documentStore;
 
 
         /// <summary>
@@ -108,10 +97,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Gets the number of entities held in memory to manage Unit of Work
         /// </summary>
-        public int NumberOfEntitiesInUnitOfWork
-        {
-            get { return DocumentsByEntity.Count; }
-        }
+        public int NumberOfEntitiesInUnitOfWork => DocumentsByEntity.Count;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
@@ -130,7 +116,7 @@ namespace Raven.Client.Documents
             UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
-            EntityToJson = new EntityToJson(documentStore, Context);
+            EntityToBlittable = new EntityToBlittable(documentStore, Context);
         }
 
         /// <summary>
@@ -138,10 +124,7 @@ namespace Raven.Client.Documents
         /// The store identifier is the identifier for the particular RavenDB instance.
         /// </summary>
         /// <value>The store identifier.</value>
-        public string StoreIdentifier
-        {
-            get { return documentStore.Identifier + ";" + DatabaseName; }
-        }
+        public string StoreIdentifier => documentStore.Identifier + ";" + DatabaseName;
 
         /// <summary>
         /// Gets the conventions used by this session
@@ -151,10 +134,7 @@ namespace Raven.Client.Documents
         /// This instance is shared among all sessions, changes to the <see cref="DocumentConvention"/> should be done
         /// via the <see cref="IDocumentStore"/> instance, not on a single session.
         /// </remarks>
-        public DocumentConvention Conventions
-        {
-            get { return documentStore.Conventions; }
-        }
+        public DocumentConvention Conventions => DocumentStore.Conventions;
 
 
         /// <summary>
@@ -245,16 +225,13 @@ namespace Raven.Client.Documents
         /// </summary>
         public bool IsLoaded(string id)
         {
-            if (IsDeleted(id))
-                return false;
             return IsLoadedOrDeleted(id);
         }
 
         internal bool IsLoadedOrDeleted(string id)
         {
-            //TODO - Do we need to check for document being null? Can documentInfo exist without initialized document?
-            //return EntitiesById.ContainsKey(id) || DocumentsById.ContainsKey(id) || IsDeleted(id);
-            return DocumentsById.ContainsKey(id) || IsDeleted(id);
+            DocumentInfo documentInfo;
+            return (DocumentsById.TryGetValue(id, out documentInfo) && (documentInfo.Document != null)) || IsDeleted(id);
         }
 
         /// <summary>
@@ -332,9 +309,9 @@ more responsive application.
         private void RegisterMissingProperties(object o, string key, object value)
         {
             Dictionary<string, JToken> dictionary;
-            if (EntityToJson.MissingDictionary.TryGetValue(o, out dictionary) == false)
+            if (EntityToBlittable.MissingDictionary.TryGetValue(o, out dictionary) == false)
             {
-                EntityToJson.MissingDictionary[o] = dictionary = new Dictionary<string, JToken>();
+                EntityToBlittable.MissingDictionary[o] = dictionary = new Dictionary<string, JToken>();
             }
 
             dictionary[key] = ConvertValueToJToken(value);
@@ -410,17 +387,22 @@ more responsive application.
             DocumentInfo documentInfo;
             if (DocumentsById.TryGetValue(id, out documentInfo))
             {
-                /*if (EntityChanged(entity, DocumentsAndMetadata[entity]))
+                BlittableJsonReaderObject newObj;
+                if (documentInfo.Entity != null && EntityChanged(documentInfo.Entity, documentInfo, out newObj))
                 {
                     throw new InvalidOperationException("Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
-                }*/
-                Delete(documentInfo.Entity);
-                return;
+                }
+                DocumentsById.Remove(id);
             }
 
             KnownMissingIds.Add(id);
 
-            Defer(new DeleteCommandData { Id = id });
+            Defer(new DynamicJsonValue()
+            {
+                ["Key"] = id,
+                ["Method"] = "DELETE",
+                ["Document"] = null
+            });
         }
 
         internal void EnsureNotReadVetoed(RavenJObject metadata)
@@ -502,7 +484,8 @@ more responsive application.
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
             }
 
-            if (deferedCommands.Any(c => c.Id == id))
+            ///TODO - Check if ["key"] exist
+            if (deferedCommands.Any(c => c["Key"].ToString() == id))
                 throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + id);
 
             if (DeletedEntities.Contains(entity))
@@ -616,8 +599,6 @@ more responsive application.
             throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");
         }
 
-
-
         protected async Task<string> GetOrGenerateDocumentKeyAsync(object entity)
         {
             string id;
@@ -635,7 +616,23 @@ more responsive application.
             return result;
         }
 
-        private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
+        public List<DynamicJsonValue> PrepareForSaveChanges()
+        {
+            var result = new SaveChangesData
+            {
+                Entities = new List<object>(),
+                Commands = new List<DynamicJsonValue>(deferedCommands),
+                DeferredCommandsCount = deferedCommands.Count
+            };
+            deferedCommands.Clear();
+
+            PrepareForEntitiesDeletion(result);
+            PrepareForEntitiesPuts(result);
+
+            return result.Commands;
+        }
+
+        private void PrepareForEntitiesDeletion(SaveChangesData result)
         {
             DocumentInfo documentInfo = null;
             var keysToDelete = DeletedEntities.Where(deletedEntity => DocumentsByEntity.TryGetValue(deletedEntity, out documentInfo))
@@ -644,43 +641,105 @@ more responsive application.
 
             foreach (var key in keysToDelete)
             {
-                if (changes != null)
+                DocumentInfo value = null;
+                if (DocumentsById.TryGetValue(key, out value))
                 {
-                    var docChanges = new List<DocumentsChanges>();
-                    var change = new DocumentsChanges
-                    {
-                        FieldNewValue = string.Empty,
-                        FieldOldValue = string.Empty,
-                        Change = DocumentsChanges.ChangeType.DocumentDeleted
-                    };
-
-                    docChanges.Add(change);
-                    changes[key] = docChanges.ToArray();
-                }
-                else
-                {
-                    long? etag = null;
-                    DocumentInfo value = null;
-                    if (DocumentsById.TryGetValue(key, out value))
-                    {
-                        etag = value.ETag;
+                    if (value.Entity != null)
                         DocumentsByEntity.Remove(value.Entity);
-                        DocumentsById.Remove(key);
+                    DocumentsById.Remove(key);
+                }
+
+                result.Entities.Add(value.Entity);
+
+                result.Commands.Add(new DynamicJsonValue()
+                {
+                    ["Key"] = key,
+                    ["Method"] = "DELETE",
+                    ["Document"] = null
+                });
+            }
+        }
+
+        private void PrepareForEntitiesPuts(SaveChangesData result)
+        {
+            BlittableJsonReaderObject document = null;
+            foreach (var entity in DocumentsByEntity)
+            {
+                if (EntityChanged(entity.Key, entity.Value, out document))
+                {
+                    result.Entities.Add(entity.Key);
+
+                    if (entity.Value.Entity != null)
+                    {
+                        DocumentsById.Remove(entity.Value.Id);
                     }
 
-                    etag = UseOptimisticConcurrency ? etag : null;
-                    result.Entities.Add(value.Entity);
-
-                    /*result.Commands.Add(new DeleteCommandData
+                    result.Commands.Add(new DynamicJsonValue()
                     {
-                        Etag = etag,
-                        Id = key,
-                    });*/
+                        ["Key"] = entity.Value.Id,
+                        ["Method"] = "PUT",
+                        ["Document"] = document
+                    });
+                }
+            }
+            DocumentsByEntity.Clear();
+        }
+
+        protected bool EntityChanged(object entity, DocumentInfo documentMetadata,  out BlittableJsonReaderObject newObj)
+        {
+            //TODO - ConvertEntityToBlittable not good
+            newObj = EntityToBlittable.ConvertEntityToBlittable(documentMetadata.Id, entity, documentMetadata.Metadata);
+            if (documentMetadata == null)
+                return true;
+
+            if (documentMetadata.IgnoreChanges)
+                return false;
+
+            string id;
+            if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) &&
+                string.Equals(documentMetadata.Id, id, StringComparison.OrdinalIgnoreCase) == false)
+                return true;
+
+            // prevent saves of a modified read only entity
+            bool readOnly;
+            documentMetadata.Metadata.TryGet(Constants.Headers.RavenReadOnly, out readOnly);
+            if (readOnly)
+                return false;
+
+            if (documentMetadata.IsNewDocument || documentMetadata.Document == null)
+                return true;
+
+            return compareBlittable(documentMetadata.Document, newObj);
+
+        }
+
+        private static bool compareBlittable(BlittableJsonReaderObject originalBlittable, BlittableJsonReaderObject newBlittable)
+        {
+            var propertiesIds = newBlittable.GetPropertiesByInsertionOrder();
+            if (propertiesIds.Length != originalBlittable.GetPropertiesByInsertionOrder().Length)
+                return true;
+
+            foreach (var propID in propertiesIds)
+            {
+                var propInfo = newBlittable.GetPropertyByIndex(propID);
+
+                object oldPropValue;
+                if (propInfo.Item1 == Constants.Metadata.Key)
+                    continue;
+                originalBlittable.TryGetMember(propInfo.Item1, out oldPropValue);
+
+                if (propInfo.Item3 == BlittableJsonToken.StartObject)
+                {
+                     if (compareBlittable(oldPropValue as BlittableJsonReaderObject, propInfo.Item2 as BlittableJsonReaderObject))
+                        continue;
+                     else
+                        return true;
                 }
 
+                if ((propInfo.Item2 == null ? null : propInfo.Item2.ToString()) != (oldPropValue == null ? null : oldPropValue.ToString()))
+                    return true;
             }
-            if (changes == null)
-                DeletedEntities.Clear();
+            return false;
         }
 
         /// <summary>
@@ -722,16 +781,16 @@ more responsive application.
             KnownMissingIds.Clear();
         }
 
-        private readonly List<ICommandData> deferedCommands = new List<ICommandData>();
+        private readonly List<DynamicJsonValue> deferedCommands = new List<DynamicJsonValue>();
         protected string _databaseName;
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; private set; }
-        public EntityToJson EntityToJson { get; private set; }
+        public EntityToBlittable EntityToBlittable { get; private set; }
 
         /// <summary>
         /// Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="commands">The commands to be executed</param>
-        public virtual void Defer(params ICommandData[] commands)
+        public virtual void Defer(params DynamicJsonValue[] commands)
         {
             // Should we remove Defer?
             // and Patch would send Put and Delete and Patch separatly, like { Delete: [], Put: [], Patch: []}
@@ -819,7 +878,7 @@ more responsive application.
         {
             public SaveChangesData()
             {
-                Commands = new List<SessionOperations.Commands.ICommandData>();
+                Commands = new List<DynamicJsonValue>();
                 Entities = new List<object>();
             }
 
@@ -827,7 +886,7 @@ more responsive application.
             /// Gets or sets the commands.
             /// </summary>
             /// <value>The commands.</value>
-            public List<SessionOperations.Commands.ICommandData> Commands { get; set; }
+            public List<DynamicJsonValue> Commands { get; set; }
 
             public int DeferredCommandsCount { get; set; }
 

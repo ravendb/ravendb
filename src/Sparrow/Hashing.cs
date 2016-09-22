@@ -218,7 +218,7 @@ namespace Sparrow
         public static class XXHash64
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static unsafe ulong CalculateInline(byte* buffer, int len, ulong seed = 0)
+            public static unsafe ulong CalculateInline(byte* buffer, ulong len, ulong seed = 0)
             {
                 ulong h64;
 
@@ -325,7 +325,7 @@ namespace Sparrow
                 return h64;
             }
 
-            public static unsafe ulong Calculate(byte* buffer, int len, ulong seed = 0)
+            public static unsafe ulong Calculate(byte* buffer, ulong len, ulong seed = 0)
             {
                 return CalculateInline(buffer, len, seed);
             }
@@ -336,14 +336,14 @@ namespace Sparrow
 
                 fixed (byte* buffer = buf)
                 {
-                    return CalculateInline(buffer, buf.Length, seed);
+                    return CalculateInline(buffer, (ulong)buf.Length, seed);
                 }
             }
             public static ulong CalculateRaw(string buf, ulong seed = 0)
             {
                 fixed (char* buffer = buf)
                 {
-                    return CalculateInline((byte*)buffer, buf.Length * sizeof(char), seed);
+                    return CalculateInline((byte*)buffer, (ulong)(buf.Length * sizeof(char)), seed);
                 }
             }
 
@@ -354,7 +354,7 @@ namespace Sparrow
 
                 fixed (byte* buffer = buf)
                 {
-                    return CalculateInline(buffer, len, seed);
+                    return CalculateInline(buffer, (ulong)len, seed);
                 }
             }
 
@@ -365,7 +365,7 @@ namespace Sparrow
 
                 fixed (int* buffer = buf)
                 {
-                    return CalculateInline((byte*)buffer, len * sizeof(int), seed);
+                    return CalculateInline((byte*)buffer, (ulong)(len * sizeof(int)), seed);
                 }
             }
         }

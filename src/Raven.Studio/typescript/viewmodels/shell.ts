@@ -18,7 +18,6 @@ import database = require("models/resources/database");
 import fileSystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
 import timeSeries = require("models/timeSeries/timeSeries");
-import documentClass = require("models/database/documents/document");
 import collection = require("models/database/documents/collection");
 import uploadItem = require("models/filesystem/uploadItem");
 import changeSubscription = require("common/changeSubscription");
@@ -28,8 +27,6 @@ import environmentColor = require("models/resources/environmentColor");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
-import alertArgs = require("common/alertArgs");
-import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
@@ -41,6 +38,7 @@ import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
 import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
 import extensions = require("common/extensions");
+import notificationCenter = require("common/notifications/notificationCenter");
 
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
@@ -55,32 +53,22 @@ import getTimeSeriesStatsCommand = require("commands/timeSeries/getTimeSeriesSta
 import getSystemDocumentCommand = require("commands/database/documents/getSystemDocumentCommand");
 import getServerConfigsCommand = require("commands/database/studio/getServerConfigsCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
-import getStudioConfig = require("commands/getStudioConfig");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import licensingStatus = require("viewmodels/common/licensingStatus");
-import recentErrors = require("viewmodels/common/recentErrors");
 import enterApiKey = require("viewmodels/common/enterApiKey");
 import recentQueriesStorage = require("common/recentQueriesStorage");
-import getHotSpareInformation = require("commands/licensing/GetHotSpareInformation");
 
 class shell extends viewModelBase {
     private router = router;
     static studioConfigDocumentId = "Raven/StudioConfig";
-    static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8"));
-    static originalEnvironmentColor = ko.observable<environmentColor>(shell.selectedEnvironmentColorStatic());
     private activeResource: KnockoutObservable<resource> = activeResourceTracker.default.resource;
-    selectedColor = shell.selectedEnvironmentColorStatic;
-    selectedEnvironmentText = ko.computed(() => this.selectedColor().name + " Environment");
-    canShowEnvironmentText = ko.computed(() => this.selectedColor().name !== "Default");
 
     renewOAuthTokenTimeoutId: number;
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption()); //TODO:
     showLogOutButton: KnockoutComputed<boolean>; //TODO:
     
-    isLoadingStatistics = ko.computed(() => !!this.activeResource() && !this.activeResource().statistics()).extend({ throttle: 100 });
-
     static databases = ko.observableArray<database>();
     databasesLoadedTask: JQueryPromise<any>;
     static fileSystems = ko.observableArray<fileSystem>();
@@ -98,17 +86,18 @@ class shell extends viewModelBase {
         });
     });
 
+    notificationCenter = notificationCenter.instance;
+
     currentConnectedResource: resource;
-    currentAlert = ko.observable<alertArgs>();
-    queuedAlert: alertArgs;
-    static clusterMode = ko.observable<boolean>(false);
-    isInCluster = ko.computed(() => shell.clusterMode());
+
+    static clusterMode = ko.observable<boolean>(false); //TODO: extract from shell
+    isInCluster = ko.computed(() => shell.clusterMode()); //TODO: extract from shell
+
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
     static serverMainVersion = ko.observable<number>(4);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
 
-    windowHeightObservable: KnockoutObservable<number>;
-    recordedErrors = ko.observableArray<alertArgs>();
+    windowHeightObservable: KnockoutObservable<number>; //TODO: delete?
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     showSplash = viewModelBase.showSplash;
@@ -140,8 +129,7 @@ class shell extends viewModelBase {
              this.notifications = this.createNotifications();*/
         });
 
-        ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
-        ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
+        
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
         ko.postbox.subscribe("SelectNone", () => this.selectNone());
@@ -181,8 +169,6 @@ class shell extends viewModelBase {
 
         oauthContext.enterApiKeyTask.done(() => this.connectToRavenServer());
 
-        NProgress.set(.7);
-
         this.setupRouting();
 
         var self = this;
@@ -204,8 +190,8 @@ class shell extends viewModelBase {
         let routes = this.getRoutesForNewLayout();
         routes.pushAll(routes);
         router.map(routes).buildNavigationModel();
-        router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-        router.on('router:navigation:cancelled', () => this.showNavigationProgress(false));
+        //TODO: do we indicate this? router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
+        //TODO: do we indicated this? router.on('router:navigation:cancelled', () => this.showNavigationProgress(false));
 
         appUrl.mapUnknownRoutes(router);
     }
@@ -432,30 +418,10 @@ class shell extends viewModelBase {
     }
 
     private fecthStudioConfigForDatabase(db: database) {
-        var hotSpareTask = new getHotSpareInformation().execute();
-        var configTask = new getStudioConfig(db).execute();
-
-        $.when<any>(hotSpareTask, configTask).done((hotSpareResult, docResult) => {
-            var hotSpare = hotSpareResult[0];
-            var doc = <documentClass>docResult[0];
-            if (hotSpare.ActivationMode === "Activated") {
-                // override environment colors with hot spare
-                shell.activateHotSpareEnvironment(hotSpare);
-            } else {
-                var envColor = (<any>doc)["EnvironmentColor"];
-                if (envColor != null) {
-                    shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
-                }
-            }
-        }).fail(() => shell.selectedEnvironmentColorStatic(shell.originalEnvironmentColor()));
+        //TODO: fetch hot spare and studio config 
     }
 
     private activateDatabase(db: database) {
-        if (db == null) {
-            this.disconnectFromCurrentResource();
-            return;
-        }
-
         this.fecthStudioConfigForDatabase(db);
 
         var changeSubscriptionArray = () => [
@@ -619,18 +585,6 @@ class shell extends viewModelBase {
          new getDatabaseStatsCommand(null).execute();*/
     }
 
-    showNavigationProgress(isNavigating: boolean) {
-        if (isNavigating) {
-            NProgress.start();
-
-            var currentProgress = parseFloat(NProgress.status);
-            var newProgress = isNaN(currentProgress) ? 0.5 : currentProgress + (currentProgress / 2);
-            NProgress.set(newProgress);
-        } else {
-            NProgress.done();
-        }
-    }
-
     static reloadDatabases = () => shell.reloadResources(() => new getDatabasesCommand().execute(), shell.databases);
     static reloadFileSystems = () => shell.reloadResources(() => new getFileSystemsCommand().execute(), shell.fileSystems);
     static reloadCounterStorages = () => shell.reloadResources(() => new getCounterStoragesCommand().execute(), shell.counterStorages);
@@ -667,15 +621,15 @@ class shell extends viewModelBase {
     private reloadDataAfterReconnection(rs: resource) {
         //TODO: shell.fetchStudioConfig();
         //this.fetchServerBuildVersion();
-        //this.fetchClientBuildVersion();
+        this.fetchClientBuildVersion();
         //TODO: shell.fetchLicenseStatus();
         //this.fetchSupportCoverage();
         this.loadServerConfig();
 
-        var databasesLoadTask = shell.reloadDatabases();
-        var fileSystemsLoadTask = shell.reloadFileSystems();
-        var counterStoragesLoadTask = shell.reloadCounterStorages();
-        var timeSeriesLoadTask = shell.reloadTimeSeries();
+        const databasesLoadTask = shell.reloadDatabases();
+        const fileSystemsLoadTask = shell.reloadFileSystems();
+        const counterStoragesLoadTask = shell.reloadCounterStorages();
+        const timeSeriesLoadTask = shell.reloadTimeSeries();
 
         $.when(databasesLoadTask, fileSystemsLoadTask, counterStoragesLoadTask, timeSeriesLoadTask)
             .done(() => {
@@ -718,15 +672,14 @@ class shell extends viewModelBase {
             this.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage, TenantType.CounterStorage)),
             this.globalChangesApi.watchDocsStartingWith("Raven/TimeSeries/", (e) => this.changesApiFiredForResource(e, shell.timeSeries, this.activeTimeSeries, TenantType.TimeSeries)),
             //TODO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),
-            this.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts())
         ];
     }
 
-    private changesApiFiredForResource(e: documentChangeNotificationDto,
+    private changesApiFiredForResource(e: Raven.Abstractions.Data.DocumentChangeNotification,
         resourceObservableArray: KnockoutObservableArray<any>, activeResourceObservable: any, resourceType: TenantType) {
 
-        if (!!e.Id && (e.Type === "Delete" || e.Type === "Put")) {
-            var receivedResourceName = e.Id.slice(e.Id.lastIndexOf('/') + 1);
+        if (!!e.Key && (e.Type === "Delete" || e.Type === "Put")) {
+            var receivedResourceName = e.Key.slice(e.Key.lastIndexOf('/') + 1);
 
             if (e.Type === "Delete") {
                 var resourceToDelete = resourceObservableArray.first((rs: resource) => rs.name == receivedResourceName);
@@ -738,7 +691,7 @@ class shell extends viewModelBase {
                         recentQueriesStorage.removeRecentQueries(resourceToDelete);
                 }
             } else { // e.Type === "Put"
-                var getSystemDocumentTask = new getSystemDocumentCommand(e.Id).execute();
+                var getSystemDocumentTask = new getSystemDocumentCommand(e.Key).execute();
                 getSystemDocumentTask.done((dto: databaseDocumentDto) => {
                     var existingResource = resourceObservableArray.first((rs: resource) => rs.name == receivedResourceName);
 
@@ -831,7 +784,7 @@ class shell extends viewModelBase {
                 //TODO: shell.fetchStudioConfig();
                 //TODO: this.fetchClusterTopology();
                 //TODO: this.fetchServerBuildVersion();
-                //TODO: this.fetchClientBuildVersion();
+                this.fetchClientBuildVersion();
                 //TODO:shell.fetchLicenseStatus();
                 //TODO: this.fetchSupportCoverage();
                 //TODO :this.fetchSystemDatabaseAlerts();
@@ -945,13 +898,9 @@ class shell extends viewModelBase {
     private static activateHotSpareEnvironment(hotSpare: HotSpareDto) {
         var color = new environmentColor(hotSpare.ActivationMode === "Activated" ? "Active Hot Spare" : "Hot Spare", "#FF8585");
         license.hotSpare(hotSpare);
-        shell.selectedEnvironmentColorStatic(color);
-        shell.originalEnvironmentColor(color);
     }
 
     private handleRavenConnectionFailure(result: any) {
-        NProgress.done();
-
         if (result.status === 401) {
             // Unauthorized might be caused by invalid credentials. 
             // Remove them from both local storage and oauth context.
@@ -963,70 +912,8 @@ class shell extends viewModelBase {
         var tryAgain = "Try again";
         var messageBoxResultPromise = this.confirmationMessage(':-(', "Couldn't connect to Raven. Details in the browser console.", [tryAgain]);
         messageBoxResultPromise.done(() => {
-            NProgress.start();
             this.connectToRavenServer();
         });
-    }
-
-    dataLoadProgress(splashType?: alertType) {
-        if (!splashType) {
-            NProgress.configure({ showSpinner: false });
-            NProgress.done();
-        } else if (splashType === alertType.warning) {
-            NProgress.configure({ showSpinner: true });
-            NProgress.start();
-        } else {
-            NProgress.done();
-            NProgress.configure({ showSpinner: false });
-            $.blockUI({ message: '<div id="longTimeoutMessage"><span> This is taking longer than usual</span><br/><span>(Waiting for server to respond)</span></div>' });
-        }
-    }
-
-    showAlert(alert: alertArgs) {
-        if (alert.displayInRecentErrors && (alert.type === alertType.danger || alert.type === alertType.warning)) {
-            this.recordedErrors.unshift(alert);
-        }
-
-        var currentAlert = this.currentAlert();
-        if (currentAlert) {
-            this.queuedAlert = alert;
-            this.closeAlertAndShowNext(currentAlert);
-        } else {
-            this.currentAlert(alert);
-            var fadeTime = 2000; // If there are no pending alerts, show it for 2 seconds before fading out.
-            /*            if (alert.title.indexOf("Changes stream was disconnected.") == 0) {
-                            fadeTime = 100000000;
-                        }*/
-            if (alert.type === alertType.danger || alert.type === alertType.warning) {
-                fadeTime = 5000; // If there are pending alerts, show the error alert for 4 seconds before fading out.
-            }
-            setTimeout(() => {
-                this.closeAlertAndShowNext(alert);
-            }, fadeTime);
-        }
-    }
-
-    closeAlertAndShowNext(alertToClose: alertArgs) {
-        var alertElement = $('#' + alertToClose.id);
-        if (alertElement.length === 0) {
-            return;
-        }
-
-        // If the mouse is over the alert, keep it around.
-        if (alertElement.is(":hover")) {
-            setTimeout(() => this.closeAlertAndShowNext(alertToClose), 1000);
-        } else {
-            alertElement.alert("close");
-        }
-    }
-
-    onAlertHidden() {
-        this.currentAlert(null);
-        var nextAlert = this.queuedAlert;
-        if (nextAlert) {
-            this.queuedAlert = null;
-            this.showAlert(nextAlert);
-        }
     }
 
     private activateDatabaseWithName(databaseName: string) {
@@ -1120,11 +1007,6 @@ class shell extends viewModelBase {
         return app.showDialog(dialog).then(() => window.location.href = "#resources");
     }
 
-    showErrorsDialog() {
-        var errorDetails: recentErrors = new recentErrors(this.recordedErrors);
-        app.showDialog(errorDetails);
-    }
-
     uploadStatusChanged(item: uploadItem) {
         var queue: uploadItem[] = uploadQueueHelper.parseUploadQueue(window.localStorage[uploadQueueHelper.localStorageUploadQueueKey + item.filesystem.name], item.filesystem);
         uploadQueueHelper.updateQueueStatus(item.id(), item.status(), queue);
@@ -1134,15 +1016,6 @@ class shell extends viewModelBase {
     showLicenseStatusDialog() {
         var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage(), license.hotSpare());
         app.showDialog(dialog);
-    }
-
-    fetchSystemDatabaseAlerts() {
-        /* TODO
-        new getDocumentWithMetadataCommand("Raven/Alerts", this.systemDatabase)
-            .execute()
-            .done((doc: documentClass) => {
-                //
-            });*/
     }
 
     logOut() {
@@ -1187,7 +1060,7 @@ class shell extends viewModelBase {
         hwaccel: false, // Whether to use hardware acceleration
         position: "absolute" // Element positioning
     };
-    private spinner = new Spinner(this.spinnerOptions);
+    private spinner = new Spinner(this.spinnerOptions); //TODO: do we need it?
 
     static resourcesNamesComputed(): KnockoutComputed<string[]> {
         return ko.computed(() => {

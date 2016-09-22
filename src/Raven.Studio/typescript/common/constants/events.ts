@@ -19,9 +19,14 @@ const Resource = {
     Disconnect: 'Resource.Disconnect'
 };
 
+const NotificationCenter = {
+    Alert: 'NotificationCenter.Alert'
+}
+
 export = {
     Menu,
     ResourceSwitcher,
     SearchBox,
-    Resource
+    Resource,
+    NotificationCenter
 };

@@ -7,11 +7,17 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Data.Queries
 {
-    public class MoreLikeThisQuery : MoreLikeThisQuery<RavenJToken>
+    public class MoreLikeThisQuery : MoreLikeThisQuery<Dictionary<string, RavenJToken>>
     {
+        protected override void CreateRequestUri(StringBuilder uri)
+        {
+            base.CreateRequestUri(uri);
+
+            TransformerParameters.ApplyIfNotNull(tp => uri.AppendFormat("&tp-{0}={1}", tp.Key, tp.Value));
+        }
     }
 
-    public abstract class MoreLikeThisQuery<T> 
+    public abstract class MoreLikeThisQuery<T>
         where T : class
     {
         private int _pageSize;
@@ -131,7 +137,7 @@ namespace Raven.Client.Data.Queries
         /// <summary>
         /// Parameters that will be passed to transformer.
         /// </summary>
-        public Dictionary<string, T> TransformerParameters { get; set; }
+        public T TransformerParameters { get; set; }
 
         /// <summary>
         /// Maximum number of records that will be retrieved.
@@ -146,12 +152,8 @@ namespace Raven.Client.Data.Queries
             }
         }
 
-        public string GetRequestUri()
+        protected virtual void CreateRequestUri(StringBuilder uri)
         {
-            if (string.IsNullOrEmpty(IndexName))
-                throw new InvalidOperationException("Index name cannot be null or empty");
-
-            var uri = new StringBuilder();
             uri.AppendFormat("/queries/{0}?&op=morelikethis", Uri.EscapeUriString(IndexName));
 
             if (MapGroupFields.Count > 0)
@@ -195,12 +197,18 @@ namespace Raven.Client.Data.Queries
                 uri.AppendFormat("&pageSize=" + PageSize);
 
             Fields.ApplyIfNotNull(f => uri.AppendFormat("&field={0}", f));
-            TransformerParameters.ApplyIfNotNull(tp => uri.AppendFormat("&tp-{0}={1}", tp.Key, tp.Value));
             Includes.ApplyIfNotNull(i => uri.AppendFormat("&include={0}", i));
+        }
+
+        public string GetRequestUri()
+        {
+            if (string.IsNullOrEmpty(IndexName))
+                throw new InvalidOperationException("Index name cannot be null or empty");
+
+            var uri = new StringBuilder();
+            CreateRequestUri(uri);
 
             return uri.ToString();
         }
     }
-
-
 }

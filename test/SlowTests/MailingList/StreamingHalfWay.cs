@@ -12,7 +12,7 @@ namespace SlowTests.MailingList
 {
     public class StreamingHalfWay : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: query streaming")]
+        [Fact(Skip = "Missing feature: /docs/stream")]
         public void ShouldWork()
         {
             using (var store = GetDocumentStore())

@@ -1,19 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
 using Raven.Client.Data;
-using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Http;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class BatchCommand : RavenCommand<GetDocumentResult>
+    public class BatchCommand : RavenCommand<BatchResult>
     {
         public JsonOperationContext Context;
         public List<DynamicJsonValue> Commands;
@@ -29,25 +32,23 @@ namespace Raven.Client.Documents.Commands
             {
                 using (var writer = new BlittableJsonTextWriter(Context, stream))
                 {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Commands");
                     writer.WriteStartArray();
-                    bool first = true;
+                    bool NotFirst = false;
                     foreach (var command in Commands)
                     {
-                        if (first)
+                        if (NotFirst)
                             writer.WriteComma();
-                        first = false;
+                        NotFirst = true;
                         Context.Write(writer, command);
                     }
                     writer.WriteEndArray();
-                    writer.WriteEndObject();
                 }
             });
 
             url = "bulk_docs";
             return request;
         }
+
 
         public override void SetResponse(BlittableJsonReaderObject response)
         {
@@ -57,7 +58,8 @@ namespace Raven.Client.Documents.Commands
                                                     "Commands: " + string.Join(",", Commands));
             }
 
-            Result = JsonDeserializationClient.GetDocumentResult(response);
+            Result = JsonDeserializationClient.BatchResult(response);
+
         }
     }
 }

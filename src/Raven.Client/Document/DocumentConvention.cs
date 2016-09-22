@@ -833,31 +833,14 @@ namespace Raven.Client.Document
         public BlittableJsonReaderObject JsonSerialize(object entity, JsonOperationContext context)
         {
             var jsonSerializer = CreateSerializer();
-            jsonSerializer.BeforeClosingObject += (o, writer) =>
-            {
-                var ravenJTokenWriter = (RavenJTokenWriter)writer;
-                ravenJTokenWriter.AssociateCurrentOBjectWith(o);
-
-                Dictionary<string, JToken> value;
-              /*  if (MissingDictionary.TryGetValue(o, out value) == false)
-                    return;*/
-
-               /* foreach (var item in value)
-                {
-                    writer.WritePropertyName(item.Key);
-                    if (item.Value == null)
-                        writer.WriteNull();
-                    else
-                        writer.WriteValue(item.Value);
-                }*/
-            };
 
             /*TODO: Use a 4KB memory stream which we be allocated once per session */
             using (var ms = new MemoryStream())
-            using (var streamWriter = new StreamWriter(new MemoryStream()))
+            using (var streamWriter = new StreamWriter(ms))
             {
                 jsonSerializer.Serialize(streamWriter, entity);
-
+                streamWriter.Flush();
+                ms.Position = 0;
                 return context.ReadForMemory(ms, "convention.Serialize");
             }
         }

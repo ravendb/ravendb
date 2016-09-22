@@ -36,8 +36,6 @@ namespace FastTests.Server.Documents.Replication
                     session.SaveChanges();
                 }
 
-                System.Threading.Thread.Sleep(2000);
-
                 using (var session = slave.OpenSession())
                 {
                     try

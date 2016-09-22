@@ -594,7 +594,8 @@ namespace Sparrow.Json
                     writer.WriteComma();
                 first = false;
 
-                writer.WritePropertyName(new LazyStringValue(null, state.StringBuffer, state.StringSize, this));
+                var lazyStringValue = new LazyStringValue(null, state.StringBuffer, state.StringSize, this);
+                writer.WritePropertyName(lazyStringValue);
 
                 if (parser.Read() == false)
                     throw new InvalidOperationException("Object json parser can't return partial results");
@@ -630,7 +631,7 @@ namespace Sparrow.Json
                     }
                     break;
                 case JsonParserToken.Float:
-                    writer.WriteString(new LazyStringValue(null, state.StringBuffer, state.StringSize, this));
+                    writer.WriteDouble(new LazyDoubleValue(new LazyStringValue(null, state.StringBuffer, state.StringSize, this)));
                     break;
                 case JsonParserToken.Integer:
                     writer.WriteInteger(state.Long);

@@ -6,7 +6,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -19,6 +18,8 @@ namespace Raven.Server.Documents.Indexes.Static
         public readonly Dictionary<string, IndexingFunc> Maps = new Dictionary<string, IndexingFunc>(StringComparer.OrdinalIgnoreCase);
 
         public readonly Dictionary<string, HashSet<string>> ReferencedCollections = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+
+        public bool HasDynamicFields{ get; set; }
 
         public string Source;
 
@@ -102,7 +103,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (_createFieldsConverter == null)
                 _createFieldsConverter = new LuceneDocumentConverter(new IndexField[] {});
 
-            return _createFieldsConverter.GetRegularFields(field, value, null);
+            return _createFieldsConverter.GetRegularFields(field, value, CurrentIndexingScope.Current.IndexContext);
         }
 
         public IndexingFunc Reduce;

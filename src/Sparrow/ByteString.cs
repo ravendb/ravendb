@@ -87,7 +87,7 @@ namespace Sparrow
             if (IntPtr.Size == 4)
                 return Hashing.XXHash32.CalculateInline(Ptr, Length);
             else
-                return Hashing.XXHash64.CalculateInline(Ptr, Length);
+                return Hashing.XXHash64.CalculateInline(Ptr, (ulong)Length);
         }
     }
 

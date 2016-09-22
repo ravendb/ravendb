@@ -9,7 +9,7 @@ namespace SlowTests.MailingList
 {
     public class RavenDB252 : RavenTestBase
     {
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-5204")]
+        [Fact]
         public void EntityNameIsNowCaseInsensitive()
         {
             using (var store = GetDocumentStore())
@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-5204")]
+        [Fact]
         public void EntityNameIsNowCaseInsensitive_Method()
         {
             using (var store = GetDocumentStore())

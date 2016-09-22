@@ -1,5 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import killRunningTaskCommand = require("commands/operations/killRunningTaskCommand");
+import killOperationComamnd = require('commands/operations/killOperationCommand');
 import getRunningTasksCommand = require("commands/operations/getRunningTasksCommand");
 import moment = require("moment");
 import document = require("models/database/documents/document");
@@ -96,6 +96,7 @@ class runningTasks extends viewModelBase {
     fetchTasks(): JQueryPromise<runningTaskDto[]> {
         var db = this.activeDatabase();
         if (db) {
+            /* TODO
             var deferred = $.Deferred();
             new getRunningTasksCommand(db)
                 .execute()
@@ -103,7 +104,7 @@ class runningTasks extends viewModelBase {
                     this.processRunningTasksResults(results);
                     deferred.resolve(results);
                 });
-            return deferred;
+            return deferred; */
         }
 
         return null;
@@ -131,7 +132,7 @@ class runningTasks extends viewModelBase {
     }
 
     taskKill(task: runningTask) {
-        new killRunningTaskCommand(this.activeDatabase(), task.id).execute()
+        new killOperationComamnd(this.activeDatabase(), task.id).execute()
             .done(() => {
                 messagePublisher.reportSuccess("Send kill task request");
             })
