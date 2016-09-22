@@ -218,8 +218,23 @@ namespace Raven.Server.Documents
                 _sendQueue.Enqueue(value);
         }
 
-        public async Task StartSendingNotifications()
+        private void SendStartTime()
         {
+            var value = new DynamicJsonValue
+            {
+                ["Type"] = "ServerStartTimeNotification",
+                ["Value"] = _documentDatabase.StartTime
+            };
+
+            if (_disposeToken.IsCancellationRequested == false)
+                _sendQueue.Enqueue(value);
+        }
+
+        public async Task StartSendingNotifications(bool sendStartTime)
+        {
+            if (sendStartTime)
+                SendStartTime();
+
             JsonOperationContext context;
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {

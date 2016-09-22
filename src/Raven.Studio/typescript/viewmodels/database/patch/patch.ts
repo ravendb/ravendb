@@ -24,8 +24,7 @@ import getIndexDefinitionCommand = require("commands/database/index/getIndexDefi
 import queryUtil = require("common/queryUtil");
 import recentPatchesStorage = require("common/recentPatchesStorage");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
-import killRunningTaskCommand = require('commands/operations/killRunningTaskCommand');
-import getRunningTasksCommand = require("commands/operations/getRunningTasksCommand");
+import killOperationComamnd = require('commands/operations/killOperationCommand');
 
 type indexInfo = {
     name: string;
@@ -273,6 +272,7 @@ class patch extends viewModelBase {
         if (this.runningPatchesPollingHandle)
             return;
 
+        /* TODO:
         new getRunningTasksCommand(this.activeDatabase())
             .execute()
             .done((tasks: runningTaskDto[]) => {
@@ -288,7 +288,7 @@ class patch extends viewModelBase {
                 } else {
                     this.runningPatchesPollingHandle = null;
                 }
-            });
+            });*/
     }
 
     private fetchRecentPatches() {
@@ -357,7 +357,6 @@ class patch extends viewModelBase {
     fetchAllCollections(): JQueryPromise<any> {
         return new getCollectionsCommand(this.activeDatabase())
             .execute()
-            .always(() => NProgress.done())
             .done((colls: collection[]) => {
                 var currentlySelectedCollection: collection = null;
 
@@ -738,7 +737,7 @@ class patch extends viewModelBase {
             this.confirmationMessage("Are you sure?", "You are stopping patch execution.")
                 .done(() => {
                     if (this.patchOperationId()) {
-                        new killRunningTaskCommand(this.activeDatabase(), operationToKill)
+                        new killOperationComamnd(this.activeDatabase(), operationToKill)
                             .execute()
                             .done(() => {
                                 if (this.patchOperationId()) {

@@ -18,9 +18,11 @@ namespace Raven.Server.ServerWide
             Token = _linkedCts.Token;
         }
 
-        private OperationCancelToken(CancellationToken token)
+        public OperationCancelToken(CancellationToken token)
         {
-            Token = token;
+            _cts = new CancellationTokenSource();
+            _linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, token);
+            Token = _linkedCts.Token;
         }
 
         public readonly CancellationToken Token;

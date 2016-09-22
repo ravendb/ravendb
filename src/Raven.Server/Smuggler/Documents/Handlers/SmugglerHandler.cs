@@ -6,6 +6,7 @@
 
 using System;
 using System.IO.Compression;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Data;
 using Raven.Client.Smuggler;
@@ -50,24 +51,35 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     exporter.OperateOnTypes = databaseItemType;
                 }
 
+                var token = CreateOperationToken();
+
                 if (operationId.HasValue)
                 {
                     await Database.DatabaseOperations.AddOperation("Export database: " + Database.Name, DatabaseOperations.PendingOperationType.DatabaseExport, 
-                        onProgress => Task.Run(() => ExportDatabaseInternal(context, exporter, onProgress)), operationId.Value, OperationCancelToken.None);
-                    //TODO: use cancelation token
+                        onProgress => Task.Run(() => ExportDatabaseInternal(context, exporter, onProgress, token)), operationId.Value, token);
                 }
                 else
                 {
-                    ExportDatabaseInternal(context, exporter, null);
+                    ExportDatabaseInternal(context, exporter, null, token);
                 }
             }
         }
 
-        private IOperationResult ExportDatabaseInternal(DocumentsOperationContext context, SmugglerExporter exporter, Action<IOperationProgress> onProgress)
+        private IOperationResult ExportDatabaseInternal(DocumentsOperationContext context, SmugglerExporter exporter, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            //TODO: use optional onProgress parameter
-            exporter.Export(context, ResponseBodyStream());
-            return null; //TODO: pass operation result to operation status
+            try
+            {
+               
+
+
+                //TODO: use optional onProgress parameter
+                exporter.Export(context, ResponseBodyStream());
+                return null; //TODO: pass operation result to operation status
+            }
+            finally
+            {
+                token.Dispose();
+            }
         }
 
         [RavenAction("/databases/*/smuggler/import", "POST")]
