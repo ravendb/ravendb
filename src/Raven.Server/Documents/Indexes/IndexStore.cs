@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.Indexes
 
         private static Logger _logger;
         private readonly DocumentDatabase _documentDatabase;
+        private readonly IndexMetadataStorage _indexMetadataStorage;
 
         private readonly CollectionOfIndexes _indexes = new CollectionOfIndexes();
 
@@ -45,6 +46,7 @@ namespace Raven.Server.Documents.Indexes
         {
             _documentDatabase = documentDatabase;
             _logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
+            _indexMetadataStorage = new IndexMetadataStorage(documentDatabase);
         }
 
         public Task InitializeAsync()
@@ -429,6 +431,7 @@ namespace Raven.Server.Documents.Indexes
                 });
             }
 
+            exceptionAggregator.Execute(() => _indexMetadataStorage.Dispose());
             exceptionAggregator.ThrowIfNeeded();
         }
 

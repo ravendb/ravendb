@@ -763,7 +763,7 @@ namespace Raven.Server.Documents
 
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
 
-            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 4);
+            result.ChangeVector = StorageUtil.GetChangeVectorEntriesFromTableValueReader(tvr, 4);
 
             return result;
         }
@@ -783,23 +783,13 @@ namespace Raven.Server.Documents
             ptr = tvr.Read(2, out size);
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
-            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 1);
+            result.ChangeVector = StorageUtil.GetChangeVectorEntriesFromTableValueReader(tvr, 1);
             result.Doc = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
 
             return result;
         }
 
-        private static ChangeVectorEntry[] GetChangeVectorEntriesFromTableValueReader(TableValueReader tvr, int index)
-        {
-            int size;
-            var pChangeVector = (ChangeVectorEntry*)tvr.Read(index, out size);
-            var changeVector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
-            for (int i = 0; i < changeVector.Length; i++)
-            {
-                changeVector[i] = pChangeVector[i];
-            }
-            return changeVector;
-        }
+       
 
         private static DocumentTombstone TableValueToTombstone(JsonOperationContext context, TableValueReader tvr)
         {
@@ -825,7 +815,7 @@ namespace Raven.Server.Documents
             ptr = tvr.Read(2, out size);
             result.DeletedEtag = Bits.SwapBytes(*(long*)ptr);
 
-            result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 4);
+            result.ChangeVector = StorageUtil.GetChangeVectorEntriesFromTableValueReader(tvr, 4);
 
             result.Collection = new LazyStringValue(null, tvr.Read(5, out size), size, context);
 
@@ -1151,7 +1141,7 @@ namespace Raven.Server.Documents
                     if (compare != 0)
                         break;
 
-                    var currentChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 1);
+                    var currentChangeVector = StorageUtil.GetChangeVectorEntriesFromTableValueReader(tvr, 1);
                     if (currentChangeVector.Equals(changeVector))
                     {
                         int size;
@@ -1412,7 +1402,7 @@ namespace Raven.Server.Documents
         {
             if (oldValue != null)
             {
-                var changeVector = GetChangeVectorEntriesFromTableValueReader(oldValue, 4);
+                var changeVector = StorageUtil.GetChangeVectorEntriesFromTableValueReader(oldValue, 4);
                 return UpdateChangeVectorWithLocalChange(newEtag, changeVector);
             }
 
