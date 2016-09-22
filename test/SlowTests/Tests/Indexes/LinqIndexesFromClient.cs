@@ -50,13 +50,13 @@ namespace SlowTests.Tests.Indexes
                 {
                     '@metadata': {'Raven-Entity-Name': 'Orders', '@id': 1},
                     'OrderLines': [{'ProductId': 2}, {'ProductId': 3}]
-                }", context),
+                }".Replace("\r\n", Environment.NewLine), context),
                   GetDocumentFromString(
                 @"
                 {
                     '@metadata': {'Raven-Entity-Name': 'Orders', '@id': 2},
                     'OrderLines': [{'ProductId': 5}, {'ProductId': 4}]
-                }", context)
+                }".Replace("\r\n", Environment.NewLine), context)
             }).Cast<object>().ToArray();
 
                 var fields = index.OutputFields
@@ -126,7 +126,7 @@ namespace SlowTests.Tests.Indexes
                 },
                 Maps = { @"docs.Users.Where(user => user.Location == ""Tel Aviv"").Select(user => new {
     Name = user.Name
-})" }
+})".Replace("\r\n", Environment.NewLine) }
             };
 
             Assert.True(original.Maps.SetEquals(generated.Maps));
@@ -150,7 +150,7 @@ namespace SlowTests.Tests.Indexes
                 },
                 Maps = { @"docs.Users.Where(user => user.Location == ""Tel Aviv"").Select(user => new {
     Age = user.Age - (20 - user.Age)
-})" }
+})".Replace("\r\n", Environment.NewLine) }
             };
 
             Assert.True(original.Maps.SetEquals(generated.Maps));
@@ -175,7 +175,7 @@ namespace SlowTests.Tests.Indexes
                 Maps = { @"docs.Users.Where(user => user.Location == ""Tel Aviv"").Select(user => new {
     Name = user.Name,
     Id = user.__document_id
-})" }
+})".Replace("\r\n", Environment.NewLine) }
             };
 
             Assert.True(original.Maps.SetEquals(generated.Maps));
@@ -200,7 +200,7 @@ namespace SlowTests.Tests.Indexes
                 },
                 Maps = { @"docs.Users.Where(user => !(user.Location == ""Te(l) (A)viv"")).Select(user => new {
     Name = user.Name
-})" }
+})".Replace("\r\n", Environment.NewLine) }
             };
 
             Assert.True(original.Maps.SetEquals(generated.Maps));
@@ -240,11 +240,11 @@ namespace SlowTests.Tests.Indexes
                 Maps = { @"docs.Users.Select(user => new {
     Location = user.Location,
     Count = 1
-})" },
+})".Replace("\r\n", Environment.NewLine) },
                 Reduce = @"results.GroupBy(agg => agg.Location).Select(g => new {
     Location = g.Key,
     Count = Enumerable.Sum(g, x => ((int) x.Count))
-})"
+})".Replace("\r\n", Environment.NewLine)
             };
 
             Assert.True(original.Maps.SetEquals(generated.Maps));
@@ -267,7 +267,7 @@ namespace SlowTests.Tests.Indexes
                 Reduce = @"results.GroupBy(agg => agg.Location).Select(g => new {
     Location = g.Key,
     Count = Enumerable.Sum(g, x => ((int) x.Count))
-})"
+})".Replace("\r\n", Environment.NewLine)
             };
 
             Assert.Equal(expectedIndexString, generated.Maps.First());
@@ -283,7 +283,7 @@ users => from user in users
 @"docs.Users.Select(user => new {
     Location = user.Location,
     Count = (user.Age + 3) * (user.Age + 4)
-})");
+})".Replace("\r\n", Environment.NewLine));
         }
 
         [Fact]
@@ -295,7 +295,7 @@ users => from user in users
 @"docs.Users.Select(user => new {
     Location = user.Location,
     Count = user.Age >= 1 ? 1 : 0
-})");
+})".Replace("\r\n", Environment.NewLine));
         }
 
         [Fact]
@@ -307,7 +307,7 @@ users => from user in users
 @"docs.Users.Select(user => new {
     Location = user.Location,
     Count = user.Gender == ""Female"" ? 1 : 0
-})");
+})".Replace("\r\n", Environment.NewLine));
         }
 
         [Fact]
@@ -319,7 +319,7 @@ users => from user in users
 @"docs.Users.Select(user => new {
     Location = user.Location,
     Count = user.Location is String ? 1 : 0
-})");
+})".Replace("\r\n", Environment.NewLine));
         }
 
 
