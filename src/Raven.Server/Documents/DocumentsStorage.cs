@@ -1708,18 +1708,23 @@ namespace Raven.Server.Documents
             return name;
         }
 
-        private static Dictionary<string, CollectionName> ReadCollections(Transaction tx)
+        private Dictionary<string, CollectionName> ReadCollections(Transaction tx)
         {
             var result = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
             var collections = tx.OpenTable(CollectionsSchema, "Collections");
-            foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys))
-            {
-                int size;
-                var ptr = tvr.Read(1, out size);
-                var collection = new string((char*) ptr, 0, size);
 
-                result.Add(collection, new CollectionName(collection));
+            JsonOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                {
+                    int size;
+                    var ptr = tvr.Read(1, out size);
+                    var collection = new LazyStringValue(null, ptr, size, context);
+
+                    result.Add(collection, new CollectionName(collection));
+                }
             }
 
             return result;
