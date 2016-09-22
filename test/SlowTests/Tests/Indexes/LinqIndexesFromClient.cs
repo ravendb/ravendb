@@ -240,7 +240,7 @@ namespace SlowTests.Tests.Indexes
                 Maps = { @"docs.Users.Select(user => new {
     Location = user.Location,
     Count = 1
-})" },
+})".Replace("\r\n", Environment.NewLine) },
                 Reduce = @"results.GroupBy(agg => agg.Location).Select(g => new {
     Location = g.Key,
     Count = Enumerable.Sum(g, x => ((int) x.Count))
