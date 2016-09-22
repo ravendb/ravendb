@@ -22,12 +22,13 @@ namespace Voron.Platform.Posix
         private readonly StorageEnvironmentOptions _options;
         private readonly string _filename;
         private int _fd, _fdReads = -1;
+        private readonly int _maxNumberOfPagesPerSingleWrite;
 
         public PosixJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize)
         {
             _options = options;
             _filename = filename;
-
+            _maxNumberOfPagesPerSingleWrite = int.MaxValue / _options.PageSize;
 
             _fd = Syscall.open(filename, OpenFlags.O_WRONLY | options.PosixOpenFlags | OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
@@ -81,21 +82,56 @@ namespace Voron.Platform.Posix
             Dispose();
         }
 
+
         public unsafe void WritePages(long position, byte* p, int numberOfPages)
+        {
+            while (numberOfPages > _maxNumberOfPagesPerSingleWrite)
+            {
+                WriteFile(position, p, _maxNumberOfPagesPerSingleWrite);
+
+                var nextChunkPosition = _maxNumberOfPagesPerSingleWrite * _options.PageSize;
+                position += nextChunkPosition;
+                p += nextChunkPosition;
+                numberOfPages -= _maxNumberOfPagesPerSingleWrite;
+            }
+
+            if (numberOfPages > 0)
+                WriteFile(position, p, numberOfPages);
+        }
+
+        private unsafe void WriteFile(long position, byte* p, int numberOfPages)
         {
             if (numberOfPages == 0)
                 return; // nothing to do
 
             var nNumberOfBytesToWrite = (ulong)numberOfPages*(ulong)_options.PageSize;
+            long actuallyWritten = 0;
             long result;
             using (_options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.WriteUsingSyscall, (long)nNumberOfBytesToWrite))
             {
-                result = Syscall.pwrite(_fd, p, nNumberOfBytesToWrite, position);
+                do
+                {
+                    result = Syscall.pwrite(_fd, p, nNumberOfBytesToWrite - (ulong)actuallyWritten, position);
+                    if (result < 1)
+                        break;
+                    actuallyWritten += result;
+                    p += actuallyWritten;
+                } while ((ulong)actuallyWritten < nNumberOfBytesToWrite);
             }
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 PosixHelper.ThrowLastError(err);
+            }
+            else if (result == 0)
+            {
+                var err = Marshal.GetLastWin32Error();
+                throw new IOException($"pwrite reported zero bytes written, after write of {actuallyWritten} bytes out of {nNumberOfBytesToWrite}. lastErrNo={err}");
+            }
+            else if ((ulong) actuallyWritten != nNumberOfBytesToWrite)
+            {
+                var err = Marshal.GetLastWin32Error();
+                throw new IOException($"pwrite couln't write {nNumberOfBytesToWrite} to file. only {actuallyWritten} written. lastErrNo={err}");
             }
         }
 
