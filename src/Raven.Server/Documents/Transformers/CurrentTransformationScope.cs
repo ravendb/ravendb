@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.Transformers
                 using (var scope = t.OpenTransformationScope(_parameters, _include, _documentsStorage, _transformerStore, _documentsContext, nested: true))
                 {
                     var enumerable = maybeItems as IEnumerable;
-                    var dynamicEnumerable = enumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(enumerable) ?
+                    var dynamicEnumerable = enumerable != null && TypeConverter.ShouldTreatAsEnumerable(enumerable) ?
                         enumerable.Cast<dynamic>() : new[] { maybeItems };
 
                     foreach (var item in scope.Transform(dynamicEnumerable.Select(x => ConvertType(x, _documentsContext))))
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Transformers
             {
                 var propertyValue = property.Value.GetValue(value);
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
-                if (propertyValueAsEnumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(propertyValue))
+                if (propertyValueAsEnumerable != null && TypeConverter.ShouldTreatAsEnumerable(propertyValue))
                 {
                     inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ConvertType(x, context)));
                     continue;

@@ -60,28 +60,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
 
                 if (_reduceOutput)
-                    reduceResult[property.Key] = TypeConverter.ToBlittableSupportedType(value, indexContext);
+                    reduceResult[property.Key] = TypeConverter.ToBlittableSupportedType(value, indexContext, flattenArrays: true);
             }
 
             if (_reduceOutput)
                 yield return GetReduceResultValueField(indexContext.ReadObject(reduceResult, "map/reduce result field"));
-        }
-
-        public static bool ShouldTreatAsEnumerable(object item)
-        {
-            if (item == null || item is DynamicNullObject)
-                return false;
-
-            if (item is DynamicBlittableJson)
-                return false;
-
-            if (item is string || item is LazyStringValue)
-                return false;
-
-            if (item is IDictionary)
-                return false;
-
-            return true;
         }
     }
 }

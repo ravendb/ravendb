@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 current = _queue.Dequeue();
 
                 var list = current as IEnumerable<object>;
-                if (list != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(current))
+                if (list != null && TypeConverter.ShouldTreatAsEnumerable(current))
                 {
                     foreach (var o in list)
                         AddItem(o);
@@ -66,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private static object NullIfEmptyEnumerable(object item)
         {
             var enumerable = item as IEnumerable<object>;
-            if (enumerable == null || AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(item) == false)
+            if (enumerable == null || TypeConverter.ShouldTreatAsEnumerable(item) == false)
                 return item;
 
             var enumerator = enumerable.GetEnumerator();

@@ -29,7 +29,7 @@ namespace Raven.Server.Utils
 
         private static readonly ConcurrentDictionary<Type, PropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, PropertyAccessor>();
 
-        public static object ToBlittableSupportedType(object value, JsonOperationContext context)
+        public static object ToBlittableSupportedType(object value, JsonOperationContext context, bool flattenArrays = false)
         {
             if (value == null || value is DynamicNullObject)
                 return null;
@@ -87,13 +87,17 @@ namespace Raven.Server.Utils
             var enumerable = value as IEnumerable;
             if (enumerable != null)
             {
-                if (AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(enumerable))
+                if (ShouldTreatAsEnumerable(enumerable))
                 {
+                    IEnumerable<object> items;
+
                     var objectEnumerable = value as IEnumerable<object>;
                     if (objectEnumerable != null)
-                        return new DynamicJsonArray(objectEnumerable.Select(x => ToBlittableSupportedType(x, context)));
+                        items = objectEnumerable.Select(x => ToBlittableSupportedType(x, context, flattenArrays));
+                    else
+                        items = enumerable.Cast<object>().Select(x => ToBlittableSupportedType(x, context, flattenArrays));
 
-                    return new DynamicJsonArray(enumerable.Cast<object>().Select(x => ToBlittableSupportedType(x, context)));
+                    return new DynamicJsonArray(flattenArrays ? Flatten(items) : items);
                 }
             }
 
@@ -104,7 +108,7 @@ namespace Raven.Server.Utils
             {
                 var propertyValue = property.Value.GetValue(value);
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
-                if (propertyValueAsEnumerable != null && AnonymousLuceneDocumentConverter.ShouldTreatAsEnumerable(propertyValue))
+                if (propertyValueAsEnumerable != null && ShouldTreatAsEnumerable(propertyValue))
                 {
                     inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ToBlittableSupportedType(x, context)));
                     continue;
@@ -114,6 +118,26 @@ namespace Raven.Server.Utils
             }
 
             return inner;
+        }
+
+        private static IEnumerable<object> Flatten(IEnumerable items)
+        {
+            foreach (var item in items)
+            {
+                var enumerable = item as IEnumerable;
+
+                if (enumerable != null && ShouldTreatAsEnumerable(enumerable))
+                {
+                    foreach (var nestedItem in Flatten(enumerable))
+                    {
+                        yield return nestedItem;
+                    }
+
+                    yield break;
+                }
+
+                yield return item;
+            }
         }
 
         public static dynamic ToDynamicType(object value)
@@ -290,6 +314,23 @@ namespace Raven.Server.Utils
         {
             var type = value.GetType();
             return PropertyAccessorCache.GetOrAdd(type, PropertyAccessor.Create);
+        }
+
+        public static bool ShouldTreatAsEnumerable(object item)
+        {
+            if (item == null || item is DynamicNullObject)
+                return false;
+
+            if (item is DynamicBlittableJson)
+                return false;
+
+            if (item is string || item is LazyStringValue)
+                return false;
+
+            if (item is IDictionary)
+                return false;
+
+            return true;
         }
     }
 }
