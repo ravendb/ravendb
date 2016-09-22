@@ -818,6 +818,12 @@ namespace Raven.Database.Indexing
                 Log.ErrorException("Failed to index because of data corruption. ", e);
                 context.AddError(batchForIndex.IndexId, batchForIndex.Index.PublicName, null, e, $"Failed to index because of data corruption. Reason: {e.Message}");
             }
+            catch (ObjectDisposedException e)
+            {
+                wasOperationCanceled = true;
+                Log.WarnException("Failed to index because index was disposed", e);
+                return null;
+            }
             catch (Exception e)
             {
                 Exception conflictException;
@@ -1104,11 +1110,16 @@ namespace Raven.Database.Indexing
                     }
                     catch (IndexDoesNotExistsException)
                     {
-                        //we can ignore this, no need to retry
+                        // we can ignore this, no need to retry
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // the index was disposed during database shutdown
+                        break;
                     }
                     catch (IOException e)
                     {
-                        //we failed to create the index writer, we will retry on the next run of the indexing executer
+                        // we failed to create the index writer, we will retry on the next run of the indexing executer
                         Log.WarnException(e.Message, e);
                         context.AddError(index.IndexId, index.PublicName, null, e, $"Failed to save last indexed etag. Reason: {e.Message}");
                         break;
@@ -1119,9 +1130,9 @@ namespace Raven.Database.Indexing
                         {
                             index.AddOutOfMemoryDatabaseAlert(e);
 
-                            //we can keep trying if it's an esent/voron OOME
-                            //if we fail to save the last indexed (after all the retries),
-                            //it will be retried on the next run of the indexing executer
+                            // we can keep trying if it's an esent/voron OOME
+                            // if we fail to save the last indexed (after all the retries),
+                            // it will be retried on the next run of the indexing executer
                             keepTrying = true;
                         }
 

@@ -88,8 +88,14 @@ namespace Raven.Database.Indexing
             }
             catch (IndexDoesNotExistsException)
             {
-                //race condition -> index was deleted
-                //we can ignore this
+                // race condition -> index was deleted
+                // we can ignore this
+                operationCanceled = true;
+            }
+            catch (ObjectDisposedException)
+            {
+                // index was disposed
+                // we can ignore this
                 operationCanceled = true;
             }
             catch (Exception e)

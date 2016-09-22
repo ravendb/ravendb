@@ -348,6 +348,9 @@ namespace Raven.Database.Indexing
                 if (indexWriter != null)
                     return;
 
+                if (disposed)
+                    throw new ObjectDisposedException("Index " + PublicName + " has been disposed");
+
                 CreateIndexWriter();
             }
             catch (IOException e)
@@ -407,6 +410,9 @@ namespace Raven.Database.Indexing
         {
             lock (writeLock)
             {
+                if (disposed)
+                    return;
+
                 waitReason = "Merge / Optimize";
                 try
                 {
@@ -614,8 +620,8 @@ namespace Raven.Database.Indexing
                         }
                         catch (OperationCanceledException)
                         {
-                            //do not add error if this exception happens,
-                            //since this exception can happen during normal code-flow
+                            // do not add error if this exception happens,
+                            // since this exception can happen during normal code-flow
                             throw;
                         }
                         catch (Exception e)
@@ -624,7 +630,7 @@ namespace Raven.Database.Indexing
                             if (TransactionalStorageHelper.IsOutOfMemoryException(e) ||
                                 TransactionalStorageHelper.IsWriteConflict(e, out _))
                             {
-                                //we are handling this
+                                // we are handling this
                                 throw;
                             }
 
@@ -656,6 +662,10 @@ namespace Raven.Database.Indexing
                     {
                         locker.Release();
                     }
+                }
+                catch (ObjectDisposedException)
+                {
+                    throw;
                 }
                 catch (OperationCanceledException)
                 {
@@ -787,6 +797,9 @@ namespace Raven.Database.Indexing
 
         private void CreateIndexWriter()
         {
+            if (disposed)
+                throw new OperationCanceledException();
+
             try
             {
                 snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
@@ -1790,11 +1803,19 @@ namespace Raven.Database.Indexing
             if (directory is RAMDirectory)
             {
                 //if the index is memory-only, force writing index data to disk
-                Write((writer, analyzer, stats) =>
+                try
                 {
-                    ForceWriteToDisk();
-                    return new IndexedItemsInfo(GetLastEtagFromStats()) { ChangedDocs = 1 };
-                });
+                    Write((writer, analyzer, stats) =>
+                    {
+                        ForceWriteToDisk();
+                        return new IndexedItemsInfo(GetLastEtagFromStats()) { ChangedDocs = 1 };
+                    });
+                }
+                catch (ObjectDisposedException e)
+                {
+                    logIndexing.Warn($"Couldn't backup index {PublicName} because it was disposed", e);
+                    return;
+                }
             }
 
             bool hasSnapshot = false;
@@ -1830,7 +1851,7 @@ namespace Raven.Database.Indexing
                         {
                             // however, we copy the current segments.gen & index.version to make 
                             // sure that we get the _at the time_ of the write. 
-                            foreach (var fileName in new[] { "segments.gen", IndexStorage.IndexVersionFileName(indexDefinition) })
+                            foreach (var fileName in new[] {"segments.gen", IndexStorage.IndexVersionFileName(indexDefinition)})
                             {
                                 token.ThrowIfCancellationRequested();
                                 var fullPath = Path.Combine(path, indexId.ToString(), fileName);
@@ -1840,6 +1861,13 @@ namespace Raven.Database.Indexing
                             }
                             return new IndexedItemsInfo(null);
                         });
+                    }
+                    catch (ObjectDisposedException e)
+                    {
+                        logIndexing.Warn($"Couldn't backup index {PublicName} because it was disposed", e);
+                        neededFilesWriter.Dispose();
+                        TryDelete(neededFilePath);
+                        return;
                     }
                     catch (CorruptIndexException e)
                     {

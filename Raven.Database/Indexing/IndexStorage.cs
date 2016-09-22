@@ -1065,8 +1065,16 @@ namespace Raven.Database.Indexing
             //need to do this for every map reduce index, even when indexing is disabled
             if (addedIndex.IsMapReduce)
             {
-                addedIndex.EnsureIndexWriter(useWriteLock: true);
-                addedIndex.Flush(Etag.Empty);
+                try
+                {
+                    addedIndex.EnsureIndexWriter(useWriteLock: true);
+                    addedIndex.Flush(Etag.Empty);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // index was disposed during database shutdown
+                    // we still need to proceed with its creation
+                }
             }
 
             UpdateIndexMappingFile();
