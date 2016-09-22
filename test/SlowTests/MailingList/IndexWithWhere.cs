@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -50,7 +51,7 @@ namespace SlowTests.MailingList
                 Assert.Equal(@"docs.Documents.Where(doc => doc.Title == ""dfsdfsfd"").Select(doc => new {
     Description = doc.Description,
     Title = doc.Title
-})", indexDefinition.Maps.First());
+})".Replace("\r\n", Environment.NewLine), indexDefinition.Maps.First());
             }
         }
 
@@ -66,7 +67,7 @@ namespace SlowTests.MailingList
                 Assert.Equal(@"docs.Documents.Where(doc => doc.IsDeleted == false).Select(doc => new {
     Description = doc.Description,
     Title = doc.Title
-})", indexDefinition.Maps.First());
+})".Replace("\r\n", Environment.NewLine), indexDefinition.Maps.First());
             }
         }
     }
