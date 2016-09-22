@@ -49,7 +49,7 @@ namespace Raven.Server.Documents
         {
             /*
              Collection schema is:
-             lower case name, full name, collection id
+             full name
              collections are never deleted from the collections table
              */
             CollectionsSchema.DefineKey(new TableSchema.SchemaIndexDef
@@ -1691,7 +1691,6 @@ namespace Raven.Server.Documents
 
             var tvr = new TableValueBuilder
             {
-                Slice.From(context.Allocator, collectionName.ToLowerInvariant()), // do we need this?
                 Slice.From(context.Allocator, collectionName)
             };
             collections.Set(tvr);
@@ -1720,7 +1719,7 @@ namespace Raven.Server.Documents
                 foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys))
                 {
                     int size;
-                    var ptr = tvr.Read(1, out size);
+                    var ptr = tvr.Read(0, out size);
                     var collection = new LazyStringValue(null, ptr, size, context);
 
                     result.Add(collection, new CollectionName(collection));
