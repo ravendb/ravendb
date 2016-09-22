@@ -109,8 +109,6 @@ class shell extends viewModelBase {
     searchBox = new searchBox();
     resourceSwitcher = new resourceSwitcher(shell.resources);
 
-    showNotifications = ko.observable<boolean>(true);
-
     private globalChangesApi: changesApi;
     private static changeSubscriptionArray: changeSubscription[];
 
@@ -623,7 +621,7 @@ class shell extends viewModelBase {
     private reloadDataAfterReconnection(rs: resource) {
         //TODO: shell.fetchStudioConfig();
         //this.fetchServerBuildVersion();
-        //this.fetchClientBuildVersion();
+        this.fetchClientBuildVersion();
         //TODO: shell.fetchLicenseStatus();
         //this.fetchSupportCoverage();
         this.loadServerConfig();
@@ -786,7 +784,7 @@ class shell extends viewModelBase {
                 //TODO: shell.fetchStudioConfig();
                 //TODO: this.fetchClusterTopology();
                 //TODO: this.fetchServerBuildVersion();
-                //TODO: this.fetchClientBuildVersion();
+                this.fetchClientBuildVersion();
                 //TODO:shell.fetchLicenseStatus();
                 //TODO: this.fetchSupportCoverage();
                 //TODO :this.fetchSystemDatabaseAlerts();

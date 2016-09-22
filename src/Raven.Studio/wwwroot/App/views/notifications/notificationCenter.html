@@ -15,7 +15,7 @@
     </div>
 </div>
 
-<div id="notification-center" data-bind="css: { 'show-notifications': showNotifications() }, with: notificationCenter">
+<div id="notification-center" data-bind="css: { 'show-notifications': notificationCenter.showNotifications() }, with: notificationCenter">
     
     <div data-bind="foreach: operations.watchedOperations()">
         <div data-bind="if: visible()">

@@ -7,6 +7,8 @@ import notificationCenterRecentErrors = require("common/notifications/notificati
 class notificationCenter {
     static instance = new notificationCenter();
 
+    showNotifications = ko.observable<boolean>(false);
+
     operations = new notificationCenterOperations();
     recentErrors = new notificationCenterRecentErrors();
 

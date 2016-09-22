@@ -6,8 +6,8 @@
         </div>
         <div id="navbar">
             <ul class="nav navbar-nav navbar-right">
-                <li><a href="#" class="icon-notifications btn-toggle" data-bind="{ click: showNotifications.toggle.bind(showNotifications) }"></a></li>
-                <li><a href="#" class="icon-help"></a></li>
+                <li><a href="#" class="icon-notifications btn-toggle" data-bind="{ click: notificationCenter.showNotifications.toggle.bind(notificationCenter.showNotifications) }"></a></li>
+                <li><a target="_blank" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
                 <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
                 <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
             </ul>
