@@ -104,7 +104,7 @@ namespace Voron.Debugging
                 var treeReport = new TreeReport
                 {
                     Type = RootObjectType.FixedSizeTree,
-                    Name = fst.Name.ToString(),
+                    Name = fst.Name,
                     BranchPages = -1,
                     Depth = fst.Depth,
                     NumberOfEntries = fst.NumberOfEntries,
@@ -167,7 +167,7 @@ namespace Voron.Debugging
                                 }
                             case TreeNodeFlags.PageRef:
                                 {
-                                    var overFlowPage = _tx.GetReadOnlyTreePage(currentNode->PageNumber);
+                                    var overFlowPage = tree.GetReadOnlyPage(currentNode->PageNumber);
                                     var nestedPage = GetNestedMultiValuePage(overFlowPage.Base + Constants.TreePageHeaderSize, currentNode);
 
                                     multiValues.NumberOfEntries += nestedPage.NumberOfEntries;

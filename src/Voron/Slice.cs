@@ -122,15 +122,12 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ReleaseExternal(ByteStringContext context)
-        {
-            context.ReleaseExternal(ref Content);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release(ByteStringContext context)
         {
-            context.Release(ref Content);
+            if (Content.IsExternal)
+                context.ReleaseExternal(ref Content);
+            else
+                context.Release(ref Content);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

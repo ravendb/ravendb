@@ -25,8 +25,8 @@ namespace FastTests.Voron.Bugs
                 {
                     foreach (var tree in trees)
                     {
-                        tx.ReadTree( tree).Add(string.Format("key/{0}/{1}/1", new string('0', 1000), a), new MemoryStream());
-                        tx.ReadTree( tree).Add(string.Format("key/{0}/{1}/2", new string('0', 1000), a), new MemoryStream());
+                        tx.ReadTree(tree).Add(string.Format("key/{0}/{1}/1", new string('0', 1000), a), new MemoryStream());
+                        tx.ReadTree(tree).Add(string.Format("key/{0}/{1}/2", new string('0', 1000), a), new MemoryStream());
                     }
 
                     tx.Commit();

@@ -35,7 +35,7 @@ namespace Voron.Data.BTrees
         {
             using (DisableFreeSpaceUsageIfSplittingRootTree())
             {
-                _tree.ClearRecentFoundPages();
+                _tree.ClearPagesCache();
                 if (_cursor.PageCount <= 1) // the root page
                 {
                     RebalanceRoot(page);
@@ -336,7 +336,7 @@ namespace Voron.Data.BTrees
             while (key.Size == 0)
             {
                 Debug.Assert(page.IsBranch);
-                page = _tx.GetReadOnlyTreePage(node->PageNumber);
+                page = _tree.GetReadOnlyPage(node->PageNumber);
                 node = page.GetNode(0);
                 key = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node);
             }

@@ -242,7 +242,7 @@ namespace Sparrow
             if ( this.Key != _pointer->Key)
             {
                 if (this.Key >> 16 != _pointer->Key >> 16)
-                    throw new InvalidOperationException("The owner context for the ByteString and the unmanaged storage are different. This is a defect on the implementation of the ByteStringContext class");
+                    throw new InvalidOperationException("The owner context for the ByteString and the unmanaged storage are different. Make sure you havent killed the allocator and kept a reference to the ByteString outside of its scope.");
 
                 Debug.Assert((this.Key & 0x0000000FFFFFFFF) != (_pointer->Key & 0x0000000FFFFFFFF));
                 throw new InvalidOperationException("The key for the ByteString and the unmanaged storage are different. This is a dangling pointer. Check your .Release() statements and aliases in the calling code.");                                    
@@ -817,6 +817,8 @@ namespace Sparrow
             if (value._pointer == null)
                 return;
 
+            Debug.Assert(value.IsExternal, "Cannot release as external an internal pointer.");
+
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
 
@@ -850,6 +852,8 @@ namespace Sparrow
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
             if (value._pointer == null)
                 return;
+
+            Debug.Assert(!value.IsExternal, "Cannot release as internal an external pointer.");
 
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);

@@ -26,6 +26,7 @@ namespace Voron.Data.Fixed
         private readonly ushort _valSize;
         private readonly int _entrySize;
         private readonly int _maxEmbeddedEntries;
+        private readonly PageLocator _pageLocator;
         private RootObjectType? _type;
         private Stack<FixedSizeTreePage> _cursor;
         private int _changes;
@@ -54,6 +55,7 @@ namespace Voron.Data.Fixed
             _parent = parent;
             _valSize = valSize;
             _treeName = treeName.Clone(_tx.Allocator);
+            _pageLocator = new PageLocator(tx, 8);
 
             _entrySize = sizeof(long) + _valSize;
             _maxEmbeddedEntries = 512 / _entrySize;
@@ -113,7 +115,7 @@ namespace Voron.Data.Fixed
 
         public bool Add(long key, Slice val)
         {
-            if (_valSize == 0 && (val.HasValue && val.Size != 0))
+            if (_valSize == 0 && val.HasValue && val.Size != 0)
                 throw new InvalidOperationException("When the value size is zero, no value can be specified");
             if (_valSize != 0 && !val.HasValue)
                 throw new InvalidOperationException("When the value size is not zero, the value must be specified");
@@ -214,7 +216,7 @@ namespace Voron.Data.Fixed
             var header = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
 
             var stack = new Stack<FixedSizeTreePage>();
-            stack.Push(_tx.GetReadOnlyFixedSizeTreePage(header->RootPageNumber));
+            stack.Push(GetReadOnlyPage(header->RootPageNumber));
 
             var numberOfEntriesInTree = 0;
 
@@ -227,7 +229,7 @@ namespace Voron.Data.Fixed
 
                 var prev = KeyFor(cur, 0);
                 if (cur.IsBranch)
-                    stack.Push(_tx.GetReadOnlyFixedSizeTreePage(PageValueFor(cur, 0)));
+                    stack.Push(GetReadOnlyPage(PageValueFor(cur, 0)));
                 else
                     numberOfEntriesInTree++;
 
@@ -238,7 +240,7 @@ namespace Voron.Data.Fixed
                         throw new InvalidOperationException($"Page {cur.PageNumber} is not sorted");
 
                     if (cur.IsBranch)
-                        stack.Push(_tx.GetReadOnlyFixedSizeTreePage(PageValueFor(cur, i)));
+                        stack.Push(GetReadOnlyPage(PageValueFor(cur, i)));
                     else
                         numberOfEntriesInTree++;
                 }
@@ -262,10 +264,15 @@ namespace Voron.Data.Fixed
             page.StartPosition = (ushort)Constants.FixedSizeTreePageHeaderSize;
         }
 
+        internal FixedSizeTreePage GetReadOnlyPage(long pageNumber)
+        {
+            return _pageLocator.GetReadOnlyPage(pageNumber).ToFixedSizeTreePage();
+        }
+
         private FixedSizeTreePage FindPageFor(long key)
         {
             var header = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
-            var page = _tx.GetReadOnlyFixedSizeTreePage(header->RootPageNumber);
+            var page = GetReadOnlyPage(header->RootPageNumber);
             if (_cursor == null)
                 _cursor = new Stack<FixedSizeTreePage>();
             else
@@ -278,7 +285,7 @@ namespace Voron.Data.Fixed
                 if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                     page.LastSearchPosition--;
                 var childPageNumber = PageValueFor(page, page.LastSearchPosition);
-                page = _tx.GetReadOnlyFixedSizeTreePage(childPageNumber);
+                page = GetReadOnlyPage(childPageNumber);
             }
 
             BinarySearch(page, key);
@@ -316,6 +323,8 @@ namespace Voron.Data.Fixed
             {
                 _tx.FreePage(pageNumber);
             }
+
+            _pageLocator.Reset(pageNumber);
         }
 
         public FixedSizeTreePage ModifyPage(FixedSizeTreePage page)
@@ -326,6 +335,8 @@ namespace Voron.Data.Fixed
             var newPage = _tx.ModifyPage(page.PageNumber).ToFixedSizeTreePage();
             newPage.LastSearchPosition = page.LastSearchPosition;
             newPage.LastMatch = page.LastMatch;
+
+            _pageLocator.Reset(page.PageNumber);
 
             return newPage;
         }
@@ -507,7 +518,7 @@ namespace Voron.Data.Fixed
             }
         }
 
-        private unsafe ushort CopyEmbeddedContentToTempPage(long key, TemporaryPage tmp, out bool isNew, out int newSize, out int srcCopyStart)
+        private ushort CopyEmbeddedContentToTempPage(long key, TemporaryPage tmp, out bool isNew, out int newSize, out int srcCopyStart)
         {
             var ptr = _parent.DirectRead(_treeName);
             if (ptr == null)
@@ -638,7 +649,7 @@ namespace Voron.Data.Fixed
                     break;
                 case RootObjectType.FixedSizeTree:
                     var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
-                    var root = _tx.GetReadOnlyFixedSizeTreePage(largePtr->RootPageNumber);
+                    var root = GetReadOnlyPage(largePtr->RootPageNumber);
 
                     var stack = new Stack<FixedSizeTreePage>();
                     stack.Push(root);
@@ -653,7 +664,7 @@ namespace Voron.Data.Fixed
                             for (int j = 0; j < p.NumberOfEntries; j++)
                             {
                                 var chhildNumber = PageValueFor(p, j);
-                                stack.Push(_tx.GetReadOnlyFixedSizeTreePage(chhildNumber));
+                                stack.Push(GetReadOnlyPage(chhildNumber));
                             }
                         }
                     }
@@ -681,7 +692,7 @@ namespace Voron.Data.Fixed
                     return _lastMatch == 0;
                 case RootObjectType.FixedSizeTree:
                     var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
-                    var page = _tx.GetReadOnlyFixedSizeTreePage(largePtr->RootPageNumber);
+                    var page = GetReadOnlyPage(largePtr->RootPageNumber);
 
                     while (page.IsLeaf == false)
                     {
@@ -689,7 +700,7 @@ namespace Voron.Data.Fixed
                         if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                             page.LastSearchPosition--;
                         var childPageNumber = PageValueFor(page, page.LastSearchPosition);
-                        page = _tx.GetReadOnlyFixedSizeTreePage(childPageNumber);
+                        page = GetReadOnlyPage(childPageNumber);
                     }
                     dataStart = page.Pointer + page.StartPosition;
 
@@ -884,7 +895,7 @@ namespace Voron.Data.Fixed
                 }
 
                 var nextPageNum = PageValueFor(page, page.LastSearchPosition);
-                var childPage = _tx.GetReadOnlyFixedSizeTreePage(nextPageNum);
+                var childPage = GetReadOnlyPage(nextPageNum);
                 if (childPage.IsLeaf)
                     return childPage;
                 _cursor.Push(childPage);
@@ -1060,7 +1071,7 @@ namespace Voron.Data.Fixed
                 {
                     var childPage = PageValueFor(page, 0);
                     var rootPageNum = page.PageNumber;
-                    Memory.Copy(page.Pointer, _tx.GetReadOnlyFixedSizeTreePage(childPage).Pointer, _tx.DataPager.PageSize);
+                    Memory.Copy(page.Pointer, GetReadOnlyPage(childPage).Pointer, _tx.DataPager.PageSize);
                     page.PageNumber = rootPageNum;//overwritten by copy
 
                     if (largeTreeHeader != null)
@@ -1133,7 +1144,7 @@ namespace Voron.Data.Fixed
                 // the current page is the leftmost one, so let us try steal some data
                 // from the one on the right
                 var siblingNum = PageValueFor(parentPage, 1);
-                var siblingPage = _tx.GetReadOnlyFixedSizeTreePage(siblingNum);
+                var siblingPage = GetReadOnlyPage(siblingNum);
                 if (siblingPage.FixedTreeFlags != page.FixedTreeFlags)
                     return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
 
@@ -1179,7 +1190,7 @@ namespace Voron.Data.Fixed
             else // we aren't the leftmost item, so we will take from the page on our left
             {
                 var siblingNum = PageValueFor(parentPage, parentPage.LastSearchPosition - 1);
-                var siblingPage = _tx.GetReadOnlyFixedSizeTreePage(siblingNum);
+                var siblingPage = GetReadOnlyPage(siblingNum);
                 siblingPage = ModifyPage(siblingPage);
                 if (siblingPage.FixedTreeFlags != page.FixedTreeFlags)
                     return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
@@ -1287,14 +1298,14 @@ namespace Voron.Data.Fixed
                 case RootObjectType.FixedSizeTree:
                     var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
 
-                    var page = _tx.GetReadOnlyFixedSizeTreePage(largePtr->RootPageNumber);
+                    var page = GetReadOnlyPage(largePtr->RootPageNumber);
                     while (page.IsLeaf == false)
                     {
                         BinarySearch(page, key);
                         if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                             page.LastSearchPosition--;
                         var childPageNumber = PageValueFor(page, page.LastSearchPosition);
-                        page = _tx.GetReadOnlyFixedSizeTreePage(childPageNumber);
+                        page = GetReadOnlyPage(childPageNumber);
                     }
                     dataStart = page.Pointer + page.StartPosition;
 

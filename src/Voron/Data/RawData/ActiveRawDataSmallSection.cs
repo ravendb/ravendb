@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow;
 using Voron.Data.BTrees;
@@ -185,8 +186,13 @@ namespace Voron.Data.RawData
             return pageHeader;
         }
 
-
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static ActiveRawDataSmallSection Create(LowLevelTransaction tx, string owner)
+        {
+            return Create(tx, Slice.From(tx.Allocator, owner, ByteStringType.Immutable));
+        }
+
+        public static ActiveRawDataSmallSection Create(LowLevelTransaction tx, Slice owner)
         {
             var numberOfPagesInSmallSection = GetNumberOfPagesInSmallSection(tx);
             Debug.Assert((numberOfPagesInSmallSection * 2) + ReservedHeaderSpace <= tx.DataPager.PageSize);
@@ -202,7 +208,7 @@ namespace Voron.Data.RawData
             sectionHeader->NumberOfEntries = 0;
             sectionHeader->NumberOfPages = numberOfPagesInSmallSection;
             sectionHeader->LastUsedPage = 0;
-            sectionHeader->SectionOwnerHash = Hashing.XXHash64.CalculateRaw(owner);
+            sectionHeader->SectionOwnerHash = Hashing.XXHash64.Calculate(owner.Content.Ptr, owner.Content.Length);
 
             var availablespace = (ushort*)((byte*)sectionHeader + ReservedHeaderSpace);
 

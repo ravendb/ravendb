@@ -17,11 +17,11 @@ namespace Voron
         {
             Debug.Assert(tx != null);
 
-            this._tx = tx;
-            this._cache = new PageHandlePtr[cacheSize];
+            _tx = tx;
+            _cache = new PageHandlePtr[cacheSize];
         }
 
-        public Page GetReadOnlyPage (long pageNumber)
+        public Page GetReadOnlyPage(long pageNumber)
         {
             int position = _current;
 

@@ -55,11 +55,7 @@ namespace Voron.Data.Tables
             if (size < 0)
                 throw new ArgumentException("Size cannot be negative", nameof(size));
 
-            _values.Add(new PtrSize
-            {
-                Size = size,
-                Ptr = ptr
-            });
+            _values.Add(PtrSize.Create(ptr, size));
             _size += size;
             if (_size + _values.Count + 1 > byte.MaxValue)
             {

@@ -1,9 +1,8 @@
 using Sparrow;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Runtime.CompilerServices;
 using Voron.Data.BTrees;
 using Voron.Data.RawData;
 using Voron.Impl;
@@ -276,6 +275,12 @@ namespace Voron.Data.Tables
             return this;
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void Create(Transaction tx, string name)
+        {
+            Create(tx, Slice.From(tx.Allocator, name, ByteStringType.Immutable));
+        }
+
         /// <summary>
         /// A table is stored inside a tree, and has the following keys in it
         /// 
@@ -290,7 +295,7 @@ namespace Voron.Data.Tables
         ///  - schemas -> schema definition for the table
         /// 
         /// </summary>
-        public void Create(Transaction tx, string name)
+        public void Create(Transaction tx, Slice name)
         {
             if (_primaryKey == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0)
                 throw new InvalidOperationException($"Cannot create table {name} without a primary key and no indexes");
