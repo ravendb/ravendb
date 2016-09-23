@@ -2,11 +2,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using metrics;
-using metrics.Core;
-using Raven.Bundles.Replication.Tasks;
+using Raven.Imports.metrics;
+using Raven.Imports.metrics.Core;
 
 namespace Raven.Database.TimeSeries
 {

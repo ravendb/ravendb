@@ -92,9 +92,8 @@
     <NoWarn>618</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="metrics">
-      <HintPath>..\..\metrics-net\bin\lib\net40\metrics.dll</HintPath>
-      <HintPath>..\SharedLibs\metrics.dll</HintPath>
+    <Reference Include="raven.metrics">
+      <HintPath>..\SharedLibs\raven.metrics.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Owin, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Owin.3.0.1\lib\net45\Microsoft.Owin.dll</HintPath>
