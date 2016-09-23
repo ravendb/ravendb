@@ -45,17 +45,7 @@ namespace Raven.Server.Documents.Indexes
             DocumentDatabase = database;
             _logger = LoggingSource.Instance.GetLogger<IndexStorage>(DocumentDatabase.Name);
 
-            Dictionary<string, HashSet<CollectionName>> referencedCollections = null;
-            switch (index.Type)
-            {
-                case IndexType.Map:
-                    referencedCollections = ((StaticMapIndex)index)._compiled.ReferencedCollections;
-                    break;
-                case IndexType.MapReduce:
-                    referencedCollections = ((MapReduceIndex)index)._compiled.ReferencedCollections;
-                    break;
-            }
-
+            var referencedCollections = index.GetReferencedCollections();
             if (referencedCollections != null)
                 _referencedCollections = referencedCollections
                     .SelectMany(x => x.Value)

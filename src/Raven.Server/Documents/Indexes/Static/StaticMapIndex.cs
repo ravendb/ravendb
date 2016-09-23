@@ -182,6 +182,11 @@ namespace Raven.Server.Documents.Indexes.Static
             return true;
         }
 
+        public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
+        {
+            return _compiled.ReferencedCollections;
+        }
+
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
             return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, StaticIndexDocsEnumerator.EnumerationType.Index);

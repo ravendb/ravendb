@@ -143,6 +143,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return true;
         }
 
+        public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
+        {
+            return _compiled.ReferencedCollections;
+        }
+
         private class AnonymusObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>
         {
             private readonly MapReduceIndex _index;
