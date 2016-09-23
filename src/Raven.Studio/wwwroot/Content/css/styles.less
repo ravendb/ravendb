@@ -538,6 +538,17 @@ hr {
                 border-radius: 50%;
                 display: none;
 
+                &.pop {
+                    &:after {
+                        opacity:0;
+                        position:absolute;
+                        width:100%;
+                        height:100%;
+                        border-radius:50%;
+                        background-color:@brand-primary;
+                        .fadeoutzoom-style;
+                    }
+                }
 
             }
         }

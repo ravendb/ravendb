@@ -1,3 +1,41 @@
+@-webkit-keyframes fadeoutzoom {
+    0%, 100% {
+        -webkit-transition-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+        transition-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+    }
+
+    0% {
+        -webkit-transform: scale3d(1, 1, 1);
+        transform: scale3d(1, 1, 1);
+        opacity:.5;
+    }
+
+    100% {
+        -webkit-transform: scale3d(5, 5, 5);
+        transform: scale3d(5, 5, 5);
+        opacity:0;
+    }
+}
+
+@keyframes fadeoutzoom {
+    0%, 100% {
+        -webkit-transition-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+        transition-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+    }
+
+    0% {
+        -webkit-transform: scale3d(1, 1, 1);
+        transform: scale3d(1, 1, 1);
+        opacity:.5;
+    }
+
+    100% {
+        -webkit-transform: scale3d(5, 5, 5);
+        transform: scale3d(5, 5, 5);
+        opacity:0;
+    }
+}
+
 @-webkit-keyframes bounceIn {
     0%, 20%, 40%, 60%, 80%, 100% {
         -webkit-transition-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
@@ -198,10 +236,18 @@
     }
 }
 
+@fadeoutzoom-properties: fadeoutzoom .5s 1 both;
 @bouncein-properties: bounceIn .75s 1 both;
 @spin-properties: spin .75s infinite cubic-bezier(0.6, 0.02, 0.4, 0.99);
 @slidein-properties: slidein .25s cubic-bezier(0, 0, 0, 1);
 @topexpand-properties: topexpand .25s cubic-bezier(0, 0, 0, 1);
+
+.fadeoutzoom-style {
+    -webkit-animation: @fadeoutzoom-properties;
+    -moz-animation: @fadeoutzoom-properties;
+    -ms-animation: @fadeoutzoom-properties;
+    animation: @fadeoutzoom-properties;
+}
 
 .bouncein-style {
    -webkit-animation: @bouncein-properties;
