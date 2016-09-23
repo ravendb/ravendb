@@ -25,8 +25,7 @@
   },
 
   "frameworks": {
-    "netstandard1.6": {
-      "imports": [ "dnxcore50" ],
+    "netstandard1.3": {
       "buildOptions": {
         "define": [ "DNXCORE50", "PORTABLE", "DOTNET" ]
       }

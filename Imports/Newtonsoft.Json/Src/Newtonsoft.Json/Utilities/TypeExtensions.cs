@@ -34,6 +34,17 @@ using System.Linq;
 
 namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
+#if (DNXCORE50)
+    internal enum MemberTypes
+    {
+        Property = 0,
+        Field = 1,
+        Event = 2,
+        Method = 3,
+        Other = 4
+    }
+#endif
+
     internal static class TypeExtensions
     {
 #if NETFX_CORE || PORTABLE
@@ -99,7 +110,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
 
         public static MemberTypes MemberType(this MemberInfo memberInfo)
         {
-            return memberInfo.MemberType;
+            return memberInfo.MemberType();
         }
 
         public static bool ContainsGenericParameters(this Type type)
