@@ -1,0 +1,239 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="theme-color" content="#FFF">
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <title>Title</title>
+
+    <!--  <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="icon" href="favicon.ico">-->
+
+    <link href='https://fonts.googleapis.com/css?family=Lato:400,300,700,900,400italic,700italic' rel='stylesheet' type='text/css'>
+
+    <link rel="stylesheet" type="text/less" href="../wwwroot/Content/css/bootstrap/bootstrap.less" />
+    <link rel="stylesheet" type="text/less" href="../wwwroot/Content/css/styles.less">
+
+    <!--[if IE 8]>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+</head>
+<body>
+    <nav id="topbar"
+    class="navbar navbar-inverse navbar-fixed-top"
+    data-load="partials/topbar.html">
+</nav>
+
+<nav id="main-menu"
+class="main-menu"
+data-load="partials/menu.html" >
+</nav>
+
+
+<div class="container-fluid content-container">
+    <div class="content-container-margin">
+        <h1>Subscriptions</h1>
+
+        <div class="subscription panel panel-default" data-subscription-id="1" >
+            <div class="panel-heading">
+                <strong>ID 1</strong> &nbsp;
+                <small>
+                    <a data-toggle="collapse" href=".subscription[data-subscription-id=1] .subscription-details" >
+                        Show details
+                    </a>
+                </small>
+            </div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-sm-3 text-right">
+                        <label for="subscription1-etag">
+                            Acknowledged ETag
+                        </label>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="editable-input-inline etagInput"  >
+                            <input type="text" class="form-control edit-inline" id="subscription1-etag" placeholder="E-Tag" value="234758972348" />
+                            <span class="static-name">234758972348</span>
+                            <a class="icon-edit reset-color btn-toggle"
+                            data-target=".subscription[data-subscription-id=1] .etagInput" data-class="edit"></a>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="row subscription-details collapse">
+                    <div class="col-sm-12">
+                        <div class="row">
+                            <div class="col-sm-3 text-right">
+                                <label for="subscription1-lastBatchSentTime">Last batch sent time</label>
+                            </div>
+                            <div class="col-sm-4">
+                                <span class="static-name">2016-09-23T06:11:22.4291379Z</span>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3 text-right">
+                                <label for="subscription1-lastClientActivityTime">Last client activity time</label>
+                            </div>
+                            <div class="col-sm-4">
+                                <span class="static-name">2016-09-23T06:11:22.4291379Z</span>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3 text-right">
+                                <label for="subscription1-criteria">Criteria</label>
+                            </div>
+                            <div class="col-sm-4">
+                                <ul class="criteria-list list-unstyled">
+                                    <li>Start ETag</li>
+                                    <li>Properties cannot match values:
+                                        <ul>
+                                            <li>Name: 'John'</li>
+                                            <li>Age: 30</li>
+                                        </ul>
+                                    </li>
+                                    <li>Properties must match values:
+                                        <ul>
+                                            <li>FavouriteColor: 'Red'</li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3 text-right">
+                                <label for="subscription1-criteria">Open</label>
+                            </div>
+                            <div class="col-sm-4">
+                                <span class="static-name">Yes</span>
+                            </div>
+                        </div>
+
+                        <!-- is subscription connection is open -->
+                        <div class="col-sm-12">
+                            <div class="connection-options" >
+                                <div class="row">
+                                    <div class="col-sm-3 text-primary text-right">
+                                        <h3>Connection options</h3>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-3 text-right">
+                                        <label>Connection ID</label>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <span class="static-name">9124509</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-3 text-right">
+                                        <label>Client alive notification interval</label>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <span class="static-name">5 s</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-3 text-right">
+                                        <label>Time to wait before connection retry</label>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <span class="static-name">43 s</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-3 text-right">
+                                        <label>Opening strategy</label>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <span class="static-name">OpenIfFree</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-3 text-right">
+                                        <label>Pulling request timeout</label>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <span class="static-name">123</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-3 text-right">
+                                        <label>Ignore subscribers errors</label>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <span class="static-name">Yes</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-3 text-right text-primary">
+                                        <h4>Batch options</h4>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-3 text-right">
+                                        <label>Acknowledgment timeout</label>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <span class="static-name">436</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-3 text-right">
+                                        <label>Max document count</label>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <span class="static-name">50</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-3 text-right">
+                                        <label>Max batch size</label>
+                                    </div>
+                                    <div class="col-sm-3">
+                                        <span class="static-name">2MB</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- //is subscription connection is open -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript" src="js/setup.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/less.js/2.7.1/less.min.js"></script>
+<script src="../wwwroot/Content/ace/ace.js" type="text/javascript" charset="utf-8"></script>
+<script>
+var editor = ace.edit("docEditor");
+editor.setTheme("ace/theme/pastel_on_dark");
+editor.getSession().setMode("ace/mode/json");
+</script>
+</body>
+</html>
