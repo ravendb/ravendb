@@ -12,15 +12,15 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
-using metrics;
-using metrics.Core;
+using Raven.Imports.metrics;
+using Raven.Imports.metrics.Core;
 
 namespace Raven.Database.Util
 {
     [CLSCompliant(false)]
     public class MetricsCountersManager : IDisposable
     {
-        readonly Metrics dbMetrics = new Metrics();
+        private readonly Metrics dbMetrics = new Metrics();
 
         public HistogramMetric StaleIndexMaps { get; private set; }
 
