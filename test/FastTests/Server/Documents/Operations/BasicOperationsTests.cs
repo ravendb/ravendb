@@ -24,11 +24,11 @@ namespace FastTests.Server.Documents.Operations
                 var notifications = new BlockingCollection<OperationStatusChangeNotification>();
                 var mre = new ManualResetEventSlim(false);
 
-                var operationId = db.DatabaseOperations.GetNextOperationId();
+                var operationId = db.Operations.GetNextOperationId();
 
                 db.Notifications.OnOperationStatusChange += notifications.Add;
 
-                db.DatabaseOperations.AddOperation("Operations Test", (DatabaseOperations.PendingOperationType) 0, 
+                db.Operations.AddOperation("Operations Test", (DatabaseOperations.PendingOperationType) 0, 
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                         var p = new DeterminateProgress
@@ -90,13 +90,13 @@ namespace FastTests.Server.Documents.Operations
         {
             using (var db = CreateDocumentDatabase())
             {
-                long operationId = db.DatabaseOperations.GetNextOperationId();
+                long operationId = db.Operations.GetNextOperationId();
 
                 var notifications = new BlockingCollection<OperationStatusChangeNotification>();
 
                 db.Notifications.OnOperationStatusChange += notifications.Add;
 
-                db.DatabaseOperations.AddOperation("Operations Test", (DatabaseOperations.PendingOperationType)0,
+                db.Operations.AddOperation("Operations Test", (DatabaseOperations.PendingOperationType)0,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                        throw new Exception("Something bad happened");
@@ -126,11 +126,11 @@ namespace FastTests.Server.Documents.Operations
 
                 var notifications = new BlockingCollection<OperationStatusChangeNotification>();
 
-                var operationId = db.DatabaseOperations.GetNextOperationId();
+                var operationId = db.Operations.GetNextOperationId();
 
                 db.Notifications.OnOperationStatusChange += notifications.Add;
 
-                db.DatabaseOperations.AddOperation("Cancellation Test", (DatabaseOperations.PendingOperationType)0,
+                db.Operations.AddOperation("Cancellation Test", (DatabaseOperations.PendingOperationType)0,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                         token.Token.ThrowIfCancellationRequested();
