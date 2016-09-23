@@ -110,6 +110,50 @@
     }
 }
 
+@-webkit-keyframes bounceInOnce {
+    0%, 70%, 100% {
+        -webkit-transition-timing-function: cubic-bezier(0.850, 0.000, 0.250, 0.995);
+        transition-timing-function: cubic-bezier(0.850, 0.000, 0.250, 0.995);
+    }
+
+    0% {
+        -webkit-transform: scale3d(.3, .3, .3);
+        transform: scale3d(.3, .3, .3);
+    }
+
+    70% {
+        -webkit-transform: scale3d(1.1, 1.1, .1.1);
+        transform: scale3d(1.1, 1.1, .1.1);
+    }
+
+    100% {
+        -webkit-transform: scale3d(1, 1, 1);
+        transform: scale3d(1, 1, 1);
+    }
+}
+
+@keyframes bounceInOnce {
+    0%, 70%, 100% {
+        -webkit-transition-timing-function: cubic-bezier(0.850, 0.000, 0.250, 0.995);
+        transition-timing-function: cubic-bezier(0.850, 0.000, 0.250, 0.995);
+    }
+
+    0% {
+        -webkit-transform: scale3d(.3, .3, .3);
+        transform: scale3d(.3, .3, .3);
+    }
+
+    70% {
+        -webkit-transform: scale3d(1.1, 1.1, 1.1);
+        transform: scale3d(1.1, 1.1, 1.1);
+    }
+
+    100% {
+        -webkit-transform: scale3d(1, 1, 1);
+        transform: scale3d(1, 1, 1);
+    }
+}
+
 @-moz-keyframes spin {
     from {
         -moz-transform: rotate(0deg);
@@ -238,6 +282,7 @@
 
 @fadeoutzoom-properties: fadeoutzoom .5s 1 both;
 @bouncein-properties: bounceIn .75s 1 both;
+@bounceinonce-properties: bounceInOnce .15s 1 both;
 @spin-properties: spin .75s infinite cubic-bezier(0.6, 0.02, 0.4, 0.99);
 @slidein-properties: slidein .25s cubic-bezier(0, 0, 0, 1);
 @topexpand-properties: topexpand .25s cubic-bezier(0, 0, 0, 1);
@@ -254,6 +299,13 @@
     -moz-animation: @bouncein-properties;
     -ms-animation: @bouncein-properties;
     animation: @bouncein-properties;
+}
+
+.bounceinonce-style {
+   -webkit-animation: @bounceinonce-properties;
+    -moz-animation: @bounceinonce-properties;
+    -ms-animation: @bounceinonce-properties;
+    animation: @bounceinonce-properties;
 }
 
 .spin-style {

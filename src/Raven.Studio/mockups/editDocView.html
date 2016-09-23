@@ -42,6 +42,9 @@
 
 </head>
 <body>
+
+    <div class="processing-spinner"></div>
+
     <nav id="topbar"
          class="navbar navbar-inverse navbar-fixed-top"
          data-load="partials/topbar.html">
@@ -51,6 +54,10 @@
          class="main-menu"
          data-load="partials/menu.html" >
     </nav>
+
+    <div id="notification-center"
+         data-load="partials/notification-center.html">
+    </div>
 
     <div class="container-fluid content-container enable-right-options-panel">
         <div class="content-container-margin">
@@ -147,7 +154,7 @@
             </div>
 
             <div class="flex-window">
-                <div class="flex-winddow-head">
+                <div class="flex-window-head">
                     <div class="clearfix">
                         <h2 class="pull-left-md">
                             <a class="reset-color btn-toggle" data-target=".fav-object" data-class="icon-star-filled favorite">
