@@ -72,8 +72,8 @@
     <Reference Include="ICSharpCode.NRefactory.Xml">
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
     </Reference>
-    <Reference Include="metrics">
-      <HintPath>..\SharedLibs\metrics.dll</HintPath>
+    <Reference Include="raven.metrics">
+      <HintPath>..\SharedLibs\raven.metrics.dll</HintPath>
     </Reference>
     <Reference Include="Mono.Cecil">
       <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.dll</HintPath>

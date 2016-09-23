@@ -6,15 +6,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
-using Jint.Runtime.References;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using metrics.Core;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
+using Raven.Imports.metrics.Core;
 
 namespace Raven.Database.Storage
 {

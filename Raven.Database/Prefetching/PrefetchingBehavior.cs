@@ -10,8 +10,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using metrics;
-using metrics.Core;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -20,7 +18,8 @@ using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
-using Raven.Database.Util;
+using Raven.Imports.metrics;
+using Raven.Imports.metrics.Core;
 
 namespace Raven.Database.Prefetching
 {

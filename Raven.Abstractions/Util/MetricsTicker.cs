@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using metrics.Core;
+using Raven.Imports.metrics.Core;
 using Sparrow.Collections;
 
 namespace Raven.Abstractions.Util

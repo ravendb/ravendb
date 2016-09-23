@@ -9,19 +9,16 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Json.Linq;
 using System.Collections.Generic;
-using metrics;
-using metrics.Core;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
-using Raven.Database.Util;
+using Raven.Imports.metrics;
+using Raven.Imports.metrics.Core;
 
 namespace Raven.Abstractions.Extensions
 {
