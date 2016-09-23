@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 stats.RecordReduceSuccesses(numberOfEntriesToReduce);
             }
-            catch (Exception e)
+                catch (Exception e)
             {
                 foreach (var item in _aggregationBatch)
                 {
@@ -355,15 +355,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             try
             {
                 result = AggregateOn(aggregationBatch, indexContext, token);
-            }
-            catch (Exception)
-            {
-                foreach (var item in aggregationBatch)
-                {
-                    item.Dispose();
-                }
-
-                throw;
             }
             finally
             {
