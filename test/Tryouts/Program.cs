@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using FastTests.Server.Documents.Replication;
 using Raven.Client.Document;
@@ -15,26 +16,33 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
-
-            using (var a = new SlowTests.MailingList.SumTests())
+            Console.WriteLine("Starting");
+            using (var store = new DocumentStore
             {
-                a.Can_get_application_counts_by_vacancy_id();
+                DefaultDatabase = "licensing",
+                Url = "http://localhost:8080"
+            })
+            {
+                store.Initialize();
+
+            var sp = Stopwatch.StartNew();
+                store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-19 13-00.ravendbdump.gzip", CancellationToken.None)
+                    .Wait();
+
+
+                Console.WriteLine("Inserted in " + sp.Elapsed);
+                sp.Restart();
+                while (true)
+                {
+                    if (store.DatabaseCommands.GetStatistics().Indexes.All(x=>x.IsStale == false))
+                    {
+                        break;
+                    }
+                    Thread.Sleep(100);
+                }
+                Console.WriteLine("Indexed in " + sp.Elapsed);
+
             }
-            //Console.WriteLine("Starting");
-            //var sp = Stopwatch.StartNew();
-            //using (var store = new DocumentStore
-            //{
-            //    DefaultDatabase = "licensing",
-            //    Url = "http://localhost:8080"
-            //})
-            //{
-            //    store.Initialize();
-
-            //    store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-19 13-00.ravendbdump.gzip", CancellationToken.None)
-            //        .Wait();
-
-            //}
-            //    Console.WriteLine(sp.Elapsed);
         }
 
     }

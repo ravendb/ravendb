@@ -701,6 +701,8 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexStats GetStats()
         {
+            if (_contextPool == null)
+                throw new ObjectDisposedException("Index " + Name);
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
