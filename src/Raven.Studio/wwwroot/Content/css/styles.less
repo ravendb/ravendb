@@ -1,5 +1,6 @@
 
 @import "bootstrap/variables.less";
+@import "bootstrap/buttons.less";
 @import "fonts.less";
 @import "bootstrap/mixins";
 @import "checkbox-toggle.less";
@@ -214,6 +215,15 @@ hr {
 }
 
 .editable-input-inline {
+
+    .btn.edit-button {
+        .btn-primary;
+
+        .text::before {
+            content: 'Change'
+        }
+    }
+
     .edit-inline {
         display: none;
     }
@@ -235,6 +245,14 @@ hr {
         .icon-edit:before {
             content: "\e917";
             color: @brand-success;
+        }
+
+        .btn.edit-button {
+            .btn-success;
+
+            .text::before {
+                content: 'Save'
+            }
         }
 
     }
@@ -332,7 +350,7 @@ hr {
     width: 130px;
     height: 130px;
     z-index: 9990;
-    
+
     @processing-color-1:    rgba(0,0,0,0);
     @processing-color-2:    @brand-primary;
 
@@ -1624,5 +1642,12 @@ pre {
         -o-transform: translateX(0%);
         -ms-transform: translateX(0%);
         transform: translateX(0%);
+    }
+}
+
+.subscription {
+
+    .subscription-etagInput {
+        display: inline;
     }
 }

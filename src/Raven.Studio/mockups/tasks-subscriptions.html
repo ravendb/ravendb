@@ -42,15 +42,22 @@
 
 </head>
 <body>
-    <nav id="topbar"
-    class="navbar navbar-inverse navbar-fixed-top"
-    data-load="partials/topbar.html">
-</nav>
 
-<nav id="main-menu"
-class="main-menu"
-data-load="partials/menu.html" >
-</nav>
+    <div class="processing-spinner"></div>
+
+    <nav id="topbar"
+         class="navbar navbar-inverse navbar-fixed-top"
+         data-load="partials/topbar.html">
+    </nav>
+
+    <nav id="main-menu"
+         class="main-menu"
+         data-load="partials/menu.html" >
+    </nav>
+
+    <div id="notification-center"
+         data-load="partials/notification-center.html">
+    </div>
 
 
 <div class="container-fluid content-container">
@@ -59,31 +66,33 @@ data-load="partials/menu.html" >
 
         <div class="subscription panel panel-default" data-subscription-id="1" >
             <div class="panel-heading">
-                <strong>ID 1</strong> &nbsp;
-                <small>
-                    <a data-toggle="collapse" href=".subscription[data-subscription-id=1] .subscription-details" >
-                        Show details
-                    </a>
-                </small>
-            </div>
-            <div class="panel-body">
                 <div class="row">
-                    <div class="col-sm-3 text-right">
-                        <label for="subscription1-etag">
-                            Acknowledged ETag
-                        </label>
+                    <div class="col-sm-3">
+                        <strong>ID 157673</strong>
+                        &nbsp;&nbsp;
+                        <a class="subscription-showDetails" data-toggle="collapse" href=".subscription[data-subscription-id=1] .subscription-details" >
+                            Show details
+                        </a>
                     </div>
                     <div class="col-sm-4">
-                        <div class="editable-input-inline etagInput"  >
+                        <span >Acknowledged ETag:</span>&nbsp;
+                        <div class="editable-input-inline subscription-etagInput" >
                             <input type="text" class="form-control edit-inline" id="subscription1-etag" placeholder="E-Tag" value="234758972348" />
-                            <span class="static-name">234758972348</span>
-                            <a class="icon-edit reset-color btn-toggle"
-                            data-target=".subscription[data-subscription-id=1] .etagInput" data-class="edit"></a>
+                            <span class="static-name padding padding-xs">
+                                234758972348
+                            </span>
+                            &nbsp;
+                            <button class="edit-button btn-toggle btn btn-sm"
+                                    data-target=".subscription[data-subscription-id=1] .subscription-etagInput" data-class="edit">
+                                <i class="icon-edit"></i>
+                                <span class="text"></span>
+                            </button>
                         </div>
-
                     </div>
                 </div>
-                <div class="row subscription-details collapse">
+            </div>
+            <div class="panel-body subscription-details collapse">
+                <div class="row">
                     <div class="col-sm-12">
                         <div class="row">
                             <div class="col-sm-3 text-right">
