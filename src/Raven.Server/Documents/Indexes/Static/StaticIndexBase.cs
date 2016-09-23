@@ -21,7 +21,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public readonly Dictionary<string, HashSet<CollectionName>> ReferencedCollections = new Dictionary<string, HashSet<CollectionName>>(StringComparer.OrdinalIgnoreCase);
 
-        public bool HasDynamicFields{ get; set; }
+        public bool HasDynamicFields { get; set; }
+
+        public bool HasBoostedFields { get; set; }
 
         public string Source;
 

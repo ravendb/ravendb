@@ -167,6 +167,7 @@ namespace Raven.Server.Documents.Indexes
 
         public bool IsRunning => _indexingThread != null;
 
+        public virtual bool HasBoostedFields => false;
         protected void Initialize(DocumentDatabase documentDatabase)
         {
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
