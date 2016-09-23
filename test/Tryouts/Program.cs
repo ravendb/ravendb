@@ -15,13 +15,11 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+
+            using (var a = new FastTests.Server.Documents.Indexing.Static.CollisionsOfReduceKeyHashes())
             {
-                using (var x = new AutomaticConflictResolution())
-                {
-                    x.Resolve_to_latest_version_tombstone_is_latest_the_incoming_document_is_replicated();
-                }
-                Console.WriteLine(i + 1);
+                a.Static_index_should_produce_multiple_outputs(numberOfUsers: 100,
+                    locations: new[] {"Israel", "Poland", "USA"}).Wait();
             }
             //Console.WriteLine("Starting");
             //var sp = Stopwatch.StartNew();

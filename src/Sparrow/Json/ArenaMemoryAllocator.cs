@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
+using Sparrow.Binary;
 using Sparrow.Logging;
 
 namespace Sparrow.Json
@@ -31,6 +34,22 @@ namespace Sparrow.Json
                 _logger.Info($"ArenaMemoryAllocator was created with initial capacity of {initialSize:#,#;;0} bytes");
         }
 
+        public bool GrowAllocation(AllocatedMemoryData allocation, int sizeIncrease)
+        {
+            var end = (byte*)allocation.Address + allocation.SizeInBytes;
+            var distance = end - _ptrCurrent;
+            if (distance != 0)
+                return false;
+
+            if (_used + sizeIncrease > _allocated)
+                return false;
+
+            _ptrCurrent += sizeIncrease;
+            _used += sizeIncrease;
+            allocation.SizeInBytes += sizeIncrease;
+            return true;
+        }
+
         public AllocatedMemoryData Allocate(int size)
         {
             if (_isDisposed)
@@ -50,7 +69,6 @@ namespace Sparrow.Json
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"ArenaMemoryAllocator allocated {size:#,#;;0} bytes");
-
             return allocation;
         }
 
@@ -61,16 +79,17 @@ namespace Sparrow.Json
 
         private void GrowArena(int requestedSize)
         {
-            if (requestedSize >= 1024 * 1024 * 1024)
+            const int maxArenaSize = 1024*1024*1024;
+            if (requestedSize >= maxArenaSize)
                 throw new ArgumentOutOfRangeException(nameof(requestedSize));
 
-            int newSize = _allocated;
-            do
-            {
-                newSize *= 2;
-                if (newSize < 0)
-                    newSize = 1024*1024*1024;
-            } while (newSize < requestedSize);
+            // we need the next allocation to cover at least the next expansion (also doubling)
+            // so we'll allocate 3 times as much as was requested, or twice as much as we already have
+            // the idea is that a single allocation can server for multiple (increasing in size) calls
+            int newSize = Math.Max(Bits.NextPowerOf2(requestedSize)*3, _allocated * 2);
+            if (newSize < 0 || newSize > maxArenaSize)
+                newSize = maxArenaSize;
+           
 
             if (_logger.IsInfoEnabled)
             {
@@ -131,6 +150,17 @@ namespace Sparrow.Json
             Marshal.FreeHGlobal(new IntPtr(_ptrStart));
 
             GC.SuppressFinalize(this);
+        }
+
+        public void Return(AllocatedMemoryData allocation)
+        {
+            if ((byte*)allocation.Address != _ptrCurrent - allocation.SizeInBytes ||
+                (byte*)allocation.Address < _ptrStart)
+                return;
+            // since the returned allocation is at the end of the arena, we can just move
+            // the pointer back
+            _used -= allocation.SizeInBytes;
+            _ptrCurrent -= allocation.SizeInBytes;
         }
     }
 
