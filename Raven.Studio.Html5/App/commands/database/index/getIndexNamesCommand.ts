@@ -9,7 +9,11 @@ class getIndexNamesCommand extends commandBase {
     execute(): JQueryPromise<any> {
         var action = this.withType ? "namesWithTypeOnly" : "namesOnly";
         var url = "/indexes/?" + action + "=true";
-        return this.query(url, null, this.db);
+        var args =
+        {
+            pageSize: 1024
+        };
+        return this.query(url, args, this.db);
     }
 }
 
