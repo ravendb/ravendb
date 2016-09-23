@@ -17,7 +17,7 @@ properties {
     $nowarn = "1591,1573"
     
     $dotnet = "dotnet"
-    $dotnetLib = "netstandard1.6"
+    $dotnetLib = "netstandard1.3"
     $dotnetApp = "netcoreapp1.0"
 
     $nuget = "$base_dir\.nuget\NuGet.exe"
@@ -285,9 +285,9 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
     New-Item $build_dir\Output\Web -Type directory | Out-Null
     New-Item $build_dir\Output\Web\bin -Type directory | Out-Null
     New-Item $build_dir\Output\Client -Type directory | Out-Null
-    New-Item $build_dir\Output\Client\netstandard1.6 -Type directory | Out-Null
+    New-Item $build_dir\Output\Client\$dotnetLib -Type directory | Out-Null
     New-Item $build_dir\Output\Bundles -Type directory | Out-Null
-    New-Item $build_dir\Output\Bundles\netstandard1.6 -Type directory | Out-Null
+    New-Item $build_dir\Output\Bundles\$dotnetLib -Type directory | Out-Null
 
     New-Item $build_dir\OutputTools -Type directory -ErrorAction SilentlyContinue | Out-Null
 }
@@ -340,7 +340,7 @@ task CopyStorageExporter {
 task CopyClient {
     @( "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Abstractions.???", "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Client.Lightweight.???") | ForEach-Object { Copy-Item "$_" $build_dir\Output\Client }
 
-    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\$_" $build_dir\Output\Client\netstandard1.6 }
+    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\$_" $build_dir\Output\Client\$dotnetLib }
 }
 
 task CopyWeb {
@@ -363,8 +363,8 @@ task CopyBundles {
     Copy-Item $base_dir\Bundles\Raven.Client.Authorization\bin\$global:configuration\Raven.Client.Authorization.??? $build_dir\Output\Bundles
     Copy-Item $base_dir\Bundles\Raven.Client.UniqueConstraints\bin\$global:configuration\Raven.Client.UniqueConstraints.??? $build_dir\Output\Bundles
 
-    @("Raven.Client.Authorization.???", "Raven.Client.Authorization.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.Authorization\$_" $build_dir\Output\Bundles\netstandard1.6 }
-    @("Raven.Client.UniqueConstraints.???", "Raven.Client.UniqueConstraints.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.UniqueConstraints\$_" $build_dir\Output\Bundles\netstandard1.6 }
+    @("Raven.Client.Authorization.???", "Raven.Client.Authorization.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.Authorization\$_" $build_dir\Output\Bundles\$dotnetLib }
+    @("Raven.Client.UniqueConstraints.???", "Raven.Client.UniqueConstraints.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.UniqueConstraints\$_" $build_dir\Output\Bundles\$dotnetLib }
 }
 
 task CopyServer -depends CreateOutpuDirectories {
@@ -726,11 +726,11 @@ task CreateNugetPackages -depends Compile, CompileDotNet, CompileHtml5, InitNuge
 
     [xml] $xmlNuspec = Get-Content("$nuget_dir\RavenDB.Client\RavenDB.Client.nuspec")
 
-    New-Item $nuget_dir\RavenDB.Client\lib\netstandard1.6 -Type directory | Out-Null
-    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\$_" $nuget_dir\RavenDB.Client\lib\netstandard1.6 }
+    New-Item $nuget_dir\RavenDB.Client\lib\$dotnetLib -Type directory | Out-Null
+    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\$_" $nuget_dir\RavenDB.Client\lib\$dotnetLib }
 
     $projects = "$base_dir\Raven.Sparrow\Sparrow", "$base_dir\Raven.Client.Lightweight", "$base_dir\Raven.Abstractions"
-    AddDependenciesToNuspec $projects "$nuspecPath" "netstandard1.6"
+    AddDependenciesToNuspec $projects "$nuspecPath" "$dotnetLib"
 
     New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib\net45 -Type directory | Out-Null
     Copy-Item $base_dir\NuGet\RavenDB.Client.MvcIntegration.nuspec $nuget_dir\RavenDB.Client.MvcIntegration\RavenDB.Client.MvcIntegration.nuspec
@@ -767,11 +767,11 @@ task CreateNugetPackages -depends Compile, CompileDotNet, CompileHtml5, InitNuge
         $nuspecPath = "$nuget_dir\RavenDB.Client.$name\RavenDB.Client.$name.nuspec"
         Copy-Item $base_dir\NuGet\RavenDB.Client.$name.nuspec "$nuspecPath"
 
-        New-Item $nuget_dir\RavenDB.Client.$name\lib\netstandard1.6 -Type directory | Out-Null
-        @("$build_dir\DotNet\Bundles\Raven.Client.$name\Raven.Client.$_.???", "$build_dir\DotNet\Bundles\Raven.Client.$name\Raven.Client.$_.deps.json" ) |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\netstandard1.6 }
+        New-Item $nuget_dir\RavenDB.Client.$name\lib\$dotnetLib -Type directory | Out-Null
+        @("$build_dir\DotNet\Bundles\Raven.Client.$name\Raven.Client.$_.???", "$build_dir\DotNet\Bundles\Raven.Client.$name\Raven.Client.$_.deps.json" ) |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\$dotnetLib }
 
         $projects = "$base_dir\Bundles\Raven.Client.$name"
-        AddDependenciesToNuspec $projects "$nuspecPath" "netstandard1.6"
+        AddDependenciesToNuspec $projects "$nuspecPath" "$dotnetLib"
     }
 
     New-Item $nuget_dir\RavenDB.Bundles.Authorization\lib\net45 -Type directory | Out-Null

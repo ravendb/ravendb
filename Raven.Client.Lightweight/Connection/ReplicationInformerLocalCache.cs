@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+#if !DNXCORE50
 using System.IO.IsolatedStorage;
+#endif
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -17,14 +19,16 @@ namespace Raven.Client.Connection
         private readonly static ILog Log = LogManager.GetLogger(typeof(ReplicationInformerLocalCache));
 #endif
 
+#if !DNXCORE50
         public static IsolatedStorageFile GetIsolatedStorageFile()
         {
-#if MONO || DNXCORE50
+#if MONO
             return IsolatedStorageFile.GetUserStoreForApplication();
 #else
             return IsolatedStorageFile.GetMachineStoreForDomain();
 #endif
         }
+#endif
 
         public static void ClearReplicationInformationFromLocalCache(string serverHash)
         {
