@@ -1206,5 +1206,10 @@ namespace Raven.Server.Documents.Indexes
         {
             return numberOfAlreadyProducedOutputs <= MaxNumberOfIndexOutputs;
         }
+
+        public virtual Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
+        {
+            return null;
+        }
     }
 }

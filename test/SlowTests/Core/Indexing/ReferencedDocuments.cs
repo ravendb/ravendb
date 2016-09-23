@@ -9,6 +9,9 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using FastTests;
+using Raven.Abstractions.Data;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
@@ -142,6 +145,151 @@ namespace SlowTests.Core.Indexing
 
                     session.Store(address1);
                     session.Store(address2);
+
+                    var user1 = new User
+                    {
+                        LastName = "Doe",
+                        AddressId = address1.Id
+                    };
+
+                    var user2 = new User
+                    {
+                        LastName = "Nowak",
+                        AddressId = address2.Id
+                    };
+
+                    session.Store(user1);
+                    session.Store(user2);
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Where(x => x.City == "New York")
+                        .OfType<User>()
+                        .ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("Doe", users[0].LastName);
+
+                    var count = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Count();
+
+                    Assert.Equal(2, count);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var address = session.Load<Address>("addresses/1");
+                    address.City = "Barcelona";
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Where(x => x.City == "New York")
+                        .OfType<User>()
+                        .ToList();
+
+                    Assert.Equal(0, users.Count);
+
+                    users = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Where(x => x.City == "Barcelona")
+                        .OfType<User>()
+                        .ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("Doe", users[0].LastName);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("addresses/1");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    // address from LoadDocument will be null so the City value will not get into index
+                    // we cannot expect to return any users here in that case
+                    var users = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Where(x => x.City == null)
+                        .OfType<User>()
+                        .ToList();
+
+                    Assert.Equal(0, users.Count);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = session.Load<User>("users/1");
+                    user1.AddressId = "addresses/2";
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<Users_ByCity.Result, Users_ByCity>()
+                        .Where(x => x.City == "Warsaw")
+                        .OfType<User>()
+                        .ToList();
+
+                    Assert.Equal(2, users.Count);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("users/1");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+            }
+        }
+
+        [Fact]
+        public void BasicLoadDocuments_Casing()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.PutIndex("Users/ByCity", new IndexDefinition
+                {
+                    Maps =
+                    {
+                        @"from user in docs.Users
+                               let address1 = LoadDocument(user.AddressId, ""addresses"")
+                               let address2 = LoadDocument(user.AddressId, ""Addresses"")
+                               select new
+                               {
+                                   City = address1.City
+                               }"
+                    }
+                });
+
+                using (var session = store.OpenSession())
+                {
+                    var address1 = new Address { City = "New York" };
+                    var address2 = new Address { City = "Warsaw" };
+
+                    session.Store(address1);
+                    session.Store(address2);
+
+                    session.Advanced.GetMetadataFor(address2)[Constants.Headers.RavenEntityName] = "addresses";
 
                     var user1 = new User
                     {
