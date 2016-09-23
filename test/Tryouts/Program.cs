@@ -16,10 +16,9 @@ namespace Tryouts
         public static void Main(string[] args)
         {
 
-            using (var a = new FastTests.Server.Documents.Indexing.Static.CollisionsOfReduceKeyHashes())
+            using (var a = new SlowTests.MailingList.SumTests())
             {
-                a.Static_index_should_produce_multiple_outputs(numberOfUsers: 100,
-                    locations: new[] {"Israel", "Poland", "USA"}).Wait();
+                a.Can_get_application_counts_by_vacancy_id();
             }
             //Console.WriteLine("Starting");
             //var sp = Stopwatch.StartNew();
