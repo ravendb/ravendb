@@ -17,7 +17,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
     public class MapReduceIndex : MapReduceIndexBase<MapReduceIndexDefinition>
     {
+        private readonly HashSet<CollectionName> _referencedCollections = new HashSet<CollectionName>();
+
         internal readonly StaticIndexBase _compiled;
+
+        private HandleReferences _handleReferences;
+
         private readonly Dictionary<string, AnonymusObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymusObjectToBlittableMapResultsEnumerableWrapper>();
 
         private int _maxNumberOfIndexOutputs;
@@ -27,6 +32,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             : base(indexId, IndexType.MapReduce, definition)
         {
             _compiled = compiled;
+
+            if (_compiled.ReferencedCollections == null)
+                return;
+
+            foreach (var collection in _compiled.ReferencedCollections)
+            {
+                foreach (var referencedCollection in collection.Value)
+                    _referencedCollections.Add(referencedCollection);
+            }
         }
 
         protected override void InitializeInternal()
@@ -64,12 +78,24 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
-            return new IIndexingWork[]
-            {
-                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
-                new ReduceMapResultsOfStaticIndex(_compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext), 
-            };
+            var workers = new List<IIndexingWork>();
+            workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext));
+
+            if (_referencedCollections.Count > 0)
+                workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
+
+            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext));
+            workers.Add(new ReduceMapResultsOfStaticIndex(_compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext));
+
+            return workers.ToArray();
+        }
+
+        public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            if (_referencedCollections.Count > 0)
+                _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
+
+            base.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)

@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -20,15 +22,17 @@ namespace Raven.Server.Documents.Indexes
 {
     public class IndexStorage
     {
-
         protected readonly Logger _logger;
 
         private readonly Index _index;
 
         private readonly TransactionContextPool _contextPool;
+
         public DocumentDatabase DocumentDatabase { get; }
 
         private readonly TableSchema _errorsSchema = new TableSchema();
+
+        private readonly Dictionary<string, CollectionName> _referencedCollections;
 
         private StorageEnvironment _environment;
 
@@ -40,6 +44,22 @@ namespace Raven.Server.Documents.Indexes
             _contextPool = contextPool;
             DocumentDatabase = database;
             _logger = LoggingSource.Instance.GetLogger<IndexStorage>(DocumentDatabase.Name);
+
+            Dictionary<string, HashSet<CollectionName>> referencedCollections = null;
+            switch (index.Type)
+            {
+                case IndexType.Map:
+                    referencedCollections = ((StaticMapIndex)index)._compiled.ReferencedCollections;
+                    break;
+                case IndexType.MapReduce:
+                    referencedCollections = ((MapReduceIndex)index)._compiled.ReferencedCollections;
+                    break;
+            }
+
+            if (referencedCollections != null)
+                _referencedCollections = referencedCollections
+                    .SelectMany(x => x.Value)
+                    .ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
         }
 
         public void Initialize(StorageEnvironment environment)
@@ -217,22 +237,22 @@ namespace Raven.Server.Documents.Indexes
             return ReadLastEtag(tx, IndexSchema.EtagsTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection));
         }
 
-        public long ReadLastProcessedReferenceEtag(RavenTransaction tx, string collection, string referencedCollection)
+        public long ReadLastProcessedReferenceEtag(RavenTransaction tx, string collection, CollectionName referencedCollection)
         {
             var tree = tx.InnerTransaction.ReadTree("$" + collection);
 
-            var result = tree?.Read(referencedCollection);
+            var result = tree?.Read(referencedCollection.Name);
             if (result == null)
                 return 0;
 
             return result.Reader.ReadLittleEndianInt64();
         }
 
-        public long ReadLastProcessedReferenceTombstoneEtag(RavenTransaction tx, string collection, string referencedCollection)
+        public long ReadLastProcessedReferenceTombstoneEtag(RavenTransaction tx, string collection, CollectionName referencedCollection)
         {
             var tree = tx.InnerTransaction.ReadTree("%" + collection);
 
-            var result = tree?.Read(referencedCollection);
+            var result = tree?.Read(referencedCollection.Name);
             if (result == null)
                 return 0;
 
@@ -244,10 +264,10 @@ namespace Raven.Server.Documents.Indexes
             return ReadLastEtag(tx, IndexSchema.EtagsTree, Slice.From(tx.InnerTransaction.Allocator, collection));
         }
 
-        public unsafe void WriteLastReferenceTombstoneEtag(RavenTransaction tx, string collection, string referencedCollection, long etag)
+        public unsafe void WriteLastReferenceTombstoneEtag(RavenTransaction tx, string collection, CollectionName referencedCollection, long etag)
         {
             var tree = tx.InnerTransaction.CreateTree("%" + collection);
-            var collectionSlice = Slice.From(tx.InnerTransaction.Allocator, referencedCollection, ByteStringType.Immutable);
+            var collectionSlice = Slice.From(tx.InnerTransaction.Allocator, referencedCollection.Name, ByteStringType.Immutable);
             var etagSlice = Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long));
             tree.Add(collectionSlice, etagSlice);
         }
@@ -257,10 +277,10 @@ namespace Raven.Server.Documents.Indexes
             WriteLastEtag(tx, IndexSchema.EtagsTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection), etag);
         }
 
-        public unsafe void WriteLastReferenceEtag(RavenTransaction tx, string collection, string referencedCollection, long etag)
+        public unsafe void WriteLastReferenceEtag(RavenTransaction tx, string collection, CollectionName referencedCollection, long etag)
         {
             var tree = tx.InnerTransaction.CreateTree("$" + collection);
-            var collectionSlice = Slice.From(tx.InnerTransaction.Allocator, referencedCollection, ByteStringType.Immutable);
+            var collectionSlice = Slice.From(tx.InnerTransaction.Allocator, referencedCollection.Name, ByteStringType.Immutable);
             var etagSlice = Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long));
             tree.Add(collectionSlice, etagSlice);
         }
@@ -272,7 +292,7 @@ namespace Raven.Server.Documents.Indexes
 
         private unsafe void WriteLastEtag(RavenTransaction tx, string tree, Slice collection, long etag)
         {
-           if (_logger.IsInfoEnabled)
+            if (_logger.IsInfoEnabled)
                 _logger.Info($"Writing last etag for '{_index.Name} ({_index.IndexId})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
 
             var statsTree = tx.InnerTransaction.CreateTree(tree);
@@ -434,7 +454,11 @@ namespace Raven.Server.Documents.Indexes
                     var collectionEtagTree = tx.InnerTransaction.CreateTree("$" + kvp.Key); // $collection
                     foreach (var collections in kvp.Value)
                     {
-                        var collectionKey = collections.Key;
+                        CollectionName collectionName;
+                        if (_referencedCollections.TryGetValue(collections.Key, out collectionName) == false)
+                            throw new InvalidOperationException("Should not happen ever!");
+
+                        var collectionKey = Slice.From(tx.InnerTransaction.Allocator, collectionName.Name, ByteStringType.Immutable);
                         var etag = collections.Value;
 
                         var result = collectionEtagTree.Read(collectionKey);
