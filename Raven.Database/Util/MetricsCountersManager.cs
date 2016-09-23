@@ -8,10 +8,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
-using metrics;
-using metrics.Core;
 using System.Linq;
 using Raven.Abstractions.Util;
+using Raven.Imports.metrics;
+using Raven.Imports.metrics.Core;
 
 namespace Raven.Database.Util
 {

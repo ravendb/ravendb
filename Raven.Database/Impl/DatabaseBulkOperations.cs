@@ -6,16 +6,9 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
-using metrics;
 using Raven.Abstractions;
 using Raven.Database.Extensions;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Json;
-using Raven.Database.Data;
-using Raven.Database.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Impl
