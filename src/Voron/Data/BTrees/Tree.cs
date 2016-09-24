@@ -231,10 +231,13 @@ namespace Voron.Data.BTrees
             bool? shouldGoToOverflowPage = null;
             if (page.LastMatch == 0) // this is an update operation
             {
-                node = page.GetNode(page.LastSearchPosition);                
+                node = page.GetNode(page.LastSearchPosition);
 
-                Debug.Assert(SliceComparer.EqualsInline(TreeNodeHeader.ToSlicePtr(_llt.Allocator, node), key));
-
+#if DEBUG
+                Slice nodeCheck;
+                using(TreeNodeHeader.ToSlicePtr(_llt.Allocator, node,out nodeCheck))
+                Debug.Assert(SliceComparer.EqualsInline(nodeCheck, key));
+#endif
                 shouldGoToOverflowPage = ShouldGoToOverflowPage(len);
 
                 byte* pos;
@@ -559,56 +562,63 @@ namespace Voron.Data.BTrees
         }
 
         private void AddToRecentlyFoundPages(List<long> c, TreePage p, bool leftmostPage, bool rightmostPage)
-        {            
+        {
+            ByteStringContext.ExternalAllocationScope firstScope, lastScope;
             Slice firstKey;
-            if (leftmostPage == true)
+            if (leftmostPage)
             {
+                firstScope = new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
                 firstKey = Slices.BeforeAllKeys;
             }
             else
             {
                 // We are going to store the slice, therefore we copy.
-                firstKey = p.GetNodeKey(_llt, 0, ByteStringType.Immutable);
+                firstScope = p.GetNodeKey(_llt, 0, ByteStringType.Immutable, out firstKey);
             }
 
             Slice lastKey;
-            if (rightmostPage == true)
+            if (rightmostPage)
             {
+                lastScope = new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
                 lastKey = Slices.AfterAllKeys;
             }
             else
             {
                 // We are going to store the slice, therefore we copy.
-                lastKey = p.GetNodeKey(_llt, p.NumberOfEntries - 1, ByteStringType.Immutable);
+                lastScope = p.GetNodeKey(_llt, p.NumberOfEntries - 1, ByteStringType.Immutable, out lastKey);
             }
 
-            var foundPage = new RecentlyFoundTreePages.FoundTreePage(p.PageNumber, p, firstKey, lastKey, c.ToArray());
+            var foundPage = new RecentlyFoundTreePages.FoundTreePage(p.PageNumber, p, firstKey, lastKey, c.ToArray(), 
+                firstScope, lastScope);
 
             _recentlyFoundPages.Add(foundPage);
         }
 
         private void AddToRecentlyFoundPages(TreeCursor c, TreePage p, bool leftmostPage, bool rightmostPage)
         {
+            ByteStringContext.ExternalAllocationScope firstScope, lastScope;
             Slice firstKey;
-            if (leftmostPage == true)
+            if (leftmostPage)
             {
+                firstScope = new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
                 firstKey = Slices.BeforeAllKeys;
             }
             else
             {
                 // We are going to store the slice, therefore we copy.
-                firstKey = p.GetNodeKey(_llt, 0, ByteStringType.Immutable);
+                firstScope = p.GetNodeKey(_llt, 0, ByteStringType.Immutable, out firstKey);
             }
 
             Slice lastKey;
-            if (rightmostPage == true)
+            if (rightmostPage)
             {
+                lastScope = new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
                 lastKey = Slices.AfterAllKeys;
             }
             else
             {
                 // We are going to store the slice, therefore we copy.
-                lastKey = p.GetNodeKey(_llt, p.NumberOfEntries - 1, ByteStringType.Immutable);
+                lastScope = p.GetNodeKey(_llt, p.NumberOfEntries - 1, ByteStringType.Immutable, out lastKey);
             }
 
             var cursorPath = new long[c.Pages.Count];
@@ -621,7 +631,7 @@ namespace Voron.Data.BTrees
                 cur = cur.Next;
             }
 
-            var foundPage = new RecentlyFoundTreePages.FoundTreePage(p.PageNumber, p, firstKey, lastKey, cursorPath);
+            var foundPage = new RecentlyFoundTreePages.FoundTreePage(p.PageNumber, p, firstKey, lastKey, cursorPath, firstScope, lastScope);
 
             _recentlyFoundPages.Add(foundPage);
         }
@@ -829,8 +839,15 @@ namespace Voron.Data.BTrees
             if (p == null || p.LastMatch != 0)
                 return -1;
 
-            if (node == null || !SliceComparer.EqualsInline(TreeNodeHeader.ToSlicePtr(_llt.Allocator, node), key))
+            if (node == null)
                 return -1;
+
+            Slice nodeKey;
+            using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out nodeKey))
+            {
+                if (!SliceComparer.EqualsInline(nodeKey, key))
+                    return -1;
+            }
 
             return TreeNodeHeader.GetDataSize(_llt, node);
         }
@@ -839,7 +856,10 @@ namespace Voron.Data.BTrees
         {
             Func<TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
-            var p = FindPageFor(page.IsLeaf ? page.GetNodeKey(_llt, 0) : page.GetNodeKey(_llt, 1), out node, out cursorConstructor);
+            TreePage p;
+            Slice key;
+            using (page.IsLeaf ? page.GetNodeKey(_llt, 0, out key) : page.GetNodeKey(_llt, 1, out key))
+                p = FindPageFor(key, out node, out cursorConstructor);
             if (p == null || p.LastMatch != 0)
                 return -1;
 
@@ -868,8 +888,12 @@ namespace Voron.Data.BTrees
             if (p == null || p.LastMatch != 0)
                 return 0;
 
-            if (node == null || !SliceComparer.EqualsInline(TreeNodeHeader.ToSlicePtr(_llt.Allocator, node),key))
-                return 0;
+            Slice nodeKey;
+            using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out nodeKey))
+            {
+                if (!SliceComparer.EqualsInline(nodeKey, key))
+                    return 0;
+            }
 
             return node->Version;
         }
@@ -923,9 +947,11 @@ namespace Voron.Data.BTrees
                     }
                     else if (node->Flags == TreeNodeFlags.MultiValuePageRef)
                     {
-                        key = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, ByteStringType.Mutable);
-                        var tree = OpenMultiValueTree(key, node);
-                        results.AddRange(tree.AllPages());
+                        using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out key))
+                        {
+                            var tree = OpenMultiValueTree(key, node);
+                            results.AddRange(tree.AllPages());
+                        }
                     }
                     else
                     {
@@ -934,12 +960,14 @@ namespace Voron.Data.BTrees
                             var valueReader = TreeNodeHeader.Reader(_llt, node);
                             var valueSize = ((FixedSizeTreeHeader.Embedded*)valueReader.Base)->ValueSize;
 
-                            var fixedSizeTreeName = p.GetNodeKey(_llt, i);
+                            Slice fixedSizeTreeName;
+                            using (p.GetNodeKey(_llt, i, out fixedSizeTreeName))
+                            {
+                                var fixedSizeTree = new FixedSizeTree(_llt, this, fixedSizeTreeName, valueSize);
 
-                            var fixedSizeTree = new FixedSizeTree(_llt, this, fixedSizeTreeName, valueSize);
-
-                            var pages = fixedSizeTree.AllPages();
-                            results.AddRange(pages);
+                                var pages = fixedSizeTree.AllPages();
+                                results.AddRange(pages);
+                            }
                         }
                     }
                 }
@@ -1059,7 +1087,7 @@ namespace Voron.Data.BTrees
             if (_fixedSizeTrees.TryGetValue(key, out fixedTree) == false)
             {
                 var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-                _fixedSizeTrees[key] = fixedTree = new FixedSizeTree(_llt, this, keySlice, valSize);
+                _fixedSizeTrees[key] = fixedTree = new FixedSizeTree(_llt, this, keySlice, valSize, clone: false);
             }
 
             State.Flags |= TreeFlags.FixedSizeTrees;

@@ -49,7 +49,7 @@ namespace Voron.Data.Tables
             public bool IsGlobal;
             public Slice Name;
 
-            public Slice GetSlice(ByteStringContext context, TableValueReader value)
+            public ByteStringContext.ExternalAllocationScope GetSlice(ByteStringContext context, TableValueReader value, out Slice slice)
             {
                 int totalSize;
                 var ptr = value.Read(StartIndex, out totalSize);
@@ -73,7 +73,7 @@ namespace Voron.Data.Tables
                 if (totalSize > ushort.MaxValue)
                     throw new ArgumentOutOfRangeException(nameof(totalSize), "Reading a slice that too big to be a slice");
 #endif
-                return Slice.External(context, ptr, (ushort)totalSize);
+                return Slice.External(context, ptr, (ushort)totalSize, out slice);
             }
 
             public byte[] Serialize()

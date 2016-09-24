@@ -16,6 +16,10 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
+            //using (var x = new SlowTests.Tests.NestedIndexing.CanTrackWhatCameFromWhat())
+            //{
+            //    x.UpdatingReferenceToAnotherDoc().Wait();
+            //}
             Console.WriteLine("Starting");
             using (var store = new DocumentStore
             {
@@ -25,7 +29,7 @@ namespace Tryouts
             {
                 store.Initialize();
 
-            var sp = Stopwatch.StartNew();
+                var sp = Stopwatch.StartNew();
                 store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-19 13-00.ravendbdump.gzip", CancellationToken.None)
                     .Wait();
 
@@ -34,7 +38,7 @@ namespace Tryouts
                 sp.Restart();
                 while (true)
                 {
-                    if (store.DatabaseCommands.GetStatistics().Indexes.All(x=>x.IsStale == false))
+                    if (store.DatabaseCommands.GetStatistics().Indexes.All(x => x.IsStale == false))
                     {
                         break;
                     }

@@ -183,12 +183,15 @@ namespace FastTests.Voron
             if (node == null)
                 return null;
 
-            var item1 = TreeNodeHeader.ToSlicePtr(txh.Allocator, node);
+            Slice item1;
+            TreeNodeHeader.ToSlicePtr(txh.Allocator, node, out item1);
 
             if (!SliceComparer.Equals(item1,key))
                 return null;
-
-            return Tuple.Create(item1, Slice.External( txh.Allocator, (byte*)node + node->KeySize + Constants.NodeHeaderSize,(ushort)node->DataSize));
+            Slice item2;
+            Slice.External(txh.Allocator, (byte*) node + node->KeySize + Constants.NodeHeaderSize,
+                (ushort) node->DataSize, out item2);
+            return Tuple.Create(item1, item2);
         }
     }
 }

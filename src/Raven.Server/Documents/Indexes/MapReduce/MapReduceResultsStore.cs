@@ -67,7 +67,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             switch (Type)
             {
                 case MapResultsStorageType.Tree:
-                    Tree.Delete(Slice.External(_indexContext.Allocator, (byte*)&entryId, sizeof(long)));
+                    Slice entrySlice;
+                    using (Slice.External(_indexContext.Allocator, (byte*) &entryId, sizeof(long), out entrySlice))
+                        Tree.Delete(entrySlice);
                     break;
                 case MapResultsStorageType.Nested:
                     var section = GetNestedResultsSection();
@@ -89,9 +91,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 case MapResultsStorageType.Tree:
                     using (result)
                     {
-                        var pos = Tree.DirectAdd(Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long)),
-                            result.Size);
-                        result.CopyTo(pos);
+                        Slice entrySlice;
+                        using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
+                        {
+                            var pos = Tree.DirectAdd(entrySlice, result.Size);
+                            result.CopyTo(pos);
+                        }
                     }
 
                     break;
@@ -122,8 +127,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             var byteType = (byte)Type;
 
-            _mapReduceContext.ResultsStoreTypes.Add((long)_reduceKeyHash, Slice.External(_indexContext.Allocator, &byteType, sizeof(byte)));
-
+            Slice val;
+            using (Slice.External(_indexContext.Allocator, &byteType, sizeof(byte), out val))
+                _mapReduceContext.ResultsStoreTypes.Add((long)_reduceKeyHash, val);
             InitializeTree(create: true);
 
             foreach (var mapResult in section.GetResults())

@@ -33,7 +33,11 @@ namespace SlowTests.Voron
                 {
                     EndianBitConverter.Little.CopyBytes(i, bytes, 0);
                     fst.Add(i, bytes);
-                    Assert.NotNull(fst.Read(i));
+                    Slice read;
+                    using (fst.Read(i, out read))
+                    {
+                        Assert.NotNull(read);
+                    }
                 }
 
                 tx.Commit();
@@ -46,9 +50,12 @@ namespace SlowTests.Voron
                 for (int i = 0; i < count; i++)
                 {
                     Assert.True(fst.Contains(i));
-                    var read = fst.Read(i);
-                    read.CopyTo(bytes);
-                    Assert.Equal(i, EndianBitConverter.Little.ToInt32(bytes, 0));
+                    Slice read;
+                    using (fst.Read(i, out read))
+                    {
+                        read.CopyTo(bytes);
+                        Assert.Equal(i, EndianBitConverter.Little.ToInt32(bytes, 0));
+                    }
                 }
                 tx.Commit();
             }
@@ -196,12 +203,20 @@ namespace SlowTests.Voron
                     if (i >= 4 && i <= count - 3)
                     {
                         Assert.False(fst.Contains(i), i.ToString());
-                        Assert.False(fst.Read(i).HasValue);
+                        Slice read;
+                        using (fst.Read(i, out read))
+                        {
+                            Assert.False(read.HasValue);
+                        }
                     }
                     else
                     {
                         Assert.True(fst.Contains(i), i.ToString());
-                        Assert.Equal(i, fst.Read(i).CreateReader().ReadLittleEndianInt64());
+                        Slice read;
+                        using (fst.Read(i, out read))
+                        {
+                            Assert.Equal(i, read.CreateReader().ReadLittleEndianInt64());
+                        }
                     }
                 }
                 tx.Commit();
@@ -250,7 +265,11 @@ namespace SlowTests.Voron
                 for (int i = 1; i <= count; i++)
                 {
                     Assert.False(fst.Contains(i), i.ToString());
-                    Assert.False(fst.Read(i).HasValue);
+                    Slice read;
+                    using (fst.Read(i, out read))
+                    {
+                        Assert.False(read.HasValue);
+                    }
                 }
                 tx.Commit();
             }

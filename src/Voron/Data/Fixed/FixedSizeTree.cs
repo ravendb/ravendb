@@ -48,12 +48,12 @@ namespace Voron.Data.Fixed
             return header->ValueSize;
         }
 
-        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize)
+        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true)
         {
             _tx = tx;
             _parent = parent;
             _valSize = valSize;
-            _treeName = treeName.Clone(_tx.Allocator);
+            _treeName = clone ? treeName.Clone(_tx.Allocator) : treeName;
 
             _entrySize = sizeof(long) + _valSize;
             _maxEmbeddedEntries = 512 / _entrySize;
@@ -1267,12 +1267,13 @@ namespace Voron.Data.Fixed
             }
         }
 
-        public Slice Read(long key)
+        public ByteStringContext.ExternalAllocationScope Read(long key, out Slice slice)
         {
             switch (_type)
             {
                 case null:
-                    return new Slice();
+                    slice = new Slice();
+                    return new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
 
                 case RootObjectType.EmbeddedFixedSizeTree:
                     var ptr = _parent.DirectRead(_treeName);
@@ -1280,9 +1281,9 @@ namespace Voron.Data.Fixed
                     var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
                     var pos = BinarySearch(dataStart, header->NumberOfEntries, key, _entrySize);
                     if (_lastMatch != 0)
-                        return new Slice();
+                        goto case null;
 
-                    return Slice.External(_tx.Allocator, dataStart + (pos * _entrySize) + sizeof(long), _valSize);
+                    return Slice.External(_tx.Allocator, dataStart + (pos * _entrySize) + sizeof(long), _valSize, out slice);
 
                 case RootObjectType.FixedSizeTree:
                     var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
@@ -1300,9 +1301,9 @@ namespace Voron.Data.Fixed
 
                     BinarySearch(page, key);
                     if (_lastMatch != 0)
-                        return new Slice();
+                        goto case null;
 
-                    return Slice.External(_tx.Allocator, dataStart + (page.LastSearchPosition * _entrySize) + sizeof(long), _valSize);
+                    return Slice.External(_tx.Allocator, dataStart + (page.LastSearchPosition * _entrySize) + sizeof(long), _valSize, out slice);
 
                 default:
                     throw new ArgumentOutOfRangeException(_type.ToString());
