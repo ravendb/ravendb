@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Abstractions.Data;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Sparrow.Json;
@@ -14,6 +15,8 @@ namespace Raven.Client.Json
         public static readonly Func<BlittableJsonReaderObject, BatchResult> BatchResult = GenerateJsonDeserializationRoutine<BatchResult>();
 
         public static readonly Func<BlittableJsonReaderObject, PutResult> PutResult = GenerateJsonDeserializationRoutine<PutResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, QueryResult> QueryResult = GenerateJsonDeserializationRoutine<QueryResult>();
 
         public static readonly Func<BlittableJsonReaderObject, AuthenticatorChallenge> AuthenticatorChallenge = GenerateJsonDeserializationRoutine<AuthenticatorChallenge>();
 
