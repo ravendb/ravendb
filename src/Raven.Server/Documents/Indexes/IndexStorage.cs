@@ -446,7 +446,8 @@ namespace Raven.Server.Documents.Indexes
                     {
                         CollectionName collectionName;
                         if (_referencedCollections.TryGetValue(collections.Key, out collectionName) == false)
-                            throw new InvalidOperationException("Should not happen ever!");
+                            throw new InvalidOperationException(
+                                $"Could not find collection {collections.Key} in the index storage collections. Should not happen ever!");
 
                         var collectionKey = Slice.From(tx.InnerTransaction.Allocator, collectionName.Name, ByteStringType.Immutable);
                         var etag = collections.Value;
