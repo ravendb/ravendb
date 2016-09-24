@@ -499,8 +499,10 @@ namespace Sparrow
         public void Free(UnmanagedGlobalSegment memory)
         {
             var local = GetThreadLocalCollection();
-            local.Push(memory);
-            local.ReduceSizeIfTooBig(4096);
+            if (local.Count < 4096)
+                local.Push(memory);
+            else
+                memory.Dispose();
         }
     }
 
