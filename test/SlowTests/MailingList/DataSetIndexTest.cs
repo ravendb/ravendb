@@ -16,7 +16,7 @@ namespace SlowTests.MailingList
     {
         private const int MaxNumberOfItemsInDataSet = 50;
 
-        [Fact(Skip = "Missing feature: CreateField")]
+        [Fact]
         public void can_execute_query_default()
         {
             using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
@@ -30,7 +30,7 @@ namespace SlowTests.MailingList
                     CreateDataSet(session, "stations/energy", "EX");
                 }
 
-                WaitForUserToContinueTheTest(store);
+               // WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -44,7 +44,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: CreateField")]
+        [Fact]
         public void can_execute_query_lazily()
         {
             using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))

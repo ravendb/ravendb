@@ -179,7 +179,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Collation and https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact(Skip = "Missing feature: Collation")]
         public void CanApplyTransformerOnQueryResults()
         {
             using (var store = GetDocumentStore())

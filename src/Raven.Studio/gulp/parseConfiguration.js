@@ -89,9 +89,15 @@ function createDefinitionFile(configurations, outputFileName) {
 
         typingSource += "    static " + groupNameLowerCased + " = { \n";
 
+        var configMappingSize = configMapping.size;
+        var currentConfigMapping = 0;
+
         configMapping.forEach(function (configKey, fieldName) {
+            currentConfigMapping++;
+            var configSeparator = currentConfigMapping === configMappingSize ? "" : ",";
+
             var fieldLowerCased = fieldName.charAt(0).toLowerCase() + fieldName.slice(1);
-            typingSource += "        " + fieldLowerCased + ": \"" + configKey + "\",\n";
+            typingSource += "        " + fieldLowerCased + ": \"" + configKey + "\"" + configSeparator + "\n";
         });
 
         typingSource += "    }\n";

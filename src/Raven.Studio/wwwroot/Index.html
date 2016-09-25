@@ -41,7 +41,6 @@
     <!-- build:js App/external-libs.js -->
         <script type="text/javascript" src="lib/jquery/dist/jquery.js"></script>
         <script type="text/javascript" src="lib/blockUI/jquery.blockUI.js"></script>
-        <script type="text/javascript" src="lib/nprogress/nprogress.js"></script>
         <script type="text/javascript" src="lib/knockout/dist/knockout.debug.js"></script>
         <script type="text/javascript" src="lib/knockout.dirtyFlag/index.js"></script>
         <script type="text/javascript" src="lib/knockout-delegatedEvents/build/knockout-delegatedEvents.js"></script>
@@ -57,11 +56,6 @@
         <script type="text/javascript" src="lib/spin.js/spin.js"></script>
         <script type="text/javascript" src="App/common/constants.js"></script>
     <!-- /build -->
-
-    <script type="text/javascript">
-        // Must pull down jQuery and nprogress before we show the progress indicator.
-        NProgress.start();
-    </script>
 
     <script data-main="App/main"></script>
     <!-- build:js App/main.js -->

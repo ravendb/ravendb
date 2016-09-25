@@ -6,7 +6,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -16,9 +15,15 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private LuceneDocumentConverter _createFieldsConverter;
 
+        private readonly Dictionary<string, CollectionName> _collectionsCache = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
+
         public readonly Dictionary<string, IndexingFunc> Maps = new Dictionary<string, IndexingFunc>(StringComparer.OrdinalIgnoreCase);
 
-        public readonly Dictionary<string, HashSet<string>> ReferencedCollections = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        public readonly Dictionary<string, HashSet<CollectionName>> ReferencedCollections = new Dictionary<string, HashSet<CollectionName>>(StringComparer.OrdinalIgnoreCase);
+
+        public bool HasDynamicFields { get; set; }
+
+        public bool HasBoostedFields { get; set; }
 
         public string Source;
 
@@ -29,11 +34,15 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public void AddReferencedCollection(string collection, string referencedCollection)
         {
-            HashSet<string> set;
-            if (ReferencedCollections.TryGetValue(collection, out set) == false)
-                ReferencedCollections[collection] = set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            CollectionName referencedCollectionName;
+            if (_collectionsCache.TryGetValue(referencedCollection, out referencedCollectionName) == false)
+                _collectionsCache[referencedCollection] = referencedCollectionName = new CollectionName(referencedCollection);
 
-            set.Add(referencedCollection);
+            HashSet<CollectionName> set;
+            if (ReferencedCollections.TryGetValue(collection, out set) == false)
+                ReferencedCollections[collection] = set = new HashSet<CollectionName>();
+
+            set.Add(referencedCollectionName);
         }
 
         public IEnumerable<dynamic> Recurse(object item, Func<dynamic, dynamic> func)
@@ -102,7 +111,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (_createFieldsConverter == null)
                 _createFieldsConverter = new LuceneDocumentConverter(new IndexField[] {});
 
-            return _createFieldsConverter.GetRegularFields(field, value, null);
+            return _createFieldsConverter.GetRegularFields(field, value, CurrentIndexingScope.Current.IndexContext);
         }
 
         public IndexingFunc Reduce;

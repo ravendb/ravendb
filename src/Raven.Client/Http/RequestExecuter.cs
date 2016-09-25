@@ -199,18 +199,18 @@ namespace Raven.Client.Http
 
                     using (var stream = await response.Content.ReadAsStreamAsync())
                     {
-                        using (var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult"))
+                        // we intentionally don't dispose the reader here, we'll be using it
+                        // in the command, any associated memory will be released on context reset
+                        var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
+                        if (response.Headers.ETag != null)
                         {
-                            if (response.Headers.ETag != null)
+                            long etag;
+                            if (long.TryParse(response.Headers.ETag.Tag, out etag))
                             {
-                                long etag;
-                                if (long.TryParse(response.Headers.ETag.Tag, out etag))
-                                {
-                                    _cache.Set(url, etag, blittableJsonReaderObject);
-                                }
+                                _cache.Set(url, etag, blittableJsonReaderObject);
                             }
-                            command.SetResponse(blittableJsonReaderObject);
                         }
+                        command.SetResponse(blittableJsonReaderObject);
                     }
                 }
             }

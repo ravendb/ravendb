@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Collation;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.SqlReplication;
@@ -26,21 +26,20 @@ namespace Raven.Server.Documents
 {
     public class DocumentDatabase : IResourceStore
     {
-        private Logger _logger;
+        private readonly Logger _logger;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
-        public readonly PatchDocument Patch;
 
         private readonly object _idleLocker = new object();
         private Task _indexStoreTask;
         private Task _transformerStoreTask;
-        public TransactionOperationsMerger TxMerger;
 
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
 
         public DocumentDatabase(string name, RavenConfiguration configuration, IoMetrics ioMetrics)
         {
+            StartTime = SystemTime.UtcNow;
             Name = name;
             Configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
@@ -59,10 +58,15 @@ namespace Raven.Server.Documents
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
             HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments,
                 configuration.Databases.MaxWarnSizeHugeDocuments);
-
         }
 
-        public SubscriptionStorage SubscriptionStorage { get; set; }
+        public SystemTime Time = new SystemTime();
+
+        public readonly PatchDocument Patch;
+
+        public TransactionOperationsMerger TxMerger;
+
+        public SubscriptionStorage SubscriptionStorage { get; }
 
         public string Name { get; }
 
@@ -99,6 +103,8 @@ namespace Raven.Server.Documents
         public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
 
         public ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
+
+        public DateTime StartTime { get; }
 
         public void Initialize()
         {
@@ -276,7 +282,7 @@ namespace Raven.Server.Documents
             try
             {
                 IndexStore?.RunIdleOperations();
-                DatabaseOperations.ClearCompletedPendingTasks();
+                DatabaseOperations?.CleanupOperations();
             }
 
             finally
@@ -319,7 +325,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     etag = document.Etag;
-                    var existingAlert = (BlittableJsonReaderObject) document.Data[alert.UniqueKey];
+                    var existingAlert = (BlittableJsonReaderObject)document.Data[alert.UniqueKey];
                     alerts = new DynamicJsonValue(document.Data)
                     {
                         [alert.UniqueKey] = new DynamicJsonValue

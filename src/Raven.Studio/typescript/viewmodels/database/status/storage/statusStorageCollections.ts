@@ -1,7 +1,7 @@
 import getSlowDocCountsCommand = require("commands/database/debug/getSlowDocCountsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import debugDocumentStats = require("models/database/debug/debugDocumentStats");
-import killRunningTaskCommand = require("commands/operations/killRunningTaskCommand");
+import killOperationComamnd = require('commands/operations/killOperationCommand');
 import genUtils = require("common/generalUtils");
 
 class statusStorageCollections extends viewModelBase {
@@ -15,7 +15,7 @@ class statusStorageCollections extends viewModelBase {
 
     cancelOperation() {
         if (this.operationId()) {
-            new killRunningTaskCommand(this.activeDatabase(), this.operationId())
+            new killOperationComamnd(this.activeDatabase(), this.operationId())
                 .execute();
         }
     }

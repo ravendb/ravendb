@@ -648,29 +648,47 @@ namespace Raven.Client.Document
 
                 while (enumerator.MoveNext())
                 {
-                    var ravenJObject = enumerator.Current;
-                    var meta = ravenJObject.Value<RavenJObject>(Constants.Metadata.Key);
-                    query.InvokeAfterStreamExecuted(ref ravenJObject);
+                    var result = enumerator.Current;
+                    var meta = result.Value<RavenJObject>(Constants.Metadata.Key);
+                    query.InvokeAfterStreamExecuted(ref result);
                     string key = null;
                     long? etag = null;
                     if (meta != null)
                     {
                         key = meta.Value<string>("@id") ??
                               meta.Value<string>(Constants.Indexing.Fields.DocumentIdFieldName) ??
-                              ravenJObject.Value<string>(Constants.Indexing.Fields.DocumentIdFieldName);
+                              result.Value<string>(Constants.Indexing.Fields.DocumentIdFieldName);
 
                         var value = meta.Value<string>("@etag");
                         if (value != null)
                             etag = long.Parse(value);
                     }
 
-                    yield return new StreamResult<T>
+                    var hasTransformer = queryOperation.IndexQuery.Transformer != null;
+                    if (hasTransformer)
                     {
-                        Document = queryOperation.Deserialize<T>(ravenJObject),
-                        Etag = etag,
-                        Key = key,
-                        Metadata = meta
-                    };
+                        var values = result.Value<RavenJArray>("$values").ToArray();
+                        foreach (RavenJObject value in values)
+                        {
+                            yield return new StreamResult<T>
+                            {
+                                Document = queryOperation.Deserialize<T>(value),
+                                Etag = etag,
+                                Key = key,
+                                Metadata = meta
+                            };
+                        }
+                    }
+                    else
+                    {
+                        yield return new StreamResult<T>
+                        {
+                            Document = queryOperation.Deserialize<T>(result),
+                            Etag = etag,
+                            Key = key,
+                            Metadata = meta
+                        };
+                    }
                 }
             }
         }

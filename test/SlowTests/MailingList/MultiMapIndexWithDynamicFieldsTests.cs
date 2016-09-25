@@ -4,13 +4,14 @@ using FastTests;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Indexes;
 using Raven.Server.Config;
+using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
     public class MultiMapIndexWithDynamicFieldsTests : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: CreateField")]
+        [Fact]
         public void CanSortDynamically()
         {
             using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))

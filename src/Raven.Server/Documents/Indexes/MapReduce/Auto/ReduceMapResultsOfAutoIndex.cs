@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 }
             }
             
-            var resultObjects = new List<BlittableJsonReaderObject>(aggregatedResultsByReduceKey.Count);
+            var resultObjects = new List<Document>(aggregatedResultsByReduceKey.Count);
 
             foreach (var aggregationResult in aggregatedResultsByReduceKey)
             {
@@ -124,10 +124,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                     djv[aggregate.Key] = aggregate.Value.ResultValue;
                 }
 
-                resultObjects.Add(indexContext.ReadObject(djv, "map/reduce"));
+                resultObjects.Add(new Document { Data = indexContext.ReadObject(djv, "map/reduce") });
             }
-            
-            return new AggregationResult(resultObjects);
+
+            return new AggregatedDocuments(resultObjects);
         }
 
         private class PropertyResult

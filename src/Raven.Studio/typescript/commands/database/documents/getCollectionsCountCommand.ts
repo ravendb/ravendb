@@ -3,6 +3,7 @@ import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
 import queryUtil = require("common/queryUtil");
 
+//TODO: do we need this class?
 class getCollectionsCountCommand extends commandBase {
 
     /**

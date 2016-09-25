@@ -17,8 +17,7 @@ namespace Sparrow.Json
     public class JsonOperationContext : IDisposable
     {
         private const int InitialStreamSize = 4096;
-        private const int MaxStreamSizeAfterReset = 16 * 1024 * 1024;
-
+        
         private readonly int _initialSize;
         private readonly int _longLivedSize;
         private readonly ArenaMemoryAllocator _arenaAllocator;
@@ -34,9 +33,7 @@ namespace Sparrow.Json
         public UTF8Encoding Encoding;
 
         public CachedProperties CachedProperties;
-
-        private int _lastStreamSize = InitialStreamSize;
-
+        
         public static JsonOperationContext ShortTermSingleUse()
         {
             return new JsonOperationContext(4096, 1024);
@@ -102,7 +99,7 @@ namespace Sparrow.Json
         /// </summary>
         public UnmanagedWriteBuffer GetStream()
         {
-            return new UnmanagedWriteBuffer(this, GetMemory(_lastStreamSize));
+            return new UnmanagedWriteBuffer(this, GetMemory(InitialStreamSize));
         }
 
         public virtual void Dispose()
@@ -493,15 +490,6 @@ namespace Sparrow.Json
             }
         }
 
-
-        public void LastStreamSize(int sizeInBytes)
-        {
-            if (_lastStreamSize >= sizeInBytes)
-                return;
-
-            _lastStreamSize = sizeInBytes;
-        }
-
         public virtual void Reset()
         {
             if (_tempBuffer != null)
@@ -528,9 +516,6 @@ namespace Sparrow.Json
                 disposable.Dispose();
 
             _disposables.Clear();
-
-            if (_lastStreamSize > MaxStreamSizeAfterReset)
-                _lastStreamSize = MaxStreamSizeAfterReset; // this must be done last, because _disposables can change this value
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
@@ -594,7 +579,8 @@ namespace Sparrow.Json
                     writer.WriteComma();
                 first = false;
 
-                writer.WritePropertyName(new LazyStringValue(null, state.StringBuffer, state.StringSize, this));
+                var lazyStringValue = new LazyStringValue(null, state.StringBuffer, state.StringSize, this);
+                writer.WritePropertyName(lazyStringValue);
 
                 if (parser.Read() == false)
                     throw new InvalidOperationException("Object json parser can't return partial results");
@@ -630,7 +616,7 @@ namespace Sparrow.Json
                     }
                     break;
                 case JsonParserToken.Float:
-                    writer.WriteString(new LazyStringValue(null, state.StringBuffer, state.StringSize, this));
+                    writer.WriteDouble(new LazyDoubleValue(new LazyStringValue(null, state.StringBuffer, state.StringSize, this)));
                     break;
                 case JsonParserToken.Integer:
                     writer.WriteInteger(state.Long);
@@ -668,6 +654,17 @@ namespace Sparrow.Json
                 WriteValue(writer, state, parser);
             }
             writer.WriteEndArray();
+        }
+
+        public bool GrowAllocation(AllocatedMemoryData allocation, int sizeIncrease)
+        {
+            return _arenaAllocator.GrowAllocation(allocation, sizeIncrease);
+        }
+
+
+        public void ReturnMemory(AllocatedMemoryData allocation)
+        {
+            _arenaAllocator.Return(allocation);
         }
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Sparrow;
+using Sparrow.Json.Parsing;
 using Voron.Util;
 
 namespace Voron.Data.Tables
@@ -70,20 +71,17 @@ namespace Voron.Data.Tables
             }
         }
 
-        public int Size => _size + _elementSize * _values.Count + 1;
+        public int Size => _size + _elementSize * _values.Count + JsonParserState.VariableSizeIntSize(_values.Count);
 
         public void CopyTo(byte* ptr)
         {
-            if (_values.Count > byte.MaxValue)
-                throw new InvalidOperationException("TableValue can contain up to 255 values only");
-
-            ptr[0] = (byte)_values.Count;
-            var pos = 1 + _values.Count * _elementSize;
+            JsonParserState.WriteVariableSizeInt(ref ptr, _values.Count);
+            var pos = _values.Count * _elementSize;
             var dataStart = ptr + pos;
             switch (_elementSize)
             {
                 case 1:
-                    var bytePtr = ptr + 1;
+                    var bytePtr = ptr;
                     for (int i = 0; i < _values.Count; i++)
                     {
                         bytePtr[i] = (byte)pos;
@@ -91,7 +89,7 @@ namespace Voron.Data.Tables
                     }
                     break;
                 case 2:
-                    var shortPtr = (ushort*)(ptr + 1);
+                    var shortPtr = (ushort*)ptr;
                     for (int i = 0; i < _values.Count; i++)
                     {
                         shortPtr[i] = (ushort)pos;
@@ -99,7 +97,7 @@ namespace Voron.Data.Tables
                     }
                     break;
                 case 4:
-                    var intPtr = (int*)(ptr + 1);
+                    var intPtr = (int*)ptr;
                     for (int i = 0; i < _values.Count; i++)
                     {
                         intPtr[i] = pos;

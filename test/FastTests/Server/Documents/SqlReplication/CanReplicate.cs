@@ -628,29 +628,6 @@ var nameArr = this.StepName.split('.');");
                 }
         */
 
-        private static void AssertCountsWithTimeout(int ordersCount, int orderLineCounts, TimeSpan timeout, DocumentStore store)
-        {
-            Exception lastException = null;
-
-            var stopWatch = Stopwatch.StartNew();
-            while (stopWatch.Elapsed <= timeout)
-            {
-                try
-                {
-                    AssertCounts(ordersCount, orderLineCounts, store);
-                    return;
-                }
-                catch (XunitException e)
-                {
-                    lastException = e;
-                }
-
-                Thread.Sleep(500);
-            }
-
-            throw lastException;
-        }
-
         private static void AssertCounts(int ordersCount, int orderLineCounts, DocumentStore store)
         {
             using (var con = new SqlConnection())

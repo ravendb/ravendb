@@ -61,7 +61,7 @@ namespace SlowTests.Tests.Linq
                                 SortOptions = { { x => x.Name, SortOptions.StringVal } }
                             }, true);
 
-                    WaitForQueryToComplete(session, indexName);
+                    WaitForQueryToComplete(session);
 
                     var allResults = session.Query<User>(indexName).OrderBy(x => x.Name)
                                             .Where(x => x.Age > 0);
@@ -112,7 +112,7 @@ namespace SlowTests.Tests.Linq
                                 SortOptions = { { x => x.Name, SortOptions.StringVal } }
                             }, true);
 
-                    WaitForQueryToComplete(session, indexName);
+                    WaitForQueryToComplete(session);
 
                     var firstItem = session.Query<User>(indexName).OrderBy(x => x.Name)
                                             .First();
@@ -151,7 +151,7 @@ namespace SlowTests.Tests.Linq
                                 Indexes = { { x => x.Name, FieldIndexing.Analyzed } }
                             }, true);
 
-                    WaitForQueryToComplete(session, indexName);
+                    WaitForQueryToComplete(session);
 
                     var singleItem = session.Query<User>(indexName)
                                             .Single(x => x.Name == ("James"));
@@ -306,7 +306,7 @@ namespace SlowTests.Tests.Linq
                                 Map = docs => from doc in docs select new { doc.Name, doc.Age },
                             }, true);
 
-                    WaitForQueryToComplete(session, indexName);
+                    WaitForQueryToComplete(session);
 
                     var result = session.Query<User>(indexName).OrderBy(x => x.Name).Where(x => x.Age >= 18).ToList();
 
@@ -479,7 +479,7 @@ namespace SlowTests.Tests.Linq
                 using (var s = store.OpenSession())
                 {
                     //Just issue a blank query to make sure there are no stale results    
-                    WaitForQueryToComplete(s, "ByLineCost");
+                    WaitForQueryToComplete(s);
 
                     //This is the lucene query we want to mimic
                     var luceneResult = s.Advanced.DocumentQuery<OrderItem>("ByLineCost")
@@ -576,19 +576,9 @@ namespace SlowTests.Tests.Linq
             public DateTime TimeOfDay { get; set; }
         }
 
-        private static void WaitForQueryToComplete(IDocumentSession session, string indexName)
+        private static void WaitForQueryToComplete(IDocumentSession session)
         {
-            QueryResult results;
-            do
-            {
-                //doesn't matter what the query is here, just want to see if it's stale or not
-                results = session.Advanced.DocumentQuery<User>(indexName)
-                              .Where("")
-                              .QueryResult;
-
-                if (results.IsStale)
-                    Thread.Sleep(1000);
-            } while (results.IsStale);
+            WaitForIndexing(session.Advanced.DocumentStore);
         }
 
         private readonly User firstUser = new User { Name = "Alan", Age = 30 };

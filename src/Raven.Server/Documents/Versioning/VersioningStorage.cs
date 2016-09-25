@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -96,10 +95,10 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        private VersioningConfigurationCollection GetVersioningConfiguration(string collectionName)
+        private VersioningConfigurationCollection GetVersioningConfiguration(CollectionName collectionName)
         {
             VersioningConfigurationCollection configuration;
-            if (_versioningConfiguration.Collections != null && _versioningConfiguration.Collections.TryGetValue(collectionName, out configuration))
+            if (_versioningConfiguration.Collections != null && _versioningConfiguration.Collections.TryGetValue(collectionName.Name, out configuration))
             {
                 return configuration;
             }
@@ -112,7 +111,7 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public void PutFromDocument(DocumentsOperationContext context, string collectionName, string key, long newEtagBigEndian, BlittableJsonReaderObject document)
+        public void PutFromDocument(DocumentsOperationContext context, CollectionName collectionName, string key, long newEtagBigEndian, BlittableJsonReaderObject document)
         {
             var enableVersioning = false;
             BlittableJsonReaderObject metadata;
@@ -123,7 +122,7 @@ namespace Raven.Server.Documents.Versioning
                 {
                     DynamicJsonValue mutatedMetadata;
                     Debug.Assert(metadata.Modifications == null);
-                   
+
                     metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
                     mutatedMetadata.Remove(Constants.Versioning.RavenDisableVersioning);
                     if (disableVersioning)
@@ -207,10 +206,8 @@ namespace Raven.Server.Documents.Versioning
             numbers.Delete(prefixedLoweredKey);
         }
 
-        public void Delete(DocumentsOperationContext context, string collectionName, Slice loweredKey)
+        public void Delete(DocumentsOperationContext context, CollectionName collectionName, Slice loweredKey)
         {
-            Debug.Assert(collectionName[0] != '@');
-            
             var configuration = GetVersioningConfiguration(collectionName);
             if (configuration.Active == false)
                 return;
@@ -219,7 +216,7 @@ namespace Raven.Server.Documents.Versioning
                 return;
 
             var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, RevisionDocuments);
-            var prefixKeyMem = context.Allocator.Allocate(loweredKey.Size +1);
+            var prefixKeyMem = context.Allocator.Allocate(loweredKey.Size + 1);
             loweredKey.CopyTo(0, prefixKeyMem.Ptr, 0, loweredKey.Size);
             prefixKeyMem.Ptr[loweredKey.Size] = (byte)30; // the record separator
             var prefixSlice = new Slice(SliceOptions.Key, prefixKeyMem);
@@ -292,7 +289,7 @@ namespace Raven.Server.Documents.Versioning
                 byteCount
                 + sizeof(char) * key.Length // for the lower calls
                 + sizeof(char) * 2); // for the record separator
-            
+
             fixed (char* pChars = key)
             {
                 var destChars = (char*)buffer;

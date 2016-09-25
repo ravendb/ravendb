@@ -1,46 +1,24 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries.Results
 {
-    public class MapReduceQueryResultRetriever : IQueryResultRetriever
+    public class MapReduceQueryResultRetriever : QueryResultRetrieverBase
     {
-        private readonly TransactionOperationContext _indexContext;
+        private readonly DocumentsOperationContext _context;
 
-        private readonly FieldsToFetch _fieldsToFetch;
-
-        public MapReduceQueryResultRetriever(TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch)
+        public MapReduceQueryResultRetriever(DocumentsOperationContext context, FieldsToFetch fieldsToFetch)
+            : base(fieldsToFetch, context)
         {
-            _indexContext = indexContext;
-            _fieldsToFetch = fieldsToFetch;
+            _context = context;
         }
 
-        public unsafe Document Get(Lucene.Net.Documents.Document input, float score)
+        protected override unsafe Document DirectGet(Lucene.Net.Documents.Document input, string id)
         {
-            // TODO [ppekrol] handle IsDistinct, no Id then
-
             var reduceValue = input.GetField(Constants.Indexing.Fields.ReduceValueFieldName).GetBinaryValue();
 
-            var result = new BlittableJsonReaderObject((byte*)_indexContext.PinObjectAndGetAddress(reduceValue),
-                reduceValue.Length, _indexContext);
-
-            if (_fieldsToFetch.IsProjection)
-            {
-                foreach (var name in result.GetPropertyNames())
-                {
-                    if (_fieldsToFetch.ContainsField(name))
-                        continue;
-
-                    if (result.Modifications == null)
-                        result.Modifications = new DynamicJsonValue(result);
-
-                    result.Modifications.Remove(name);
-                }
-
-                result = _indexContext.ReadObject(result, "map-reduce result document");
-            }
+            var result = new BlittableJsonReaderObject((byte*)_context.PinObjectAndGetAddress(reduceValue), reduceValue.Length, _context);
 
             return new Document
             {
@@ -48,7 +26,15 @@ namespace Raven.Server.Documents.Queries.Results
             };
         }
 
-        public bool TryGetKey(Lucene.Net.Documents.Document document, out string key)
+        public override Document Get(Lucene.Net.Documents.Document input, float score)
+        {
+            if (_fieldsToFetch.IsProjection || _fieldsToFetch.IsTransformation)
+                return GetProjection(input, score, null);
+
+            return DirectGet(input, null);
+        }
+
+        public override bool TryGetKey(Lucene.Net.Documents.Document document, out string key)
         {
             key = null;
             return false;

@@ -3,12 +3,15 @@ using Raven.Abstractions.Data;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Sparrow.Json;
+using BatchResult = Raven.Client.Documents.Commands.BatchResult;
 
 namespace Raven.Client.Json
 {
     public class JsonDeserializationClient : JsonDeserializationBase
     {
         public static readonly Func<BlittableJsonReaderObject, GetDocumentResult> GetDocumentResult = GenerateJsonDeserializationRoutine<GetDocumentResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, BatchResult> BatchResult = GenerateJsonDeserializationRoutine<BatchResult>();
 
         public static readonly Func<BlittableJsonReaderObject, PutResult> PutResult = GenerateJsonDeserializationRoutine<PutResult>();
 

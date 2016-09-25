@@ -131,21 +131,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 if (section.IsNew == false)
                     writer.DeleteReduceResult(reduceKeyHash, stats);
 
-                foreach (var output in result.Outputs)
+                foreach (var output in result.GetOutputs())
                 {
-                    writer.IndexDocument(reduceKeyHash, new Document
-                    {
-                        Key = reduceKeyHash,
-                        LoweredKey = reduceKeyHash,
-                        Data = output
-                    }, stats, indexContext);
+                    writer.IndexDocument(reduceKeyHash, output, stats, indexContext);
                 }
 
                 _metrics.MapReduceReducedPerSecond.Mark(numberOfEntriesToReduce);
 
                 stats.RecordReduceSuccesses(numberOfEntriesToReduce);
             }
-            catch (Exception e)
+                catch (Exception e)
             {
                 foreach (var item in _aggregationBatch)
                 {
@@ -211,14 +206,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             writer.DeleteReduceResult(reduceKeyHash, stats);
 
-                            foreach (var output in result.Outputs)
+                            foreach (var output in result.GetOutputs())
                             {
-                                writer.IndexDocument(reduceKeyHash, new Document
-                                {
-                                    Key = reduceKeyHash,
-                                    LoweredKey = reduceKeyHash,
-                                    Data = output
-                                }, stats, indexContext);
+                                writer.IndexDocument(reduceKeyHash, output, stats, indexContext);
                             }
 
                             _metrics.MapReduceReducedPerSecond.Mark(page.NumberOfEntries);
@@ -227,6 +217,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         }
                         else
                         {
+                            StoreAggregationResult(page.PageNumber, page.NumberOfEntries, table, result);
                             parentPagesToAggregate[parentPage] = modifiedStore.Tree;
                         }
                     }
@@ -286,15 +277,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             {
                                 writer.DeleteReduceResult(reduceKeyHash, stats);
 
-                                foreach (var output in result.Outputs)
+                                foreach (var output in result.GetOutputs())
                                 {
-                                    writer.IndexDocument(reduceKeyHash, new Document
-                                    {
-                                        Key = reduceKeyHash,
-                                        LoweredKey = reduceKeyHash,
-                                        Data = output
-                                    }, stats, indexContext);
+                                    writer.IndexDocument(reduceKeyHash, output, stats, indexContext);
                                 }
+
                                 _metrics.MapReduceReducedPerSecond.Mark(aggregatedEntries);
 
                                 stats.RecordReduceSuccesses(aggregatedEntries);
@@ -302,6 +289,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             else
                             {
                                 parentPagesToAggregate[parentPage] = tree;
+                                StoreAggregationResult(page.PageNumber, aggregatedEntries, table, result);
                             }
                         }
                     }
@@ -330,7 +318,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 _aggregationBatch.Add(reduceEntry);
             }
 
-            return AggregateBatchResults(_aggregationBatch, page.PageNumber, page.NumberOfEntries, table, indexContext, token);
+            return AggregateBatchResults(_aggregationBatch, indexContext, token);
         }
 
         private AggregationResult AggregateBranchPage(TreePage page, Table table, TransactionOperationContext indexContext, CancellationToken token, out int aggregatedEntries)
@@ -357,11 +345,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
-            return AggregateBatchResults(_aggregationBatch, page.PageNumber, aggregatedEntries, table, indexContext, token);
+            return AggregateBatchResults(_aggregationBatch, indexContext, token);
         }
 
-        private AggregationResult AggregateBatchResults(List<BlittableJsonReaderObject> aggregationBatch, long modifiedPage, int aggregatedEntries,
-            Table table, TransactionOperationContext indexContext, CancellationToken token)
+        private AggregationResult AggregateBatchResults(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, CancellationToken token)
         {
             AggregationResult result;
 
@@ -369,38 +356,32 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 result = AggregateOn(aggregationBatch, indexContext, token);
             }
-            catch (Exception)
-            {
-                foreach (var item in aggregationBatch)
-                {
-                    item.Dispose();
-                }
-
-                throw;
-            }
             finally
             {
                 aggregationBatch.Clear();
             }
-            
+
+            return result;
+        }
+
+        private static void StoreAggregationResult(long modifiedPage, int aggregatedEntries, Table table, AggregationResult result)
+        {
             var pageNumber = IPAddress.HostToNetworkOrder(modifiedPage);
-            var numberOfOutputs = result.Outputs.Count;
+            var numberOfOutputs = result.Count;
 
             var tvb = new TableValueBuilder
             {
                 {(byte*) &pageNumber, sizeof(long)},
-                {(byte*) &aggregatedEntries, sizeof (int)},
-                {(byte*) &numberOfOutputs, sizeof (int)}
+                {(byte*) &aggregatedEntries, sizeof(int)},
+                {(byte*) &numberOfOutputs, sizeof(int)}
             };
 
-            foreach (var output in result.Outputs)
+            foreach (var output in result.GetOutputsToStore())
             {
                 tvb.Add(output.BasePointer, output.Size);
             }
 
             table.Set(tvb);
-
-            return result;
         }
 
         protected abstract AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, CancellationToken token);

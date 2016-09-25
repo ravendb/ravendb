@@ -9,16 +9,16 @@ class saveDocumentCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<bulkDocumentDto[]> {
+    execute(): JQueryPromise<saveDocumentResponseDto> {
         if (this.reportSaveProgress) {
             this.reportInfo("Saving " + this.id + "...");
         }
 
-        let commands: Array<bulkDocumentDto> = [this.document.toBulkDoc("PUT")];
+        const commands: Array<bulkDocumentDto> = [this.document.toBulkDoc("PUT")];
 
-        let args = ko.toJSON(commands);
-        let url = endpoints.databases.batch.bulk_docs;
-        let saveTask = this.post(url, args, this.db);
+        const args = ko.toJSON(commands);
+        const url = endpoints.databases.batch.bulk_docs;
+        const saveTask = this.post(url, args, this.db);
 
         if (this.reportSaveProgress) {
             saveTask.done(() => this.reportSuccess("Saved " + this.id));

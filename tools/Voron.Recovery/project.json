@@ -10,7 +10,7 @@
   "dependencies": {
     "Microsoft.NETCore.App": {
       "type": "platform",
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     "Voron": "4.0.0-*",
     "Raven.Server": "4.0.0-*"

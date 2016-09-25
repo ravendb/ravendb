@@ -335,8 +335,8 @@ namespace Voron
                 {
                     _headerAccessor,
                     _scratchBufferPool,
-                    _options.OwnsPagers ? _options : null,
-                    _journal
+                    _journal,
+                    _options.OwnsPagers ? _options : null
                 }.Concat(_tempPagesPool))
                 {
                     try

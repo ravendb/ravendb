@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Document;
@@ -25,7 +26,7 @@ namespace SlowTests.MailingList
                 @"docs.Technologies.Where(technology => !technology.__document_id.EndsWith(""/published"")).Select(technology => new {
     TechnologyId = technology.__document_id,
     DrugId = technology.Drug.Id
-})",
+})".Replace("\r\n", Environment.NewLine),
                 indexDefinition.Maps.First());
         }
 

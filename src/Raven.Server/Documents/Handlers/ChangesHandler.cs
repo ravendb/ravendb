@@ -26,13 +26,16 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
+                // this flag can be used to detect if server was restarted between changes connections on client side
+                var sendStartTime = GetBoolValueQueryString("sendServerStartTime", false).GetValueOrDefault(false);
+
                 //TODO: select small context size (maybe pool just for them?)
                 JsonOperationContext context;
                 using (ContextPool.AllocateOperationContext(out context))
                 {
                     try
                     {
-                        await HandleConnection(webSocket, context);
+                        await HandleConnection(webSocket, context, sendStartTime);
                     }
                     catch (Exception ex)
                     {
@@ -87,11 +90,11 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        private async Task HandleConnection(WebSocket webSocket, JsonOperationContext context)
+        private async Task HandleConnection(WebSocket webSocket, JsonOperationContext context, bool sendStartTime)
         {
             var connection = new NotificationsClientConnection(webSocket, Database);
             Database.Notifications.Connect(connection);
-            var sendTask = connection.StartSendingNotifications();
+            var sendTask = connection.StartSendingNotifications(sendStartTime);
             var debugTag = "changes/" + connection.Id;
             try
             {

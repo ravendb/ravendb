@@ -244,8 +244,8 @@ namespace FastTests
             }
 
             timeout = timeout ?? (Debugger.IsAttached
-                          ? TimeSpan.FromMinutes(5)
-                          : TimeSpan.FromSeconds(20));
+                          ? TimeSpan.FromMinutes(15)
+                          : TimeSpan.FromMinutes(1));
 
             var spinUntil = SpinWait.SpinUntil(() =>
                         databaseCommands.GetStatistics().Indexes.All(x => x.IsStale == false),
@@ -290,8 +290,6 @@ namespace FastTests
         public virtual void Dispose()
         {
             GC.SuppressFinalize(this);
-
-            SystemTime.UtcDateTime = null;
 
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 

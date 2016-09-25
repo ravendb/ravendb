@@ -210,16 +210,18 @@ namespace Raven.Server.Documents.Indexes.Static
             var statements = new List<StatementSyntax>();
             var maps = definition.Maps.ToList();
             var fieldNamesValidator = new FieldNamesValidator();
+            var methodDetector = new MethodDetectorRewriter();
+
             for (var i = 0; i < maps.Count; i++)
             {
                 var map = maps[i];
-                statements.AddRange(HandleMap(map, fieldNamesValidator));
+                statements.AddRange(HandleMap(map, fieldNamesValidator, methodDetector));
             }
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
             {
                 string[] groupByFields;
-                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, out groupByFields));
+                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, out groupByFields));
 
                 var groupByFieldsArray = GetArrayCreationExpression(groupByFields);
                 statements.Add(RoslynHelper.This(nameof(StaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
@@ -227,6 +229,14 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var outputFieldsArray = GetArrayCreationExpression(fieldNamesValidator.Fields);
             statements.Add(RoslynHelper.This(nameof(StaticIndexBase.OutputFields)).Assign(outputFieldsArray).AsExpressionStatement());
+
+            var methods = methodDetector.Methods;
+
+            if (methods.HasCreateField)
+                statements.Add(RoslynHelper.This(nameof(StaticIndexBase.HasDynamicFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+
+            if (methods.HasBoost)
+                statements.Add(RoslynHelper.This(nameof(StaticIndexBase.HasBoostedFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
 
             var ctor = RoslynHelper.PublicCtor(name)
                 .AddBodyStatements(statements.ToArray());
@@ -262,21 +272,22 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static List<StatementSyntax> HandleMap(string map, FieldNamesValidator fieldNamesValidator)
+        private static List<StatementSyntax> HandleMap(string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector)
         {
             try
             {
                 var expression = SyntaxFactory.ParseExpression(map).NormalizeWhitespace();
 
                 fieldNamesValidator.Validate(map, expression);
+                methodsDetector.Visit(expression);
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
-                    return HandleSyntaxInMap(new QuerySyntaxMapRewriter(), queryExpression);
+                    return HandleSyntaxInMap(new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression);
 
                 var invocationExpression = expression as InvocationExpressionSyntax;
                 if (invocationExpression != null)
-                    return HandleSyntaxInMap(new MethodSyntaxMapRewriter(), invocationExpression);
+                    return HandleSyntaxInMap(new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression);
 
                 throw new InvalidOperationException("Not supported expression type.");
             }
@@ -290,13 +301,14 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, out string[] groupByFields)
+        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, out string[] groupByFields)
         {
             try
             {
                 var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
 
                 fieldNamesValidator?.Validate(reduce, expression);
+                methodsDetector.Visit(expression);
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
@@ -347,7 +359,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 .AsExpressionStatement();
         }
 
-        private static List<StatementSyntax> HandleSyntaxInMap(MapRewriterBase mapRewriter, ExpressionSyntax expression)
+        private static List<StatementSyntax> HandleSyntaxInMap(MapFunctionProcessor mapRewriter, ExpressionSyntax expression)
         {
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
 
@@ -422,10 +434,16 @@ namespace Raven.Server.Documents.Indexes.Static
         public class IndexAndTransformerMethods
         {
             public bool HasLoadDocument { get; set; }
+
             public bool HasTransformWith { get; set; }
+
             public bool HasGroupBy { get; set; }
 
             public bool HasInclude { get; set; }
+
+            public bool HasCreateField { get; set; }
+
+            public bool HasBoost { get; set; }
         }
     }
 }

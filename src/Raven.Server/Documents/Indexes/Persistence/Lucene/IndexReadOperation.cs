@@ -37,32 +37,32 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IndexType _indexType;
         private readonly int? _actualMaxIndexOutputsPerDocument;
         private readonly int _maxIndexOutputsPerDocument;
+        bool _indexHasBoostedFields;
 
         private readonly IndexSearcher _searcher;
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
         private readonly IDisposable _releaseSearcher;
         private readonly IDisposable _releaseReadTransaction;
 
-        public IndexReadOperation(string indexName, IndexType indexType,
-            int maxIndexOutputsPerDocument, int? actualMaxIndexOutputsPerDocument,
-            Dictionary<string, IndexField> fields, LuceneVoronDirectory directory,
-            IndexSearcherHolder searcherHolder, Transaction readTransaction, DocumentDatabase documentDatabase)
-            : base(indexName, LoggingSource.Instance.GetLogger<IndexReadOperation>(documentDatabase.Name))
+        public IndexReadOperation(Index index, LuceneVoronDirectory directory,
+            IndexSearcherHolder searcherHolder, Transaction readTransaction)
+            : base(index.Name, LoggingSource.Instance.GetLogger<IndexReadOperation>(index._indexStorage.DocumentDatabase.Name))
         {
             try
             {
-                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields, forQuerying: true);
+                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition.MapFields, forQuerying: true);
             }
             catch (Exception e)
             {
                 throw new IndexAnalyzerException(e);
             }
 
-            _indexType = indexType;
-            _actualMaxIndexOutputsPerDocument = actualMaxIndexOutputsPerDocument;
-            _maxIndexOutputsPerDocument = maxIndexOutputsPerDocument;
+            _indexType = index.Type;
+            _indexHasBoostedFields = index.HasBoostedFields;
+            _actualMaxIndexOutputsPerDocument = index.ActualMaxNumberOfIndexOutputs;
+            _maxIndexOutputsPerDocument = index.MaxNumberOfIndexOutputs;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
-            _releaseSearcher = searcherHolder.GetSearcher(out _searcher, documentDatabase);
+            _releaseSearcher = searcherHolder.GetSearcher(out _searcher, index._indexStorage.DocumentDatabase);
         }
 
         public int EntriesCount()
@@ -222,17 +222,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private TopDocs ExecuteQuery(Query documentQuery, int start, int pageSize, Sort sort)
         {
-            if (pageSize == int.MaxValue && sort == null) // we want all docs, no sorting required
+            if (sort == null && _indexHasBoostedFields == false && IsBoostedQuery(documentQuery) == false)
             {
-                var gatherAllCollector = new GatherAllCollector();
-                _searcher.Search(documentQuery, gatherAllCollector);
-                return gatherAllCollector.ToTopDocs();
-            }
+                if (pageSize == int.MaxValue) // we want all docs, no sorting required
+                {
+                    var gatherAllCollector = new GatherAllCollector();
+                    _searcher.Search(documentQuery, gatherAllCollector);
+                    return gatherAllCollector.ToTopDocs();
+                }
 
+                var noSortingCollector = new NonSortingCollector(Math.Abs(pageSize + start));
+
+                _searcher.Search(documentQuery, noSortingCollector);
+
+                return noSortingCollector.ToTopDocs();
+            }
+            
             var absFullPage = Math.Abs(pageSize + start); // need to protect against ridiculously high values of pageSize + start that overflow
             var minPageSize = Math.Max(absFullPage, 1);
-
-            // NOTE: We get Start + Pagesize results back so we have something to page on
+            
             if (sort != null)
             {
                 _searcher.SetDefaultFieldSortScoring(true, false);
@@ -247,6 +255,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             return _searcher.Search(documentQuery, null, minPageSize);
+        }
+
+        private static bool IsBoostedQuery(Query query)
+        {
+            if (query.Boost > 1)
+                return true;
+
+            BooleanQuery booleanQuery = query as BooleanQuery;
+
+            if (booleanQuery == null)
+                return false;
+
+            foreach (var clause in booleanQuery.Clauses)
+            {
+                if (clause.Query.Boost > 1)
+                    return true;
+            }
+
+            return false;
         }
 
         private static Sort GetSort(SortedField[] sortedFields)

@@ -46,7 +46,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-5199")]
+        [Fact]
         public void CanSortRandomly_Dynamic()
         {
             using (var store = GetDocumentStore())

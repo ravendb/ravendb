@@ -41,7 +41,7 @@ class conflicts extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            changesContext.currentResourceChangesApi().watchAllReplicationConflicts((e) => this.refreshConflictsObservable(new Date().getTime())) 
+            //TODO: changesContext.currentResourceChangesApi().watchAllReplicationConflicts((e) => this.refreshConflictsObservable(new Date().getTime())) 
         ];
     }
 

@@ -39,7 +39,7 @@ class viewModelBase {
 
     currentHelpLink = ko.observable<string>().subscribeTo('globalHelpLink', true);
 
-    //holds full studio version eg. 3.0.3528
+    //holds full studio version eg. 4.0.40000
     static clientVersion = ko.observable<string>();
     static hasContinueTestOption = ko.observable<boolean>(false);
 
@@ -47,13 +47,6 @@ class viewModelBase {
         this.appUrls = appUrl.forCurrentDatabase();
     }
 
-    /*
-     * Called by Durandal when checking whether this navigation is allowed. 
-     * Possible return values: boolean, promise<boolean>, {redirect: 'some/other/route'}, promise<{redirect: 'some/other/route'}>
-     * 
-     * We use this to determine whether we should allow navigation to a system DB page.
-     * p.s. from Judah: a big scary prompt when loading the system DB is a bit heavy-handed, no? 
-     */
     canActivate(args: any): any {
         var self = this;
         setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
@@ -308,22 +301,22 @@ class viewModelBase {
         }
     }
 
-    public addNotification(subscription: changeSubscription) {
+    addNotification(subscription: changeSubscription) {
         this.notifications.push(subscription);
     }
 
-    public removeNotification(subscription: changeSubscription) {
+    removeNotification(subscription: changeSubscription) {
         this.notifications.remove(subscription);
     }
 
-    public continueTest() {
+    continueTest() {
         var doc = document.empty();
         new saveDocumentCommand("Debug/Done", doc, this.activeDatabase(), false)
             .execute()
             .done(() => viewModelBase.hasContinueTestOption(false));
     }
 
-    public updateHelpLink(hash: string = null) {
+    updateHelpLink(hash: string = null) {
         if (hash) {
             var version = viewModelBase.clientVersion();
             if (version) {

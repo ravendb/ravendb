@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    internal class ReferencedCollectionRewriter : CSharpSyntaxRewriter
+    internal class ReferencedCollectionsRetriever : CSharpSyntaxRewriter
     {
         public HashSet<string> ReferencedCollections;
 
