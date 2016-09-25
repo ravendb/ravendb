@@ -46,13 +46,13 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext.ExternalAllocationScope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, out Slice slice)
+        public static ByteStringContext.Scope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, out Slice slice)
         {
             return ToSlicePtr(context, node, ByteStringType.Mutable | (ByteStringType) SliceOptions.Key, out slice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext.ExternalAllocationScope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, ByteStringType type, out Slice slice)
+        public static ByteStringContext.Scope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, ByteStringType type, out Slice slice)
         {
             ByteString str;
             var scope = context.FromPtr((byte*)node + Constants.NodeHeaderSize, node->KeySize,
@@ -85,7 +85,7 @@ namespace Voron.Data.BTrees
             return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
         }
 
-        public static ByteStringContext.ExternalAllocationScope GetData(LowLevelTransaction tx, TreeNodeHeader* node, out Slice slice)
+        public static ByteStringContext.Scope GetData(LowLevelTransaction tx, TreeNodeHeader* node, out Slice slice)
         {
             if (node->Flags == (TreeNodeFlags.PageRef))
             {

@@ -60,8 +60,8 @@ namespace Raven.Server.Documents.Transformers
                     return source;
             }
 
-            ByteStringContext.ExternalAllocationScope scope =
-                new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
+            ByteStringContext.Scope scope =
+                new ByteStringContext<ByteStringMemoryCache>.Scope();
             Slice keySlice;
             if (keyLazy != null)
             {

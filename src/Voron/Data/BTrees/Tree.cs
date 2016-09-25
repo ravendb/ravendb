@@ -563,11 +563,11 @@ namespace Voron.Data.BTrees
 
         private void AddToRecentlyFoundPages(List<long> c, TreePage p, bool leftmostPage, bool rightmostPage)
         {
-            ByteStringContext.ExternalAllocationScope firstScope, lastScope;
+            ByteStringContext.Scope firstScope, lastScope;
             Slice firstKey;
             if (leftmostPage)
             {
-                firstScope = new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
+                firstScope = new ByteStringContext<ByteStringMemoryCache>.Scope();
                 firstKey = Slices.BeforeAllKeys;
             }
             else
@@ -579,7 +579,7 @@ namespace Voron.Data.BTrees
             Slice lastKey;
             if (rightmostPage)
             {
-                lastScope = new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
+                lastScope = new ByteStringContext<ByteStringMemoryCache>.Scope();
                 lastKey = Slices.AfterAllKeys;
             }
             else
@@ -596,11 +596,11 @@ namespace Voron.Data.BTrees
 
         private void AddToRecentlyFoundPages(TreeCursor c, TreePage p, bool leftmostPage, bool rightmostPage)
         {
-            ByteStringContext.ExternalAllocationScope firstScope, lastScope;
+            ByteStringContext.Scope firstScope, lastScope;
             Slice firstKey;
             if (leftmostPage)
             {
-                firstScope = new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
+                firstScope = new ByteStringContext<ByteStringMemoryCache>.Scope();
                 firstKey = Slices.BeforeAllKeys;
             }
             else
@@ -612,7 +612,7 @@ namespace Voron.Data.BTrees
             Slice lastKey;
             if (rightmostPage)
             {
-                lastScope = new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
+                lastScope = new ByteStringContext<ByteStringMemoryCache>.Scope();
                 lastKey = Slices.AfterAllKeys;
             }
             else

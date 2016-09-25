@@ -21,8 +21,8 @@ namespace Voron.Data.BTrees
         private Slice _currentKey = default(Slice);
         private Slice _currentInternalKey = default(Slice);
 
-        private ByteStringContext.ExternalAllocationScope _prevKeyScope =
-            default(ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope);
+        private ByteStringContext.Scope _prevKeyScope =
+            default(ByteStringContext<ByteStringMemoryCache>.Scope);
 
         public TreeIterator(Tree tree, LowLevelTransaction tx, bool prefetch)
         {

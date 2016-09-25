@@ -18,7 +18,7 @@ namespace Voron.Data.Fixed
             bool SeekToLast();
             bool Seek(long key);
             long CurrentKey { get; }
-            ByteStringContext.ExternalAllocationScope Value(out Slice slice);
+            ByteStringContext.Scope Value(out Slice slice);
             bool MoveNext();
             bool MovePrev();
 
@@ -41,10 +41,10 @@ namespace Voron.Data.Fixed
 
             public long CurrentKey { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
             public Slice Value { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
-            ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope IFixedSizeIterator.Value(out Slice slice)
+            ByteStringContext<ByteStringMemoryCache>.Scope IFixedSizeIterator.Value(out Slice slice)
             {
                 slice = new Slice();
-                return new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
+                return new ByteStringContext<ByteStringMemoryCache>.Scope();
             }
 
             public bool MoveNext()
@@ -119,7 +119,7 @@ namespace Voron.Data.Fixed
                 }
             }
 
-            public ByteStringContext.ExternalAllocationScope Value(out Slice slice)
+            public ByteStringContext.Scope Value(out Slice slice)
             {
                 if (_pos == _header->NumberOfEntries)
                     throw new InvalidOperationException("Invalid position, cannot read past end of tree");
@@ -211,7 +211,7 @@ namespace Voron.Data.Fixed
                 }
             }
 
-            public ByteStringContext.ExternalAllocationScope Value(out Slice slice)
+            public ByteStringContext.Scope Value(out Slice slice)
             {
                 if (_currentPage == null)
                     throw new InvalidOperationException("No current page was set");

@@ -300,22 +300,22 @@ namespace Voron.Data.BTrees
                         var leftPageNumber = implicitLeftNode->PageNumber;
 
                         Slice implicitLeftKeyToInsert;
-                        ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope? externalAllocationScope;
+                        ByteStringContext<ByteStringMemoryCache>.Scope? externalScope;
 
                         if (implicitLeftNode == actualKeyNode)
                         {
-                            externalAllocationScope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, actualKeyNode,
+                            externalScope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, actualKeyNode,
                                 out implicitLeftKeyToInsert);
                         }
                         else
                         {
                             implicitLeftKeyToInsert = implicitLeftKey;
-                            externalAllocationScope = null;
+                            externalScope = null;
                         }
 
                         to.EnsureHasSpaceFor(_tx, implicitLeftKeyToInsert, -1);
                         to.AddPageRefNode(1, implicitLeftKeyToInsert, leftPageNumber);
-                        externalAllocationScope?.Dispose();
+                        externalScope?.Dispose();
 
                         to.ChangeImplicitRefPageNode(pageNum); // setup the new implicit node
                     }
@@ -361,14 +361,14 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext.ExternalAllocationScope GetActualKey(TreePage page, int pos, out Slice slice)
+        private ByteStringContext.Scope GetActualKey(TreePage page, int pos, out Slice slice)
         {
             TreeNodeHeader* _;
             return GetActualKey(page, pos, out _, out slice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext.ExternalAllocationScope GetActualKey(TreePage page, int pos, out TreeNodeHeader* node, out Slice key)
+        private ByteStringContext.Scope GetActualKey(TreePage page, int pos, out TreeNodeHeader* node, out Slice key)
         {
             node = page.GetNode(pos);
             var scope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out key);

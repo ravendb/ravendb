@@ -530,14 +530,14 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext.ExternalAllocationScope GetNodeKey(LowLevelTransaction tx, int nodeNumber,
+        public ByteStringContext.Scope GetNodeKey(LowLevelTransaction tx, int nodeNumber,
             out Slice result)
         {
             return GetNodeKey(tx, nodeNumber, ByteStringType.Mutable | ByteStringType.External, out result);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext.ExternalAllocationScope GetNodeKey(LowLevelTransaction tx, int nodeNumber, ByteStringType type/* = ByteStringType.Mutable | ByteStringType.External*/,
+        public ByteStringContext.Scope GetNodeKey(LowLevelTransaction tx, int nodeNumber, ByteStringType type/* = ByteStringType.Mutable | ByteStringType.External*/,
             out Slice result)
         {            
             var node = GetNode(nodeNumber);
@@ -546,7 +546,7 @@ namespace Voron.Data.BTrees
             if ((type & ByteStringType.External) == 0)
             {
                 result = TreeNodeHeader.ToSlice(tx.Allocator, node, type);
-                return new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
+                return new ByteStringContext<ByteStringMemoryCache>.Scope();
             }
             return TreeNodeHeader.ToSlicePtr(tx.Allocator, node, type, out result);
         }  

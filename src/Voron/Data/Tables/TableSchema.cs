@@ -49,7 +49,7 @@ namespace Voron.Data.Tables
             public bool IsGlobal;
             public Slice Name;
 
-            public ByteStringContext.ExternalAllocationScope GetSlice(ByteStringContext context, TableValueReader value, out Slice slice)
+            public ByteStringContext.Scope GetSlice(ByteStringContext context, TableValueReader value, out Slice slice)
             {
                 int totalSize;
                 var ptr = value.Read(StartIndex, out totalSize);

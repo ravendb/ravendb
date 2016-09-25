@@ -1267,13 +1267,13 @@ namespace Voron.Data.Fixed
             }
         }
 
-        public ByteStringContext.ExternalAllocationScope Read(long key, out Slice slice)
+        public ByteStringContext.Scope Read(long key, out Slice slice)
         {
             switch (_type)
             {
                 case null:
                     slice = new Slice();
-                    return new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
+                    return new ByteStringContext<ByteStringMemoryCache>.Scope();
 
                 case RootObjectType.EmbeddedFixedSizeTree:
                     var ptr = _parent.DirectRead(_treeName);

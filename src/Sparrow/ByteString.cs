@@ -1065,12 +1065,12 @@ namespace Sparrow
             return result;
         }
 
-        public struct ExternalAllocationScope : IDisposable
+        public struct Scope : IDisposable
         {
             private ByteStringContext<TAllocator> _parent;
             private ByteString _str;
 
-            public ExternalAllocationScope(ByteStringContext<TAllocator> parent, ByteString str)
+            public Scope(ByteStringContext<TAllocator> parent, ByteString str)
             {
                 _parent = parent;
                 _str = str;
@@ -1078,12 +1078,12 @@ namespace Sparrow
 
             public void Dispose()
             {
-                _parent?.ReleaseExternal(ref _str);
+                _parent?.Release(ref _str);
                 _parent = null;
             }
         }
 
-        public ExternalAllocationScope FromPtr(byte* valuePtr, int size, 
+        public Scope FromPtr(byte* valuePtr, int size, 
             ByteStringType type,
             out ByteString str)
         {
@@ -1094,7 +1094,7 @@ namespace Sparrow
 
             RegisterForValidation(str);
 
-            return new ExternalAllocationScope(this, str);
+            return new Scope(this, str);
         }
 
 #if VALIDATE
