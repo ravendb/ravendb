@@ -220,7 +220,9 @@ namespace Raven.Server.Documents.Expiration
             var ticksBigEndian = IPAddress.HostToNetworkOrder(date.Ticks);
 
             var tree = context.Transaction.InnerTransaction.CreateTree(DocumentsByExpiration);
-            tree.MultiAdd(Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long)), loweredKey);
+            Slice ticksSlice;
+            using (Slice.External(context.Allocator, (byte*) &ticksBigEndian, sizeof(long), out ticksSlice))
+                tree.MultiAdd(ticksSlice, loweredKey);
         }
     }
 }

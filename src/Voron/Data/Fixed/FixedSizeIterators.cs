@@ -18,7 +18,7 @@ namespace Voron.Data.Fixed
             bool SeekToLast();
             bool Seek(long key);
             long CurrentKey { get; }
-            Slice Value { get; }
+            ByteStringContext.ExternalAllocationScope Value(out Slice slice);
             bool MoveNext();
             bool MovePrev();
 
@@ -41,6 +41,12 @@ namespace Voron.Data.Fixed
 
             public long CurrentKey { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
             public Slice Value { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
+            ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope IFixedSizeIterator.Value(out Slice slice)
+            {
+                slice = new Slice();
+                return new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
+            }
+
             public bool MoveNext()
             {
                 return false;
@@ -113,15 +119,12 @@ namespace Voron.Data.Fixed
                 }
             }
 
-            public Slice Value
+            public ByteStringContext.ExternalAllocationScope Value(out Slice slice)
             {
-                get
-                {
-                    if (_pos == _header->NumberOfEntries)
-                        throw new InvalidOperationException("Invalid position, cannot read past end of tree");
-  
-                    return Slice.External(_allocator, _dataStart + (_pos * _fst._entrySize) + sizeof(long), _fst._valSize);
-                }
+                if (_pos == _header->NumberOfEntries)
+                    throw new InvalidOperationException("Invalid position, cannot read past end of tree");
+
+                return Slice.External(_allocator, _dataStart + (_pos*_fst._entrySize) + sizeof(long), _fst._valSize, out slice);
             }
 
             public bool MovePrev()
@@ -208,15 +211,15 @@ namespace Voron.Data.Fixed
                 }
             }
 
-            public Slice Value
+            public ByteStringContext.ExternalAllocationScope Value(out Slice slice)
             {
-                get
-                {
-                    if (_currentPage == null)
-                        throw new InvalidOperationException("No current page was set");
+                if (_currentPage == null)
+                    throw new InvalidOperationException("No current page was set");
 
-                    return Slice.External(_allocator, _currentPage.Pointer + _currentPage.StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
-                }
+                return Slice.External(_allocator,
+                    _currentPage.Pointer + _currentPage.StartPosition +
+                    (_parent._entrySize*_currentPage.LastSearchPosition) + sizeof(long), _parent._valSize,
+                    out slice);
             }
 
             public bool MoveNext()

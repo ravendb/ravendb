@@ -77,12 +77,15 @@ namespace Raven.Server.Documents.Indexes
                 var typeInt = (int)_index.Type;
 
                 var statsTree = tx.InnerTransaction.CreateTree(IndexSchema.StatsTree);
-                statsTree.Add(IndexSchema.TypeSlice, Slice.External(context.Allocator, (byte*)&typeInt, sizeof(int)));
+                Slice tmpSlice;
+                using (Slice.External(context.Allocator, (byte*) &typeInt, sizeof(int), out tmpSlice))
+                    statsTree.Add(IndexSchema.TypeSlice, tmpSlice);
 
                 if (statsTree.ReadVersion(IndexSchema.CreatedTimestampSlice) == 0)
                 {
                     var binaryDate = SystemTime.UtcNow.ToBinary();
-                    statsTree.Add(IndexSchema.CreatedTimestampSlice, Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long)));
+                    using (Slice.External(context.Allocator, (byte*) &binaryDate, sizeof(long), out tmpSlice))
+                        statsTree.Add(IndexSchema.CreatedTimestampSlice, tmpSlice);
                 }
 
                 tx.InnerTransaction.CreateTree(IndexSchema.EtagsTree);
@@ -103,7 +106,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
                 var priorityInt = (int)priority;
-                statsTree.Add(IndexSchema.PrioritySlice, Slice.External(context.Allocator, (byte*)&priorityInt, sizeof(int)));
+                Slice prioritySlice;
+                using (Slice.External(context.Allocator, (byte*) &priorityInt, sizeof(int), out prioritySlice))
+                    statsTree.Add(IndexSchema.PrioritySlice, prioritySlice);
 
                 tx.Commit();
             }
@@ -258,8 +263,9 @@ namespace Raven.Server.Documents.Indexes
         {
             var tree = tx.InnerTransaction.CreateTree("%" + collection);
             var collectionSlice = Slice.From(tx.InnerTransaction.Allocator, referencedCollection.Name, ByteStringType.Immutable);
-            var etagSlice = Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long));
-            tree.Add(collectionSlice, etagSlice);
+            Slice etagSlice;
+            using (Slice.External(tx.InnerTransaction.Allocator, (byte*) &etag, sizeof(long), out etagSlice))
+                tree.Add(collectionSlice, etagSlice);
         }
 
         public void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
@@ -271,8 +277,9 @@ namespace Raven.Server.Documents.Indexes
         {
             var tree = tx.InnerTransaction.CreateTree("$" + collection);
             var collectionSlice = Slice.From(tx.InnerTransaction.Allocator, referencedCollection.Name, ByteStringType.Immutable);
-            var etagSlice = Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long));
-            tree.Add(collectionSlice, etagSlice);
+            Slice etagSlice;
+            using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
+                tree.Add(collectionSlice, etagSlice);
         }
 
         public void WriteLastIndexedEtag(RavenTransaction tx, string collection, long etag)
@@ -286,7 +293,9 @@ namespace Raven.Server.Documents.Indexes
                 _logger.Info($"Writing last etag for '{_index.Name} ({_index.IndexId})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
 
             var statsTree = tx.InnerTransaction.CreateTree(tree);
-            statsTree.Add(collection, Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long)));
+            Slice etagSlice;
+            using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
+                statsTree.Add(collection, etagSlice);
         }
 
         private static long ReadLastEtag(RavenTransaction tx, string tree, Slice collection)
@@ -325,7 +334,9 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 var binaryDate = indexingTime.ToBinary();
-                statsTree.Add(IndexSchema.LastIndexingTimeSlice, Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long)));
+                Slice binaryDateslice;
+                using (Slice.External(context.Allocator, (byte*) &binaryDate, sizeof(long), out binaryDateslice))
+                    statsTree.Add(IndexSchema.LastIndexingTimeSlice, binaryDateslice);
 
                 if (stats.Errors != null)
                 {
@@ -385,16 +396,19 @@ namespace Raven.Server.Documents.Indexes
             if (collectionTree == null)
                 yield break;
 
-            var referenceKeyAsSlice = CreateKey(tx, referenceKey);
-            using (var it = collectionTree.MultiRead(referenceKeyAsSlice))
+            Slice referenceKeyAsSlice;
+            using (CreateKey(tx, referenceKey, out referenceKeyAsSlice))
             {
-                if (it.Seek(Slices.BeforeAllKeys) == false)
-                    yield break;
-
-                do
+                using (var it = collectionTree.MultiRead(referenceKeyAsSlice))
                 {
-                    yield return it.CurrentKey;
-                } while (it.MoveNext());
+                    if (it.Seek(Slices.BeforeAllKeys) == false)
+                        yield break;
+
+                    do
+                    {
+                        yield return it.CurrentKey;
+                    } while (it.MoveNext());
+                }
             }
         }
 
@@ -430,9 +444,12 @@ namespace Raven.Server.Documents.Indexes
                         {
                             collectionTree.MultiAdd(referenceKey, key);
                             referencesTree.MultiAdd(key, referenceKey);
+
                         }
 
                         RemoveReferences(key, collections.Key, keys.Value, tx);
+
+                        key.Release(tx.InnerTransaction.Allocator);
                     }
                 }
             }
@@ -446,7 +463,8 @@ namespace Raven.Server.Documents.Indexes
                     {
                         CollectionName collectionName;
                         if (_referencedCollections.TryGetValue(collections.Key, out collectionName) == false)
-                            throw new InvalidOperationException("Should not happen ever!");
+                            throw new InvalidOperationException(
+                                $"Could not find collection {collections.Key} in the index storage collections. Should not happen ever!");
 
                         var collectionKey = Slice.From(tx.InnerTransaction.Allocator, collectionName.Name, ByteStringType.Immutable);
                         var etag = collections.Value;
@@ -459,9 +477,9 @@ namespace Raven.Server.Documents.Indexes
                                 continue;
                         }
 
-                        var etagSlice = Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long));
-
-                        collectionEtagTree.Add(collectionKey, etagSlice);
+                        Slice etagSlice ;
+                        using (Slice.External(tx.InnerTransaction.Allocator, (byte*) &etag, sizeof(long), out etagSlice))
+                            collectionEtagTree.Add(collectionKey, etagSlice);
                     }
                 }
             }
@@ -495,12 +513,13 @@ namespace Raven.Server.Documents.Indexes
             {
                 referencesTree.MultiDelete(key, referenceKey);
                 collectionTree?.MultiDelete(referenceKey, key);
+                referenceKey.Release(tx.InnerTransaction.Allocator);
             }
         }
 
-        private static unsafe Slice CreateKey(RavenTransaction tx, LazyStringValue key)
+        private static unsafe ByteStringContext.ExternalAllocationScope CreateKey(RavenTransaction tx, LazyStringValue key, out Slice keySlice)
         {
-            return Slice.External(tx.InnerTransaction.Allocator, key.Buffer, key.Size);
+            return Slice.External(tx.InnerTransaction.Allocator, key.Buffer, key.Size, out keySlice);
         }
 
         private class IndexSchema

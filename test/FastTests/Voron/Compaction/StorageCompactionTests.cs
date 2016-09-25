@@ -183,8 +183,9 @@ namespace FastTests.Voron.Compaction
                                 // Data should be the same
                                 int size;
                                 byte* ptr = value.Read(0, out size);
-                                Slice current = Slice.External(allocator, ptr, size);
-                                Assert.True(SliceComparer.Equals(current, entry.Key));
+                                Slice current;
+                                using (Slice.External(allocator, ptr, size, out current))
+                                    Assert.True(SliceComparer.Equals(current, entry.Key));
 
                                 ptr = value.Read(1, out size);
                                 Assert.Equal(entry.Value, *(long*) ptr);

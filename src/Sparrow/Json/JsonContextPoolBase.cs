@@ -43,11 +43,15 @@ namespace Sparrow.Json
             public JsonContextPoolBase<T> Parent;
             public void Dispose()
             {
-                Context.Reset();
-                Parent._contextPool.Push(Context);
-                //TODO: this probably should have low memory handle
-                //TODO: need better policies, stats, reporting, etc
-                Parent._contextPool.ReduceSizeIfTooBig(4096);
+                if (Parent._contextPool.Count < 4096)
+                {
+                    Context.Reset();
+                    Parent._contextPool.Push(Context);
+                }
+                else
+                {
+                    Context.Dispose();
+                }
             }
         }
 

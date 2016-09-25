@@ -114,7 +114,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 {
                     id = _mapReduceWorkContext.GetNextIdentifier();
 
-                    documentMapEntries.Add(id, Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong)));
+                    Slice val;
+                    using (Slice.External(indexContext.Allocator, (byte*) &reduceKeyHash, sizeof(ulong), out val))
+                        documentMapEntries.Add(id, val);
                 }
 
                 GetResultsStore(reduceKeyHash, indexContext, true).Add(id, mapResult.Data);
@@ -172,18 +174,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             MapReduceResultsStore store;
             if (_mapReduceWorkContext.StoreByReduceKeyHash.TryGetValue(reduceKeyHash, out store) == false)
             {
-                var read = _mapReduceWorkContext.ResultsStoreTypes.Read((long) reduceKeyHash);
+                Slice read;
+                using (_mapReduceWorkContext.ResultsStoreTypes.Read((long) reduceKeyHash, out read))
+                {
+                    MapResultsStorageType type;
 
-                MapResultsStorageType type;
+                    if (read.HasValue)
+                        type = (MapResultsStorageType) (*read.CreateReader().Base);
+                    else
+                        type = MapResultsStorageType.Nested;
 
-                if (read.HasValue)
-                    type = (MapResultsStorageType)(*read.CreateReader().Base);
-                else
-                    type = MapResultsStorageType.Nested;
+                    store = new MapReduceResultsStore(reduceKeyHash, type, indexContext, _mapReduceWorkContext, create);
 
-                store = new MapReduceResultsStore(reduceKeyHash, type, indexContext, _mapReduceWorkContext, create);
-
-                _mapReduceWorkContext.StoreByReduceKeyHash[reduceKeyHash] = store;
+                    _mapReduceWorkContext.StoreByReduceKeyHash[reduceKeyHash] = store;
+                }
             }
 
             return store;

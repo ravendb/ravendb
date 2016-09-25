@@ -28,7 +28,7 @@ namespace Voron.Impl.FreeSpace
 
             if (_disableStatus.DisableCount > 0)
                 return null;
-            
+
             using (_guard.Enter())
             {
                 var freeSpaceTree = GetFreeSpaceTree(tx);
@@ -99,16 +99,20 @@ namespace Voron.Impl.FreeSpace
                         return info.StartSectionId * NumberOfPagesInSection;
                     }
 
+                    StreamBitArray next;
                     var nextSectionId = currentSectionId + 1;
-                    var read = freeSpaceTree.Read(nextSectionId);
-                    if (!read.HasValue)
+                    Slice read;
+                    using (freeSpaceTree.Read(nextSectionId, out read))
                     {
-                        //not a following next section
-                        info.Clear();
-                        continue;
-                    }
+                        if (!read.HasValue)
+                        {
+                            //not a following next section
+                            info.Clear();
+                            continue;
+                        }
 
-                    var next = new StreamBitArray(read.CreateReader());
+                        next = new StreamBitArray(read.CreateReader());
+                    }
 
                     if (next.HasStartRangeCount(numberOfExtraBitsNeeded) == false)
                     {
@@ -188,7 +192,7 @@ namespace Voron.Impl.FreeSpace
             return null;
         }
 
-        private bool TryFindContinuousRange(LowLevelTransaction tx, FixedSizeTree freeSpaceTree, FixedSizeTree.IFixedSizeIterator it, int num, 
+        private bool TryFindContinuousRange(LowLevelTransaction tx, FixedSizeTree freeSpaceTree, FixedSizeTree.IFixedSizeIterator it, int num,
             StreamBitArray current, long currentSectionId, out long? page)
         {
             page = -1;
@@ -234,7 +238,7 @@ namespace Voron.Impl.FreeSpace
             return true;
         }
 
-        private static bool TryFindSmallValueMergingTwoSections(LowLevelTransaction tx, FixedSizeTree freeSpacetree, long currentSectionId, int num, 
+        private static bool TryFindSmallValueMergingTwoSections(LowLevelTransaction tx, FixedSizeTree freeSpacetree, long currentSectionId, int num,
             StreamBitArray current, out long? result)
         {
             result = -1;
@@ -244,11 +248,15 @@ namespace Voron.Impl.FreeSpace
 
             var nextSectionId = currentSectionId + 1;
 
-            var read = freeSpacetree.Read(nextSectionId);
-            if (!read.HasValue)
-                return false;
+            StreamBitArray next;
+            Slice read;
+            using (freeSpacetree.Read(nextSectionId, out read))
+            {
+                if (!read.HasValue)
+                    return false;
 
-            var next = new StreamBitArray(read.CreateReader());
+                next = new StreamBitArray(read.CreateReader());
+            }
 
             var nextRange = num - currentEndRange;
             if (next.HasStartRangeCount(nextRange) == false)
@@ -323,10 +331,14 @@ namespace Voron.Impl.FreeSpace
             {
                 var freeSpaceTree = GetFreeSpaceTree(tx);
 
-                var section = pageNumber/NumberOfPagesInSection;
-                var result = freeSpaceTree.Read(section);
-                var sba = !result.HasValue ? new StreamBitArray() : new StreamBitArray(result.CreateReader());
-                sba.Set((int)(pageNumber%NumberOfPagesInSection), true);
+                StreamBitArray sba;
+                var section = pageNumber / NumberOfPagesInSection;
+                Slice result;
+                using (freeSpaceTree.Read(section, out result))
+                {
+                    sba = !result.HasValue ? new StreamBitArray() : new StreamBitArray(result.CreateReader());
+                }
+                sba.Set((int)(pageNumber % NumberOfPagesInSection), true);
                 freeSpaceTree.Add(section, sba.ToSlice(tx.Allocator));
 
                 var onPageFreed = PageFreed;
@@ -352,9 +364,9 @@ namespace Voron.Impl.FreeSpace
 
         private static FixedSizeTree GetFreeSpaceTree(LowLevelTransaction tx)
         {
-            return new FixedSizeTree(tx, tx.RootObjects, FreeSpaceKey, 260)
+            return new FixedSizeTree(tx, tx.RootObjects, FreeSpaceKey, 260, clone: false)
             {
-                FreeSpaceTree =true
+                FreeSpaceTree = true
             };
         }
     }

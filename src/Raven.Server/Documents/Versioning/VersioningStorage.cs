@@ -143,11 +143,14 @@ namespace Raven.Server.Documents.Versioning
                 return;
 
             var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, RevisionDocuments);
-            var prefixSlice = GetSliceFromKey(context, key);
-            var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
-            DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount);
+            Slice prefixSlice;
+            using (DocumentsStorage.GetSliceFromKey(context, key, out prefixSlice))
+            {
+                var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
+                DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount);
 
-            PutInternal(context, key, newEtagBigEndian, document, table);
+                PutInternal(context, key, newEtagBigEndian, document, table);
+            }
         }
 
         public void PutDirect(DocumentsOperationContext context, string key, long etag, BlittableJsonReaderObject document)
@@ -228,25 +231,30 @@ namespace Raven.Server.Documents.Versioning
         {
             var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, RevisionDocuments);
 
-            var prefixSlice = GetSliceFromKey(context, key);
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var sr in table.SeekForwardFrom(_docsSchema.Indexes[KeyAndEtagSlice], prefixSlice, startsWith: true))
+            Slice prefixSlice;
+            using (DocumentsStorage.GetSliceFromKey(context, key, out prefixSlice))
             {
-                foreach (var tvr in sr.Results)
+                // ReSharper disable once LoopCanBeConvertedToQuery
+                foreach (
+                    var sr in table.SeekForwardFrom(_docsSchema.Indexes[KeyAndEtagSlice], prefixSlice, startsWith: true)
+                )
                 {
-                    if (start > 0)
+                    foreach (var tvr in sr.Results)
                     {
-                        start--;
-                        continue;
-                    }
-                    if (take-- <= 0)
-                        yield break;
+                        if (start > 0)
+                        {
+                            start--;
+                            continue;
+                        }
+                        if (take-- <= 0)
+                            yield break;
 
-                    var document = TableValueToDocument(context, tvr);
-                    yield return document;
+                        var document = TableValueToDocument(context, tvr);
+                        yield return document;
+                    }
+                    if (take <= 0)
+                        yield break;
                 }
-                if (take <= 0)
-                    yield break;
             }
         }
 
@@ -272,37 +280,6 @@ namespace Raven.Server.Documents.Versioning
 
                 if (take-- <= 0)
                     yield break;
-            }
-        }
-
-        public static Slice GetSliceFromKey(DocumentsOperationContext context, string key)
-        {
-            // TODO: Is this needed? Could we just use the ByteString?
-
-            var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
-            if (byteCount > 255)
-                throw new ArgumentException(
-                    $"Key cannot exceed 255 bytes, but the key was {byteCount} bytes. The invalid key is '{key}'.",
-                    nameof(key));
-
-            var buffer = context.GetNativeTempBuffer(
-                byteCount
-                + sizeof(char) * key.Length // for the lower calls
-                + sizeof(char) * 2); // for the record separator
-
-            fixed (char* pChars = key)
-            {
-                var destChars = (char*)buffer;
-                for (var i = 0; i < key.Length; i++)
-                {
-                    destChars[i] = char.ToLowerInvariant(pChars[i]);
-                }
-                destChars[key.Length] = (char)30; // the record separator
-
-                var keyBytes = buffer + sizeof(char) + key.Length * sizeof(char);
-
-                var size = Encoding.UTF8.GetBytes(destChars, key.Length + 1, keyBytes, byteCount + 1);
-                return Slice.External(context.Allocator, keyBytes, (ushort)size);
             }
         }
 

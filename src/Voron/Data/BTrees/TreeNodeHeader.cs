@@ -46,9 +46,19 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Slice ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, ByteStringType type = ByteStringType.Mutable)
+        public static ByteStringContext.ExternalAllocationScope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, out Slice slice)
         {
-            return new Slice(context.FromPtr((byte*)node + Constants.NodeHeaderSize, node->KeySize, type | (ByteStringType)SliceOptions.Key));
+            return ToSlicePtr(context, node, ByteStringType.Mutable | (ByteStringType) SliceOptions.Key, out slice);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.ExternalAllocationScope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, ByteStringType type, out Slice slice)
+        {
+            ByteString str;
+            var scope = context.FromPtr((byte*)node + Constants.NodeHeaderSize, node->KeySize,
+                type, out str);
+            slice = new Slice(str);
+            return scope;
         }
 
         public static byte* DirectAccess(LowLevelTransaction tx, TreeNodeHeader* node)
@@ -75,16 +85,16 @@ namespace Voron.Data.BTrees
             return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
         }
 
-        public static Slice GetData(LowLevelTransaction tx, TreeNodeHeader* node)
+        public static ByteStringContext.ExternalAllocationScope GetData(LowLevelTransaction tx, TreeNodeHeader* node, out Slice slice)
         {
             if (node->Flags == (TreeNodeFlags.PageRef))
             {
                 var overFlowPage = tx.GetPage(node->PageNumber);
                 if (overFlowPage.OverflowSize > ushort.MaxValue)
                     throw new InvalidOperationException("Cannot convert big data to a slice, too big");
-                return Slice.External(tx.Allocator, overFlowPage.Pointer + Constants.TreePageHeaderSize, (ushort)overFlowPage.OverflowSize);
+                return Slice.External(tx.Allocator, overFlowPage.Pointer + Constants.TreePageHeaderSize, (ushort)overFlowPage.OverflowSize, out slice);
             }
-            return Slice.External(tx.Allocator, (byte*)node + node->KeySize + Constants.NodeHeaderSize, (ushort) node->DataSize);
+            return Slice.External(tx.Allocator, (byte*)node + node->KeySize + Constants.NodeHeaderSize, (ushort) node->DataSize, out slice);
         }
 
 

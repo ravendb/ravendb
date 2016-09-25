@@ -23,7 +23,7 @@ namespace Voron.Data.Tables
         private FixedSizeTree _fstKey;
         private FixedSizeTree _inactiveSections;
         private FixedSizeTree _activeCandidateSection;
-        private readonly int _pageSize;      
+        private readonly int _pageSize;
 
         private Dictionary<Slice, Tree> _treesBySliceCache;
         private readonly Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache = new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>(SliceComparer.Instance);
@@ -158,7 +158,7 @@ namespace Voron.Data.Tables
 
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
-            id = -1;		
+            id = -1;
             var pkTree = GetTree(_schema.Key);
             var readResult = pkTree?.Read(key);
             if (readResult == null)
@@ -303,23 +303,29 @@ namespace Voron.Data.Tables
 
 
         private void DeleteValueFromIndex(long id, TableValueReader value)
-        {            
+        {
             //TODO: Avoid all those allocations by using a single buffer
             if (_schema.Key != null)
             {
-                var keySlice = _schema.Key.GetSlice(_tx.Allocator, value);
+                Slice keySlice;
+                using (_schema.Key.GetSlice(_tx.Allocator, value, out keySlice))
+                {
 
-                var pkTree = GetTree(_schema.Key);
-                pkTree.Delete(keySlice);
+                    var pkTree = GetTree(_schema.Key);
+                    pkTree.Delete(keySlice);
+                }
             }
 
             foreach (var indexDef in _schema.Indexes.Values)
             {
                 // For now we wont create secondary indexes on Compact trees.
                 var indexTree = GetTree(indexDef);
-                var val = indexDef.GetSlice(_tx.Allocator, value);
-                var fst = GetFixedSizeTree(indexTree, val.Clone(_tx.Allocator), 0);
-                fst.Delete(id);
+                Slice val;
+                using (indexDef.GetSlice(_tx.Allocator, value, out val))
+                {
+                    var fst = GetFixedSizeTree(indexTree, val.Clone(_tx.Allocator), 0);
+                    fst.Delete(id);
+                }
             }
 
             foreach (var indexDef in _schema.FixedSizeIndexes.Values)
@@ -363,7 +369,7 @@ namespace Voron.Data.Tables
                 page.OverflowSize = size;
 
                 pos = page.Pointer + sizeof(PageHeader);
-                
+
                 builder.CopyTo(pos);
                 id = page.PageNumber * _pageSize;
             }
@@ -416,29 +422,38 @@ namespace Voron.Data.Tables
         private void InsertIndexValuesFor(long id, TableValueReader value)
         {
             var pk = _schema.Key;
-            if (pk != null)
+            Slice idAsSlice;
+            using (Slice.External(_tx.Allocator, (byte*)&id, sizeof(long), out idAsSlice))
             {
-                var pkval = pk.GetSlice(_tx.Allocator, value);
+                if (pk != null)
+                {
+                    Slice pkVal;
+                    using (pk.GetSlice(_tx.Allocator, value, out pkVal))
+                    {
+                        var pkIndex = GetTree(pk);
 
-                var pkIndex = GetTree(pk);
+                        pkIndex.Add(pkVal, idAsSlice);
+                    }
+                }
 
-                pkIndex.Add(pkval, Slice.External(_tx.Allocator, (byte*)&id, sizeof(long)));                      
-            }
+                foreach (var indexDef in _schema.Indexes.Values)
+                {
+                    // For now we wont create secondary indexes on Compact trees.
+                    Slice val;
+                    using (indexDef.GetSlice(_tx.Allocator, value, out val))
+                    {
+                        var indexTree = GetTree(indexDef);
+                        var index = GetFixedSizeTree(indexTree, val, 0);
+                        index.Add(id);
+                    }
+                }
 
-            foreach (var indexDef in _schema.Indexes.Values)
-            {
-                // For now we wont create secondary indexes on Compact trees.
-                var val = indexDef.GetSlice(_tx.Allocator, value);
-                var indexTree = GetTree(indexDef);
-                var index = GetFixedSizeTree(indexTree, val.Clone(_tx.Allocator), 0);
-                index.Add(id);
-            }
-
-            foreach (var indexDef in _schema.FixedSizeIndexes.Values)
-            {
-                var index = GetFixedSizeTree(indexDef);
-                long key = indexDef.GetValue(value);
-                index.Add(key, Slice.External(_tx.Allocator, (byte*)&id, sizeof(long)));
+                foreach (var indexDef in _schema.FixedSizeIndexes.Values)
+                {
+                    var index = GetFixedSizeTree(indexDef);
+                    long key = indexDef.GetValue(value);
+                    index.Add(key, idAsSlice);
+                }
             }
         }
 
@@ -455,17 +470,16 @@ namespace Voron.Data.Tables
         {
             Dictionary<Slice, FixedSizeTree> cache;
 
-            var parentName = Slice.From( _tx.Allocator, parent.Name ?? Constants.RootTreeName, ByteStringType.Immutable);            
+            var parentName = Slice.From(_tx.Allocator, parent.Name ?? Constants.RootTreeName, ByteStringType.Immutable);
             if (_fixedSizeTreeCache.TryGetValue(parentName, out cache) == false)
             {
                 _fixedSizeTreeCache[parentName] = cache = new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
             }
-            
+
             FixedSizeTree tree;
             if (cache.TryGetValue(name, out tree) == false)
             {
-                var treeName = name.Clone(_tx.Allocator);
-                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, treeName, valSize);
+                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize);
                 return cache[fixedSizeTree.Name] = fixedSizeTree;
             }
 
@@ -536,7 +550,7 @@ namespace Voron.Data.Tables
             return GetTree(idx.Name);
         }
 
-         public void DeleteByKey(Slice key)
+        public void DeleteByKey(Slice key)
         {
             var pkTree = GetTree(_schema.Key);
 
@@ -553,16 +567,23 @@ namespace Voron.Data.Tables
 
         private IEnumerable<TableValueReader> GetSecondaryIndexForValue(Tree tree, Slice value)
         {
-            var fstIndex = GetFixedSizeTree(tree, value, 0);
-            using (var it = fstIndex.Iterate())
+            try
             {
-                if (it.Seek(long.MinValue) == false)
-                    yield break;
-
-                do
+                var fstIndex = GetFixedSizeTree(tree, value, 0);
+                using (var it = fstIndex.Iterate())
                 {
-                    yield return ReadById(it.CurrentKey);
-                } while (it.MoveNext());
+                    if (it.Seek(long.MinValue) == false)
+                        yield break;
+
+                    do
+                    {
+                        yield return ReadById(it.CurrentKey);
+                    } while (it.MoveNext());
+                }
+            }
+            finally
+            {
+                value.Release(_tx.Allocator);
             }
         }
 
@@ -584,7 +605,7 @@ namespace Voron.Data.Tables
         }
 
         public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, string value, bool startsWith = false)
-        {            
+        {
             return SeekForwardFrom(index, Slice.From(_tx.Allocator, value, ByteStringType.Immutable), startsWith);
         }
 
@@ -604,7 +625,7 @@ namespace Voron.Data.Tables
 
                 if (it.Seek(value) == false)
                     yield break;
-                
+
                 do
                 {
                     yield return new SeekResult
@@ -684,7 +705,9 @@ namespace Voron.Data.Tables
         private TableValueReader GetTableValueReader(FixedSizeTree.IFixedSizeIterator it)
         {
             long id;
-            it.Value.CopyTo((byte*)&id);
+            Slice slice;
+            using (it.Value(out slice))
+                slice.CopyTo((byte*) &id);
             int size;
             var ptr = DirectRead(id, out size);
             return new TableValueReader(ptr, size)
@@ -710,12 +733,18 @@ namespace Voron.Data.Tables
             var read = builder.Read(_schema.Key.StartIndex, out size);
 
             long id;
-            if (TryFindIdFromPrimaryKey(Slice.External(_tx.Allocator, read, (ushort)size), out id))
+            Slice key;
+            bool exist;
+            using (Slice.External(_tx.Allocator, read, (ushort)size, out key))
+            {
+                exist = TryFindIdFromPrimaryKey(key, out id);
+            }
+
+            if (exist)
             {
                 id = Update(id, builder);
                 return id;
             }
-
             return Insert(builder);
         }
 
@@ -751,7 +780,7 @@ namespace Voron.Data.Tables
                 throw new ArgumentOutOfRangeException(nameof(numberOfEntriesToDelete), "Number of entries should not be negative");
 
             if (numberOfEntriesToDelete == 0)
-                return 0;            
+                return 0;
 
             var toDelete = new List<long>();
             var tree = GetTree(index);
@@ -789,14 +818,14 @@ namespace Voron.Data.Tables
             if (_treesBySliceCache == null)
                 return;
 
-            foreach( var item in _treesBySliceCache)
+            foreach (var item in _treesBySliceCache)
             {
                 var tree = item.Value;
                 if (!tree.State.IsModified)
                     continue;
 
-                var treeName = item.Key;               
-                var header = (TreeRootHeader*) _tableTree.DirectAdd(treeName, sizeof(TreeRootHeader));
+                var treeName = item.Key;
+                var header = (TreeRootHeader*)_tableTree.DirectAdd(treeName, sizeof(TreeRootHeader));
                 tree.State.CopyTo(header);
             }
         }

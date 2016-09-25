@@ -10,6 +10,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using System.Linq;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Transformers
@@ -59,13 +60,15 @@ namespace Raven.Server.Documents.Transformers
                     return source;
             }
 
+            ByteStringContext.ExternalAllocationScope scope =
+                new ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope();
             Slice keySlice;
             if (keyLazy != null)
             {
                 if (keyLazy.Length == 0)
                     return DynamicNullObject.Null;
 
-                keySlice = Slice.External(_documentsContext.Allocator, keyLazy.Buffer, keyLazy.Size);
+                scope = Slice.External(_documentsContext.Allocator, keyLazy.Buffer, keyLazy.Size, out keySlice);
             }
             else
             {
@@ -80,6 +83,9 @@ namespace Raven.Server.Documents.Transformers
             _documentsContext.Allocator.ToLowerCase(ref keySlice.Content);
 
             var document = _documentsStorage.Get(_documentsContext, keySlice);
+
+            scope.Dispose();
+
             if (document == null)
                 return DynamicNullObject.Null;
 

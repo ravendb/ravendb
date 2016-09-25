@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Global;
 using Sparrow.Utils;
 
 namespace Sparrow
@@ -19,7 +20,7 @@ namespace Sparrow
         Immutable = 0x00, // This is a shorthand for an internal-immutable string. 
         Mutable = 0x01,
         External = 0x02,
-        Reserved1 = 0x04, // This bit is reserved for future uses.
+        Disposed = 0x04, 
         Reserved2 = 0x08, // This bit is reserved for future uses.
 
         // These flags are unused and can be used by users to store custom information on the instance.
@@ -182,8 +183,10 @@ namespace Sparrow
 
         public bool HasValue
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _pointer != null; }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)] get
+            {
+                return _pointer != null && _pointer->Flags != ByteStringType.Disposed;
+            }
         }
 
         public byte this[int index]
@@ -411,31 +414,28 @@ namespace Sparrow
     /// </summary>
     public struct ByteStringMemoryCache : IByteStringAllocator
     {
-        private static readonly ConcurrentDictionary<int, WeakReference<ConcurrentStack<UnmanagedGlobalSegment>>> Global = new ConcurrentDictionary<int, WeakReference<ConcurrentStack<UnmanagedGlobalSegment>>>();
+        //TODO: policy for reducing this when they are not needed
+        [ThreadStatic]
+        private static Stack<UnmanagedGlobalSegment> _threadLocal;
 
         [ThreadStatic]
-        private static ConcurrentStack<UnmanagedGlobalSegment> _threadLocal;
-
-        [ThreadStatic]
-        private static int _lastVictimId;
+        private static int _minSize;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ConcurrentStack<UnmanagedGlobalSegment> GetThreadLocalCollection()
+        private static Stack<UnmanagedGlobalSegment> GetThreadLocalCollection()
         {
-            if (_threadLocal == null)
-            {
-                _threadLocal = new ConcurrentStack<UnmanagedGlobalSegment>();
-                Global[Thread.CurrentThread.ManagedThreadId] = new WeakReference<ConcurrentStack<UnmanagedGlobalSegment>>(_threadLocal);
-            }
-            return _threadLocal;
+            return _threadLocal ?? (_threadLocal = new Stack<UnmanagedGlobalSegment>());
         }
 
         public UnmanagedGlobalSegment Allocate(int size)
         {
+            if (_minSize > size)
+                _minSize = size;
+
             var local = GetThreadLocalCollection();
-            UnmanagedGlobalSegment memorySegment;
-            if (local.TryPop(out memorySegment))
+            while (local.Count > 0)
             {
+                var memorySegment = local.Pop();
                 if (memorySegment.Size >= size)
                 {
                     return memorySegment;
@@ -445,62 +445,22 @@ namespace Sparrow
                 memorySegment.Dispose();
             }
 
-            var victimQueue = TryGetVictimQueue();
-
-            if (victimQueue != null && victimQueue.TryPop(out memorySegment))
-            {
-                if (memorySegment.Size >= size)
-                {
-                    return memorySegment;
-                }
-                // it is not my memory to dispose of, return it to the thread's usage
-                victimQueue.Push(memorySegment);
-            }
-
             // have to allocate it directly
             return new UnmanagedGlobalSegment(size);
         }
 
-        private static ConcurrentStack<UnmanagedGlobalSegment> TryGetVictimQueue()
-        {
-            ConcurrentStack<UnmanagedGlobalSegment> victimQueue = null;
-            WeakReference<ConcurrentStack<UnmanagedGlobalSegment>> value;
-            if (Global.TryGetValue(_lastVictimId, out value))
-            {
-                if (value.TryGetTarget(out victimQueue) == false)
-                {
-                    if (Global.TryRemove(_lastVictimId, out value) && value.TryGetTarget(out victimQueue))
-                    {
-                        // a thread was reborn? new thread with same id?
-                        // should be very rare
-                        Global[_lastVictimId] = value;
-                    }
-                }
-            }
-            else
-            {
-                var prevVictim = _lastVictimId;
-                foreach (var kvp in Global)
-                {
-                    if (kvp.Key < _lastVictimId)
-                        continue; // we want to scan the list sequentially, so we ignore anything smaller
-                    if (kvp.Value.TryGetTarget(out victimQueue))
-                    {
-                        _lastVictimId = kvp.Key;
-                        break;
-                    }
-                }
-                if (prevVictim == _lastVictimId)
-                    _lastVictimId = 0; // next time, start from scratch
-            }
-            return victimQueue;
-        }
-
         public void Free(UnmanagedGlobalSegment memory)
         {
-            var local = GetThreadLocalCollection();
+            if (_minSize > memory.Size)
+            {
+                memory.Dispose();
+                return;
+            }
+            if (_minSize > memory.Size)
+                _minSize = memory.Size;
+
+           var local = GetThreadLocalCollection();
             local.Push(memory);
-            local.ReduceSizeIfTooBig(4096);
         }
     }
 
@@ -548,7 +508,7 @@ namespace Sparrow
         /// This list keeps all the segments already instantiated in order to release them after context finalization. 
         /// </summary>
         private readonly List<SegmentInformation> _wholeSegments;
-        private readonly int _allocationBlockSize;
+        private int _allocationBlockSize;
 
         /// <summary>
         /// This list keeps the hot segments released for use. It is important to note that we will never put into this list
@@ -586,7 +546,13 @@ namespace Sparrow
 
             this._externalStringPool = new Stack<IntPtr>(64);
 
+
             PrepareForValidation();
+        }
+
+        private void ThrowSingleUseTaken()
+        {
+            throw new NotSupportedException("Attempt to call SingleUse when SingleUse scope is still in use");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -623,7 +589,10 @@ namespace Sparrow
             else
             {
                 if (_externalCurrentLeft == 0)
+                {
+                    _allocationBlockSize = Math.Min(16*Constants.Size.Megabyte, _allocationBlockSize*2);
                     AllocateExternalSegment(_allocationBlockSize);
+                }
 
                 storagePtr = (ByteStringStorage*)_externalCurrent.Current;
                 _externalCurrent.Current += _externalAlignedSize;
@@ -723,7 +692,15 @@ namespace Sparrow
                     }
 
                     // Use the segment and if there is no segment available that matches the request, just get a new one.
-                    this._internalCurrent = segment ?? AllocateSegment(_allocationBlockSize);
+                    if (segment != null)
+                    {
+                        _internalCurrent = segment;
+                    }
+                    else
+                    {
+                        _allocationBlockSize = Math.Min(16 * Constants.Size.Megabyte, _allocationBlockSize * 2);
+                        _internalCurrent = AllocateSegment(_allocationBlockSize);
+                    }
                 }                    
 
                 var byteString = Create(_internalCurrent.Current, length, allocationUnit, type);                
@@ -791,7 +768,8 @@ namespace Sparrow
 
         private ByteString AllocateWholeSegment(int length, ByteStringType type)
         {
-            SegmentInformation segment = AllocateSegment(length + sizeof(ByteStringStorage));
+            var size = Bits.NextPowerOf2(length + sizeof(ByteStringStorage));
+            SegmentInformation segment = AllocateSegment(size);
 
             var byteString = Create(segment.Current, length, segment.Size, type);
             segment.Current += byteString._pointer->Size;
@@ -816,6 +794,8 @@ namespace Sparrow
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
             if (value._pointer == null)
                 return;
+
+            value._pointer->Flags = ByteStringType.Disposed;
 
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
@@ -1085,16 +1065,36 @@ namespace Sparrow
             return result;
         }
 
-        public ByteString FromPtr(byte* valuePtr, int size, ByteStringType type = ByteStringType.Mutable | ByteStringType.External)
+        public struct ExternalAllocationScope : IDisposable
+        {
+            private ByteStringContext<TAllocator> _parent;
+            private ByteString _str;
+
+            public ExternalAllocationScope(ByteStringContext<TAllocator> parent, ByteString str)
+            {
+                _parent = parent;
+                _str = str;
+            }
+
+            public void Dispose()
+            {
+                _parent?.ReleaseExternal(ref _str);
+                _parent = null;
+            }
+        }
+
+        public ExternalAllocationScope FromPtr(byte* valuePtr, int size, 
+            ByteStringType type,
+            out ByteString str)
         {
             Debug.Assert(valuePtr != null, $"{nameof(valuePtr)} cant be null.");
             Debug.Assert(size >= 0, $"{nameof(size)} cannot be negative.");
 
-            var result = AllocateExternal(valuePtr, size, type | ByteStringType.External); // We are allocating external, so we will force it (even if we are checking for it in debug).
+            str = AllocateExternal(valuePtr, size, type | ByteStringType.External); // We are allocating external, so we will force it (even if we are checking for it in debug).
 
-            RegisterForValidation(result);
+            RegisterForValidation(str);
 
-            return result;
+            return new ExternalAllocationScope(this, str);
         }
 
 #if VALIDATE

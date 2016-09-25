@@ -5,27 +5,42 @@
 // -----------------------------------------------------------------------
 
 using System;
+using Sparrow;
+using Voron.Impl;
 
 namespace Voron.Data.BTrees
 {
     public class RecentlyFoundTreePages
     {
-        public class FoundTreePage
+        public class FoundTreePage : IDisposable
         {
             public readonly long Number;
             public readonly Slice FirstKey;
             public readonly Slice LastKey;
             public readonly long[] CursorPath;
+            private ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope _firstScope;
+            private ByteStringContext<ByteStringMemoryCache>.ExternalAllocationScope _lastScope;
 
             public TreePage Page;
 
-            public FoundTreePage(long number, TreePage page, Slice firstKey, Slice lastKey, long[] cursorPath)
+            public FoundTreePage(long number, TreePage page, Slice firstKey, Slice lastKey, long[] cursorPath,
+                ByteStringContext.ExternalAllocationScope firstScope,
+                ByteStringContext.ExternalAllocationScope lastScope)
             {
                 Number = number;
                 Page = page;
                 FirstKey = firstKey;
                 LastKey = lastKey;
                 CursorPath = cursorPath;
+                _firstScope = firstScope;
+                _lastScope = lastScope;
+            }
+
+            public void Dispose()
+            {
+               _firstScope.Dispose();
+                _lastScope.Dispose();
+
             }
         }
 
@@ -33,7 +48,7 @@ namespace Voron.Data.BTrees
 
         private readonly int _cacheSize;
 
-        private int current = 0;
+        private int _current = 0;
 
         public RecentlyFoundTreePages(int cacheSize)
         {
@@ -44,13 +59,14 @@ namespace Voron.Data.BTrees
         public void Add(FoundTreePage page)
         {
             int itemsLeft = _cacheSize;
-            int position = current + _cacheSize;
+            int position = _current + _cacheSize;
             while (itemsLeft > 0)
             {
                 var itemIndex = position % _cacheSize;
                 var item = _cache[itemIndex];
                 if (item == null || item.Number == page.Number)
                 {
+                    item?.Dispose();
                     _cache[itemIndex] = page;
                     return;
                 }
@@ -59,13 +75,14 @@ namespace Voron.Data.BTrees
                 position--;
             }
 
-            current = (++current) % _cacheSize;
-            _cache[current] = page;
+            _current = (++_current) % _cacheSize;
+            _cache[_current]?.Dispose();
+            _cache[_current] = page;
         }
 
         public FoundTreePage Find(Slice key)
         {
-            int position = current;
+            int position = _current;
 
             int itemsLeft = _cacheSize;
             while ( itemsLeft > 0 )
