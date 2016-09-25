@@ -167,6 +167,7 @@ namespace Raven.Server.Documents.Indexes
 
         public bool IsRunning => _indexingThread != null;
 
+        public virtual bool HasBoostedFields => false;
         protected void Initialize(DocumentDatabase documentDatabase)
         {
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
@@ -701,6 +702,8 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexStats GetStats()
         {
+            if (_contextPool == null)
+                throw new ObjectDisposedException("Index " + Name);
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
@@ -1203,6 +1206,11 @@ namespace Raven.Server.Documents.Indexes
         protected virtual bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
         {
             return numberOfAlreadyProducedOutputs <= MaxNumberOfIndexOutputs;
+        }
+
+        public virtual Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
+        {
+            return null;
         }
     }
 }

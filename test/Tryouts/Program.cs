@@ -1,53 +1,49 @@
-﻿using System.Linq;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading;
 using FastTests.Server.Documents.Replication;
-using Raven.Abstractions.Data;
 using Raven.Client.Document;
-using Raven.Client.Linq;
+using Raven.Client.Smuggler;
+using SlowTests.Voron;
+using Voron;
 
 namespace Tryouts
 {
     public class Program
     {
-        public class User
-        {
-            public string Id { get; set; }
-            public string Name { get; set; }
-            public int Age { get; set; }
-        }
-
+       
         public static void Main(string[] args)
         {
-            var store = new DocumentStore()
+            Console.WriteLine("Starting");
+            using (var store = new DocumentStore
             {
-                Url = "http://localhost.fiddler:8080",
-                DefaultDatabase = "Temp"
-            };
-            store.Initialize();
-            /*store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+                DefaultDatabase = "licensing",
+                Url = "http://localhost:8080"
+            })
             {
-                Id = "Temp",
-                Settings = { { "Raven/DataDir", @"~\Databases\Temp"} }
-            });
-            using (var session = store.OpenSession())
-            {
-                session.Store(new User()
-                {
-                    Name = "Iftah"
-                }, "users/1");
-                session.Store(new User()
-                {
-                    Name = "Idan"
-                }, "users/2");
-                session.SaveChanges();
-            };*/
+                store.Initialize();
 
-            using (var session = store.OpenNewSession())
-            {
-                var q = session.Query<User>()
-                    .Where(x => x.Name.Equals("Iftah"))
-                    .ToList();
-            };
-            store.Dispose();
+            var sp = Stopwatch.StartNew();
+                store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-19 13-00.ravendbdump.gzip", CancellationToken.None)
+                    .Wait();
+
+
+                Console.WriteLine("Inserted in " + sp.Elapsed);
+                sp.Restart();
+                while (true)
+                {
+                    if (store.DatabaseCommands.GetStatistics().Indexes.All(x=>x.IsStale == false))
+                    {
+                        break;
+                    }
+                    Thread.Sleep(100);
+                }
+                Console.WriteLine("Indexed in " + sp.Elapsed);
+
+            }
         }
+
     }
 }

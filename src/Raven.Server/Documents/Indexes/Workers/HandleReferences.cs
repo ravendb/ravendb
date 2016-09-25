@@ -4,10 +4,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using Raven.Abstractions.Logging;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -19,16 +17,18 @@ namespace Raven.Server.Documents.Indexes.Workers
     {
         protected Logger _logger;
 
-        private readonly StaticMapIndex _index;
+        private readonly Index _index;
+        private readonly Dictionary<string, HashSet<CollectionName>> _referencedCollections;
         private readonly IndexingConfiguration _configuration;
         private readonly DocumentsStorage _documentsStorage;
         private readonly IndexStorage _indexStorage;
 
         private readonly Reference _reference = new Reference();
 
-        public HandleReferences(StaticMapIndex index, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
+        public HandleReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
         {
             _index = index;
+            _referencedCollections = referencedCollections;
             _configuration = configuration;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
@@ -57,8 +57,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             foreach (var collection in _index.Collections)
             {
-                HashSet<string> referencedCollections;
-                if (_index._compiled.ReferencedCollections.TryGetValue(collection, out referencedCollections) == false)
+                HashSet<CollectionName> referencedCollections;
+                if (_referencedCollections.TryGetValue(collection, out referencedCollections) == false)
                     continue;
 
                 if (lastIndexedEtagsByCollection == null)
@@ -73,10 +73,10 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                 foreach (var referencedCollection in referencedCollections)
                 {
-                    using (var collectionStats = stats.For("Collection_" + referencedCollection))
+                    using (var collectionStats = stats.For("Collection_" + referencedCollection.Name))
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Collection: {referencedCollection}. Type: {actionType}.");
+                            _logger.Info($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Collection: {referencedCollection.Name}. Type: {actionType}.");
 
                         long lastReferenceEtag;
 
@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                             {
                                 case ActionType.Document:
                                     references = _documentsStorage
-                                        .GetDocumentsAfter(databaseContext, referencedCollection, lastReferenceEtag + 1, 0, pageSize)
+                                        .GetDocumentsAfter(databaseContext, referencedCollection.Name, lastReferenceEtag + 1, 0, pageSize)
                                         .Select(document =>
                                         {
                                             _reference.Key = document.Key;
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     break;
                                 case ActionType.Tombstone:
                                     references = _documentsStorage
-                                        .GetTombstonesAfter(databaseContext, referencedCollection, lastReferenceEtag , 0, pageSize)
+                                        .GetTombstonesAfter(databaseContext, referencedCollection.Name, lastReferenceEtag , 0, pageSize)
                                         .Select(tombstone =>
                                         {
                                             _reference.Key = tombstone.Key;
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                             continue;
 
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Executing handle references for '{_index} ({_index.Name})'. Processed {count} references in '{referencedCollection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                            _logger.Info($"Executing handle references for '{_index} ({_index.Name})'. Processed {count} references in '{referencedCollection.Name}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
                         switch (actionType)
                         {

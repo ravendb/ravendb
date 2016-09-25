@@ -282,7 +282,7 @@ namespace Raven.Server.Documents
             try
             {
                 IndexStore?.RunIdleOperations();
-                DatabaseOperations.CleanupOperations();
+                DatabaseOperations?.CleanupOperations();
             }
 
             finally
