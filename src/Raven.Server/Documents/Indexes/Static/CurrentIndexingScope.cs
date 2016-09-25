@@ -81,10 +81,6 @@ namespace Raven.Server.Documents.Indexes.Static
             references.Add(keySlice);
 
             var document = _documentsStorage.Get(_documentsContext, keySlice);
-            if (keyLazy != null)
-                keySlice.ReleaseExternal(_documentsContext.Allocator);
-            else
-                keySlice.Release(_documentsContext.Allocator);
 
             if (document == null)
             {

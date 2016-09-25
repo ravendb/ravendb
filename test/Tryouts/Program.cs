@@ -6,6 +6,7 @@ using System.Threading;
 using FastTests.Server.Documents.Replication;
 using Raven.Client.Document;
 using Raven.Client.Smuggler;
+using SlowTests.SlowTests.Bugs;
 using SlowTests.Voron;
 using Voron;
 
@@ -16,9 +17,9 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
-            using (var x = new FastTests.Voron.Tables.SecondayIndex())
+            using (var x = new SlowTests.Tests.Faceted.LargeFacets())
             {
-                x.CanInsertThenReadBySecondary();
+                x.CanGetSameResult();
             }
             //Console.WriteLine("Starting");
             //using (var store = new DocumentStore
