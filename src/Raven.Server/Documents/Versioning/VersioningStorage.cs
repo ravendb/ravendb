@@ -17,8 +17,8 @@ namespace Raven.Server.Documents.Versioning
 {
     public unsafe class VersioningStorage
     {
-        public static readonly Slice KeyAndEtagSlice = Slice.From(StorageEnvironment.LabelsContext, "KeyAndEtag", ByteStringType.Immutable);
-        public static readonly Slice EtagSlice = Slice.From(StorageEnvironment.LabelsContext, "Etag", ByteStringType.Immutable);
+        public static readonly Slice KeyAndEtagSlice;
+        public static readonly Slice EtagSlice;
         private static Logger _logger;
 
         private static readonly TableSchema _docsSchema = CreateVersioningDocsSchema();
@@ -66,6 +66,12 @@ namespace Raven.Server.Documents.Versioning
 
                 tx.Commit();
             }
+        }
+
+        static VersioningStorage()
+        {
+            Slice.From(StorageEnvironment.LabelsContext, "KeyAndEtag", ByteStringType.Immutable, out KeyAndEtagSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Etag", ByteStringType.Immutable, out EtagSlice);
         }
 
         public static VersioningStorage LoadConfigurations(DocumentDatabase database)

@@ -114,7 +114,8 @@ namespace Raven.Server.Documents.Queries
                 if (documentId.Equals(EqualPrefix))
                 {
                     var id = q.SubSegment(EqualPrefix.Length);
-                    var key = Slice.From(_context.Allocator, id);
+                    Slice key;
+                    Slice.From(_context.Allocator, id, out key);
                     _context.Allocator.ToLowerCase(ref key.Content);
 
                     return new List<Slice>
@@ -147,7 +148,8 @@ namespace Raven.Server.Documents.Queries
                     else
                         id = ids;
 
-                    var key = Slice.From(_context.Allocator, id);
+                    Slice key;
+                    Slice.From(_context.Allocator, id, out key);
                     _context.Allocator.ToLowerCase(ref key.Content);
 
                     Array.Resize(ref results, results.Length + 1);
@@ -290,6 +292,10 @@ namespace Raven.Server.Documents.Queries
 
             public void Dispose()
             {
+                foreach (var id in _ids)
+                {
+                    id.Release(_context.Allocator);
+                }
             }
 
             private class Sort

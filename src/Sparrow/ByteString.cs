@@ -830,6 +830,7 @@ namespace Sparrow
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
             if (value._pointer == null)
                 return;
+            Debug.Assert(value._pointer->Flags != ByteStringType.Disposed, "Double free");
 
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
@@ -949,120 +950,165 @@ namespace Sparrow
             return result;
         }
 
-        public ByteString From(string value, ByteStringType type = ByteStringType.Mutable)
+        public Scope From(string value, out ByteString str)
+        {
+            return From(value, ByteStringType.Mutable, out str);
+        }
+
+        public Scope From(string value, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
             int maxSize = 4 * value.Length;
             // Important if not working with Unicode. 
             // http://stackoverflow.com/questions/9533258/what-is-the-maximum-number-of-bytes-for-a-utf-8-encoded-character
-            var result = AllocateInternal(maxSize, type);
+            str = AllocateInternal(maxSize, type);
             fixed (char* ptr = value)
             {
-                int length = Encoding.UTF8.GetBytes(ptr, value.Length, result.Ptr, maxSize);
+                int length = Encoding.UTF8.GetBytes(ptr, value.Length, str.Ptr, maxSize);
 
                 // We can do this because it is internal. See if it makes sense to actually give this ability. 
-                result._pointer->Length = length;
+                str._pointer->Length = length;
             }
 
-            RegisterForValidation(result);
-            return result;
+            RegisterForValidation(str);
+            return new Scope(this, str);
         }
 
-        public ByteString From(string value, Encoding encoding, ByteStringType type = ByteStringType.Mutable)
+        public Scope From(string value, Encoding encoding, out ByteString str)
+        {
+            return From(value, encoding, ByteStringType.Immutable, out str);
+        }
+
+        public Scope From(string value, Encoding encoding, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
             int maxSize = 4 * value.Length;
             // Important if not working with Unicode. 
             // http://stackoverflow.com/questions/9533258/what-is-the-maximum-number-of-bytes-for-a-utf-8-encoded-character
-            var result = AllocateInternal(maxSize, type);
+            str = AllocateInternal(maxSize, type);
             fixed (char* ptr = value)
             {
-                int length = encoding.GetBytes(ptr, value.Length, result.Ptr, maxSize);
+                int length = encoding.GetBytes(ptr, value.Length, str.Ptr, maxSize);
 
                 // We can do this because it is internal. See if it makes sense to actually give this ability. 
-                result._pointer->Length = length;
+                str._pointer->Length = length;
             }
 
-            RegisterForValidation(result);
-            return result;
+            RegisterForValidation(str);
+            return new Scope(this, str);
         }
 
-        public ByteString From(byte[] value, int offset, int count, ByteStringType type = ByteStringType.Mutable)
+        public Scope From(byte[] value, int offset, int count, out ByteString str)
+        {
+            return From(value, offset, count, ByteStringType.Immutable, out str);
+        }
+
+        public Scope From(byte[] value, int offset, int count, ByteStringType type , out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var result = AllocateInternal(count, type);
+            str = AllocateInternal(count, type);
             fixed (byte* ptr = value)
             {
-                Memory.Copy(result._pointer->Ptr, ptr + offset, count);
+                Memory.Copy(str._pointer->Ptr, ptr + offset, count);
             }
 
-            RegisterForValidation(result);
-            return result;
+            RegisterForValidation(str);
+            return new Scope(this, str);
         }
 
-        public ByteString From(byte[] value, int size, ByteStringType type = ByteStringType.Mutable)
+        public Scope From(byte[] value, int size, out ByteString str)
+        {
+            return From(value, size, ByteStringType.Immutable, out str);
+        }
+
+        public Scope From(byte[] value, int size, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var result = AllocateInternal(size, type);
+            str = AllocateInternal(size, type);
             fixed (byte* ptr = value)
             {
-                Memory.Copy(result._pointer->Ptr, ptr, size);
+                Memory.Copy(str._pointer->Ptr, ptr, size);
             }
 
-            RegisterForValidation(result);
-            return result;
+            RegisterForValidation(str);
+            return new Scope(this, str);
         }
 
-        public ByteString From(int value, ByteStringType type = ByteStringType.Mutable)
+        public Scope From(int value, out ByteString str)
         {
-            var result = AllocateInternal(sizeof(int), type);
-            ((int*)result._pointer->Ptr)[0] = value;
-
-            RegisterForValidation(result);
-            return result;
+            return From(value, ByteStringType.Immutable, out str);
         }
 
-        public ByteString From(long value, ByteStringType type = ByteStringType.Mutable)
+        public Scope From(int value, ByteStringType type, out ByteString str)
         {
-            var result = AllocateInternal(sizeof(long), type);
-            ((long*)result._pointer->Ptr)[0] = value;
+            str = AllocateInternal(sizeof(int), type);
+            ((int*)str._pointer->Ptr)[0] = value;
 
-            RegisterForValidation(result);
-            return result;
+            RegisterForValidation(str);
+            return new Scope(this,str);
         }
 
-        public ByteString From(short value, ByteStringType type = ByteStringType.Mutable)
+        public Scope From(long value, out ByteString str)
         {
-            var result = AllocateInternal(sizeof(short), type);
-            ((short*)result._pointer->Ptr)[0] = value;
-
-            RegisterForValidation(result);
-            return result;
+            return From(value, ByteStringType.Immutable, out str);
         }
 
-        public ByteString From(byte value, ByteStringType type = ByteStringType.Mutable)
+        public Scope From(long value, ByteStringType type, out ByteString str)
         {
-            var result = AllocateInternal(1, type);
-            result._pointer->Ptr[0] = value;
+            str = AllocateInternal(sizeof(long), type);
+            ((long*)str._pointer->Ptr)[0] = value;
 
-            RegisterForValidation(result);
-            return result;
+            RegisterForValidation(str);
+            return new Scope(this, str);
         }
 
-        public ByteString From(byte* valuePtr, int size, ByteStringType type = ByteStringType.Mutable)
+        public Scope From(short value, out ByteString str)
+        {
+            return From(value, ByteStringType.Immutable, out str);
+        }
+
+        public Scope From(short value, ByteStringType type , out ByteString str)
+        {
+            str = AllocateInternal(sizeof(short), type);
+            ((short*)str._pointer->Ptr)[0] = value;
+
+            RegisterForValidation(str);
+            return new Scope(this,str);
+        }
+
+        public Scope From(byte value, out ByteString str)
+        {
+            return From(value, ByteStringType.Immutable, out str);
+        }
+
+        public Scope From(byte value, ByteStringType type, out ByteString str)
+        {
+            str = AllocateInternal(1, type);
+            str._pointer->Ptr[0] = value;
+
+            RegisterForValidation(str);
+            return new Scope(this, str);
+        }
+
+        public Scope From(byte* valuePtr, int size, out ByteString str)
+        {
+            return From(valuePtr, size, ByteStringType.Immutable, out str);
+        }
+
+        public Scope From(byte* valuePtr, int size, ByteStringType type, out ByteString str)
         {
             Debug.Assert(valuePtr != null, $"{nameof(valuePtr)} cant be null.");
             Debug.Assert((type & ByteStringType.External) == 0, $"{nameof(From)} is not expected to be called with the '{nameof(ByteStringType.External)}' requested type, use {nameof(FromPtr)} instead.");
 
-            var result = AllocateInternal(size, type);
-            Memory.Copy(result._pointer->Ptr, valuePtr, size);
+            str = AllocateInternal(size, type);
+            Memory.Copy(str._pointer->Ptr, valuePtr, size);
 
-            RegisterForValidation(result);
-            return result;
+            RegisterForValidation(str);
+            return new Scope(this, str);
         }
 
         public struct Scope : IDisposable

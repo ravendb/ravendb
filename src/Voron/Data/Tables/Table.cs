@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Sparrow;
+using Sparrow.Binary;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;
@@ -470,7 +471,8 @@ namespace Voron.Data.Tables
         {
             Dictionary<Slice, FixedSizeTree> cache;
 
-            var parentName = Slice.From(_tx.Allocator, parent.Name ?? Constants.RootTreeName, ByteStringType.Immutable);
+            Slice parentName;// explicitly not disposing this, will be hanndled in the end of the tx
+            Slice.From(_tx.Allocator, parent.Name ?? Constants.RootTreeName, ByteStringType.Immutable, out parentName);
             if (_fixedSizeTreeCache.TryGetValue(parentName, out cache) == false)
             {
                 _fixedSizeTreeCache[parentName] = cache = new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
@@ -515,8 +517,12 @@ namespace Voron.Data.Tables
 
                 _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name);
                 _activeDataSmallSection.DataMoved += OnDataMoved;
-                var pageNumber = Slice.From(_tx.Allocator, EndianBitConverter.Little.GetBytes(_activeDataSmallSection.PageNumber), ByteStringType.Immutable);
-                _tableTree.Add(TableSchema.ActiveSectionSlice, pageNumber);
+                Slice pageNumber;
+                var val = Bits.SwapBytes(_activeDataSmallSection.PageNumber);
+                using (Slice.External(_tx.Allocator, (byte*)&val, sizeof(long), out pageNumber))
+                {
+                    _tableTree.Add(TableSchema.ActiveSectionSlice, pageNumber);
+                }
 
                 var allocationResult = _activeDataSmallSection.TryAllocate(size, out id);
 
@@ -606,7 +612,11 @@ namespace Voron.Data.Tables
 
         public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, string value, bool startsWith = false)
         {
-            return SeekForwardFrom(index, Slice.From(_tx.Allocator, value, ByteStringType.Immutable), startsWith);
+            Slice str;
+            using (Slice.From(_tx.Allocator, value, ByteStringType.Immutable, out str))
+            {
+                return SeekForwardFrom(index, str, startsWith);
+            }
         }
 
         public long GetNumberEntriesFor(TableSchema.FixedSizeSchemaIndexDef index)

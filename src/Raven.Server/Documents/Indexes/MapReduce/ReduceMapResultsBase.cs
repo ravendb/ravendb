@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public abstract unsafe class ReduceMapResultsBase<T> : IIndexingWork where T : IndexDefinitionBase
     {
-        public static readonly Slice PageNumberSlice = Slice.From(StorageEnvironment.LabelsContext, "PageNumber", ByteStringType.Immutable);
+        public static readonly Slice PageNumberSlice;
         private Logger _logger;
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
         protected readonly T _indexDefinition;
@@ -43,6 +43,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _metrics = metrics;
             _mapReduceContext = mapReduceContext;
             _logger = LoggingSource.Instance.GetLogger<ReduceMapResultsBase<T>>(indexStorage.DocumentDatabase.Name);
+        }
+
+        static ReduceMapResultsBase()
+        {
+            Slice.From(StorageEnvironment.LabelsContext, "PageNumber", ByteStringType.Immutable, out PageNumberSlice);
         }
 
         public string Name => "Reduce";

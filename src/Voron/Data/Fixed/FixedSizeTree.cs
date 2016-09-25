@@ -129,8 +129,12 @@ namespace Voron.Data.Fixed
         }
 
         public bool Add(long key, byte[] val)
-        {            
-            return Add(key, Slice.From(_tx.Allocator, val, ByteStringType.Immutable));
+        {
+            Slice str;
+            using (Slice.From(_tx.Allocator, val, ByteStringType.Immutable, out str))
+            {
+                return Add(key, str);
+            }
         }
 
         public byte* DirectAdd(long key, out bool isNew)

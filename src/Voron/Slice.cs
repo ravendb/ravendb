@@ -92,27 +92,57 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Slice From(ByteStringContext context, string value, ByteStringType type = ByteStringType.Mutable)
+        public static ByteStringContext.Scope From(ByteStringContext context, string value, out Slice str)
         {
-            return new Slice(context.From(value, type));
+            return From(context, value, ByteStringType.Immutable, out str);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Slice From(ByteStringContext context, byte[] value, ByteStringType type = ByteStringType.Mutable)
+        public static ByteStringContext.Scope From(ByteStringContext context, string value, ByteStringType type, out Slice str)
         {
-            return new Slice(context.From(value, 0, value.Length, type));
+            ByteString s;
+            var scope = context.From(value, type, out s);
+            str = new Slice(s);
+            return scope;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Slice From(ByteStringContext context, byte[] value, int offset, int count, ByteStringType type = ByteStringType.Mutable)
+        public static ByteStringContext.Scope From(ByteStringContext context, byte[] value, out Slice str)
         {
-            return new Slice(context.From(value, offset, count, type));
+            return From(context, value, ByteStringType.Immutable, out str);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Slice From(ByteStringContext context, byte* value, int size, ByteStringType type = ByteStringType.Mutable)
+        public static ByteStringContext.Scope From(ByteStringContext context, byte[] value, ByteStringType type, out Slice str)
         {
-            return new Slice(context.From(value, size, type));
+            ByteString byteString;
+            var scope = context.From(value, 0, value.Length, type, out byteString);
+            str = new Slice(byteString);
+            return scope;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.Scope From(ByteStringContext context, byte[] value, int offset, int count, ByteStringType type, out Slice str)
+        {
+            ByteString byteString;
+            var scope = context.From(value, offset, count, type, out byteString);
+            str = new Slice(byteString);
+            return scope;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.Scope From(ByteStringContext context, byte* value, int size, out Slice str)
+        {
+            return From(context, value, size, ByteStringType.Immutable, out str);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.Scope From(ByteStringContext context, byte* value, int size, ByteStringType type, out Slice str)
+        {
+            ByteString byteString;
+            var scope = context.From(value, size, type, out byteString);
+            str = new Slice(byteString);
+            return scope;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -164,7 +194,7 @@ namespace Voron
 
     public static class Slices
     {
-        private static readonly ByteStringContext _sharedSliceContent = new ByteStringContext();
+        private static readonly ByteStringContext SharedSliceContent = new ByteStringContext();
 
         public static readonly Slice AfterAllKeys;
         public static readonly Slice BeforeAllKeys;
@@ -172,9 +202,11 @@ namespace Voron
 
         static Slices()
         {
-            Empty = new Slice(SliceOptions.Key, _sharedSliceContent.From(string.Empty));
-            BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys, _sharedSliceContent.From(string.Empty));
-            AfterAllKeys = new Slice(SliceOptions.AfterAllKeys, _sharedSliceContent.From(string.Empty));
+            ByteString content;
+            SharedSliceContent.From(string.Empty, out content);
+            Empty = new Slice(SliceOptions.Key, content);
+            BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys, content);
+            AfterAllKeys = new Slice(SliceOptions.AfterAllKeys, content);
         }
     }
 }

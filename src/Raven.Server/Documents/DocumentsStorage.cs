@@ -26,17 +26,17 @@ namespace Raven.Server.Documents
 {
     public unsafe class DocumentsStorage : IDisposable
     {
-        private static readonly Slice KeySlice = Slice.From(StorageEnvironment.LabelsContext, "Key", ByteStringType.Immutable);
+        private static readonly Slice KeySlice;
 
-        private static readonly Slice DocsSlice = Slice.From(StorageEnvironment.LabelsContext, "Docs", ByteStringType.Immutable);
-        private static readonly Slice CollectionEtagsSlice = Slice.From(StorageEnvironment.LabelsContext, "CollectionEtags", ByteStringType.Immutable);
-        private static readonly Slice AllDocsEtagsSlice = Slice.From(StorageEnvironment.LabelsContext, "AllDocsEtags", ByteStringType.Immutable);
-        private static readonly Slice TombstonesSlice = Slice.From(StorageEnvironment.LabelsContext, "Tombstones", ByteStringType.Immutable);
-        private static readonly Slice KeyAndChangeVectorSlice = Slice.From(StorageEnvironment.LabelsContext, "KeyAndChangeVector", ByteStringType.Immutable);
+        private static readonly Slice DocsSlice;
+        private static readonly Slice CollectionEtagsSlice;
+        private static readonly Slice AllDocsEtagsSlice;
+        private static readonly Slice TombstonesSlice;
+        private static readonly Slice KeyAndChangeVectorSlice;
 
         private static readonly TableSchema DocsSchema = new TableSchema();
-        private static readonly Slice TombstonesPrefix = Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable);
-        private static readonly Slice DeletedEtagsSlice = Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable);
+        private static readonly Slice TombstonesPrefix;
+        private static readonly Slice DeletedEtagsSlice;
         private static readonly TableSchema ConflictsSchema = new TableSchema();
         private static readonly TableSchema TombstonesSchema = new TableSchema();
         private static readonly TableSchema CollectionsSchema = new TableSchema();
@@ -47,6 +47,16 @@ namespace Raven.Server.Documents
 
         static DocumentsStorage()
         {
+            Slice.From(StorageEnvironment.LabelsContext, "AllTombstonesEtags", ByteStringType.Immutable, out AllTombstonesEtagsSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Key", ByteStringType.Immutable, out KeySlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Docs", ByteStringType.Immutable, out DocsSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "CollectionEtags", ByteStringType.Immutable, out CollectionEtagsSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "AllDocsEtags", ByteStringType.Immutable, out AllDocsEtagsSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Tombstones", ByteStringType.Immutable, out TombstonesSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "KeyAndChangeVector", ByteStringType.Immutable, out KeyAndChangeVectorSlice);
+            Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
+            Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
             /*
              Collection schema is:
              full name
@@ -142,8 +152,8 @@ namespace Raven.Server.Documents
 
         private readonly Logger _logger;
         private readonly string _name;
-        private static readonly Slice AllTombstonesEtagsSlice = Slice.From(StorageEnvironment.LabelsContext, "AllTombstonesEtags", ByteStringType.Immutable);
-        private static readonly Slice LastEtagSlice = Slice.From(StorageEnvironment.LabelsContext, "LastEtag", ByteStringType.Immutable);
+        private static readonly Slice AllTombstonesEtagsSlice;
+        private static readonly Slice LastEtagSlice;
 
         // this is only modified by write transactions under lock
         // no need to use thread safe ops
@@ -1087,20 +1097,24 @@ namespace Raven.Server.Documents
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
-                var collectionSlice = Slice.From(context.Allocator, collectionName.Name);
-                var tbv = new TableValueBuilder
+                Slice collectionSlice;
+                using (Slice.From(context.Allocator, collectionName.Name, out collectionSlice))
                 {
-                    {lowerKey, lowerSize},
-                    {(byte*) &newEtagBigEndian, sizeof (long)},
-                    {(byte*) &documentEtagBigEndian, sizeof (long)},
-                    {keyPtr, keySize},
-                    {(byte*)pChangeVector, sizeof (ChangeVectorEntry)*changeVector.Length},
-                    collectionSlice
-                };
+                    var tbv = new TableValueBuilder
+                    {
+                        {lowerKey, lowerSize},
+                        {(byte*) &newEtagBigEndian, sizeof(long)},
+                        {(byte*) &documentEtagBigEndian, sizeof(long)},
+                        {keyPtr, keySize},
+                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
+                        collectionSlice
+                    };
 
-                var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+                    var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
+                        collectionName.GetTableName(CollectionTableType.Tombstones));
 
-                table.Insert(tbv);
+                    table.Insert(tbv);
+                }
             }
         }
 
@@ -1445,7 +1459,11 @@ namespace Raven.Server.Documents
         private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, byte* lowerKey, int lowerSize)
         {
             var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
-            tombstoneTable.DeleteByKey(Slice.From(context.Allocator, lowerKey, lowerSize));
+            Slice key;
+            using (Slice.From(context.Allocator, lowerKey, lowerSize, out key))
+            {
+                tombstoneTable.DeleteByKey(key);
+            }
         }
 
         private ChangeVectorEntry[] SetDocumentChangeVectorForLocalChange(
@@ -1700,12 +1718,11 @@ namespace Raven.Server.Documents
         {
             var etagsTree = context.Transaction.InnerTransaction.CreateTree("LastReplicatedEtags");
             Slice etagSlice;
+            Slice keySlice;
+            using(Slice.From(context.Allocator, dbId, out keySlice))
             using (Slice.External(context.Allocator, (byte*) &etag, sizeof(long), out etagSlice))
             {
-                etagsTree.Add(
-                    Slice.From(context.Allocator, dbId),
-                    etagSlice
-                );
+                etagsTree.Add(keySlice, etagSlice);
             }
         }
 
@@ -1742,21 +1759,26 @@ namespace Raven.Server.Documents
 
             name = new CollectionName(collectionName);
 
-            var tvr = new TableValueBuilder
+            Slice collectionSlice;
+            using (Slice.From(context.Allocator, collectionName, out collectionSlice))
             {
-                Slice.From(context.Allocator, collectionName)
-            };
-            collections.Set(tvr);
+                var tvr = new TableValueBuilder
+                {
+                    collectionSlice
+                };
+                collections.Set(tvr);
 
-            DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents));
-            TombstonesSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Tombstones));
+                DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents));
+                TombstonesSchema.Create(context.Transaction.InnerTransaction,
+                    name.GetTableName(CollectionTableType.Tombstones));
 
-            // safe to do, other transactions will see it, but we are under write lock here
-            _collectionsCache = new Dictionary<string, CollectionName>(_collectionsCache, StringComparer.OrdinalIgnoreCase)
-            {
-                {name.Name, name}
-            };
-
+                // safe to do, other transactions will see it, but we are under write lock here
+                _collectionsCache = new Dictionary<string, CollectionName>(_collectionsCache,
+                    StringComparer.OrdinalIgnoreCase)
+                {
+                    {name.Name, name}
+                };
+            }
             return name;
         }
 

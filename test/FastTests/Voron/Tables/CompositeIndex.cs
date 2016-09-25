@@ -80,7 +80,9 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                docs.DeleteByKey(Slice.From(tx.Allocator, "users/1"));
+                Slice key;
+                Slice.From(tx.Allocator, "users/1", out key);
+                docs.DeleteByKey(key);
 
                 tx.Commit();
             }

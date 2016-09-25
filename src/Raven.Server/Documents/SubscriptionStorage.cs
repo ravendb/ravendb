@@ -448,7 +448,12 @@ namespace Raven.Server.Documents
     {
         public const string IdsTree = "SubscriptionsIDs";
         public const string SubsTree = "Subscriptions";
-        public static readonly Slice Id = Slice.From(StorageEnvironment.LabelsContext, "Id", ByteStringType.Immutable);
+        public static readonly Slice Id;
+
+        static SubscriptionSchema()
+        {
+            Slice.From(StorageEnvironment.LabelsContext, "Id", ByteStringType.Immutable, out Id);
+        }
 
         public static class SubscriptionTable
         {

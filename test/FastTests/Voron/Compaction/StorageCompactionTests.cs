@@ -94,7 +94,8 @@ namespace FastTests.Voron.Compaction
 
                 for (var i = 0; i < entries; i++)
                 {
-                    var key = Slice.From(allocator, "test" + i);
+                    Slice key;
+                    Slice.From(allocator, "test" + i, out key);
 
                     create.Add(key, r.Next());
 

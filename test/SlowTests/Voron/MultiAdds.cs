@@ -50,8 +50,10 @@ namespace SlowTests.Voron
                 {
                     var tree = tx.CreateTree("foo");
                     foreach (var buffer in inputData)
-                    {						
-                        tree.MultiAdd("ChildTreeKey", Slice.From(tx.Allocator, buffer));
+                    {
+                        Slice key;
+                        Slice.From(tx.Allocator, buffer, out key);
+                        tree.MultiAdd("ChildTreeKey", key);
                     }
                     tx.Commit();
                 }
@@ -62,7 +64,9 @@ namespace SlowTests.Voron
                     for (int i = 0; i < inputData.Count; i++)
                     {
                         var buffer = inputData[i];
-                        tree.MultiDelete("ChildTreeKey", Slice.From(tx.Allocator, buffer));
+                        Slice key;
+                        Slice.From(tx.Allocator, buffer, out key);
+                        tree.MultiDelete("ChildTreeKey", key);
                     }
 
                     tx.Commit();

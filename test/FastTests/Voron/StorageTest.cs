@@ -172,7 +172,9 @@ namespace FastTests.Voron
 
         protected unsafe Tuple<Slice, Slice> ReadKey(Transaction txh, Tree tree, string key)
         {
-            return ReadKey(txh, tree, Slice.From(txh.Allocator, key));
+            Slice s;
+            Slice.From(txh.Allocator, key, out s);
+            return ReadKey(txh, tree, s);
         }
 
         protected unsafe Tuple<Slice, Slice> ReadKey(Transaction txh, Tree tree, Slice key)

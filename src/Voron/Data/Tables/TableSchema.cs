@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Sparrow.Binary;
 using Voron.Data.BTrees;
 using Voron.Data.RawData;
 using Voron.Impl;
@@ -20,16 +21,26 @@ namespace Voron.Data.Tables
 
     public unsafe class TableSchema
     {
-        public static readonly Slice ActiveSectionSlice = Slice.From(StorageEnvironment.LabelsContext, "Active-Section", ByteStringType.Immutable);
-        public static readonly Slice InactiveSectionSlice = Slice.From(StorageEnvironment.LabelsContext, "Inactive-Section", ByteStringType.Immutable);
-        public static readonly Slice ActiveCandidateSectionSlice = Slice.From(StorageEnvironment.LabelsContext, "Active-Candidate-Section", ByteStringType.Immutable);
-        public static readonly Slice StatsSlice = Slice.From(StorageEnvironment.LabelsContext, "Stats", ByteStringType.Immutable);
-        public static readonly Slice SchemasSlice = Slice.From(StorageEnvironment.LabelsContext, "Schemas", ByteStringType.Immutable);
-        public static readonly Slice PkSlice = Slice.From(StorageEnvironment.LabelsContext, "PK", ByteStringType.Immutable);
+        public static readonly Slice ActiveSectionSlice;
+        public static readonly Slice InactiveSectionSlice;
+        public static readonly Slice ActiveCandidateSectionSlice;
+        public static readonly Slice StatsSlice;
+        public static readonly Slice SchemasSlice;
+        public static readonly Slice PkSlice;
 
         private SchemaIndexDef _primaryKey;
         private readonly Dictionary<Slice, SchemaIndexDef> _indexes = new Dictionary<Slice, SchemaIndexDef>(SliceComparer.Instance);
         private readonly Dictionary<Slice, FixedSizeSchemaIndexDef> _fixedSizeIndexes = new Dictionary<Slice, FixedSizeSchemaIndexDef>(SliceComparer.Instance);
+
+        static TableSchema()
+        {
+            Slice.From(StorageEnvironment.LabelsContext, "Active-Section", ByteStringType.Immutable, out ActiveSectionSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Inactive-Section", ByteStringType.Immutable, out InactiveSectionSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Active-Candidate-Section", ByteStringType.Immutable, out ActiveCandidateSectionSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Stats", ByteStringType.Immutable, out StatsSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Schemas", ByteStringType.Immutable, out SchemasSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "PK", ByteStringType.Immutable, out PkSlice);
+        }
 
         public SchemaIndexDef Key => _primaryKey;
         public Dictionary<Slice, SchemaIndexDef> Indexes => _indexes;
@@ -125,7 +136,7 @@ namespace Voron.Data.Tables
                 indexDef.IsGlobal = Convert.ToBoolean(*currentPtr);
 
                 currentPtr = input.Read(4, out currentSize);
-                indexDef.Name = Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable);
+                Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable, out indexDef.Name);
 
                 return indexDef;
             }
@@ -211,7 +222,7 @@ namespace Voron.Data.Tables
                 output.IsGlobal = Convert.ToBoolean(*currentPtr);
 
                 currentPtr = input.Read(2, out currentSize);
-                output.Name = Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable);
+                Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable, out output.Name);
 
                 return output;
             }
@@ -302,8 +313,12 @@ namespace Voron.Data.Tables
             // Create raw data. This is where we will actually store the documents
             var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name);
 
-            Slice pageNumber = Slice.From(tx.Allocator, EndianBitConverter.Little.GetBytes(rawDataActiveSection.PageNumber), ByteStringType.Immutable);
-            tableTree.Add(ActiveSectionSlice, pageNumber);
+            long val = Bits.SwapBytes(rawDataActiveSection.PageNumber);
+            Slice pageNumber;
+            using (Slice.External(tx.Allocator, (byte*)&val, sizeof(long), ByteStringType.Immutable, out pageNumber))
+            {
+                tableTree.Add(ActiveSectionSlice, pageNumber);
+            }
             
             var stats = (TableSchemaStats*)tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats));
             stats->NumberOfEntries = 0;

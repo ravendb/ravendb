@@ -545,8 +545,7 @@ namespace Voron.Data.BTrees
             // This will ensure that we can create a copy or just use the pointer instead.
             if ((type & ByteStringType.External) == 0)
             {
-                result = TreeNodeHeader.ToSlice(tx.Allocator, node, type);
-                return new ByteStringContext<ByteStringMemoryCache>.Scope();
+                return TreeNodeHeader.ToSlice(tx.Allocator, node, type, out result);
             }
             return TreeNodeHeader.ToSlicePtr(tx.Allocator, node, type, out result);
         }  

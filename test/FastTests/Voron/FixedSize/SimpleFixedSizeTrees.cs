@@ -15,14 +15,19 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void TimeSeries()
         {
-            var watchId = Slice.From(Allocator, "watches/12831-12345");
+            Slice watchId;
+            Slice.From(Allocator, "watches/12831-12345", out watchId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(watchId, valSize: 8);
 
-                fst.Add(DateTime.Today.AddHours(8).Ticks, Slice.From(Allocator, BitConverter.GetBytes(80D)));
-                fst.Add(DateTime.Today.AddHours(9).Ticks, Slice.From(Allocator, BitConverter.GetBytes(65D)));
-                fst.Add(DateTime.Today.AddHours(10).Ticks, Slice.From(Allocator, BitConverter.GetBytes(44D)));
+                Slice val;
+                Slice.From(Allocator, BitConverter.GetBytes(80D), out val);
+                fst.Add(DateTime.Today.AddHours(8).Ticks, val);
+                Slice.From(Allocator, BitConverter.GetBytes(65D), out val);
+                fst.Add(DateTime.Today.AddHours(9).Ticks, val);
+                Slice.From(Allocator, BitConverter.GetBytes(44D), out val);
+                fst.Add(DateTime.Today.AddHours(10).Ticks, val);
 
                 tx.Commit();
             }
@@ -55,7 +60,8 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanAdd()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 0);
@@ -80,7 +86,8 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void SeekShouldGiveTheNextKey()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 0);
@@ -110,7 +117,8 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanAdd_Mixed()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 0);
@@ -142,7 +150,8 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanIterate()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 0);
@@ -176,7 +185,8 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanRemove()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 0);
@@ -210,14 +220,17 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanDeleteRange()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
 
                 for (int i = 1; i <= 10; i++)
                 {
-                    fst.Add(i, Slice.From(Allocator, BitConverter.GetBytes(i + 10L)));
+                    Slice val;
+                    Slice.From(Allocator, BitConverter.GetBytes(i + 10L), out val);
+                    fst.Add(i, val);
                 }
                 tx.Commit();
             }
@@ -260,18 +273,23 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanDeleteRangeWithGaps()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
 
                 for (int i = 1; i <= 10; i++)
                 {
-                    fst.Add(i, Slice.From(Allocator, BitConverter.GetBytes(i + 10L)));
+                    Slice val;
+                    Slice.From(Allocator, BitConverter.GetBytes(i + 10L), out val);
+                    fst.Add(i, val);
                 }
                 for (int i = 30; i <= 40; i++)
                 {
-                    fst.Add(i, Slice.From(Allocator, BitConverter.GetBytes(i + 10L)));
+                    Slice val;
+                    Slice.From(Allocator, BitConverter.GetBytes(i + 10L), out val);
+                    fst.Add(i, val);
                 }
                 tx.Commit();
             }
@@ -328,14 +346,17 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanDeleteAllRange()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
 
                 for (int i = 1; i <= 10; i++)
                 {
-                    fst.Add(i, Slice.From(Allocator, BitConverter.GetBytes(i + 10L)));
+                    Slice val;
+                    Slice.From(Allocator, BitConverter.GetBytes(i + 10L), out val);
+                    fst.Add(i, val);
                 }
                 tx.Commit();
             }
@@ -368,13 +389,16 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanAdd_WithValue()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
-
-                fst.Add(1, Slice.From(Allocator, BitConverter.GetBytes(1L)));
-                fst.Add(2, Slice.From(Allocator, BitConverter.GetBytes(2L)));
+                Slice val;
+                Slice.From(Allocator, BitConverter.GetBytes(1L), out val);
+                fst.Add(1, val);
+                Slice.From(Allocator, BitConverter.GetBytes(2L), out val);
+                fst.Add(2, val);
 
                 tx.Commit();
             }
@@ -399,14 +423,18 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanRemove_WithValue()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
-
-                fst.Add(1, Slice.From(Allocator, BitConverter.GetBytes(1L)));
-                fst.Add(2, Slice.From(Allocator, BitConverter.GetBytes(2L)));
-                fst.Add(3, Slice.From(Allocator, BitConverter.GetBytes(3L)));
+                Slice val;
+                Slice.From(Allocator, BitConverter.GetBytes(1L), out val);
+                fst.Add(1, val);
+                Slice.From(Allocator, BitConverter.GetBytes(2L), out val);
+                fst.Add(2, val);
+                Slice.From(Allocator, BitConverter.GetBytes(3L), out val);
+                fst.Add(3, val);
 
                 tx.Commit();
             }

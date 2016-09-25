@@ -39,10 +39,21 @@ namespace Voron.Data.BTrees
         {
             return Encoding.UTF8.GetString((byte*)node + Constants.NodeHeaderSize, node->KeySize);
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Slice ToSlice(ByteStringContext context, TreeNodeHeader* node, ByteStringType type = ByteStringType.Mutable)
+        public static ByteStringContext.Scope ToSlice(ByteStringContext context, TreeNodeHeader* node, out Slice str)
         {
-            return new Slice(context.From((byte*)node + Constants.NodeHeaderSize, node->KeySize, type | (ByteStringType)SliceOptions.Key));
+            return ToSlice(context, node, ByteStringType.Immutable, out str);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.Scope ToSlice(ByteStringContext context, TreeNodeHeader* node, ByteStringType type, out Slice str)
+        {
+            ByteString byteString;
+            var scope = context.From((byte*) node + Constants.NodeHeaderSize, node->KeySize,
+                type | (ByteStringType) SliceOptions.Key, out byteString);
+            str = new Slice(byteString);
+            return scope;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

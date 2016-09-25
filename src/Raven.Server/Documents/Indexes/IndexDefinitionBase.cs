@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Indexes
     {
         protected const string MetadataFileName = "metadata";
 
-        protected static readonly Slice DefinitionSlice = Slice.From(StorageEnvironment.LabelsContext, "Definition", ByteStringType.Immutable); 
+        protected static readonly Slice DefinitionSlice; 
 
         private int? _cachedHashCode;
 
@@ -31,6 +31,11 @@ namespace Raven.Server.Documents.Indexes
             Collections = collections;
             MapFields = mapFields.ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
             LockMode = lockMode;
+        }
+
+        static IndexDefinitionBase()
+        {
+            Slice.From(StorageEnvironment.LabelsContext, "Definition", ByteStringType.Immutable, out DefinitionSlice);
         }
 
         public string Name { get; }
@@ -64,7 +69,11 @@ namespace Raven.Server.Documents.Indexes
                 writer.Flush();
 
                 stream.Position = 0;
-                tree.Add(DefinitionSlice, Slice.From(context.Allocator, stream.ToArray()));
+                Slice val;
+                using (Slice.From(context.Allocator, stream.ToArray(), out val))
+                {
+                    tree.Add(DefinitionSlice, val);
+                }
             }
         }
 

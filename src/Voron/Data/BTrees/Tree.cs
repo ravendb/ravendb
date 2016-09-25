@@ -1088,7 +1088,8 @@ namespace Voron.Data.BTrees
             FixedSizeTree fixedTree;
             if (_fixedSizeTrees.TryGetValue(key, out fixedTree) == false)
             {
-                var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
+                Slice keySlice; // we explicitly don't dispose it here
+                Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice);
                 _fixedSizeTrees[key] = fixedTree = new FixedSizeTree(_llt, this, keySlice, valSize, clone: false);
             }
 

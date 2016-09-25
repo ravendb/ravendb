@@ -15,6 +15,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly TransactionOperationContext _indexContext;
         private readonly MapReduceIndexingContext _mapReduceContext;
         private readonly Slice _nestedValueKey;
+        private ByteStringContext.Scope _nestedValueKeyScope;
         private readonly Transaction _tx;
 
         private NestedMapResultsSection _nestedSection;
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     InitializeTree(create);
                     break;
                 case MapResultsStorageType.Nested:
-                    _nestedValueKey = Slice.From(indexContext.Allocator, "#reduceValues-" + reduceKeyHash, ByteStringType.Immutable);
+                    _nestedValueKeyScope = Slice.From(indexContext.Allocator, "#reduceValues-" + reduceKeyHash, ByteStringType.Immutable, out _nestedValueKey);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(Type.ToString());
@@ -166,6 +167,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Dispose()
         {
+            _nestedValueKeyScope.Dispose();
             if (_nestedSection != null)
             {
                 _nestedSection.Dispose();

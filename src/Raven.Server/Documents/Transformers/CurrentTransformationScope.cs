@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Transformers
                 if (keyString.Length == 0)
                     return DynamicNullObject.Null;
 
-                keySlice = Slice.From(_documentsContext.Allocator, keyString);
+                scope = Slice.From(_documentsContext.Allocator, keyString, out keySlice);
             }
 
             // making sure that we normalize the case of the key so we'll be able to find
