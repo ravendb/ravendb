@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Text;
+using Raven.Client.Document;
 using SlowTests.Voron;
 using Voron;
 
@@ -7,113 +9,65 @@ namespace Tryouts
 {
     public class Program
     {
-        public const long GB = 1024L * 1024 * 1024;
-        public const long MB = 1024L * 1024;
-
-        const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ";
-        public static Random Rand = new Random(123);
-        private static long BUFF_SIZE = 10 * MB;
-
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 10; i++)
+            using (var store = new DocumentStore { DefaultDatabase = "test", Url = "http://localhost:8080" }.Initialize(true))
+            using(var bulk = store.BulkInsert())
             {
-                Console.WriteLine("Run #" + i);
-                var test = new HugeTransactions();
-                test.LZ4TestAbove2GB(3L * 1024 * 1024);
-            }
-
-            for (int i = 0; i < 5; i++)
-            {
-                Console.WriteLine("Run BT 2 #" + i);
-                var test = new HugeTransactions();
-                test.CanWriteBigTransactions(2);
-            }
-
-            for (int i = 0; i < 3; i++)
-            {
-                Console.WriteLine("Run BT 6 #" + i);
-                var test = new HugeTransactions();
-                test.CanWriteBigTransactions(6);
-            }
-
-
-            Console.WriteLine("Press any key for next test");
-            Console.ReadKey();
-
-
-            if (args.Length == 1)
-                BUFF_SIZE = Convert.ToInt32(args[0]) * MB;
-
-            BUFF_SIZE = 900*MB;
-
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(@"C:\zzzzTest")))
-            {
-                var value = new byte[BUFF_SIZE];
-                Console.WriteLine("Filling " + PrintSize(BUFF_SIZE) + " buffer with random values");
-                new Random().NextBytes(value);
-
-                Console.WriteLine("Add buffer");
-                using (var tx = env.WriteTransaction())
+                var rand = new Random();
+                var numberOfPersons = 50*1000;
+                var numberOfBigDocuments = 5*1000;
+                var numberOfStoredPeople = 0;
+                var numberOfRemainingBigDocuments = numberOfBigDocuments;
+                var totalDocuments = numberOfPersons + numberOfRemainingBigDocuments;
+                for (var i = 0; i < totalDocuments; i++)
                 {
-                    // env.Options.DataPager.EnsureContinuous(0, 256 * 1024);
-                    var tree = tx.CreateTree("test1");
-
-                    for (int i = 0; i < 8; i++)
+                    if (i + numberOfRemainingBigDocuments >= totalDocuments || rand.NextDouble() <= 0.1)
                     {
-                        var ms1 = new MemoryStream(value);
-                        ms1.Position = 0;
-                        tree.Add("treeKeyAA" + i, ms1);
+                        bulk.Store(new BigDocument(0.1, 2));
+                        continue;
                     }
-
-
-                    tx.Commit();
-                }
-
-                Console.WriteLine("Add buffer 2");
-                using (var tx = env.WriteTransaction())
-                {
-                    var tree = tx.CreateTree("test2");
-                    var ms1 = new MemoryStream(value);
-                    ms1.Position = 0;
-                    tree.Add("treeKey12", ms1);
-
-                    var ms2 = new MemoryStream(value);
-                    ms2.Position = 0;
-                    tree.Add("treeKey13", ms2);
-
-                    tx.Commit();
+                    bulk.Store(new Person {Name = $"Person{numberOfStoredPeople++}"});
                 }
             }
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Done !");
-            Console.ResetColor();
         }
-
-        private static string PrintSize(long size)
-        {
-            float sum;
-            string postfix;
-            if (size >= GB)
-            {
-                sum = (size / GB);
-                postfix = "GB";
-            }
-            else if (size >= MB)
-            {
-                sum = (size / MB);
-                postfix = "MB";
-            }
-            else
-            {
-                sum = size;
-                postfix = "B";
-            }
-
-            return $"{sum:#.##}{postfix} ({size:#,#})";
-        }
-
-
     }
+
+    public class Person
+    {
+        public string Name { get; set; }
+    }
+
+    public class BigDocument
+    {
+        public BigDocument(double nestedBigDocChance,int maxNesting)
+        {
+            Field0 = GeneratePageSizeBlob();
+            Field1 = GenerateObject(nestedBigDocChance, maxNesting);
+            Field2 = GenerateObject(nestedBigDocChance, maxNesting);
+            Field3 = GenerateObject(nestedBigDocChance, maxNesting);
+        }
+
+        private object GenerateObject(double nestedBigDocChance, int maxNesting)
+        {
+            var isBigDocument = maxNesting > 0 && rand.NextDouble() <= nestedBigDocChance;
+            if(isBigDocument)
+                return new BigDocument(nestedBigDocChance,maxNesting-1);
+            return GeneratePageSizeBlob();
+        }
+
+        private byte[] GeneratePageSizeBlob()
+        {
+            var buffer = new byte[PageSize];
+            rand.NextBytes(buffer);
+            return buffer;
+        }
+        public object Field0 { get; set; }
+        public object Field1 { get; set; }
+        public object Field2 { get; set; }
+        public object Field3 { get; set; }
+        private static Random rand = new Random();
+        private static readonly int PageSize = 4096;
+    }
+
 }

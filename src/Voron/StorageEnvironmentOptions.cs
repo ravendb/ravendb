@@ -97,6 +97,11 @@ namespace Voron
 
         public abstract string BasePath { get; }
 
+        /// <summary>
+        /// This mode is used in the Voron recovery tool and is not intended to be set otherwise.
+        /// </summary>
+        internal bool CopyOnWriteMode { get; set; }
+
         public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
 
         protected bool Disposed;

@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
 using Voron.Data.BTrees;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util;
@@ -45,16 +46,24 @@ namespace Voron.Platform.Win32
                                    Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
             :base(options)
         {
-           
             Win32NativeMethods.SYSTEM_INFO systemInfo;
             Win32NativeMethods.GetSystemInfo(out systemInfo);
             FileName = file;
             AllocationGranularity = systemInfo.allocationGranularity;
-
             _access = access;
-            _memoryMappedFileAccess = _access == Win32NativeFileAccess.GenericRead
+
+            if (options.CopyOnWriteMode && Path.GetFileName(FileName) == Constants.DatabaseFilename)
+            {
+                _memoryMappedFileAccess = MemoryMappedFileAccess.Read | MemoryMappedFileAccess.CopyOnWrite;
+                fileAttributes = Win32NativeFileAttributes.Readonly;
+                _access = Win32NativeFileAccess.GenericRead;
+            }
+            else
+            {
+                _memoryMappedFileAccess = _access == Win32NativeFileAccess.GenericRead
                 ? MemoryMappedFileAccess.Read
                 : MemoryMappedFileAccess.ReadWrite;
+            }
 
             _handle = Win32NativeFileMethods.CreateFile(file, access,
                                                         Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
@@ -171,9 +180,12 @@ namespace Voron.Platform.Win32
             var mmf = MemoryMappedFile.CreateFromFile(_fileStream, null, _fileStream.Length,
                 _memoryMappedFileAccess,
                  HandleInheritability.None, true);
-
+            Win32MemoryMapNativeMethods.NativeFileMapAccessType mmfAccessType = Options.CopyOnWriteMode && Path.GetFileName(FileName) == Constants.DatabaseFilename
+                ? Win32MemoryMapNativeMethods.NativeFileMapAccessType.Copy 
+                : Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read |
+                  Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write;
             var newMappingBaseAddress = Win32MemoryMapNativeMethods.MapViewOfFileEx(mmf.SafeMemoryMappedFileHandle.DangerousGetHandle(),
-                Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write,
+                mmfAccessType,
                 offset.High, offset.Low,
                 new UIntPtr((ulong)allocationSize),
                 baseAddress);
@@ -200,10 +212,18 @@ namespace Voron.Platform.Win32
                 HandleInheritability.None, true);
 
             var fileMappingHandle = mmf.SafeMemoryMappedFileHandle.DangerousGetHandle();
-            var mmFileAccessType = _access == Win32NativeFileAccess.GenericRead
-                ? Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read
-                    : Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read | Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write;
-
+            Win32MemoryMapNativeMethods.NativeFileMapAccessType mmFileAccessType;
+            if (Options.CopyOnWriteMode && Path.GetFileName(FileName) == Constants.DatabaseFilename)
+            {
+                mmFileAccessType =  Win32MemoryMapNativeMethods.NativeFileMapAccessType.Copy;
+            }
+            else
+            {
+                mmFileAccessType = _access == Win32NativeFileAccess.GenericRead
+                    ? Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read
+                    : Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read |
+                      Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write;
+            }
             var startingBaseAddressPtr = Win32MemoryMapNativeMethods.MapViewOfFileEx(fileMappingHandle,
                 mmFileAccessType,
                 0, 0,
