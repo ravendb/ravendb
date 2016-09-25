@@ -162,10 +162,9 @@ namespace Raven.Client.Documents
         {
             var a = queryGenerator.CreateRavenQueryInspector<S>();
 
-            a.Init(this, ravenQueryStatistics, highlightings, indexName, expression, 
-                (InMemoryDocumentSessionOperations) queryGenerator, 
-                databaseCommands, 
-                asyncDatabaseCommands, isMapReduce);
+            a.Init(this, ravenQueryStatistics, highlightings, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator
+                                              , databaseCommands
+                                              , asyncDatabaseCommands, isMapReduce);
 
             return a;
         }
