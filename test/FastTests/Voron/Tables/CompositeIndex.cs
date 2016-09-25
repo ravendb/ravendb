@@ -125,18 +125,22 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users")
-                                 .First();
+                bool gotValues = false;
+                foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users"))
+                {
+                    var valueReader = reader.Key.CreateReader();
+                    Assert.Equal("Users", valueReader.ReadString(5));
+                    Assert.Equal(2L, valueReader.ReadBigEndianInt64());
 
-                var valueReader = reader.Key.CreateReader();
-                Assert.Equal("Users", valueReader.ReadString(5));
-                Assert.Equal(2L, valueReader.ReadBigEndianInt64());
+                    var handle = reader.Results.Single();
+                    int size;
+                    Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
 
-                var handle = reader.Results.Single();
-                int size;
-                Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
-
-                tx.Commit();
+                    tx.Commit();
+                    gotValues = true;
+                    break;
+                }
+                Assert.True(gotValues);
             }
         }
 

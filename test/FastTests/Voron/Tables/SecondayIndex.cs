@@ -34,16 +34,21 @@ namespace FastTests.Voron.Tables
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
                 var etag = Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1L));
-                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag)
-                                 .First();
+                bool gotValues = false;
+                foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag))
+                {
+                    Assert.Equal(1L, reader.Key.CreateReader().ReadBigEndianInt64());
+                    var handle = reader.Results.Single();
+                    int size;
+                    Assert.Equal("{'Name': 'Oren'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
 
-                Assert.Equal(1L, reader.Key.CreateReader().ReadBigEndianInt64());
-                var handle = reader.Results.Single();
-                int size;
-                Assert.Equal("{'Name': 'Oren'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
 
+                    tx.Commit();
+                    gotValues = true;
+                    break;
+                }
+                Assert.True(gotValues);
 
-                tx.Commit();
             }
         }
 
@@ -117,17 +122,21 @@ namespace FastTests.Voron.Tables
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
                 var etag = Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1L));
-                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag)
-                                 .First();
+                bool gotValues = false;
+                foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag))
+                {
+                    Assert.Equal(2L, reader.Key.CreateReader().ReadBigEndianInt64());
 
-                Assert.Equal(2L, reader.Key.CreateReader().ReadBigEndianInt64());
+                    var handle = reader.Results.Single();
+                    int size;
+                    Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
+                    tx.Commit();
+                    gotValues = true;
+                    break;
+                }
+                Assert.True(gotValues);
 
-                var handle = reader.Results.Single();
-                int size;
-                Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
-
-
-                tx.Commit();
+                
             }
         }
 

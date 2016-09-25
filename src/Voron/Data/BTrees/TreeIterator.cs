@@ -44,9 +44,9 @@ namespace Voron.Data.BTrees
                 throw new ObjectDisposedException("TreeIterator " + _tree.Name);
 
             TreeNodeHeader* node;
-            Func<TreeCursor> constructor;
+            Func<Slice, TreeCursor> constructor;
             _currentPage = _tree.FindPageFor(key, out node, out constructor);
-            _cursor = constructor();
+            _cursor = constructor(key);
             _cursor.Pop();
 
             if (node != null)
@@ -213,6 +213,10 @@ namespace Voron.Data.BTrees
             if (_disposed)
                 return;
             _disposed = true;
+            if(RequiredPrefix.HasValue)
+                RequiredPrefix.Release(_tx.Allocator);
+            if (MaxKey.HasValue)
+                MaxKey.Release(_tx.Allocator);
             _prevKeyScope.Dispose();
             _cursor.Dispose();
             OnDisposal?.Invoke(this);

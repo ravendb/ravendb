@@ -16,37 +16,37 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
-            //using (var x = new SlowTests.Tests.NestedIndexing.CanTrackWhatCameFromWhat())
-            //{
-            //    x.UpdatingReferenceToAnotherDoc().Wait();
-            //}
-            Console.WriteLine("Starting");
-            using (var store = new DocumentStore
+            using (var x = new FastTests.Voron.Tables.SecondayIndex())
             {
-                DefaultDatabase = "licensing",
-                Url = "http://localhost:8080"
-            })
-            {
-                store.Initialize();
-
-                var sp = Stopwatch.StartNew();
-                store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-19 13-00.ravendbdump.gzip", CancellationToken.None)
-                    .Wait();
-
-
-                Console.WriteLine("Inserted in " + sp.Elapsed);
-                sp.Restart();
-                while (true)
-                {
-                    if (store.DatabaseCommands.GetStatistics().Indexes.All(x => x.IsStale == false))
-                    {
-                        break;
-                    }
-                    Thread.Sleep(100);
-                }
-                Console.WriteLine("Indexed in " + sp.Elapsed);
-
+                x.CanInsertThenReadBySecondary();
             }
+            //Console.WriteLine("Starting");
+            //using (var store = new DocumentStore
+            //{
+            //    DefaultDatabase = "licensing",
+            //    Url = "http://localhost:8080"
+            //})
+            //{
+            //    store.Initialize();
+
+            //    var sp = Stopwatch.StartNew();
+            //    store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-19 13-00.ravendbdump.gzip", CancellationToken.None)
+            //        .Wait();
+
+
+            //    Console.WriteLine("Inserted in " + sp.Elapsed);
+            //    sp.Restart();
+            //    while (true)
+            //    {
+            //        if (store.DatabaseCommands.GetStatistics().Indexes.All(x => x.IsStale == false))
+            //        {
+            //            break;
+            //        }
+            //        Thread.Sleep(100);
+            //    }
+            //    Console.WriteLine("Indexed in " + sp.Elapsed);
+
+            //}
         }
 
     }

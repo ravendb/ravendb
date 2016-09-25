@@ -221,7 +221,7 @@ namespace Voron.Data.BTrees
             if (AbstractPager.IsKeySizeValid(key.Size) == false)
                 throw new ArgumentException($"Key size is too big, must be at most {AbstractPager.MaxKeySize} bytes, but was {(key.Size + AbstractPager.RequiredSpaceForNewNode)}", nameof(key));
 
-            Func<TreeCursor> cursorConstructor;
+            Func<Slice, TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
             var foundPage = FindPageFor(key, out node, out cursorConstructor);
 
@@ -276,7 +276,7 @@ namespace Voron.Data.BTrees
             byte* dataPos;
             if (page.HasSpaceFor(_llt, key, len) == false)
             {
-                using (var cursor = cursorConstructor())
+                using (var cursor = cursorConstructor(key))
                 {
                     cursor.Update(cursor.Pages.First, page);
 
@@ -416,7 +416,7 @@ namespace Voron.Data.BTrees
             return SearchForPage(key, out node);
         }
 
-        internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, out Func<TreeCursor> cursor)
+        internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, out Func<Slice,TreeCursor> cursor)
         {
             TreePage p;
 
@@ -494,7 +494,7 @@ namespace Voron.Data.BTrees
             return p;
         }
 
-        private TreePage SearchForPage(Slice key, out Func<TreeCursor> cursorConstructor, out TreeNodeHeader* node)
+        private TreePage SearchForPage(Slice key, out Func<Slice, TreeCursor> cursorConstructor, out TreeNodeHeader* node)
         {
             var p = _llt.GetReadOnlyTreePage(State.RootPageNumber);
 
@@ -549,7 +549,7 @@ namespace Voron.Data.BTrees
                 cursor.Push(p);
             }
 
-            cursorConstructor = () => cursor;
+            cursorConstructor = _ => cursor;
 
             if (p.IsLeaf == false)
                 throw new InvalidDataException("Index points to a non leaf page");
@@ -668,17 +668,15 @@ namespace Voron.Data.BTrees
             return true;
         }
 
-        private bool TryUseRecentTransactionPage(Slice key, out Func<TreeCursor> cursor, out TreePage page, out TreeNodeHeader* node)
+        private bool TryUseRecentTransactionPage(Slice key, out Func<Slice, TreeCursor> cursor, out TreePage page, out TreeNodeHeader* node)
         {
             node = null;
             page = null;
             cursor = null;
 
             var recentPages = _recentlyFoundPages;
-            if (recentPages == null)
-                return false;
 
-            var foundPage = recentPages.Find(key);
+            var foundPage = recentPages?.Find(key);
             if (foundPage == null)
                 return false;
 
@@ -703,40 +701,42 @@ namespace Voron.Data.BTrees
             var cursorPath = foundPage.CursorPath;
             var pageCopy = page;
 
-            cursor = () =>
-            {
-                var c = new TreeCursor();
-                foreach (var p in cursorPath)
-                {
-                    if (p == lastFoundPageNumber)
-                    {
-                        c.Push(pageCopy);
-                    }
-                    else
-                    {
-                        var cursorPage = _llt.GetReadOnlyTreePage(p);
-                        if (key.Options == SliceOptions.Key)
-                        {
-                            if (cursorPage.Search(_llt, key) != null && cursorPage.LastMatch != 0)
-                                cursorPage.LastSearchPosition--;
-                        }
-                        else if (key.Options == SliceOptions.BeforeAllKeys)
-                        {
-                            cursorPage.LastSearchPosition = 0;
-                        }
-                        else if (key.Options == SliceOptions.AfterAllKeys)
-                        {
-                            cursorPage.LastSearchPosition = (ushort)(cursorPage.NumberOfEntries - 1);
-                        }
-                        else throw new ArgumentException();
-
-                        c.Push(cursorPage);
-                    }
-                }
-                return c;
-            };
+            cursor = keySlice => BuildTreeCursor(keySlice, cursorPath, lastFoundPageNumber, pageCopy);
 
             return true;
+        }
+
+        private TreeCursor BuildTreeCursor(Slice key, long[] cursorPath, long lastFoundPageNumber, TreePage pageCopy)
+        {
+            var c = new TreeCursor();
+            foreach (var p in cursorPath)
+            {
+                if (p == lastFoundPageNumber)
+                {
+                    c.Push(pageCopy);
+                }
+                else
+                {
+                    var cursorPage = _llt.GetReadOnlyTreePage(p);
+                    if (key.Options == SliceOptions.Key)
+                    {
+                        if (cursorPage.Search(_llt, key) != null && cursorPage.LastMatch != 0)
+                            cursorPage.LastSearchPosition--;
+                    }
+                    else if (key.Options == SliceOptions.BeforeAllKeys)
+                    {
+                        cursorPage.LastSearchPosition = 0;
+                    }
+                    else if (key.Options == SliceOptions.AfterAllKeys)
+                    {
+                        cursorPage.LastSearchPosition = (ushort) (cursorPage.NumberOfEntries - 1);
+                    }
+                    else throw new ArgumentException();
+
+                    c.Push(cursorPage);
+                }
+            }
+            return c;
         }
 
         internal TreePage NewPage(TreePageFlags flags, int num)
@@ -788,7 +788,7 @@ namespace Voron.Data.BTrees
                 throw new ArgumentException("Cannot delete a value in a read only transaction");
 
             State.IsModified = true;
-            Func<TreeCursor> cursorConstructor;
+            Func<Slice,TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
             var page = FindPageFor(key, out node, out cursorConstructor);
 
@@ -803,7 +803,7 @@ namespace Voron.Data.BTrees
 
             CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
 
-            using (var cursor = cursorConstructor())
+            using (var cursor = cursorConstructor(key))
             {
                 var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
                 var changedPage = page;
@@ -854,27 +854,29 @@ namespace Voron.Data.BTrees
 
         public long GetParentPageOf(TreePage page)
         {
-            Func<TreeCursor> cursorConstructor;
-            TreeNodeHeader* node;
             TreePage p;
             Slice key;
             using (page.IsLeaf ? page.GetNodeKey(_llt, 0, out key) : page.GetNodeKey(_llt, 1, out key))
-                p = FindPageFor(key, out node, out cursorConstructor);
-            if (p == null || p.LastMatch != 0)
-                return -1;
-
-            using (var cursor = cursorConstructor())
             {
-                while (cursor.PageCount > 0)
-                {
-                    if (cursor.CurrentPage.PageNumber == page.PageNumber)
-                    {
-                        if (cursor.PageCount == 1)
-                            return -1;// root page
+                Func<Slice,TreeCursor> cursorConstructor;
+                TreeNodeHeader* node;
+                p = FindPageFor(key, out node, out cursorConstructor);
+                if (p == null || p.LastMatch != 0)
+                    return -1;
 
-                        return cursor.ParentPage.PageNumber;
+                using (var cursor = cursorConstructor(key))
+                {
+                    while (cursor.PageCount > 0)
+                    {
+                        if (cursor.CurrentPage.PageNumber == page.PageNumber)
+                        {
+                            if (cursor.PageCount == 1)
+                                return -1; // root page
+
+                            return cursor.ParentPage.PageNumber;
+                        }
+                        cursor.Pop();
                     }
-                    cursor.Pop();
                 }
             }
 

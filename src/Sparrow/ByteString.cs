@@ -20,7 +20,7 @@ namespace Sparrow
         Immutable = 0x00, // This is a shorthand for an internal-immutable string. 
         Mutable = 0x01,
         External = 0x02,
-        Reserved1 = 0x04, // This bit is reserved for future uses.
+        Disposed = 0x04, 
         Reserved2 = 0x08, // This bit is reserved for future uses.
 
         // These flags are unused and can be used by users to store custom information on the instance.
@@ -183,8 +183,10 @@ namespace Sparrow
 
         public bool HasValue
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _pointer != null; }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)] get
+            {
+                return _pointer != null && _pointer->Flags != ByteStringType.Disposed;
+            }
         }
 
         public byte this[int index]
@@ -792,6 +794,8 @@ namespace Sparrow
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
             if (value._pointer == null)
                 return;
+
+            value._pointer->Flags = ByteStringType.Disposed;
 
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);

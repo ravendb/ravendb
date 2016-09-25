@@ -567,16 +567,23 @@ namespace Voron.Data.Tables
 
         private IEnumerable<TableValueReader> GetSecondaryIndexForValue(Tree tree, Slice value)
         {
-            var fstIndex = GetFixedSizeTree(tree, value, 0);
-            using (var it = fstIndex.Iterate())
+            try
             {
-                if (it.Seek(long.MinValue) == false)
-                    yield break;
-
-                do
+                var fstIndex = GetFixedSizeTree(tree, value, 0);
+                using (var it = fstIndex.Iterate())
                 {
-                    yield return ReadById(it.CurrentKey);
-                } while (it.MoveNext());
+                    if (it.Seek(long.MinValue) == false)
+                        yield break;
+
+                    do
+                    {
+                        yield return ReadById(it.CurrentKey);
+                    } while (it.MoveNext());
+                }
+            }
+            finally
+            {
+                value.Release(_tx.Allocator);
             }
         }
 

@@ -168,8 +168,6 @@ namespace Voron.Data.BTrees
                     Slice nodeKey;
                     using (TreeNodeHeader.ToSlicePtr(allocator, nodeHeader, out nodeKey))
                         newNestedPage.AddDataNode(i, nodeKey, 0, (ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
-
-                    nodeKey.Release(allocator);
                 }
 
                 newNestedPage.Search(_llt, value);
