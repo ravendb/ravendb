@@ -107,7 +107,8 @@ namespace Raven.Database.Actions
                 Task = task,
                 State = state,
                 Description = description,
-                TokenSource = tokenSource
+                TokenSource = tokenSource,
+                CreatedAt = DateTime.UtcNow
             });
         }
 
@@ -125,7 +126,8 @@ namespace Raven.Database.Actions
                 Task = task,
                 State = state,
                 Description = description,
-                TokenSource = tokenSource
+                TokenSource = tokenSource,
+                CreatedAt = DateTime.UtcNow
             });
 
             if (addResult == false)
