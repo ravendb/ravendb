@@ -75,6 +75,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexSearcherHolder = new IndexSearcherHolder(() => new IndexSearcher(_directory, true));
         }
 
+        public void Clean()
+        {
+            _converter?.Clean();
+        }
+
         public void Initialize(StorageEnvironment environment, IndexingConfiguration configuration)
         {
             if (_initialized)

@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _indexingThread = new Thread(ExecuteIndexing)
                 {
-                    Name = "Indexing of " + Name,
+                    Name = "Indexing of " + Name + " of " + _indexStorage.DocumentDatabase.Name,
                     IsBackground = true
                 };
 
@@ -513,7 +513,17 @@ namespace Raven.Server.Documents.Indexes
 
                         try
                         {
-                            _mre.Wait(cts.Token);
+                            if (_mre.Wait(5000, cts.Token) == false)
+                            {
+                                // there is no work to be done, and hasn't been for a while,
+                                // so this is a good time to release resource we won't need 
+                                // anytime soon
+                                ByteStringMemoryCache.Clean(keep: 1);
+                                DocumentDatabase.DocumentsStorage.ContextPool.Clean(keep: 1);
+                                _contextPool.Clean(keep: 1);
+                                IndexPersistence.Clean();
+                                _mre.Wait(cts.Token);
+                            }
                         }
                         catch (OperationCanceledException)
                         {

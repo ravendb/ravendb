@@ -496,6 +496,11 @@ namespace Sparrow.Json
                 _liveBuilders.Remove(disposedNode);
         }
 
+        public virtual void Ready()
+        {
+            
+        }
+
         public virtual void Reset()
         {
             if (_tempBuffer != null)
