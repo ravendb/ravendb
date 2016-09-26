@@ -666,17 +666,23 @@
             <h2>Inline editor</h2>
             <section class="panel">
                 <div class="panel-body">
-                    <div class="editable-input-inline" id="editable-input-example">
-                        <span class="static-name padding padding-xs">
-                            234758972348
-                            <input type="text" class="form-control edit-inline" id="subscription1-etag" placeholder="E-Tag" value="234758972348">
-                        </span>
-                        &nbsp;
-                        <button class="edit-button btn-toggle btn btn-sm" data-target="#editable-input-example" data-class="edit">
-                            <i class="icon-edit"></i>
-                            <span class="text"></span>
-                        </button>
-                    </div>
+                    <p>
+                        <div class="editable-input-inline" id="editable-input-example">
+                            <span class="value-container">
+                                <span class="static-name padding padding-lg">234758972348</span>
+                                <input type="text" class="form-control edit-inline padding padding-sm" value="234758972348">
+                            </span>
+                            &nbsp;
+                            <button class="edit-button btn-toggle btn btn-sm" data-target="#editable-input-example" data-class="edit">
+                                <i class="icon-edit"></i>
+                                <span class="text"></span>
+                            </button>
+
+                        </div>
+                    </p>
+                    <small class="bg-info padding padding-sm">
+                        <span class="icon-info"></span> If you want to add padding to the text please rememer to add padding classes (eg. ".padding.padding-sm") to both .statnic-name and .edit-inline.
+                    </small>
                 </div>
             </section>
             <h2>Toggles</h2>
