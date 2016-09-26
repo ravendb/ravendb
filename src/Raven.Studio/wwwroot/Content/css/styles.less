@@ -107,6 +107,9 @@ h6 {
     text-transform: uppercase;
 }
 
+.nobr {
+    white-space:nowrap;
+}
 
 a, .btn {
     text-decoration: none !important;
@@ -350,24 +353,27 @@ hr {
     width: 130px;
     height: 130px;
     z-index: 9990;
-
+    transition: transform 0.5s cubic-bezier(0.70, -0.40, 0.40, 1.30);
+    
     @processing-color-1:    rgba(0,0,0,0);
     @processing-color-2:    @brand-primary;
+
+
 
     background: -moz-linear-gradient(-45deg,  @processing-color-1 0%, @processing-color-1 50%, @processing-color-2 50%, @processing-color-2 100%);
     background: -webkit-linear-gradient(-45deg,  @processing-color-1 0%, @processing-color-1 50%, @processing-color-2 50%, @processing-color-2 100%);
     background: linear-gradient(135deg,  @processing-color-1 0%, @processing-color-1 50%, @processing-color-2 50%, @processing-color-2 100%);
 
-    -moz-transform: translateX(100%) translateY(100%);
-    -webkit-transform: translateX(100%) translateY(100%);
-    -o-transform: translateX(100%) translateY(100%);
-    -ms-transform: translateX(100%) translateY(100%);
-    transform: translateX(100%) translateY(100%);
-    -webkit-transition: transform 0.5s cubic-bezier(0.70, -0.40, 0.40, 1.30);
-    -moz-transition: transform 0.5s cubic-bezier(0.70, -0.40, 0.40, 1.30);
-    -ms-transition: transform 0.5s cubic-bezier(0.70, -0.40, 0.40, 1.30);
-    -o-transition: transform 0.5s cubic-bezier(0.70, -0.40, 0.40, 1.30);
-    transition: transform 0.5s cubic-bezier(0.70, -0.40, 0.40, 1.30);
+    -moz-transform: translateX(50%) translateY(50%);
+    -webkit-transform: translateX(50%) translateY(50%);
+    -o-transform: translateX(50%) translateY(50%);
+    -ms-transform: translateX(50%) translateY(50%);
+    transform: translateX(50%) translateY(50%);
+    -webkit-transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
+    -moz-transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
+    -ms-transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
+    -o-transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
+    transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
 
     &:before {
         content: '';
@@ -552,7 +558,7 @@ hr {
 
             a.active {
                 position: relative;
-                color: @brand-primary;
+                color: @gray-dark;
 
                 &:before {
                     .bounceinonce-style;
@@ -584,14 +590,36 @@ hr {
                 border-radius: 50%;
                 display: none;
 
+                &.success {
+                    background-color: @brand-success;
+                }
+
+                &.info {
+                    background-color: @brand-info;
+                }
+
+                &.warning {
+                    background-color: @brand-warning;
+                }
+
+                &.danger {
+                    background-color: @brand-danger;
+                }
+
                 &.pop {
                     &:after {
+                        position:absolute;
+                        left:0;
+                        top:0;
+                        content:'';
                         opacity: 0;
                         position: absolute;
                         width: 100%;
                         height: 100%;
                         border-radius: 50%;
-                        background-color: @brand-primary;
+                        z-index:9999;
+                        border:1px solid @brand-primary;
+                        //background-color: @brand-primary;
                         .fadeoutzoom-style;
                     }
                 }
@@ -1157,8 +1185,6 @@ hr {
             & + li {
                 &:before {
                     content: '';
-                    margin-left: 25px;
-                    margin-right: 25px;
                     display: block;
                     border-top: 1px solid @gray-dark;
                 }
@@ -1598,6 +1624,31 @@ pre {
 
     .panel {
         margin-bottom: @grid-gutter-width / 8;
+        background-color: @panel-bg;
+        &.panel-success {
+            box-shadow:6px 0 0 0 @brand-success-dark inset;
+            h3 {
+                color:@brand-success;
+            }
+        }
+        &.panel-info {
+            box-shadow:6px 0 0 0 @brand-info-dark inset;
+            h3 {
+                color:@brand-info;
+            }
+        }
+        &.panel-warning {
+            box-shadow:6px 0 0 0 @brand-warning-dark inset;
+            h3 {
+                color:@brand-warning;
+            }
+        }
+        &.panel-danger {
+            box-shadow:6px 0 0 0 @brand-danger-dark inset;
+            h3 {
+                color:@brand-danger;
+            }
+        }
 
         .panel-body {
             position: relative;
@@ -1646,15 +1697,8 @@ pre {
 }
 
 .subscription {
+
     .subscription-etagInput {
         display: inline;
     }
-}
-
-.sampleData-classes {
-    color: inherit;
-    background-color: inherit;
-    font-family: monospace;
-    width: 100%;
-    height: 500px;
 }
