@@ -202,11 +202,15 @@ namespace Voron
 
         static Slices()
         {
-            ByteString content;
-            SharedSliceContent.From(string.Empty, out content);
-            Empty = new Slice(SliceOptions.Key, content);
-            BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys, content);
-            AfterAllKeys = new Slice(SliceOptions.AfterAllKeys, content);
+            ByteString empty;
+            SharedSliceContent.From(string.Empty, out empty);
+            Empty = new Slice(SliceOptions.Key, empty);
+            ByteString before;
+            SharedSliceContent.From(string.Empty, out before);
+            BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys, before);
+            ByteString after;
+            SharedSliceContent.From(string.Empty, out after);
+            AfterAllKeys = new Slice(SliceOptions.AfterAllKeys, after);
         }
     }
 }

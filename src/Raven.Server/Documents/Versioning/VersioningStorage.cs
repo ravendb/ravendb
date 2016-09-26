@@ -21,29 +21,7 @@ namespace Raven.Server.Documents.Versioning
         public static readonly Slice EtagSlice;
         private static Logger _logger;
 
-        private static readonly TableSchema _docsSchema = CreateVersioningDocsSchema();
-
-        private static TableSchema CreateVersioningDocsSchema()
-        {
-            // The documents schema is as follows
-            // 5 fields (lowered key, recored separator, etag, lazy string key, document)
-            // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
-            //      e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it.
-            // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
-            var schema = new TableSchema();
-            schema.DefineIndex(new TableSchema.SchemaIndexDef
-            {
-                StartIndex = 0,
-                Count = 3,
-                Name = KeyAndEtagSlice
-            });
-            schema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
-            {
-                StartIndex = 2,
-                Name = EtagSlice
-            });
-            return schema;
-        }
+        private static readonly TableSchema DocsSchema;
 
         private readonly VersioningConfiguration _versioningConfiguration;
 
@@ -60,7 +38,7 @@ namespace Raven.Server.Documents.Versioning
 
             using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
             {
-                _docsSchema.Create(tx, RevisionDocuments);
+                DocsSchema.Create(tx, RevisionDocuments);
 
                 tx.CreateTree(RevisionsCount);
 
@@ -72,6 +50,23 @@ namespace Raven.Server.Documents.Versioning
         {
             Slice.From(StorageEnvironment.LabelsContext, "KeyAndEtag", ByteStringType.Immutable, out KeyAndEtagSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Etag", ByteStringType.Immutable, out EtagSlice);
+            // The documents schema is as follows
+            // 5 fields (lowered key, recored separator, etag, lazy string key, document)
+            // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
+            //      e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it.
+            // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
+            DocsSchema = new TableSchema();
+            DocsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 0,
+                Count = 3,
+                Name = KeyAndEtagSlice
+            });
+            DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = 2,
+                Name = EtagSlice
+            });
         }
 
         public static VersioningStorage LoadConfigurations(DocumentDatabase database)
@@ -148,7 +143,7 @@ namespace Raven.Server.Documents.Versioning
             if (enableVersioning == false && configuration.Active == false)
                 return;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, RevisionDocuments);
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
             Slice prefixSlice;
             using (DocumentsStorage.GetSliceFromKey(context, key, out prefixSlice))
             {
@@ -163,7 +158,7 @@ namespace Raven.Server.Documents.Versioning
         {
             var newEtagBigEndian = IPAddress.HostToNetworkOrder(etag);
 
-            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, RevisionDocuments);
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
             PutInternal(context, key, newEtagBigEndian, document, table);
         }
 
@@ -198,7 +193,7 @@ namespace Raven.Server.Documents.Versioning
             if (numberOfRevisionsToDelete <= 0)
                 return;
 
-            var deletedRevisionsCount = table.DeleteForwardFrom(_docsSchema.Indexes[KeyAndEtagSlice], prefixSlice, numberOfRevisionsToDelete);
+            var deletedRevisionsCount = table.DeleteForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, numberOfRevisionsToDelete);
             Debug.Assert(numberOfRevisionsToDelete == deletedRevisionsCount);
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
         }
@@ -224,25 +219,25 @@ namespace Raven.Server.Documents.Versioning
             if (configuration.PurgeOnDelete == false)
                 return;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, RevisionDocuments);
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
             var prefixKeyMem = context.Allocator.Allocate(loweredKey.Size + 1);
             loweredKey.CopyTo(0, prefixKeyMem.Ptr, 0, loweredKey.Size);
             prefixKeyMem.Ptr[loweredKey.Size] = (byte)30; // the record separator
             var prefixSlice = new Slice(SliceOptions.Key, prefixKeyMem);
-            table.DeleteForwardFrom(_docsSchema.Indexes[KeyAndEtagSlice], prefixSlice, long.MaxValue);
+            table.DeleteForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, long.MaxValue);
             DeleteCountOfRevisions(context, prefixSlice);
         }
 
         public IEnumerable<Document> GetRevisions(DocumentsOperationContext context, string key, int start, int take)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, RevisionDocuments);
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
 
             Slice prefixSlice;
             using (DocumentsStorage.GetSliceFromKey(context, key, out prefixSlice))
             {
                 // ReSharper disable once LoopCanBeConvertedToQuery
                 foreach (
-                    var sr in table.SeekForwardFrom(_docsSchema.Indexes[KeyAndEtagSlice], prefixSlice, startsWith: true)
+                    var sr in table.SeekForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, startsWith: true)
                 )
                 {
                     foreach (var tvr in sr.Results)
@@ -266,9 +261,9 @@ namespace Raven.Server.Documents.Versioning
 
         public IEnumerable<Document> GetRevisionsAfter(DocumentsOperationContext context, long etag)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, RevisionDocuments);
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
 
-            foreach (var tvr in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes[EtagSlice], etag))
+            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[EtagSlice], etag))
             {
                 var document = TableValueToDocument(context, tvr);
                 yield return document;
@@ -277,9 +272,9 @@ namespace Raven.Server.Documents.Versioning
 
         public IEnumerable<Document> GetRevisionsAfter(DocumentsOperationContext context, long etag, int take)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, RevisionDocuments);
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
 
-            foreach (var tvr in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes[EtagSlice], etag))
+            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[EtagSlice], etag))
             {
                 var document = TableValueToDocument(context, tvr);
                 yield return document;
@@ -310,8 +305,8 @@ namespace Raven.Server.Documents.Versioning
 
         public long GetNumberOfRevisionDocuments(DocumentsOperationContext context)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(_docsSchema, RevisionDocuments);
-            return table.GetNumberEntriesFor(_docsSchema.FixedSizeIndexes[EtagSlice]);
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
+            return table.GetNumberEntriesFor(DocsSchema.FixedSizeIndexes[EtagSlice]);
         }
     }
 }
