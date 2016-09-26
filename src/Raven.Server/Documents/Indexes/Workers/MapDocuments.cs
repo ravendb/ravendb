@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             var pageSize = _configuration.MaxNumberOfDocumentsToFetchForMap;
-            var timeoutProcessing = Debugger.IsAttached == false ? _configuration.DocumentProcessingTimeout.AsTimeSpan : TimeSpan.FromMinutes(15);
+            var timeoutProcessing = _configuration.DocumentProcessingTimeout.AsTimeSpan;
 
             var moreWorkFound = false;
 
