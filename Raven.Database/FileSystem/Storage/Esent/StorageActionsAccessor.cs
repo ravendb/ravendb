@@ -353,7 +353,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
                     {
                         var name = Api.RetrieveColumnAsString(session, Usage, tableColumnsCache.UsageColumns["name"]);
                         if (name.Equals(filename, StringComparison.InvariantCultureIgnoreCase) == false)
-                            continue;
+                            break;
 
                         fileInformation.Pages.Add(new PageInformation
                                                       {
