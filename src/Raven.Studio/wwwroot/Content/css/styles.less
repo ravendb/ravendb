@@ -128,7 +128,7 @@ a, .btn {
     padding: (@grid-gutter-width / 2) (@grid-gutter-width / 4 * 3) !important;
 
     &.padding-xs {
-        padding: (@grid-gutter-width / 8) (@grid-gutter-width / 4) !important;
+        padding: 1px (@grid-gutter-width / 4) !important;
     }
 
     &.padding-sm {
@@ -218,8 +218,11 @@ hr {
 }
 
 .editable-input-inline {
+    display:inline-block;
 
     .btn.edit-button {
+        float:left;
+        margin-left:4px;
         .btn-primary;
 
         .text::before {
@@ -230,6 +233,7 @@ hr {
     .value-container {
         display:inline-block;
         position:relative;
+        float:left;
 
         .static-name {
             display:inline-block;
