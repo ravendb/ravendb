@@ -19,12 +19,12 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
-            using (var x = new FastTests.Server.OAuth.CanAuthenticate())
-            {
-                x.CanStoreAndDeleteApiKeys();
-                if (DateTime.Now.Year == 2016)
-                    return;
-            }
+            //using (var x = new FastTests.Server.OAuth.CanAuthenticate())
+            //{
+            //    x.CanStoreAndDeleteApiKeys();
+            //    if (DateTime.Now.Year == 2016)
+            //        return;
+            //}
             Console.WriteLine("Starting");
             using (var store = new DocumentStore
             {
@@ -35,7 +35,7 @@ namespace Tryouts
                 store.Initialize();
 
                 var sp = Stopwatch.StartNew();
-                store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-19 13-00.ravendbdump.gzip", CancellationToken.None)
+                store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-22 15-51.ravendbdump.gzip", CancellationToken.None)
                     .Wait();
 
 
