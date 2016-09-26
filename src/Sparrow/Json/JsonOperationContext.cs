@@ -501,7 +501,15 @@ namespace Sparrow.Json
             if (_tempBuffer != null)
                 _tempBuffer.Address = IntPtr.Zero;
 
+            foreach (var builder in _liveBuilders)
+            {
+                builder.DisposeTrackingReference = null;
+                builder.Dispose();
+            }
+
+            _liveBuilders.Clear();
             _arenaAllocator.ResetArena();
+
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
             // When a context is re-used, the buffer containing those field names was not reset and the strings are still valid and alive.
 
@@ -516,15 +524,6 @@ namespace Sparrow.Json
                 CachedProperties = new CachedProperties(this);// need to reset this as well
                 _fieldNames.Clear();
             }
-
-
-            foreach (var builder in _liveBuilders)
-            {
-                builder.DisposeTrackingReference = null;
-                builder.Dispose();
-            }
-
-            _liveBuilders.Clear();
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
