@@ -1,18 +1,20 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using Sparrow.Utils;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace Sparrow.Json
 {
     public abstract class JsonContextPoolBase<T>
         where T : JsonOperationContext
     {
-        private readonly ConcurrentStack<T> _contextPool;
+        /// <summary>
+        /// This is thread static value because we usually have great similiarity in the operations per threads.
+        /// Indexing thread will adjust their contexts to their needs, and request processing threads will tend to
+        /// average to the same overall type of contexts
+        /// </summary>
+        private readonly ThreadLocal<Stack<T>> _contextPool = new ThreadLocal<Stack<T>>(() => new Stack<T>(), trackAllValues: true);
 
-        protected JsonContextPoolBase()
-        {
-            _contextPool = new ConcurrentStack<T>();
-        }
+        private bool _disposed;
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context)
         {
@@ -25,8 +27,8 @@ namespace Sparrow.Json
 
         public IDisposable AllocateOperationContext(out T context)
         {
-            if (_contextPool.TryPop(out context) == false)
-                context = CreateContext();
+            var stack = _contextPool.Value;
+            context = stack.Count == 0 ? CreateContext() : stack.Pop();
 
             return new ReturnRequestContext
             {
@@ -41,12 +43,19 @@ namespace Sparrow.Json
         {
             public T Context;
             public JsonContextPoolBase<T> Parent;
+
             public void Dispose()
             {
-                if (Parent._contextPool.Count < 4096)
+                var stack = Parent._contextPool.Value;
+                if (
+                    //TODO: Probably need better policy here, need to consider what
+                    //TODO: it means for async operations ( single thread is used for many tasks)
+                    //TODO: and for thread operations like indexing / replication that has just single
+                    //TODO: usable thread. 
+                    stack.Count < 4096)
                 {
                     Context.Reset();
-                    Parent._contextPool.Push(Context);
+                    stack.Push(Context);
                 }
                 else
                 {
@@ -57,11 +66,18 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            T result;
-            while (_contextPool.TryPop(out result))
+            if (_disposed)
+                return;
+            _disposed = true;
+            foreach (var stack in _contextPool.Values)
             {
-                result.Dispose();
+                while (stack.Count > 0)
+                {
+                    var ctx = stack.Pop();
+                    ctx.Dispose();
+                }
             }
+            _contextPool.Dispose();
         }
     }
 }

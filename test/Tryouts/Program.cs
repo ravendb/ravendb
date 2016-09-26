@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -18,6 +19,12 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
+            using (var x = new FastTests.Server.OAuth.CanAuthenticate())
+            {
+                x.CanStoreAndDeleteApiKeys();
+                if (DateTime.Now.Year == 2016)
+                    return;
+            }
             Console.WriteLine("Starting");
             using (var store = new DocumentStore
             {
@@ -34,12 +41,23 @@ namespace Tryouts
 
                 Console.WriteLine("Inserted in " + sp.Elapsed);
                 sp.Restart();
+                var done = new HashSet<string>();
                 while (true)
                 {
-                    if (store.DatabaseCommands.GetStatistics().Indexes.All(x => x.IsStale == false))
+                    bool all = true;
+                    foreach (var index in store.DatabaseCommands.GetStatistics().Indexes)
                     {
-                        break;
+                        if (index.IsStale)
+                        {
+                            all = false;
+                        }
+                        else if (done.Add(index.Name))
+                        {
+                            Console.WriteLine(index.Name + " done in " + sp.Elapsed);
+                        }
                     }
+                    if (all)
+                        break;
                     Thread.Sleep(100);
                 }
                 Console.WriteLine("Indexed in " + sp.Elapsed);
