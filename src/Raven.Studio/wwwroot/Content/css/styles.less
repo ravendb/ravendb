@@ -141,8 +141,11 @@ a, .btn {
 }
 
 .btn {
-    //border: none;
-    &:not(.btn-sm) {
+    [class^="icon-"], [class*=" icon-"] {
+        margin-left: -3px;
+    }
+
+    &:not(.btn-sm .btn-xs) {
         [class^="icon-"], [class*=" icon-"] {
             font-size: 170%;
             line-height: 60%;
@@ -155,8 +158,13 @@ a, .btn {
         [class^="icon-"], [class*=" icon-"] {
             font-size: 110%;
             line-height: 60%;
+            top: 2px;
+        }
+    }
+
+    &.btn-xs {
+        [class^="icon-"], [class*=" icon-"] {
             top: 1px;
-            margin-left: -3px;
         }
     }
 }
@@ -256,7 +264,6 @@ hr {
 
     .icon-edit {
         font-size: 100%;
-        margin-left: 10px;
     }
 
     &.edit {
