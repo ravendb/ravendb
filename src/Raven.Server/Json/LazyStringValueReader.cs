@@ -15,6 +15,13 @@ namespace Raven.Server.Json
 
         public TextReader GetTextReaderFor(LazyStringValue value)
         {
+            // if the value is small, we don't want to create a reader for it
+            // the reason is that a reader takes 3KB of memory, and if we won't
+            // save it, might as well reduce the cost
+
+            if (value.Length < 2048 && _reader == null)
+                return new StringReader(GetStringFor(value));
+
             if (_mmapStream == null)
                 _mmapStream = new MmapStream(null, 0);
             if(_reader == null)
