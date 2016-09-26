@@ -34,6 +34,7 @@ namespace Raven.Server.Documents
         private Task _indexStoreTask;
         private Task _transformerStoreTask;
 
+        private readonly ConfigurationStorage _configurationStorage;
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
 
@@ -51,13 +52,14 @@ namespace Raven.Server.Documents
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
             SubscriptionStorage = new SubscriptionStorage(this);
-            DatabaseOperations = new DatabaseOperations(this);
+            Operations = new DatabaseOperations(this);
             Metrics = new MetricsCountersManager();
             IoMetrics = ioMetrics;
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
             HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments,
                 configuration.Databases.MaxWarnSizeHugeDocuments);
+            _configurationStorage = new ConfigurationStorage(this);
         }
 
         public SystemTime Time = new SystemTime();
@@ -86,7 +88,7 @@ namespace Raven.Server.Documents
 
         public DocumentsNotifications Notifications { get; }
 
-        public DatabaseOperations DatabaseOperations { get; private set; }
+        public DatabaseOperations Operations { get; private set; }
 
         public HugeDocuments HugeDocuments { get; }
 
@@ -97,6 +99,9 @@ namespace Raven.Server.Documents
         public IndexStore IndexStore { get; private set; }
 
         public TransformerStore TransformerStore { get; private set; }
+
+
+        public AlertsStorage Alerts => _configurationStorage.AlertsStorage;
 
         public SqlReplicationLoader SqlReplicationLoader { get; private set; }
 
@@ -182,6 +187,7 @@ namespace Raven.Server.Documents
             }
 
             SubscriptionStorage.Initialize();
+            _configurationStorage.Initialize();
         }
 
         public void Dispose()
@@ -257,14 +263,20 @@ namespace Raven.Server.Documents
 
             exceptionAggregator.Execute(() =>
             {
-                DatabaseOperations?.Dispose(exceptionAggregator);
-                DatabaseOperations = null;
+                Operations?.Dispose(exceptionAggregator);
+                Operations = null;
             });
 
             exceptionAggregator.Execute(() =>
             {
                 SubscriptionStorage?.Dispose();
             });
+
+            exceptionAggregator.Execute(() =>
+            {
+                _configurationStorage?.Dispose();
+            });
+
             exceptionAggregator.Execute(() =>
             {
                 DocumentsStorage?.Dispose();
@@ -282,69 +294,12 @@ namespace Raven.Server.Documents
             try
             {
                 IndexStore?.RunIdleOperations();
-                DatabaseOperations?.CleanupOperations();
+                Operations?.CleanupOperations();
             }
 
             finally
             {
                 Monitor.Exit(_idleLocker);
-            }
-        }
-
-        public void AddAlert(Alert alert)
-        {
-            // Ignore for now, we are going to have a new implementation
-            if (DateTime.UtcNow.Ticks != 0)
-                return;
-
-            if (string.IsNullOrEmpty(alert.UniqueKey))
-                throw new ArgumentNullException(nameof(alert.UniqueKey), "Unique error key must be not null");
-
-            DocumentsOperationContext context;
-            using (DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                var document = DocumentsStorage.Get(context, Constants.RavenAlerts);
-                DynamicJsonValue alerts;
-                long? etag = null;
-                if (document == null)
-                {
-                    alerts = new DynamicJsonValue
-                    {
-                        [alert.UniqueKey] = new DynamicJsonValue
-                        {
-                            ["IsError"] = alert.IsError,
-                            ["CreatedAt"] = alert.CreatedAt,
-                            ["Title"] = alert.Title,
-                            ["Exception"] = alert.Exception,
-                            ["Message"] = alert.Message,
-                            ["Observed"] = alert.Observed,
-                        }
-                    };
-                }
-                else
-                {
-                    etag = document.Etag;
-                    var existingAlert = (BlittableJsonReaderObject)document.Data[alert.UniqueKey];
-                    alerts = new DynamicJsonValue(document.Data)
-                    {
-                        [alert.UniqueKey] = new DynamicJsonValue
-                        {
-                            ["IsError"] = alert.IsError,
-                            ["CreatedAt"] = alert.CreatedAt,
-                            ["Title"] = alert.Title,
-                            ["Exception"] = alert.Exception,
-                            ["Message"] = alert.Message,
-                            ["Observed"] = alert.Observed,
-                            ["LastDismissedAt"] = existingAlert?["LastDismissedAt"],
-                        }
-                    };
-                }
-
-                var alertsDocument = context.ReadObject(alerts, Constants.RavenAlerts,
-                    BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                DocumentsStorage.Put(context, Constants.RavenAlerts, etag, alertsDocument);
-                tx.Commit();
             }
         }
 

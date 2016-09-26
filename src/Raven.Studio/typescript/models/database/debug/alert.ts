@@ -8,7 +8,8 @@ class alert {
     title: string;
     uniqueKey: string;
     observed = ko.observable(false);
-    lastDismissedAt:string;
+    lastDismissedAt: string;
+    global: boolean;
 
     isVisible: KnockoutComputed<boolean>;
     createdAtHumanized: KnockoutComputed<string>;

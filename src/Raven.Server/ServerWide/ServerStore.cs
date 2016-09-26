@@ -40,6 +40,7 @@ namespace Raven.Server.ServerWide
         private readonly IList<IDisposable> toDispose = new List<IDisposable>();
         public readonly RavenConfiguration Configuration;
         public readonly IoMetrics IoMetrics;
+        public readonly AlertsStorage Alerts;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 
@@ -50,6 +51,8 @@ namespace Raven.Server.ServerWide
             Configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<ServerStore>("ServerStore");
             DatabasesLandlord = new DatabasesLandlord(this);
+
+            Alerts = new AlertsStorage("Raven/Server");
 
             // We use the follow format for the items data
             // { lowered key, key, data }
@@ -102,6 +105,7 @@ namespace Raven.Server.ServerWide
 
             ContextPool = new TransactionContextPool(_env);
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
+            Alerts.Initialize(_env, ContextPool);
         }
 
         public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id)

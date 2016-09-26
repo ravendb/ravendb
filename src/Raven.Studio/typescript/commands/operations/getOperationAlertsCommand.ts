@@ -1,6 +1,12 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import alert = require("models/database/debug/alert");
+import endpoints = require("endpoints");
+
+type alertsResponse = {
+    Global: alertDto[];
+    Local: alertDto[];
+}
 
 class getOperationAlertsCommand extends commandBase {
 
@@ -9,9 +15,18 @@ class getOperationAlertsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<alert[]> {
-        var url = "/operation/alerts";//TODO: use endpoints
+        const url = endpoints.databases.operationAlerts.operationAlerts;
+
+        const mapper = (result: alertsResponse) => {
+            const globalAlerts = result.Global.map(a => new alert(a));
+            globalAlerts.forEach(x => x.global = true);
+
+            const localAlerts = result.Local.map(a => new alert(a));
+
+            return globalAlerts.concat(localAlerts);
+        }
         
-        return this.query<alert[]>(url, null, this.db, (result: alertDto[]) => result.map(a => new alert(a)));
+        return this.query<alert[]>(url, null, this.db, mapper);
     }
 }
 

@@ -340,14 +340,17 @@ namespace Raven.Server.Documents.PeriodicExport
                 _exportLimit = 100;
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations("Error when performing periodic export", e);
-                _database.AddAlert(new Alert
-                {
-                    IsError = true,
+                _database.Alerts.AddAlert(new Alert
+                { 
+                    Type = AlertType.PeriodicExport,
+                    Message = "Error in Periodic Export",
                     CreatedAt = SystemTime.UtcNow,
-                    Message = e.Message,
-                    Title = "Error in Periodic Export",
-                    Exception = e.ToString(),
-                    UniqueKey = "Periodic Export Error",
+                    Severity = AlertSeverity.Error,
+                    Content = new ExceptionAlertContent
+                    {
+                        Message = e.Message,
+                        Exception = e.ToString()
+                    }
                 });
             }
         }

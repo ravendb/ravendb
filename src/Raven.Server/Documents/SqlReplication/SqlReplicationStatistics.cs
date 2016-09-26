@@ -1,6 +1,5 @@
 using System;
 using Raven.Abstractions;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.SqlReplication
@@ -44,12 +43,16 @@ namespace Raven.Server.Documents.SqlReplication
 
             LastAlert = new Alert
             {
-                IsError = true,
+                Type = AlertType.SqlReplicationError,
+                Severity = AlertSeverity.Error,
                 CreatedAt = SystemTime.UtcNow,
-                Message = "Last SQL replication operation for " + _name + " was failed",
-                Title = "SQL replication error",
-                Exception = e.ToString(),
-                UniqueKey = "Sql Replication Error: " + _name
+                Message = "SQL replication error",
+                Key = _name,
+                Content = new ExceptionAlertContent
+                {
+                    Message = "Last SQL replication operation for " + _name + " was failed",
+                    Exception = e.ToString()
+                }
             };
 
             if (WriteErrorCount < 100)
@@ -66,17 +69,21 @@ namespace Raven.Server.Documents.SqlReplication
 
             LastAlert = new Alert
             {
-                IsError = true,
+                Type = AlertType.SqlReplicationWriteErrorRatio, 
+                Severity = AlertSeverity.Error,
                 CreatedAt = SystemTime.UtcNow,
-                Message = "Could not tolerate write error ratio and stopped current replication cycle for " + _name + Environment.NewLine + this,
-                Title = "Sql Replication write error hit ratio too high",
-                Exception = e.ToString(),
-                UniqueKey = "Sql Replication Write Error Ratio: " + _name
+                Message = "Sql Replication write error hit ratio too high",
+                Key = _name,
+                Content = new ExceptionAlertContent
+                {
+                    Message = "Could not tolerate write error ratio and stopped current replication cycle for " + _name + Environment.NewLine + this,
+                    Exception = e.ToString()
+                }
             };
 
             if (_reportToDatabaseAlerts)
             {
-                database.AddAlert(LastAlert);
+                database.Alerts.AddAlert(LastAlert);
             }
 
             throw new InvalidOperationException("Could not tolerate write error ratio and stopped current replication cycle for " + _name + Environment.NewLine + this, e);
@@ -101,15 +108,19 @@ namespace Raven.Server.Documents.SqlReplication
             SuspendUntil = DateTime.MaxValue;
             LastAlert = new Alert
             {
-                IsError = true,
+                Type = AlertType.SqlReplicationScriptError,
+                Severity = AlertSeverity.Error,
                 CreatedAt = SystemTime.UtcNow,
-                Message = string.Format("Could not parse script for {0} " + Environment.NewLine + "Script: {1}", _name, script),
-                Title = "Could not parse Script",
-                UniqueKey = "Script Parse Error: " + _name
+                Key = _name,
+                Message = "Could not parse Script",
+                Content = new ExceptionAlertContent
+                {
+                    Message = string.Format("Could not parse script for {0} " + Environment.NewLine + "Script: {1}", _name, script),
+                }
             };
             if (_reportToDatabaseAlerts)
             {
-                database.AddAlert(LastAlert);
+                database.Alerts.AddAlert(LastAlert);
             }
         }
 
@@ -121,12 +132,16 @@ namespace Raven.Server.Documents.SqlReplication
 
             LastAlert = new Alert
             {
-                IsError = true,
+                Type = AlertType.SqlReplicationError,
+                Severity = AlertSeverity.Error,
                 CreatedAt = SystemTime.UtcNow,
-                Message = "Replication script for " + _name + " was failed",
-                Title = "SQL replication error",
-                Exception = e.ToString(),
-                UniqueKey = "Sql Replication Error: " + _name
+                Message = "SQL replication error",
+                Key = _name,
+                Content = new ExceptionAlertContent
+                {
+                    Message = "Replication script for " + _name + " was failed",
+                    Exception = e.ToString()
+                }
             };
 
             if (ScriptErrorCount < 100)
@@ -137,15 +152,19 @@ namespace Raven.Server.Documents.SqlReplication
 
             LastAlert = new Alert
             {
-                IsError = true,
+                Type = AlertType.SqlReplicationScriptErrorRatio,
+                Severity = AlertSeverity.Error,
                 CreatedAt = SystemTime.UtcNow,
-                Message = "Could not tolerate script error ratio and stopped current replication cycle for " + _name + Environment.NewLine + this,
-                Title = "Sql Replication script error hit ratio too high",
-                UniqueKey = "Sql Replication Script Error Ratio: " + _name
+                Message = "Sql Replication script error hit ratio too high",
+                Key = _name,
+                Content = new ExceptionAlertContent
+                {
+                    Message = "Could not tolerate script error ratio and stopped current replication cycle for " + _name + Environment.NewLine + this,
+                }
             };
             if (_reportToDatabaseAlerts)
             {
-                database.AddAlert(LastAlert);
+                database.Alerts.AddAlert(LastAlert);
             }
 
             throw new InvalidOperationException("Could not tolerate script error ratio and stopped current replication cycle for " + _name + Environment.NewLine + this);
@@ -160,7 +179,7 @@ namespace Raven.Server.Documents.SqlReplication
         {
             var json = new DynamicJsonValue
             {
-                ["LastAlert"] = LastAlert,
+                ["LastAlert"] = LastAlert?.ToJson(),
                 ["LastErrorTime"] = LastErrorTime,
                 ["LastReplicatedEtag"] = LastReplicatedEtag,
                 ["LastTombstonesEtag"] = LastTombstonesEtag,

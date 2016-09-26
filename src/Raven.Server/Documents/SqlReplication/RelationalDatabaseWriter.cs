@@ -53,14 +53,18 @@ namespace Raven.Server.Documents.SqlReplication
             }
             catch (Exception e)
             {
-                database.AddAlert(new Alert
+                database.Alerts.AddAlert(new Alert
                 {
-                    IsError = true,
+                    Type = AlertType.SqlReplicationConnectionError,
+                    Message = "Sql Replication could not open connection",
+                    Content = new ExceptionAlertContent
+                    {
+                        Message = "Sql Replication could not open connection to " + _connection.ConnectionString,
+                        Exception = e.ToString()
+                    },
                     CreatedAt = SystemTime.UtcNow,
-                    Exception = e.ToString(),
-                    Title = "Sql Replication could not open connection",
-                    Message = "Sql Replication could not open connection to " + _connection.ConnectionString,
-                    UniqueKey = "Sql Replication Connection Error: " + _connection.ConnectionString,
+                    Key = _connection.ConnectionString,
+                    Severity = AlertSeverity.Error
                 });
                 throw;
             }
@@ -98,14 +102,18 @@ namespace Raven.Server.Documents.SqlReplication
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Could not find provider factory {_predefinedSqlConnection.FactoryName} to replicate to sql for {configuration.Name}, ignoring", e);
 
-                _database.AddAlert(new Alert
+                _database.Alerts.AddAlert(new Alert
                 {
-                    IsError = true,
+                    Type = AlertType.SqlReplicationProviderError,
                     CreatedAt = SystemTime.UtcNow,
-                    Exception = e.ToString(),
-                    Title = "Sql Replication could not find factory provider",
-                    Message = $"Could not find factory provider {_predefinedSqlConnection.FactoryName} to replicate to sql for {configuration.Name}, ignoring",
-                    UniqueKey = $"Sql Replication Provider Not Found: {configuration.Name}, {_predefinedSqlConnection.FactoryName}",
+                    Message = "Sql Replication could not find factory provider",
+                    Key = configuration.Name,
+                    Content = new ExceptionAlertContent
+                    {
+                        Message = $"Could not find factory provider {_predefinedSqlConnection.FactoryName} to replicate to sql for {configuration.Name}, ignoring",
+                        Exception = e.ToString()
+                    },
+                    Severity = AlertSeverity.Error
                 });
 
                 throw;
@@ -305,13 +313,16 @@ namespace Raven.Server.Documents.SqlReplication
             var message = $"Slow SQL detected. Execution took: {elapsedMiliseconds}ms, statement: {stmt}";
             if (_logger.IsInfoEnabled)
                 _logger.Info(message);
-            _database.AddAlert(new Alert
+            _database.Alerts.AddAlert(new Alert
             {
-                IsError = false,
+                Type = AlertType.SqlReplicationSlowSql,
+                Severity = AlertSeverity.Warning,
+                Message = "Slow SQL statement",
                 CreatedAt = SystemTime.UtcNow,
-                Message = message,
-                Title = "Slow SQL statement",
-                UniqueKey = "Slow SQL statement"
+                Content = new ExceptionAlertContent
+                {
+                    Message = message
+                }
             });
         }
 
