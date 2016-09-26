@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes
                 _indexedDocs.Delete(slice);
         }
 
-        public override unsafe void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override unsafe int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             Slice keySlice;
             using (Slice.External(indexContext.Allocator, key.Buffer, key.Size, out keySlice))
@@ -76,6 +76,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 DocumentDatabase.Metrics.IndexedPerSecond.Mark();
+                return numberOfOutputs;
             }
 
         }

@@ -59,6 +59,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                     var lastEtag = lastMappedEtag;
                     var count = 0;
+                    var resultsCount = 0;
 
                     var sw = Stopwatch.StartNew();
                     IndexWriteOperation indexWriter = null;
@@ -95,7 +96,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 try
                                 {
-                                    _index.HandleMap(current.LoweredKey, mapResults, indexWriter, indexContext, collectionStats);
+                                    resultsCount  += 
+                                        _index.HandleMap(current.LoweredKey, mapResults, indexWriter, indexContext, collectionStats);
 
                                     collectionStats.RecordMapSuccess();
                                 }
@@ -109,7 +111,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         $"Failed to execute mapping function on {current.Key}. Message: {e.Message}");
                                 }
 
-                                if (sw.Elapsed > timeoutProcessing)
+                                if (sw.Elapsed > timeoutProcessing )
                                     break;
                             }
                         }
@@ -119,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         continue;
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {count} documents in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                        _logger.Info($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {count:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
                     if (_index.Type.IsMap())
                     {

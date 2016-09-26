@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return tx.CreateTree(MapEntriesTreeName);
         }
 
-        protected unsafe void PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext)
+        protected unsafe int PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext)
         {
             var documentMapEntries = _mapReduceWorkContext.MapEntries.FixedTreeFor(documentKey, sizeof(ulong));
 
@@ -95,8 +95,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
+            int resultsCount = 0;
             foreach (var mapResult in mappedResults)
             {
+                resultsCount++;
                 var reduceKeyHash = mapResult.ReduceKeyHash;
 
                 long id;
@@ -143,6 +145,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                 }
             }
+
+            return resultsCount;
         }
 
         private static unsafe List<MapEntry> GetMapEntries(FixedSizeTree documentMapEntries)
