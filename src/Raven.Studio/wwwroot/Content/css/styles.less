@@ -81,7 +81,7 @@ body {
             transform: translateX(0%) translateY(0%);
 
             &:hover {
-                opacity:.2;
+                opacity: .2;
             }
 
             &:before {
@@ -108,7 +108,7 @@ h6 {
 }
 
 .nobr {
-    white-space:nowrap;
+    white-space: nowrap;
 }
 
 a, .btn {
@@ -223,7 +223,7 @@ hr {
         .btn-primary;
 
         .text::before {
-            content: 'Change'
+            content: 'Change';
         }
     }
 
@@ -254,10 +254,9 @@ hr {
             .btn-success;
 
             .text::before {
-                content: 'Save'
+                content: 'Save';
             }
         }
-
     }
 
     .edit-inline {
@@ -354,16 +353,15 @@ hr {
     height: 130px;
     z-index: 9990;
     transition: transform 0.5s cubic-bezier(0.70, -0.40, 0.40, 1.30);
-    
-    @processing-color-1:    rgba(0,0,0,0);
-    @processing-color-2:    @brand-primary;
+
+    @processing-color-1: rgba(0,0,0,0);
+    @processing-color-2: @brand-primary;
 
 
 
-    background: -moz-linear-gradient(-45deg,  @processing-color-1 0%, @processing-color-1 50%, @processing-color-2 50%, @processing-color-2 100%);
-    background: -webkit-linear-gradient(-45deg,  @processing-color-1 0%, @processing-color-1 50%, @processing-color-2 50%, @processing-color-2 100%);
-    background: linear-gradient(135deg,  @processing-color-1 0%, @processing-color-1 50%, @processing-color-2 50%, @processing-color-2 100%);
-
+    background: -moz-linear-gradient(-45deg, @processing-color-1 0%, @processing-color-1 50%, @processing-color-2 50%, @processing-color-2 100%);
+    background: -webkit-linear-gradient(-45deg, @processing-color-1 0%, @processing-color-1 50%, @processing-color-2 50%, @processing-color-2 100%);
+    background: linear-gradient(135deg, @processing-color-1 0%, @processing-color-1 50%, @processing-color-2 50%, @processing-color-2 100%);
     -moz-transform: translateX(50%) translateY(50%);
     -webkit-transform: translateX(50%) translateY(50%);
     -o-transform: translateX(50%) translateY(50%);
@@ -428,18 +426,23 @@ hr {
     }
 }
 
-.btn .global-spinner {
-    display: inline-block;
-    position: relative;
-    top: 3px;
-    margin-right: 5px;
-    margin-top: -4px;
+.btn.btn-spinner {
+    .global-spinner;
+
+    [class^="icon-"], [class*=" icon-"] {
+        display: none;
+    }
 
     &:before {
         width: 18px;
         height: 18px;
-        border: 3px solid fadeout(#FFF,80%);
-        border-top-color: inherit;
+        border: 3px solid rgba(255, 255, 255, 0.2);
+        border-top-color: #FFF;
+        margin-right: 11px;
+        margin-left: -2px;
+        margin-top: -5px;
+        position: relative;
+        top: 4px;
     }
 }
 
@@ -608,17 +611,17 @@ hr {
 
                 &.pop {
                     &:after {
-                        position:absolute;
-                        left:0;
-                        top:0;
-                        content:'';
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        content: '';
                         opacity: 0;
                         position: absolute;
                         width: 100%;
                         height: 100%;
                         border-radius: 50%;
-                        z-index:9999;
-                        border:1px solid @brand-primary;
+                        z-index: 9999;
+                        border: 1px solid @brand-primary;
                         //background-color: @brand-primary;
                         .fadeoutzoom-style;
                     }
@@ -1625,28 +1628,36 @@ pre {
     .panel {
         margin-bottom: @grid-gutter-width / 8;
         background-color: @panel-bg;
+
         &.panel-success {
-            box-shadow:6px 0 0 0 @brand-success-dark inset;
+            box-shadow: 6px 0 0 0 @brand-success-dark inset;
+
             h3 {
-                color:@brand-success;
+                color: @brand-success;
             }
         }
+
         &.panel-info {
-            box-shadow:6px 0 0 0 @brand-info-dark inset;
+            box-shadow: 6px 0 0 0 @brand-info-dark inset;
+
             h3 {
-                color:@brand-info;
+                color: @brand-info;
             }
         }
+
         &.panel-warning {
-            box-shadow:6px 0 0 0 @brand-warning-dark inset;
+            box-shadow: 6px 0 0 0 @brand-warning-dark inset;
+
             h3 {
-                color:@brand-warning;
+                color: @brand-warning;
             }
         }
+
         &.panel-danger {
-            box-shadow:6px 0 0 0 @brand-danger-dark inset;
+            box-shadow: 6px 0 0 0 @brand-danger-dark inset;
+
             h3 {
-                color:@brand-danger;
+                color: @brand-danger;
             }
         }
 
