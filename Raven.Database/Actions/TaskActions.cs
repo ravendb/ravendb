@@ -22,6 +22,7 @@ namespace Raven.Database.Actions
     public class TaskActions : ActionsBase
     {
         private long pendingTaskCounter;
+        private readonly object clearTasksLock = new object();
         private readonly ConcurrentDictionary<long, PendingTask> pendingTasks = new ConcurrentDictionary<long, PendingTask>();
 
         public TaskActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
@@ -31,18 +32,36 @@ namespace Raven.Database.Actions
 
         internal void ClearCompletedPendingTasks()
         {
-            foreach (var taskAndState in pendingTasks)
+            var lockTaken = false;
+            try
             {
-                var task = taskAndState.Value.Task;
-                if (task.IsCompleted || task.IsCanceled || task.IsFaulted)
+
+                Monitor.TryEnter(clearTasksLock, ref lockTaken);
+                if (lockTaken == false)
+                    return;
+
+                var now = DateTime.UtcNow;
+                foreach (var taskAndState in pendingTasks)
                 {
-                    PendingTask value;
-                    pendingTasks.TryRemove(taskAndState.Key, out value);
+                    var task = taskAndState.Value.Task;
+                    if ((task.IsCompleted || task.IsCanceled || task.IsFaulted) &&
+                        (pendingTasks.Count > 500 || (now - taskAndState.Value.CreatedAt).TotalMinutes > 1))
+                    {
+                        // we keep the tasks that finished in the past minute or the last 500
+                        PendingTask _;
+                        pendingTasks.TryRemove(taskAndState.Key, out _);
+                    }
+
+                    if (task.Exception != null)
+                    {
+                        Log.InfoException("Failed to execute background task " + taskAndState.Key, task.Exception);
+                    }
                 }
-                if (task.Exception != null)
-                {
-                    Log.InfoException("Failed to execute background task " + taskAndState.Key, task.Exception);
-                }
+            }
+            finally
+            {
+                if (lockTaken)
+                    Monitor.Exit(clearTasksLock);
             }
         }
 
@@ -184,6 +203,7 @@ namespace Raven.Database.Actions
             public IOperationState State;
             public PendingTaskDescription Description;
             public CancellationTokenSource TokenSource;
+            public DateTime CreatedAt;
         }
 
         /// <summary>
