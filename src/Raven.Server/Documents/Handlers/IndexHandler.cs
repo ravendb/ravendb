@@ -31,6 +31,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 var json = await context.ReadForDiskAsync(RequestBodyStream(), name);
                 var indexDefinition = JsonDeserializationServer.IndexDefinition(json);
+                if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
+                    throw new ArgumentException("Index must have a 'Maps' fields");
+
                 indexDefinition.Name = name;
 
                 var indexId = Database.IndexStore.CreateIndex(indexDefinition);
