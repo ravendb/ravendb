@@ -11,7 +11,6 @@ namespace Sparrow.Json
     public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
     {
         private readonly BlittableJsonDocumentBuilder _builder;
-        private readonly CachedProperties _cachedProperties;
         private byte* _metadataPtr;
         private readonly int _size;
         private readonly int _propCount;
@@ -42,11 +41,9 @@ namespace Sparrow.Json
         }
 
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context,
-            BlittableJsonDocumentBuilder builder = null,
-            CachedProperties cachedProperties = null)
+            BlittableJsonDocumentBuilder builder = null)
         {
             _builder = builder;
-            _cachedProperties = cachedProperties;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
             _context = context;
@@ -104,7 +101,6 @@ namespace Sparrow.Json
             _mem = parent._mem;
             _size = parent._size;
             _propNames = parent._propNames;
-            _cachedProperties = parent._cachedProperties;
 
             var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
             switch (propNamesOffsetFlag)
@@ -186,11 +182,8 @@ namespace Sparrow.Json
             };
         }
 
-        private unsafe LazyStringValue GetPropertyName(int propertyId)
+        private LazyStringValue GetPropertyName(int propertyId)
         {
-            if (_cachedProperties != null)
-                return _cachedProperties.GetProperty(propertyId);
-
             if (_parent != null)
                 return _parent.GetPropertyName(propertyId);
 
@@ -425,12 +418,6 @@ namespace Sparrow.Json
         {
             if (_propCount == 0)
                 return -1;
-
-            if (_cachedProperties != null)
-            {
-                var propName = _context.GetLazyStringForFieldWithCaching(name.Value);
-                return _cachedProperties.GetPropertyId(propName);
-            }
 
             int min = 0, max = _propCount - 1;
             var comparer = _context.GetLazyStringForFieldWithCaching(name.Value);
