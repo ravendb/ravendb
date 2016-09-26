@@ -1707,6 +1707,16 @@ pre {
     }
 }
 
+.required {
+    &::after {
+        margin: 0 0 0 3px;
+        content: '*';
+        font-style: normal;
+        display: inline-block;
+        color: @brand-primary;
+    }
+}
+
 @import "pages/tasks-sampleData";
 @import "pages/tasks-csvImport";
 @import "pages/tasks-subscriptions";
