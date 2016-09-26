@@ -39,7 +39,7 @@ namespace Voron.Data.BTrees
             public void Dispose()
             {
                _firstScope.Dispose();
-                _lastScope.Dispose();
+               _lastScope.Dispose();
 
             }
         }

@@ -292,9 +292,12 @@ namespace Raven.Server.Documents.Queries
 
             public void Dispose()
             {
-                foreach (var id in _ids)
+                if (_ids != null)
                 {
-                    id.Release(_context.Allocator);
+                    foreach (var id in _ids)
+                    {
+                        id.Release(_context.Allocator);
+                    }
                 }
             }
 

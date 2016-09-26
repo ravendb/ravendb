@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using FastTests.Server.Documents.Replication;
+using FastTests.Voron.Storage;
 using Raven.Client.Document;
 using Raven.Client.Smuggler;
 using SlowTests.SlowTests.Bugs;
@@ -17,9 +18,9 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
-            using (var x = new SlowTests.Tests.Faceted.LargeFacets())
+            using (var x = new SlowTests.MailingList.Gal())
             {
-                x.CanGetSameResult();
+                x.UsingInQuery();
             }
             //Console.WriteLine("Starting");
             //using (var store = new DocumentStore

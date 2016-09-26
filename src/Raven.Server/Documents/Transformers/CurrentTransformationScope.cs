@@ -60,8 +60,7 @@ namespace Raven.Server.Documents.Transformers
                     return source;
             }
 
-            ByteStringContext.Scope scope =
-                new ByteStringContext<ByteStringMemoryCache>.Scope();
+            ByteStringContext.Scope scope;
             Slice keySlice;
             if (keyLazy != null)
             {

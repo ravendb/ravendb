@@ -518,7 +518,7 @@ namespace Voron.Data.Tables
                 _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name);
                 _activeDataSmallSection.DataMoved += OnDataMoved;
                 Slice pageNumber;
-                var val = Bits.SwapBytes(_activeDataSmallSection.PageNumber);
+                var val = _activeDataSmallSection.PageNumber;
                 using (Slice.External(_tx.Allocator, (byte*)&val, sizeof(long), out pageNumber))
                 {
                     _tableTree.Add(TableSchema.ActiveSectionSlice, pageNumber);

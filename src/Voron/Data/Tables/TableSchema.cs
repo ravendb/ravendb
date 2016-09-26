@@ -313,7 +313,7 @@ namespace Voron.Data.Tables
             // Create raw data. This is where we will actually store the documents
             var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name);
 
-            long val = Bits.SwapBytes(rawDataActiveSection.PageNumber);
+            long val = rawDataActiveSection.PageNumber;
             Slice pageNumber;
             using (Slice.External(tx.Allocator, (byte*)&val, sizeof(long), ByteStringType.Immutable, out pageNumber))
             {
