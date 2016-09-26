@@ -10,11 +10,16 @@ namespace Voron.Impl.FreeSpace
 
         private readonly FreeSpaceHandlingDisabler _disableStatus = new FreeSpaceHandlingDisabler();
 
-        private readonly FreeSpaceRecursiveCallGuard _guard = new FreeSpaceRecursiveCallGuard();
+        private readonly FreeSpaceRecursiveCallGuard _guard;
 
         static FreeSpaceHandling()
         {
             Slice.From(StorageEnvironment.LabelsContext, "$free-space", Sparrow.ByteStringType.Immutable, out FreeSpaceKey);
+        }
+
+        public FreeSpaceHandling()
+        {
+            _guard = new FreeSpaceRecursiveCallGuard(this);
         }
 
         internal const int NumberOfPagesInSection = 2048;
@@ -34,7 +39,10 @@ namespace Voron.Impl.FreeSpace
             if (_disableStatus.DisableCount > 0)
                 return null;
 
-            using (_guard.Enter())
+            if (_guard.IsProcessingFixedSizeTree)
+                return null;
+
+            using (_guard.Enter(tx))
             {
                 var freeSpaceTree = GetFreeSpaceTree(tx);
 
@@ -340,7 +348,12 @@ namespace Voron.Impl.FreeSpace
 
         public void FreePage(LowLevelTransaction tx, long pageNumber)
         {
-            using (_guard.Enter())
+            if (_guard.IsProcessingFixedSizeTree)
+            {
+                _guard.PagesFreed.Add(pageNumber);
+                return;
+            }
+            using (_guard.Enter(tx))
             {
                 var freeSpaceTree = GetFreeSpaceTree(tx);
 
