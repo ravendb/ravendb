@@ -26,6 +26,7 @@ namespace Voron.Platform.Win32
         private readonly SafeFileHandle _handle;
         private readonly Win32NativeFileAccess _access;
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
+        private bool _copyOnWriteMode;
 
         [StructLayout(LayoutKind.Explicit)]
         private struct SplitValue
@@ -51,8 +52,8 @@ namespace Voron.Platform.Win32
             FileName = file;
             AllocationGranularity = systemInfo.allocationGranularity;
             _access = access;
-
-            if (options.CopyOnWriteMode && Path.GetFileName(FileName) == Constants.DatabaseFilename)
+            _copyOnWriteMode = Options.CopyOnWriteMode && FileName.EndsWith(Constants.DatabaseFilename);
+            if (options.CopyOnWriteMode && CopyOnWriteMode)
             {
                 _memoryMappedFileAccess = MemoryMappedFileAccess.Read | MemoryMappedFileAccess.CopyOnWrite;
                 fileAttributes = Win32NativeFileAttributes.Readonly;
@@ -180,7 +181,7 @@ namespace Voron.Platform.Win32
             var mmf = MemoryMappedFile.CreateFromFile(_fileStream, null, _fileStream.Length,
                 _memoryMappedFileAccess,
                  HandleInheritability.None, true);
-            Win32MemoryMapNativeMethods.NativeFileMapAccessType mmfAccessType = Options.CopyOnWriteMode && Path.GetFileName(FileName) == Constants.DatabaseFilename
+            Win32MemoryMapNativeMethods.NativeFileMapAccessType mmfAccessType = CopyOnWriteMode
                 ? Win32MemoryMapNativeMethods.NativeFileMapAccessType.Copy 
                 : Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read |
                   Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write;
@@ -213,7 +214,7 @@ namespace Voron.Platform.Win32
 
             var fileMappingHandle = mmf.SafeMemoryMappedFileHandle.DangerousGetHandle();
             Win32MemoryMapNativeMethods.NativeFileMapAccessType mmFileAccessType;
-            if (Options.CopyOnWriteMode && Path.GetFileName(FileName) == Constants.DatabaseFilename)
+            if (CopyOnWriteMode)
             {
                 mmFileAccessType =  Win32MemoryMapNativeMethods.NativeFileMapAccessType.Copy;
             }
@@ -376,6 +377,15 @@ namespace Voron.Platform.Win32
                     (UIntPtr)ranges.Count,
                     entries, 0);
             }
+        }
+
+        /// <summary>
+        /// Allows the pager to work in copy on write mode.
+        /// </summary>
+        public bool CopyOnWriteMode
+        {
+            get { return _copyOnWriteMode; }
+            set { _copyOnWriteMode = value; }
         }
     }
 }
