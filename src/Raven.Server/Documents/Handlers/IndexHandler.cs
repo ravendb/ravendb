@@ -287,7 +287,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/c-sharp-index-definition", "GET")]
+        [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET")]
         public Task GenerateCSharpIndexDefinition()
         {
             var fullIndexName = HttpContext.Request.Query["fullIndexName"];
@@ -297,6 +297,10 @@ namespace Raven.Server.Documents.Handlers
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return Task.CompletedTask;
             }
+
+            if (index.Type.IsAuto())
+                throw new InvalidOperationException("Unsupported Operation - Can't create c-sharp index definition from automatic indexes ");
+
             var indexDefinition = index.GetIndexDefinition();
 
             using (var writer = new StreamWriter(ResponseBodyStream()))
