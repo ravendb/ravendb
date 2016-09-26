@@ -28,7 +28,7 @@ namespace Sparrow.Json
 
         private byte[] _managedBuffer;
         private byte[] _parsingBuffer;
-        private readonly List<IDisposable> _disposables = new List<IDisposable>();
+        private readonly LinkedList<BlittableJsonDocumentBuilder> _liveBuilders = new LinkedList<BlittableJsonDocumentBuilder>();
         public LZ4 Lz4 = new LZ4();
         public UTF8Encoding Encoding;
 
@@ -208,7 +208,7 @@ namespace Sparrow.Json
                     if (writer.Read() == false)
                         throw new InvalidOperationException("Partial content in object json parser shouldn't happen");
                     writer.FinalizeDocument();
-                    _disposables.Add(writer);
+                    writer.DisposeTrackingReference = _liveBuilders.AddFirst(writer);
                     return writer.CreateReader();
                 }
                 catch (Exception)
@@ -278,7 +278,7 @@ namespace Sparrow.Json
                     }
                     builder.FinalizeDocument();
 
-                    _disposables.Add(builder);
+                    builder.DisposeTrackingReference = _liveBuilders.AddFirst(builder);
                     return builder.CreateReader();
                 }
                 catch (Exception)
@@ -311,7 +311,7 @@ namespace Sparrow.Json
                     }
                     writer.FinalizeDocument();
 
-                    _disposables.Add(writer);
+                    writer.DisposeTrackingReference = _liveBuilders.AddFirst(writer);
                     return writer.CreateReader();
                 }
                 catch (Exception)
@@ -345,7 +345,7 @@ namespace Sparrow.Json
                             break;
                     }
                     writer.FinalizeDocument();
-                    _disposables.Add(writer);
+                    writer.DisposeTrackingReference = _liveBuilders.AddFirst(writer);
                     return writer.CreateArrayReader();
                 }
                 catch (Exception)
@@ -490,6 +490,12 @@ namespace Sparrow.Json
             }
         }
 
+        internal void BuilderDisposed(LinkedListNode<BlittableJsonDocumentBuilder> disposedNode)
+        {
+            if (disposedNode.List == _liveBuilders)
+                _liveBuilders.Remove(disposedNode);
+        }
+
         public virtual void Reset()
         {
             if (_tempBuffer != null)
@@ -512,10 +518,13 @@ namespace Sparrow.Json
             }
 
 
-            foreach (var disposable in _disposables)
-                disposable.Dispose();
+            foreach (var builder in _liveBuilders)
+            {
+                builder.DisposeTrackingReference = null;
+                builder.Dispose();
+            }
 
-            _disposables.Clear();
+            _liveBuilders.Clear();
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)

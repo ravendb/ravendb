@@ -59,9 +59,13 @@ namespace Sparrow.Json
 
         public int SizeInBytes => _unmanagedWriteBuffer.SizeInBytes;
 
+        internal LinkedListNode<BlittableJsonDocumentBuilder> DisposeTrackingReference;
+
         public void Dispose()
         {
             _unmanagedWriteBuffer.Dispose();
+            if (DisposeTrackingReference != null)
+                _context.BuilderDisposed(DisposeTrackingReference);
         }
 
         public bool Read()
@@ -700,12 +704,12 @@ namespace Sparrow.Json
         }
 
 
-        public unsafe BlittableJsonReaderObject CreateReader(CachedProperties cachedProperties = null)
+        public unsafe BlittableJsonReaderObject CreateReader()
         {
             byte* ptr;
             int size;
             _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out size);
-            return new BlittableJsonReaderObject(ptr, size, _context, this, cachedProperties);
+            return new BlittableJsonReaderObject(ptr, size, _context, this);
         }
 
         public BlittableJsonReaderArray CreateArrayReader()
