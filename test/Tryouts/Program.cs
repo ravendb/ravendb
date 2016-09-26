@@ -18,9 +18,9 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
-            using (var x = new SlowTests.MailingList.Gal())
+            using (var x = new FastTests.Server.Documents.Versioning.Versioning())
             {
-                x.UsingInQuery();
+                x.WillDeleteRevisionsIfDeleted_OnlyIfPurgeOnDeleteIsTrue().Wait();
             }
             //Console.WriteLine("Starting");
             //using (var store = new DocumentStore
