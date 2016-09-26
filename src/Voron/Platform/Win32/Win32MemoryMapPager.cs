@@ -53,7 +53,7 @@ namespace Voron.Platform.Win32
             AllocationGranularity = systemInfo.allocationGranularity;
             _access = access;
             _copyOnWriteMode = Options.CopyOnWriteMode && FileName.EndsWith(Constants.DatabaseFilename);
-            if (options.CopyOnWriteMode && CopyOnWriteMode)
+            if (options.CopyOnWriteMode && _copyOnWriteMode)
             {
                 _memoryMappedFileAccess = MemoryMappedFileAccess.Read | MemoryMappedFileAccess.CopyOnWrite;
                 fileAttributes = Win32NativeFileAttributes.Readonly;
@@ -181,7 +181,7 @@ namespace Voron.Platform.Win32
             var mmf = MemoryMappedFile.CreateFromFile(_fileStream, null, _fileStream.Length,
                 _memoryMappedFileAccess,
                  HandleInheritability.None, true);
-            Win32MemoryMapNativeMethods.NativeFileMapAccessType mmfAccessType = CopyOnWriteMode
+            Win32MemoryMapNativeMethods.NativeFileMapAccessType mmfAccessType = _copyOnWriteMode
                 ? Win32MemoryMapNativeMethods.NativeFileMapAccessType.Copy 
                 : Win32MemoryMapNativeMethods.NativeFileMapAccessType.Read |
                   Win32MemoryMapNativeMethods.NativeFileMapAccessType.Write;
@@ -214,7 +214,7 @@ namespace Voron.Platform.Win32
 
             var fileMappingHandle = mmf.SafeMemoryMappedFileHandle.DangerousGetHandle();
             Win32MemoryMapNativeMethods.NativeFileMapAccessType mmFileAccessType;
-            if (CopyOnWriteMode)
+            if (_copyOnWriteMode)
             {
                 mmFileAccessType =  Win32MemoryMapNativeMethods.NativeFileMapAccessType.Copy;
             }
@@ -377,15 +377,6 @@ namespace Voron.Platform.Win32
                     (UIntPtr)ranges.Count,
                     entries, 0);
             }
-        }
-
-        /// <summary>
-        /// Allows the pager to work in copy on write mode.
-        /// </summary>
-        public bool CopyOnWriteMode
-        {
-            get { return _copyOnWriteMode; }
-            set { _copyOnWriteMode = value; }
         }
     }
 }
