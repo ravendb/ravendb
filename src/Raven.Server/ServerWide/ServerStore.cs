@@ -82,6 +82,7 @@ namespace Raven.Server.ServerWide
 
             try
             {
+                StorageEnvironment.MaxConcurrentFlushes = Configuration.Storage.MaxConcurrentFlushes;
                 _env = new StorageEnvironment(options);
                 using (var tx = _env.WriteTransaction())
                 {
