@@ -62,23 +62,22 @@ data-load="partials/notification-center.html">
 
 
 <div class="container-fluid content-container">
-    <div class="content-container-margin">
+    <div class="content-container-margin sampleData">
         <h1>Create sample data</h1>
 
         <div class="panel panel-default">
             <div class="panel-body">
-                <div class="bg-info padding padding-md">
+                <p class="bg-info padding padding-md">
                     <i class="icon-info"></i>
                     Creating sample data requires an empty database.
-                </div>
-                <br>
+                </p>
                 <div class="row">
-                    <div class="col-sm-6">
+                    <div class="col-sm-12 col-md-4">
                         <button class="btn btn-default">
                             <i class="icon-code"></i>&nbsp;
                             Copy C# classes for sample data
                         </button>
-                        <button class="btn btn-primary">
+                        <button class="btn btn-primary btn-toggle sampleData-createBtn" data-target=".sampleData-createBtn" data-class="btn-spinner">
                             <i class="icon-document-group"></i>&nbsp;
                             Create sample data
                         </button>
@@ -87,7 +86,7 @@ data-load="partials/notification-center.html">
                 <br>
                 <div class="row">
                     <div class="col-sm-6">
-                        <p>Sample data C# code:</p>
+                        <h2>Sample data C# code</h2>
                         <textarea class="sampleData-classes">
 namespace Orders {
 
