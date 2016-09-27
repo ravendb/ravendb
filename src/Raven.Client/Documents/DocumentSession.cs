@@ -38,7 +38,7 @@ namespace Raven.Client.Documents
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
         /// </summary>
         public DocumentSession(string dbName, DocumentStore documentStore, DocumentSessionListeners listeners, Guid id, IDatabaseCommands databaseCommands, RequestExecuter requestExecuter)
-            : base(dbName, documentStore, requestExecuter, id)
+            : base(dbName, documentStore, listeners, requestExecuter, id)
         {
             DatabaseCommands = databaseCommands;
         }
