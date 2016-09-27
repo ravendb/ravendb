@@ -22,7 +22,7 @@ namespace Sparrow.Utils
             public ThreadStats()
             {
                 var currentThread = Thread.CurrentThread;
-                Name = currentThread.Name;
+                Name = currentThread.Name ?? "<ThreadPool>";
                 Id = currentThread.ManagedThreadId;
             }
         }

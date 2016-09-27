@@ -22,6 +22,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
             JsonOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
+                //TODO: When https://github.com/dotnet/corefx/issues/10157 is done, add managed 
+                //TODO: allocations per threads to the stats as well
+
                 var currentProcess = Process.GetCurrentProcess();
                 var workingSet = currentProcess.WorkingSet64;
                 long totalUnmanagedAllocations = 0;
