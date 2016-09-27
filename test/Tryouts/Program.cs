@@ -19,9 +19,9 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
+            using (var a = new SlowTests.MailingList.spokeypokey.spokeypokey3())
             {
-                a.CanDelete();
+                a.Can_deal_with_nulls2();
                 if (DateTime.Now.Year == 2016)
                     return;
             }
