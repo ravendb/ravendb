@@ -20,6 +20,7 @@ namespace Raven.Client.Documents.Commands
     {
         public JsonOperationContext Context;
         public List<DynamicJsonValue> Commands;
+        public List<object> Entities;
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
@@ -59,7 +60,6 @@ namespace Raven.Client.Documents.Commands
             }
 
             Result = JsonDeserializationClient.BatchResult(response);
-
         }
     }
 }

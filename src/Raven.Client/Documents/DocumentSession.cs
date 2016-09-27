@@ -550,10 +550,6 @@ namespace Raven.Client.Documents
             throw new NotImplementedException();
         }
 
-        public IDictionary<string, DocumentsChanges[]> WhatChanged()
-        {
-            throw new NotImplementedException();
-        }
         public ResponseTimeInformation ExecuteAllPendingLazyOperations()
         {
             throw new NotImplementedException();

@@ -635,7 +635,7 @@ more responsive application.
             return result;
         }
 
-        public List<DynamicJsonValue> PrepareForSaveChanges()
+        public SaveChangesData PrepareForSaveChanges()
         {
             var result = new SaveChangesData
             {
@@ -648,7 +648,7 @@ more responsive application.
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
 
-            return result.Commands;
+            return result;
         }
 
         private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
@@ -679,11 +679,13 @@ more responsive application.
                     if (DocumentsById.TryGetValue(key, out value))
                     {
                         if (value.Entity != null)
+                        {
                             DocumentsByEntity.Remove(value.Entity);
+                            result.Entities.Add(value.Entity);
+                        }
+
                         DocumentsById.Remove(key);
                     }
-                    //TODO - value can be null????
-                    result.Entities.Add(value.Entity);
 
                     result.Commands.Add(new DynamicJsonValue()
                     {
@@ -701,13 +703,16 @@ more responsive application.
             {
                 BlittableJsonReaderObject document = null;
                 document = EntityToBlittable.ConvertEntityToBlittable(entity.Value.Id, entity.Key, entity.Value);
+
                 if ((!(entity.Value.IgnoreChanges)) && (EntityChanged(document, entity.Value, null)))
                 {
+                    if (entity.Value.IsNewDocument)
+                        entity.Value.IsNewDocument = false;
                     result.Entities.Add(entity.Key);
 
                     if (entity.Value.Entity != null)
                         DocumentsById.Remove(entity.Value.Id);
-
+                    entity.Value.Document = document;
                     result.Commands.Add(new DynamicJsonValue()
                     {
                         ["Key"] = entity.Value.Id,
@@ -716,8 +721,6 @@ more responsive application.
                     });
                 }
             }
-            //TODO - mybe clear only in the end of a session
-            //DocumentsByEntity.Clear();
         }
 
         protected bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
@@ -737,9 +740,18 @@ more responsive application.
                 newChange(null, null, docChanges, DocumentsChanges.ChangeType.DocumentAdded);
                 changes[documentInfo.Id] = docChanges.ToArray();
             }
-
             return true;
         }
+
+        public const BlittableJsonToken TypesMask =
+                BlittableJsonToken.Boolean |
+                BlittableJsonToken.Float |
+                BlittableJsonToken.Integer |
+                BlittableJsonToken.Null |
+                BlittableJsonToken.StartArray |
+                BlittableJsonToken.StartObject |
+                BlittableJsonToken.String |
+                BlittableJsonToken.CompressedString;
 
         private static bool CompareBlittable(string id, BlittableJsonReaderObject originalBlittable, 
             BlittableJsonReaderObject newBlittable, IDictionary<string, DocumentsChanges[]> changes, 
@@ -778,8 +790,7 @@ more responsive application.
                     newFieldTypeChange(newPropInfo.Item3, oldPropInfo.Item3, docChanges, DocumentsChanges.ChangeType.FieldTypeChanged);
                     continue;
                 }
-
-                switch (newPropInfo.Item3)
+                switch ((newPropInfo.Item3 & TypesMask))
                 {
                     case BlittableJsonToken.Integer:
                     case BlittableJsonToken.Boolean:
@@ -792,7 +803,6 @@ more responsive application.
                                 if (changes == null)
                                     return true;
                                 newChange(newPropInfo.Item2, oldPropInfo.Item2, docChanges, DocumentsChanges.ChangeType.FieldChanged);
-                                    continue;
                             }
                             break;
                         }
@@ -801,7 +811,13 @@ more responsive application.
                         break;
                     case BlittableJsonToken.StartArray:
                     {
-                        //TODO
+                        //TODO - Work in progress 
+                        if (((newPropInfo.Item2 as BlittableJsonReaderArray).Except(oldPropInfo.Item2 as BlittableJsonReaderArray)).Count() > 0)
+                        {
+                                if (changes == null)
+                                    return true;
+                                newChange(newPropInfo.Item2, oldPropInfo.Item2, docChanges, DocumentsChanges.ChangeType.FieldChanged);
+                        }
                         break;
                     }
                     case BlittableJsonToken.StartObject:
@@ -1016,7 +1032,7 @@ more responsive application.
             /// Gets or sets the entities.
             /// </summary>
             /// <value>The entities.</value>
-            public IList<object> Entities { get; set; }
+            public List<object> Entities { get; set; }
 
         }
 
