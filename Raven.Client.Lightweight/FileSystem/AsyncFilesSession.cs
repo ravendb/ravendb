@@ -96,7 +96,7 @@ namespace Raven.Client.FileSystem
             {
                 IncrementRequestCount();
 
-                var fileHeaders = await Commands.GetAsync(idsOfNotExistingObjects.ToArray());
+                var fileHeaders = await Commands.GetAsync(idsOfNotExistingObjects.ToArray()).ConfigureAwait(false);
                 foreach (var header in fileHeaders)
                 {
                     if (header == null)
