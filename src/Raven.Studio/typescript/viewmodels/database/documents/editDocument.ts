@@ -134,7 +134,7 @@ class editDocument extends viewModelBase {
         this.docEditor = aceEditorBindingHandler.getEditorBySelection(this.$docEditor);
 
         // preload json newline friendly mode to avoid issues with document save
-        (<any>ace).config.loadModule("ace/mode/json_newline_friendly");
+        (ace as any).config.loadModule("ace/mode/json_newline_friendly");
 
         this.$docEditor.on('DynamicHeightSet', () => this.docEditor.resize());
         this.focusOnEditor();
@@ -150,12 +150,12 @@ class editDocument extends viewModelBase {
         this.databaseForEditedDoc = appUrl.getDatabase();
         this.loadDocument(id)
             .done(() => {
-                //TODO:this.changeNotification = this.createDocumentChangeNotification(id);
+                this.changeNotification = this.createDocumentChangeNotification(id);
                 this.addNotification(this.changeNotification);
                 canActivateResult.resolve({ can: true });
             })
             .fail(() => {
-                messagePublisher.reportError("Could not find " + id + " document");
+                messagePublisher.reportError(`Could not find ${id} document`);
                 canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
             });
         return canActivateResult;
@@ -172,7 +172,7 @@ class editDocument extends viewModelBase {
             sorts = [];
         }
 
-        var resultsFetcher = (skip: number, take: number) => {
+        const resultsFetcher = (skip: number, take: number) => {
             var command = new queryIndexCommand(indexName, this.activeDatabase(), skip, take, query, sorts);
             return command
                 .execute();
@@ -255,17 +255,12 @@ class editDocument extends viewModelBase {
         this.provideCustomNameForNewDocument(true);
     }
 
-    createDocumentChangeNotification(docId: string) {
-        return changesContext.currentResourceChangesApi().watchDocument(docId, (n: documentChangeNotificationDto) => this.documentChangeNotification(n));
+    createDocumentChangeNotification(docId: string): changeSubscription {
+        return changesContext.currentResourceChangesApi().watchDocument(docId, (n: Raven.Abstractions.Data.DocumentChangeNotification) => this.documentChangeNotification(n));
     }
 
-    documentChangeNotification(n: documentChangeNotificationDto): void {
-        if (this.isSaving()) {
-            return;
-        }
-
-        var newEtag = n.Etag;
-        if (newEtag === this.metadata().etag) {
+    documentChangeNotification(n: Raven.Abstractions.Data.DocumentChangeNotification): void {
+        if (this.isSaving() || n.Etag === this.metadata().etag) {
             return;
         }
 
@@ -428,11 +423,11 @@ class editDocument extends viewModelBase {
         this.isSaving(true);
         saveCommand
             .execute()
-            .done((saveResult: bulkDocumentDto[]) => this.onDocumentSaved(saveResult));
+            .done((saveResult: saveDocumentResponseDto) => this.onDocumentSaved(saveResult));
     }
 
-    private onDocumentSaved(saveResult: bulkDocumentDto[]) {
-        var savedDocumentDto: bulkDocumentDto = saveResult[0];
+    private onDocumentSaved(saveResult: saveDocumentResponseDto) {
+        var savedDocumentDto: saveDocumentResponseItemDto = saveResult.Results[0];
         var currentSelection = this.docEditor.getSelectionRange();
         this.loadDocument(savedDocumentDto.Key)
             .always(() => {
@@ -451,7 +446,7 @@ class editDocument extends viewModelBase {
     }
 
     private attachReservedMetaProperties(id: string, target: documentMetadataDto) {
-        target['@etag'] = "0";
+        target['@etag'] = 0;
         target['Raven-Entity-Name'] = target['Raven-Entity-Name'] || document.getEntityNameFromId(id);
         target['@id'] = id;
     }
@@ -479,10 +474,10 @@ class editDocument extends viewModelBase {
     }
 
     refreshDocument() {
-        var canContinue = this.canContinueIfNotDirty("Refresh", "You have unsaved data. Are you sure you want to continue?");
-        canContinue.done(() => {
+        this.canContinueIfNotDirty("Refresh", "You have unsaved data. Are you sure you want to continue?")
+        .done(() => {
             if (this.isInDocMode()) {
-                var docId = this.editedDocId();
+                const docId = this.editedDocId();
                 this.document(null);
                 this.documentText(null);
                 this.userSpecifiedId("");

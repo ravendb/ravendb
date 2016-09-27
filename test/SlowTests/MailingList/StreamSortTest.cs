@@ -9,7 +9,7 @@ namespace SlowTests.MailingList
 {
     public class StreamSortTest : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: query streaming")]
+        [Fact]
         public void Streaming_Results_Should_Sort_Properly()
         {
             using (var documentStore = GetDocumentStore())

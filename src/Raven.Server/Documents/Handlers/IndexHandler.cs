@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -283,6 +284,27 @@ namespace Raven.Server.Documents.Handlers
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/c-sharp-index-definition", "GET")]
+        public Task GenerateCSharpIndexDefinition()
+        {
+            var fullIndexName = HttpContext.Request.Query["fullIndexName"];
+            var index = Database.IndexStore.GetIndex(fullIndexName);
+            if (index == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
+            }
+            var indexDefinition = index.GetIndexDefinition();
+
+            using (var writer = new StreamWriter(ResponseBodyStream()))
+            {
+                var text = new IndexDefinitionCodeGenerator(indexDefinition).Generate();
+                writer.Write(text);
+            }
+
             return Task.CompletedTask;
         }
 

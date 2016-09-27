@@ -14,6 +14,7 @@ using Sparrow;
 using Sparrow.Json;
 using Voron.Exceptions;
 using Sparrow.Logging;
+using Voron;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -144,8 +145,8 @@ namespace Raven.Server.Documents.Patch
                 var isModified = document.Data.Size != modifiedDocument.Size;
                 if (isModified == false) // optimization, if size different, no need to compute hash to check
                 {
-                    var originHash = Hashing.XXHash64.Calculate(document.Data.BasePointer, document.Data.Size);
-                    var modifiedHash = Hashing.XXHash64.Calculate(modifiedDocument.BasePointer, modifiedDocument.Size);
+                    var originHash = Hashing.XXHash64.Calculate(document.Data.BasePointer, (ulong)document.Data.Size);
+                    var modifiedHash = Hashing.XXHash64.Calculate(modifiedDocument.BasePointer, (ulong)modifiedDocument.Size);
                     isModified = originHash != modifiedHash;
                 }
 

@@ -9,8 +9,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Voron.Exceptions;
-using Voron.Impl.Paging;
-using Voron.Util;
 
 namespace Voron.Impl.Scratch
 {
@@ -25,8 +23,6 @@ namespace Voron.Impl.Scratch
     /// </summary>
     public unsafe class ScratchBufferPool : IDisposable
     {
-        private const int InvalidScratchFileNumber = -1;
-
         // Immutable state. 
         private readonly long _sizeLimit;
         private readonly StorageEnvironmentOptions _options;
@@ -206,8 +202,17 @@ namespace Voron.Impl.Scratch
 
                     createNextFile = true;
                 }
+                else // TODO : RavenDB - the following block is for 'Support large tx' however also deals with the problematic max-scratch-buffer, but with inflating scratch when bursting from bulkinsert for example..
+                {
+                    // if we reached so far and weren't able to allocate space, 
+                    // we will increase the scratch over it's limit size to support large transactions (or intensive write burst)
+                    result = current.File.Allocate(tx, numberOfPages, size);
+                    _options.OnScratchBufferSizeChanged(sizeAfterAllocation);
+                    return result;
+                }
 
-                if (createNextFile)
+
+                if (createNextFile) // TODO : remove this condition after deciding which strategy to take on max-scratch-buffer
                 {
                     // We need to ensure that _current stays constant through the codepath until return. 
                     current = NextFile();
@@ -337,9 +342,9 @@ namespace Voron.Impl.Scratch
 
             public ScratchBufferItem(int number, ScratchBufferFile file)
             {
-                this.Number = number;
-                this.File = file;
-                this.OldestTransactionWhenFlushWasForced = -1;
+                Number = number;
+                File = file;
+                OldestTransactionWhenFlushWasForced = -1;
             }
         }
 

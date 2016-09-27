@@ -24,8 +24,8 @@ class deleteFilesMatchingQueryCommand extends commandBase {
 
     private waitForOperationToComplete(fs: filesystem, operationId: number, task: JQueryDeferred<any>) {
         new getOperationStatusCommand(fs, operationId)
-            .execute()
-            .done((result: operationStatusDto) => this.deletionStatusRetrieved(fs, operationId, result, task));
+            .execute();
+            //TODO: .done((result: operationStatusDto) => this.deletionStatusRetrieved(fs, operationId, result, task));
     }
 
     private deletionStatusRetrieved(fs: filesystem, operationId: number, result: operationStatusDto, task: JQueryDeferred<any>) {

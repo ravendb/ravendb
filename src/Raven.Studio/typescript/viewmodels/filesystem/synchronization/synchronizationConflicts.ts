@@ -90,7 +90,7 @@ class synchronizationConflicts extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        return [changesContext.currentResourceChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => this.processFsConflicts(e)) ];
+        return [ /* TODO changesContext.currentResourceChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => this.processFsConflicts(e)) */ ];
     }
 
     private processFsConflicts(e: synchronizationConflictNotification) {

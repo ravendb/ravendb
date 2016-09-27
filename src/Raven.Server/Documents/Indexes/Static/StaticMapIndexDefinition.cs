@@ -5,7 +5,6 @@ using Raven.Abstractions.Data;
 using Raven.Client.Indexing;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
-using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
 using Voron;
@@ -14,13 +13,17 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class StaticMapIndexDefinition : IndexDefinitionBase
     {
+        private bool _hasDynamicFields;
         public readonly IndexDefinition IndexDefinition;
 
-        public StaticMapIndexDefinition(IndexDefinition definition, string[] collections, string[] outputFields)
+        public StaticMapIndexDefinition(IndexDefinition definition, string[] collections, string[] outputFields, bool hasDynamicFields)
             : base(definition.Name, collections, definition.LockMode, GetFields(definition, outputFields))
         {
+            _hasDynamicFields = hasDynamicFields;
             IndexDefinition = definition;
         }
+
+        public override bool HasDynamicFields => _hasDynamicFields;
 
         private static IndexField[] GetFields(IndexDefinition definition, string[] outputFields)
         {

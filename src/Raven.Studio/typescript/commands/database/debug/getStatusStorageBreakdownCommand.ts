@@ -22,7 +22,7 @@ class getStatusStorageBreakdownCommand extends commandBase {
     private monitorOperation(operationId: number) {
         new getOperationStatusCommand(this.db, operationId)
             .execute()
-            .done((result: internalStorageBreakdownState) => {
+            /* TODO .done((result: internalStorageBreakdownState) => {
                 this.updateProgress(result.State.Progress);
 
                 if (result.Completed) {
@@ -36,7 +36,7 @@ class getStatusStorageBreakdownCommand extends commandBase {
                 } else {
                     setTimeout(() => this.monitorOperation(operationId), 500);
                 }
-            });
+            });*/
     }
 
     public getBreakdownCompletedTask() {

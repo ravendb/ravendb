@@ -8,7 +8,8 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanAddDuplicate()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, valSize: 8);
@@ -51,7 +52,8 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanAddDuplicate_Many()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 for (var i = 0; i < 300; i++)

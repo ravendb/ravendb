@@ -18,7 +18,7 @@ namespace SlowTests.MailingList
 {
     public class SearchByMapReduceExample : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void GivenAListOfLogEntriesAndAPartialClientName_Search_Returns1Player()
         {
             // Act.
@@ -35,7 +35,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void GivenAListOfLogEntriesAndAFullClientName_Search_Returns1Player()
         {
             // Act.
@@ -51,7 +51,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void GivenAListOfLogEntriesAndAFullGuid_Search_Returns1PlayerWith3ClientNames()
         {
             // Act.
@@ -68,7 +68,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void GivenAListOfLogEntriesAndAPartialEndOfClientGuid_Search_Returns1PlayerWith3ClientNames()
         {
             // Act.

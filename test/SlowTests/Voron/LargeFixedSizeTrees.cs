@@ -23,7 +23,8 @@ namespace SlowTests.Voron
         public void CanAdd_ALot_ForPageSplits(int count)
         {
             var bytes = new byte[48];
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
 
             using (var tx = Env.WriteTransaction())
             {
@@ -33,7 +34,11 @@ namespace SlowTests.Voron
                 {
                     EndianBitConverter.Little.CopyBytes(i, bytes, 0);
                     fst.Add(i, bytes);
-                    Assert.NotNull(fst.Read(i));
+                    Slice read;
+                    using (fst.Read(i, out read))
+                    {
+                        Assert.NotNull(read);
+                    }
                 }
 
                 tx.Commit();
@@ -46,9 +51,12 @@ namespace SlowTests.Voron
                 for (int i = 0; i < count; i++)
                 {
                     Assert.True(fst.Contains(i));
-                    var read = fst.Read(i);
-                    read.CopyTo(bytes);
-                    Assert.Equal(i, EndianBitConverter.Little.ToInt32(bytes, 0));
+                    Slice read;
+                    using (fst.Read(i, out read))
+                    {
+                        read.CopyTo(bytes);
+                        Assert.Equal(i, EndianBitConverter.Little.ToInt32(bytes, 0));
+                    }
                 }
                 tx.Commit();
             }
@@ -63,7 +71,8 @@ namespace SlowTests.Voron
         {
             var bytes = new byte[48];
 
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
 
             using (var tx = Env.WriteTransaction())
             {
@@ -72,7 +81,8 @@ namespace SlowTests.Voron
                 for (int i = 0; i < count; i++)
                 {
                     EndianBitConverter.Little.CopyBytes(i, bytes, 0);
-                    var slice = Slice.From(Allocator, bytes);
+                    Slice slice;
+                    Slice.From(Allocator, bytes, out slice);
                     fst.Add(i, slice);
                 }
 
@@ -105,8 +115,11 @@ namespace SlowTests.Voron
         public void CanRemove_ALot_ForPageSplits(int count)
         {
             var bytes = new byte[48];
-            var slice = Slice.From(Allocator, bytes);
-            var treeId = Slice.From(Allocator, "test");
+            Slice slice;
+            Slice.From(Allocator, bytes, out slice);
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
+
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, valSize: 48);
@@ -151,8 +164,10 @@ namespace SlowTests.Voron
         [InlineData(1024 * 256)]
         public void CanDeleteRange(int count)
         {
-            var bytes = new byte[48];           
-            var treeId = Slice.From(Allocator, "test");
+            var bytes = new byte[48];
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
+
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, valSize: 48);
@@ -162,7 +177,8 @@ namespace SlowTests.Voron
                     EndianBitConverter.Little.CopyBytes(i, bytes, 0);
                     Assert.Equal(i - 1, fst.NumberOfEntries);
 
-                    var slice = Slice.From(Allocator, bytes);
+                    Slice slice;
+                    Slice.From(Allocator, bytes, out slice);
                     fst.Add(i, slice);
                 }
 
@@ -196,12 +212,20 @@ namespace SlowTests.Voron
                     if (i >= 4 && i <= count - 3)
                     {
                         Assert.False(fst.Contains(i), i.ToString());
-                        Assert.False(fst.Read(i).HasValue);
+                        Slice read;
+                        using (fst.Read(i, out read))
+                        {
+                            Assert.False(read.HasValue);
+                        }
                     }
                     else
                     {
                         Assert.True(fst.Contains(i), i.ToString());
-                        Assert.Equal(i, fst.Read(i).CreateReader().ReadLittleEndianInt64());
+                        Slice read;
+                        using (fst.Read(i, out read))
+                        {
+                            Assert.Equal(i, read.CreateReader().ReadLittleEndianInt64());
+                        }
                     }
                 }
                 tx.Commit();
@@ -216,8 +240,10 @@ namespace SlowTests.Voron
         public void CanDeleteAllRange(int count)
         {
             var bytes = new byte[48];
-           
-            var treeId = Slice.From(Allocator, "test");
+
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
+
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, valSize: 48);
@@ -225,7 +251,8 @@ namespace SlowTests.Voron
                 for (int i = 1; i <= count; i++)
                 {
                     EndianBitConverter.Little.CopyBytes(i, bytes, 0);
-                    var slice = Slice.From(Allocator, bytes);
+                    Slice slice;
+                    Slice.From(Allocator, bytes, out slice);
                     fst.Add(i, slice);
                 }
 
@@ -250,7 +277,11 @@ namespace SlowTests.Voron
                 for (int i = 1; i <= count; i++)
                 {
                     Assert.False(fst.Contains(i), i.ToString());
-                    Assert.False(fst.Read(i).HasValue);
+                    Slice read;
+                    using (fst.Read(i, out read))
+                    {
+                        Assert.False(read.HasValue);
+                    }
                 }
                 tx.Commit();
             }
@@ -266,7 +297,9 @@ namespace SlowTests.Voron
             var bytes = new byte[48];
      
             var status = new BitArray(count + 1);
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
+
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, valSize: 48);
@@ -274,7 +307,8 @@ namespace SlowTests.Voron
                 for (int i = 1; i <= count; i++)
                 {
                     EndianBitConverter.Little.CopyBytes(i, bytes, 0);
-                    var slice = Slice.From(Allocator, bytes);
+                    Slice slice;
+                    Slice.From(Allocator, bytes, out slice);
                     fst.Add(i, slice);
 
                     status[i] = true;
@@ -349,7 +383,9 @@ namespace SlowTests.Voron
         public void CanDeleteRange_RandomRanges(int count, int seed)
         {
             var bytes = new byte[48];
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
+
             var status = new BitArray(count + 1);
             using (var tx = Env.WriteTransaction())
             {
@@ -358,7 +394,8 @@ namespace SlowTests.Voron
                 for (int i = 1; i <= count; i++)
                 {
                     EndianBitConverter.Little.CopyBytes(i, bytes, 0);
-                    var slice = Slice.From(Allocator, bytes);
+                    Slice slice;
+                    Slice.From(Allocator, bytes, out slice);
                     fst.Add(i, slice);
                     status[i] = true;
                 }
@@ -404,8 +441,11 @@ namespace SlowTests.Voron
         public void CanDeleteRange_RandomRanges_WithGaps(int count, int seed)
         {
             var bytes = new byte[48];
-            var slice = Slice.From(Allocator, bytes);
-            var treeId = Slice.From(Allocator, "test");
+            Slice slice;
+            Slice.From(Allocator, bytes, out slice);
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
+
             var status = new BitArray(count * 3);
             using (var tx = Env.WriteTransaction())
             {
@@ -457,8 +497,11 @@ namespace SlowTests.Voron
         public void SeekToLast_ShouldWork(int count)
         {
             var bytes = new byte[48];
-            var slice = Slice.From(Allocator, bytes);
-            var treeId = Slice.From(Allocator, "test");
+            Slice slice;
+            Slice.From(Allocator, bytes, out slice);
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
+
             int lastId = -1;
             using (var tx = Env.WriteTransaction())
             {

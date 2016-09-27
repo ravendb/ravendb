@@ -4,7 +4,7 @@ import collection = require("models/database/documents/collection");
 import pagedResultSet = require("common/pagedResultSet");
 import queryUtil = require("common/queryUtil");
 
-
+//TODO: do we need this?
 class getDocumentsByEntityNameCommand extends commandBase {
 
     constructor(private collection: collection, private skip: number, private take: number) {

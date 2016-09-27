@@ -296,7 +296,7 @@ class indexes extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
+            //TODO: changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
             changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent())
         ];
     }
@@ -310,7 +310,7 @@ class indexes extends viewModelBase {
         }
     }
 
-    processIndexEvent(e: indexChangeNotificationDto) {
+    processIndexEvent(e: Raven.Abstractions.Data.IndexChangeNotification) {
         if (e.Type === "IndexRemoved") {
             if (!this.resetsInProgress.has(e.Name)) {
                 this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));

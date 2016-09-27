@@ -47,6 +47,24 @@ namespace Raven.Client.Data
             return path.ToString();
         }
 
+        // TODO Iftah, merge the two GetIndexQueryUrl()
+        /// <summary>
+        /// Gets the index query URL.
+        /// </summary>
+        public string GetIndexQueryUrl(string index, string operationName,
+            bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
+        {
+            var path = new StringBuilder();
+
+            path.Append(operationName)
+                .Append("/")
+                .Append(index);
+
+            AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet, includeQuery);
+
+            return path.ToString();
+        }
+
         public string GetMinimalQueryString()
         {
             var sb = new StringBuilder();

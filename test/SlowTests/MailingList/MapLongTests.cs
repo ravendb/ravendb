@@ -8,7 +8,7 @@ namespace SlowTests.MailingList
 {
     public class MapLongTests : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: CreateField")]
+        [Fact]
         public void CanMapADictionaryLong()
         {
             using (var store = GetDocumentStore())

@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             _blittableToDynamicWrapper.InitializeForEnumeration(aggregationBatch);
             
-            var resultObjects = new List<BlittableJsonReaderObject>();
+            var resultObjects = new List<object>();
 
             foreach (var output in _reducingFunc(_blittableToDynamicWrapper))
             {
@@ -37,18 +37,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 if (_propertyAccessor == null)
                     _propertyAccessor = PropertyAccessor.Create(output.GetType());
 
-                var djv = new DynamicJsonValue();
-
-                foreach (var property in _propertyAccessor.Properties)
-                {
-                    var value = property.Value.GetValue(output);
-                    djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, indexContext);
-                }
-
-                resultObjects.Add(indexContext.ReadObject(djv, "map/reduce"));
+                resultObjects.Add(output);
             }
 
-            return new AggregationResult(resultObjects);
+            return new AggregatedAnonymousObjects(resultObjects, _propertyAccessor, indexContext);
         }
 
         private class DynamicIterationOfAggregationBatchWrapper : IEnumerable<DynamicBlittableJson>
@@ -73,7 +65,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private class Enumerator : IEnumerator<DynamicBlittableJson>
             {
                 private IEnumerator<BlittableJsonReaderObject> _items;
-                private BlittableJsonReaderObject _previous;
 
                 public void Initialize(IEnumerator<BlittableJsonReaderObject> items)
                 {
@@ -85,11 +76,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     if (_items.MoveNext() == false)
                         return false;
 
-                    _previous?.Dispose();
-
                     Current = new DynamicBlittableJson(_items.Current); // we have to create new instance to properly GroupBy
-
-                    _previous = _items.Current;
 
                     return true;
                 }
@@ -105,8 +92,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 public void Dispose()
                 {
-                    _previous?.Dispose();
-                    _previous = null;
                 }
             }
         }

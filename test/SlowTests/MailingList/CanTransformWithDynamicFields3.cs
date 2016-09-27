@@ -189,7 +189,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: CreateField")]
+        [Fact]
         public void WillMapPropertiesOnMapReduceIndexes()
         {
             new TranslatedEntities_MapReduce().Execute(_store);

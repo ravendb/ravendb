@@ -1,22 +1,55 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using Raven.Abstractions.Data;
+using System.Threading;
+using FastTests.Server.Documents.Replication;
+using FastTests.Voron.Storage;
 using Raven.Client.Document;
-using Raven.Client.Indexes;
-using SlowTests.Smuggler;
+using Raven.Client.Smuggler;
+using SlowTests.SlowTests.Bugs;
+using SlowTests.Voron;
+using Voron;
 
 namespace Tryouts
 {
     public class Program
     {
+       
         public static void Main(string[] args)
         {
-            using (var x = new FastTests.Server.Documents.Replication.ReplicationConflictsTests())
+            using (var x = new FastTests.Server.Documents.Versioning.Versioning())
             {
-                x.Conflict_then_load_by_id_will_return_409_and_conflict_data().Wait();
+                x.WillDeleteRevisionsIfDeleted_OnlyIfPurgeOnDeleteIsTrue().Wait();
             }
+            //Console.WriteLine("Starting");
+            //using (var store = new DocumentStore
+            //{
+            //    DefaultDatabase = "licensing",
+            //    Url = "http://localhost:8080"
+            //})
+            //{
+            //    store.Initialize();
+
+            //    var sp = Stopwatch.StartNew();
+            //    store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-19 13-00.ravendbdump.gzip", CancellationToken.None)
+            //        .Wait();
+
+
+            //    Console.WriteLine("Inserted in " + sp.Elapsed);
+            //    sp.Restart();
+            //    while (true)
+            //    {
+            //        if (store.DatabaseCommands.GetStatistics().Indexes.All(x => x.IsStale == false))
+            //        {
+            //            break;
+            //        }
+            //        Thread.Sleep(100);
+            //    }
+            //    Console.WriteLine("Indexed in " + sp.Elapsed);
+
+            //}
         }
 
     }
 }
-

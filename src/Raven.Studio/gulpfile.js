@@ -22,10 +22,14 @@ var tsCompilerConfig = plugins.typescript.createProject('tsconfig.json', {
     typescript: require('typescript')
 });
 
-gulp.task('clean', function () {
+gulp.task('clean', ['clean:js'], function () {
     del.sync(PATHS.releaseTarget);
     del.sync(['./typings/*', '!./typings/_studio/**', '!./typings/tsd.d.ts']);
     del.sync([PATHS.bowerSource]);
+    
+});
+
+gulp.task('clean:js', function() {
     del.sync(['./wwwroot/App/**/*.js']);
     del.sync(['./wwwroot/App/**/*.js.map']);
 });
@@ -44,7 +48,7 @@ gulp.task('parse-configuration', function() {
 
 gulp.task('less', function() {
     return gulp.src(PATHS.lessSource, { base: './wwwroot/Content/' })
-        .pipe(plugins.newy(findNewestFile(PATHS.lessTargetSelector)))
+       // .pipe(plugins.newy(findNewestFile(PATHS.lessTargetSelector)))
         .pipe(plugins.sourcemaps.init())
         .pipe(plugins.less({
             sourceMap: true

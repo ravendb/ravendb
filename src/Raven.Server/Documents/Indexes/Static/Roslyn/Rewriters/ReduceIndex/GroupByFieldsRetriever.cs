@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 if (by.StartsWith("new"))
                 {
                     by = by.Substring(3);
-                    by = by.Trim('{', ' ', '}');
+                    by = by.Trim('{', ' ', '}', '\r', '\n');
                 }
 
                 by = by.Replace($"{result}.", string.Empty);
@@ -33,7 +33,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
                 for (int i = 0; i < GroupByFields.Length; i++)
                 {
-                    GroupByFields[i] = GroupByFields[i].Trim();
+                    var field = GroupByFields[i];
+
+                    var parts = field.Split('=');
+
+                    GroupByFields[i] = parts[0].Trim();
                 }
 
                 return base.VisitGroupClause(node);

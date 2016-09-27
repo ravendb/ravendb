@@ -77,7 +77,7 @@ namespace Voron.Impl.Journal
 
             try
             {
-                LZ4.Decode64((byte*)current + sizeof(TransactionHeader), current->CompressedSize, outputPage,
+                LZ4.Decode64LongBuffers((byte*)current + sizeof(TransactionHeader), current->CompressedSize, outputPage,
                     current->UncompressedSize, true);
             }
             catch (Exception e)
@@ -90,7 +90,7 @@ namespace Voron.Impl.Journal
 
             var pageInfoPtr = (TransactionHeaderPageInfo*)outputPage;
             
-            var totalRead = sizeof(TransactionHeaderPageInfo)*current->PageCount;
+            long totalRead = sizeof(TransactionHeaderPageInfo)*current->PageCount;
             for (var i = 0; i < current->PageCount; i++)
             {
                 if(totalRead > current->UncompressedSize)
@@ -126,9 +126,10 @@ namespace Voron.Impl.Journal
             return true;
         }
 
-        internal static int GetNumberOfPagesFromSize(StorageEnvironmentOptions options, int size)
+        internal static int GetNumberOfPagesFromSize(StorageEnvironmentOptions options, long size)
         {
-            return (size / options.PageSize) + (size % options.PageSize == 0 ? 0 : 1);
+            var lastPage = (size % options.PageSize == 0 ? 0 : 1);
+            return checked((int)(size/options.PageSize) + lastPage);
         }
 
         public void RecoverAndValidate(StorageEnvironmentOptions options)
@@ -204,7 +205,23 @@ namespace Voron.Impl.Journal
             // The location of the data is the base pointer, plus the space reserved for the transaction header if uncompressed. 
             byte* dataPtr = _journalPager.AcquirePagePointer(null, _readingPage) + sizeof(TransactionHeader);
 
-            ulong hash = Hashing.XXHash64.Calculate(dataPtr, current->CompressedSize);
+            if (current->CompressedSize < 0)
+            {
+                RequireHeaderUpdate = true;
+                // negative size is not supported
+                options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is negative", null);
+                return false;
+            }
+            if (current->CompressedSize >
+                (_journalPager.NumberOfAllocatedPages - _readingPage)*_journalPager.PageSize)
+            {
+                // we can't read past the end of the journal
+                RequireHeaderUpdate = true;
+                options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is too big for the journal size {_journalPager.NumberOfAllocatedPages * _journalPager.PageSize}", null);
+                return false;
+            }
+
+            ulong hash = Hashing.XXHash64.Calculate(dataPtr, (ulong)current->CompressedSize);
             if (hash != current->Hash)
             {
                 RequireHeaderUpdate = true;

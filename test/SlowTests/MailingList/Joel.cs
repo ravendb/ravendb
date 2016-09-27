@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -51,7 +52,7 @@ namespace SlowTests.MailingList
         ((object) item.Age),
         item.Name
     }
-})", indexDefinition.Maps.First());
+})".Replace("\r\n", Environment.NewLine), indexDefinition.Maps.First());
             }
         }
     }

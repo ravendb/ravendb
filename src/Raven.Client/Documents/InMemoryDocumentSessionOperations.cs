@@ -82,6 +82,19 @@ namespace Raven.Client.Documents
 
         public string DatabaseName => databaseName;
 
+        /// <summary>
+        /// all the listeners for this session
+        /// </summary>
+        protected readonly DocumentSessionListeners theListeners;
+
+        /// <summary>
+        /// all the listeners for this session
+        /// </summary>
+        public DocumentSessionListeners Listeners
+        {
+            get { return theListeners; }
+        }
+
         ///<summary>
         /// The document store associated with this session
         ///</summary>
@@ -111,6 +124,7 @@ namespace Raven.Client.Documents
             Id = id;
             this.databaseName = databaseName;
             this.documentStore = documentStore;
+            this.theListeners = new DocumentSessionListeners(); // TODO Iftah, pass listeners as argument
             RequestExecuter = requestExecuter;
             _releaseOperationContext = requestExecuter.ContextPool.AllocateOperationContext(out Context);
             UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;

@@ -1,4 +1,5 @@
-﻿using Sparrow;
+﻿using System.IO;
+using Sparrow;
 using Voron.Global;
 using Voron.Data.BTrees;
 
@@ -21,7 +22,7 @@ namespace Voron.Impl.Paging
             return requestedPageNumber + numberOfPages > pager.NumberOfAllocatedPages;
         }
 
-       public static int Write(this AbstractPager pager, TreePage page, long? pageNumber = null)
+       public static long Write(this AbstractPager pager, TreePage page, long? pageNumber = null)
         {
             var startPage = pageNumber ?? page.PageNumber;
 
@@ -32,7 +33,7 @@ namespace Voron.Impl.Paging
 
 
 
-        public static int WritePage(this AbstractPager pager, Page page, long? pageNumber = null)
+        public static long WritePage(this AbstractPager pager, Page page, long? pageNumber = null)
         {
             var startPage = pageNumber ?? page.PageNumber;
 
@@ -45,10 +46,10 @@ namespace Voron.Impl.Paging
             return page.IsOverflow ? pager.GetNumberOfOverflowPages(page.OverflowSize) : 1;
         }
 
-        public static int GetNumberOfOverflowPages(this AbstractPager pager, int overflowSize)
+        public static int GetNumberOfOverflowPages(this AbstractPager pager, long overflowSize)
         {
             overflowSize += Constants.TreePageHeaderSize;
-            return (overflowSize/pager.PageSize) + (overflowSize%pager.PageSize == 0 ? 0 : 1);
+            return checked((int)(overflowSize / pager.PageSize) + (overflowSize % pager.PageSize == 0 ? 0 : 1));
         }
     }
 }

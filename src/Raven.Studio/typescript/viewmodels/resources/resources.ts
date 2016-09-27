@@ -418,12 +418,6 @@ class resources extends viewModelBase {
         });
     }
     
-    navigateToAdminSettings() {
-        this.navigate(this.appUrls.adminSettings());
-        shell.disconnectFromResourceChangesApi();
-        shell.selectedEnvironmentColorStatic(shell.originalEnvironmentColor());
-    }
-
     navigateToCreateCluster() {
         this.navigate(this.appUrls.adminSettingsCluster());
         shell.disconnectFromResourceChangesApi();

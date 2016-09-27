@@ -41,7 +41,7 @@ namespace Raven.Server.Extensions
         }
 
 
-        public static bool GreaterThen(this ChangeVectorEntry[] self, Dictionary<Guid,long> other)
+        public static bool GreaterThan(this ChangeVectorEntry[] self, Dictionary<Guid,long> other)
         {
             for (int i = 0; i < self.Length; i++)
             {
@@ -52,7 +52,30 @@ namespace Raven.Server.Extensions
                     return true;
             }
             return false;
-        }	
+        }
+
+        public static bool GreaterThan(this ChangeVectorEntry[] self, ChangeVectorEntry[] other)
+        {
+            for (int i = 0; i < self.Length; i++)
+            {
+                var indexOfDbId = IndexOf(self[i].DbId, other);
+                if (indexOfDbId == -1)
+                    return true;
+                if (self[i].Etag > other[indexOfDbId].Etag)
+                    return true;
+            }
+            return false;
+        }
+
+        private static int IndexOf(Guid DbId, ChangeVectorEntry[] v)
+        {
+            for (int i = 0; i < v.Length; i++)
+            {
+                if (v[i].DbId == DbId)
+                    return i;
+            }
+            return -1;
+        }
 
         public static string Format(this ChangeVectorEntry[] changeVector)
         {

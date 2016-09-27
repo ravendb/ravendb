@@ -125,7 +125,9 @@ namespace Voron.Impl.Compaction
                         var transactionSize = 0L;
                         do
                         {
-                            snd.Add(it.CurrentKey, it.Value);
+                            Slice val;
+                            using (it.Value(out val))
+                                snd.Add(it.CurrentKey, val);
                             transactionSize += fst.ValueSize + sizeof (long);
                             copiedEntries++;
                         } while (transactionSize < compactedEnv.Options.MaxScratchBufferSize/2 && it.MoveNext());
@@ -315,7 +317,7 @@ namespace Voron.Impl.Compaction
                             // size before a flush
                             if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
                             {
-                                lastSlice = schema.Key.GetSlice(txr.Allocator, entry);
+                                schema.Key.GetSlice(txr.Allocator, entry, out lastSlice);
                                 break;
                             }
                         }

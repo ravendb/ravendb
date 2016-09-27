@@ -23,8 +23,8 @@ class getSlowDocCountsCommand extends commandBase {
 
     private monitorOperation(operationId: number) {
         new getOperationStatusCommand(this.db, operationId)
-            .execute()
-            .done((result: debugDocumentStatsStateDto) => {
+            .execute();
+            /* TODO .done((result: debugDocumentStatsStateDto) => {
                 this.updateProgress(result.State.Progress);
 
                 if (result.Completed) {
@@ -38,7 +38,7 @@ class getSlowDocCountsCommand extends commandBase {
                 } else {
                     setTimeout(() => this.monitorOperation(operationId), 500);
                 }
-            });
+            });*/
     }
 
     public getCalculationCompletedTask(): JQueryPromise<debugDocumentStats> {

@@ -5,6 +5,7 @@ import getIndexTermsCommand = require("commands/database/index/getIndexTermsComm
 import getCollectionsCountCommand = require("commands/database/documents/getCollectionsCountCommand");
 import getCachedCollectionsCount = require("commands/database/studio/getCachedCollectionsCount");
 
+//TODO: do we need this class?
 class getCollectionsCommand extends commandBase {
 
     /**

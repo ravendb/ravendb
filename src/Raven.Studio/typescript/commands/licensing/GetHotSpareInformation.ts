@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 
+//TODO: rename to lower case
 class GetHotSpareInformation extends commandBase {
 
     execute(): JQueryPromise<HotSpareDto> {

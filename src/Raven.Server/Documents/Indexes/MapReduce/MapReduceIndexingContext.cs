@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public class MapReduceIndexingContext : IDisposable
     {
-        internal Slice LastMapResultIdKey = Slice.From(StorageEnvironment.LabelsContext, "#LastMapResultId", ByteStringType.Immutable);
+        internal static Slice LastMapResultIdKey;
 
         private readonly Queue<long> _idsOfDeletedEntries = new Queue<long>();
 
@@ -21,6 +21,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public Dictionary<string, long> ProcessedTombstoneEtags = new Dictionary<string, long>();
         
         internal long LastMapResultId = -1;
+
+        static MapReduceIndexingContext()
+        {
+             Slice.From(StorageEnvironment.LabelsContext, "#LastMapResultId", ByteStringType.Immutable, out LastMapResultIdKey);
+        }
 
         public void Dispose()
         {

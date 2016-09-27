@@ -66,8 +66,6 @@ namespace FastTests
         {
             GC.SuppressFinalize(this);
 
-            SystemTime.UtcDateTime = null;
-
             GC.Collect(2);
             GC.WaitForPendingFinalizers();
 

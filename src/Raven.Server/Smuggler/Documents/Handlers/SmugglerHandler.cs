@@ -6,23 +6,38 @@
 
 using System;
 using System.IO.Compression;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Data;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Smuggler.Documents.Handlers
 {
     public class SmugglerHandler : DatabaseRequestHandler
     {
+
+        [RavenAction("/databases/*/smuggler/validateOptions", "POST")]
+        public Task PostValidateOptions()
+        {
+            //TODO: implement me!
+
+            
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/smuggler/export", "POST")]
-        public Task PostExport()
+        public async Task PostExport()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
+                var operationId = GetIntValueQueryString("operationId", required: false);
+
                 var exporter = new SmugglerExporter(Database)
                 {
                     DocumentsLimit = GetIntValueQueryString("documentsLimit", required: false),
@@ -35,10 +50,36 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 {
                     exporter.OperateOnTypes = databaseItemType;
                 }
-                
-                exporter.Export(context, ResponseBodyStream());
+
+                var token = CreateOperationToken();
+
+                if (operationId.HasValue)
+                {
+                    await Database.DatabaseOperations.AddOperation("Export database: " + Database.Name, DatabaseOperations.PendingOperationType.DatabaseExport, 
+                        onProgress => Task.Run(() => ExportDatabaseInternal(context, exporter, onProgress, token)), operationId.Value, token);
+                }
+                else
+                {
+                    ExportDatabaseInternal(context, exporter, null, token);
+                }
             }
-            return Task.CompletedTask;
+        }
+
+        private IOperationResult ExportDatabaseInternal(DocumentsOperationContext context, SmugglerExporter exporter, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        {
+            try
+            {
+               
+
+
+                //TODO: use optional onProgress parameter
+                exporter.Export(context, ResponseBodyStream());
+                return null; //TODO: pass operation result to operation status
+            }
+            finally
+            {
+                token.Dispose();
+            }
         }
 
         [RavenAction("/databases/*/smuggler/import", "POST")]

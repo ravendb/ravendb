@@ -18,7 +18,8 @@ class exportDatabase extends viewModelBase {
 
     startExport() {
         var fs = this.activeFilesystem();
-        fs.isExporting(true);
+        throw new Error("impl me!");
+        /* TODO fs.isExporting(true);
         fs.exportStatus("");
 
         var smugglerOptions = {
@@ -27,7 +28,7 @@ class exportDatabase extends viewModelBase {
         };
         
         var url = "/studio-tasks/exportFilesystem";
-        this.downloader.downloadByPost(fs, url, smugglerOptions, fs.isExporting, fs.exportStatus);
+        this.downloader.downloadByPost(fs, url, smugglerOptions, fs.isExporting, fs.exportStatus);*/
     }
 }
 

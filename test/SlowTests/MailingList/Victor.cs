@@ -38,7 +38,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: CreateField")]
+        [Fact]
         public void CanSortDynamically()
         {
             using (var store = GetDocumentStore())

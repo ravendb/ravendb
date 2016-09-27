@@ -60,7 +60,10 @@ namespace SlowTests.Voron
                     }
 
                     var val = long.MaxValue/2;
-                    options.Add(Slice.From(tx.Allocator, "LastEntryId"), Slice.From(tx.Allocator, (byte*)&val, sizeof(long)));
+                    Slice key, v;
+                    Slice.From(tx.Allocator, "LastEntryId", out key);
+                    Slice.From(tx.Allocator, (byte*) &val, sizeof(long), out v);
+                    options.Add(key, v);
                     tx.Commit();
                 }
             }

@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 
+//TODO: rename to lower case
 class ActivateLicenseCommand extends commandBase {
 
     execute(): JQueryPromise<any> {

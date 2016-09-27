@@ -26,12 +26,15 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     session.Store(new WaiverWaitlistItem { Id = "waiverwaitlistitems/1", ClientId = "clients/1", ScreeningDate = DateTime.Today, GroupNumber = "5" });
-                    session.Store(new WaiverWaitlistItem { Id = "waiverwaitlistitems/2", ClientId = "clients/1", ScreeningDate = DateTime.Today.AddDays(7), GroupNumber = "1" });
+                    session.Store(new WaiverWaitlistItem { Id = "waiverwaitlistitems/2", ClientId = "clients/2", ScreeningDate = DateTime.Today.AddDays(7), GroupNumber = "1" });
                     session.Store(new TestClient { ClientProfile = { PersonName = new TestPersonName("John", "Able") }, Id = "clients/1" });
                     session.Store(new TestClient { ClientProfile = { PersonName = new TestPersonName("Joe", "Cain") }, Id = "clients/2" });
                     session.SaveChanges();
 
+                    RavenQueryStatistics stats;
                     var list = session.Query<App_WaiverWaitlistItemSearch.IndexResult, App_WaiverWaitlistItemSearch>()
+                        .Statistics(out stats)
+                        .Customize(x=>x.WaitForNonStaleResults())
                         .ProjectFromIndexFieldsInto<App_WaiverWaitlistItemSearch.IndexResult>()
                         .ToList();
 
