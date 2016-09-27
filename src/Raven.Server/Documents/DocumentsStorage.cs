@@ -290,10 +290,10 @@ namespace Raven.Server.Documents
             var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
             Guid dbId;
             long etagBigEndian;
-            Slice keySlice;;
+            Slice keySlice; ;
             Slice valSlice;
             using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out keySlice))
-            using (Slice.External(context.Allocator, (byte*) &etagBigEndian, sizeof(long), out valSlice))
+            using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out valSlice))
             {
                 foreach (var kvp in changeVector)
                 {
@@ -304,6 +304,36 @@ namespace Raven.Server.Documents
             }
         }
 
+        public static long ReadLastDocumentEtag(Transaction tx)
+        {
+            var fst = new FixedSizeTree(tx.LowLevelTransaction,
+                tx.LowLevelTransaction.RootObjects,
+                AllDocsEtagsSlice, sizeof(long));
+
+            using (var it = fst.Iterate())
+            {
+                if (it.SeekToLast())
+                    return it.CurrentKey;
+            }
+
+            return 0;
+        }
+
+        public static long ReadLastTombstoneEtag(Transaction tx)
+        {
+            var fst = new FixedSizeTree(tx.LowLevelTransaction,
+                tx.LowLevelTransaction.RootObjects,
+                AllTombstonesEtagsSlice, sizeof(long));
+
+            using (var it = fst.Iterate())
+            {
+                if (it.SeekToLast())
+                    return it.CurrentKey;
+            }
+
+            return 0;
+        }
+
         public static long ReadLastEtag(Transaction tx)
         {
             var tree = tx.CreateTree("Etags");
@@ -312,29 +342,13 @@ namespace Raven.Server.Documents
             if (readResult != null)
                 lastEtag = readResult.Reader.ReadLittleEndianInt64();
 
-            var fst = new FixedSizeTree(tx.LowLevelTransaction,
-                tx.LowLevelTransaction.RootObjects,
-                AllDocsEtagsSlice, sizeof(long));
+            var lastDocumentEtag = ReadLastDocumentEtag(tx);
+            if (lastDocumentEtag > lastEtag)
+                lastEtag = lastDocumentEtag;
 
-            using (var it = fst.Iterate())
-            {
-                if (it.SeekToLast())
-                {
-                    lastEtag = Math.Max(lastEtag, it.CurrentKey);
-                }
-            }
-
-            fst = new FixedSizeTree(tx.LowLevelTransaction,
-                tx.LowLevelTransaction.RootObjects,
-                AllTombstonesEtagsSlice, sizeof(long));
-
-            using (var it = fst.Iterate())
-            {
-                if (it.SeekToLast())
-                {
-                    lastEtag = Math.Max(lastEtag, it.CurrentKey);
-                }
-            }
+            var lastTombstoneEtag = ReadLastTombstoneEtag(tx);
+            if (lastTombstoneEtag > lastEtag)
+                lastEtag = lastTombstoneEtag;
 
             return lastEtag;
         }
@@ -673,7 +687,7 @@ namespace Raven.Server.Documents
         public static ByteStringContext.Scope GetSliceFromKey(DocumentsOperationContext context, string key, out Slice keySlice)
         {
             var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
-            
+
             var buffer = context.GetNativeTempBuffer(
                 byteCount
                 + sizeof(char) * key.Length); // for the lower calls
@@ -955,7 +969,7 @@ namespace Raven.Server.Documents
             var etagTree = context.Transaction.InnerTransaction.ReadTree("Etags");
             var etag = _lastEtag;
             Slice etagSlice;
-            using (Slice.External(context.Allocator, (byte*) &etag, sizeof(long), out etagSlice))
+            using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
                 etagTree.Add(LastEtagSlice, etagSlice);
         }
 
@@ -1028,7 +1042,7 @@ namespace Raven.Server.Documents
                     {
                         Type = DocumentChangeTypes.DeleteOnTombstoneReplication,
                         Etag = _lastEtag,
-                        MaterializeKey = state => ((Slice) state).ToString(),
+                        MaterializeKey = state => ((Slice)state).ToString(),
                         MaterializeKeyState = loweredKey,
                         CollectionName = collectionName.Name,
                         IsSystemDocument = false, //tombstone is not a system document...
@@ -1379,7 +1393,7 @@ namespace Raven.Server.Documents
 
             TableValueReader oldValue;
             Slice keySlice;
-            using (Slice.External(context.Allocator, lowerKey, (ushort) lowerSize, out keySlice))
+            using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out keySlice))
             {
                 oldValue = table.ReadByKey(keySlice);
 
@@ -1414,7 +1428,7 @@ namespace Raven.Server.Documents
                     {
                         int size;
                         var pOldEtag = oldValue.Read(1, out size);
-                        var oldEtag = IPAddress.NetworkToHostOrder(*(long*) pOldEtag);
+                        var oldEtag = IPAddress.NetworkToHostOrder(*(long*)pOldEtag);
                         if (expectedEtag != null && oldEtag != expectedEtag)
                             throw new ConcurrencyException(
                                 $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
@@ -1601,12 +1615,12 @@ namespace Raven.Server.Documents
                             return key + nextIdentityValue;
                         }
                         lastKnownFree = maybeFree;
-                        maybeFree = Math.Max(maybeFree - (maybeFree - lastKnownBusy)/2, lastKnownBusy + 1);
+                        maybeFree = Math.Max(maybeFree - (maybeFree - lastKnownBusy) / 2, lastKnownBusy + 1);
                     }
                     else
                     {
                         lastKnownBusy = maybeFree;
-                        maybeFree = Math.Min(lastKnownFree, maybeFree*2);
+                        maybeFree = Math.Min(lastKnownFree, maybeFree * 2);
                     }
                 }
             }
@@ -1719,8 +1733,8 @@ namespace Raven.Server.Documents
             var etagsTree = context.Transaction.InnerTransaction.CreateTree("LastReplicatedEtags");
             Slice etagSlice;
             Slice keySlice;
-            using(Slice.From(context.Allocator, dbId, out keySlice))
-            using (Slice.External(context.Allocator, (byte*) &etag, sizeof(long), out etagSlice))
+            using (Slice.From(context.Allocator, dbId, out keySlice))
+            using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
             {
                 etagsTree.Add(keySlice, etagSlice);
             }

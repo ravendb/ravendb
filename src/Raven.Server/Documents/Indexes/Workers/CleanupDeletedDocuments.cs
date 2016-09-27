@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
-using Raven.Abstractions.Logging;
+using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
@@ -67,10 +67,11 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                     using (databaseContext.OpenReadTransaction())
                     {
-                        foreach (
-                            var tombstone in
-                            _documentsStorage.GetTombstonesAfter(databaseContext, collection, lastEtag, 0, pageSize)
-                        )
+                        var tombstones = collection == Constants.Indexing.AllDocumentsCollection
+                            ? _documentsStorage.GetTombstonesAfter(databaseContext, lastEtag, 0, pageSize)
+                            : _documentsStorage.GetTombstonesAfter(databaseContext, collection, lastEtag, 0, pageSize);
+
+                        foreach (var tombstone in tombstones)
                         {
                             token.ThrowIfCancellationRequested();
 
