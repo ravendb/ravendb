@@ -37,7 +37,7 @@ namespace Raven.Client.Connection
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFile())
                 {
-                    var path = "RavenDB Replication Information For - " + serverHash;
+                    var path = "RavenDB 3.5 Replication Information For - " + serverHash;
 
                     if (machineStoreForApplication.GetFileNames(path).Length == 0)
                         return;
@@ -59,7 +59,7 @@ namespace Raven.Client.Connection
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFile())
                 {
-                    var path = "RavenDB Replication Information For - " + serverHash;
+                    var path = "RavenDB 3.5 Replication Information For - " + serverHash;
 
                     if (machineStoreForApplication.GetFileNames(path).Length == 0)
                         return null;
@@ -87,7 +87,7 @@ namespace Raven.Client.Connection
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFile())
                 {
-                    var path = "RavenDB Replication Information For - " + serverHash;
+                    var path = "RavenDB 3.5 Replication Information For - " + serverHash;
                     using (var stream = new IsolatedStorageFileStream(path, FileMode.Create, machineStoreForApplication))
                     {
                         document.ToJson().WriteTo(stream);
