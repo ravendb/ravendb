@@ -310,7 +310,10 @@ namespace Raven.Server.Documents.Indexes
 
                 var indexingThread = _indexingThread;
                 _indexingThread = null;
-                indexingThread.Join();
+                //Cancelation was requested, the thread will exit the indexing loop and terminate.
+                //If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
+                if(Thread.CurrentThread != indexingThread)
+                    indexingThread.Join();
             }
         }
 
