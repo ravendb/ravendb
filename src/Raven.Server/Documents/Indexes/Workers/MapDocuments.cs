@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         _logger.Info($"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.",e);
 
                                     collectionStats.AddMapError(current.Key,
-                                        $"Failed to execute mapping function on {current.Key}. Message: {e.Message}");
+                                        $"Failed to execute mapping function on {current.Key}. Exception: {e}");
                                 }
 
                                 if (sw.Elapsed > timeoutProcessing )
