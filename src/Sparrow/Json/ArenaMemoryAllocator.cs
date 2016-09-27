@@ -59,7 +59,7 @@ namespace Sparrow.Json
             var allocation = new AllocatedMemoryData()
             {
                 SizeInBytes = size,
-                Address = new IntPtr(_ptrCurrent)
+                Address = _ptrCurrent
             };
 
             _ptrCurrent += size;
@@ -153,8 +153,8 @@ namespace Sparrow.Json
 
         public void Return(AllocatedMemoryData allocation)
         {
-            if ((byte*)allocation.Address != _ptrCurrent - allocation.SizeInBytes ||
-                (byte*)allocation.Address < _ptrStart)
+            if (allocation.Address != _ptrCurrent - allocation.SizeInBytes ||
+                allocation.Address < _ptrStart)
                 return;
             // since the returned allocation is at the end of the arena, we can just move
             // the pointer back
@@ -163,7 +163,7 @@ namespace Sparrow.Json
         }
     }
 
-    public class AllocatedMemoryData
+    public unsafe class AllocatedMemoryData
     {
         public byte* Address;
         public int SizeInBytes;

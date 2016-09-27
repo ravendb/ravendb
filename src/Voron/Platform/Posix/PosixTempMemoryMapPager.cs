@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using Sparrow.Utils;
 using Voron.Impl;
 
 namespace Voron.Platform.Posix
@@ -114,7 +115,7 @@ namespace Voron.Platform.Posix
                 var err = Marshal.GetLastWin32Error();
                 PosixHelper.ThrowLastError(err);
             }
-
+            NativeMemory.RegisterFileMapping(FileName, _totalAllocationSize);
             var allocationInfo = new PagerState.AllocationInfo
             {
                 BaseAddress = (byte*)startingBaseAddressPtr.ToPointer(),
@@ -152,6 +153,7 @@ namespace Voron.Platform.Posix
                 var err = Marshal.GetLastWin32Error();
                 PosixHelper.ThrowLastError(err);
             }
+            NativeMemory.UnregisterFileMapping(FileName, size);
         }
 
         public override void Dispose()

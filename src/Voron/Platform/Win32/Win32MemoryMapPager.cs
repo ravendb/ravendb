@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
+using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -222,6 +223,8 @@ namespace Voron.Platform.Win32
                 throw new OutOfMemoryException(errorMessage, innerException);
             }
 
+            NativeMemory.RegisterFileMapping(_fileInfo.FullName, _fileStream.Length);
+
             var allocationInfo = new PagerState.AllocationInfo
             {
                 BaseAddress = startingBaseAddressPtr,
@@ -296,6 +299,7 @@ namespace Voron.Platform.Win32
         {
             if (Win32MemoryMapNativeMethods.UnmapViewOfFile(baseAddress) == false)
                 throw new Win32Exception();
+            NativeMemory.UnregisterFileMapping(_fileInfo.FullName, size);
         }
 
         public override void MaybePrefetchMemory(List<long> pagesToPrefetch)

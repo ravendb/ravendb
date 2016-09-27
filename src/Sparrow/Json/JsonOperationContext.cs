@@ -70,13 +70,13 @@ namespace Sparrow.Json
         public unsafe byte* GetNativeTempBuffer(int requestedSize)
         {
             if (_tempBuffer == null ||
-                _tempBuffer.Address == IntPtr.Zero ||
+                _tempBuffer.Address == null ||
                 _tempBuffer.SizeInBytes < requestedSize)
             {
                 _tempBuffer = GetMemory(Math.Max(_tempBuffer?.SizeInBytes ?? 0, requestedSize));
             }
 
-            return (byte*)_tempBuffer.Address;
+            return _tempBuffer.Address;
         }
 
         public AllocatedMemoryData GetMemory(int requestedSize)
@@ -501,10 +501,10 @@ namespace Sparrow.Json
             
         }
 
-        public virtual void Reset()
+        public virtual unsafe void Reset()
         {
             if (_tempBuffer != null)
-                _tempBuffer.Address = IntPtr.Zero;
+                _tempBuffer.Address = null;
 
             foreach (var builder in _liveBuilders)
             {
