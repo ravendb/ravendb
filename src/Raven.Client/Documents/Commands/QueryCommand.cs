@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -34,8 +36,21 @@ namespace Raven.Client.Documents.Commands
             {
                 Method = method
             };
+            
+            if (method == HttpMethod.Post)
+            {
+                request.Content = new BlittableJsonContent(stream =>
+                {
+                    using (var writer = new BlittableJsonTextWriter(Context, stream))
+                    {
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("Query");
+                        writer.WriteString(indexQuery.Query);
+                        writer.WriteEndObject();
+                    }
+                });
+            }
 
-            // TODO Iftah, if query string is too long, need to send as post.
             var indexQueryUrl = indexQuery.GetIndexQueryUrl(index, "queries", includeQuery: method == HttpMethod.Get);
 
             EnsureIsNotNullOrEmpty(indexQueryUrl, "index");

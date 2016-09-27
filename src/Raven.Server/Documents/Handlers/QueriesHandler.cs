@@ -38,8 +38,8 @@ namespace Raven.Server.Documents.Handlers
                     await FacetedQuery(context, indexName, token).ConfigureAwait(false);
                     return;
                 }
-
-                throw new NotSupportedException($"Operation '{operation}' is not supported.");
+                
+                await Query(context, indexName, token, HttpMethod.Post).ConfigureAwait(false);
             }
         }
 
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                await Query(context, indexName, token).ConfigureAwait(false);
+                await Query(context, indexName, token, HttpMethod.Get).ConfigureAwait(false);
             }
         }
 
@@ -123,17 +123,25 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task Query(DocumentsOperationContext context, string indexName, OperationCancelToken token)
+        private async Task Query(DocumentsOperationContext context, string indexName, OperationCancelToken token, HttpMethod method)
         {
-            var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
+            var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
 
+            if (method == HttpMethod.Post && string.IsNullOrWhiteSpace(indexQuery.Query))
+            {
+                string queryString;
+                var request = context.Read(RequestBodyStream(), "QueryInPostBody");
+                if (request.TryGet("Query", out queryString))
+                    indexQuery.Query = queryString;
+            }
+            
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
             var includes = GetStringValuesQueryString("include", required: false);
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
             var runner = new QueryRunner(Database, context);
 
-            var result = await runner.ExecuteQuery(indexName, query, includes, existingResultEtag, token).ConfigureAwait(false);
+            var result = await runner.ExecuteQuery(indexName, indexQuery, includes, existingResultEtag, token).ConfigureAwait(false);
 
             if (result.NotModified)
             {
