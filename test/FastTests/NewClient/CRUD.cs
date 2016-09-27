@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Document;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -7,6 +8,11 @@ namespace FastTests.NewClient
 {
     public class CRUD : RavenTestBase
     {
+        protected override void ModifyStore(DocumentStore store)
+        {
+            store.FailoverServers = null;
+        }
+
         [Fact]
         public void CRUD_Operations()
         {

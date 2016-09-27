@@ -27,7 +27,7 @@ namespace Raven.Client.Documents
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server
     /// </summary>
-    public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ISyncAdvancedSessionOperation, ILazySessionOperations
+    public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ISyncAdvancedSessionOperation, IDocumentSessionImpl
     {
         /// <summary>
         /// Gets the database commands.
@@ -43,18 +43,8 @@ namespace Raven.Client.Documents
         {
             DatabaseCommands = databaseCommands;
         }
-        
 
-        /// <summary>
-        /// Begin a load while including the specified path
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns></returns>
-        public ILoaderWithInclude<object> Include(string path)
-        {
-            //return new MultiLoaderWithInclude<object>(this).Include(path);
-            throw new NotImplementedException();
-        }
+        #region Lazy
 
         ILazyLoaderWithInclude<TResult> ILazySessionOperations.Include<TResult>(Expression<Func<TResult, object>> path)
         {
@@ -143,6 +133,24 @@ namespace Raven.Client.Documents
             throw new NotImplementedException();
         }
 
+        public Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
+        {
+            throw new NotImplementedException();
+        }
+
+        public T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+        {
+            throw new NotImplementedException();
+        }
+
+
+        #endregion Lazy
+
         /// <summary>
         /// Begin a load while including the specified path
         /// </summary>
@@ -150,8 +158,7 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
         {
-            //return new MultiLoaderWithInclude<T>(this).Include(path);
-            throw new NotImplementedException();
+            return new MultiLoaderWithInclude<T>(this).Include(path);
         }
 
         /// <summary>
@@ -161,8 +168,17 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
         {
-            //return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
-            throw new NotImplementedException();
+            return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
+        }
+
+        /// <summary>
+        /// Begin a load while including the specified path
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns></returns>
+        public ILoaderWithInclude<object> Include(string path)
+        {
+            return new MultiLoaderWithInclude<object>(this).Include(path);
         }
 
         /// <summary>
@@ -250,6 +266,77 @@ namespace Raven.Client.Documents
             return Load<T>(documentKeys);
         }
 
+        public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            var transformer = new TTransformer().TransformerName;
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+                configure(configuration);
+
+            return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
+        }
+
+        public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            var transformer = new TTransformer().TransformerName;
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+                configure(configuration);
+
+            return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
+        }
+
+        public TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public TResult Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public T[] LoadInternal<T>(string[] ids)
+        {
+            var loadOeration = new LoadOperation(this);
+            loadOeration.ByIds(ids);
+
+            var command = loadOeration.CreateRequest();
+            if (command != null)
+            {
+                RequestExecuter.Execute(command, Context);
+                loadOeration.SetResult(command.Result);
+            }
+
+            return loadOeration.GetDocuments<T>();
+        }
+
+        public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
+        {
+            var loadOeration = new LoadOperation(this);
+            loadOeration.ByIds(ids);
+            loadOeration.WithIncludes(includes.Select(x => x.Key).ToArray());
+
+            var command = loadOeration.CreateRequest();
+            if (command != null)
+            {
+                RequestExecuter.Execute(command, Context);
+                loadOeration.SetResult(command.Result);
+            }
+
+            return loadOeration.GetDocuments<T>();
+        }
+
         /// <summary>
         /// Get the accessor for advanced operations
         /// </summary>
@@ -262,7 +349,7 @@ namespace Raven.Client.Documents
             get { return this; }
         }
 
-        public IEagerSessionOperations Eagerly { get; }
+        public IEagerSessionOperations Eagerly => this;
         ILazySessionOperations ISyncAdvancedSessionOperation.Lazily
         {
             get { return Lazily; }
@@ -273,7 +360,7 @@ namespace Raven.Client.Documents
             get { return Eagerly; }
         }
 
-        public ILazySessionOperations Lazily { get; }
+        public ILazySessionOperations Lazily => this;
 
         /// <summary>
         /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
@@ -460,46 +547,6 @@ namespace Raven.Client.Documents
         {
             return Advanced.DocumentQuery<T>(indexName, isMapReduce);
         }
-        
-        public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var transformer = new TTransformer().TransformerName;
-            var configuration = new RavenLoadConfiguration();
-            if (configure != null)
-                configure(configuration);
-
-            return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
-        }
-
-        public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var transformer = new TTransformer().TransformerName;
-            var configuration = new RavenLoadConfiguration();
-            if (configure != null)
-                configure(configuration);
-
-            return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
-        }
-
-        public TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure)
-        {
-            throw new NotImplementedException();
-        }
-
-        public TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public TResult Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
-        {
-            throw new NotImplementedException();
-        }
 
         protected override JsonDocument GetJsonDocument(string documentKey)
         {
@@ -530,6 +577,14 @@ namespace Raven.Client.Documents
         
         public bool HasChanges { get; }
 
+        Client.ISyncAdvancedSessionOperation IDocumentSession.Advanced
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
+
         public void Defer(params ICommandData[] commands)
         {
             throw new NotImplementedException();
@@ -555,48 +610,17 @@ namespace Raven.Client.Documents
             throw new NotImplementedException();
         }
 
-        public T[] LoadInternal<T>(string[] ids)
-        {
-            var loadOeration = new LoadOperation(this);
-            loadOeration.ByIds(ids);
-
-            var command = loadOeration.CreateRequest();
-            if (command != null)
-            {
-                RequestExecuter.Execute(command, Context);
-                loadOeration.SetResult(command.Result);
-            }
-
-            return loadOeration.GetDocuments<T>();
-        }
-
-        public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
-        {
-            var loadOeration = new LoadOperation(this);
-            loadOeration.ByIds(ids);
-            loadOeration.WithIncludes(includes.Select(x=>x.Key).ToArray());
-
-            var command = loadOeration.CreateRequest();
-            if (command != null)
-            {
-                RequestExecuter.Execute(command, Context);
-                loadOeration.SetResult(command.Result);
-            }
-
-            return loadOeration.GetDocuments<T>();
-        }
-
-        public T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+        Linq.IRavenQueryable<T> IDocumentSession.Query<T>(string indexName, bool isMapReduce)
         {
             throw new NotImplementedException();
         }
 
-        public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+        Linq.IRavenQueryable<T> IDocumentSession.Query<T>()
         {
             throw new NotImplementedException();
         }
 
-        public Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
+        Linq.IRavenQueryable<T> IDocumentSession.Query<T, TIndexCreator>()
         {
             throw new NotImplementedException();
         }
