@@ -19,6 +19,12 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
+            using (var a = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
+            {
+                a.CanDelete();
+                if (DateTime.Now.Year == 2016)
+                    return;
+            }
             Console.WriteLine("Starting");
             using (var store = new DocumentStore
             {

@@ -338,7 +338,8 @@ namespace Raven.Server.Documents.Indexes
                 if (_documentDatabase.Configuration.Indexing.RunInMemory)
                     return;
 
-                var path = Path.Combine(_documentDatabase.Configuration.Indexing.IndexStoragePath, id.ToString());
+                var path = Path.Combine(_documentDatabase.Configuration.Indexing.IndexStoragePath,
+                    index.GetIndexNameSafeForFileSystem());
                 IOExtensions.DeleteDirectory(path);
             }
         }

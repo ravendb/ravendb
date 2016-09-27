@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' was already initialized.");
 
-                var indexPath = Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, $"{IndexId:0000}-{MakeIndexNameSafeForFileSystem()}");
+                var indexPath = Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, GetIndexNameSafeForFileSystem());
                 var options = documentDatabase.Configuration.Indexing.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly()
                     : StorageEnvironmentOptions.ForPath(indexPath);
@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private string MakeIndexNameSafeForFileSystem()
+        public string GetIndexNameSafeForFileSystem()
         {
             var name = Name;
             foreach (var invalidPathChar in Path.GetInvalidFileNameChars())
@@ -202,8 +202,8 @@ namespace Raven.Server.Documents.Indexes
                 name = name.Replace(invalidPathChar, '_');
             }
             if (name.Length < 64)
-                return name;
-            return name.Substring(0, 64);
+                return $"{IndexId:0000}-{name}";
+            return $"{IndexId:0000}-{name.Substring(0, 64)}";
         }
 
         protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase)
