@@ -264,11 +264,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             tx.Commit();
                         }
 
-                        long lastProcessedEtag;
-
                         using (context.OpenReadTransaction())
                         {
-                            var isStale = index.IsStale(context, out lastProcessedEtag);
+                            var isStale = index.IsStale(context);
                             Assert.True(isStale);
                         }
 
@@ -282,7 +280,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            var isStale = index.IsStale(context, out lastProcessedEtag);
+                            var isStale = index.IsStale(context);
                             Assert.False(isStale);
                         }
 
@@ -295,7 +293,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            var isStale = index.IsStale(context, out lastProcessedEtag);
+                            var isStale = index.IsStale(context);
                             Assert.True(isStale);
                         }
 
@@ -305,7 +303,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            var isStale = index.IsStale(context, out lastProcessedEtag);
+                            var isStale = index.IsStale(context);
                             Assert.False(isStale);
                         }
                     }

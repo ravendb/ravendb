@@ -146,19 +146,41 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/stats", "GET")]
         public Task Stats()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var name = GetStringQueryString("name", required: false);
 
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                throw new InvalidOperationException("There is not index with name: " + name);
+            IndexStats[] indexStats;
+            if (string.IsNullOrEmpty(name))
+                indexStats = Database.IndexStore
+                    .GetIndexes()
+                    .OrderBy(x => x.Name)
+                    .Select(x => x.GetStats())
+                    .ToArray();
+            else
+            {
+                var index = Database.IndexStore.GetIndex(name);
+                if (index == null)
+                    throw new InvalidOperationException("There is not index with name: " + name);
 
-            var stats = index.GetStats();
+                indexStats = new[] { index.GetStats() };
+            }
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteIndexStats(context, stats);
+                writer.WriteStartArray();
+                var first = true;
+                foreach (var stats in indexStats)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+
+                    first = false;
+                    writer.WriteIndexStats(context, stats);
+                }
+
+                writer.WriteEndArray();
+
             }
 
             return Task.CompletedTask;
@@ -190,8 +212,8 @@ namespace Raven.Server.Documents.Handlers
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             HttpContext.Response.StatusCode = Database.IndexStore.TryDeleteIndexIfExists(name)
-                ? (int) HttpStatusCode.NoContent
-                : (int) HttpStatusCode.NotFound;
+                ? (int)HttpStatusCode.NoContent
+                : (int)HttpStatusCode.NotFound;
 
             return Task.CompletedTask;
         }

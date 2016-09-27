@@ -84,8 +84,6 @@ namespace Raven.Client.Data
 
     public class IndexInformation
     {
-        public long LastProcessedEtag { get; set; }
-
         public int IndexId { get; set; }
 
         public string Name { get; set; }

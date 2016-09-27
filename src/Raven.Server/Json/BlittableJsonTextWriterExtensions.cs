@@ -639,10 +639,6 @@ namespace Raven.Server.Json
                 writer.WriteString((index.Name));
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(index.LastProcessedEtag)));
-                writer.WriteInteger(index.LastProcessedEtag);
-                writer.WriteComma();
-
                 writer.WritePropertyName((nameof(index.IndexId)));
                 writer.WriteInteger(index.IndexId);
                 writer.WriteComma();

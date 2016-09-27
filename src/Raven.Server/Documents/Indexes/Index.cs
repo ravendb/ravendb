@@ -362,7 +362,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public bool IsStale(DocumentsOperationContext databaseContext, out long lastProcessedEtag)
+        public bool IsStale(DocumentsOperationContext databaseContext)
         {
             Debug.Assert(databaseContext.Transaction != null);
 
@@ -370,12 +370,6 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (indexContext.OpenReadTransaction())
             {
-                lastProcessedEtag = 0;
-                foreach (var collection in Collections)
-                {
-                    var collectionEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
-                    lastProcessedEtag = Math.Max(lastProcessedEtag, collectionEtag);
-                }
                 return IsStale(databaseContext, indexContext);
             }
         }
