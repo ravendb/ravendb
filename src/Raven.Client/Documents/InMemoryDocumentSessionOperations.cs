@@ -118,13 +118,14 @@ namespace Raven.Client.Documents
         protected InMemoryDocumentSessionOperations(
             string databaseName,
             DocumentStoreBase documentStore,
+            DocumentSessionListeners listeners,
             RequestExecuter requestExecuter,
             Guid id)
         {
             Id = id;
             this.databaseName = databaseName;
             this.documentStore = documentStore;
-            this.theListeners = new DocumentSessionListeners(); // TODO Iftah, pass listeners as argument
+            this.theListeners = listeners;
             RequestExecuter = requestExecuter;
             _releaseOperationContext = requestExecuter.ContextPool.AllocateOperationContext(out Context);
             UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;

@@ -594,9 +594,10 @@ namespace Raven.Client.Documents
             timeout = waitTimeout;
         }
 
-        protected internal QueryOperation InitializeQueryOperation()
+        protected internal QueryOperation InitializeQueryOperation(bool isAsync = false)
         {
-            var indexQuery = GetIndexQuery(isAsync: false);
+            // TODO Iftah, should we use isAsync? GetIndexQuery doesn't use it...
+            var indexQuery = GetIndexQuery(isAsync: isAsync);
 
             if (beforeQueryExecutionAction != null)
                 beforeQueryExecutionAction(indexQuery);
@@ -799,7 +800,7 @@ namespace Raven.Client.Documents
             ClearSortHints(AsyncDatabaseCommands);
             ExecuteBeforeQueryListeners();
 
-            queryOperation = InitializeQueryOperation();
+            queryOperation = InitializeQueryOperation(isAsync: true);
             return await ExecuteActualQueryAsync().ConfigureAwait(false);
         }
 
@@ -1835,22 +1836,21 @@ If you really want to do in memory filtering on the data returned from the query
 
         protected virtual async Task<QueryOperation> ExecuteActualQueryAsync()
         {
-            throw new NotImplementedException();
-            /*theSession.IncrementRequestCount();
+            theSession.IncrementRequestCount();
             using (queryOperation.EnterQueryContext())
             {
                 queryOperation.LogQuery();
-                var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery).ConfigureAwait(false);
-
-                queryOperation.EnsureIsAcceptable(result);
+                var command = queryOperation.CreateRequest();
+                await theSession.RequestExecuter.ExecuteAsync(command, theSession.Context);
+                queryOperation.SetResult(command.Result);
 
                 InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
                 return queryOperation;
-            }*/
+            }
         }
 
         /// <summary>
-        ///   Generates the index query.
+        /// Generates the index query.
         /// </summary>
         /// <param name = "query">The query.</param>
         /// <returns></returns>

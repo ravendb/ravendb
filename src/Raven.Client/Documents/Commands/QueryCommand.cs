@@ -35,6 +35,7 @@ namespace Raven.Client.Documents.Commands
                 Method = method
             };
 
+            // TODO Iftah, if query string is too long, need to send as post.
             var indexQueryUrl = indexQuery.GetIndexQueryUrl(index, "queries", includeQuery: method == HttpMethod.Get);
 
             EnsureIsNotNullOrEmpty(indexQueryUrl, "index");

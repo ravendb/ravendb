@@ -21,7 +21,7 @@ namespace FastTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var newSession = store.OpenNewAsyncSession(new OpenSessionOptions()))
+                using (var newSession = store.OpenNewAsyncSession())
                 {
                     var user = await newSession.LoadAsync<User>("users/1");
                     Assert.NotNull(user);
@@ -42,7 +42,7 @@ namespace FastTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var newSession = store.OpenNewAsyncSession(new OpenSessionOptions()))
+                using (var newSession = store.OpenNewAsyncSession())
                 {
                     var user = await newSession.LoadAsync<User>(new[] { "users/1", "users/2" });
                     Assert.Equal(user.Length, 2);
@@ -62,7 +62,7 @@ namespace FastTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var newSession = store.OpenNewAsyncSession(new OpenSessionOptions()))
+                using (var newSession = store.OpenNewAsyncSession())
                 {
                     var user = await newSession.LoadAsync<User>(2);
                     Assert.NotNull(user);
@@ -83,7 +83,7 @@ namespace FastTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var newSession = store.OpenNewAsyncSession(new OpenSessionOptions()))
+                using (var newSession = store.OpenNewAsyncSession())
                 {
                     var users = await newSession.LoadAsync<User>(CancellationToken.None, 1,2);
                     Assert.Equal(users.Length, 2);
@@ -103,7 +103,7 @@ namespace FastTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var newSession = store.OpenNewAsyncSession(new OpenSessionOptions()))
+                using (var newSession = store.OpenNewAsyncSession())
                 {
                     var users = await newSession.LoadAsync<User>(new List<System.ValueType> { 1, 2 });
                     Assert.Equal(users.Length, 2);
