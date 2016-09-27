@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using Raven.Client.Document.Batches;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
@@ -1028,12 +1029,12 @@ more responsive application.
             KnownMissingIds.Remove(id);
         }
 
-        public void RegisterMissingIncludes(IEnumerable<RavenJObject> results, ICollection<string> includes)
+        public void RegisterMissingIncludes(BlittableJsonReaderArray results, ICollection<string> includes)
         {
             if (includes == null || includes.Any() == false)
                 return;
 
-            foreach (var result in results)
+            foreach (BlittableJsonReaderObject result in results)
             {
                 foreach (var include in includes)
                 {
@@ -1104,7 +1105,14 @@ more responsive application.
             return indexName;
         }
 
+        
         public bool CheckIfIdAlreadyIncluded(string[] ids, KeyValuePair<string, Type>[] includes)
+        {
+            return CheckIfIdAlreadyIncluded(ids, includes.Select(x => x.Key));
+        }
+
+
+        public bool CheckIfIdAlreadyIncluded(string[] ids, IEnumerable<string> includes)
         {
             foreach (var id in ids)
             {
@@ -1117,17 +1125,21 @@ more responsive application.
                 if (documentInfo.Entity == null)
                     return false;
 
+                var rawData = DocumentsById[id];
+
+                if (includes==null)
+                    continue;
+                
                 foreach (var include in includes)
                 {
                     var hasAll = true;
-                    /*IncludesUtil.Include(value.OriginalValue, include.Key, s =>
+                    IncludesUtil.Include(rawData.Document, include, s =>
                     {
                         hasAll &= IsLoaded(s);
                         return true;
                     });
                     if (hasAll == false)
-                        return false;*/
-                    throw new NotImplementedException();
+                        return false;
                 }
             }
             return true;
