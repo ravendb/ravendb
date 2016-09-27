@@ -138,6 +138,7 @@
     <Compile Include="FileHandling.cs" />
     <Compile Include="FileNamingTests.cs" />
     <Compile Include="Folders.cs" />
+    <Compile Include="Issues\RavenDB_5347.cs" />
     <Compile Include="Issues\RavenDB_3887.cs" />
     <Compile Include="Issues\RavenDB_3920.cs" />
     <Compile Include="Issues\RavenDB_3955.cs" />
