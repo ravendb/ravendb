@@ -85,7 +85,7 @@ namespace Raven.Client.FileSystem
             if (!filenames.Any())
                 return new FileHeader[0];
 
-            filenames = filenames.Select(FileHeader.Canonize);
+            filenames = filenames.Select(FileHeader.Canonize).ToList();
 
             // only load documents that aren't already cached
             var idsOfNotExistingObjects = filenames.Where(x => IsLoaded(x) == false && IsDeleted(x) == false)
@@ -96,13 +96,18 @@ namespace Raven.Client.FileSystem
             {
                 IncrementRequestCount();
 
-                var fileHeaders = await Commands.GetAsync(idsOfNotExistingObjects.ToArray());                                
-                foreach( var header in fileHeaders )
-                    AddToCache(header.FullPath, header);                
+                var fileHeaders = await Commands.GetAsync(idsOfNotExistingObjects.ToArray());
+                foreach (var header in fileHeaders)
+                {
+                    if (header == null)
+                        continue;
+
+                    AddToCache(header.FullPath, header);
+                }                  
             }
 
             var result = new List<FileHeader>();
-            foreach ( var file in filenames )
+            foreach (var file in filenames)
             {
                 FileHeader obj = null;
                 entitiesByKey.TryGetValue(file, out obj);
