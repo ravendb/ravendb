@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.Indexes
             using (var tx = context.OpenReadTransaction())
             {
                 Priority = _indexStorage.ReadPriority(tx);
-                _lastQueryingTime = SystemTime.UtcNow;
+                _lastQueryingTime = DocumentDatabase.Time.GetUtcNow();
                 _lastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
             }
         }
@@ -384,11 +384,9 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var collection in Collections)
             {
-                long lastDocEtag;
-                if (collection == Constants.Indexing.AllDocumentsCollection)
-                    lastDocEtag = DocumentsStorage.ReadLastEtag(databaseContext.Transaction.InnerTransaction);
-                else
-                    lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                var lastDocEtag = collection == Constants.Indexing.AllDocumentsCollection
+                    ? DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction)
+                    : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
 
                 var lastProcessedDocEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
@@ -397,7 +395,10 @@ namespace Raven.Server.Documents.Indexes
                     if (lastDocEtag > lastProcessedDocEtag)
                         return true;
 
-                    var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
+                    var lastTombstoneEtag = collection == Constants.Indexing.AllDocumentsCollection
+                        ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
+                        : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
+
                     var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                     if (lastTombstoneEtag > lastProcessedTombstoneEtag)
@@ -910,7 +911,7 @@ namespace Raven.Server.Documents.Indexes
             if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
                 SetPriority(IndexingPriority.Normal);
 
-            MarkQueried(SystemTime.UtcNow);
+            MarkQueried(DocumentDatabase.Time.GetUtcNow());
 
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, null);
 

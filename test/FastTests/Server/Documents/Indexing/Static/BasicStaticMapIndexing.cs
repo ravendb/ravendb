@@ -220,5 +220,97 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }
             }
         }
+
+        [Fact]
+        public void StalenessCalculationShouldWorkForAllDocsIndexes()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                using (var index = StaticMapIndex.CreateNew(1, new IndexDefinition()
+                {
+                    Name = "Index1",
+                    Maps = { "from doc in docs select new { doc.Name }" },
+                    Type = IndexType.Map
+                }, database))
+                {
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    {
+                        using (var tx = context.OpenWriteTransaction())
+                        {
+                            using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
+                            {
+                                ["Name"] = "John",
+                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                {
+                                    [Constants.Headers.RavenEntityName] = "Users"
+                                }
+                            }))
+                            {
+                                database.DocumentsStorage.Put(context, "users/1", null, doc);
+                            }
+
+                            using (var doc = CreateDocument(context, "people/1", new DynamicJsonValue
+                            {
+                                ["Name"] = "Edward",
+                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                {
+                                    [Constants.Headers.RavenEntityName] = "People"
+                                }
+                            }))
+                            {
+                                database.DocumentsStorage.Put(context, "people/1", null, doc);
+                            }
+
+                            tx.Commit();
+                        }
+
+                        long lastProcessedEtag;
+
+                        using (context.OpenReadTransaction())
+                        {
+                            var isStale = index.IsStale(context, out lastProcessedEtag);
+                            Assert.True(isStale);
+                        }
+
+                        var batchStats = new IndexingRunStats();
+                        var scope = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
+
+                        Assert.Equal(2, batchStats.MapAttempts);
+                        Assert.Equal(2, batchStats.MapSuccesses);
+                        Assert.Equal(0, batchStats.MapErrors);
+
+                        using (context.OpenReadTransaction())
+                        {
+                            var isStale = index.IsStale(context, out lastProcessedEtag);
+                            Assert.False(isStale);
+                        }
+
+                        using (var tx = context.OpenWriteTransaction())
+                        {
+                            database.DocumentsStorage.Delete(context, "people/1", null);
+
+                            tx.Commit();
+                        }
+
+                        using (context.OpenReadTransaction())
+                        {
+                            var isStale = index.IsStale(context, out lastProcessedEtag);
+                            Assert.True(isStale);
+                        }
+
+                        batchStats = new IndexingRunStats();
+                        scope = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
+
+                        using (context.OpenReadTransaction())
+                        {
+                            var isStale = index.IsStale(context, out lastProcessedEtag);
+                            Assert.False(isStale);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
