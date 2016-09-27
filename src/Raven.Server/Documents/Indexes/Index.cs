@@ -118,11 +118,11 @@ namespace Raven.Server.Documents.Indexes
                 _handleAllDocs = true;
         }
 
-        public static Index Open(int indexId, DocumentDatabase documentDatabase)
+        public static Index Open(int indexId, string path, DocumentDatabase documentDatabase)
         {
             StorageEnvironment environment = null;
 
-            var options = StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, indexId.ToString()));
+            var options = StorageEnvironmentOptions.ForPath(path);
             try
             {
                 options.SchemaVersion = 1;
@@ -176,9 +176,10 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' was already initialized.");
 
+                var indexPath = Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, GetIndexNameSafeForFileSystem());
                 var options = documentDatabase.Configuration.Indexing.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly()
-                    : StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, IndexId.ToString()));
+                    : StorageEnvironmentOptions.ForPath(indexPath);
 
                 options.SchemaVersion = 1;
                 try
@@ -191,6 +192,18 @@ namespace Raven.Server.Documents.Indexes
                     throw;
                 }
             }
+        }
+
+        public string GetIndexNameSafeForFileSystem()
+        {
+            var name = Name;
+            foreach (var invalidPathChar in Path.GetInvalidFileNameChars())
+            {
+                name = name.Replace(invalidPathChar, '_');
+            }
+            if (name.Length < 64)
+                return $"{IndexId:0000}-{name}";
+            return $"{IndexId:0000}-{name.Substring(0, 64)}";
         }
 
         protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase)
@@ -272,7 +285,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _indexingThread = new Thread(ExecuteIndexing)
                 {
-                    Name = "Indexing of " + Name,
+                    Name = "Indexing of " + Name + " of " + _indexStorage.DocumentDatabase.Name,
                     IsBackground = true
                 };
 
@@ -297,7 +310,10 @@ namespace Raven.Server.Documents.Indexes
 
                 var indexingThread = _indexingThread;
                 _indexingThread = null;
-                indexingThread.Join();
+                //Cancelation was requested, the thread will exit the indexing loop and terminate.
+                //If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
+                if(Thread.CurrentThread != indexingThread)
+                    indexingThread.Join();
             }
         }
 
@@ -513,7 +529,17 @@ namespace Raven.Server.Documents.Indexes
 
                         try
                         {
-                            _mre.Wait(cts.Token);
+                            if (_mre.Wait(5000, cts.Token) == false)
+                            {
+                                // there is no work to be done, and hasn't been for a while,
+                                // so this is a good time to release resource we won't need 
+                                // anytime soon
+                                ByteStringMemoryCache.Clean(keep: 1);
+                                DocumentDatabase.DocumentsStorage.ContextPool.Clean(keep: 1);
+                                _contextPool.Clean(keep: 1);
+                                IndexPersistence.Clean();
+                                _mre.Wait(cts.Token);
+                            }
                         }
                         catch (OperationCanceledException)
                         {
@@ -619,7 +645,7 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public abstract void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
+        public abstract int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         private void HandleIndexChange(IndexChangeNotification notification)
         {

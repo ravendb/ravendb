@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Threading;
 using Sparrow.Binary;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
@@ -17,7 +14,7 @@ namespace Sparrow.Json
         private int _allocated;
         private int _used;
 
-        private List<IntPtr> _olderBuffers;
+        private List<Tuple<IntPtr,int>> _olderBuffers;
 
         private bool _isDisposed;
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
@@ -26,13 +23,14 @@ namespace Sparrow.Json
 
         public ArenaMemoryAllocator(int initialSize = 1024 * 1024)
         {
-            _ptrStart = _ptrCurrent = (byte*)Marshal.AllocHGlobal(initialSize).ToPointer();
+            _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(initialSize);
             _allocated = initialSize;
             _used = 0;
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"ArenaMemoryAllocator was created with initial capacity of {initialSize:#,#;;0} bytes");
         }
+
 
         public bool GrowAllocation(AllocatedMemoryData allocation, int sizeIncrease)
         {
@@ -61,7 +59,7 @@ namespace Sparrow.Json
             var allocation = new AllocatedMemoryData()
             {
                 SizeInBytes = size,
-                Address = new IntPtr(_ptrCurrent)
+                Address = _ptrCurrent
             };
 
             _ptrCurrent += size;
@@ -101,13 +99,14 @@ namespace Sparrow.Json
             }
 
                 
-            var newBuffer = (byte*)Marshal.AllocHGlobal(newSize).ToPointer();
-            _allocated = newSize;
+            var newBuffer = NativeMemory.AllocateMemory(newSize);
 
             // Save the old buffer pointer to be released when the arena is reset
             if (_olderBuffers == null)
-                _olderBuffers = new List<IntPtr>();
-            _olderBuffers.Add(new IntPtr(_ptrStart));
+                _olderBuffers = new List<Tuple<IntPtr, int>>();
+            _olderBuffers.Add(Tuple.Create(new IntPtr(_ptrStart), _allocated));
+
+            _allocated = newSize;
 
             _ptrStart = newBuffer;
             _ptrCurrent = _ptrStart;
@@ -125,7 +124,7 @@ namespace Sparrow.Json
             {
                 foreach (var unusedBuffer in _olderBuffers)
                 {
-                    Marshal.FreeHGlobal(unusedBuffer);
+                    NativeMemory.Free((byte*)unusedBuffer.Item1, unusedBuffer.Item2);
                 }
                 _olderBuffers = null;
             }
@@ -147,15 +146,15 @@ namespace Sparrow.Json
 
             ResetArena();
 
-            Marshal.FreeHGlobal(new IntPtr(_ptrStart));
+            NativeMemory.Free(_ptrStart, _allocated);
 
             GC.SuppressFinalize(this);
         }
 
         public void Return(AllocatedMemoryData allocation)
         {
-            if ((byte*)allocation.Address != _ptrCurrent - allocation.SizeInBytes ||
-                (byte*)allocation.Address < _ptrStart)
+            if (allocation.Address != _ptrCurrent - allocation.SizeInBytes ||
+                allocation.Address < _ptrStart)
                 return;
             // since the returned allocation is at the end of the arena, we can just move
             // the pointer back
@@ -164,9 +163,9 @@ namespace Sparrow.Json
         }
     }
 
-    public class AllocatedMemoryData
+    public unsafe class AllocatedMemoryData
     {
-        public IntPtr Address;
+        public byte* Address;
         public int SizeInBytes;
     }
 }

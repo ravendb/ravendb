@@ -82,6 +82,7 @@ namespace Raven.Server.ServerWide
 
             try
             {
+                StorageEnvironment.MaxConcurrentFlushes = Configuration.Storage.MaxConcurrentFlushes;
                 _env = new StorageEnvironment(options);
                 using (var tx = _env.WriteTransaction())
                 {
@@ -106,7 +107,13 @@ namespace Raven.Server.ServerWide
         public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id)
         {
             var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-            var reader = items.ReadByKey(Slice.From(ctx.Allocator, id.ToLowerInvariant()));
+
+            TableValueReader reader;
+            Slice key;
+            using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
+            {
+                reader = items.ReadByKey(key);
+            }
             if (reader == null)
                 return null;
             int size;
@@ -117,7 +124,11 @@ namespace Raven.Server.ServerWide
         public void Delete(TransactionOperationContext ctx, string id)
         {
             var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-            items.DeleteByKey(Slice.From(ctx.Allocator, id.ToLowerInvariant()));
+            Slice key;
+            using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
+            {
+                items.DeleteByKey(key);
+            }
         }
 
         public class Item
@@ -129,17 +140,20 @@ namespace Raven.Server.ServerWide
         public IEnumerable<Item> StartingWith(TransactionOperationContext ctx, string prefix, int start, int take)
         {
             var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-            var loweredPrefix = Slice.From(ctx.Allocator, prefix.ToLowerInvariant());
-            foreach (var result in items.SeekByPrimaryKey(loweredPrefix, startsWith: true))
+            Slice loweredPrefix;
+            using (Slice.From(ctx.Allocator, prefix.ToLowerInvariant(), out loweredPrefix))
             {
-                if (start > 0)
+                foreach (var result in items.SeekByPrimaryKey(loweredPrefix, startsWith: true))
                 {
-                    start--;
-                    continue;
+                    if (start > 0)
+                    {
+                        start--;
+                        continue;
+                    }
+                    if (take-- <= 0)
+                        yield break;
+                    yield return GetCurrentItem(ctx, result);
                 }
-                if (take-- <= 0)
-                    yield break;
-                yield return GetCurrentItem(ctx, result);
             }
         }
 
@@ -156,16 +170,20 @@ namespace Raven.Server.ServerWide
 
         public void Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc)
         {
-            var idAsSlice = Slice.From(ctx.Allocator, id);
-            var loweredId = Slice.From(ctx.Allocator, id.ToLowerInvariant());
-            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-
-            items.Set(new TableValueBuilder
+            Slice idAsSlice;
+            Slice loweredId;
+            using (Slice.From(ctx.Allocator, id, out idAsSlice))
+            using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out loweredId))
             {
-                loweredId,
-                idAsSlice,
-                {doc.BasePointer, doc.Size}
-            });
+                var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
+
+                items.Set(new TableValueBuilder
+                {
+                    loweredId,
+                    idAsSlice,
+                    {doc.BasePointer, doc.Size}
+                });
+            }
         }
 
         public void Dispose()

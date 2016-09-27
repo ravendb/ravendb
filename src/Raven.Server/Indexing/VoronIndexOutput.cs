@@ -53,15 +53,24 @@ namespace Raven.Server.Indexing
 
             var size = _file.Length;
 
-            var numberOfChunks = size/MaxFileChunkSize + (size%MaxFileChunkSize != 0 ? 1 : 0);
+            var numberOfChunks = size / MaxFileChunkSize + (size % MaxFileChunkSize != 0 ? 1 : 0);
 
+            Slice key;
             for (int i = 0; i < numberOfChunks; i++)
             {
-                tree.Add(Slice.From(_tx.Allocator, i.ToString("D9")), new LimitedStream(_file, _file.Position, Math.Min(_file.Position + MaxFileChunkSize, _file.Length)));
+                using (Slice.From(_tx.Allocator, i.ToString("D9"), out key))
+                {
+                    tree.Add(key, new LimitedStream(_file, _file.Position, Math.Min(_file.Position + MaxFileChunkSize, _file.Length)));
+                }
             }
 
             var files = _tx.ReadTree("Files");
-            files.Add(Slice.From(_tx.Allocator, _name), Slice.From(_tx.Allocator, (byte*)&size, sizeof(long)));
+            Slice val;
+            using (Slice.From(_tx.Allocator, _name, out key))
+            using (Slice.From(_tx.Allocator, (byte*)&size, sizeof(long), out val))
+            {
+                files.Add(key, val);
+            }
         }
     }
 }

@@ -145,7 +145,12 @@ namespace Raven.Server.Documents
                     {(byte*)&now, sizeof (long)}
                 };
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
-                var existingSubscription = table.ReadByKey(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long)));
+                TableValueReader existingSubscription;
+                Slice subscriptionSlice;
+                using (Slice.External(tx.Allocator, (byte*) &subscriptionId, sizeof(long), out subscriptionSlice))
+                {
+                    existingSubscription = table.ReadByKey(subscriptionSlice);
+                }
                 table.Update(existingSubscription.Id, tvb);
                 tx.Commit();
             }
@@ -176,7 +181,12 @@ namespace Raven.Server.Documents
             var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
             var subscriptionId = Bits.SwapBytes((ulong)id);
 
-            var config = table.ReadByKey(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long)));
+            TableValueReader config;
+            Slice subsriptionSlice;
+            using(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long),out subsriptionSlice))
+            {
+                config = table.ReadByKey(subsriptionSlice);
+            }
 
             if (config == null)
                 throw new SubscriptionDoesNotExistException(
@@ -191,10 +201,15 @@ namespace Raven.Server.Documents
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 var subscriptionId = Bits.SwapBytes((ulong)id);
 
-                if (table.VerifyKeyExists(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(ulong))) == false)
-                    throw new SubscriptionDoesNotExistException(
-                        "There is no subscription configuration for specified identifier (id: " + id + ")");
+                Slice subsriptionSlice;
+                using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subsriptionSlice))
+                {
+                    if (table.VerifyKeyExists(subsriptionSlice) == false)
+                        throw new SubscriptionDoesNotExistException(
+                            "There is no subscription configuration for specified identifier (id: " + id + ")");
+                }
             }
+               
         }
 
 
@@ -212,7 +227,12 @@ namespace Raven.Server.Documents
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
 
                 long subscriptionId = id;
-                TableValueReader subscription = table.ReadByKey(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(ulong)));
+                TableValueReader subscription;
+                Slice subsriptionSlice;
+                using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subsriptionSlice))
+                {
+                    subscription = table.ReadByKey(subsriptionSlice);
+                }
                 table.Delete(subscription.Id);
 
                 tx.Commit();
@@ -428,7 +448,12 @@ namespace Raven.Server.Documents
     {
         public const string IdsTree = "SubscriptionsIDs";
         public const string SubsTree = "Subscriptions";
-        public static readonly Slice Id = Slice.From(StorageEnvironment.LabelsContext, "Id", ByteStringType.Immutable);
+        public static readonly Slice Id;
+
+        static SubscriptionSchema()
+        {
+            Slice.From(StorageEnvironment.LabelsContext, "Id", ByteStringType.Immutable, out Id);
+        }
 
         public static class SubscriptionTable
         {

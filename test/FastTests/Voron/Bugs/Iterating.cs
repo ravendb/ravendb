@@ -35,7 +35,9 @@ namespace FastTests.Voron.Bugs
                 using (var snapshot = env.ReadTransaction())
                 using (var iterator = snapshot.ReadTree("tree").Iterate(false))
                 {
-                    Assert.False(iterator.Seek(Slice.From(snapshot.Allocator, @"Raven\Filesystem\")));
+                    Slice v;
+                    Slice.From(snapshot.Allocator, @"Raven\Filesystem\", out v);
+                    Assert.False(iterator.Seek(v));
                 }
             }
         }

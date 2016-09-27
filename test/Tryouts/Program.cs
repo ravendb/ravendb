@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using FastTests.Server.Documents.Replication;
+using FastTests.Voron.Storage;
 using Raven.Client.Document;
 using Raven.Client.Smuggler;
+using SlowTests.SlowTests.Bugs;
 using SlowTests.Voron;
 using Voron;
 
@@ -16,6 +19,12 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
+            using (var a = new SlowTests.MailingList.spokeypokey.spokeypokey3())
+            {
+                a.Can_deal_with_nulls2();
+                if (DateTime.Now.Year == 2016)
+                    return;
+            }
             Console.WriteLine("Starting");
             using (var store = new DocumentStore
             {
@@ -25,23 +34,33 @@ namespace Tryouts
             {
                 store.Initialize();
 
-            var sp = Stopwatch.StartNew();
+                var sp = Stopwatch.StartNew();
                 store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-19 13-00.ravendbdump.gzip", CancellationToken.None)
                     .Wait();
 
 
                 Console.WriteLine("Inserted in " + sp.Elapsed);
                 sp.Restart();
+                var done = new HashSet<string>();
                 while (true)
                 {
-                    if (store.DatabaseCommands.GetStatistics().Indexes.All(x=>x.IsStale == false))
+                    bool all = true;
+                    foreach (var index in store.DatabaseCommands.GetStatistics().Indexes)
                     {
-                        break;
+                        if (index.IsStale)
+                        {
+                            all = false;
+                        }
+                        else if (done.Add(index.Name))
+                        {
+                            Console.WriteLine(index.Name + " done in " + sp.Elapsed);
+                        }
                     }
+                    if (all)
+                        break;
                     Thread.Sleep(100);
                 }
                 Console.WriteLine("Indexed in " + sp.Elapsed);
-
             }
         }
 

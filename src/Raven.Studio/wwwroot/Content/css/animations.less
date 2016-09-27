@@ -1,37 +1,29 @@
 @-webkit-keyframes fadeoutzoom {
-    0%, 100% {
-        -webkit-transition-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
-        transition-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
-    }
 
     0% {
         -webkit-transform: scale3d(1, 1, 1);
         transform: scale3d(1, 1, 1);
-        opacity:.5;
+        opacity:1;
     }
 
     100% {
-        -webkit-transform: scale3d(5, 5, 5);
-        transform: scale3d(5, 5, 5);
+        -webkit-transform: scale3d(10, 10, 10);
+        transform: scale3d(10, 10, 10);
         opacity:0;
     }
 }
 
 @keyframes fadeoutzoom {
-    0%, 100% {
-        -webkit-transition-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
-        transition-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
-    }
-
     0% {
         -webkit-transform: scale3d(1, 1, 1);
         transform: scale3d(1, 1, 1);
-        opacity:.5;
+        opacity:1;
     }
 
+
     100% {
-        -webkit-transform: scale3d(5, 5, 5);
-        transform: scale3d(5, 5, 5);
+        -webkit-transform: scale3d(10, 10, 10);
+        transform: scale3d(10, 10, 10);
         opacity:0;
     }
 }

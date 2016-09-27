@@ -168,7 +168,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
             var index1 =
                 database.IndexStore.CreateIndex(
                     new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
-            var path1 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index1.ToString());
+            var path1 = Path.Combine(database.Configuration.Indexing.IndexStoragePath,
+                database.IndexStore.GetIndex(index1).GetIndexNameSafeForFileSystem());
 
             if (database.Configuration.Core.RunInMemory == false)
                 Assert.True(Directory.Exists(path1));
@@ -176,7 +177,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
             var index2 =
                 database.IndexStore.CreateIndex(
                     new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
-            var path2 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index2.ToString());
+            var path2 = Path.Combine(database.Configuration.Indexing.IndexStoragePath,
+                database.IndexStore.GetIndex(index2).GetIndexNameSafeForFileSystem());
 
             if (database.Configuration.Core.RunInMemory == false)
                 Assert.True(Directory.Exists(path2));
@@ -217,7 +219,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
             var index1 =
                 database.IndexStore.CreateIndex(
                     new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
-            var path1 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index1.ToString());
+
+            
+
+            var path1 = Path.Combine(database.Configuration.Indexing.IndexStoragePath,
+                database.IndexStore.GetIndex(index1).GetIndexNameSafeForFileSystem());
 
             if (database.Configuration.Core.RunInMemory == false)
                 Assert.True(Directory.Exists(path1));
@@ -225,7 +231,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
             var index2 =
                 database.IndexStore.CreateIndex(
                     new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
-            var path2 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index2.ToString());
+            var path2 = Path.Combine(database.Configuration.Indexing.IndexStoragePath,
+                database.IndexStore.GetIndex(index2).GetIndexNameSafeForFileSystem());
 
             if (database.Configuration.Core.RunInMemory == false)
                 Assert.True(Directory.Exists(path2));
@@ -233,7 +240,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
             Assert.Equal(2, database.IndexStore.GetIndexesForCollection("Users").Count());
 
             var index3 = database.IndexStore.ResetIndex(index1);
-            var path3 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index3.ToString());
+            var path3 = Path.Combine(database.Configuration.Indexing.IndexStoragePath,
+                database.IndexStore.GetIndex(index3).GetIndexNameSafeForFileSystem());
 
             Assert.NotEqual(index3, index1);
             if (database.Configuration.Core.RunInMemory == false)
@@ -246,7 +254,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
             Assert.Equal(2, indexes.Count);
 
             var index4 = database.IndexStore.ResetIndex(index2);
-            var path4 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index4.ToString());
+            var path4 = Path.Combine(database.Configuration.Indexing.IndexStoragePath,
+                database.IndexStore.GetIndex(index4).GetIndexNameSafeForFileSystem());
 
             Assert.NotEqual(index4, index2);
             if (database.Configuration.Core.RunInMemory == false)
@@ -1081,13 +1090,15 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 };
 
                 Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })));
-                indexName = database.IndexStore.GetIndex(1).Name;
+                var index = database.IndexStore.GetIndex(1);
+                indexName = index.Name;
 
-                indexStoragePath = database.Configuration.Indexing.IndexStoragePath;
+                indexStoragePath = Path.Combine(database.Configuration.Indexing.IndexStoragePath, 
+                    index.GetIndexNameSafeForFileSystem());
             }
 
-            IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "1", "headers.one"));
-            IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "1", "headers.two"));
+            IOExtensions.DeleteFile(Path.Combine(indexStoragePath,"headers.one"));
+            IOExtensions.DeleteFile(Path.Combine(indexStoragePath,"headers.two"));
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false))
             {

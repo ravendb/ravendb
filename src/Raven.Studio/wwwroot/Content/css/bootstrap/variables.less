@@ -26,9 +26,9 @@
 @brand-info:            #4d90b3;
 @brand-info-light:      #84d5f7;
 
-@brand-warning-dark:    #a69532;
-@brand-warning:         #e6cc46;
-@brand-warning-light:   #fee480;
+@brand-warning-dark:    #a68f42;
+@brand-warning:         #f7d631;
+@brand-warning-light:   #ffe066;
 
 @brand-danger-dark:     #793233;
 @brand-danger:          #e55151;
@@ -203,7 +203,8 @@
 @input-bg:                       transparent;
 //** `<input disabled>` background color
 @input-bg-disabled:              transparent;
-@input-bg-disabled-image:        url("../../img/disabled-input-bkg.png");
+@input-bg-disabled-image:        repeating-linear-gradient(-45deg, fadeout(@gray-darker,75%), fadeout(@gray-darker,75%) 3px, fadeout(#FFF,100%) 3px, fadeout(#FFF,100%) 6px);
+    //url("../../img/disabled-input-bkg.png");
 
 //** Text color for `<input>`s
 @input-color:                    @gray-lighter;

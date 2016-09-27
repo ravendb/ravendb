@@ -7,6 +7,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using Sparrow.Utils;
 
 namespace Sparrow.Compression
 {
@@ -66,7 +67,7 @@ namespace Sparrow.Compression
                 var byteCount = Encoding.UTF8.GetByteCount(termsTable[i]);
                 if (byteCount > byte.MaxValue)
                     throw new InvalidOperationException("Term " + termsTable[i] + " is too big");
-                var ptr = (byte*)Marshal.AllocHGlobal(byteCount + 2);
+                var ptr = (byte*)NativeMemory.AllocateMemory(byteCount + 2);
                 _termsTableBytes[i] = ptr;
                 ptr[0] = (byte)byteCount;
                 fixed (char* pChars = termsTable[i])

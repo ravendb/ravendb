@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public abstract unsafe class ReduceMapResultsBase<T> : IIndexingWork where T : IndexDefinitionBase
     {
-        public static readonly Slice PageNumberSlice = Slice.From(StorageEnvironment.LabelsContext, "PageNumber", ByteStringType.Immutable);
+        public static readonly Slice PageNumberSlice;
         private Logger _logger;
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
         protected readonly T _indexDefinition;
@@ -43,6 +43,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _metrics = metrics;
             _mapReduceContext = mapReduceContext;
             _logger = LoggingSource.Instance.GetLogger<ReduceMapResultsBase<T>>(indexStorage.DocumentDatabase.Name);
+        }
+
+        static ReduceMapResultsBase()
+        {
+            Slice.From(StorageEnvironment.LabelsContext, "PageNumber", ByteStringType.Immutable, out PageNumberSlice);
         }
 
         public string Name => "Reduce";
@@ -189,7 +194,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     writer.DeleteReduceResult(reduceKeyHash, stats);
 
                     var emptyPageNumber = page.PageNumber;
-                    table.DeleteByKey(Slice.External(indexContext.Allocator, (byte*) &emptyPageNumber, sizeof(long)));
+                    Slice pageNumSlice;
+                    using(Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long),out pageNumSlice))
+                        table.DeleteByKey(pageNumSlice);
 
                     continue;
                 }
@@ -239,13 +246,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
 
             long tmp = 0;
-            var pageNumberSlice = Slice.External(indexContext.Allocator, (byte*) &tmp, sizeof(long));
-            foreach (var freedPage in modifiedStore.FreedPages)
+            Slice pageNumberSlice ;
+            using (Slice.External(indexContext.Allocator, (byte*) &tmp, sizeof(long), out pageNumberSlice))
             {
-                tmp = freedPage;
-                table.DeleteByKey(pageNumberSlice);
+                foreach (var freedPage in modifiedStore.FreedPages)
+                {
+                    tmp = freedPage;
+                    table.DeleteByKey(pageNumberSlice);
+                }
             }
-
             while (parentPagesToAggregate.Count > 0)
             {
                 token.ThrowIfCancellationRequested();
@@ -328,7 +337,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             for (int i = 0; i < page.NumberOfEntries; i++)
             {
                 var childPageNumber = IPAddress.HostToNetworkOrder(page.GetNode(i)->PageNumber);
-                var tvr = table.ReadByKey(Slice.External(indexContext.Allocator, (byte*)&childPageNumber, sizeof(long)));
+                Slice childPageNumberSlice;
+                TableValueReader tvr;
+                using(Slice.External(indexContext.Allocator, (byte*)&childPageNumber, sizeof(long),out childPageNumberSlice))
+                    tvr = table.ReadByKey(childPageNumberSlice);
                 if (tvr == null)
                 {
                     throw new InvalidOperationException("Couldn't find pre-computed results for existing page " + childPageNumber);

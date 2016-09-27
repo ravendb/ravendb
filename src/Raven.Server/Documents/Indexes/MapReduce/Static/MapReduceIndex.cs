@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, StaticIndexDocsEnumerator.EnumerationType.Index);
         }
 
-        public override void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             AnonymusObjectToBlittableMapResultsEnumerableWrapper wrapper;
             if (_enumerationWrappers.TryGetValue(CurrentIndexingScope.Current.SourceCollection, out wrapper) == false)
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             wrapper.InitializeForEnumeration(mapResults, indexContext);
 
-            PutMapResults(key, wrapper, indexContext);
+            return PutMapResults(key, wrapper, indexContext);
         }
 
         public override int? ActualMaxNumberOfIndexOutputs

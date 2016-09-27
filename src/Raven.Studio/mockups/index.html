@@ -55,7 +55,7 @@
          data-load="partials/menu.html">
     </nav>
 
-    <div id="notification-center" 
+    <div id="notification-center"
          data-load="partials/notification-center.html">
     </div>
 
@@ -605,9 +605,11 @@
                                 </p>
                                 <h5>Addons:</h5>
                                 <p class="text-center">
-                                    <button class="btn btn-default"><span class="icon-info"></span> icon-*</button>
-                                    <button class="btn btn-default"><span class="global-spinner"></span> global spinner</button>
-
+                                    <button class="btn btn-xs btn-default"><span class="icon-info"></span> icon-info</button>
+                                    <button class="btn btn-sm btn-default"><span class="icon-info"></span> icon-info</button>
+                                    <button class="btn btn-default"><span class="icon-info"></span> icon-info</button>
+                                    <button class="btn btn-lg btn-default"><span class="icon-info"></span>icon-info</button><br />                                 
+                                    <button class="btn btn-default btn-spinner">.btn-spinner</button>
                                 </p>
                                 <hr />
                                 <h5>description:</h5>
@@ -664,7 +666,28 @@
                     </div>
                 </div>
             </section>
+            <h2>Inline editor</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <p>
+                        <div class="editable-input-inline" id="editable-input-example">
+                            <span class="value-container">
+                                <span class="static-name padding padding-xs">234758972348</span>
+                                <input type="text" class="form-control edit-inline padding padding-xs" value="234758972348">
+                            </span>
+                            &nbsp;
+                            <button class="edit-button btn-toggle btn btn-sm" data-target="#editable-input-example" data-class="edit">
+                                <i class="icon-edit"></i>
+                                <span class="text"></span>
+                            </button>
 
+                        </div>
+                    </p>
+                    <small class="bg-info padding padding-sm">
+                        <span class="icon-info"></span> If you want to add padding to the text please rememer to add padding classes (eg. ".padding.padding-sm") to both .statnic-name and .edit-inline.
+                    </small>
+                </div>
+            </section>
             <h2>Toggles</h2>
             <section class="panel">
                 <div class="panel-body">
@@ -1017,6 +1040,40 @@
                                         Danger
                                     </label>
                                 </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <h2>Horizontal form</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <form class="form-horizontal">
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-2 control-label">Email</label>
+                            <div class="col-sm-4">
+                                <input type="email" class="form-control" id="inputEmail3" placeholder="Email">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-2 control-label">Password</label>
+                            <div class="col-sm-4">
+                                <input type="password" class="form-control" id="inputPassword3" placeholder="Password">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-4">
+                                <div class="checkbox">
+                                    <label>
+                                        <input type="checkbox"> Remember me
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <button type="submit" class="btn btn-primary">Sign in</button>
                             </div>
                         </div>
                     </form>

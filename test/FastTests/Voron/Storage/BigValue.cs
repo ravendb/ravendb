@@ -28,7 +28,9 @@ namespace FastTests.Voron.Storage
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                tree.Add(Slice.From(Allocator, BitConverter.GetBytes(1203)), new MemoryStream(buffer));
+                Slice key;
+                Slice.From(Allocator, BitConverter.GetBytes(1203), out key);
+                tree.Add(key, new MemoryStream(buffer));
                 tx.Commit();
             }
 
@@ -42,14 +44,18 @@ namespace FastTests.Voron.Storage
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                tree.Delete(Slice.From(Allocator, BitConverter.GetBytes(1203)));
+                Slice key;
+                Slice.From(Allocator, BitConverter.GetBytes(1203), out key);
+                tree.Delete(key);
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var readResult = tree.Read(Slice.From(Allocator, BitConverter.GetBytes(1203)));
+                Slice key;
+                Slice.From(Allocator, BitConverter.GetBytes(1203), out key);
+                var readResult = tree.Read(key);
                 Assert.Null(readResult);
             }
 
@@ -59,7 +65,9 @@ namespace FastTests.Voron.Storage
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var readResult = tree.Read(Slice.From(Allocator, BitConverter.GetBytes(1203)));
+                Slice key;
+                Slice.From(Allocator, BitConverter.GetBytes(1203), out key);
+                var readResult = tree.Read(key);
                 Assert.Null(readResult);
             }
 
@@ -68,14 +76,18 @@ namespace FastTests.Voron.Storage
                 buffer = new byte[1024 * 1024 * 3 + 1238];
                 random.NextBytes(buffer);
                 var tree = tx.CreateTree("foo");
-                tree.Add(Slice.From(Allocator, BitConverter.GetBytes(1203)), new MemoryStream(buffer));
+                Slice key;
+                Slice.From(Allocator, BitConverter.GetBytes(1203), out key);
+                tree.Add(key, new MemoryStream(buffer));
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var readResult = tree.Read(Slice.From(Allocator, BitConverter.GetBytes(1203)));
+                Slice key;
+                Slice.From(Allocator, BitConverter.GetBytes(1203), out key);
+                var readResult = tree.Read(key);
                 Assert.NotNull(readResult);
 
                 var memoryStream = new MemoryStream();
@@ -90,7 +102,9 @@ namespace FastTests.Voron.Storage
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var readResult = tree.Read(Slice.From(Allocator, BitConverter.GetBytes(1203)));
+                Slice key;
+                Slice.From(Allocator, BitConverter.GetBytes(1203), out key);
+                var readResult = tree.Read(key);
                 Assert.NotNull(readResult);
 
                 var memoryStream = new MemoryStream();
@@ -104,7 +118,9 @@ namespace FastTests.Voron.Storage
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var readResult = tree.Read(Slice.From(Allocator, BitConverter.GetBytes(1203)));
+                Slice key;
+                Slice.From(Allocator, BitConverter.GetBytes(1203), out key);
+                var readResult = tree.Read(key);
                 Assert.NotNull(readResult);
 
                 var memoryStream = new MemoryStream();
@@ -121,7 +137,9 @@ namespace FastTests.Voron.Storage
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var readResult = tree.Read(Slice.From(Allocator, BitConverter.GetBytes(1203)));
+                Slice key;
+                Slice.From(Allocator, BitConverter.GetBytes(1203), out key);
+                var readResult = tree.Read(key);
                 Assert.NotNull(readResult);
 
                 var memoryStream = new MemoryStream();
@@ -151,7 +169,9 @@ namespace FastTests.Voron.Storage
                     var buffer = new byte[912];
                     random.NextBytes(buffer);
                     buffers.Add(buffer);
-                    tree.Add(Slice.From(Allocator, BitConverter.GetBytes(i)), new MemoryStream(buffer));
+                    Slice key;
+                    Slice.From(Allocator, BitConverter.GetBytes(i), out key);
+                    tree.Add(key, new MemoryStream(buffer));
                 }
                 tx.Commit();
             }
@@ -161,7 +181,9 @@ namespace FastTests.Voron.Storage
                 var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 1500; i++)
                 {
-                    var readResult = tree.Read(Slice.From(Allocator, BitConverter.GetBytes(i)));
+                    Slice key;
+                    Slice.From(Allocator, BitConverter.GetBytes(i), out key);
+                    var readResult = tree.Read(key);
                     Assert.NotNull(readResult);
 
                     var memoryStream = new MemoryStream();

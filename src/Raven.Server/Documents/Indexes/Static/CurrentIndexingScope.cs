@@ -59,14 +59,17 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (keyLazy.Length == 0)
                     return DynamicNullObject.Null;
 
-                keySlice = Slice.External(_documentsContext.Allocator, keyLazy.Buffer, keyLazy.Size);
+                // we intentionally don't dispose of the scope here, this is being tracked by the references
+                // and will be disposed there.
+                Slice.External(_documentsContext.Allocator, keyLazy.Buffer, keyLazy.Size, out keySlice);
             }
             else
             {
                 if (keyString.Length == 0)
                     return DynamicNullObject.Null;
-
-                keySlice = Slice.From(_documentsContext.Allocator, keyString);
+                // we intentionally don't dispose of the scope here, this is being tracked by the references
+                // and will be disposed there.
+                Slice.From(_documentsContext.Allocator, keyString, out keySlice);
             }
 
             // making sure that we normalize the case of the key so we'll be able to find
@@ -79,6 +82,7 @@ namespace Raven.Server.Documents.Indexes.Static
             references.Add(keySlice);
 
             var document = _documentsStorage.Get(_documentsContext, keySlice);
+
             if (document == null)
             {
                 MaybeUpdateReferenceEtags(referenceEtags, collectionName, 0);

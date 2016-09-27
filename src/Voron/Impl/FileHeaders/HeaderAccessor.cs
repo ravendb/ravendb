@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Sparrow.Utils;
 using Voron.Global;
 
 namespace Voron.Impl.FileHeaders
@@ -25,7 +26,7 @@ namespace Voron.Impl.FileHeaders
         private long _revision;
 
         private FileHeader* _theHeader;
-        private IntPtr _headerPtr;
+        private byte* _headerPtr;
 
         internal static string[] HeaderFileNames = { "headers.one", "headers.two" };
 
@@ -33,8 +34,8 @@ namespace Voron.Impl.FileHeaders
         {
             _env = env;
 
-            _headerPtr = Marshal.AllocHGlobal(sizeof(FileHeader));
-            _theHeader = (FileHeader*)_headerPtr.ToPointer();
+            _headerPtr = NativeMemory.AllocateMemory(sizeof(FileHeader));
+            _theHeader = (FileHeader*)_headerPtr;
         }
 
         public bool Initialize()
@@ -190,10 +191,10 @@ namespace Voron.Impl.FileHeaders
             _locker.EnterWriteLock();
             try
             {
-                if (_headerPtr != IntPtr.Zero)
+                if (_headerPtr != null)
                 {
-                    Marshal.FreeHGlobal(_headerPtr);
-                    _headerPtr = IntPtr.Zero;
+                    NativeMemory.Free(_headerPtr, sizeof(FileHeader));
+                    _headerPtr = null;
                     _theHeader = null;
                 }
             }

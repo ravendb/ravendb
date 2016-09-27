@@ -33,7 +33,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             foreach (var output in _outputs)
             {
-
                 var djv = new DynamicJsonValue();
 
                 foreach (var property in _propertyAccessor.Properties)

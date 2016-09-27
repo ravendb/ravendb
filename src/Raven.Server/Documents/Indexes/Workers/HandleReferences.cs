@@ -210,8 +210,11 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            var tombstoneKeySlice = Slice.External(indexContext.Transaction.InnerTransaction.Allocator, tombstone.LoweredKey.Buffer, tombstone.LoweredKey.Size);
-            _indexStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
+            Slice tombstoneKeySlice;
+            var tx = indexContext.Transaction.InnerTransaction;
+            var loweredKey = tombstone.LoweredKey;
+            using (Slice.External(tx.Allocator, loweredKey.Buffer,loweredKey.Size,out tombstoneKeySlice))
+                _indexStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
         }
 
         private enum ActionType

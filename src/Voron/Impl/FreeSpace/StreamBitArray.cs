@@ -180,10 +180,18 @@ namespace Voron.Impl.FreeSpace
             return tmpBuffer;
         }
 
-        public Slice ToSlice(ByteStringContext context, ByteStringType type = ByteStringType.Mutable)
+        public ByteStringContext.Scope ToSlice(ByteStringContext context, out Slice str)
+        {
+            return ToSlice(context, ByteStringType.Immutable, out str);
+        }
+
+        public ByteStringContext.Scope ToSlice(ByteStringContext context, ByteStringType type, out Slice str)
         {
             var buffer = ToBuffer();
-            return new Slice(context.From(buffer, 0, buffer.Length, type));
+            ByteString byteString;
+            var scope = context.From(buffer, 0, buffer.Length, type, out byteString);
+            str = new Slice(byteString);
+            return scope;
         }
     }
 }

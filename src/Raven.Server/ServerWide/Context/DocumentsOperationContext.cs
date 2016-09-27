@@ -12,7 +12,8 @@ namespace Raven.Server.ServerWide.Context
 
         public static DocumentsOperationContext ShortTermSingleUse(DocumentDatabase documentDatabase)
         {
-            return new DocumentsOperationContext(documentDatabase, 4096, 1024);
+            var shortTermSingleUse = new DocumentsOperationContext(documentDatabase, 4096, 1024);
+            return shortTermSingleUse;
         }
 
         public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize) :
