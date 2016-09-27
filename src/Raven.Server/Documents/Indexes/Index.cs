@@ -721,20 +721,13 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IndexStats GetStats()
+        public IndexStats GetStats(DocumentsOperationContext documentsContext = null)
         {
             if (_contextPool == null)
                 throw new ObjectDisposedException("Index " + Name);
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
-            {
-                return ReadStats(tx);
-            }
-        }
-
-        private IndexStats ReadStats(RavenTransaction tx)
-        {
             using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
             {
                 var stats = _indexStorage.ReadStats(tx);
@@ -742,12 +735,29 @@ namespace Raven.Server.Documents.Indexes
                 stats.Id = IndexId;
                 stats.Name = Name;
                 stats.Type = Type;
-                stats.ForCollections = Collections.ToArray();
                 stats.EntriesCount = reader.EntriesCount();
                 stats.LockMode = Definition.LockMode;
                 stats.Priority = Priority;
 
                 stats.LastQueryingTime = _lastQueryingTime;
+
+                if (documentsContext != null)
+                {
+                    using (documentsContext.OpenReadTransaction())
+                    {
+                        foreach (var collection in Collections)
+                        {
+                            var collectionStats = stats.Collections[collection];
+
+                            long totalCount;
+                            collectionStats.NumberOfDocumentsToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, collectionStats.LastProcessedDocumentEtag, out totalCount);
+                            collectionStats.TotalNumberOfDocuments = totalCount;
+
+                            collectionStats.NumberOfTombstonesToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, collectionStats.LastProcessedTombstoneEtag, out totalCount);
+                            collectionStats.TotalNumberOfTombstones = totalCount;
+                        }
+                    }
+                }
 
                 return stats;
             }

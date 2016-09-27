@@ -147,9 +147,7 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(1, indexes.Length);
 
                 var index = indexes[0];
-                var request = store.AsyncDatabaseCommands.CreateRequest("/indexes/stats?name=" + index.Name, HttpMethod.Get);
-                var json = await request.ReadResponseJsonAsync();
-                var stats = json.JsonDeserialization<IndexStats>();
+                var stats = await store.AsyncDatabaseCommands.GetIndexStatisticsAsync(index.Name);
 
                 Assert.Equal(index.IndexId, stats.Id);
                 Assert.Equal(index.Name, stats.Name);
@@ -161,8 +159,13 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(2, stats.MapAttempts);
                 Assert.Equal(0, stats.MapErrors);
                 Assert.Equal(2, stats.MapSuccesses);
-                Assert.Equal(1, stats.ForCollections.Length);
-                Assert.Equal(2 + 1, stats.LastIndexedEtags[stats.ForCollections[0]]); // +1 because of HiLo
+                Assert.Equal(1, stats.Collections.Count);
+                Assert.Equal(2 + 1, stats.Collections.First().Value.LastProcessedDocumentEtag); // +1 because of HiLo
+                Assert.Equal(0, stats.Collections.First().Value.LastProcessedTombstoneEtag);
+                Assert.Equal(0, stats.Collections.First().Value.NumberOfDocumentsToProcess);
+                Assert.Equal(0, stats.Collections.First().Value.NumberOfTombstonesToProcess);
+                Assert.Equal(2, stats.Collections.First().Value.TotalNumberOfDocuments);
+                Assert.Equal(0, stats.Collections.First().Value.TotalNumberOfTombstones);
                 Assert.True(stats.LastIndexingTime.HasValue);
                 Assert.True(stats.LastQueryingTime.HasValue);
                 Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
@@ -198,9 +201,7 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(1, indexes.Length);
 
                 var index = indexes[0];
-                var request = store.AsyncDatabaseCommands.CreateRequest("/indexes/stats?name=" + index.Name, HttpMethod.Get);
-                var json = await request.ReadResponseJsonAsync();
-                var stats = json.JsonDeserialization<IndexStats>();
+                var stats = await store.AsyncDatabaseCommands.GetIndexStatisticsAsync(index.Name);
 
                 Assert.Equal(index.IndexId, stats.Id);
                 Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
@@ -209,9 +210,7 @@ namespace FastTests.Client.Indexing
                 await store.AsyncDatabaseCommands.SetIndexLockAsync(index.Name, IndexLockMode.LockedIgnore);
                 await store.AsyncDatabaseCommands.SetIndexPriorityAsync(index.Name, IndexingPriority.Error);
 
-                request = store.AsyncDatabaseCommands.CreateRequest("/indexes/stats?name=" + index.Name, HttpMethod.Get);
-                json = await request.ReadResponseJsonAsync();
-                stats = json.JsonDeserialization<IndexStats>();
+                stats = await store.AsyncDatabaseCommands.GetIndexStatisticsAsync(index.Name);
 
                 Assert.Equal(index.IndexId, stats.Id);
                 Assert.Equal(IndexLockMode.LockedIgnore, stats.LockMode);

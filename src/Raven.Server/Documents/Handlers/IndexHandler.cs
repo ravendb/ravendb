@@ -148,26 +148,26 @@ namespace Raven.Server.Documents.Handlers
         {
             var name = GetStringQueryString("name", required: false);
 
-            IndexStats[] indexStats;
-            if (string.IsNullOrEmpty(name))
-                indexStats = Database.IndexStore
-                    .GetIndexes()
-                    .OrderBy(x => x.Name)
-                    .Select(x => x.GetStats())
-                    .ToArray();
-            else
-            {
-                var index = Database.IndexStore.GetIndex(name);
-                if (index == null)
-                    throw new InvalidOperationException("There is not index with name: " + name);
-
-                indexStats = new[] { index.GetStats() };
-            }
-
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
+                IndexStats[] indexStats;
+                if (string.IsNullOrEmpty(name))
+                    indexStats = Database.IndexStore
+                        .GetIndexes()
+                        .OrderBy(x => x.Name)
+                        .Select(x => x.GetStats(context))
+                        .ToArray();
+                else
+                {
+                    var index = Database.IndexStore.GetIndex(name);
+                    if (index == null)
+                        throw new InvalidOperationException("There is not index with name: " + name);
+
+                    indexStats = new[] { index.GetStats(context) };
+                }
+
                 writer.WriteStartArray();
                 var first = true;
                 foreach (var stats in indexStats)

@@ -774,36 +774,48 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(stats.ForCollections)));
-            writer.WriteStartArray();
-            var isFirst = true;
-            foreach (var collection in stats.ForCollections)
-            {
-                if (isFirst == false)
-                    writer.WriteComma();
-
-                isFirst = false;
-                writer.WriteString((collection));
-            }
-            writer.WriteEndArray();
-            writer.WriteComma();
-
             writer.WritePropertyName((nameof(stats.IsInMemory)));
             writer.WriteBool(stats.IsInMemory);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(stats.LastIndexedEtags)));
+            writer.WritePropertyName(nameof(stats.Collections));
             writer.WriteStartObject();
-            isFirst = true;
-            foreach (var kvp in stats.LastIndexedEtags)
+            var isFirst = true;
+            foreach (var kvp in stats.Collections)
             {
                 if (isFirst == false)
                     writer.WriteComma();
 
                 isFirst = false;
 
-                writer.WritePropertyName((kvp.Key));
-                writer.WriteInteger(kvp.Value);
+                writer.WritePropertyName(kvp.Key);
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(kvp.Value.LastProcessedDocumentEtag));
+                writer.WriteInteger(kvp.Value.LastProcessedDocumentEtag);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(kvp.Value.LastProcessedTombstoneEtag));
+                writer.WriteInteger(kvp.Value.LastProcessedTombstoneEtag);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(kvp.Value.NumberOfDocumentsToProcess));
+                writer.WriteInteger(kvp.Value.NumberOfDocumentsToProcess);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(kvp.Value.NumberOfTombstonesToProcess));
+                writer.WriteInteger(kvp.Value.NumberOfTombstonesToProcess);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfDocuments));
+                writer.WriteInteger(kvp.Value.TotalNumberOfDocuments);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfTombstones));
+                writer.WriteInteger(kvp.Value.TotalNumberOfTombstones);
+
+                writer.WriteEndObject();
             }
             writer.WriteEndObject();
             writer.WriteComma();

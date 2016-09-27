@@ -54,10 +54,7 @@ namespace Raven.Client.Data.Indexes
         /// </summary>
         public int? ReduceErrors { get; set; }
 
-        /// <summary>
-        /// This value represents etag of last document indexed (using map) by this index.
-        /// </summary>
-        public Dictionary<string, long> LastIndexedEtags { get; set; }
+        public Dictionary<string, CollectionStats> Collections { get; set; }
 
         /// <summary>
         /// Time of last query for this index.
@@ -98,11 +95,6 @@ namespace Raven.Client.Data.Indexes
         public IndexType Type { get; set; }
 
         /// <summary>
-        /// List of all collections for which this index is working.
-        /// </summary>
-        public string[] ForCollections { get; set; }
-
-        /// <summary>
         /// Total number of entries in this index.
         /// </summary>
         public int EntriesCount { get; set; }
@@ -123,6 +115,21 @@ namespace Raven.Client.Data.Indexes
             {
                 return IndexFailureInformation.CheckIndexInvalid(MapAttempts, MapErrors, ReduceAttempts, ReduceErrors);
             }
+        }
+
+        public class CollectionStats
+        {
+            public long LastProcessedDocumentEtag { get; set; }
+
+            public long NumberOfDocumentsToProcess { get; set; }
+
+            public long TotalNumberOfDocuments { get; set; }
+
+            public long LastProcessedTombstoneEtag { get; set; }
+
+            public long NumberOfTombstonesToProcess { get; set; }
+
+            public long TotalNumberOfTombstones { get; set; }
         }
     }
 

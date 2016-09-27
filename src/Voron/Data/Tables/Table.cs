@@ -619,6 +619,32 @@ namespace Voron.Data.Tables
             }
         }
 
+        public long GetNumberEntriesFor(TableSchema.FixedSizeSchemaIndexDef index, long afterValue, out long totalCount)
+        {
+            var fst = GetFixedSizeTree(index);
+
+            totalCount = fst.NumberOfEntries;
+            if (afterValue == 0 || totalCount == 0)
+                return totalCount;
+
+            long count = 0;
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(afterValue) == false)
+                    return 0;
+
+                do
+                {
+                    if (it.CurrentKey == afterValue)
+                        continue;
+
+                    count++;
+                } while (it.MoveNext());
+            }
+
+            return count;
+        }
+
         public long GetNumberEntriesFor(TableSchema.FixedSizeSchemaIndexDef index)
         {
             var fst = GetFixedSizeTree(index);
