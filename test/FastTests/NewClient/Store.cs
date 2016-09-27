@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -38,6 +39,26 @@ namespace FastTests.NewClient
                 }
             }
         }
+
+       /* [Fact]
+        public void Store_Document_without_id_prop()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenNewSession())
+                {
+                    var user1 = new UserName { Name = "RavenDB"};
+                    newSession.Store(user1);
+                    newSession.SaveChanges();
+                   
+                }
+            }
+        }
+
+        public class UserName
+        {
+            public string Name { get; set; }
+        }*/
     }
 }
 

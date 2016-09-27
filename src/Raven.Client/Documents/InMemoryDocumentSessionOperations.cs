@@ -352,7 +352,7 @@ more responsive application.
         /// <typeparam name="T"></typeparam>
         /// <param name="entity">The entity.</param>
         public void Delete<T>(T entity)
-        {
+         {
             if (ReferenceEquals(entity, null))
                 throw new ArgumentNullException("entity");
 
@@ -387,14 +387,18 @@ more responsive application.
             DocumentInfo documentInfo;
             if (DocumentsById.TryGetValue(id, out documentInfo))
             {
-                BlittableJsonReaderObject newObj;
-                if (documentInfo.Entity != null && EntityChanged(documentInfo.Entity, documentInfo, out newObj))
+                BlittableJsonReaderObject newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Id, documentInfo.Entity, documentInfo);
+                if (documentInfo.Entity != null && EntityChanged(newObj, documentInfo,  null))
                 {
-                    throw new InvalidOperationException("Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
+                    throw new InvalidOperationException(
+                        "Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
+                }
+                if (documentInfo.Entity != null)
+                {
+                    DocumentsByEntity.Remove(documentInfo.Entity);
                 }
                 DocumentsById.Remove(id);
             }
-
             KnownMissingIds.Add(id);
 
             Defer(new DynamicJsonValue()
@@ -484,7 +488,6 @@ more responsive application.
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
             }
 
-            ///TODO - Check if ["key"] exist
             if (deferedCommands.Any(c => c["Key"].ToString() == id))
                 throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + id);
 
@@ -576,19 +579,20 @@ more responsive application.
             if (id != null)
                 KnownMissingIds.Remove(id);
 
-            var documentMetadata = new DocumentInfo
+            var documentInfo = new DocumentInfo
             {
                 Id = id,
                 Metadata = Context.ReadObject(metadata, id),
                 ETag = etag,
                 ForceConcurrencyCheck = forceConcurrencyCheck,
                 Entity = entity,
+                IsNewDocument = true,
                 Document =  null
             };
 
-            DocumentsByEntity.Add(entity, documentMetadata);
+            DocumentsByEntity.Add(entity, documentInfo);
             if (id != null)
-                DocumentsById[id] = documentMetadata;
+                DocumentsById[id] = documentInfo;
         }
 
         protected virtual void AssertNoNonUniqueInstance(object entity, string id)
@@ -626,13 +630,13 @@ more responsive application.
             };
             deferedCommands.Clear();
 
-            PrepareForEntitiesDeletion(result);
+            PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
 
             return result.Commands;
         }
 
-        private void PrepareForEntitiesDeletion(SaveChangesData result)
+        private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
         {
             DocumentInfo documentInfo = null;
             var keysToDelete = DeletedEntities.Where(deletedEntity => DocumentsByEntity.TryGetValue(deletedEntity, out documentInfo))
@@ -641,38 +645,53 @@ more responsive application.
 
             foreach (var key in keysToDelete)
             {
-                DocumentInfo value = null;
-                if (DocumentsById.TryGetValue(key, out value))
+                if(changes != null)
                 {
-                    if (value.Entity != null)
-                        DocumentsByEntity.Remove(value.Entity);
-                    DocumentsById.Remove(key);
+                    var docChanges = new List<DocumentsChanges>() { };
+                    var change = new DocumentsChanges()
+                    {
+                        FieldNewValue = string.Empty,
+                        FieldOldValue = string.Empty,
+                        Change = DocumentsChanges.ChangeType.DocumentDeleted
+                    };
+
+                    docChanges.Add(change);
+                    changes[key] = docChanges.ToArray();
                 }
-
-                result.Entities.Add(value.Entity);
-
-                result.Commands.Add(new DynamicJsonValue()
+                else
                 {
-                    ["Key"] = key,
-                    ["Method"] = "DELETE",
-                    ["Document"] = null
-                });
+                    DocumentInfo value = null;
+                    if (DocumentsById.TryGetValue(key, out value))
+                    {
+                        if (value.Entity != null)
+                            DocumentsByEntity.Remove(value.Entity);
+                        DocumentsById.Remove(key);
+                    }
+                    //TODO - value can be null????
+                    result.Entities.Add(value.Entity);
+
+                    result.Commands.Add(new DynamicJsonValue()
+                    {
+                        ["Key"] = key,
+                        ["Method"] = "DELETE",
+                        ["Document"] = null
+                    });
+                }
             }
         }
 
         private void PrepareForEntitiesPuts(SaveChangesData result)
         {
-            BlittableJsonReaderObject document = null;
             foreach (var entity in DocumentsByEntity)
             {
-                if (EntityChanged(entity.Key, entity.Value, out document))
+                BlittableJsonReaderObject document = null;
+                document = EntityToBlittable.ConvertEntityToBlittable(entity.Value.Id, entity.Key, entity.Value);
+                if ((!(entity.Value.IgnoreChanges)) && (EntityChanged(document, entity.Value, null)))
                 {
                     result.Entities.Add(entity.Key);
 
                     if (entity.Value.Entity != null)
-                    {
                         DocumentsById.Remove(entity.Value.Id);
-                    }
 
                     result.Commands.Add(new DynamicJsonValue()
                     {
@@ -682,64 +701,152 @@ more responsive application.
                     });
                 }
             }
-            DocumentsByEntity.Clear();
+            //TODO - mybe clear only in the end of a session
+            //DocumentsByEntity.Clear();
         }
 
-        protected bool EntityChanged(object entity, DocumentInfo documentMetadata,  out BlittableJsonReaderObject newObj)
+        protected bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
         {
-            //TODO - ConvertEntityToBlittable not good
-            newObj = EntityToBlittable.ConvertEntityToBlittable(documentMetadata.Id, entity, documentMetadata.Metadata);
-            if (documentMetadata == null)
-                return true;
-
-            if (documentMetadata.IgnoreChanges)
-                return false;
-
-            string id;
-            if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) &&
-                string.Equals(documentMetadata.Id, id, StringComparison.OrdinalIgnoreCase) == false)
-                return true;
-
-            // prevent saves of a modified read only entity
+            // prevent saves of a modified read only entity TODO- ???
             bool readOnly;
-            documentMetadata.Metadata.TryGet(Constants.Headers.RavenReadOnly, out readOnly);
+            documentInfo.Metadata.TryGet(Constants.Headers.RavenReadOnly, out readOnly);
             if (readOnly)
                 return false;
+            var docChanges = new List<DocumentsChanges>() { };
 
-            if (documentMetadata.IsNewDocument || documentMetadata.Document == null)
-                return true;
+            if (!documentInfo.IsNewDocument && documentInfo.Document != null)
+                return CompareBlittable(documentInfo.Id, documentInfo.Document, newObj, changes, docChanges);
 
-            return compareBlittable(documentMetadata.Document, newObj);
+            if (changes != null)
+            {
+                newChange(null, null, docChanges, DocumentsChanges.ChangeType.DocumentAdded);
+                changes[documentInfo.Id] = docChanges.ToArray();
+            }
 
+            return true;
         }
 
-        private static bool compareBlittable(BlittableJsonReaderObject originalBlittable, BlittableJsonReaderObject newBlittable)
+        private static bool CompareBlittable(string id, BlittableJsonReaderObject originalBlittable, 
+            BlittableJsonReaderObject newBlittable, IDictionary<string, DocumentsChanges[]> changes, 
+            List<DocumentsChanges> docChanges)
         {
             var propertiesIds = newBlittable.GetPropertiesByInsertionOrder();
-            if (propertiesIds.Length != originalBlittable.GetPropertiesByInsertionOrder().Length)
-                return true;
+            //TODO - Check if the old one have more props
 
-            foreach (var propID in propertiesIds)
+            foreach (var propId in propertiesIds)
             {
-                var propInfo = newBlittable.GetPropertyByIndex(propID);
+                var newPropInfo = newBlittable.GetPropertyByIndex(propId);
 
-                object oldPropValue;
-                if (propInfo.Item1 == Constants.Metadata.Key)
+                //TODO - need to check metadata ????
+                if (newPropInfo.Item1 == Constants.Metadata.Key)
                     continue;
-                originalBlittable.TryGetMember(propInfo.Item1, out oldPropValue);
 
-                if (propInfo.Item3 == BlittableJsonToken.StartObject)
+                //Prop not exist
+                var oldPropId = originalBlittable.GetPropertyIndex(newPropInfo.Item1);
+                if (oldPropId < 0)
                 {
-                     if (compareBlittable(oldPropValue as BlittableJsonReaderObject, propInfo.Item2 as BlittableJsonReaderObject))
-                        continue;
-                     else
+                    if (changes == null)
                         return true;
+
+                    newChange(newPropInfo.Item2, null, docChanges,
+                        DocumentsChanges.ChangeType.NewField);
+                    continue;
                 }
 
-                if ((propInfo.Item2 == null ? null : propInfo.Item2.ToString()) != (oldPropValue == null ? null : oldPropValue.ToString()))
-                    return true;
+                var oldPropInfo = originalBlittable.GetPropertyByIndex(oldPropId);
+
+                if (newPropInfo.Item3 != oldPropInfo.Item3)
+                {
+                    if (changes == null)
+                        return true;
+
+                    newFieldTypeChange(newPropInfo.Item3, oldPropInfo.Item3, docChanges, DocumentsChanges.ChangeType.FieldTypeChanged);
+                    continue;
+                }
+
+                switch (newPropInfo.Item3)
+                {
+                    case BlittableJsonToken.Integer:
+                    case BlittableJsonToken.Boolean:
+                    case BlittableJsonToken.Float:
+                    case BlittableJsonToken.CompressedString:
+                    case BlittableJsonToken.String:
+                        {
+                            if (!(newPropInfo.Item2.Equals(oldPropInfo.Item2)))
+                            {
+                                if (changes == null)
+                                    return true;
+                                newChange(newPropInfo.Item2, oldPropInfo.Item2, docChanges, DocumentsChanges.ChangeType.FieldChanged);
+                                    continue;
+                            }
+                            break;
+                        }
+                    //TODO - Check if null can be with int and all the rest
+                    case BlittableJsonToken.Null:
+                        break;
+                    case BlittableJsonToken.StartArray:
+                    {
+                        //TODO
+                        break;
+                    }
+                    case BlittableJsonToken.StartObject:
+                    {
+                            var changed = CompareBlittable(id, oldPropInfo.Item2 as BlittableJsonReaderObject,
+                             newPropInfo.Item2 as BlittableJsonReaderObject, changes, docChanges);
+                            if (changes == null)
+                                return changed;
+                            break;
+                    }
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            if ((changes != null ) && (docChanges.Count > 0))
+            {
+                changes[id] = docChanges.ToArray();
+                return true;
             }
             return false;
+        }
+
+        private static void newChange(object newValue, object oldValue, List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
+        {
+            docChanges.Add(new DocumentsChanges()
+            {
+                FieldNewValue = newValue,
+                FieldOldValue = oldValue,
+                Change = change
+            });
+        }
+
+        private static void newFieldTypeChange(BlittableJsonToken newValue, BlittableJsonToken oldValue, List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
+        {
+            docChanges.Add(new DocumentsChanges()
+            {
+                FieldNewType = newValue,
+                FieldOldType = oldValue,
+                Change = change
+            });
+        }
+
+        public IDictionary<string, DocumentsChanges[]> WhatChanged()
+        {
+            var changes = new Dictionary<string, DocumentsChanges[]>();
+            PrepareForEntitiesDeletion(null, changes);
+            GetAllEntitiesChanges(changes);
+            return changes;
+        }
+
+        private void GetAllEntitiesChanges(IDictionary<string, DocumentsChanges[]> changes)
+        {
+            foreach (var pair in DocumentsById)
+            {
+                BlittableJsonReaderObject newObj = EntityToBlittable.ConvertEntityToBlittable(pair.Value.Id, pair.Value.Entity, pair.Value);
+                EntityChanged(newObj, pair.Value, changes);
+                pair.Value.Metadata.Modifications = null;
+            }
+
         }
 
         /// <summary>

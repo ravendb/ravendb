@@ -78,17 +78,18 @@ namespace Raven.Client.Documents.SessionOperations
                 return default(T);
 
             var entity = _session.ConvertToEntity(typeof(T), id, documentInfo.Document);
-            var newMetadata = new DocumentInfo
+            /*var newMetadata = new DocumentInfo
             {
                 //TODO - Add all DocumentInfo properties ??
                 Id = id,
                 Document = documentInfo.Document,
                 Entity = entity,
                 Metadata = documentInfo.Metadata
-            };
+            };*/
+            documentInfo.Entity = entity;
             try
             {
-                _session.DocumentsByEntity.Add(entity, newMetadata);
+                _session.DocumentsByEntity.Add(entity, documentInfo);
             }
             catch (Exception)
             {
@@ -96,7 +97,7 @@ namespace Raven.Client.Documents.SessionOperations
                     _logger.Info("Tried to add an exisitg entity");
             }
 
-            try
+            /*try
             {
                 _session.DocumentsById.Add(id, newMetadata);
             }
@@ -104,7 +105,7 @@ namespace Raven.Client.Documents.SessionOperations
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Tried to add an exisitg id");
-            }
+            }*/
             return (T) entity;
         }
 
