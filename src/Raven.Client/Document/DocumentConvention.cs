@@ -32,6 +32,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Document
 {
@@ -101,13 +102,26 @@ namespace Raven.Client.Document
             MaxLengthOfQueryUsingGetUrl = 1024 + 512;
             ApplyReduceFunction = DefaultApplyReduceFunction;
             ReplicationInformerFactory = (url, jsonRequestFactory) => new ReplicationInformer(this, jsonRequestFactory);
-            CustomizeJsonSerializer = serializer => { };
+            CustomizeJsonSerializer = serializer => { }; // todo: remove this or merge with SerializeEntityToJson
             FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
             ShouldAggressiveCacheTrackChanges = true;
             ShouldSaveChangesForceAggressiveCacheCheck = true;
             IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.Indexes | IndexAndTransformerReplicationMode.Transformers;
             AcceptGzipContent = true;
             RequestTimeThresholdInMilliseconds = 100;
+
+            SerializeEntityToJson  = (object entity, out Stream jsonStream) =>
+            {
+                var jsonSerializer = CreateSerializer();
+
+                jsonStream = new MemoryStream();
+                var streamWriter = new StreamWriter(jsonStream);
+
+                jsonSerializer.Serialize(streamWriter, entity);
+                streamWriter.Flush();
+                jsonStream.Position = 0;
+                return jsonStream;
+            };
         }
 
         private IEnumerable<object> DefaultApplyReduceFunction(
@@ -830,18 +844,21 @@ namespace Raven.Client.Document
             }
         }
 
+        public delegate IDisposable JsonSerializerDelegate(object entity, out Stream jsonStream);
+
+        public JsonSerializerDelegate SerializeEntityToJson;
+
         public BlittableJsonReaderObject JsonSerialize(object entity, JsonOperationContext context)
         {
+
             var jsonSerializer = CreateSerializer();
 
             /*TODO: Use a 4KB memory stream which we be allocated once per session */
-            using (var ms = new MemoryStream())
-            using (var streamWriter = new StreamWriter(ms))
+            Stream jsonStream;
+
+            using (SerializeEntityToJson(entity, out jsonStream))
             {
-                jsonSerializer.Serialize(streamWriter, entity);
-                streamWriter.Flush();
-                ms.Position = 0;
-                return context.ReadForMemory(ms, "convention.Serialize");
+                return context.ReadForMemory(jsonStream, "convention.Serialize");
             }
         }
     }

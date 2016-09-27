@@ -20,6 +20,7 @@ namespace Raven.Client.Documents.Commands
     {
         public JsonOperationContext Context;
         public List<DynamicJsonValue> Commands;
+        public List<object> Entities;
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
@@ -33,12 +34,12 @@ namespace Raven.Client.Documents.Commands
                 using (var writer = new BlittableJsonTextWriter(Context, stream))
                 {
                     writer.WriteStartArray();
-                    bool NotFirst = false;
+                    bool first = true;
                     foreach (var command in Commands)
                     {
-                        if (NotFirst)
+                        if (!(first))
                             writer.WriteComma();
-                        NotFirst = true;
+                        first = false;
                         Context.Write(writer, command);
                     }
                     writer.WriteEndArray();
@@ -59,7 +60,6 @@ namespace Raven.Client.Documents.Commands
             }
 
             Result = JsonDeserializationClient.BatchResult(response);
-
         }
     }
 }
