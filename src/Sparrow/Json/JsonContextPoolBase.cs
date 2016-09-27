@@ -60,7 +60,6 @@ namespace Sparrow.Json
         {
             var stack = _contextPool.Value;
             context = stack.Count == 0 ? CreateContext() : stack.Pop();
-            context.Ready();
             return new ReturnRequestContext
             {
                 Parent = this,

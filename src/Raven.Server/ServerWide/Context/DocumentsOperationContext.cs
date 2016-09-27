@@ -13,7 +13,6 @@ namespace Raven.Server.ServerWide.Context
         public static DocumentsOperationContext ShortTermSingleUse(DocumentDatabase documentDatabase)
         {
             var shortTermSingleUse = new DocumentsOperationContext(documentDatabase, 4096, 1024);
-            shortTermSingleUse.Ready();
             return shortTermSingleUse;
         }
 

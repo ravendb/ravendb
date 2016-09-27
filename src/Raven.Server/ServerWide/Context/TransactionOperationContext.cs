@@ -41,6 +41,7 @@ namespace Raven.Server.ServerWide.Context
         protected TransactionOperationContext(int initialSize, int longLivedSize): 
             base(initialSize, longLivedSize)
         {
+            Allocator = new ByteStringContext();
         }
 
         public RavenTransaction OpenReadTransaction()
@@ -101,12 +102,7 @@ namespace Raven.Server.ServerWide.Context
                 }
             }
         }
-
-        public override void Ready()
-        {
-            Allocator = new ByteStringContext();
-        }
-
+        
         public override void Reset()
         {
             base.Reset();
@@ -114,7 +110,7 @@ namespace Raven.Server.ServerWide.Context
             CloseTransaction();
 
             Allocator?.Dispose();
-            Allocator = null;
+            Allocator = new ByteStringContext();
         }
     }
 }

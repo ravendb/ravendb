@@ -433,7 +433,7 @@ namespace Sparrow
             // segments need, that they are the newest, and that they are 
             // the largest around, so we shouldn't need more allocation
 
-            if (_threadLocal.Count == 0)
+            if (_threadLocal == null || _threadLocal.Count == 0)
                 return; // nothing to do;
 
             var latest = _threadLocal.Peek();
