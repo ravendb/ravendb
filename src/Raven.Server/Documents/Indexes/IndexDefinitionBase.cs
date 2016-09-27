@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Indexes
     {
         protected const string MetadataFileName = "metadata";
 
-        protected static readonly Slice DefinitionSlice; 
+        protected static readonly Slice DefinitionSlice;
 
         private int? _cachedHashCode;
 
@@ -50,16 +50,6 @@ namespace Raven.Server.Documents.Indexes
 
         public void Persist(TransactionOperationContext context, StorageEnvironmentOptions options)
         {
-            if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
-            {
-                using (var stream = File.Open(Path.Combine(options.BasePath, MetadataFileName), FileMode.Create))
-                using (var writer = new StreamWriter(stream, Encoding.UTF8))
-                {
-                    writer.Write(Name);
-                    writer.Flush();
-                }
-            }
-
             var tree = context.Transaction.InnerTransaction.CreateTree("Definition");
             using (var stream = new MemoryStream())
             using (var writer = new BlittableJsonTextWriter(context, stream))
@@ -69,6 +59,21 @@ namespace Raven.Server.Documents.Indexes
                 writer.Flush();
 
                 stream.Position = 0;
+
+                if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+                {
+                    using (var metadata = File.Open(Path.Combine(options.BasePath, MetadataFileName), FileMode.Create))
+                    using (var metadataWriter = new StreamWriter(metadata, Encoding.UTF8))
+                    {
+                        metadataWriter.WriteLine(Name);
+                        metadataWriter.Flush();
+
+                        stream.CopyTo(metadata);
+                        stream.Position = 0;
+                    }
+                }
+
+
                 Slice val;
                 using (Slice.From(context.Allocator, stream.ToArray(), out val))
                 {
@@ -210,7 +215,7 @@ namespace Raven.Server.Documents.Indexes
             if (File.Exists(metadataFile) == false)
                 return null;
 
-            var name = File.ReadAllText(metadataFile, Encoding.UTF8);
+            var name = File.ReadLines(metadataFile, Encoding.UTF8).FirstOrDefault();
             if (string.IsNullOrWhiteSpace(name))
                 return null;
 

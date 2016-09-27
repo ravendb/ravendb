@@ -453,8 +453,10 @@ namespace Raven.Server.Documents.Indexes
                     if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
                         return;
 
+                    var parts = indexDirectory.Name.Split(new [] { '-' },StringSplitOptions.RemoveEmptyEntries);
+
                     int indexId;
-                    if (int.TryParse(indexDirectory.Name, out indexId) == false)
+                    if (int.TryParse(parts[0], out indexId) == false)
                         continue;
 
                     List<Exception> exceptions = null;
@@ -465,7 +467,7 @@ namespace Raven.Server.Documents.Indexes
 
                     try
                     {
-                        index = Index.Open(indexId, _documentDatabase);
+                        index = Index.Open(indexId, indexDirectory.FullName, _documentDatabase);
                         index.Start();
                         _indexes.Add(index);
                     }

@@ -118,11 +118,11 @@ namespace Raven.Server.Documents.Indexes
                 _handleAllDocs = true;
         }
 
-        public static Index Open(int indexId, DocumentDatabase documentDatabase)
+        public static Index Open(int indexId, string path, DocumentDatabase documentDatabase)
         {
             StorageEnvironment environment = null;
 
-            var options = StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, indexId.ToString()));
+            var options = StorageEnvironmentOptions.ForPath(path);
             try
             {
                 options.SchemaVersion = 1;
@@ -176,9 +176,10 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' was already initialized.");
 
+                var indexPath = Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, $"{IndexId:0000}-{MakeIndexNameSafeForFileSystem()}");
                 var options = documentDatabase.Configuration.Indexing.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly()
-                    : StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, IndexId.ToString()));
+                    : StorageEnvironmentOptions.ForPath(indexPath);
 
                 options.SchemaVersion = 1;
                 try
@@ -191,6 +192,18 @@ namespace Raven.Server.Documents.Indexes
                     throw;
                 }
             }
+        }
+
+        private string MakeIndexNameSafeForFileSystem()
+        {
+            var name = Name;
+            foreach (var invalidPathChar in Path.GetInvalidFileNameChars())
+            {
+                name = name.Replace(invalidPathChar, '_');
+            }
+            if (name.Length < 64)
+                return name;
+            return name.Substring(0, 64);
         }
 
         protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase)
