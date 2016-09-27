@@ -30,12 +30,17 @@ namespace Voron.Impl.FreeSpace
         public void Dispose()
         {
             IsProcessingFixedSizeTree = false;
-            foreach (var page in PagesFreed)
+            if (PagesFreed == null)
+                return;
+            var copy = PagesFreed;
+            PagesFreed = null;
+            foreach (var page in copy)
             {
                 _freeSpaceHandling.FreePage(_tx,page);
             }
             _tx = null;
-            PagesFreed.Clear();
+            copy.Clear();
+            PagesFreed = copy;
 
         }
     }
