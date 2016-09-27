@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
+using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
@@ -44,7 +45,7 @@ namespace Voron.Platform.Win32
 
             NumberOfAllocatedPages = (int)(journalSize / _options.PageSize);
 
-            _nativeOverlapped = (NativeOverlapped*) Marshal.AllocHGlobal(sizeof (NativeOverlapped));
+            _nativeOverlapped = (NativeOverlapped*) NativeMemory.AllocateMemory(sizeof (NativeOverlapped));
 
             _nativeOverlapped->InternalLow = IntPtr.Zero;
             _nativeOverlapped->InternalHigh = IntPtr.Zero;
@@ -114,7 +115,7 @@ namespace Voron.Platform.Win32
             }
 
             long position = pageNumber * _options.PageSize;
-            NativeOverlapped* nativeOverlapped = (NativeOverlapped*)Marshal.AllocHGlobal(sizeof(NativeOverlapped));
+            NativeOverlapped* nativeOverlapped = (NativeOverlapped*)NativeMemory.AllocateMemory(sizeof(NativeOverlapped));
             try
             {
                 nativeOverlapped->OffsetLow = (int)(position & 0xffffffff);
@@ -140,7 +141,7 @@ namespace Voron.Platform.Win32
             }
             finally
             {
-                Marshal.FreeHGlobal((IntPtr) nativeOverlapped);
+                NativeMemory.Free((byte*) nativeOverlapped, sizeof(NativeOverlapped));
             }
         }
 
@@ -159,7 +160,7 @@ namespace Voron.Platform.Win32
             _handle = null;
             if (_nativeOverlapped != null)
             {
-                Marshal.FreeHGlobal((IntPtr) _nativeOverlapped);
+                NativeMemory.Free((byte*)_nativeOverlapped, sizeof(NativeOverlapped));
                 _nativeOverlapped = null;
             }
            

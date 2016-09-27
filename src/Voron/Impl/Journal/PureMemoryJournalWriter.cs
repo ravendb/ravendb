@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Utils;
 using Voron.Impl.Paging;
 using Voron.Util;
 
@@ -18,7 +19,6 @@ namespace Voron.Impl.Journal
         {
             public byte* Pointer;
             public long SizeInPages;
-            public IntPtr Handle;
         }
 
         private ImmutableAppendOnlyList<Buffer> _buffers = ImmutableAppendOnlyList<Buffer>.Empty;
@@ -83,7 +83,7 @@ namespace Voron.Impl.Journal
             Disposed = true;
             foreach (var buffer in _buffers)
             {
-                Marshal.FreeHGlobal(buffer.Handle);
+                NativeMemory.Free(buffer.Pointer, buffer.SizeInPages*_options.PageSize);
             }
             _buffers = ImmutableAppendOnlyList<Buffer>.Empty;
         }
@@ -99,12 +99,11 @@ namespace Voron.Impl.Journal
                 var size = numberOfPages*_options.PageSize;
                 _lastPos += size;
 
-                var handle = Marshal.AllocHGlobal(size);
+                var handle = NativeMemory.AllocateMemory(size);
 
                 var buffer = new Buffer
                 {
-                    Handle = handle,
-                    Pointer = (byte*)handle.ToPointer(),
+                    Pointer = handle,
                     SizeInPages = numberOfPages
                 };
                 _buffers = _buffers.Append(buffer);

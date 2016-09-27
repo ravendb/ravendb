@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
+using Sparrow.Utils;
 using Voron.Global;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
@@ -433,7 +434,7 @@ namespace Voron
                 IntPtr ptr;
                 if (_headers.TryGetValue(filename, out ptr) == false)
                 {
-                    ptr = Marshal.AllocHGlobal(sizeof(FileHeader));
+                    ptr = (IntPtr)NativeMemory.AllocateMemory(sizeof(FileHeader));
                     _headers[filename] = ptr;
                 }
                 Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));

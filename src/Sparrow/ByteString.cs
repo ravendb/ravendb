@@ -339,7 +339,7 @@ namespace Sparrow
         }
     }
 
-    public unsafe sealed class UnmanagedGlobalSegment : IDisposable
+    public sealed unsafe class UnmanagedGlobalSegment : IDisposable
     {
         public readonly byte* Segment;
         public readonly int Size;
@@ -347,7 +347,7 @@ namespace Sparrow
         public UnmanagedGlobalSegment(int size)
         {
             Size = size;
-            Segment = ArenaMemoryAllocator.AllocateMemory(size);
+            Segment = NativeMemory.AllocateMemory(size);
         }
 
         #region IDisposable Support
@@ -366,7 +366,7 @@ namespace Sparrow
 
                 if (Segment != null)
                 {
-                    ArenaMemoryAllocator.Free(Segment, Size);
+                    NativeMemory.Free(Segment, Size);
                 }
             }
         }
