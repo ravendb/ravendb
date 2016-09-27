@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.Linq;
@@ -29,45 +30,53 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var workingSet = currentProcess.WorkingSet64;
                 long totalUnmanagedAllocations = 0;
                 long totalMapping = 0;
-                var fileMappingByDir = new Dictionary<string, DynamicJsonValue>();
+                var fileMappingByDir = new Dictionary<string, Dictionary<string,long>>();
                 var fileMappingSizesByDir = new Dictionary<string, long>();
                 foreach (var mapping in NativeMemory.FileMapping)
                 {
                     totalMapping += mapping.Value;
 
                     var dir = Path.GetDirectoryName(mapping.Key);
-                    DynamicJsonValue value;
+                    Dictionary<string, long> value;
                     if (fileMappingByDir.TryGetValue(dir, out value) == false)
                     {
-                        value = new DynamicJsonValue
-                        {
-                            ["Directory"] = dir,
-                        };
+                        value = new Dictionary<string, long>();
                         fileMappingByDir[dir] = value;
                     }
                     long prevSize;
                     fileMappingSizesByDir.TryGetValue(dir, out prevSize);
                     fileMappingSizesByDir[dir] = prevSize + mapping.Value;
-                    value[Path.GetFileName(mapping.Key)] = new DynamicJsonValue
-                    {
-                        ["Mapped"] = mapping.Value,
-                        ["HumaneMapped"] = FileHeader.Humane(mapping.Value)
-                    };
+                    value[Path.GetFileName(mapping.Key)] = mapping.Value;
                 }
 
-                foreach (var sizes in fileMappingSizesByDir)
+                var prefixLength = LongestCommonPrefixLen(new List<string>(fileMappingSizesByDir.Keys));
+
+                var fileMappings = new DynamicJsonArray();
+                foreach (var sizes in fileMappingSizesByDir.OrderByDescending(x=>x.Value))
                 {
-                    DynamicJsonValue value;
+                    Dictionary<string, long> value;
                     if (fileMappingByDir.TryGetValue(sizes.Key, out value))
                     {
-                        value["TotalDirectorySize"] = new DynamicJsonValue
+                        var dir = new DynamicJsonValue
                         {
-                            ["Mapped"] = sizes.Value,
-                            ["HumaneMapped"] = FileHeader.Humane(sizes.Value)
+                            ["Directory"] = sizes.Key.Substring(prefixLength),
+                            ["TotalDirectorySize"] = new DynamicJsonValue
+                            {
+                                ["Mapped"] = sizes.Value,
+                                ["HumaneMapped"] = FileHeader.Humane(sizes.Value)
+                            }
                         };
+                        foreach (var file in value.OrderByDescending(x=>x.Value))
+                        {
+                            dir[file.Key] = new DynamicJsonValue
+                            {
+                                ["Mapped"] = file.Value,
+                                ["HumaneMapped"] = FileHeader.Humane(file.Value)
+                            };
+                        }
+                        fileMappings.Add(dir);
                     }
                 }
-                var fileMappings = new DynamicJsonArray(fileMappingByDir.Values);
 
                 var threads = new DynamicJsonArray();
                 foreach (var stats in NativeMemory.ThreadAllocations.Values)
@@ -109,6 +118,23 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
                 return Task.CompletedTask;
             }
+        }
+
+        public static int LongestCommonPrefixLen(List<string> strings)
+        {
+            for (int prefixLen = 0; prefixLen < strings[0].Length; prefixLen++)
+            {
+                char c = strings[0][prefixLen];
+                for (int i = 1; i < strings.Count; i++)
+                {
+                    if (prefixLen >= strings[i].Length || strings[i][prefixLen] != c)
+                    {
+                        // Mismatch found
+                        return prefixLen;
+                    }
+                }
+            }
+            return strings[0].Length;
         }
     }
 }
