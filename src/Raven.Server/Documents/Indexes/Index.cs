@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.Indexes
             using (var tx = context.OpenReadTransaction())
             {
                 Priority = _indexStorage.ReadPriority(tx);
-                _lastQueryingTime = SystemTime.UtcNow;
+                _lastQueryingTime = DocumentDatabase.Time.GetUtcNow();
                 _lastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
             }
         }
@@ -910,7 +910,7 @@ namespace Raven.Server.Documents.Indexes
             if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
                 SetPriority(IndexingPriority.Normal);
 
-            MarkQueried(SystemTime.UtcNow);
+            MarkQueried(DocumentDatabase.Time.GetUtcNow());
 
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, null);
 
