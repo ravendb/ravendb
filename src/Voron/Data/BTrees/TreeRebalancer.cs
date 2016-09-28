@@ -336,7 +336,7 @@ namespace Voron.Data.BTrees
             while (key.Size == 0)
             {
                 Debug.Assert(page.IsBranch);
-                page = _tree.GetReadOnlyPage(node->PageNumber);
+                page = _tree.GetReadOnlyTreePage(node->PageNumber);
                 node = page.GetNode(0);
                 key = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node);
             }

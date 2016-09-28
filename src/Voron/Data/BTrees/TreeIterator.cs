@@ -32,7 +32,7 @@ namespace Voron.Data.BTrees
         {
             if(_disposed)
                 throw new ObjectDisposedException("TreeIterator " + _tree.Name);
-            return TreeNodeHeader.GetDataSize(_tx, Current);
+            return _tree.GetDataSize(Current);
         }
 
         public bool Seek(Slice key)
@@ -114,7 +114,7 @@ namespace Voron.Data.BTrees
                     {
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
-                        _currentPage = _tree.GetReadOnlyPage(node->PageNumber);
+                        _currentPage = _tree.GetReadOnlyTreePage(node->PageNumber);
                         _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
 
                         if (_prefetch && _currentPage.IsLeaf)
@@ -160,7 +160,7 @@ namespace Voron.Data.BTrees
                     {
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
-                        _currentPage = _tree.GetReadOnlyPage(node->PageNumber);
+                        _currentPage = _tree.GetReadOnlyTreePage(node->PageNumber);
 
                         _currentPage.LastSearchPosition = 0;
                     }
@@ -200,7 +200,7 @@ namespace Voron.Data.BTrees
 
         public ValueReader CreateReaderForCurrent()
         {
-            return TreeNodeHeader.Reader(_tx, Current);
+            return _tree.GetValueReaderFromHeader(Current);
         }
 
         public void Dispose()

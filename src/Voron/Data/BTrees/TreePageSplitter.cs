@@ -293,7 +293,7 @@ namespace Voron.Data.BTrees
             if (_cursor.CurrentPage.PageNumber == page.PageNumber)
             {
                 _cursor.Pop();
-                _cursor.Push(_tree.GetReadOnlyPage(pageRefNumber));
+                _cursor.Push(_tree.GetReadOnlyTreePage(pageRefNumber));
             }
 
             _tree.FreePage(page);

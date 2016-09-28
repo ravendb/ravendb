@@ -208,7 +208,7 @@ namespace Voron.Data.RawData
             sectionHeader->NumberOfEntries = 0;
             sectionHeader->NumberOfPages = numberOfPagesInSmallSection;
             sectionHeader->LastUsedPage = 0;
-            sectionHeader->SectionOwnerHash = Hashing.XXHash64.Calculate(owner.Content.Ptr, owner.Content.Length);
+            sectionHeader->SectionOwnerHash = Hashing.XXHash64.Calculate(owner.Content.Ptr, (ulong)owner.Content.Length);
 
             var availablespace = (ushort*)((byte*)sectionHeader + ReservedHeaderSpace);
 

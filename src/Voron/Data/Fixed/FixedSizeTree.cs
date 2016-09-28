@@ -55,7 +55,7 @@ namespace Voron.Data.Fixed
             _parent = parent;
             _valSize = valSize;
             _treeName = treeName.Clone(_tx.Allocator);
-            _pageLocator = new PageLocator(tx, 8);
+            _pageLocator = new PageLocator(tx, _tx.Flags == TransactionFlags.Read ? 16 : 8);
 
             _entrySize = sizeof(long) + _valSize;
             _maxEmbeddedEntries = 512 / _entrySize;
@@ -332,11 +332,9 @@ namespace Voron.Data.Fixed
             if (page.Dirty)
                 return page;
 
-            var newPage = _tx.ModifyPage(page.PageNumber).ToFixedSizeTreePage();
+            var newPage = _pageLocator.GetWritablePage(page.PageNumber).ToFixedSizeTreePage();
             newPage.LastSearchPosition = page.LastSearchPosition;
             newPage.LastMatch = page.LastMatch;
-
-            _pageLocator.Reset(page.PageNumber);
 
             return newPage;
         }
