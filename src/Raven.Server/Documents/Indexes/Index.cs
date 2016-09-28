@@ -366,6 +366,9 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(databaseContext.Transaction != null);
 
+            if (Type == IndexType.Faulty)
+                return false;
+
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (indexContext.OpenReadTransaction())
@@ -724,7 +727,18 @@ namespace Raven.Server.Documents.Indexes
         public IndexStats GetStats(bool calculateCollectionStats = false, DocumentsOperationContext documentsContext = null)
         {
             if (_contextPool == null)
-                throw new ObjectDisposedException("Index " + Name);
+            {
+                if (Type != IndexType.Faulty)
+                    throw new ObjectDisposedException("Index " + Name);
+
+                return new IndexStats
+                {
+                    Id = IndexId,
+                    Name = Name,
+                    Type = Type
+                };
+            }
+
 
             if (calculateCollectionStats && documentsContext == null)
                 throw new InvalidOperationException("Cannot calculate collection stats without valid context.");

@@ -648,6 +648,10 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName((nameof(index.Priority)));
                 writer.WriteString((index.Priority.ToString()));
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(index.Type));
+                writer.WriteString(index.Type.ToString());
 
                 writer.WriteEndObject();
             }
@@ -778,45 +782,50 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(stats.Collections));
-            writer.WriteStartObject();
-            var isFirst = true;
-            foreach (var kvp in stats.Collections)
+            if (stats.Collections != null)
             {
-                if (isFirst == false)
+                writer.WriteStartObject();
+                var isFirst = true;
+                foreach (var kvp in stats.Collections)
+                {
+                    if (isFirst == false)
+                        writer.WriteComma();
+
+                    isFirst = false;
+
+                    writer.WritePropertyName(kvp.Key);
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(kvp.Value.LastProcessedDocumentEtag));
+                    writer.WriteInteger(kvp.Value.LastProcessedDocumentEtag);
                     writer.WriteComma();
 
-                isFirst = false;
+                    writer.WritePropertyName(nameof(kvp.Value.LastProcessedTombstoneEtag));
+                    writer.WriteInteger(kvp.Value.LastProcessedTombstoneEtag);
+                    writer.WriteComma();
 
-                writer.WritePropertyName(kvp.Key);
+                    writer.WritePropertyName(nameof(kvp.Value.NumberOfDocumentsToProcess));
+                    writer.WriteInteger(kvp.Value.NumberOfDocumentsToProcess);
+                    writer.WriteComma();
 
-                writer.WriteStartObject();
+                    writer.WritePropertyName(nameof(kvp.Value.NumberOfTombstonesToProcess));
+                    writer.WriteInteger(kvp.Value.NumberOfTombstonesToProcess);
+                    writer.WriteComma();
 
-                writer.WritePropertyName(nameof(kvp.Value.LastProcessedDocumentEtag));
-                writer.WriteInteger(kvp.Value.LastProcessedDocumentEtag);
-                writer.WriteComma();
+                    writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfDocuments));
+                    writer.WriteInteger(kvp.Value.TotalNumberOfDocuments);
+                    writer.WriteComma();
 
-                writer.WritePropertyName(nameof(kvp.Value.LastProcessedTombstoneEtag));
-                writer.WriteInteger(kvp.Value.LastProcessedTombstoneEtag);
-                writer.WriteComma();
+                    writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfTombstones));
+                    writer.WriteInteger(kvp.Value.TotalNumberOfTombstones);
 
-                writer.WritePropertyName(nameof(kvp.Value.NumberOfDocumentsToProcess));
-                writer.WriteInteger(kvp.Value.NumberOfDocumentsToProcess);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(kvp.Value.NumberOfTombstonesToProcess));
-                writer.WriteInteger(kvp.Value.NumberOfTombstonesToProcess);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfDocuments));
-                writer.WriteInteger(kvp.Value.TotalNumberOfDocuments);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfTombstones));
-                writer.WriteInteger(kvp.Value.TotalNumberOfTombstones);
-
+                    writer.WriteEndObject();
+                }
                 writer.WriteEndObject();
             }
-            writer.WriteEndObject();
+            else
+                writer.WriteNull();
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(stats.Memory));
