@@ -834,7 +834,6 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(nameof(stats.Memory.ThreadAllocations));
                 writer.WriteSize(context, stats.Memory.ThreadAllocations);
-                writer.WriteComma();
 
                 writer.WriteEndObject();
             }
