@@ -93,6 +93,8 @@ namespace Raven.Client.Data
         public IndexingPriority Priority { get; set; }
 
         public IndexLockMode LockMode { get; set; }
+
+        public IndexType Type { get; set; }
     }
 
     public class TriggerInfo
