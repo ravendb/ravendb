@@ -12,7 +12,7 @@ namespace Raven.Server.Web.Operations
         [RavenAction("/databases/*/operations/next-operation-id", "GET")]
         public Task GetNextOperationId()
         {
-            var nextId = Database.DatabaseOperations.GetNextOperationId();
+            var nextId = Database.Operations.GetNextOperationId();
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -31,7 +31,7 @@ namespace Raven.Server.Web.Operations
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
-            Database.DatabaseOperations.KillOperation(id.Value);
+            Database.Operations.KillOperation(id.Value);
 
             return Task.CompletedTask;
         }
@@ -41,7 +41,7 @@ namespace Raven.Server.Web.Operations
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
-            Database.DatabaseOperations.DismissOperation(id.Value);
+            Database.Operations.DismissOperation(id.Value);
 
             return Task.CompletedTask;
         }
@@ -58,7 +58,7 @@ namespace Raven.Server.Web.Operations
 
                     var first = true;
 
-                    foreach (var operation in Database.DatabaseOperations.GetAll())
+                    foreach (var operation in Database.Operations.GetAll())
                     {
                         if (first == false)
                             writer.WriteComma();
@@ -79,7 +79,7 @@ namespace Raven.Server.Web.Operations
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
-            var operation = Database.DatabaseOperations.GetOperation(id.Value);
+            var operation = Database.Operations.GetOperation(id.Value);
 
             if (operation == null)
             {
@@ -104,7 +104,7 @@ namespace Raven.Server.Web.Operations
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
-            var state = Database.DatabaseOperations.GetOperationState(id.Value);
+            var state = Database.Operations.GetOperationState(id.Value);
 
             if (state == null)
             {

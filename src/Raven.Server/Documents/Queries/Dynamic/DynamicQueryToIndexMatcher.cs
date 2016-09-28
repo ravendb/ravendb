@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = _indexStore.GetIndex(definition.Name);
 
             var priority = index.Priority;
-            var stats = index.GetStats();
+            var stats = index.GetStats(calculateCollectionStats: false);
 
             if (priority.HasFlag(IndexingPriority.Error) || priority.HasFlag(IndexingPriority.Disabled) || stats.IsInvalidIndex)
             {

@@ -1,13 +1,31 @@
 using System;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents
 {
     public class Alert
     {
         /// <summary>
-        /// Alert title.
+        /// Alert severity
         /// </summary>
-        public string Title { get; set; }
+        public AlertSeverity Severity { get; set; }
+
+        /// <summary>
+        /// Alert type
+        /// </summary>
+        public AlertType Type { get; set; }
+
+        /// <summary>
+        /// Key used to distinguish alerts with the same type
+        /// </summary>
+        public string Key { get; set; }
+
+
+        /// <summary>
+        /// Alert id
+        /// </summary>
+        public string Id => CreateId(Type, Key);
 
         /// <summary>
         /// Alert creation date.
@@ -15,15 +33,15 @@ namespace Raven.Server.Documents
         public DateTime CreatedAt { get; set; }
 
         /// <summary>
-        /// Indicates if alert was observed (read).
+        /// <para>Purpose of this field is to avoid user from being flooded by recurring errors. We can display error i.e. once per day.</para>
+        /// <para>This field might be used to dismiss alert until given date.</para>
         /// </summary>
-        public bool Observed { get; set; }
+        public DateTime? DismissedUntil { get; set; }
 
         /// <summary>
-        /// <para>Purpose of this field is to avoid user from being flooded by recurring errors. We can display error i.e. once per day.</para>
-        /// <para>This field might be used to determinate when user dismissed given alert for the last time.</para>
+        /// Indicates if alert was read.
         /// </summary>
-        public DateTime? LastDismissedAt { get; set; }
+        public bool Read { get; set; }
 
         /// <summary>
         /// Alert message.
@@ -31,18 +49,28 @@ namespace Raven.Server.Documents
         public string Message { get; set; }
 
         /// <summary>
-        /// Alert severity level.
+        /// Alert contents
         /// </summary>
-        public bool IsError { get; set; }
+        public IAlertContent Content { get; set; }
 
-        /// <summary>
-        /// Exception that occured.
-        /// </summary>
-        public string Exception { get; set; }
+        public static string CreateId(AlertType type, string key)
+        {
+            return type + (key != null ? "/" + key : string.Empty);
+        }
 
-        /// <summary>
-        /// Unique key for the alert.
-        /// </summary>
-        public string UniqueKey { get; set; }
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Severity)] = Severity.ToString(),
+                [nameof(Type)] = Type.ToString(),
+                [nameof(Key)] = Key,
+                [nameof(CreatedAt)] = CreatedAt,
+                [nameof(DismissedUntil)] = DismissedUntil,
+                [nameof(Read)] = Read,
+                [nameof(Message)] = Message,
+                [nameof(Content)] = Content?.ToJson()
+            };
+        }
     }
 }

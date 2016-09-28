@@ -239,9 +239,9 @@ namespace Raven.Server.Documents.Handlers
 
             var queryRunner = new QueryRunner(Database, context);
 
-            var operationId = Database.DatabaseOperations.GetNextOperationId();
+            var operationId = Database.Operations.GetNextOperationId();
 
-            var task = Database.DatabaseOperations.AddOperation(indexName, operationType, onProgress => 
+            var task = Database.Operations.AddOperation(indexName, operationType, onProgress => 
                     operation(queryRunner, indexName, query, options, onProgress, token), operationId, token);
 
             task.ContinueWith(_ => returnContextToPool.Dispose());

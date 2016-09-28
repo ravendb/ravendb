@@ -1,25 +1,32 @@
-<div class="panel panel-default">
-    <div class="panel-heading">
-        <h3 class="panel-title">Create Sample Data</h3>
-    </div>
-    <div class="panel-body">
-        <p>
-            <i class="fa fa-info-circle text-info"></i>
-            Creating sample data requires an empty database.<br />
-        </p>
-        <div class="btn-group">
-            <button class="btn btn-primary" data-bind="click: generateSampleData">
-                <i class="fa fa-magic"></i>
-                Create sample data
-            </button>
-        </div>
-        <button class="btn btn-link" data-bind="click: showSampleDataClass , enable: isEnable">
-            <!--<i class="fa fa-file-code-o"></i>-->
-            Show sample data classes
-        </button>
+<div class="sampleData">
+    <h1>Create sample data</h1>
 
-        <div class="progress progress-striped active" data-bind="visible: isBusy">
-            <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <p class="bg-info padding padding-md">
+                <i class="icon-info"></i>
+                Creating sample data requires an empty database.
+            </p>
+            <div class="row">
+                <div class="col-sm-12">
+                    <button class="btn btn-default" data-bind="click: copyClasses">
+                        <i class="icon-code"></i>&nbsp;
+                        Copy C# classes for sample data
+                    </button>
+                    <button class="btn btn-primary sampleData-createBtn" data-bind="click: generateSampleData, css: { 'btn-spinner': isBusy() }">
+                        <i class="icon-document-group"></i>&nbsp;
+                        Create sample data
+                    </button>
+                </div>
+            </div>
+            <br>
+            <div class="row">
+                <div class="col-sm-12">
+                    <h2>Sample data C# code</h2>
+                    <pre class="sampleData-classes"
+                         data-bind="aceEditor: { code: classData, lang: 'ace/mode/csharp', readOnly: true }"></pre>
+                </div>
+            </div>
         </div>
     </div>
 </div>

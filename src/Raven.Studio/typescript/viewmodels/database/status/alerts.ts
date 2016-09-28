@@ -1,5 +1,4 @@
 import router = require("plugins/router"); 
-import getAlertsCommand = require("commands/operations/getAlertsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import moment = require("moment");
 import alert = require("models/database/debug/alert");
@@ -10,7 +9,7 @@ import tableNavigationTrait = require("common/tableNavigationTrait");
 
 class alerts extends viewModelBase {
 
-    alertDoc = ko.observable<alertContainerDto>();
+    //TODO: alertDoc = ko.observable<alertContainerDto>();
     allAlerts = ko.observableArray<alert>();
     filterLevel = ko.observable("All");
     selectedAlert = ko.observable<alert>();
@@ -29,17 +28,17 @@ class alerts extends viewModelBase {
 
         autoRefreshBindingHandler.install();
 
-        this.unreadAlertCount = ko.computed(() => this.allAlerts().count(a => !a.observed()));
-        this.readAlertCount = ko.computed(() => this.allAlerts().count(a => a.observed()));
+        //TODO: this.unreadAlertCount = ko.computed(() => this.allAlerts().count(a => !a.observed()));
+        //TODO: this.readAlertCount = ko.computed(() => this.allAlerts().count(a => a.observed()));
         this.updateCurrentNowTime();
-        this.activeDatabase.subscribe(() => this.fetchAlerts());
+        //TODO: this.activeDatabase.subscribe(() => this.fetchAlerts());
 
         this.tableNavigation = new tableNavigationTrait<alert>("#alertTableContainer", this.selectedAlert, this.allAlerts, i => "#alertsContainer table tbody tr:nth-child(" + (i + 1) + ")");
     }
 
     activate(args: any) {
         super.activate(args);
-        this.fetchAlerts();
+        //TODO: this.fetchAlerts();
         var item = !!args.item && !isNaN(args.item) ? args.item : 0;
         this.updateHelpLink('HL46QE');
         this.selectedAlertIndex(item);
@@ -55,7 +54,7 @@ class alerts extends viewModelBase {
     deactivate() {
         clearTimeout(this.updateNowTimeoutHandle);
     }
-
+    /* TODO
     fetchAlerts(): JQueryPromise<alertContainerDto> {
         var db = this.activeDatabase();
         if (db) {
@@ -89,7 +88,7 @@ class alerts extends viewModelBase {
         var unreadFilterWithUnreadAlert = this.filterLevel() === "Unread" && !a.observed();
         var readFilterWithReadAlert = this.filterLevel() === "Read" && a.observed();
         return unreadFilterWithUnreadAlert || readFilterWithReadAlert;
-    }
+    }*/
 
     createHumanReadableTime(time: string): KnockoutComputed<string> {
         if (time) {
@@ -132,6 +131,7 @@ class alerts extends viewModelBase {
     }
 
     toggleSelectedReadState() {
+        /* TODO
         this.disableAutoRefresh(); 
         var alert = this.selectedAlert();
         if (alert) {
@@ -139,7 +139,7 @@ class alerts extends viewModelBase {
                 alert.lastDismissedAt = this.now().toISOString();
             }
             alert.observed(!alert.observed());
-        }
+        }*/
     }
 
     private disableAutoRefresh() {
@@ -156,7 +156,7 @@ class alerts extends viewModelBase {
 
     deleteReadAlerts() {
         this.disableAutoRefresh();
-        this.allAlerts.remove(a => a.observed());
+        //TODO: this.allAlerts.remove(a => a.observed());
     }
 
     deleteAllAlerts() {
@@ -165,6 +165,7 @@ class alerts extends viewModelBase {
     }
 
     saveAlerts() {
+        /* TODO
         var alertDoc = this.alertDoc();
         var db = this.activeDatabase();
         if (alertDoc && db) {
@@ -173,7 +174,7 @@ class alerts extends viewModelBase {
                 .execute()
                 .done(() => this.fetchAlerts());
 
-        }
+        }*/
     }
 }
 

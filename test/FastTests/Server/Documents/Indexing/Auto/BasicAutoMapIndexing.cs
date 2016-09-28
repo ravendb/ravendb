@@ -333,8 +333,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(2, stats.MapAttempts);
                         Assert.Equal(0, stats.MapErrors);
                         Assert.Equal(2, stats.MapSuccesses);
-                        Assert.Equal(1, stats.ForCollections.Length);
-                        Assert.Equal(2, stats.LastIndexedEtags[stats.ForCollections[0]]);
+                        Assert.Equal(1, stats.Collections.Count);
+                        Assert.Equal(2, stats.Collections.First().Value.LastProcessedDocumentEtag);
                         Assert.Equal(now, stats.LastIndexingTime);
                         Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
@@ -379,8 +379,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(3, stats.MapAttempts);
                         Assert.Equal(0, stats.MapErrors);
                         Assert.Equal(3, stats.MapSuccesses);
-                        Assert.Equal(1, stats.ForCollections.Length);
-                        Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
+                        Assert.Equal(1, stats.Collections.Count);
+                        Assert.Equal(3, stats.Collections.First().Value.LastProcessedDocumentEtag);
                         Assert.Equal(now, stats.LastIndexingTime);
                         Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
@@ -415,8 +415,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(3, stats.MapAttempts);
                         Assert.Equal(0, stats.MapErrors);
                         Assert.Equal(3, stats.MapSuccesses);
-                        Assert.Equal(1, stats.ForCollections.Length);
-                        Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
+                        Assert.Equal(1, stats.Collections.Count);
+                        Assert.Equal(3, stats.Collections.First().Value.LastProcessedDocumentEtag);
                         Assert.Equal(now, stats.LastIndexingTime);
                         Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);

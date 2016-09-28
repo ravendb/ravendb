@@ -2,6 +2,9 @@
 
 class watchedOperation {
     private static readonly inProgresStatus = "InProgress" as Raven.Client.Data.OperationStatus;
+    private static readonly completedStatus = "Completed" as Raven.Client.Data.OperationStatus;
+    private static readonly faultedStatus = "Faulted" as Raven.Client.Data.OperationStatus;
+    private static readonly canceledStatus = "Canceled" as Raven.Client.Data.OperationStatus;
 
     private disposeHandle: changeSubscription;
 
@@ -12,6 +15,10 @@ class watchedOperation {
     killable = ko.observable<boolean>(false);
     completed: KnockoutComputed<boolean>;
     visible: KnockoutComputed<boolean>;
+
+    isSuccess: KnockoutComputed<boolean>;
+    isFailure: KnockoutComputed<boolean>;
+    isCancelled: KnockoutComputed<boolean>;
 
     constructor(operationId: number, disposeHandle: changeSubscription) {
         this.operationId = operationId;
@@ -29,6 +36,20 @@ class watchedOperation {
             var state = this.state();
             if (state) {
                 return state.Status !== watchedOperation.inProgresStatus;
+            }
+            return false;
+        });
+
+        this.isSuccess = this.statusComparer(watchedOperation.completedStatus);
+        this.isCancelled = this.statusComparer(watchedOperation.canceledStatus);
+        this.isFailure = this.statusComparer(watchedOperation.faultedStatus);
+    }
+
+    private statusComparer(desiredStatus: Raven.Client.Data.OperationStatus): KnockoutComputed<boolean> {
+        return ko.pureComputed(() => {
+            var state = this.state();
+            if (state) {
+                return state.Status === desiredStatus;
             }
             return false;
         });

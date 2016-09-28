@@ -1632,6 +1632,41 @@ namespace Raven.Server.Documents
             return identities.Increment(key, 1);
         }
 
+        public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
+        {
+            return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: false, totalCount: out totalCount);
+        }
+
+        public long GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
+        {
+            return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: true, totalCount: out totalCount);
+        }
+
+        private long GetNumberOfItemsToProcess(DocumentsOperationContext context, string collection, long afterEtag, bool tombstones, out long totalCount)
+        {
+            var collectionName = ExtractCollectionName(context, collection);
+            if (collectionName == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            Table table;
+            TableSchema.FixedSizeSchemaIndexDef indexDef;
+            if (tombstones)
+            {
+                table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+                indexDef = TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice];
+            }
+            else
+            {
+                table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                indexDef = DocsSchema.FixedSizeIndexes[CollectionEtagsSlice];
+            }
+
+            return table.GetNumberEntriesFor(indexDef, afterEtag, out totalCount);
+        }
+
         public long GetNumberOfDocuments(DocumentsOperationContext context)
         {
             var fstIndex = DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice];

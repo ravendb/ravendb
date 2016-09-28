@@ -11,7 +11,7 @@
             </div>
             <span data-bind="visible: errorMessage, text: errorMessage"></span>
             <a class="alert alert-link" href="#" data-bind="visible: details, click: $parent.showErrorsDialog.bind($parent)">Details</a>
-        </div>     
+        </div>
     </div>
 </div>
 
@@ -19,7 +19,7 @@
     
     <div data-bind="foreach: operations.watchedOperations()">
         <div data-bind="if: visible()">
-            <div class="panel">
+            <div class="panel" data-bind="css: { 'panel-success': isSuccess(), 'panel-warning': isCancelled(), 'panel-danger': isFailure() }">
                 <div class="panel-body">
                     <div data-bind="if: completed()">
                         <h3 data-bind="text: description().Description"></h3>
@@ -59,11 +59,25 @@
         <div class="panel">
             <div class="panel-body">
                 <h3 class="text-warning">
-                    <span class="icon-database"></span> <span data-bind="text: title"></span>
+                    <span data-bind="text: title"></span>
                 </h3>
                 <div class="text-right">
                     <a href="#" class="btn btn-sm btn-default">Details</a>
                     <a href="#" data-bind="click: $parent.dismissRecentError.bind($parent, $data)" class="btn btn-sm btn-danger"><span class="icon-cancel dismiss-notification"></span>Dismiss</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div data-bind="foreach: alerts.alerts">
+        <div class="panel" data-bind="css: { 'panel-info': isInfo, 'panel-warning': isWarning, 'panel-danger': isError }">
+            <div class="panel-body">
+                <h3 class="text-warning">
+                    <span data-bind="text: message"></span>
+                </h3>
+                <div class="text-right">
+                    <a href="#" class="btn btn-sm btn-default">Details</a>
+                    <a href="#" class="btn btn-sm btn-danger"><span class="icon-cancel dismiss-notification"></span>Postpone</a>
                 </div>
             </div>
         </div>

@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     _logger.Info(message, e);
 
                 stats.RecordReduceErrors(numberOfEntriesToReduce);
-                stats.AddReduceError(message + $" Message: {message}.");
+                stats.AddReduceError(message + $"  Exception: {e}");
             }
             finally
             {
@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     if (parentPage == -1)
                     {
                         stats.RecordReduceErrors(page.NumberOfEntries);
-                        stats.AddReduceError(message + $" Message: {message}.");
+                        stats.AddReduceError(message + $"  Exception: {e}");
                     }
                 }
             }
@@ -311,7 +311,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             _logger.Info(message, e);
 
                         stats.RecordReduceErrors(aggregatedEntries);
-                        stats.AddReduceError(message + $" Message: {message}.");
+                        stats.AddReduceError(message + $" Exception: {e}");
                     }
                 }
             }

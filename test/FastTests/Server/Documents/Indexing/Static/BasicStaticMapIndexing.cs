@@ -264,11 +264,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             tx.Commit();
                         }
 
-                        long lastProcessedEtag;
-
                         using (context.OpenReadTransaction())
                         {
-                            var isStale = index.IsStale(context, out lastProcessedEtag);
+                            var isStale = index.IsStale(context);
                             Assert.True(isStale);
                         }
 
@@ -282,7 +280,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            var isStale = index.IsStale(context, out lastProcessedEtag);
+                            var isStale = index.IsStale(context);
                             Assert.False(isStale);
                         }
 
@@ -295,7 +293,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            var isStale = index.IsStale(context, out lastProcessedEtag);
+                            var isStale = index.IsStale(context);
                             Assert.True(isStale);
                         }
 
@@ -305,9 +303,143 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            var isStale = index.IsStale(context, out lastProcessedEtag);
+                            var isStale = index.IsStale(context);
                             Assert.False(isStale);
                         }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void NumberOfDocumentsAndTombstonesToProcessShouldBeCalculatedCorrectly()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                using (var index = StaticMapIndex.CreateNew(1, new IndexDefinition()
+                {
+                    Name = "Index1",
+                    Maps = { "from doc in docs.Users select new { doc.Name }" },
+                    Type = IndexType.Map
+                }, database))
+                {
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    {
+                        using (var tx = context.OpenWriteTransaction())
+                        {
+                            using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
+                            {
+                                ["Name"] = "John",
+                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                {
+                                    [Constants.Headers.RavenEntityName] = "Users"
+                                }
+                            }))
+                            {
+                                database.DocumentsStorage.Put(context, "users/1", null, doc);
+                            }
+
+                            using (var doc = CreateDocument(context, "users/2", new DynamicJsonValue
+                            {
+                                ["Name"] = "Bob",
+                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                {
+                                    [Constants.Headers.RavenEntityName] = "Users"
+                                }
+                            }))
+                            {
+                                database.DocumentsStorage.Put(context, "users/2", null, doc);
+                            }
+
+                            using (var doc = CreateDocument(context, "people/1", new DynamicJsonValue
+                            {
+                                ["Name"] = "Edward",
+                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                {
+                                    [Constants.Headers.RavenEntityName] = "People"
+                                }
+                            }))
+                            {
+                                database.DocumentsStorage.Put(context, "people/1", null, doc);
+                            }
+
+                            tx.Commit();
+                        }
+
+                        var stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+
+                        Assert.Equal(0, stats.Collections["Users"].LastProcessedDocumentEtag);
+                        Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
+                        Assert.Equal(2, stats.Collections["Users"].NumberOfDocumentsToProcess);
+                        Assert.Equal(0, stats.Collections["Users"].NumberOfTombstonesToProcess);
+                        Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
+                        Assert.Equal(0, stats.Collections["Users"].TotalNumberOfTombstones);
+
+                        var batchStats = new IndexingRunStats();
+                        var scope = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
+
+                        stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+
+                        Assert.Equal(2, stats.Collections["Users"].LastProcessedDocumentEtag);
+                        Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
+                        Assert.Equal(0, stats.Collections["Users"].NumberOfDocumentsToProcess);
+                        Assert.Equal(0, stats.Collections["Users"].NumberOfTombstonesToProcess);
+                        Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
+                        Assert.Equal(0, stats.Collections["Users"].TotalNumberOfTombstones);
+
+                        using (var tx = context.OpenWriteTransaction())
+                        {
+                            database.DocumentsStorage.Delete(context, "users/1", null);
+
+                            using (var doc = CreateDocument(context, "users/3", new DynamicJsonValue
+                            {
+                                ["Name"] = "George",
+                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                {
+                                    [Constants.Headers.RavenEntityName] = "Users"
+                                }
+                            }))
+                            {
+                                database.DocumentsStorage.Put(context, "users/3", null, doc);
+                            }
+
+                            using (var doc = CreateDocument(context, "people/2", new DynamicJsonValue
+                            {
+                                ["Name"] = "Edward",
+                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                {
+                                    [Constants.Headers.RavenEntityName] = "People"
+                                }
+                            }))
+                            {
+                                database.DocumentsStorage.Put(context, "people/2", null, doc);
+                            }
+
+                            tx.Commit();
+                        }
+
+                        stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+
+                        Assert.Equal(2, stats.Collections["Users"].LastProcessedDocumentEtag);
+                        Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
+                        Assert.Equal(1, stats.Collections["Users"].NumberOfDocumentsToProcess);
+                        Assert.Equal(1, stats.Collections["Users"].NumberOfTombstonesToProcess);
+                        Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
+                        Assert.Equal(1, stats.Collections["Users"].TotalNumberOfTombstones);
+
+                        batchStats = new IndexingRunStats();
+                        scope = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
+
+                        stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+
+                        Assert.Equal(5, stats.Collections["Users"].LastProcessedDocumentEtag);
+                        Assert.Equal(4, stats.Collections["Users"].LastProcessedTombstoneEtag);
+                        Assert.Equal(0, stats.Collections["Users"].NumberOfDocumentsToProcess);
+                        Assert.Equal(0, stats.Collections["Users"].NumberOfTombstonesToProcess);
+                        Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
+                        Assert.Equal(1, stats.Collections["Users"].TotalNumberOfTombstones);
                     }
                 }
             }
