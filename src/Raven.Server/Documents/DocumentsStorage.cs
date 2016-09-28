@@ -684,7 +684,7 @@ namespace Raven.Server.Documents
                     .Count();
         }
 
-        public static ByteStringContext.Scope GetSliceFromKey(DocumentsOperationContext context, string key, out Slice keySlice)
+        public static ByteStringContext.ExternalScope GetSliceFromKey(DocumentsOperationContext context, string key, out Slice keySlice)
         {
             var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
 

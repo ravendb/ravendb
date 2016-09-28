@@ -32,11 +32,9 @@ namespace FastTests.Utils
 
                 for (int i = 0; i < numberOfBuffers; i++)
                 {
-                    ptrSize.Add(new PtrSize
-                    {
-                        Ptr = ptr + (i * chunkSize),
-                        Size = i == numberOfBuffers - 1 ? totalSize % chunkSize : chunkSize
-                    });
+                    ptrSize.Add(PtrSize.Create(
+                        ptr + (i * chunkSize),
+                        i == numberOfBuffers - 1 ? totalSize % chunkSize : chunkSize));
                 }
                 
                 var sut = new ChunkedMmapStream(ptrSize.ToArray(), chunkSize);

@@ -387,7 +387,7 @@ namespace Voron.Impl.Backup
 
 
                 var root = Tree.Open(txw, null, &lastTxHeader->Root);
-                root.Name = Constants.RootTreeName;
+                root.Name = Constants.RootTreeNameSlice;
 
                 txw.UpdateRootsIfNeeded(root);
 

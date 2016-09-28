@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly TransactionOperationContext _indexContext;
         private readonly MapReduceIndexingContext _mapReduceContext;
         private readonly Slice _nestedValueKey;
-        private ByteStringContext.Scope _nestedValueKeyScope;
+        private ByteStringContext.InternalScope _nestedValueKeyScope;
         private readonly Transaction _tx;
 
         private NestedMapResultsSection _nestedSection;

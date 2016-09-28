@@ -24,12 +24,12 @@ namespace Voron.Data.Tables
         private FixedSizeTree _fstKey;
         private FixedSizeTree _inactiveSections;
         private FixedSizeTree _activeCandidateSection;
-        private readonly int _pageSize;
+        private readonly int _pageSize;      
 
-        private Dictionary<Slice, Tree> _treesBySliceCache;
+        private readonly Dictionary<Slice, Tree> _treesBySliceCache = new Dictionary<Slice, Tree>(SliceComparer.Instance);
         private readonly Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache = new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>(SliceComparer.Instance);
 
-        public readonly string Name;
+        public readonly Slice Name;
 
         public long NumberOfEntries { get; private set; }
 
@@ -98,7 +98,7 @@ namespace Voron.Data.Tables
         /// Using this constructor WILL NOT register the Table for commit in
         /// the Transaction, and hence changes WILL NOT be commited.
         /// </summary>
-        public Table(TableSchema schema, string name, Transaction tx, int tag, bool doSchemaValidation = false)
+        public Table(TableSchema schema, Slice name, Transaction tx, int tag, bool doSchemaValidation = false)
         {
             Name = name;
 
@@ -159,7 +159,7 @@ namespace Voron.Data.Tables
 
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
-            id = -1;
+            id = -1;		
             var pkTree = GetTree(_schema.Key);
             var readResult = pkTree?.Read(key);
             if (readResult == null)
@@ -370,7 +370,7 @@ namespace Voron.Data.Tables
                 page.OverflowSize = size;
 
                 pos = page.Pointer + sizeof(PageHeader);
-
+                
                 builder.CopyTo(pos);
                 id = page.PageNumber * _pageSize;
             }
@@ -471,13 +471,15 @@ namespace Voron.Data.Tables
         {
             Dictionary<Slice, FixedSizeTree> cache;
 
-            Slice parentName;// explicitly not disposing this, will be hanndled in the end of the tx
-            Slice.From(_tx.Allocator, parent.Name ?? Constants.RootTreeName, ByteStringType.Immutable, out parentName);
+            // explicitly not disposing this, will be handled in the end of the tx
+            Slice parentName = parent.Name.HasValue ? parent.Name : Constants.RootTreeNameSlice;
+
             if (_fixedSizeTreeCache.TryGetValue(parentName, out cache) == false)
             {
-                _fixedSizeTreeCache[parentName] = cache = new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
+                cache = new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
+                _fixedSizeTreeCache[parentName] = cache;
             }
-
+            
             FixedSizeTree tree;
             if (cache.TryGetValue(name, out tree) == false)
             {
@@ -533,9 +535,6 @@ namespace Voron.Data.Tables
 
         internal Tree GetTree(Slice name)
         {
-            if (_treesBySliceCache == null)
-                _treesBySliceCache = new Dictionary<Slice, Tree>(SliceComparer.Instance);
-
             Tree tree;
             if (_treesBySliceCache.TryGetValue(name, out tree))
                 return tree;
@@ -552,11 +551,11 @@ namespace Voron.Data.Tables
         private Tree GetTree(TableSchema.SchemaIndexDef idx)
         {
             if (idx.IsGlobal)
-                return _tx.ReadTree(idx.Name.ToString());
+                return _tx.ReadTree(idx.Name);
             return GetTree(idx.Name);
         }
 
-        public void DeleteByKey(Slice key)
+         public void DeleteByKey(Slice key)
         {
             var pkTree = GetTree(_schema.Key);
 
@@ -661,7 +660,7 @@ namespace Voron.Data.Tables
 
                 if (it.Seek(value) == false)
                     yield break;
-
+                
                 do
                 {
                     yield return new SeekResult
@@ -816,7 +815,7 @@ namespace Voron.Data.Tables
                 throw new ArgumentOutOfRangeException(nameof(numberOfEntriesToDelete), "Number of entries should not be negative");
 
             if (numberOfEntriesToDelete == 0)
-                return 0;
+                return 0;            
 
             var toDelete = new List<long>();
             var tree = GetTree(index);
@@ -854,14 +853,14 @@ namespace Voron.Data.Tables
             if (_treesBySliceCache == null)
                 return;
 
-            foreach (var item in _treesBySliceCache)
+            foreach( var item in _treesBySliceCache)
             {
                 var tree = item.Value;
                 if (!tree.State.IsModified)
                     continue;
 
-                var treeName = item.Key;
-                var header = (TreeRootHeader*)_tableTree.DirectAdd(treeName, sizeof(TreeRootHeader));
+                var treeName = item.Key;               
+                var header = (TreeRootHeader*) _tableTree.DirectAdd(treeName, sizeof(TreeRootHeader));
                 tree.State.CopyTo(header);
             }
         }

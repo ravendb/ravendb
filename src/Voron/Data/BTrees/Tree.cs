@@ -14,15 +14,16 @@ namespace Voron.Data.BTrees
 {
     public unsafe partial class Tree
     {
-        private Dictionary<string, FixedSizeTree> _fixedSizeTrees;
+        private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
         private readonly TreeMutableState _state;
 
         public event Action<long> PageModified;
         public event Action<long> PageFreed;
 
         private readonly RecentlyFoundTreePages _recentlyFoundPages;
+        private readonly PageLocator _pageLocator;
 
-        public string Name { get; set; }
+        public Slice Name { get; set; }
 
         public TreeMutableState State
         {
@@ -42,6 +43,7 @@ namespace Voron.Data.BTrees
             _llt = llt;
             _tx = tx;
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2);
+            _pageLocator = new PageLocator(_llt, llt.Flags == TransactionFlags.Read ? 16 : 8);
             _state = new TreeMutableState(llt)
             {
                 RootPageNumber = root
@@ -53,6 +55,7 @@ namespace Voron.Data.BTrees
             _llt = llt;
             _tx = tx;
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2);
+            _pageLocator = new PageLocator(_llt, llt.Flags == TransactionFlags.Read ? 16 : 8);
             _state = new TreeMutableState(llt);
             _state = state;
         }
@@ -190,7 +193,6 @@ namespace Voron.Data.BTrees
             {
                 var tempPageBuffer = tmp.TempPageBuffer;
                 var tempPagePointer = tmp.TempPagePointer;
-                int copied = 0;
 
                 while (true)
                 {
@@ -200,7 +202,6 @@ namespace Voron.Data.BTrees
 
                     Memory.CopyInline(pos, tempPagePointer, read);
                     pos += read;
-                    copied += read;
 
                     if (read != tempPageBuffer.Length)
                         break;
@@ -231,12 +232,14 @@ namespace Voron.Data.BTrees
             bool? shouldGoToOverflowPage = null;
             if (page.LastMatch == 0) // this is an update operation
             {
-                node = page.GetNode(page.LastSearchPosition);
+                node = page.GetNode(page.LastSearchPosition);                
 
 #if DEBUG
                 Slice nodeCheck;
                 using(TreeNodeHeader.ToSlicePtr(_llt.Allocator, node,out nodeCheck))
-                Debug.Assert(SliceComparer.EqualsInline(nodeCheck, key));
+				{
+					Debug.Assert(SliceComparer.EqualsInline(nodeCheck, key));	
+				}                
 #endif
                 shouldGoToOverflowPage = ShouldGoToOverflowPage(len);
 
@@ -302,7 +305,7 @@ namespace Voron.Data.BTrees
                     default:
                         throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
                 }
-                page.DebugValidate(_llt, State.RootPageNumber);
+                page.DebugValidate(this, State.RootPageNumber);
             }
             if (overFlowPos != null)
                 return overFlowPos;
@@ -323,7 +326,7 @@ namespace Voron.Data.BTrees
 
         public TreePage ModifyPage(long pageNumber)
         {
-            var newPage = _llt.ModifyPage(pageNumber).ToTreePage();
+            var newPage = GetWriteableTreePage(pageNumber);
             newPage.Dirty = true;
             _recentlyFoundPages.Reset(pageNumber);
 
@@ -358,7 +361,7 @@ namespace Voron.Data.BTrees
             nodeVersion = node->Version;
             if (node->Flags == (TreeNodeFlags.PageRef)) // this is an overflow pointer
             {
-                var overflowPage = _llt.GetReadOnlyTreePage(node->PageNumber);
+                var overflowPage = GetReadOnlyTreePage(node->PageNumber);
                 FreePage(overflowPage);
             }
 
@@ -370,7 +373,7 @@ namespace Voron.Data.BTrees
         {
             var pages = new HashSet<long>();
             var stack = new Stack<TreePage>();
-            var root = _llt.GetReadOnlyTreePage(rootPageNumber);
+            var root = GetReadOnlyTreePage(rootPageNumber);
             stack.Push(root);
             pages.Add(rootPageNumber);
             while (stack.Count > 0)
@@ -378,11 +381,11 @@ namespace Voron.Data.BTrees
                 var p = stack.Pop();
                 if (p.NumberOfEntries == 0 && p != root)
                 {
-                    DebugStuff.RenderAndShowTree(_llt, rootPageNumber);
+                    DebugStuff.RenderAndShowTree(this, rootPageNumber);
                     throw new InvalidOperationException("The page " + p.PageNumber + " is empty");
 
                 }
-                p.DebugValidate(_llt, rootPageNumber);
+                p.DebugValidate(this, rootPageNumber);
                 if (p.IsBranch == false)
                     continue;
 
@@ -396,12 +399,27 @@ namespace Voron.Data.BTrees
                     var page = p.GetNode(i)->PageNumber;
                     if (pages.Add(page) == false)
                     {
-                        DebugStuff.RenderAndShowTree(_llt, rootPageNumber);
+                        DebugStuff.RenderAndShowTree(this, rootPageNumber);
                         throw new InvalidOperationException("The page " + page + " already appeared in the tree!");
                     }
-                    stack.Push(_llt.GetReadOnlyTreePage(page));
+                    stack.Push(GetReadOnlyTreePage(page));
                 }
             }
+        }
+
+        internal TreePage GetReadOnlyTreePage(long pageNumber)
+        {
+            return _pageLocator.GetReadOnlyPage(pageNumber).ToTreePage();
+        }
+
+        internal Page GetReadOnlyPage(long pageNumber)
+        {
+            return _pageLocator.GetReadOnlyPage(pageNumber);
+        }
+
+        internal TreePage GetWriteableTreePage(long pageNumber)
+        {
+            return _pageLocator.GetWritablePage(pageNumber).ToTreePage();
         }
 
         internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node)
@@ -430,7 +448,7 @@ namespace Voron.Data.BTrees
 
         private TreePage SearchForPage(Slice key, out TreeNodeHeader* node) 
         {
-            var p = _llt.GetReadOnlyTreePage(State.RootPageNumber);
+            var p = GetReadOnlyTreePage(State.RootPageNumber);
 
             var cursorPath = new List<long>();
             cursorPath.Add(p.PageNumber);
@@ -477,7 +495,7 @@ namespace Voron.Data.BTrees
                 }
 
                 var pageNode = p.GetNode(nodePos);
-                p = _llt.GetReadOnlyTreePage(pageNode->PageNumber);
+                p = GetReadOnlyTreePage(pageNode->PageNumber);
                 Debug.Assert(pageNode->PageNumber == p.PageNumber,
                     string.Format("Requested Page: #{0}. Got Page: #{1}", pageNode->PageNumber, p.PageNumber));
 
@@ -496,7 +514,7 @@ namespace Voron.Data.BTrees
 
         private TreePage SearchForPage(Slice key, out Func<Slice, TreeCursor> cursorConstructor, out TreeNodeHeader* node)
         {
-            var p = _llt.GetReadOnlyTreePage(State.RootPageNumber);
+            var p = GetReadOnlyTreePage(State.RootPageNumber);
 
             var cursor = new TreeCursor();
             cursor.Push(p);
@@ -542,7 +560,7 @@ namespace Voron.Data.BTrees
                 }
 
                 var pageNode = p.GetNode(nodePos);
-                p = _llt.GetReadOnlyTreePage(pageNode->PageNumber);
+                p = GetReadOnlyTreePage(pageNode->PageNumber);
                 Debug.Assert(pageNode->PageNumber == p.PageNumber,
                     string.Format("Requested Page: #{0}. Got Page: #{1}", pageNode->PageNumber, p.PageNumber));
 
@@ -588,8 +606,7 @@ namespace Voron.Data.BTrees
                 lastScope = p.GetNodeKey(_llt, p.NumberOfEntries - 1, ByteStringType.Immutable, out lastKey);
             }
 
-            var foundPage = new RecentlyFoundTreePages.FoundTreePage(p.PageNumber, p, firstKey, lastKey, c.ToArray(), 
-                firstScope, lastScope);
+            var foundPage = new RecentlyFoundTreePages.FoundTreePage(p.PageNumber, p, firstKey, lastKey, c.ToArray(), firstScope, lastScope);
 
             _recentlyFoundPages.Add(foundPage);
         }
@@ -657,7 +674,7 @@ namespace Voron.Data.BTrees
             }
             else
             {
-                page = _llt.GetReadOnlyTreePage(foundPage.Number);
+                page = GetReadOnlyTreePage(foundPage.Number);
             }
 
             if (page.IsLeaf == false)
@@ -690,7 +707,7 @@ namespace Voron.Data.BTrees
             }
             else
             {
-                page = _llt.GetReadOnlyTreePage(lastFoundPageNumber);
+                page = GetReadOnlyTreePage(lastFoundPageNumber);
             }
 
             if (page.IsLeaf == false)
@@ -717,7 +734,7 @@ namespace Voron.Data.BTrees
                 }
                 else
                 {
-                    var cursorPage = _llt.GetReadOnlyTreePage(p);
+                    var cursorPage = GetReadOnlyTreePage(p);
                     if (key.Options == SliceOptions.Key)
                     {
                         if (cursorPage.Search(_llt, key) != null && cursorPage.LastMatch != 0)
@@ -771,6 +788,7 @@ namespace Voron.Data.BTrees
                 for (int i = 0; i < numberOfPages; i++)
                 {
                     _llt.FreePage(p.PageNumber + i);
+                    _pageLocator.Reset(p.PageNumber + i);
                 }
 
                 State.RecordFreedPage(p, numberOfPages);
@@ -778,6 +796,7 @@ namespace Voron.Data.BTrees
             else
             {
                 _llt.FreePage(p.PageNumber);
+                _pageLocator.Reset(p.PageNumber);
                 State.RecordFreedPage(p, 1);
             }
         }
@@ -813,7 +832,7 @@ namespace Voron.Data.BTrees
                 }
             }
 
-            page.DebugValidate(_llt, State.RootPageNumber);
+            page.DebugValidate(this, State.RootPageNumber);
         }
 
         public TreeIterator Iterate(bool prefetch)
@@ -829,7 +848,7 @@ namespace Voron.Data.BTrees
             if (p.LastMatch != 0)
                 return null;
 
-            return new ReadResult(TreeNodeHeader.Reader(_llt, node), node->Version);
+            return new ReadResult(GetValueReaderFromHeader(node), node->Version);
         }
 
         public int GetDataSize(Slice key)
@@ -846,10 +865,20 @@ namespace Voron.Data.BTrees
             using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out nodeKey))
             {
                 if (!SliceComparer.EqualsInline(nodeKey, key))
-                    return -1;
+                return -1;
             }
 
-            return TreeNodeHeader.GetDataSize(_llt, node);
+            return GetDataSize(node);
+        }
+
+        public int GetDataSize(TreeNodeHeader* node)
+        {
+            if (node->Flags == (TreeNodeFlags.PageRef))
+            {
+                var overFlowPage = GetReadOnlyPage(node->PageNumber);
+                return overFlowPage.OverflowSize;
+            }
+            return node->DataSize;
         }
 
         public long GetParentPageOf(TreePage page)
@@ -909,9 +938,9 @@ namespace Voron.Data.BTrees
 
             Debug.Assert(node != null);
 
-            if (node->Flags == (TreeNodeFlags.PageRef))
+            if (node->Flags == TreeNodeFlags.PageRef)
             {
-                var overFlowPage = _llt.GetReadOnlyTreePage(node->PageNumber);
+                var overFlowPage = GetReadOnlyTreePage(node->PageNumber);
                 return overFlowPage.Base + Constants.TreePageHeaderSize;
             }
 
@@ -922,7 +951,7 @@ namespace Voron.Data.BTrees
         {
             var results = new List<long>();
             var stack = new Stack<TreePage>();
-            var root = _llt.GetReadOnlyTreePage(State.RootPageNumber);
+            var root = GetReadOnlyTreePage(State.RootPageNumber);
             stack.Push(root);
 
             Slice key = default(Slice);
@@ -937,12 +966,12 @@ namespace Voron.Data.BTrees
                     var pageNumber = node->PageNumber;
                     if (p.IsBranch)
                     {
-                        stack.Push(_llt.GetReadOnlyTreePage(pageNumber));
+                        stack.Push(GetReadOnlyTreePage(pageNumber));
                     }
                     else if (node->Flags == TreeNodeFlags.PageRef)
                     {
                         // This is an overflow page
-                        var overflowPage = _llt.GetReadOnlyTreePage(pageNumber);
+                        var overflowPage = GetReadOnlyTreePage(pageNumber);
                         var numberOfPages = _llt.DataPager.GetNumberOfOverflowPages(overflowPage.OverflowSize);
                         for (long j = 0; j < numberOfPages; ++j)
                             results.Add(overflowPage.PageNumber + j);
@@ -959,7 +988,7 @@ namespace Voron.Data.BTrees
                     {
                         if ((State.Flags & TreeFlags.FixedSizeTrees) == TreeFlags.FixedSizeTrees)
                         {
-                            var valueReader = TreeNodeHeader.Reader(_llt, node);
+                            var valueReader = GetValueReaderFromHeader(node);
                             var valueSize = ((FixedSizeTreeHeader.Embedded*)valueReader.Base)->ValueSize;
 
                             Slice fixedSizeTreeName;
@@ -972,7 +1001,7 @@ namespace Voron.Data.BTrees
                             }
                         }
                     }
-                }
+            	}
             }
             return results;
         }
@@ -1014,7 +1043,7 @@ namespace Voron.Data.BTrees
         {
             if (updatedNode->Flags == TreeNodeFlags.PageRef)
             {
-                var readOnlyOverflowPage = _llt.GetReadOnlyTreePage(updatedNode->PageNumber);
+                var readOnlyOverflowPage = GetReadOnlyTreePage(updatedNode->PageNumber);
 
                 if (len <= readOnlyOverflowPage.OverflowSize)
                 {
@@ -1074,23 +1103,24 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public void ClearRecentFoundPages()
+        public void ClearPagesCache()
         {
             if (_recentlyFoundPages != null)
                 _recentlyFoundPages.Clear();
+
+            if (_pageLocator != null)
+                _pageLocator.Clear();
         }
 
-        public FixedSizeTree FixedTreeFor(string key, byte valSize = 0)
+        public FixedSizeTree FixedTreeFor(Slice key, byte valSize = 0)
         {
             if (_fixedSizeTrees == null)
-                _fixedSizeTrees = new Dictionary<string, FixedSizeTree>();
+                _fixedSizeTrees = new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
 
             FixedSizeTree fixedTree;
             if (_fixedSizeTrees.TryGetValue(key, out fixedTree) == false)
             {
-                Slice keySlice; // we explicitly don't dispose it here
-                Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice);
-                _fixedSizeTrees[key] = fixedTree = new FixedSizeTree(_llt, this, keySlice, valSize, clone: false);
+                _fixedSizeTrees[key] = fixedTree = new FixedSizeTree(_llt, this, key, valSize, clone: false);
             }
 
             State.Flags |= TreeFlags.FixedSizeTrees;
@@ -1098,7 +1128,7 @@ namespace Voron.Data.BTrees
             return fixedTree;
         }
 
-        public long DeleteFixedTreeFor(string key, byte valSize = 0)
+        public long DeleteFixedTreeFor(Slice key, byte valSize = 0)
         {
             var fixedSizeTree = FixedTreeFor(key, valSize);
             var numberOfEntries = fixedSizeTree.NumberOfEntries;
@@ -1117,6 +1147,52 @@ namespace Voron.Data.BTrees
         public void DebugRenderAndShow()
         {
             DebugStuff.RenderAndShow(this);
+        }
+
+        public byte* DirectAccessFromHeader(TreeNodeHeader* node)
+        {
+            if (node->Flags == TreeNodeFlags.PageRef)
+            {
+                var overFlowPage = GetReadOnlyTreePage(node->PageNumber);
+                return overFlowPage.Base + Constants.TreePageHeaderSize;
+            }
+
+            return (byte*)node + node->KeySize + Constants.NodeHeaderSize;
+        }
+
+        public Slice GetData(TreeNodeHeader* node)
+        {
+            Slice outputDataSlice;
+
+            if (node->Flags == TreeNodeFlags.PageRef)
+            {
+                var overFlowPage = GetReadOnlyPage(node->PageNumber);
+                if (overFlowPage.OverflowSize > ushort.MaxValue)
+                    throw new InvalidOperationException("Cannot convert big data to a slice, too big");
+                Slice.External(Llt.Allocator, overFlowPage.Pointer + Constants.TreePageHeaderSize,
+                    (ushort) overFlowPage.OverflowSize, out outputDataSlice);
+            }
+            else
+            {
+                Slice.External(Llt.Allocator, (byte*)node + node->KeySize + Constants.NodeHeaderSize,
+                    (ushort)node->DataSize, out outputDataSlice);
+            }
+
+            return outputDataSlice;
+        }
+
+        public ValueReader GetValueReaderFromHeader(TreeNodeHeader* node)
+        {
+            if (node->Flags == TreeNodeFlags.PageRef)
+            {
+                var overFlowPage = GetReadOnlyPage(node->PageNumber);
+
+                Debug.Assert(overFlowPage.IsOverflow, "Requested overflow page but got " + overFlowPage.Flags);
+                Debug.Assert(overFlowPage.OverflowSize > 0, "Overflow page cannot be size equal 0 bytes");
+
+                return new ValueReader(overFlowPage.Pointer + Constants.TreePageHeaderSize, overFlowPage.OverflowSize);
+            }
+            return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
         }
     }
 }

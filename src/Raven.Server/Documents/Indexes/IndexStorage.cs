@@ -545,7 +545,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private static unsafe ByteStringContext.Scope CreateKey(RavenTransaction tx, LazyStringValue key, out Slice keySlice)
+        private static unsafe ByteStringContext.ExternalScope CreateKey(RavenTransaction tx, LazyStringValue key, out Slice keySlice)
         {
             return Slice.External(tx.InnerTransaction.Allocator, key.Buffer, key.Size, out keySlice);
         }

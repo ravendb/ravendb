@@ -32,7 +32,7 @@ namespace Voron.Debugging
 	public class TreeReport
 	{
         public RootObjectType Type { get; set; }
-		public string Name { get; set; }
+		public Slice Name { get; set; }
 		public long PageCount { get; set; }
 		public long NumberOfEntries { get; set; }
 		public long BranchPages { get; set; }
