@@ -64,12 +64,17 @@ namespace Raven.Database.Bundles.SqlReplication
             get { return statistics; }
         }
 
+        public ConcurrentDictionary<string, bool> ResetRequested
+        {
+            get { return resetRequested; }
+        }
         public readonly ConcurrentDictionary<string, SqlReplicationMetricsCountersManager> SqlReplicationMetricsCounters =
             new ConcurrentDictionary<string, SqlReplicationMetricsCountersManager>();
 
         private readonly ConcurrentSet<PrefetchingBehavior> prefetchingBehaviors = new ConcurrentSet<PrefetchingBehavior>();
 
         private PrefetchingBehavior defaultPrefetchingBehavior;
+        private ConcurrentDictionary<string, bool> resetRequested = new ConcurrentDictionary<string, bool>();
 
         public void Execute(DocumentDatabase database)
         {
@@ -401,6 +406,12 @@ namespace Raven.Database.Bundles.SqlReplication
                     {
                         var cfg = t.Item1;
                         var currentLatestEtag = t.Item2;
+                        //If a reset was requested we don't want to update the last replicated etag.
+                        //If we do register the success the reset will become a noop.
+                        bool isReset;
+                        if (ResetRequested.TryGetValue(t.Item1.Name, out isReset) && isReset)
+                            continue;
+
                         var destEtag = localReplicationStatus.LastReplicatedEtags.FirstOrDefault(x => string.Equals(x.Name, cfg.Name, StringComparison.InvariantCultureIgnoreCase));
                         if (destEtag == null)
                         {
@@ -419,7 +430,8 @@ namespace Raven.Database.Bundles.SqlReplication
                             destEtag.LastDocEtag = lastDocEtag;
                         }
                     }
-
+                    //We are done recording success for this batch so we can clear the reset dictionary
+                    ResetRequested.Clear();
                     SaveNewReplicationStatus(localReplicationStatus);
                 }
                 finally
