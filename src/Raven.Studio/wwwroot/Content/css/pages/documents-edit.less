@@ -1,0 +1,36 @@
+@import "../icons";
+
+.editDocument {
+
+    .documentId {
+
+        .markFavourite {
+            position: relative;
+            top: -6px;
+        }
+
+        .btn.edit-button {
+            margin-left: 12px;
+
+            .text::before {
+                content: 'Change ID';
+            }
+        }
+
+        .edit {
+            .btn.edit-button {
+
+                .icon-edit:before {
+                    content: @tick-character;
+                }
+
+                .text::before {
+                    content: 'Apply';
+                }
+            }
+
+        }
+
+    }
+
+}
