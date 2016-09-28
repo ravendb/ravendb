@@ -9,7 +9,6 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
     let activeDatabase = activeResourceTracker.default.database;
     var importDatabaseUrl = ko.computed(() => appUrl.forImportDatabase(activeDatabase()));
     var exportDatabaseUrl = ko.computed(() => appUrl.forExportDatabase(activeDatabase()));
-    var toggleIndexingUrl = ko.computed(() => appUrl.forToggleIndexing(activeDatabase()));
     var setAcknowledgedEtagUrl = ko.computed(() => appUrl.forSetAcknowledgedEtag(activeDatabase()));
     var sampleDataUrl = ko.computed(() => appUrl.forSampleData(activeDatabase()));
     var csvImportUrl = ko.computed(() => appUrl.forCsvImport(activeDatabase()));
@@ -33,14 +32,6 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-plus',
             dynamicHash: exportDatabaseUrl
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/toggleIndexing',
-            moduleId: 'viewmodels/database/tasks/toggleIndexing',
-            title: 'Toggle Indexing',
-            nav: true,
-            css: 'icon-plus',
-            dynamicHash: toggleIndexingUrl
         }),
         new leafMenuItem({
             route: 'databases/tasks/subscriptionsTask',

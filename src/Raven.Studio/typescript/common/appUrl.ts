@@ -730,11 +730,6 @@ class appUrl {
         return appUrl.forResourceQuery(db) + "/streams/query/Raven/DocumentsByEntityName" + appUrl.urlEncodeArgs(args);
     }
 
-    static forToggleIndexing(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/toggleIndexing?" + databasePart;
-    }
-
     static forSetAcknowledgedEtag(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/subscriptionsTask?" + databasePart;
