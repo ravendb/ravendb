@@ -4,8 +4,8 @@ import alert = require("models/database/debug/alert");
 import endpoints = require("endpoints");
 
 type alertsResponse = {
-    Global: alertDto[];
-    Local: alertDto[];
+    Global: Raven.Server.Documents.Alert[];
+    Local: Raven.Server.Documents.Alert[];
 }
 
 class getOperationAlertsCommand extends commandBase {

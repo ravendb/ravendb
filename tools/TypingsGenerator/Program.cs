@@ -12,6 +12,7 @@ using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 using Raven.Json.Linq;
 using Raven.Server.Documents;
+using Raven.Server.Web.Operations;
 using Sparrow.Json;
 using TypeScripter;
 using TypeScripter.TypeScript;
@@ -70,9 +71,11 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexChangeNotification));
             scripter.AddType(typeof(TransformerChangeNotification));
             scripter.AddType(typeof(DatabaseOperations.PendingOperation));
+            scripter.AddType(typeof(AlertNotification));
 
             // alerts
             scripter.AddType(typeof(Alert));
+            
 
 
             return scripter;

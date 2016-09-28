@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-using Raven.Abstractions;
-using Raven.Server.ServerWide;
+﻿using Raven.Abstractions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -47,6 +44,9 @@ namespace Raven.Server.Documents
 
         public unsafe void AddAlert(Alert alert)
         {
+
+            //TODO: send notification
+
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Saving alert '{alert.Id}'.");
 
@@ -61,19 +61,24 @@ namespace Raven.Server.Documents
                 var alertAsJson = alert.ToJson();
 
                 // if previous alert has dismissed until value pass this value to newly saved alert
-                var existingTvr = table.ReadByKey(Slice.From(tx.InnerTransaction.Allocator, alertId));
-                if (existingTvr != null)
+                Slice slice;
+                using (Slice.From(tx.InnerTransaction.Allocator, alertId, out slice))
                 {
-                    var existingAlert = Read(context, existingTvr);
-
-                    object dismissedUntilValue;
-                    existingAlert.TryGetMember(nameof(alert.DismissedUntil), out dismissedUntilValue);
-                    if (dismissedUntilValue != null)
+                    var existingTvr = table.ReadByKey(slice);
+                    if (existingTvr != null)
                     {
-                        var dismissedUntil = (LazyStringValue) dismissedUntilValue;
-                        alertAsJson[nameof(alert.DismissedUntil)] = dismissedUntil;
+                        var existingAlert = Read(context, existingTvr);
+
+                        object dismissedUntilValue;
+                        existingAlert.TryGetMember(nameof(alert.DismissedUntil), out dismissedUntilValue);
+                        if (dismissedUntilValue != null)
+                        {
+                            var dismissedUntil = (LazyStringValue)dismissedUntilValue;
+                            alertAsJson[nameof(alert.DismissedUntil)] = dismissedUntil;
+                        }
                     }
                 }
+                
 
                 using (var id = context.GetLazyString(alertId))
                 using (var json = context.ReadObject(alertAsJson, "Alert", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
@@ -131,7 +136,11 @@ namespace Raven.Server.Documents
 
                 var alertId = Alert.CreateId(type, key);
 
-                table.DeleteByKey(Slice.From(tx.InnerTransaction.Allocator, alertId));
+                Slice alertSlice;
+                using (Slice.From(tx.InnerTransaction.Allocator, alertId, out alertSlice))
+                {
+                    table.DeleteByKey(alertSlice);
+                }
 
                 tx.Commit();
             }

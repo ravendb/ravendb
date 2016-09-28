@@ -56,7 +56,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 if (operationId.HasValue)
                 {
                     await Database.Operations.AddOperation("Export database: " + Database.Name, DatabaseOperations.PendingOperationType.DatabaseExport, 
-                        onProgress => Task.Run(() => ExportDatabaseInternal(context, exporter, onProgress, token)), operationId.Value, token);
+                        onProgress => Task.Run(() => ExportDatabaseInternal(context, exporter, onProgress, token), token.Token), operationId.Value, token);
                 }
                 else
                 {
