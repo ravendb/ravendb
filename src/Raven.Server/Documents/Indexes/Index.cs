@@ -366,6 +366,9 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(databaseContext.Transaction != null);
 
+            if (Type == IndexType.Faulty)
+                return false;
+
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (indexContext.OpenReadTransaction())
