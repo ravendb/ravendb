@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using Raven.Client.Document.Batches;
 using System.Threading;
@@ -75,6 +76,11 @@ namespace Raven.Client.Documents
         internal readonly Dictionary<string, DocumentInfo> DocumentsById = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
+        /// Translate between a key and its associated entity
+        /// </summary>
+        internal readonly Dictionary<string, DocumentInfo> includedDocumentsByKey = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
         /// </summary>
         protected internal readonly Dictionary<object, DocumentInfo> DocumentsByEntity = new Dictionary<object, DocumentInfo>(ObjectReferenceEqualityComparer<object>.Default);
@@ -113,7 +119,7 @@ namespace Raven.Client.Documents
         /// Gets the number of entities held in memory to manage Unit of Work
         /// </summary>
         public int NumberOfEntitiesInUnitOfWork => DocumentsByEntity.Count;
-
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
         /// </summary>
@@ -133,7 +139,7 @@ namespace Raven.Client.Documents
             UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
-            EntityToBlittable = new EntityToBlittable(documentStore, Context);
+            EntityToBlittable = new EntityToBlittable(this);
         }
 
         /// <summary>
@@ -248,7 +254,7 @@ namespace Raven.Client.Documents
         internal bool IsLoadedOrDeleted(string id)
         {
             DocumentInfo documentInfo;
-            return (DocumentsById.TryGetValue(id, out documentInfo) && (documentInfo.Document != null)) || IsDeleted(id);
+            return (DocumentsById.TryGetValue(id, out documentInfo) && (documentInfo.Document != null)) || IsDeleted(id) || includedDocumentsByKey.ContainsKey(id);
         }
 
         /// <summary>
@@ -296,31 +302,8 @@ more responsive application.
         /// <returns></returns>
         public object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject documentFound)
         {
-            try
-            {
-                var defaultValue = GetDefaultValue(entityType);
-                var entity = defaultValue;
-
-                var documentType = Conventions.GetClrType(id, documentFound);
-                if (documentType != null)
-                {
-                    var type = Type.GetType(documentType);
-                    if (type != null)
-                        entity = Conventions.JsonDeserialize(type, documentFound);
-                }
-
-                if (Equals(entity, defaultValue))
-                {
-                    entity = Conventions.JsonDeserialize(entityType, documentFound);
-                }
-                GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
-
-                return entity;
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Could not convert document {id} to entity of type {entityType}", ex);
-            }
+            //TODO: consider removing this function entirely, leaving only the EntityToBlittalbe version
+            return EntityToBlittable.ConvertToEntity(entityType, id, documentFound);
         }
 
         private void RegisterMissingProperties(object o, string key, object value)
@@ -358,7 +341,7 @@ more responsive application.
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        static object GetDefaultValue(Type type)
+        public static object GetDefaultValue(Type type)
         {
             return type.IsValueType() ? Activator.CreateInstance(type) : null;
         }
@@ -379,6 +362,7 @@ more responsive application.
                 throw new InvalidOperationException(entity + " is not associated with the session, cannot delete unknown entity instance");
             }
             DeletedEntities.Add(entity);
+            includedDocumentsByKey.Remove(value.Id);
             KnownMissingIds.Add(value.Id);
         }
 
@@ -405,7 +389,7 @@ more responsive application.
             long? etag = null;
             if (DocumentsById.TryGetValue(id, out documentInfo))
             {
-                BlittableJsonReaderObject newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Id, documentInfo.Entity, documentInfo);
+                BlittableJsonReaderObject newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
                 if (documentInfo.Entity != null && EntityChanged(newObj, documentInfo,  null))
                 {
                     throw new InvalidOperationException(
@@ -564,6 +548,11 @@ more responsive application.
             StoreInternal(entity, etag, id, forceConcurrencyCheck);
         }
 
+        public void TrackIncludedDocument(DocumentInfo docInfo)
+        {
+            includedDocumentsByKey[docInfo.Id] = docInfo;
+        }
+
         protected abstract string GenerateKey(object entity);
 
         protected virtual void RememberEntityForDocumentKeyGeneration(object entity)
@@ -711,30 +700,30 @@ more responsive application.
             foreach (var entity in DocumentsByEntity)
             {
                 BlittableJsonReaderObject document = null;
-                document = EntityToBlittable.ConvertEntityToBlittable(entity.Value.Id, entity.Key, entity.Value);
+                document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
 
                 if ((entity.Value.IgnoreChanges) || (!EntityChanged(document, entity.Value, null))) continue;
 
-                entity.Value.IsNewDocument = false;
-                result.Entities.Add(entity.Key);
+                        entity.Value.IsNewDocument = false;
+                    result.Entities.Add(entity.Key);
 
-                if (entity.Value.Entity != null)
-                    DocumentsById.Remove(entity.Value.Id);
+                    if (entity.Value.Entity != null)
+                        DocumentsById.Remove(entity.Value.Id);
 
-                entity.Value.Document = document;
+                    entity.Value.Document = document;
                 var etag = UseOptimisticConcurrency || entity.Value.ForceConcurrencyCheck
                           ? (long?)(entity.Value.ETag ?? 0)
                           : null;
 
-                result.Commands.Add(new DynamicJsonValue()
-                {
-                    ["Key"] = entity.Value.Id,
-                    ["Method"] = "PUT",
+                    result.Commands.Add(new DynamicJsonValue()
+                    {
+                        ["Key"] = entity.Value.Id,
+                        ["Method"] = "PUT",
                     ["Document"] = document,
                     ["Etag"] = etag
-                });
+                    });
+                }
             }
-        }
 
         public void MarkReadOnly(object entity)
         {
@@ -768,7 +757,7 @@ more responsive application.
                 return true;
 
             NewChange(null, null, docChanges, DocumentsChanges.ChangeType.DocumentAdded);
-            changes[documentInfo.Id] = docChanges.ToArray();
+                changes[documentInfo.Id] = docChanges.ToArray();
             return true;
         }
 
@@ -835,11 +824,11 @@ more responsive application.
                         if (newPropInfo.Item2.Equals(oldPropInfo.Item2))
                             break;
 
-                        if (changes == null)
-                            return true;
+                                if (changes == null)
+                                    return true;
                         NewChange(newPropInfo.Item2, oldPropInfo.Item2, docChanges,
                             DocumentsChanges.ChangeType.FieldChanged);
-                        break;
+                            break;
                     case BlittableJsonToken.Null:
                         break;
                     case BlittableJsonToken.StartArray:
@@ -853,18 +842,18 @@ more responsive application.
                         if (!(newArray.Except(oldArray).Any()))
                             break;
 
-                        if (changes == null)
-                            return true;
+                                if (changes == null)
+                                    return true;
                         NewChange(newPropInfo.Item2, oldPropInfo.Item2, docChanges,
                             DocumentsChanges.ChangeType.FieldChanged);
                         break;
                     case BlittableJsonToken.StartObject:
                     {
-                        var changed = CompareBlittable(id, oldPropInfo.Item2 as BlittableJsonReaderObject,
-                            newPropInfo.Item2 as BlittableJsonReaderObject, changes, docChanges);
-                        if (changes == null)
-                            return changed;
-                        break;
+                            var changed = CompareBlittable(id, oldPropInfo.Item2 as BlittableJsonReaderObject,
+                             newPropInfo.Item2 as BlittableJsonReaderObject, changes, docChanges);
+                            if (changes == null)
+                                return changed;
+                            break;
                     }
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -873,9 +862,9 @@ more responsive application.
 
             if ((changes == null) || (docChanges.Count <= 0)) return false;
 
-            changes[id] = docChanges.ToArray();
-            return true;
-        }
+                changes[id] = docChanges.ToArray();
+                return true;
+            }
 
         private static void NewChange(object newValue, object oldValue, List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
         {
@@ -932,7 +921,7 @@ more responsive application.
         {
             foreach (var pair in DocumentsById)
             {
-                var newObj = EntityToBlittable.ConvertEntityToBlittable(pair.Value.Id, pair.Value.Entity, pair.Value);
+                var newObj = EntityToBlittable.ConvertEntityToBlittable(pair.Value.Entity, pair.Value);
                 EntityChanged(newObj, pair.Value, changes);
                 pair.Value.Metadata.Modifications = null;
             }
@@ -1196,11 +1185,13 @@ more responsive application.
                     continue;
 
                 DocumentInfo documentInfo;
-                if (DocumentsById.TryGetValue(id, out documentInfo) == false)
-                    return false;
-                if (documentInfo.Entity == null)
+
+                // Check if document was already loaded, the check if we've received it through include
+                if (DocumentsById.TryGetValue(id, out documentInfo) == false && includedDocumentsByKey.TryGetValue(id, out documentInfo) == false) 
                     return false;
 
+                if (documentInfo.Entity == null)
+                    return false;
                 var rawData = DocumentsById[id];
 
                 if (includes==null)

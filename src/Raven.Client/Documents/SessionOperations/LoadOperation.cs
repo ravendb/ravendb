@@ -79,7 +79,17 @@ namespace Raven.Client.Documents.SessionOperations
 
             DocumentInfo documentInfo;
             if (_session.DocumentsById.TryGetValue(id, out documentInfo) == false)
-                return default(T);
+            {
+                if (_session.includedDocumentsByKey.TryGetValue(id, out documentInfo))
+                {
+                    _session.includedDocumentsByKey.Remove(id);
+                    _session.DocumentsById[id] = documentInfo;
+                }
+                else
+                {
+                    return default(T);
+                }
+            }
 
             if (documentInfo.Entity != null)
                 return (T)documentInfo.Entity;
@@ -98,16 +108,7 @@ namespace Raven.Client.Documents.SessionOperations
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Tried to add an exisitg entity");
             }
-
-            /*try
-            {
-                _session.DocumentsById.Add(id, newMetadata);
-            }
-            catch (Exception)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Tried to add an exisitg id");
-            }*/
+            
             return (T) entity;
         }
 
@@ -153,7 +154,7 @@ namespace Raven.Client.Documents.SessionOperations
                         ETag = etag
                     };
 
-                    _session.DocumentsById[id] = newMetadata;
+                    _session.includedDocumentsByKey[id] = newMetadata;
                 }
             }
 
@@ -191,8 +192,6 @@ namespace Raven.Client.Documents.SessionOperations
             {
                 _session.RegisterMissingIncludes(result.Results, _includes);
             }
-            
-
         }
     }
 }
