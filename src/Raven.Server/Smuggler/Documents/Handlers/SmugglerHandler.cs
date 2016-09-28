@@ -92,7 +92,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             {
                 var tuple = await GetImportStream();
                 using(tuple.Item2)
-                using (var stream = tuple.Item1)
+                using (var stream = new GZipStream(tuple.Item1,CompressionMode.Decompress))
                 {
                     await DoImport(context, stream);
                 }
@@ -114,8 +114,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 return Tuple.Create<Stream, IDisposable>(stream, httpClient);
             }
 
-            var gzipRequestStream = new GZipStream(HttpContext.Request.Body, CompressionMode.Decompress);
-            return Tuple.Create<Stream, IDisposable>(gzipRequestStream, null);
+            return Tuple.Create<Stream, IDisposable>(HttpContext.Request.Body, null);
         }
 
         private async Task DoImport(DocumentsOperationContext context, Stream stream)
