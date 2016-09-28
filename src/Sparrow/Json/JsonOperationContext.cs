@@ -33,7 +33,10 @@ namespace Sparrow.Json
         public UTF8Encoding Encoding;
 
         public CachedProperties CachedProperties;
-        
+        public readonly ByteStringContext Allocator;
+
+        private int _lastStreamSize = InitialStreamSize;
+
         public static JsonOperationContext ShortTermSingleUse()
         {
             return new JsonOperationContext(4096, 1024);
@@ -47,6 +50,7 @@ namespace Sparrow.Json
             _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(longLivedSize);
             Encoding = new UTF8Encoding();
             CachedProperties = new CachedProperties(this);
+            Allocator = new ByteStringContext();
         }
 
         public byte[] GetParsingBuffer()
@@ -108,7 +112,7 @@ namespace Sparrow.Json
                 return;
 
             Reset();
-
+            Allocator.Dispose();
             _arenaAllocator.Dispose();
             _arenaAllocatorForLongLivedValues.Dispose();
 

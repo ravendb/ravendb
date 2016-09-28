@@ -41,7 +41,6 @@ namespace Raven.Server.ServerWide.Context
         protected TransactionOperationContext(int initialSize, int longLivedSize): 
             base(initialSize, longLivedSize)
         {
-            Allocator = new ByteStringContext();
         }
 
         public RavenTransaction OpenReadTransaction()
@@ -91,8 +90,6 @@ namespace Raven.Server.ServerWide.Context
         public override void Dispose()
         {
             base.Dispose();
-
-            Allocator?.Dispose();
 
             if (_pinnedObjects != null)
             {

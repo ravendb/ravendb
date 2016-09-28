@@ -70,6 +70,7 @@ namespace Raven.Server.Documents.Indexes
                         Directory.CreateDirectory(_path);
                 }
 
+                _indexMetadataStorage.Initialize();
                 _initialized = true;
 
                 return Task.Factory.StartNew(OpenIndexes, TaskCreationOptions.LongRunning);
@@ -133,6 +134,7 @@ namespace Raven.Server.Documents.Indexes
                         throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
                 }
 
+
                 return CreateIndexInternal(index, indexId);
             }
         }
@@ -164,21 +166,27 @@ namespace Raven.Server.Documents.Indexes
 
                 Index index;
 
-                if (definition is AutoMapIndexDefinition)
-                    index = AutoMapIndex.CreateNew(indexId, (AutoMapIndexDefinition)definition, _documentDatabase);
-                else if (definition is AutoMapReduceIndexDefinition)
-                    index = AutoMapReduceIndex.CreateNew(indexId, (AutoMapReduceIndexDefinition)definition, _documentDatabase);
-                else if (definition is StaticMapIndexDefinition)
+                var autoMapIndexDefinition = definition as AutoMapIndexDefinition;
+                var autoMapReduceIndexDefinition = definition as AutoMapReduceIndexDefinition;
+                var staticMapIndexDefinition = definition as StaticMapIndexDefinition;
+
+                if (autoMapIndexDefinition != null)
+                    index = AutoMapIndex.CreateNew(indexId, autoMapIndexDefinition, _documentDatabase);
+                else if (autoMapReduceIndexDefinition != null)
+                    index = AutoMapReduceIndex.CreateNew(indexId, autoMapReduceIndexDefinition, _documentDatabase);
+                else if (staticMapIndexDefinition != null)
                 {
                     var mapReduceIndexDef = definition as MapReduceIndexDefinition;
 
                     if (mapReduceIndexDef != null)
                     {
-                        index = MapReduceIndex.CreateNew(indexId, ((MapReduceIndexDefinition)definition).IndexDefinition, _documentDatabase);
+                        index = MapReduceIndex.CreateNew(indexId,
+                            ((MapReduceIndexDefinition) definition).IndexDefinition, _documentDatabase);
                     }
                     else
                     {
-                        index = StaticMapIndex.CreateNew(indexId, ((StaticMapIndexDefinition)definition).IndexDefinition, _documentDatabase);
+                        index = StaticMapIndex.CreateNew(indexId,
+                            staticMapIndexDefinition.IndexDefinition, _documentDatabase);
                     }
                 }
                 else
@@ -197,7 +205,7 @@ namespace Raven.Server.Documents.Indexes
                 index.Start();
 
             _indexes.Add(index);
-
+            _indexMetadataStorage.WriteNewMetadataFor(indexId);
             _documentDatabase.Notifications.RaiseNotifications(
                 new IndexChangeNotification { Name = index.Name, Type = IndexChangeTypes.IndexAdded });
 
@@ -330,7 +338,7 @@ namespace Raven.Server.Documents.Indexes
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not dispose index '{index.Name}' ({id}).", e);
                 }
-
+                _indexMetadataStorage.DeleteMetadata(id);
                 _documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
                 {
                     Name = index.Name,

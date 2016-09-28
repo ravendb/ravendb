@@ -3,11 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
- 
-using System.Linq;
+
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;

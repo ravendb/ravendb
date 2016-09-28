@@ -210,14 +210,15 @@ namespace Raven.Server.Documents
 
             exceptionAggregator.Execute(() =>
             {
-                DocumentReplicationLoader.Dispose();
+                //prevent NRE on double dispose
+                DocumentReplicationLoader?.Dispose();
             });
 
             if (_indexStoreTask != null)
             {
                 exceptionAggregator.Execute(() =>
                 {
-                    _indexStoreTask.Wait(DatabaseShutdown);
+                    _indexStoreTask?.Wait(DatabaseShutdown);
                     _indexStoreTask = null;
                 });
             }
@@ -226,7 +227,7 @@ namespace Raven.Server.Documents
             {
                 exceptionAggregator.Execute(() =>
                 {
-                    _transformerStoreTask.Wait(DatabaseShutdown);
+                    _transformerStoreTask?.Wait(DatabaseShutdown);
                     _transformerStoreTask = null;
                 });
             }

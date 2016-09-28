@@ -35,7 +35,11 @@ namespace Raven.Server.Documents.Replication
         private readonly TimeSpan _minimalHeartbeatInterval = TimeSpan.FromSeconds(15);
         private Thread _sendingThread;
 
-        private long _lastSentEtag;
+        private long _lastSentDocumentEtag;
+
+        //private long _lastSentIndexEtag;
+        //private long _lastSentTransformerEtag;
+
         private DateTime _lastSentTime;
         private readonly Dictionary<Guid, long> _destinationLastKnownChangeVector = new Dictionary<Guid, long>();
         private string _destinationLastKnownChangeVectorString;
@@ -132,7 +136,7 @@ namespace Raven.Server.Documents.Replication
                                 using (_context.OpenReadTransaction())
                                 {
                                     var currentEtag = DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
-                                    if (currentEtag < _lastSentEtag)
+                                    if (currentEtag < _lastSentDocumentEtag)
                                         continue;
                                 }
                             }
@@ -168,7 +172,7 @@ namespace Raven.Server.Documents.Replication
         {
             _destinationLastKnownChangeVector.Clear();
 
-            _lastSentEtag = replicationBatchReply.LastEtagAccepted;
+            _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
             _destinationLastKnownChangeVectorString = replicationBatchReply.CurrentChangeVector.Format();
 
@@ -200,7 +204,7 @@ namespace Raven.Server.Documents.Replication
                 _context.Write(_writer, new DynamicJsonValue
                 {
                     ["Type"] = "ReplicationBatch",
-                    ["LastEtag"] = _lastSentEtag,
+                    ["LastEtag"] = _lastSentDocumentEtag,
                     ["Documents"] = 0
                 });
                 _writer.Flush();
@@ -278,7 +282,7 @@ namespace Raven.Server.Documents.Replication
                     var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
                     while (sp.ElapsedMilliseconds < timeout)
                     {
-                        _lastEtag = _parent._lastSentEtag;
+                        _lastEtag = _parent._lastSentDocumentEtag;
 
                         _parent._cts.Token.ThrowIfCancellationRequested();
 
@@ -340,8 +344,8 @@ namespace Raven.Server.Documents.Replication
 
                     if (_orderedReplicaItems.Count == 0)
                     {
-                        var hasModification = _lastEtag != _parent._lastSentEtag;
-                        _parent._lastSentEtag = _lastEtag;
+                        var hasModification = _lastEtag != _parent._lastSentDocumentEtag;
+                        _parent._lastSentDocumentEtag = _lastEtag;
                         // ensure that the other server is aware that we skipped 
                         // on (potentially a lot of) documents to send, and we update
                         // the last etag they have from us on the other side
@@ -415,7 +419,7 @@ namespace Raven.Server.Documents.Replication
                 _stream.Flush();
                 sw.Stop();
 
-                _parent._lastSentEtag = _lastEtag;
+                _parent._lastSentDocumentEtag = _lastEtag;
 
                 if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
                     _log.Info(

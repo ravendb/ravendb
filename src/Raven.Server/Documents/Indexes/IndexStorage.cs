@@ -95,8 +95,8 @@ namespace Raven.Server.Documents.Indexes
 
                 tx.Commit();
             }
-        }
 
+        }
         public unsafe void WritePriority(IndexingPriority priority)
         {
             TransactionOperationContext context;
