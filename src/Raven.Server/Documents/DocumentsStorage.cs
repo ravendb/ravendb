@@ -1644,7 +1644,7 @@ namespace Raven.Server.Documents
 
         private long GetNumberOfItemsToProcess(DocumentsOperationContext context, string collection, long afterEtag, bool tombstones, out long totalCount)
         {
-            var collectionName = ExtractCollectionName(context, collection);
+            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
             {
                 totalCount = 0;
