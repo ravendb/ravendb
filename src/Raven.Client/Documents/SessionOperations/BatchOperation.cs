@@ -1,8 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client.Document;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.SessionOperations.Commands;
+using Raven.Json.Linq;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
@@ -35,20 +39,63 @@ namespace Raven.Client.Documents.SessionOperations
             }
         }
 
+        private List<object> entities;
+        private int DeferredCommandsCount;
+
         public BatchCommand CreateRequest()
         {
             _session.IncrementRequestCount();
             LogBatch();
+
+            var result = _session.PrepareForSaveChanges();
+            entities = result.Entities;
+            DeferredCommandsCount = result.DeferredCommandsCount;
             return new BatchCommand()
             {
-                Commands = _session.PrepareForSaveChanges(),
+                Commands = result.Commands,
                 Context = _session.Context
             };
+
         }
 
         public void SetResult(BatchResult result)
         {
-            //TODO
+            //TODO - work in grogress
+            for (var i = DeferredCommandsCount; i < result.Results.Length; i++)
+            {
+                var batchResult = result.Results[i] as BlittableJsonReaderObject;
+                string methodType;
+                batchResult.TryGet("Method", out methodType);
+
+                if (methodType != "PUT")
+                    continue;
+
+                var entity = entities[i - DeferredCommandsCount];
+                InMemoryDocumentSessionOperations.DocumentInfo documentInfo;
+
+                if (_session.DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
+                    continue;
+
+                string Key;
+
+                BlittableJsonReaderObject metadata;
+                 batchResult.TryGet("Metadata", out metadata);
+                documentInfo.Metadata = metadata;
+                batchResult.TryGet("Key", out Key);
+                _session.DocumentsById[Key] = documentInfo;
+                /*documentMetadata.ETag = batchResult.Etag;
+                documentMetadata.Key = batchResult.Key;
+                documentMetadata.OriginalMetadata = (RavenJObject)batchResult.Metadata.CloneToken();
+                documentMetadata.Metadata = batchResult.Metadata;
+                documentMetadata.OriginalValue = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
+
+                GenerateEntityIdOnTheClient.TrySetIdentity(entity, batchResult.Key);
+
+                foreach (var documentStoreListener in theListeners.StoreListeners)
+                {
+                    documentStoreListener.AfterStore(batchResult.Key, entity, batchResult.Metadata);
+                }#1#*/
+            }
         }
     }
 }

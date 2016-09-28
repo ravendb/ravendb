@@ -87,9 +87,6 @@ class commandBase {
         return this.ajax(relativeUrl, args, "RESET", resource, options);
     }
 
-    /*
-     * Performs a DELETE rest call.
-    */
     protected del(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "DELETE", resource, options, timeToAlert);
     }

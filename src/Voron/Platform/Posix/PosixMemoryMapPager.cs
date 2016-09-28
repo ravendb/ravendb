@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow;
+using Sparrow.Utils;
+using Voron.Global;
 using Voron.Impl;
 
 namespace Voron.Platform.Posix
@@ -12,10 +14,12 @@ namespace Voron.Platform.Posix
         public readonly long SysPageSize;
         private long _totalAllocationSize;
         private readonly bool _isSyncDirAllowed;
+        private bool _copyOnWriteMode;
         
         public PosixMemoryMapPager(StorageEnvironmentOptions options,string file, long? initialFileSize = null):base(options)
         {
             FileName = file;
+            _copyOnWriteMode = options.CopyOnWriteMode && file.EndsWith(Constants.DatabaseFilename);
             _isSyncDirAllowed = PosixHelper.CheckSyncDirectoryAllowed(FileName);
 
             PosixHelper.EnsurePathExists(FileName);
@@ -125,15 +129,18 @@ namespace Voron.Platform.Posix
         private PagerState CreatePagerState()
         {
             var fileSize = GetFileSize();
+            var mmflags = _copyOnWriteMode ? MmapFlags.MAP_PRIVATE : MmapFlags.MAP_SHARED;
             var startingBaseAddressPtr = Syscall.mmap(IntPtr.Zero, (ulong)fileSize,
                                                       MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                                                      MmapFlags.MAP_SHARED, _fd, 0);
+                                                      mmflags, _fd, 0);
 
             if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
             {
                 var err = Marshal.GetLastWin32Error();
                 PosixHelper.ThrowLastError(err);
             }
+
+            NativeMemory.RegisterFileMapping(FileName, fileSize);
 
             var allocationInfo = new PagerState.AllocationInfo
             {
@@ -190,6 +197,7 @@ namespace Voron.Platform.Posix
                 var err = Marshal.GetLastWin32Error();
                 PosixHelper.ThrowLastError(err);
             }
+            NativeMemory.UnregisterFileMapping(FileName, size);
         }
 
         public override void Dispose()

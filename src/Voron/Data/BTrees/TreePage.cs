@@ -101,9 +101,12 @@ namespace Voron.Data.BTrees
                         {
                             var node = GetNode(0);
 
-                            Slice pageKey = TreeNodeHeader.ToSlicePtr(tx.Allocator, node, ByteStringType.Mutable);
+                            Slice pageKey;
+                            using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out pageKey))
+                            {
+                                LastMatch = SliceComparer.CompareInline(key, pageKey);
+                            }
 
-                            LastMatch = SliceComparer.CompareInline(key, pageKey);
                             LastSearchPosition = LastMatch > 0 ? 1 : 0;
                             return LastSearchPosition == 0 ? node : null;
                         }
@@ -120,12 +123,12 @@ namespace Voron.Data.BTrees
 
                             var node = (TreeNodeHeader*)(Base + offsets[position]);
 
-                            Slice pageKey = TreeNodeHeader.ToSlicePtr(allocator, node, ByteStringType.Mutable);
+                            Slice pageKey;
+                            using (TreeNodeHeader.ToSlicePtr(allocator, node, out pageKey))
+							{
+								LastMatch = SliceComparer.CompareInline(key, pageKey);
+							}
 
-                            LastMatch = SliceComparer.CompareInline(key, pageKey);
-
-                            // Ensure we will reuse the external reference improving memory locality.
-                            pageKey.Release(allocator); 
 
                             if (LastMatch == 0)
                                 break;
@@ -396,8 +399,8 @@ namespace Voron.Data.BTrees
                 for (int j = 0; j < i; j++)
                 {
                     var node = GetNode(j);
-                    slice = TreeNodeHeader.ToSlicePtr(tx.Allocator, node, ByteStringType.Mutable);
-                    copy.CopyNodeDataToEndOfPage(node, slice);
+                    using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out slice))
+                        copy.CopyNodeDataToEndOfPage(node, slice);
                 }
 
                 Memory.Copy(Base + Constants.TreePageHeaderSize,
@@ -533,15 +536,22 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Slice GetNodeKey(LowLevelTransaction tx, int nodeNumber, ByteStringType type = ByteStringType.Mutable | ByteStringType.External)
+        public ByteStringContext.Scope GetNodeKey(LowLevelTransaction tx, int nodeNumber, out Slice result)
+        {
+            return GetNodeKey(tx, nodeNumber, ByteStringType.Mutable | ByteStringType.External, out result);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ByteStringContext.Scope GetNodeKey(LowLevelTransaction tx, int nodeNumber, ByteStringType type/* = ByteStringType.Mutable | ByteStringType.External*/, out Slice result)
         {            
             var node = GetNode(nodeNumber);
 
             // This will ensure that we can create a copy or just use the pointer instead.
-            if ( (type & ByteStringType.External) == 0 )
-                return TreeNodeHeader.ToSlice(tx.Allocator, node, type);
-            else
-                return TreeNodeHeader.ToSlicePtr(tx.Allocator, node, type);
+            if ((type & ByteStringType.External) == 0)
+            {
+                return TreeNodeHeader.ToSlice(tx.Allocator, node, type, out result);
+            }
+            return TreeNodeHeader.ToSlicePtr(tx.Allocator, node, type, out result);
         }  
 
         public string DebugView(LowLevelTransaction tx)
@@ -549,12 +559,16 @@ namespace Voron.Data.BTrees
             var sb = new StringBuilder();
             for (int i = 0; i < NumberOfEntries; i++)
             {
-                sb.Append(i)
-                    .Append(": ")
-                    .Append(GetNodeKey(tx, i))
-                    .Append(" - ")
-                    .Append(KeysOffsets[i])
-                    .AppendLine();
+                Slice slice;
+                using (GetNodeKey(tx, i, out slice))
+                {
+                    sb.Append(i)
+                        .Append(": ")
+                        .Append(slice)
+                        .Append(" - ")
+                        .Append(KeysOffsets[i])
+                        .AppendLine();
+                }
             }
             return sb.ToString();
         }
@@ -570,14 +584,18 @@ namespace Voron.Data.BTrees
                 throw new InvalidOperationException("The branch page " + PageNumber + " has " + NumberOfEntries + " entry");
             }
 
-            var prev = GetNodeKey(tree.Llt, 0);
+            Slice prev;
+            var prevScope = GetNodeKey(tree.Llt, 0, out prev);
+            try
+            {
             var pages = new HashSet<long>();
             for (int i = 1; i < NumberOfEntries; i++)
             {
                 var node = GetNode(i);
-                var current = GetNodeKey(tree.Llt, i);
+                    Slice current;
+                    var currentScope = GetNodeKey(tree.Llt, i, out current);
 
-                if (SliceComparer.CompareInline(prev,current) >= 0)
+                    if (SliceComparer.CompareInline(prev, current) >= 0)
                 {
                     DebugStuff.RenderAndShowTree(tree, root);
                     throw new InvalidOperationException("The page " + PageNumber + " is not sorted");
@@ -591,8 +609,14 @@ namespace Voron.Data.BTrees
                         throw new InvalidOperationException("The page " + PageNumber + " references same page multiple times");
                     }
                 }
-
+                    prevScope.Dispose();
                 prev = current;
+                    prevScope = currentScope;
+            }
+        }
+            finally
+            {
+                prevScope.Dispose();
             }
         }
 

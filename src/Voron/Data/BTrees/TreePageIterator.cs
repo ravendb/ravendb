@@ -1,4 +1,5 @@
 using System;
+using Sparrow;
 using Voron.Global;
 using Voron.Impl;
 
@@ -13,6 +14,9 @@ namespace Voron.Data.BTrees
 
         private Slice _currentKey = default(Slice);
         private Slice _currentInternalKey = default(Slice);
+
+        private ByteStringContext.ExternalScope _prevScopeDispose = default(ByteStringContext<ByteStringMemoryCache>.ExternalScope);
+
         private bool _disposed;
 
         public TreePageIterator(LowLevelTransaction tx, Slice treeKey, Tree parent, TreePage page)
@@ -26,7 +30,7 @@ namespace Voron.Data.BTrees
         public void Dispose()
         {
             _disposed = true;
-
+            _prevScopeDispose.Dispose();
             OnDisposal?.Invoke(this);
         }
 
@@ -38,7 +42,8 @@ namespace Voron.Data.BTrees
             if (current == null)
                 return false;
 
-            _currentInternalKey = TreeNodeHeader.ToSlicePtr(_tx.Allocator, current);
+            _prevScopeDispose.Dispose();
+            _prevScopeDispose = TreeNodeHeader.ToSlicePtr(_tx.Allocator, current, out _currentInternalKey);
             _currentKey = _currentInternalKey;
 
             if (DoRequireValidation)
@@ -144,7 +149,9 @@ namespace Voron.Data.BTrees
                 return false;
             }
 
-            _currentInternalKey = TreeNodeHeader.ToSlicePtr(_tx.Allocator, current);
+            _prevScopeDispose.Dispose();
+            _prevScopeDispose = TreeNodeHeader.ToSlicePtr(_tx.Allocator, current, out _currentInternalKey);
+
             _currentKey = _currentInternalKey;
             return true;
         }

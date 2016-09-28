@@ -107,22 +107,5 @@ namespace SlowTests.Voron
                 Env.Options.DataPager.EnsureContinuous(0, (int)(numberOfPages));
             }
         }
-
-        byte* AllocateMemoryAtEndOfPager(long totalAllocationSize)
-        {
-            if (StorageEnvironmentOptions.RunningOnPosix)
-            {
-                var p = Syscall.mmap(new IntPtr(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize), 16,
-                    MmapProts.PROT_READ | MmapProts.PROT_WRITE, MmapFlags.MAP_ANONYMOUS, -1, 0);
-                if (p.ToInt64() == -1)
-                {
-                    return null;
-                }
-                return (byte*)p.ToPointer();
-            }
-            return Win32NativeMethods.VirtualAlloc(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize, new UIntPtr(16),
-                Win32NativeMethods.AllocationType.RESERVE, Win32NativeMethods.MemoryProtection.EXECUTE_READWRITE);
-        }
-
     }
 }

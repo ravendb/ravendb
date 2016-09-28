@@ -160,15 +160,15 @@ namespace Voron.Debugging
                                 }
                             case TreeNodeFlags.Data:
                                 {
-                                    var nestedPage = GetNestedMultiValuePage(TreeNodeHeader.DirectAccess(_tx, currentNode), currentNode);
+                                    var nestedPage = GetNestedMultiValuePage(tree, tree.DirectAccessFromHeader(currentNode), currentNode);
 
                                     multiValues.NumberOfEntries += nestedPage.NumberOfEntries;
                                     break;
                                 }
                             case TreeNodeFlags.PageRef:
                                 {
-                                    var overFlowPage = tree.GetReadOnlyPage(currentNode->PageNumber);
-                                    var nestedPage = GetNestedMultiValuePage(overFlowPage.Base + Constants.TreePageHeaderSize, currentNode);
+                                    var overFlowPage = tree.GetReadOnlyTreePage(currentNode->PageNumber);
+                                    var nestedPage = GetNestedMultiValuePage(tree, overFlowPage.Base + Constants.TreePageHeaderSize, currentNode);
 
                                     multiValues.NumberOfEntries += nestedPage.NumberOfEntries;
                                     break;
@@ -234,9 +234,9 @@ namespace Voron.Debugging
             return densities;
         }
 
-        private TreePage GetNestedMultiValuePage(byte* nestedPagePtr, TreeNodeHeader* currentNode)
+        private TreePage GetNestedMultiValuePage(Tree tree, byte* nestedPagePtr, TreeNodeHeader* currentNode)
         {
-            var nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort) TreeNodeHeader.GetDataSize(_tx, currentNode));
+            var nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort) tree.GetDataSize(currentNode));
 
             Debug.Assert(nestedPage.PageNumber == -1); // nested page marker
             return nestedPage;

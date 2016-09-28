@@ -38,7 +38,9 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.ReadTransaction())
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
-                var handle = docs.ReadByKey(Slice.From(tx.Allocator, "users/1"));
+                Slice key;
+                Slice.From(tx.Allocator, "users/1", out key);
+                var handle = docs.ReadByKey(key);
 
                 int size;
                 var read = handle.Read(3, out size);
@@ -76,7 +78,9 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.ReadTransaction())
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
-                var handle = docs.ReadByKey(Slice.From(tx.Allocator, "users/1"));
+                Slice key;
+                Slice.From(tx.Allocator, "users/1", out key);
+                var handle = docs.ReadByKey(key);
 
                 int size;
                 var read = handle.Read(3, out size);
@@ -108,8 +112,9 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
-
-                docs.DeleteByKey(Slice.From(tx.Allocator, "users/1"));
+                Slice key;
+                Slice.From(tx.Allocator, "users/1", out key);
+                docs.DeleteByKey(key);
 
                 tx.Commit();
             }
@@ -118,7 +123,9 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                Assert.Null(docs.ReadByKey(Slice.From(tx.Allocator, "users/1")));
+                Slice key;
+                Slice.From(tx.Allocator, "users/1", out key);
+                Assert.Null(docs.ReadByKey(key));
             }
         }
 
@@ -128,13 +135,17 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 DocsSchema.Create(tx, "docs");
-                Assert.Equal(RootObjectType.Table, tx.GetRootObjectType(Slice.From(tx.Allocator, "docs")));
+                Slice key;
+                Slice.From(tx.Allocator, "docs", out key);
+                Assert.Equal(RootObjectType.Table, tx.GetRootObjectType(key));
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
-                Assert.Equal(RootObjectType.Table, tx.GetRootObjectType(Slice.From(tx.Allocator, "docs")));
+                Slice key;
+                Slice.From(tx.Allocator, "docs", out key);
+                Assert.Equal(RootObjectType.Table, tx.GetRootObjectType(key));
             }
         }
 

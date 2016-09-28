@@ -46,10 +46,17 @@ namespace Voron
             _pos += sizeof(short);
         }
 
-        public Slice CreateSlice(ByteStringContext context, ByteStringType type = ByteStringType.Mutable)
+        public ByteStringContext.InternalScope CreateSlice(ByteStringContext context, out Slice str)
         {
-            var content = context.From(_buffer, 0, _buffer.Length, type);
-            return new Slice(content);
+            return CreateSlice(context, ByteStringType.Immutable, out str);
+        }
+
+        public ByteStringContext.InternalScope CreateSlice(ByteStringContext context, ByteStringType type, out Slice str)
+        {
+            ByteString byteString;
+            var scope = context.From(_buffer, 0, _buffer.Length, type, out byteString);
+            str = new Slice(byteString);
+            return scope;
         }
 
         public void Write(bool b)
@@ -92,10 +99,17 @@ namespace Voron
             _pos = 0;
         }
 
-        public Slice CreateSlice(ByteStringContext context, int size, ByteStringType type = ByteStringType.Mutable)
+        public ByteStringContext.InternalScope CreateSlice(ByteStringContext context, int size, out Slice str)
         {
-            var content = context.From(_buffer, size, type);
-            return new Slice(content);
+            return CreateSlice(context, size, ByteStringType.Immutable, out str);
+        }
+
+        public ByteStringContext.InternalScope CreateSlice(ByteStringContext context, int size, ByteStringType type, out Slice str)
+        {
+            ByteString byteString;
+            var scope = context.From(_buffer, size, type, out byteString);
+            str = new Slice(byteString);
+            return scope;
         }
     }
 }

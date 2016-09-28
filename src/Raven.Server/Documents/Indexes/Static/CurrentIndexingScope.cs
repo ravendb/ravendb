@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Raven.Client.Linq;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 using Voron;
 
@@ -17,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public Dictionary<string, Dictionary<string, HashSet<Slice>>> ReferencesByCollection;
 
         /// [collection: [collectionKey: etag]]
-        public Dictionary<string, Dictionary<Slice, long>> ReferenceEtagsByCollection;
+        public Dictionary<string, Dictionary<string, long>> ReferenceEtagsByCollection;
 
         [ThreadStatic]
         public static CurrentIndexingScope Current;
@@ -60,21 +59,22 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (keyLazy.Length == 0)
                     return DynamicNullObject.Null;
 
-                keySlice = Slice.External(_documentsContext.Allocator, keyLazy.Buffer, keyLazy.Size);
+                // we intentionally don't dispose of the scope here, this is being tracked by the references
+                // and will be disposed there.
+                Slice.External(_documentsContext.Allocator, keyLazy.Buffer, keyLazy.Size, out keySlice);
             }
             else
             {
                 if (keyString.Length == 0)
                     return DynamicNullObject.Null;
-
-                keySlice = Slice.From(_documentsContext.Allocator, keyString);
+                // we intentionally don't dispose of the scope here, this is being tracked by the references
+                // and will be disposed there.
+                Slice.From(_documentsContext.Allocator, keyString, out keySlice);
             }
 
             // making sure that we normalize the case of the key so we'll be able to find
             // it in case insensitive manner
             _documentsContext.Allocator.ToLowerCase(ref keySlice.Content);
-
-            var collectionSlice = Slice.From(_documentsContext.Allocator, collectionName, ByteStringType.Immutable);
 
             var references = GetReferencesForDocument(id);
             var referenceEtags = GetReferenceEtags();
@@ -82,13 +82,14 @@ namespace Raven.Server.Documents.Indexes.Static
             references.Add(keySlice);
 
             var document = _documentsStorage.Get(_documentsContext, keySlice);
+
             if (document == null)
             {
-                MaybeUpdateReferenceEtags(referenceEtags, collectionSlice, 0);
+                MaybeUpdateReferenceEtags(referenceEtags, collectionName, 0);
                 return DynamicNullObject.Null;
             }
 
-            MaybeUpdateReferenceEtags(referenceEtags, collectionSlice, document.Etag);
+            MaybeUpdateReferenceEtags(referenceEtags, collectionName, document.Etag);
 
             // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
             return new DynamicBlittableJson(document);
@@ -99,7 +100,7 @@ namespace Raven.Server.Documents.Indexes.Static
             Current = null;
         }
 
-        private static void MaybeUpdateReferenceEtags(Dictionary<Slice, long> referenceEtags, Slice collection, long etag)
+        private static void MaybeUpdateReferenceEtags(Dictionary<string, long> referenceEtags, string collection, long etag)
         {
             long oldEtag;
             if (referenceEtags.TryGetValue(collection, out oldEtag) == false)
@@ -114,14 +115,14 @@ namespace Raven.Server.Documents.Indexes.Static
             referenceEtags[collection] = etag;
         }
 
-        private Dictionary<Slice, long> GetReferenceEtags()
+        private Dictionary<string, long> GetReferenceEtags()
         {
             if (ReferenceEtagsByCollection == null)
-                ReferenceEtagsByCollection = new Dictionary<string, Dictionary<Slice, long>>(StringComparer.OrdinalIgnoreCase);
+                ReferenceEtagsByCollection = new Dictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
 
-            Dictionary<Slice, long> referenceEtags;
+            Dictionary<string, long> referenceEtags;
             if (ReferenceEtagsByCollection.TryGetValue(SourceCollection, out referenceEtags) == false)
-                ReferenceEtagsByCollection.Add(SourceCollection, referenceEtags = new Dictionary<Slice, long>(SliceComparer.Instance));
+                ReferenceEtagsByCollection.Add(SourceCollection, referenceEtags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase));
 
             return referenceEtags;
         }
@@ -129,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private HashSet<Slice> GetReferencesForDocument(string key)
         {
             if (ReferencesByCollection == null)
-                ReferencesByCollection = new Dictionary<string, Dictionary<string, HashSet<Slice>>>();
+                ReferencesByCollection = new Dictionary<string, Dictionary<string, HashSet<Slice>>>(StringComparer.OrdinalIgnoreCase);
 
             Dictionary<string, HashSet<Slice>> referencesByCollection;
             if (ReferencesByCollection.TryGetValue(SourceCollection, out referencesByCollection) == false)

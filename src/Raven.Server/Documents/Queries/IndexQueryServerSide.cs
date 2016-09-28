@@ -111,8 +111,6 @@ namespace Raven.Server.Documents.Queries
 
             if (result.Query == null)
             {
-                /* TODO arek queryFromPostRequest ?? */
-
                 result.Query = string.Empty;
             }
 

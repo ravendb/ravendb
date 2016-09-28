@@ -189,7 +189,9 @@ namespace Voron.Data.RawData
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static ActiveRawDataSmallSection Create(LowLevelTransaction tx, string owner)
         {
-            return Create(tx, Slice.From(tx.Allocator, owner, ByteStringType.Immutable));
+            Slice ownerSlice;
+            Slice.From(tx.Allocator, owner, ByteStringType.Immutable, out ownerSlice);
+            return Create(tx, ownerSlice);
         }
 
         public static ActiveRawDataSmallSection Create(LowLevelTransaction tx, Slice owner)
@@ -208,7 +210,7 @@ namespace Voron.Data.RawData
             sectionHeader->NumberOfEntries = 0;
             sectionHeader->NumberOfPages = numberOfPagesInSmallSection;
             sectionHeader->LastUsedPage = 0;
-            sectionHeader->SectionOwnerHash = Hashing.XXHash64.Calculate(owner.Content.Ptr, owner.Content.Length);
+            sectionHeader->SectionOwnerHash = Hashing.XXHash64.Calculate(owner.Content.Ptr, (ulong)owner.Content.Length);
 
             var availablespace = (ushort*)((byte*)sectionHeader + ReservedHeaderSpace);
 

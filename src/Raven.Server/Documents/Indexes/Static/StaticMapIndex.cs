@@ -35,9 +35,11 @@ namespace Raven.Server.Documents.Indexes.Static
             foreach (var collection in _compiled.ReferencedCollections)
             {
                 foreach (var referencedCollection in collection.Value)
-                    _referencedCollections.Add(referencedCollection);
+                    _referencedCollections.Add(referencedCollection.Name);
             }
         }
+
+        public override bool HasBoostedFields => _compiled.HasBoostedFields;
 
         protected override void InitializeInternal()
         {
@@ -50,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.Static
             workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null));
 
             if (_referencedCollections.Count > 0)
-                workers.Add(_handleReferences = new HandleReferences(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
+                workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
 
             workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null));
 
@@ -73,13 +75,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
             foreach (var collection in Collections)
             {
-                HashSet<string> referencedCollections;
+                HashSet<CollectionName> referencedCollections;
                 if (_compiled.ReferencedCollections.TryGetValue(collection, out referencedCollections) == false)
                     continue;
 
                 foreach (var referencedCollection in referencedCollections)
                 {
-                    var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, referencedCollection);
+                    var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, referencedCollection.Name);
                     var lastProcessedReferenceEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
 
                     if (cutoff == null)
@@ -87,7 +89,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         if (lastDocEtag > lastProcessedReferenceEtag)
                             return true;
 
-                        var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection);
+                        var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection.Name);
                         var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
 
                         if (lastTombstoneEtag > lastProcessedTombstoneEtag)
@@ -98,7 +100,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         if (Math.Min(cutoff.Value, lastDocEtag) > lastProcessedReferenceEtag)
                             return true;
 
-                        if (DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, referencedCollection, cutoff.Value) > 0)
+                        if (DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, referencedCollection.Name, cutoff.Value) > 0)
                             return true;
                     }
                 }
@@ -131,13 +133,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
             foreach (var collection in Collections)
             {
-                HashSet<string> referencedCollections;
+                HashSet<CollectionName> referencedCollections;
                 if (_compiled.ReferencedCollections.TryGetValue(collection, out referencedCollections) == false)
                     continue;
 
                 foreach (var referencedCollection in referencedCollections)
                 {
-                    var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, referencedCollection);
+                    var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, referencedCollection.Name);
                     var lastMappedEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
 
                     indexEtagBytes[index++] = lastDocEtag;
@@ -182,6 +184,11 @@ namespace Raven.Server.Documents.Indexes.Static
             return true;
         }
 
+        public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
+        {
+            return _compiled.ReferencedCollections;
+        }
+
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
             return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, StaticIndexDocsEnumerator.EnumerationType.Index);
@@ -201,12 +208,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     foreach (var collection in Collections)
                     {
-                        foreach (var referencedCollection in _referencedCollections)
+                        HashSet<CollectionName> referencedCollections;
+                        if (_compiled.ReferencedCollections.TryGetValue(collection, out referencedCollections) == false)
+                            throw new InvalidOperationException("Should not happen ever!");
+
+                        foreach (var referencedCollection in referencedCollections)
                         {
                             var etag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(tx, collection, referencedCollection);
                             long currentEtag;
-                            if (etags.TryGetValue(referencedCollection, out currentEtag) == false || etag < currentEtag)
-                                etags[referencedCollection] = etag;
+                            if (etags.TryGetValue(referencedCollection.Name, out currentEtag) == false || etag < currentEtag)
+                                etags[referencedCollection.Name] = etag;
                         }
                     }
 

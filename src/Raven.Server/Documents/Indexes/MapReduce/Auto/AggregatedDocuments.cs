@@ -29,10 +29,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public override void Dispose()
         {
-            foreach (var item in _outputs)
+            for (int i = _outputs.Count - 1; i >= 0; i--)
             {
-                item.Data.Dispose();
+                _outputs[i].Data.Dispose();
             }
+            _outputs.Clear();
         }
     }
 

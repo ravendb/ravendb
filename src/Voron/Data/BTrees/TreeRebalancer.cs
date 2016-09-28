@@ -108,7 +108,7 @@ namespace Voron.Data.BTrees
                     if (TryMergePages(parentPage, page, sibling) == false)
                         return null;
                 }
-                
+
                 return parentPage;
             }
         }
@@ -148,16 +148,21 @@ namespace Voron.Data.BTrees
                 {
                     right.LastSearchPosition = i;
 
-                    var key = GetActualKey(right, right.LastSearchPositionOrLastEntry);
-                    var node = right.GetNode(i);
-
-                    if (mergedPage.HasSpaceFor(_tx, TreeSizeOf.NodeEntryWithAnotherKey(node, key) + Constants.NodeOffsetSize ) == false)
+                    Slice key;
+                    using (GetActualKey(right, right.LastSearchPositionOrLastEntry, out key))
                     {
-                        right.LastSearchPosition = previousSearchPosition; //previous position --> prevent mutation of parameter
-                        return false;
-                    }
 
-                    mergedPage.CopyNodeDataToEndOfPage(node, key);
+                        var node = right.GetNode(i);
+
+                        if (mergedPage.HasSpaceFor(_tx,TreeSizeOf.NodeEntryWithAnotherKey(node, key) + Constants.NodeOffsetSize) == false)
+                        {
+                            right.LastSearchPosition = previousSearchPosition;
+                                //previous position --> prevent mutation of parameter
+                            return false;
+                        }
+
+                        mergedPage.CopyNodeDataToEndOfPage(node, key);
+                    }
                 }
 
                 Memory.Copy(left.Base, mergedPage.Base, left.PageSize);
@@ -199,52 +204,68 @@ namespace Voron.Data.BTrees
         private void MoveLeafNode(TreePage parentPage, TreePage from, TreePage to)
         {
             Debug.Assert(from.IsBranch == false);
-            var originalFromKeyStart = GetActualKey(from, from.LastSearchPositionOrLastEntry);
-
-            var fromNode = from.GetNode(from.LastSearchPosition);
-            byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize + originalFromKeyStart.Size;
-
-            var nodeVersion = fromNode->Version; // every time new node is allocated the version is increased, but in this case we do not want to increase it
-            if (nodeVersion > 0)
-                nodeVersion -= 1;
-
-            byte* dataPos;
-            var fromDataSize = fromNode->DataSize;
-            switch (fromNode->Flags)
+            Slice originalFromKeyStart;
+            using (GetActualKey(from, from.LastSearchPositionOrLastEntry, out originalFromKeyStart))
             {
-                case TreeNodeFlags.PageRef:
-                    to.EnsureHasSpaceFor(_tx, originalFromKeyStart, -1);
-                    dataPos = to.AddPageRefNode(to.LastSearchPosition, originalFromKeyStart, fromNode->PageNumber);
-                    break;
-                case TreeNodeFlags.Data:
-                    to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromDataSize);
-                    dataPos = to.AddDataNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize, nodeVersion);
-                    break;
-                case TreeNodeFlags.MultiValuePageRef:
-                    to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromDataSize);
-                    dataPos = to.AddMultiValueNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize, nodeVersion);
-                    break;
-                default:
-                    throw new NotSupportedException("Invalid node type to move: " + fromNode->Flags);
+
+
+                var fromNode = from.GetNode(from.LastSearchPosition);
+                byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize +
+                            originalFromKeyStart.Size;
+
+                var nodeVersion = fromNode->Version;
+                    // every time new node is allocated the version is increased, but in this case we do not want to increase it
+                if (nodeVersion > 0)
+                    nodeVersion -= 1;
+
+                byte* dataPos;
+                var fromDataSize = fromNode->DataSize;
+                switch (fromNode->Flags)
+                {
+                    case TreeNodeFlags.PageRef:
+                        to.EnsureHasSpaceFor(_tx, originalFromKeyStart, -1);
+                        dataPos = to.AddPageRefNode(to.LastSearchPosition, originalFromKeyStart, fromNode->PageNumber);
+                        break;
+                    case TreeNodeFlags.Data:
+                        to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromDataSize);
+                        dataPos = to.AddDataNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize, nodeVersion);
+                        break;
+                    case TreeNodeFlags.MultiValuePageRef:
+                        to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromDataSize);
+                        dataPos = to.AddMultiValueNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize,
+                            nodeVersion);
+                        break;
+                    default:
+                        throw new NotSupportedException("Invalid node type to move: " + fromNode->Flags);
+                }
+
+                if (dataPos != null && fromDataSize > 0)
+                    Memory.Copy(dataPos, val, fromDataSize);
+
+                from.RemoveNode(from.LastSearchPositionOrLastEntry);
+
+                var pos = parentPage.LastSearchPositionOrLastEntry;
+                parentPage.RemoveNode(pos);
+
+                Slice newSeparatorKey;
+                var scope = GetActualKey(to, 0, out newSeparatorKey); // get the next smallest key it has now
+                try
+                {
+                    var pageNumber = to.PageNumber;
+                    if (parentPage.GetNode(0)->PageNumber == to.PageNumber)
+                    {
+                        pageNumber = from.PageNumber;
+                        scope.Dispose();
+                        scope = GetActualKey(from, 0, out newSeparatorKey);
+                    }
+
+                    AddSeparatorToParentPage(to, parentPage, pageNumber, newSeparatorKey, pos);
+                }
+                finally
+                {
+                    scope.Dispose();
+                }
             }
-            
-            if(dataPos != null && fromDataSize > 0)
-                Memory.Copy(dataPos, val, fromDataSize);
-            
-            from.RemoveNode(from.LastSearchPositionOrLastEntry);
-
-            var pos = parentPage.LastSearchPositionOrLastEntry;
-            parentPage.RemoveNode(pos);
-
-            var newSeparatorKey = GetActualKey(to, 0); // get the next smallest key it has now
-            var pageNumber = to.PageNumber;
-            if (parentPage.GetNode(0)->PageNumber == to.PageNumber)
-            {
-                pageNumber = from.PageNumber;
-                newSeparatorKey = GetActualKey(from, 0);
-            }
-
-            AddSeparatorToParentPage(to, parentPage, pageNumber, newSeparatorKey, pos);
         }
 
         private void AddSeparatorToParentPage(TreePage childPage, TreePage parentPage, long pageNumber, Slice seperatorKey, int separatorKeyPosition)
@@ -258,42 +279,50 @@ namespace Voron.Data.BTrees
         {
             Debug.Assert(from.IsBranch);
 
-            var originalFromKey = GetActualKey(from, from.LastSearchPositionOrLastEntry);
-
-            to.EnsureHasSpaceFor(_tx, originalFromKey, -1);
-
-            var fromNode = from.GetNode(from.LastSearchPosition);
-            long pageNum = fromNode->PageNumber;
-
-            if (to.LastSearchPosition == 0)
+            Slice originalFromKey;
+            using (GetActualKey(from, from.LastSearchPositionOrLastEntry, out originalFromKey))
             {
-                // cannot add to left implicit side, adjust by moving the left node
-                // to the right by one, then adding the new one as the left
+                to.EnsureHasSpaceFor(_tx, originalFromKey, -1);
 
-                TreeNodeHeader* actualKeyNode;
-                var implicitLeftKey = GetActualKey(to, 0, out actualKeyNode);
-                var implicitLeftNode = to.GetNode(0);
-                var leftPageNumber = implicitLeftNode->PageNumber;
+                var fromNode = from.GetNode(from.LastSearchPosition);
+                long pageNum = fromNode->PageNumber;
 
-                Slice implicitLeftKeyToInsert;
-
-                if (implicitLeftNode == actualKeyNode)
+                if (to.LastSearchPosition == 0)
                 {
-                    implicitLeftKeyToInsert = TreeNodeHeader.ToSlicePtr(_tx.Allocator, actualKeyNode);
+                    // cannot add to left implicit side, adjust by moving the left node
+                    // to the right by one, then adding the new one as the left
+
+                    TreeNodeHeader* actualKeyNode;
+                    Slice implicitLeftKey;
+                    using (GetActualKey(to, 0, out actualKeyNode, out implicitLeftKey))
+                    {
+                        var implicitLeftNode = to.GetNode(0);
+                        var leftPageNumber = implicitLeftNode->PageNumber;
+
+                        Slice implicitLeftKeyToInsert;
+                        ByteStringContext<ByteStringMemoryCache>.ExternalScope? externalScope;
+
+                        if (implicitLeftNode == actualKeyNode)
+                        {
+                            externalScope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, actualKeyNode, out implicitLeftKeyToInsert);
+                        }
+                        else
+                        {
+                            implicitLeftKeyToInsert = implicitLeftKey;
+                            externalScope = null;
+                        }
+
+                        to.EnsureHasSpaceFor(_tx, implicitLeftKeyToInsert, -1);
+                        to.AddPageRefNode(1, implicitLeftKeyToInsert, leftPageNumber);
+                        externalScope?.Dispose();
+
+                        to.ChangeImplicitRefPageNode(pageNum); // setup the new implicit node
+                    }
                 }
                 else
                 {
-                    implicitLeftKeyToInsert = implicitLeftKey;
-                }					
-                
-                to.EnsureHasSpaceFor(_tx, implicitLeftKeyToInsert, -1);
-                to.AddPageRefNode(1, implicitLeftKeyToInsert, leftPageNumber);
-
-                to.ChangeImplicitRefPageNode(pageNum); // setup the new implicit node
-            }
-            else
-            {
-                to.AddPageRefNode(to.LastSearchPosition, originalFromKey, pageNum);
+                    to.AddPageRefNode(to.LastSearchPosition, originalFromKey, pageNum);
+                }
             }
 
             if (from.LastSearchPositionOrLastEntry == 0)
@@ -310,38 +339,48 @@ namespace Voron.Data.BTrees
 
             var pos = parentPage.LastSearchPositionOrLastEntry;
             parentPage.RemoveNode(pos);
-            var newSeparatorKey = GetActualKey(to, 0); // get the next smallest key it has now
-            var pageNumber = to.PageNumber;
-            if (parentPage.GetNode(0)->PageNumber == to.PageNumber)
+            Slice newSeparatorKey;
+            var scope = GetActualKey(to, 0, out newSeparatorKey); // get the next smallest key it has now
+            try
             {
-                pageNumber = from.PageNumber;
-                newSeparatorKey = GetActualKey(from, 0);
-            }
+                var pageNumber = to.PageNumber;
+                if (parentPage.GetNode(0)->PageNumber == to.PageNumber)
+                {
+                    pageNumber = from.PageNumber;
+                    scope.Dispose();
+                    scope = GetActualKey(from, 0, out newSeparatorKey);
+                }
 
-            AddSeparatorToParentPage(to, parentPage, pageNumber, newSeparatorKey, pos);
+                AddSeparatorToParentPage(to, parentPage, pageNumber, newSeparatorKey, pos);
+            }
+            finally
+            {
+                scope.Dispose();
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Slice GetActualKey(TreePage page, int pos)
+        private ByteStringContext.ExternalScope GetActualKey(TreePage page, int pos, out Slice slice)
         {
             TreeNodeHeader* _;
-            return GetActualKey(page, pos, out _);
+            return GetActualKey(page, pos, out _, out slice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Slice GetActualKey(TreePage page, int pos, out TreeNodeHeader* node)
+        private ByteStringContext.ExternalScope GetActualKey(TreePage page, int pos, out TreeNodeHeader* node, out Slice key)
         {
             node = page.GetNode(pos);
-            var key = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node);
+            var scope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out key);
             while (key.Size == 0)
             {
                 Debug.Assert(page.IsBranch);
-                page = _tree.GetReadOnlyPage(node->PageNumber);
+                page = _tree.GetReadOnlyTreePage(node->PageNumber);
                 node = page.GetNode(0);
-                key = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node);
+                scope.Dispose();
+                scope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out key);
             }
 
-            return key;
+            return scope;
         }
 
         private void RebalanceRoot(TreePage page)

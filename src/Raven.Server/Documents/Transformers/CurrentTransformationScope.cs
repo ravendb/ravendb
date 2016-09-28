@@ -10,6 +10,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using System.Linq;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Transformers
@@ -59,20 +60,21 @@ namespace Raven.Server.Documents.Transformers
                     return source;
             }
 
+            ByteStringContext.Scope scope;
             Slice keySlice;
             if (keyLazy != null)
             {
                 if (keyLazy.Length == 0)
                     return DynamicNullObject.Null;
 
-                keySlice = Slice.External(_documentsContext.Allocator, keyLazy.Buffer, keyLazy.Size);
+                scope = Slice.External(_documentsContext.Allocator, keyLazy.Buffer, keyLazy.Size, out keySlice);
             }
             else
             {
                 if (keyString.Length == 0)
                     return DynamicNullObject.Null;
 
-                keySlice = Slice.From(_documentsContext.Allocator, keyString);
+                scope = Slice.From(_documentsContext.Allocator, keyString, out keySlice);
             }
 
             // making sure that we normalize the case of the key so we'll be able to find
@@ -80,6 +82,9 @@ namespace Raven.Server.Documents.Transformers
             _documentsContext.Allocator.ToLowerCase(ref keySlice.Content);
 
             var document = _documentsStorage.Get(_documentsContext, keySlice);
+
+            scope.Dispose();
+
             if (document == null)
                 return DynamicNullObject.Null;
 

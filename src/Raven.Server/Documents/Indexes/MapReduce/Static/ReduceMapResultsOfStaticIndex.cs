@@ -65,7 +65,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private class Enumerator : IEnumerator<DynamicBlittableJson>
             {
                 private IEnumerator<BlittableJsonReaderObject> _items;
-                private BlittableJsonReaderObject _previous;
 
                 public void Initialize(IEnumerator<BlittableJsonReaderObject> items)
                 {
@@ -77,11 +76,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     if (_items.MoveNext() == false)
                         return false;
 
-                    _previous?.Dispose();
-
                     Current = new DynamicBlittableJson(_items.Current); // we have to create new instance to properly GroupBy
-
-                    _previous = _items.Current;
 
                     return true;
                 }
@@ -97,8 +92,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 public void Dispose()
                 {
-                    _previous?.Dispose();
-                    _previous = null;
                 }
             }
         }

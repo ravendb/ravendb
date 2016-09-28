@@ -78,6 +78,11 @@ namespace Raven.Server.Config.Categories
         [LegacyConfigurationEntry("Raven/TransactionsModeDuration")]
         public int TransactionsModeDuration { get; set; }
 
+        [Description("Maximum concurrent flushes")]
+        [DefaultValue(10)]
+        [ConfigurationEntry("Raven/Storage/MaxConcurrentFlushes")]
+        public int MaxConcurrentFlushes { get; set; }
+
         public override void Initialize(IConfigurationRoot settings)
         {
             base.Initialize(settings);

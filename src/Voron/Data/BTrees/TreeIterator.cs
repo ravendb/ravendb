@@ -19,7 +19,9 @@ namespace Voron.Data.BTrees
         public event Action<IIterator> OnDisposal;
 
         private Slice _currentKey = default(Slice);
-        private Slice _currentInternalKey = new Slice();
+        private Slice _currentInternalKey = default(Slice);
+
+        private ByteStringContext.ExternalScope _prevKeyScope = default(ByteStringContext<ByteStringMemoryCache>.ExternalScope);
 
         public TreeIterator(Tree tree, LowLevelTransaction tx, bool prefetch)
         {
@@ -32,7 +34,7 @@ namespace Voron.Data.BTrees
         {
             if(_disposed)
                 throw new ObjectDisposedException("TreeIterator " + _tree.Name);
-            return TreeNodeHeader.GetDataSize(_tx, Current);
+            return _tree.GetDataSize(Current);
         }
 
         public bool Seek(Slice key)
@@ -41,20 +43,20 @@ namespace Voron.Data.BTrees
                 throw new ObjectDisposedException("TreeIterator " + _tree.Name);
 
             TreeNodeHeader* node;
-            Func<TreeCursor> constructor;
+            Func<Slice, TreeCursor> constructor;
             _currentPage = _tree.FindPageFor(key, out node, out constructor);
-            _cursor = constructor();
+            _cursor = constructor(key);
             _cursor.Pop();
 
             if (node != null)
             {
-                _currentInternalKey = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, ByteStringType.Mutable);
-                _currentKey = _currentInternalKey; // TODO: Check here if aliasing via pointer is the intended use.
+                _prevKeyScope.Dispose();
+                _prevKeyScope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out _currentInternalKey);
+                _currentKey = _currentInternalKey; 
 
                 if (DoRequireValidation)
                     return this.ValidateCurrentKey(_tx, Current);
-                else
-                    return true;
+                return true;
             }
             
             // The key is not found in the db, but we are Seek()ing for equals or starts with.
@@ -114,7 +116,7 @@ namespace Voron.Data.BTrees
                     {
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
-                        _currentPage = _tree.GetReadOnlyPage(node->PageNumber);
+                        _currentPage = _tree.GetReadOnlyTreePage(node->PageNumber);
                         _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
 
                         if (_prefetch && _currentPage.IsLeaf)
@@ -125,8 +127,10 @@ namespace Voron.Data.BTrees
                     if (DoRequireValidation && this.ValidateCurrentKey(_tx, current) == false)
                         return false;
 
-                    _currentInternalKey = TreeNodeHeader.ToSlicePtr(_tx.Allocator, current, ByteStringType.Mutable);
+                    _prevKeyScope.Dispose();
+                    _prevKeyScope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, current, out _currentInternalKey);
                     _currentKey = _currentInternalKey;
+
                     return true;// there is another entry in this page
                 }
                 if (_cursor.PageCount == 0)
@@ -160,15 +164,15 @@ namespace Voron.Data.BTrees
                     {
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
-                        _currentPage = _tree.GetReadOnlyPage(node->PageNumber);
+                        _currentPage = _tree.GetReadOnlyTreePage(node->PageNumber);
 
                         _currentPage.LastSearchPosition = 0;
                     }
                     var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
                     if (DoRequireValidation && this.ValidateCurrentKey(_tx, current) == false)
                         return false;
-
-                    _currentInternalKey = TreeNodeHeader.ToSlicePtr(_tx.Allocator, current, ByteStringType.Mutable);
+                    _prevKeyScope.Dispose();
+                    _prevKeyScope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, current, out _currentInternalKey);
                     _currentKey = _currentInternalKey;
                     return true;// there is another entry in this page
                 }
@@ -200,7 +204,7 @@ namespace Voron.Data.BTrees
 
         public ValueReader CreateReaderForCurrent()
         {
-            return TreeNodeHeader.Reader(_tx, Current);
+            return _tree.GetValueReaderFromHeader(Current);
         }
 
         public void Dispose()
@@ -208,7 +212,11 @@ namespace Voron.Data.BTrees
             if (_disposed)
                 return;
             _disposed = true;
-
+            if(RequiredPrefix.HasValue)
+                RequiredPrefix.Release(_tx.Allocator);
+            if (MaxKey.HasValue)
+                MaxKey.Release(_tx.Allocator);
+            _prevKeyScope.Dispose();
             _cursor.Dispose();
             OnDisposal?.Invoke(this);
         }
@@ -264,19 +272,21 @@ namespace Voron.Data.BTrees
             while (self.MoveNext());
         }
         
-        public unsafe static bool ValidateCurrentKey<T>(this T self, LowLevelTransaction tx, TreeNodeHeader* node) where T : IIterator
+        public static unsafe bool ValidateCurrentKey<T>(this T self, LowLevelTransaction tx, TreeNodeHeader* node) where T : IIterator
         {
-            if (self.RequiredPrefix.HasValue)
+            Slice currentKey;
+            using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out currentKey))
             {
-                var currentKey = TreeNodeHeader.ToSlicePtr(tx.Allocator, node);
-                if (SliceComparer.StartWith(currentKey, self.RequiredPrefix) == false)
-                    return false;
-            }
-            if (self.MaxKey.HasValue)
-            {
-                var currentKey = TreeNodeHeader.ToSlicePtr(tx.Allocator, node);
-                if (SliceComparer.CompareInline(currentKey, self.MaxKey) >= 0)
-                    return false;
+                if (self.RequiredPrefix.HasValue)
+                {
+                    if (SliceComparer.StartWith(currentKey, self.RequiredPrefix) == false)
+                        return false;
+                }
+                if (self.MaxKey.HasValue)
+                {
+                    if (SliceComparer.CompareInline(currentKey, self.MaxKey) >= 0)
+                        return false;
+                }
             }
             return true;
         }

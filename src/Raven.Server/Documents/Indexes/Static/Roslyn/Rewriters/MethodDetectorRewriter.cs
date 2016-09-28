@@ -34,6 +34,18 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     break;
             }
 
+            var memberAccessExpression = node.Expression as MemberAccessExpressionSyntax;
+
+            if (memberAccessExpression != null)
+            {
+                switch (memberAccessExpression.Name.Identifier.Text)
+                {
+                    case "Boost":
+                        Methods.HasBoost = true;
+                        break;
+                }
+            }
+
             return base.VisitInvocationExpression(node);
         }
 

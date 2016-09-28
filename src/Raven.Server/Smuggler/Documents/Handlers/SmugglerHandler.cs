@@ -5,7 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.IO.Compression;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Data;
@@ -25,7 +27,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             //TODO: implement me!
 
-            
+
             return Task.CompletedTask;
         }
 
@@ -55,8 +57,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 if (operationId.HasValue)
                 {
-                    await Database.DatabaseOperations.AddOperation("Export database: " + Database.Name, DatabaseOperations.PendingOperationType.DatabaseExport, 
-                        onProgress => Task.Run(() => ExportDatabaseInternal(context, exporter, onProgress, token)), operationId.Value, token);
+                    await Database.Operations.AddOperation("Export database: " + Database.Name, DatabaseOperations.PendingOperationType.DatabaseExport,
+                        onProgress => Task.Run(() => ExportDatabaseInternal(context, exporter, onProgress, token), token.Token), operationId.Value, token);
                 }
                 else
                 {
@@ -69,7 +71,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             try
             {
-               
+
 
 
                 //TODO: use optional onProgress parameter
@@ -85,23 +87,48 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/smuggler/import", "POST")]
         public async Task PostImport()
         {
-            // var fileName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("fileName");
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
-            //TODO: detect gzip or not based on query string param
-            using (var stream = new GZipStream(HttpContext.Request.Body, CompressionMode.Decompress))
             {
-                var importer = new SmugglerImporter(Database);
-
-                var operateOnTypes = GetStringQueryString("operateOnTypes", required: false);
-                DatabaseItemType databaseItemType;
-                if (Enum.TryParse(operateOnTypes, true, out databaseItemType))
+                var tuple = await GetImportStream();
+                using(tuple.Item2)
+                using (var stream = new GZipStream(tuple.Item1,CompressionMode.Decompress))
                 {
-                    importer.OperateOnTypes = databaseItemType;
+                    await DoImport(context, stream);
                 }
-
-                await importer.Import(context, stream);
             }
+        }
+
+        private async Task<Tuple<Stream, IDisposable>> GetImportStream()
+        {
+            var file = GetStringQueryString("file", required: false);
+            if (string.IsNullOrEmpty(file) == false)
+                return Tuple.Create<Stream,IDisposable>(File.OpenRead(file),null);
+
+            var url = GetStringQueryString("url", required: false);
+            if (string.IsNullOrEmpty(url) == false)
+            {
+                var httpClient = new HttpClient();
+                
+                var stream = await httpClient.GetStreamAsync(url);
+                return Tuple.Create<Stream, IDisposable>(stream, httpClient);
+            }
+
+            return Tuple.Create<Stream, IDisposable>(HttpContext.Request.Body, null);
+        }
+
+        private async Task DoImport(DocumentsOperationContext context, Stream stream)
+        {
+            var importer = new SmugglerImporter(Database);
+
+            var operateOnTypes = GetStringQueryString("operateOnTypes", required: false);
+            DatabaseItemType databaseItemType;
+            if (Enum.TryParse(operateOnTypes, true, out databaseItemType))
+            {
+                importer.OperateOnTypes = databaseItemType;
+            }
+
+            await importer.Import(context, stream);
         }
     }
 }

@@ -1,140 +1,234 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.IO;
+using System.Runtime.CompilerServices;
 using Sparrow;
+using Voron.Data.Fixed;
 
 namespace Voron.Data.BTrees
 {
     partial class Tree
     {
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public long Increment(string key, long delta)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            return Increment(keySlice, delta);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                return Increment(keySlice, delta);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public long Increment( string key, long delta, ushort version)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            return Increment(keySlice, delta, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                return Increment(keySlice, delta, version);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public bool AddMax(string key, long value)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            return AddMax(keySlice, value);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                return AddMax(keySlice, value);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Add(string key, Stream value, ushort version)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            Add(keySlice, value, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                Add(keySlice, value, version);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Add(string key, Stream value)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            Add(keySlice, value);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                Add(keySlice, value);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Add(string key, MemoryStream value, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            Add(keySlice, value, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                Add(keySlice, value, version);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Add(string key, byte[] value, ushort version)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            var valueSlice = Slice.From(_llt.Allocator, value, ByteStringType.Immutable);
-
-            Add(keySlice, valueSlice, version);
+            Slice keySlice;
+            Slice valueSlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out valueSlice))
+            {
+                Add(keySlice, valueSlice, version);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Add(string key, byte[] value)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-
-            Add(keySlice, value);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                Add(keySlice, value);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Add(string key, string value, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            var valueSlice = Slice.From(_llt.Allocator, value, ByteStringType.Immutable);
-
-            Add(keySlice, valueSlice, version);
+            Slice keySlice;
+            Slice valueSlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out valueSlice))
+            {
+                Add(keySlice, valueSlice, version);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe byte* DirectAdd(string key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            return DirectAdd(keySlice, len, nodeType, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                return DirectAdd(keySlice, len, nodeType, version);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Delete(string key)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            Delete(keySlice);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                Delete(keySlice);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Delete(string key, ushort version)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            Delete(keySlice, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                Delete(keySlice, version);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public ReadResult Read(string key)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            return Read(keySlice);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                return Read(keySlice);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public ushort ReadVersion(string key)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            return ReadVersion(keySlice);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                return ReadVersion(keySlice);
+            }
         }
 
-
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiAdd(string key, string value, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            var valueSlice = Slice.From(_llt.Allocator, value, ByteStringType.Immutable);
-            MultiAdd(keySlice, valueSlice, version);
+            Slice keySlice;
+            Slice valueSlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out valueSlice))
+            {
+                MultiAdd(keySlice, valueSlice, version);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiAdd(string key, Slice value, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            MultiAdd(keySlice, value, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                MultiAdd(keySlice, value, version);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiAdd(Slice key, string value, ushort? version = null)
         {
-            var valueSlice = Slice.From(_llt.Allocator, value, ByteStringType.Immutable);
-            MultiAdd(key, valueSlice, version);
+            Slice valueSlice;
+            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out valueSlice))
+            {
+                MultiAdd(key, valueSlice, version);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiDelete(string key, string value, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            var valueSlice = Slice.From(_llt.Allocator, value, ByteStringType.Immutable);
-            MultiDelete(keySlice, valueSlice, version);
+            Slice keySlice;
+            Slice valueSlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out valueSlice))
+            {
+                MultiDelete(keySlice, valueSlice, version);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiDelete(string key, Slice value, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            MultiDelete(keySlice, value, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                MultiDelete(keySlice, value, version);
+            }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public IIterator MultiRead(string key)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, ByteStringType.Immutable);
-            return MultiRead(keySlice);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                return MultiRead(keySlice);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public long DeleteFixedTreeFor(string key, byte valSize = 0)
+        {
+            Slice keySlice;
+            Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice);
+            return DeleteFixedTreeFor(keySlice, valSize);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public FixedSizeTree FixedTreeFor(string key, byte valSize = 0)
+        {
+            Slice keySlice; // we explicitly don't dispose it here
+            Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice);
+            return FixedTreeFor(keySlice, valSize);
         }
     }
 }

@@ -1,41 +1,44 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 class alert {
-    alertLevel: string;
-    createdAt: string;
-    exception: string;
+
+    id: string;
+    key: string;
     message: string;
-    title: string;
-    uniqueKey: string;
-    observed = ko.observable(false);
-    lastDismissedAt:string;
+    read: boolean;
+    severity: Raven.Server.Documents.AlertSeverity;
+    type: Raven.Server.Documents.AlertType;
+    createdAt: string;
+    dismissedUntil: string;
+    content: Raven.Server.Documents.IAlertContent;
 
-    isVisible: KnockoutComputed<boolean>;
-    createdAtHumanized: KnockoutComputed<string>;
+    global: boolean;
 
-    constructor(dto: alertDto) {
-        this.alertLevel = dto.AlertLevel;
-        this.createdAt = dto.CreatedAt;
-        this.exception = dto.Exception;
+    isError: boolean;
+    isWarning: boolean;
+    isInfo: boolean;
+
+    constructor(dto: Raven.Server.Documents.Alert) {
+        this.id = dto.Id;
+        this.key = dto.Key;
         this.message = dto.Message;
-        this.observed(dto.Observed);
-        this.lastDismissedAt = dto.LastDismissedAt;
-        this.title = dto.Title;
-        this.uniqueKey = dto.UniqueKey;
+        this.read = dto.Read;
+        this.severity = dto.Severity;
+        this.type = dto.Type;
+        this.createdAt = dto.CreatedAt;
+        this.dismissedUntil = dto.DismissedUntil;
+        this.content = dto.Content;
+
+        this.initStatus();
     }
 
-    toDto(): alertDto {
-        return {
-            AlertLevel: this.alertLevel,
-            CreatedAt: this.createdAt,
-            Exception: this.exception,
-            Message: this.message,
-            Observed: this.observed(),
-            LastDismissedAt: this.lastDismissedAt,
-            Title: this.title,
-            UniqueKey: this.uniqueKey
-        };
+    private initStatus() {
+        this.isError = this.severity === ("Error" as Raven.Server.Documents.AlertSeverity);
+        this.isWarning = this.severity === ("Warning" as Raven.Server.Documents.AlertSeverity);
+        this.isInfo = this.severity === ("Info" as Raven.Server.Documents.AlertSeverity);
     }
+
+
 }
 
 export = alert;

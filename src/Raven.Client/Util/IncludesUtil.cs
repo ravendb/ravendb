@@ -16,32 +16,7 @@ namespace Raven.Abstractions.Util
          RegexOptions.Compiled |
          RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-        private static IncludePath GetIncludePath(string include, out bool isPrefix)
-        {
-            isPrefix = false;
-            var result = new IncludePath { Path = include };
-            var match = Match.Empty;
-            var matchPrefix = IncludePrefixRegex.Match(include);
-            if (matchPrefix.Success)
-            {
-                match = matchPrefix;
-                isPrefix = true;
-            }
-            else
-            {
-                var matchSuffix = IncludeSuffixRegex.Match(include);
-                if (matchSuffix.Success)
-                    match = matchSuffix;
-            }
-
-            if (match.Success && match.Groups.Count >= 2)
-            {
-                result.Addition = match.Groups[1].Value;
-                result.Path = result.Path.Replace(result.Addition, "");
-                result.Addition = result.Addition.Substring(1, result.Addition.Length - 2);
-            }
-            return result;
-        }
+        
 
 
         private static void ExecuteInternal(RavenJToken token, string addition, Func<string, string, bool> loadId)
@@ -88,6 +63,32 @@ namespace Raven.Abstractions.Util
             public string Addition;
         }
 
+        private static IncludePath GetIncludePath(string include, out bool isPrefix)
+        {
+            isPrefix = false;
+            var result = new IncludePath { Path = include };
+            var match = Match.Empty;
+            var matchPrefix = IncludePrefixRegex.Match(include);
+            if (matchPrefix.Success)
+            {
+                match = matchPrefix;
+                isPrefix = true;
+            }
+            else
+            {
+                var matchSuffix = IncludeSuffixRegex.Match(include);
+                if (matchSuffix.Success)
+                    match = matchSuffix;
+            }
+
+            if (match.Success && match.Groups.Count >= 2)
+            {
+                result.Addition = match.Groups[1].Value;
+                result.Path = result.Path.Replace(result.Addition, "");
+                result.Addition = result.Addition.Substring(1, result.Addition.Length - 2);
+            }
+            return result;
+        }
 
         public static void Include(RavenJObject document, string include, Func<string, bool> loadId)
         {

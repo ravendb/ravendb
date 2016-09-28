@@ -74,12 +74,12 @@ namespace SlowTests.MailingList
                 Assert.Equal(@"docs.StudentDtos.Select(studentDto => new {
     Email = studentDto.Email,
     Postcode = studentDto.ZipCode
-})", definition.Maps.First());
+})".Replace("\r\n", Environment.NewLine), definition.Maps.First());
 
                 Assert.NotEqual(@"docs.StudentDtos.Select(studentDto => new {
     Email = studentDto.EmailAddress,
     Postcode = studentDto.ZipCode
-})", definition.Maps.First());
+})".Replace("\r\n", Environment.NewLine), definition.Maps.First());
             }
         }
     }

@@ -180,7 +180,7 @@ namespace Raven.Client.Indexing
         {
             get
             {
-                if (_indexType == null)
+                if (_indexType == null || _indexType.Value == IndexType.None)
                 {
                     _indexType = DetectStaticIndexType();
                 }

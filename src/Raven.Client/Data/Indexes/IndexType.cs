@@ -2,6 +2,7 @@
 {
     public enum IndexType
     {
+        None,
         AutoMap,
         AutoMapReduce,
         Map,
