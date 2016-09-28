@@ -144,7 +144,6 @@ namespace Raven.Server.Documents.Transformers
             private class Enumerator : IEnumerator<DynamicBlittableJson>
             {
                 private IEnumerator<Document> _items;
-                private Document _previous;
 
                 public void Initialize(IEnumerator<Document> items)
                 {
@@ -156,14 +155,9 @@ namespace Raven.Server.Documents.Transformers
                     if (_items.MoveNext() == false)
                         return false;
 
-                    _previous?.Data.Dispose();
-
                     Current = new DynamicBlittableJson(_items.Current); // we have to create new instance to properly GroupBy
 
-                    _previous = _items.Current;
-
                     CurrentTransformationScope.Current.Source = Current;
-
                     return true;
                 }
 
@@ -178,8 +172,7 @@ namespace Raven.Server.Documents.Transformers
 
                 public void Dispose()
                 {
-                    _previous?.Data.Dispose();
-                    _previous = null;
+                   
                 }
             }
         }

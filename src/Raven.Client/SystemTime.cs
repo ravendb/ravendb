@@ -8,27 +8,30 @@ using System.Threading;
 
 namespace Raven.Abstractions
 {
-    public static class SystemTime
+    public class SystemTime
     {
-        public static readonly double MicroSecPerTick =
-            1000000D / System.Diagnostics.Stopwatch.Frequency;
+        private static readonly SystemTime Instance = new SystemTime();
 
-        public static Func<DateTime> UtcDateTime;
+        private static readonly double MicroSecPerTick = 1000000D / System.Diagnostics.Stopwatch.Frequency;
 
-        public static Action<int> WaitCalled; 
+        /// <summary>
+        /// Tests now run in parallel so this is no longer static to mitigate the possibility of getting incorrent results. Use DocumentDatabase.Time instead.
+        /// </summary>
+        public Func<DateTime> UtcDateTime;
 
-        public static DateTime UtcNow
+        public Action<int> WaitCalled;
+
+        public DateTime GetUtcNow()
         {
-            get
-            {
-                var temp = UtcDateTime;
-                return temp == null ? DateTime.UtcNow : temp();
-            }
+            var temp = UtcDateTime;
+            return temp?.Invoke() ?? DateTime.UtcNow;
         }
+
+        public static DateTime UtcNow => Instance.GetUtcNow();
 
         public static void Wait(int durationMs)
         {
-            var waitCalled = WaitCalled;
+            var waitCalled = Instance.WaitCalled;
             if (waitCalled != null)
             {
                 waitCalled(durationMs);

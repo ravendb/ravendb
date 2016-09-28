@@ -1472,8 +1472,8 @@ namespace Raven.Client.Connection.Async
         {
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url.IndexStatistics(name), HttpMethod.Get, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url))))
             {
-                var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                return json.Deserialize<IndexStats>(convention);
+                var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return json.Deserialize<IndexStats[]>(convention)[0];
             }
         }
 
@@ -1554,13 +1554,13 @@ namespace Raven.Client.Connection.Async
             HttpMethod method;
             if (query.Query != null && query.Query.Length > convention.MaxLengthOfQueryUsingGetUrl)
             {
-                path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false);
+                path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/queries", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false);
                 method = HttpMethod.Post;
             }
             else
             {
                 method = HttpMethod.Get;
-                path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false);
+                path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/queries", includePageSizeEvenIfNotExplicitlySet: false);
             }
 
             var request = jsonRequestFactory
@@ -1624,7 +1624,6 @@ namespace Raven.Client.Connection.Async
                 Index = response.Headers.GetFirstValue("Raven-Index"),
                 IndexTimestamp = DateTime.ParseExact(response.Headers.GetFirstValue("Raven-Index-Timestamp"), Default.DateTimeFormatsToRead,
                                                                 CultureInfo.InvariantCulture, DateTimeStyles.None),
-                IndexEtag = long.Parse(response.Headers.GetFirstValue("Raven-Index-Etag")),
                 ResultEtag = long.Parse(response.Headers.GetFirstValue("Raven-Result-Etag")),
                 IsStale = bool.Parse(response.Headers.GetFirstValue("Raven-Is-Stale")),
                 TotalResults = int.Parse(response.Headers.GetFirstValue("Raven-Total-Results"))

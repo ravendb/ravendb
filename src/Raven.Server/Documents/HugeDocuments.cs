@@ -16,6 +16,13 @@ namespace Raven.Server.Documents
             _hugeDocs = new SizeLimitedConcurrentDictionary<Tuple<string, DateTime>, int>(maxCollectionSize);
         }
 
+        public void AddIfDocIsHuge(Document doc)
+        {
+            if(doc.Data.Size > _maxWarnSize)
+                _hugeDocs.Set(new Tuple<string, DateTime>(doc.Key, DateTime.UtcNow), doc.Data.Size);
+
+        }
+
         public void AddIfDocIsHuge(string id, int size)
         {
             if (size > _maxWarnSize)

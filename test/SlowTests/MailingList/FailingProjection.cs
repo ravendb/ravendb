@@ -15,7 +15,7 @@ namespace SlowTests.MailingList
             public int Index { get; set; }
         }
 
-        [Fact(Skip = "Missing feature: Streams")]
+        [Fact]
         public void TestFailingProjection()
         {
             using (var store = GetDocumentStore())

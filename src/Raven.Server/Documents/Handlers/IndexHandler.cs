@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -30,6 +31,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 var json = await context.ReadForDiskAsync(RequestBodyStream(), name);
                 var indexDefinition = JsonDeserializationServer.IndexDefinition(json);
+                if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
+                    throw new ArgumentException("Index must have a 'Maps' fields");
+
                 indexDefinition.Name = name;
 
                 var indexId = Database.IndexStore.CreateIndex(indexDefinition);
@@ -142,19 +146,41 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/stats", "GET")]
         public Task Stats()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                throw new InvalidOperationException("There is not index with name: " + name);
-
-            var stats = index.GetStats();
+            var name = GetStringQueryString("name", required: false);
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteIndexStats(context, stats);
+                IndexStats[] indexStats;
+                if (string.IsNullOrEmpty(name))
+                    indexStats = Database.IndexStore
+                        .GetIndexes()
+                        .OrderBy(x => x.Name)
+                        .Select(x => x.GetStats(calculateCollectionStats: true, documentsContext: context))
+                        .ToArray();
+                else
+                {
+                    var index = Database.IndexStore.GetIndex(name);
+                    if (index == null)
+                        throw new InvalidOperationException("There is not index with name: " + name);
+
+                    indexStats = new[] { index.GetStats(calculateCollectionStats: true, documentsContext: context) };
+                }
+
+                writer.WriteStartArray();
+                var first = true;
+                foreach (var stats in indexStats)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+
+                    first = false;
+                    writer.WriteIndexStats(context, stats);
+                }
+
+                writer.WriteEndArray();
+
             }
 
             return Task.CompletedTask;
@@ -186,8 +212,8 @@ namespace Raven.Server.Documents.Handlers
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             HttpContext.Response.StatusCode = Database.IndexStore.TryDeleteIndexIfExists(name)
-                ? (int) HttpStatusCode.NoContent
-                : (int) HttpStatusCode.NotFound;
+                ? (int)HttpStatusCode.NoContent
+                : (int)HttpStatusCode.NotFound;
 
             return Task.CompletedTask;
         }
@@ -283,6 +309,31 @@ namespace Raven.Server.Documents.Handlers
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET")]
+        public Task GenerateCSharpIndexDefinition()
+        {
+            var fullIndexName = HttpContext.Request.Query["fullIndexName"];
+            var index = Database.IndexStore.GetIndex(fullIndexName);
+            if (index == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
+            }
+
+            if (index.Type.IsAuto())
+                throw new InvalidOperationException("Unsupported Operation - Can't create c-sharp index definition from automatic indexes ");
+
+            var indexDefinition = index.GetIndexDefinition();
+
+            using (var writer = new StreamWriter(ResponseBodyStream()))
+            {
+                var text = new IndexDefinitionCodeGenerator(indexDefinition).Generate();
+                writer.Write(text);
+            }
+
             return Task.CompletedTask;
         }
 

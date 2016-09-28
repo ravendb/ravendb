@@ -14,6 +14,7 @@ using Sparrow;
 using Sparrow.Json;
 using Voron.Exceptions;
 using Sparrow.Logging;
+using Voron;
 
 namespace Raven.Server.Documents.Patch
 {

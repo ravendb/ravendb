@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.IO;
 
 namespace Voron.Data.BTrees
 {
@@ -10,130 +6,191 @@ namespace Voron.Data.BTrees
     {
         public long Increment(string key, long delta)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            return Increment(keySlice, delta);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                return Increment(keySlice, delta);
+            }
         }
 
         public long Increment( string key, long delta, ushort version)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            return Increment(keySlice, delta, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                return Increment(keySlice, delta, version);
+            }
         }
 
         public bool AddMax(string key, long value)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            return AddMax(keySlice, value);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                return AddMax(keySlice, value);
+            }
         }
 
         public void Add(string key, Stream value, ushort version)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            Add(keySlice, value, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                Add(keySlice, value, version);
+            }
         }
 
         public void Add(string key, Stream value)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            Add(keySlice, value);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                Add(keySlice, value);
+            }
         }
 
         public void Add(string key, MemoryStream value, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            Add(keySlice, value, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                Add(keySlice, value, version);
+            }
         }
 
         public void Add(string key, byte[] value, ushort version)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            var valueSlice = Slice.From(_llt.Allocator, value, Sparrow.ByteStringType.Immutable);
-
-            Add(keySlice, valueSlice, version);
+            Slice keySlice;
+            Slice valueSlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, value, Sparrow.ByteStringType.Immutable, out valueSlice))
+            {
+                Add(keySlice, valueSlice, version);
+            }
         }
 
         public void Add(string key, byte[] value)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-
-            Add(keySlice, value);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                Add(keySlice, value);
+            }
         }
 
         public void Add(string key, string value, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            var valueSlice = Slice.From(_llt.Allocator, value, Sparrow.ByteStringType.Immutable);
-
-            Add(keySlice, valueSlice, version);
+            Slice keySlice;
+            Slice valueSlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, value, Sparrow.ByteStringType.Immutable, out valueSlice))
+            {
+                Add(keySlice, valueSlice, version);
+            }
         }
 
         public unsafe byte* DirectAdd(string key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            return DirectAdd(keySlice, len, nodeType, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                return DirectAdd(keySlice, len, nodeType, version);
+            }
         }
 
         public void Delete(string key)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            Delete(keySlice);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                Delete(keySlice);
+            }
         }
 
         public void Delete(string key, ushort version)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            Delete(keySlice, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                Delete(keySlice, version);
+            }
         }
 
         public ReadResult Read(string key)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            return Read(keySlice);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                return Read(keySlice);
+            }
         }
 
         public ushort ReadVersion(string key)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            return ReadVersion(keySlice);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                return ReadVersion(keySlice);
+            }
         }
 
 
         public void MultiAdd(string key, string value, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            var valueSlice = Slice.From(_llt.Allocator, value, Sparrow.ByteStringType.Immutable);
-            MultiAdd(keySlice, valueSlice, version);
+            Slice keySlice;
+            Slice valueSlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, value, Sparrow.ByteStringType.Immutable, out valueSlice))
+            {
+                MultiAdd(keySlice, valueSlice, version);
+            }
         }
 
         public void MultiAdd(string key, Slice value, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            MultiAdd(keySlice, value, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                MultiAdd(keySlice, value, version);
+            }
         }
 
         public void MultiAdd(Slice key, string value, ushort? version = null)
         {
-            var valueSlice = Slice.From(_llt.Allocator, value, Sparrow.ByteStringType.Immutable);
-            MultiAdd(key, valueSlice, version);
+            Slice valueSlice;
+            using (Slice.From(_llt.Allocator, value, Sparrow.ByteStringType.Immutable, out valueSlice))
+            {
+                MultiAdd(key, valueSlice, version);
+            }
         }
 
         public void MultiDelete(string key, string value, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            var valueSlice = Slice.From(_llt.Allocator, value, Sparrow.ByteStringType.Immutable);
-            MultiDelete(keySlice, valueSlice, version);
+            Slice keySlice;
+            Slice valueSlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, value, Sparrow.ByteStringType.Immutable, out valueSlice))
+            {
+                MultiDelete(keySlice, valueSlice, version);
+            }
         }
 
         public void MultiDelete(string key, Slice value, ushort? version = null)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            MultiDelete(keySlice, value, version);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                MultiDelete(keySlice, value, version);
+            }
         }
 
         public IIterator MultiRead(string key)
         {
-            var keySlice = Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable);
-            return MultiRead(keySlice);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, Sparrow.ByteStringType.Immutable, out keySlice))
+            {
+                return MultiRead(keySlice);
+            }
         }
     }
 }

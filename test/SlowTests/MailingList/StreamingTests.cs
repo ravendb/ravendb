@@ -20,7 +20,7 @@ namespace SlowTests.MailingList
             public string Name { get; set; }
         }
 
-        [Fact(Skip = "Missing feature: query streaming")]
+        [Fact]
         public void CanStreamUsingLuceneSelectFields()
         {
             int count = 0;
@@ -56,7 +56,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: query streaming")]
+        [Fact]
         public void CanGetUsingLuceneSelectFields()
         {
             int count = 0;

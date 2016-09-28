@@ -305,22 +305,6 @@ interface logDto {
     StackTrace: string;
 }
 
-
-interface alertContainerDto extends documentDto {
-    Alerts: alertDto[];
-}
-
-interface alertDto {
-    Title: string;
-    CreatedAt: string;
-    Observed: boolean;
-    LastDismissedAt: string;
-    Message: string;
-    AlertLevel: string;
-    Exception: string;
-    UniqueKey: string;
-}
-
 interface serverErrorDto {
     Index: number;
     IndexName: string;
@@ -722,7 +706,7 @@ interface tableQuerySummary {
 
 interface sqlReplicationSimulationResultDto {
     Results: tableQuerySummary[];
-    LastAlert: alertDto;
+    //TODO: LastAlert: alertDto;
 }
 
 interface sqlReplicationConnectionsDto extends documentDto {
@@ -1055,7 +1039,7 @@ interface sqlReplicationStatisticsDto {
     ScriptSuccessCount: number;
     WriteErrorCount: number;
     SuccessCount: number;
-    LastAlert: alertDto;
+    //TODO: LastAlert: alertDto;
 }
 
 interface statusDebugIndexFieldsDto {

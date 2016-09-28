@@ -43,9 +43,9 @@ namespace Raven.Server.Documents
             return $"Collection: '{Name}'";
         }
 
-        private bool Equals(CollectionName other)
+        protected bool Equals(CollectionName other)
         {
-            return string.Equals(Name, other.Name);
+            return string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase);
         }
 
         public override bool Equals(object obj)
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents
 
         public override int GetHashCode()
         {
-            return Name?.GetHashCode() ?? 0;
+            return Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Name) : 0;
         }
 
         public static bool operator ==(CollectionName left, CollectionName right)

@@ -21,7 +21,7 @@
 // Optional heading
 .panel-heading {
   padding: @panel-heading-padding;
-  border-bottom: 1px solid transparent;
+  //border-bottom: 1px solid transparent;
   .border-top-radius((@panel-border-radius - 1));
 
   > .dropdown .dropdown-toggle {
@@ -33,7 +33,8 @@
 .panel-title {
   margin-top: 0;
   margin-bottom: 0;
-  font-size: ceil((@font-size-base * 1.125));
+  font-size: @font-size-base;
+  font-weight:normal;
   color: inherit;
 
   > a,
@@ -48,8 +49,9 @@
 // Optional footer (stays gray in every modifier class)
 .panel-footer {
   padding: @panel-footer-padding;
+  line-height:1;
   background-color: @panel-footer-bg;
-  border-top: 1px solid @panel-inner-border;
+  //border-top: 1px solid @panel-inner-border;
   .border-bottom-radius((@panel-border-radius - 1));
 }
 
@@ -252,20 +254,21 @@
 
 // Contextual variations
 .panel-default {
-  .panel-variant(@panel-default-border; @panel-default-text; @panel-default-heading-bg; @panel-default-border);
+  .panel-variant(@panel-default-bg; @panel-default-border; @panel-default-text; @panel-default-heading-bg; @panel-default-border);
+  background-color:@panel-bg;
 }
 .panel-primary {
-  .panel-variant(@panel-primary-border; @panel-primary-text; @panel-primary-heading-bg; @panel-primary-border);
+  .panel-variant(@panel-primary-bg; @panel-primary-border; @panel-primary-text; @panel-primary-heading-bg; @panel-primary-border);
 }
 .panel-success {
-  .panel-variant(@panel-success-border; @panel-success-text; @panel-success-heading-bg; @panel-success-border);
+  .panel-variant(@panel-success-bg; @panel-success-border; @panel-success-text; @panel-success-heading-bg; @panel-success-border);
 }
 .panel-info {
-  .panel-variant(@panel-info-border; @panel-info-text; @panel-info-heading-bg; @panel-info-border);
+  .panel-variant(@panel-info-bg; @panel-info-border; @panel-info-text; @panel-info-heading-bg; @panel-info-border);
 }
 .panel-warning {
-  .panel-variant(@panel-warning-border; @panel-warning-text; @panel-warning-heading-bg; @panel-warning-border);
+  .panel-variant(@panel-warning-bg; @panel-warning-border; @panel-warning-text; @panel-warning-heading-bg; @panel-warning-border);
 }
 .panel-danger {
-  .panel-variant(@panel-danger-border; @panel-danger-text; @panel-danger-heading-bg; @panel-danger-border);
+  .panel-variant(@panel-danger-bg; @panel-danger-border; @panel-danger-text; @panel-danger-heading-bg; @panel-danger-border);
 }

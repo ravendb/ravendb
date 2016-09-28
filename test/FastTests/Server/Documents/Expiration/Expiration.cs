@@ -39,7 +39,7 @@ namespace FastTests.Server.Documents.Expiration
             {
                 await SetupExpiration(store);
 
-                var company = new Company {Name = "Company Name"};
+                var company = new Company { Name = "Company Name" };
                 var expiry = SystemTime.UtcNow.AddMinutes(5);
                 using (var session = store.OpenAsyncSession())
                 {
@@ -62,8 +62,9 @@ namespace FastTests.Server.Documents.Expiration
                 }
 
 
-                var expiredDocumentsCleaner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.ExpiredDocumentsCleaner;
-                expiredDocumentsCleaner.UtcNow = () => DateTime.UtcNow.AddMinutes(10);
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                var expiredDocumentsCleaner = database.BundleLoader.ExpiredDocumentsCleaner;
 
                 expiredDocumentsCleaner.CleanupExpiredDocs();
 
@@ -109,11 +110,9 @@ namespace FastTests.Server.Documents.Expiration
                     Assert.NotNull(company2);
                 }
 
-
-                var expiredDocumentsCleaner =
-                    (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.ExpiredDocumentsCleaner;
-
-                expiredDocumentsCleaner.UtcNow = () => DateTime.UtcNow.AddMinutes(10);
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                var expiredDocumentsCleaner = database.BundleLoader.ExpiredDocumentsCleaner;
 
                 expiredDocumentsCleaner.CleanupExpiredDocs();
 

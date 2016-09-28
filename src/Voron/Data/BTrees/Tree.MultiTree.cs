@@ -84,9 +84,12 @@ namespace Voron.Data.BTrees
             if (existingItem != null)
             {
                 // maybe same value added twice?
-                var tmpKey = TreeNodeHeader.ToSlicePtr(_llt.Allocator, item); 
-                if (SliceComparer.Equals(tmpKey,value))
-                    return; // already there, turning into a no-op
+                Slice tmpKey;
+                using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, item, out tmpKey))
+                {
+                    if (SliceComparer.Equals(tmpKey, value))
+                        return; // already there, turning into a no-op
+                }
 
                 nestedPage.RemoveNode(nestedPage.LastSearchPosition);
             }
@@ -125,8 +128,9 @@ namespace Voron.Data.BTrees
             var tree = Create(_llt, _tx, TreeFlags.MultiValue);
             for (int i = 0; i < nestedPage.NumberOfEntries; i++)
             {
-                var existingValue = nestedPage.GetNodeKey(_llt, i);
-                tree.DirectAdd(existingValue, 0);
+                Slice existingValue;
+                using (nestedPage.GetNodeKey(_llt, i, out existingValue))
+                    tree.DirectAdd(existingValue, 0);
             }
             tree.DirectAdd(value, 0, version: version);
             _tx.AddMultiValueTree(this, key, tree);
@@ -161,11 +165,9 @@ namespace Voron.Data.BTrees
                 {
                     var nodeHeader = nestedPage.GetNode(i);
 
-                    Slice nodeKey = TreeNodeHeader.ToSlicePtr(allocator, nodeHeader);
-
-                    newNestedPage.AddDataNode(i, nodeKey, 0, (ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
-
-                    nodeKey.Release(allocator);
+                    Slice nodeKey;
+                    using (TreeNodeHeader.ToSlicePtr(allocator, nodeHeader, out nodeKey))
+                        newNestedPage.AddDataNode(i, nodeKey, 0, (ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
                 }
 
                 newNestedPage.Search(_llt, value);
@@ -273,10 +275,13 @@ namespace Voron.Data.BTrees
 
             Debug.Assert(node != null);
 
-            var fetchedNodeKey = TreeNodeHeader.ToSlicePtr(_llt.Allocator, node);
-            if (SliceComparer.Equals(fetchedNodeKey, key) == false)
+            Slice fetchedNodeKey;
+            using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out fetchedNodeKey))
             {
-                throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
+                if (SliceComparer.Equals(fetchedNodeKey, key) == false)
+                {
+                    throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
+                }
             }
 
             if (node->Flags == TreeNodeFlags.MultiValuePageRef)
@@ -300,10 +305,13 @@ namespace Voron.Data.BTrees
 
             Debug.Assert(node != null);
 
-            var fetchedNodeKey = TreeNodeHeader.ToSlicePtr(_llt.Allocator, node);
-            if (SliceComparer.Equals(fetchedNodeKey, key) == false)
+            Slice fetchedNodeKey;
+            using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out fetchedNodeKey))
             {
-                throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
+                if (SliceComparer.Equals(fetchedNodeKey, key) == false)
+                {
+                    throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
+                }
             }
 
             if (node->Flags == TreeNodeFlags.MultiValuePageRef)

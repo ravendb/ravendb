@@ -17,7 +17,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
     public class MapReduceIndex : MapReduceIndexBase<MapReduceIndexDefinition>
     {
+        private readonly HashSet<CollectionName> _referencedCollections = new HashSet<CollectionName>();
+
         internal readonly StaticIndexBase _compiled;
+
+        private HandleReferences _handleReferences;
+
         private readonly Dictionary<string, AnonymusObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymusObjectToBlittableMapResultsEnumerableWrapper>();
 
         private int _maxNumberOfIndexOutputs;
@@ -27,7 +32,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             : base(indexId, IndexType.MapReduce, definition)
         {
             _compiled = compiled;
+
+            if (_compiled.ReferencedCollections == null)
+                return;
+
+            foreach (var collection in _compiled.ReferencedCollections)
+            {
+                foreach (var referencedCollection in collection.Value)
+                    _referencedCollections.Add(referencedCollection);
+            }
         }
+
+        public override bool HasBoostedFields => _compiled.HasBoostedFields;
 
         protected override void InitializeInternal()
         {
@@ -56,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, staticIndex.GroupByFields);
+            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, staticIndex.GroupByFields, staticIndex.HasDynamicFields);
             var instance = new MapReduceIndex(indexId, staticMapIndexDefinition, staticIndex);
 
             return instance;
@@ -64,12 +80,24 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
-            return new IIndexingWork[]
-            {
-                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
-                new ReduceMapResultsOfStaticIndex(_compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext), 
-            };
+            var workers = new List<IIndexingWork>();
+            workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext));
+
+            if (_referencedCollections.Count > 0)
+                workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
+
+            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext));
+            workers.Add(new ReduceMapResultsOfStaticIndex(_compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext));
+
+            return workers.ToArray();
+        }
+
+        public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            if (_referencedCollections.Count > 0)
+                _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
+
+            base.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
@@ -77,7 +105,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, StaticIndexDocsEnumerator.EnumerationType.Index);
         }
 
-        public override void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             AnonymusObjectToBlittableMapResultsEnumerableWrapper wrapper;
             if (_enumerationWrappers.TryGetValue(CurrentIndexingScope.Current.SourceCollection, out wrapper) == false)
@@ -87,7 +115,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             wrapper.InitializeForEnumeration(mapResults, indexContext);
 
-            PutMapResults(key, wrapper, indexContext);
+            return PutMapResults(key, wrapper, indexContext);
         }
 
         public override int? ActualMaxNumberOfIndexOutputs
@@ -115,6 +143,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             }
 
             return true;
+        }
+
+        public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
+        {
+            return _compiled.ReferencedCollections;
         }
 
         private class AnonymusObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>

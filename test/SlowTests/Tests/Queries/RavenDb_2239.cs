@@ -131,7 +131,7 @@ namespace SlowTests.Tests.Queries
             WaitForIndexing(store);
         }
 
-        [Fact(Skip = "Missing feature: query streaming")]
+        [Fact]
         public void SmallLogTransformerTest()
         {
             using (var store = GetDocumentStore())
@@ -143,13 +143,9 @@ namespace SlowTests.Tests.Queries
                 {
                     var cntr = 0;
                     sw.Restart();
-                    Assert.Throws<AggregateException>(() =>
+                    Assert.Throws<InvalidOperationException>(() =>
                     {
-                        using (
-                            var enumerator =
-                                session.Advanced.Stream(
-                                    session.Query<Document, Document_Index>()
-                                        .TransformWith<TestDocumentNameTransformer, DocumentName>()))
+                        using (var enumerator = session.Advanced.Stream(session.Query<Document, Document_Index>().TransformWith<TestDocumentNameTransformer, DocumentName>()))
                         {
                             enumerator.MoveNext();
                             sw.Stop();
@@ -170,7 +166,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Fact(Skip = "Missing feature: query streaming")]
+        [Fact]
         public void FullLogTransformerDelay()
         {
             using (var store = GetDocumentStore())

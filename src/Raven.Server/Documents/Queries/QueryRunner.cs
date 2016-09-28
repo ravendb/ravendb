@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
-
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
@@ -14,7 +15,8 @@ using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-
+using Sparrow.Json;
+using Voron;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries
@@ -33,28 +35,36 @@ namespace Raven.Server.Documents.Queries
 
         public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQueryServerSide query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
         {
-            DocumentQueryResult result;
-
-            if (indexName.StartsWith("dynamic", StringComparison.OrdinalIgnoreCase))
+            if (DynamicQueryRunner.IsDynamicIndex(indexName))
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
-                result = await runner.Execute(indexName, query, existingResultEtag).ConfigureAwait(false);
+                return await runner.Execute(indexName, query, existingResultEtag).ConfigureAwait(false);
             }
-            else
+
+            var index = GetIndex(indexName);
+            if (existingResultEtag.HasValue)
             {
-                var index = GetIndex(indexName);
-                if (existingResultEtag.HasValue)
-                {
-                    var etag = index.GetIndexEtag();
-                    if (etag == existingResultEtag)
-                        return DocumentQueryResult.NotModifiedResult;
-                }
-
-                return await index.Query(query, _documentsContext, token);
+                var etag = index.GetIndexEtag();
+                if (etag == existingResultEtag)
+                    return DocumentQueryResult.NotModifiedResult;
             }
 
-            return result;
+            return await index.Query(query, _documentsContext, token);
+        }
+
+        public async Task ExecuteStreamQuery(string indexName, IndexQueryServerSide query, HttpResponse response, BlittableJsonTextWriter writer, OperationCancelToken token)
+        {
+            if (DynamicQueryRunner.IsDynamicIndex(indexName))
+            {
+                var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
+
+                await runner.ExecuteStream(response, writer, indexName, query).ConfigureAwait(false);
+            }
+
+            var index = GetIndex(indexName);
+
+            await index.StreamQuery(response, writer, query, _documentsContext, token);
         }
 
         public Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQuery query, long? facetsEtag, long? existingResultEtag, OperationCancelToken token)
@@ -131,7 +141,7 @@ namespace Raven.Server.Documents.Queries
 
         public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(string indexName, IndexQueryServerSide indexQuery)
         {
-            if (string.IsNullOrWhiteSpace(indexName) || (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) == false && indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase) == false))
+            if (DynamicQueryRunner.IsDynamicIndex(indexName) == false)
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
             var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, OperationCancelToken.None);
@@ -163,22 +173,28 @@ namespace Raven.Server.Documents.Queries
 
             RavenTransaction tx = null;
             var operationsInCurrentBatch = 0;
-            DocumentQueryResult results;
+            List<string> resultKeys;
             try
             {
-                results = await index.Query(query, context, token).ConfigureAwait(false);
+                var results = await index.Query(query, context, token).ConfigureAwait(false);
+                if (options.AllowStale == false && results.IsStale)
+                    throw new InvalidOperationException("Cannot perform delete operation. Query is stale.");
+
+                resultKeys = new List<string>(results.Results.Count);
+                foreach (var document in results.Results)
+                {
+                    resultKeys.Add(document.Key.ToString());
+                }
             }
             finally //make sure to close tx if DocumentConflictException is thrown
             {
                 context.CloseTransaction();
             }
 
-            if (options.AllowStale == false && results.IsStale)
-                throw new InvalidOperationException("Cannot perform delete operation. Query is stale.");
-
+          
             var progress = new DeterminateProgress
             {
-                Total = results.Results.Count,
+                Total = resultKeys.Count,
                 Processed = 0
             };
 
@@ -186,7 +202,7 @@ namespace Raven.Server.Documents.Queries
 
             using (var rateGate = options.MaxOpsPerSecond.HasValue ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1)) : null)
             {
-                foreach (var document in results.Results)
+                foreach (var document in resultKeys)
                 {
                     if (rateGate != null && rateGate.WaitToProceed(0) == false)
                     {
@@ -206,7 +222,8 @@ namespace Raven.Server.Documents.Queries
                         tx = context.OpenWriteTransaction();
                     }
 
-                    action(document.Key);
+                    action(document);
+
                     operationsInCurrentBatch++;
                     progress.Processed++;
 

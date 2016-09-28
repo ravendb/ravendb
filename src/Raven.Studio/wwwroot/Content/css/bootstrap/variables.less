@@ -26,9 +26,9 @@
 @brand-info:            #4d90b3;
 @brand-info-light:      #84d5f7;
 
-@brand-warning-dark:    #a69532;
-@brand-warning:         #e6cc46;
-@brand-warning-light:   #fee480;
+@brand-warning-dark:    #a68f42;
+@brand-warning:         #f7d631;
+@brand-warning-light:   #ffe066;
 
 @brand-danger-dark:     #793233;
 @brand-danger:          #e55151;
@@ -203,7 +203,8 @@
 @input-bg:                       transparent;
 //** `<input disabled>` background color
 @input-bg-disabled:              transparent;
-@input-bg-disabled-image:        url("../../img/disabled-input-bkg.png");
+@input-bg-disabled-image:        repeating-linear-gradient(-45deg, fadeout(@gray-darker,75%), fadeout(@gray-darker,75%) 3px, fadeout(#FFF,100%) 3px, fadeout(#FFF,100%) 6px);
+    //url("../../img/disabled-input-bkg.png");
 
 //** Text color for `<input>`s
 @input-color:                    @gray-lighter;
@@ -731,37 +732,43 @@
 
 @panel-bg:                    @gray-darker;
 @panel-body-padding:          @grid-gutter-width / 4 * 3;
-@panel-heading-padding:       10px 15px;
+@panel-heading-padding:       7px @grid-gutter-width / 4 * 3;
 @panel-footer-padding:        @panel-heading-padding;
 @panel-border-radius:         @border-radius-base;
 
 //** Border color for elements within panels
 @panel-inner-border:          @panel-bg;
-@panel-footer-bg:             @gray;
+@panel-footer-bg:             @gray-dark;
 
 @panel-default-text:          @text-color;
+@panel-default-bg:            @panel-bg;
 @panel-default-border:        @panel-bg;
-@panel-default-heading-bg:    @gray;
+@panel-default-heading-bg:    @gray-dark;
 
 @panel-primary-text:          #fff;
-@panel-primary-border:        @brand-primary;
-@panel-primary-heading-bg:    @brand-primary;
+@panel-primary-bg:            @brand-primary-dark;
+@panel-primary-border:        transparent;
+@panel-primary-heading-bg:    @brand-primary-dark;
 
-@panel-success-text:          @state-success-text;
-@panel-success-border:        @state-success-border;
-@panel-success-heading-bg:    @state-success-bg;
+@panel-success-text:          #fff;
+@panel-success-bg:            @brand-success-dark;
+@panel-success-border:        transparent;
+@panel-success-heading-bg:    @brand-success-dark;
 
-@panel-info-text:             @state-info-text;
-@panel-info-border:           @state-info-border;
-@panel-info-heading-bg:       @state-info-bg;
+@panel-info-text:             #fff;
+@panel-info-bg:               @brand-info-dark;
+@panel-info-border:           transparent;
+@panel-info-heading-bg:       @brand-info-dark;
 
-@panel-warning-text:          @state-warning-text;
-@panel-warning-border:        @state-warning-border;
-@panel-warning-heading-bg:    @state-warning-bg;
+@panel-warning-text:          #fff;
+@panel-warning-bg:            @brand-warning-dark;
+@panel-warning-border:        transparent;
+@panel-warning-heading-bg:    @brand-warning-dark;
 
-@panel-danger-text:           @state-danger-text;
-@panel-danger-border:         @state-danger-border;
-@panel-danger-heading-bg:     @state-danger-bg;
+@panel-danger-text:           #fff;
+@panel-danger-bg:             @brand-danger-dark;
+@panel-danger-border:         transparent;
+@panel-danger-heading-bg:     @brand-danger-dark;
 
 
 //== Thumbnails

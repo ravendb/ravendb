@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch)
         {
-            return new MapReduceQueryResultRetriever(indexContext, fieldsToFetch);
+            return new MapReduceQueryResultRetriever(documentsContext, fieldsToFetch);
         }
 
         private static Tree GetMapEntriesTree(Transaction tx)
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return tx.CreateTree(MapEntriesTreeName);
         }
 
-        protected unsafe void PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext)
+        protected unsafe int PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext)
         {
             var documentMapEntries = _mapReduceWorkContext.MapEntries.FixedTreeFor(documentKey, sizeof(ulong));
 
@@ -95,8 +95,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
+            int resultsCount = 0;
             foreach (var mapResult in mappedResults)
             {
+                resultsCount++;
                 var reduceKeyHash = mapResult.ReduceKeyHash;
 
                 long id;
@@ -114,7 +116,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 {
                     id = _mapReduceWorkContext.GetNextIdentifier();
 
-                    documentMapEntries.Add(id, Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong)));
+                    Slice val;
+                    using (Slice.External(indexContext.Allocator, (byte*) &reduceKeyHash, sizeof(ulong), out val))
+                        documentMapEntries.Add(id, val);
                 }
 
                 GetResultsStore(reduceKeyHash, indexContext, true).Add(id, mapResult.Data);
@@ -141,6 +145,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                 }
             }
+
+            return resultsCount;
         }
 
         private static unsafe List<MapEntry> GetMapEntries(FixedSizeTree documentMapEntries)
@@ -172,18 +178,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             MapReduceResultsStore store;
             if (_mapReduceWorkContext.StoreByReduceKeyHash.TryGetValue(reduceKeyHash, out store) == false)
             {
-                var read = _mapReduceWorkContext.ResultsStoreTypes.Read((long) reduceKeyHash);
+                Slice read;
+                using (_mapReduceWorkContext.ResultsStoreTypes.Read((long) reduceKeyHash, out read))
+                {
+                    MapResultsStorageType type;
 
-                MapResultsStorageType type;
+                    if (read.HasValue)
+                        type = (MapResultsStorageType) (*read.CreateReader().Base);
+                    else
+                        type = MapResultsStorageType.Nested;
 
-                if (read.HasValue)
-                    type = (MapResultsStorageType)(*read.CreateReader().Base);
-                else
-                    type = MapResultsStorageType.Nested;
+                    store = new MapReduceResultsStore(reduceKeyHash, type, indexContext, _mapReduceWorkContext, create);
 
-                store = new MapReduceResultsStore(reduceKeyHash, type, indexContext, _mapReduceWorkContext, create);
-
-                _mapReduceWorkContext.StoreByReduceKeyHash[reduceKeyHash] = store;
+                    _mapReduceWorkContext.StoreByReduceKeyHash[reduceKeyHash] = store;
+                }
             }
 
             return store;

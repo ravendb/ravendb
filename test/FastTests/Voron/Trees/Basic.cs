@@ -64,7 +64,9 @@ namespace FastTests.Voron.Trees
 
                 using (var it = tree.Iterate(false))
                 {
-                    Assert.True(it.Seek(Slice.From(tx.Allocator, "a")));
+                    Slice key;
+                    Slice.From(tx.Allocator, "a", out key);
+                    Assert.True(it.Seek(key));
                     Assert.Equal("a", it.CurrentKey.ToString());
                 }
 
@@ -77,7 +79,8 @@ namespace FastTests.Voron.Trees
         {
             using (var tx = Env.WriteTransaction())
             {
-                Slice key = Slice.From(tx.Allocator, "test");
+                Slice key;
+                Slice.From(tx.Allocator, "test", out key);
                 var tree = tx.CreateTree("foo");
                 tree.Add(key, StreamFor("value"));
 
@@ -135,7 +138,9 @@ namespace FastTests.Voron.Trees
                 {
                     for (int i = 0; i < count; i++)
                     {
-                        Assert.True(it.Seek(Slice.From(tx.Allocator, "test-" + i.ToString("000"))));
+                        Slice key;
+                        Slice.From(tx.Allocator, "test-" + i.ToString("000"), out key);
+                        Assert.True(it.Seek(key));
                         Assert.Equal("test-" + i.ToString("000"), it.CurrentKey.ToString());
                         Assert.Equal("val-" + i, it.CreateReaderForCurrent().ToString());
                     }

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Server.Documents;
@@ -25,6 +26,10 @@ namespace Voron.Recovery
             _initialContextSize = config.InitialContextSizeInMB * Constants.Size.Megabyte;
             _initialContextLongLivedSize = config.InitialContextLongLivedSizeInKB*Constants.Size.Kilobyte;
             _option = StorageEnvironmentOptions.ForPath(config.DataFileDirectory);
+            _copyOnWrite = !config.DisableCopyOnWriteMode;
+            // by default CopyOnWriteMode will be true
+            //i'm setting CopyOnWriteMode this was because we want to keep it internal.
+            _option.GetType().GetProperty("CopyOnWriteMode", BindingFlags.NonPublic|BindingFlags.Instance).SetValue(_option, _copyOnWrite);
             _progressIntervalInSeconds = config.ProgressIntervalInSeconds;
         }
 
@@ -38,13 +43,35 @@ namespace Voron.Recovery
         public RecoveryStatus Execute(CancellationToken ct)
         {            
             var sw = new Stopwatch();
+            StorageEnvironment se = null;
             sw.Start();
+            if (_copyOnWrite)
+            {
+                Console.WriteLine("Recovering journal files, this may take a while...");
+                try
+                {
+
+                    se = new StorageEnvironment(_option);
+                    Console.WriteLine(
+                        $"Journal recovery has completed successfully within {sw.Elapsed.TotalSeconds:N1} seconds");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Journal recovery failed, reason:{Environment.NewLine}{e}");
+                }
+                finally
+                {
+                    se?.Dispose();
+                }
+            }
+            _option = StorageEnvironmentOptions.ForPath(Path.GetDirectoryName(_datafile));
+
             var mem = Pager.AcquirePagePointer(null, 0);
-            long startOffest = (long)mem;
+            long startOffset = (long) mem;
             var fi = new FileInfo(_datafile);
             var fileSize = fi.Length;
             //making sure eof is page aligned
-            var eof = mem + (fileSize / _pageSize) * _pageSize; 
+            var eof = mem + (fileSize/_pageSize)*_pageSize;
             DateTime lastProgressReport = DateTime.MinValue;
             using (var destinationStream = File.OpenWrite(_output))
             using (var logFile = File.CreateText(Path.Combine(Path.GetDirectoryName(_output), LogFileName)))
@@ -59,7 +86,8 @@ namespace Voron.Recovery
                     {
                         if (ct.IsCancellationRequested)
                         {
-                            logFile.WriteLine($"Cancellation requested while recovery was in position {GetFilePosition(startOffest, mem)}");
+                            logFile.WriteLine(
+                                $"Cancellation requested while recovery was in position {GetFilePosition(startOffset, mem)}");
                             _cancellationRequested = true;
                             break;
                         }
@@ -72,20 +100,23 @@ namespace Voron.Recovery
                                 Console.WriteLine("Press 'q' to quit the recovery process");
                             }
                             lastProgressReport = now;
-                            var currPos = GetFilePosition(startOffest, mem);
-                            var eofPos = GetFilePosition(startOffest, eof);
-                            Console.WriteLine($"{now:hh:MM:ss}: Recovering page at position {currPos:#,#;;0}/{eofPos:#,#;;0} ({(double)currPos/eofPos:p}) - Last recovered doc is {_lastRecoveredDocumentKey}");
+                            var currPos = GetFilePosition(startOffset, mem);
+                            var eofPos = GetFilePosition(startOffset, eof);
+                            Console.WriteLine(
+                                $"{now:hh:MM:ss}: Recovering page at position {currPos:#,#;;0}/{eofPos:#,#;;0} ({(double) currPos/eofPos:p}) - Last recovered doc is {_lastRecoveredDocumentKey}");
                         }
-                        var pageHeader = (PageHeader*)mem;
+                        var pageHeader = (PageHeader*) mem;
                         //this page is not raw data section move on
                         if ((pageHeader->Flags).HasFlag(PageFlags.RawData) == false)
                         {
                             mem += _pageSize;
                             continue;
                         }
-                        if (pageHeader->Flags.HasFlag(PageFlags.Single) && pageHeader->Flags.HasFlag(PageFlags.Overflow))
+                        if (pageHeader->Flags.HasFlag(PageFlags.Single) &&
+                            pageHeader->Flags.HasFlag(PageFlags.Overflow))
                         {
-                            var message = $"page #{pageHeader->PageNumber} (offset={GetFilePosition(startOffest,mem)}) has both Overflow and Single flag turned";
+                            var message =
+                                $"page #{pageHeader->PageNumber} (offset={GetFilePosition(startOffset, mem)}) has both Overflow and Single flag turned";
                             mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                             continue;
                         }
@@ -93,13 +124,14 @@ namespace Voron.Recovery
                         if (pageHeader->Flags.HasFlag(PageFlags.Overflow))
                         {
 
-                            var endOfOverflow = pageHeader + Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize) * _pageSize;
+                            var endOfOverflow = pageHeader +
+                                                Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize)*_pageSize;
                             // the endOfOeverFlow can be equal to eof if the last page is overflow
                             if (endOfOverflow > eof)
                             {
                                 var message =
-                                    $"Overflow page #{pageHeader->PageNumber} (offset={GetFilePosition(startOffest, mem)})" +
-                                    $" size exceeds the end of the file ([{(long)pageHeader}:{(long)endOfOverflow}])";
+                                    $"Overflow page #{pageHeader->PageNumber} (offset={GetFilePosition(startOffset, mem)})" +
+                                    $" size exceeds the end of the file ([{(long) pageHeader}:{(long) endOfOverflow}])";
                                 mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                                 continue;
                             }
@@ -107,26 +139,27 @@ namespace Voron.Recovery
                             if (pageHeader->OverflowSize <= 0)
                             {
                                 var message =
-                                    $"Overflow page #{pageHeader->PageNumber} (offset={GetFilePosition(startOffest, mem)})" +
+                                    $"Overflow page #{pageHeader->PageNumber} (offset={GetFilePosition(startOffset, mem)})" +
                                     $" OverflowSize is not a positive number ({pageHeader->OverflowSize})";
                                 mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                                 continue;
                             }
-                            if (WriteDocument((byte*) pageHeader + sizeof(PageHeader), pageHeader->OverflowSize, writer,
-                                logFile, context, startOffest))
+                            if (WriteDocument((byte*) pageHeader + sizeof(PageHeader), pageHeader->OverflowSize,
+                                writer,
+                                logFile, context, startOffset))
                             {
                                 var numberOfPages = Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
-                                mem += numberOfPages * _pageSize;
+                                mem += numberOfPages*_pageSize;
                             }
                             else
-                             //write document failed 
+                                //write document failed 
                             {
                                 mem += _pageSize;
                             }
                             continue;
                         }
                         // small raw data section
-                        var rawHeader = (RawDataSmallPageHeader*)mem;
+                        var rawHeader = (RawDataSmallPageHeader*) mem;
                         if (rawHeader->RawDataFlags.HasFlag(RawDataPageFlags.Header))
                         {
                             mem += _pageSize;
@@ -135,20 +168,21 @@ namespace Voron.Recovery
                         if (rawHeader->NextAllocation > _pageSize)
                         {
                             var message =
-                                $"RawDataSmallPage #{rawHeader->PageNumber} at {GetFilePosition(startOffest, mem)} next allocation is larger than {_pageSize} bytes";
+                                $"RawDataSmallPage #{rawHeader->PageNumber} at {GetFilePosition(startOffset, mem)} next allocation is larger than {_pageSize} bytes";
                             mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                             continue;
                         }
 
                         for (var pos = sizeof(PageHeader); pos < rawHeader->NextAllocation;)
                         {
+                            var debug = GetFilePosition(startOffset, mem);
                             var currMem = mem + pos;
-                            var entry = (RawDataSection.RawDataEntrySizes*)currMem;                            
+                            var entry = (RawDataSection.RawDataEntrySizes*) currMem;
                             //this indicates that the current entry is invalid because it is outside the size of a page
                             if (pos > _pageSize)
                             {
                                 var message =
-                                    $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffest, currMem)}";
+                                    $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}";
                                 mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                                 //we can't retrive entries past the invalid entry
                                 break;
@@ -158,7 +192,7 @@ namespace Voron.Recovery
                                 rawHeader->NextAllocation)
                             {
                                 var message =
-                                    $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffest, currMem)}" +
+                                    $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}" +
                                     "the allocated entry exceed the bound of the page next allocation.";
                                 mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                                 //we can't retrive entries past the invalid entry
@@ -167,7 +201,7 @@ namespace Voron.Recovery
                             if (entry->UsedSize > entry->AllocatedSize)
                             {
                                 var message =
-                                    $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffest, currMem)}" +
+                                    $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}" +
                                     "the size of the entry exceed the allocated size";
                                 mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                                 //we can't retrive entries past the invalid entry
@@ -175,22 +209,26 @@ namespace Voron.Recovery
                             }
                             pos += entry->AllocatedSize + sizeof(RawDataSection.RawDataEntrySizes);
                             if (entry->AllocatedSize == 0 || entry->UsedSize == -1)
-                                continue;                            
-                            if ( WriteDocument(currMem + sizeof(RawDataSection.RawDataEntrySizes), entry->UsedSize, writer, logFile, context, startOffest) == false)
+                                continue;
+                            if (
+                                WriteDocument(currMem + sizeof(RawDataSection.RawDataEntrySizes), entry->UsedSize,
+                                    writer, logFile, context, startOffset) == false)
                                 break;
                         }
                         mem += _pageSize;
                     }
                     catch (Exception e)
                     {
-                        var message = $"Unexpected exception at position {GetFilePosition(startOffest, mem)}:{Environment.NewLine} {e}";
+                        var message =
+                            $"Unexpected exception at position {GetFilePosition(startOffset, mem)}:{Environment.NewLine} {e}";
                         mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                     }
                 }
                 writer.WriteEndArray();
                 writer.WriteEndObject();
-                logFile.WriteLine($"Discovered a total of {_numberOfDocumentsRetrived:#,#;00} documents within {sw.Elapsed.TotalSeconds::#,#.#;;00} seconds.");
-                logFile.WriteLine($"Discovered a total of {_numberOfFaultedPages::#,#;00} faulted pages.");                
+                logFile.WriteLine(
+                    $"Discovered a total of {_numberOfDocumentsRetrived:#,#;00} documents within {sw.Elapsed.TotalSeconds::#,#.#;;00} seconds.");
+                logFile.WriteLine($"Discovered a total of {_numberOfFaultedPages::#,#;00} faulted pages.");
             }
             if (_cancellationRequested)
                 return RecoveryStatus.CancellationRequested;
@@ -216,9 +254,11 @@ namespace Voron.Recovery
                 {
                     var message =
                         $"Failed to read document at position {GetFilePosition(startOffest,mem)} because the TableValueReader number of entries" +
-                        $" doesn't match NumberOfFiledsInDocumentTable={_numberOfFieldsInDocumentTable}";
+                        $" doesn't match NumberOfFiledsInDocumentTable expected={_numberOfFieldsInDocumentTable} actual={tvr.Count}";
                     //we actually not advancing the memory here because we might write a small data section entry
-                    PrintErrorAndAdvanceMem(message, mem, logWriter);
+                    //here i don't issue an error because we do have rawdatasections that are used for other things than documents so i'll assume 
+                    //this is the case, anyway i'll log this in the log file incase it is a problem.
+                    logWriter.WriteLine(message);
                     return false;
                 }
 
@@ -276,11 +316,12 @@ namespace Voron.Recovery
         private readonly int _initialContextSize;
         private readonly int _initialContextLongLivedSize;
         private bool _firstDoc = true;
-        private readonly StorageEnvironmentOptions _option;
+        private StorageEnvironmentOptions _option;
         private readonly int _progressIntervalInSeconds;
         private bool _cancellationRequested;
         private string _lastRecoveredDocumentKey = "No documents recovered yet";
         private readonly string _datafile;
+        private bool _copyOnWrite;
 
 
         public enum RecoveryStatus

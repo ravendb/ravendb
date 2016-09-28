@@ -4,10 +4,11 @@ using System.Runtime.InteropServices;
 using NLog;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Client.Util
 {
-    public class UnmanagedBuffersPool : IDisposable
+    public unsafe class UnmanagedBuffersPool : IDisposable
     {
         protected readonly string _debugTag;
 
@@ -46,7 +47,7 @@ namespace Raven.Client.Util
                 while (stack.TryPop(out allocatedMemoryDatas))
                 {
                     size += allocatedMemoryDatas.SizeInBytes;
-                    Marshal.FreeHGlobal(allocatedMemoryDatas.Address);
+                    NativeMemory.Free(allocatedMemoryDatas.Address, allocatedMemoryDatas.SizeInBytes);
                 }
             }
             return size;
@@ -100,7 +101,7 @@ namespace Raven.Client.Util
                 return new AllocatedMemoryData
                 {
                     SizeInBytes = size,
-                    Address = Marshal.AllocHGlobal(size)
+                    Address = NativeMemory.AllocateMemory(size)
                 };
             }
 
@@ -113,7 +114,7 @@ namespace Raven.Client.Util
             return new AllocatedMemoryData
             {
                 SizeInBytes = actualSize,
-                Address = Marshal.AllocHGlobal(actualSize)
+                Address = NativeMemory.AllocateMemory(size)
             };
         }
 
@@ -156,7 +157,7 @@ namespace Raven.Client.Util
             var index = GetIndexFromSize(returned.SizeInBytes);
             if (index == -1)
             {
-                Marshal.FreeHGlobal(returned.Address);
+                NativeMemory.Free(returned.Address, returned.SizeInBytes);
 
                 return; // strange size, just free it
             }

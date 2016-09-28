@@ -33,17 +33,24 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                var etag = Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1L));
-                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag)
-                                 .First();
+                Slice etag;
+                bool gotValues = false;
+                using (Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1L), out etag))
+                {
+                    foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag))
+                    {
+                        Assert.Equal(1L, reader.Key.CreateReader().ReadBigEndianInt64());
+                        var handle = reader.Results.Single();
+                        int size;
+                        Assert.Equal("{'Name': 'Oren'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
 
-                Assert.Equal(1L, reader.Key.CreateReader().ReadBigEndianInt64());
-                var handle = reader.Results.Single();
-                int size;
-                Assert.Equal("{'Name': 'Oren'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
 
-
-                tx.Commit();
+                        tx.Commit();
+                        gotValues = true;
+                        break;
+                    }
+                }
+                Assert.True(gotValues);
             }
         }
 
@@ -69,7 +76,9 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                docs.DeleteByKey(Slice.From(tx.Allocator, "users/1"));
+                Slice key;
+                Slice.From(tx.Allocator, "users/1", out key);
+                docs.DeleteByKey(key);
 
                 tx.Commit();
             }
@@ -78,7 +87,9 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1)));
+                Slice key;
+                Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1), out key);
+                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], key);
                 Assert.Empty(reader);
             }
         }
@@ -116,18 +127,23 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                var etag = Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1L));
-                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag)
-                                 .First();
+                Slice etag;
+                bool gotValues = false;
+                using (Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1L), out etag))
+                {
+                    foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag))
+                    {
+                        Assert.Equal(2L, reader.Key.CreateReader().ReadBigEndianInt64());
 
-                Assert.Equal(2L, reader.Key.CreateReader().ReadBigEndianInt64());
-
-                var handle = reader.Results.Single();
-                int size;
-                Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
-
-
-                tx.Commit();
+                        var handle = reader.Results.Single();
+                        int size;
+                        Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
+                        tx.Commit();
+                        gotValues = true;
+                        break;
+                    }
+                }
+                Assert.True(gotValues);
             }
         }
 

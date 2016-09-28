@@ -243,14 +243,14 @@ namespace Raven.Json.Linq
                 {
                     changes.Change = DocumentsChanges.ChangeType.ArrayValueRemoved;
                     changes.FieldOldValue = dif.ToString();
-                    changes.FieldOldType = dif.Type.ToString();
+                    //changes.FieldOldType = dif.Type.ToString();
                 }
 
                 if (selfArray.Length > otherArray.Length)
                 {
                     changes.Change = DocumentsChanges.ChangeType.ArrayValueAdded;
                     changes.FieldNewValue = dif.ToString();
-                    changes.FieldNewType = dif.Type.ToString();
+                    //changes.FieldNewType = dif.Type.ToString();
                 }
                 docChanges.Add(changes);
             }
@@ -271,14 +271,14 @@ namespace Raven.Json.Linq
                     if (selfObj.Properties.TryGetValue(kvp.Key, out token))
                     {
                         changes.FieldNewValue = token.ToString();
-                        changes.FieldNewType = token.Type.ToString();
+                        //changes.FieldNewType = token.Type.ToString();
                         changes.Change = DocumentsChanges.ChangeType.NewField;
 
                         changes.FieldName = kvp.Key;
                     }
 
                     changes.FieldOldValue = "null";
-                    changes.FieldOldType = "null";
+                    //changes.FieldOldType = "null";
 
                     docChanges.Add(changes);
                 }
@@ -291,8 +291,8 @@ namespace Raven.Json.Linq
             {
                 var changes = new DocumentsChanges
                 {
-                    FieldOldType = otherObj.Type.ToString(),
-                    FieldNewType = selfObj.Type.ToString(),
+                   // FieldOldType = otherObj.Type.ToString(),
+                    //FieldNewType = selfObj.Type.ToString(),
                      FieldName = key
                 };
 
@@ -351,8 +351,8 @@ namespace Raven.Json.Linq
         {
             var changes = new DocumentsChanges
             {
-                FieldNewType = kvp.Value.Type.ToString(),
-                FieldOldType = token.Type.ToString(),
+                //FieldNewType = kvp.Value.Type.ToString(),
+                //FieldOldType = token.Type.ToString(),
                 FieldNewValue = kvp.Value.ToString(),
                 FieldOldValue = token.ToString(),
                 Change = DocumentsChanges.ChangeType.FieldChanged,
@@ -365,8 +365,8 @@ namespace Raven.Json.Linq
         {
             var changes = new DocumentsChanges
             {
-                FieldNewType = curThisReader.Type.ToString(),
-                FieldOldType = curOtherReader.Type.ToString(),
+                //FieldNewType = curThisReader.Type.ToString(),
+                //FieldOldType = curOtherReader.Type.ToString(),
                 FieldNewValue = curThisReader.ToString(),
                 FieldOldValue = curOtherReader.ToString(),
                 Change = DocumentsChanges.ChangeType.FieldChanged,

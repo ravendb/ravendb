@@ -5,7 +5,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Lucene.Net.Documents;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
@@ -13,11 +12,11 @@ using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Json;
 using Sparrow.Json;
-
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
+using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -31,6 +30,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private const string TrueString = "true";
 
         private const string FalseString = "false";
+        
+        private readonly Field _reduceValueField = new Field(Constants.Indexing.Fields.ReduceValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
         private static readonly FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
 
@@ -46,11 +47,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected readonly bool _reduceOutput;
 
+        private byte[] _reduceValueBuffer;
+
+        public void Clean()
+        {
+            if (_fieldsCache.Count > 256)
+            {
+                _fieldsCache.Clear();
+            }
+        }
+
         protected LuceneDocumentConverterBase(ICollection<IndexField> fields, bool reduceOutput = false)
         {
             _fields = fields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
 
             _reduceOutput = reduceOutput;
+
+            if (reduceOutput)
+                _reduceValueBuffer = new byte[0];
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
@@ -239,23 +253,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 yield break;
             }
 
-            if (valueType == ValueType.Dictionary)
-            {
-                var dict = (IDictionary) value;
-
-                var djv = new DynamicJsonValue();
-
-                foreach (var key in dict.Keys)
-                {
-                    djv[key.ToString()] = TypeConverter.ToBlittableSupportedType(dict[key], indexContext);
-                }
-
-                foreach (var dictField in GetRegularFields(field, indexContext.ReadObject(djv, "lucene field"), indexContext))
-                    yield return dictField;
-
-                yield break;
-            }
-
             if (valueType == ValueType.DynamicJsonObject)
             {
                 var dynamicJson = (DynamicBlittableJson)value;
@@ -289,6 +286,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             else if (valueType == ValueType.Convertible) // we need this to store numbers in invariant format, so JSON could read them
             {
                 yield return GetOrCreateField(path, ((IConvertible)value).ToString(CultureInfo.InvariantCulture), null, null, storage, indexing, termVector);
+            }
+
+            if (valueType == ValueType.ConvertToJson)
+            {
+                var json = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(value, indexContext);
+
+                foreach (var jsonField in GetComplexObjectFields(path, indexContext.ReadObject(json, "json value field"), storage, indexing, termVector))
+                    yield return jsonField;
+
+                yield break;
             }
 
             foreach (var numericField in GetOrCreateNumericField(field, value, storage))
@@ -335,8 +342,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (value is DynamicBlittableJson) return ValueType.DynamicJsonObject;
 
-            if (value is IDictionary) return ValueType.Dictionary;
-
             if (value is IEnumerable) return ValueType.Enumerable;
 
             if (value is LazyDoubleValue) return ValueType.Double;
@@ -347,7 +352,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (value is BlittableJsonReaderObject) return ValueType.BlittableJsonObject;
 
-            return ValueType.Numeric;
+            if (IsNumber(value)) return ValueType.Numeric;
+
+            return ValueType.ConvertToJson;
         }
 
         private static object GetNullValueForSorting(SortOptions? sortOptions)
@@ -499,12 +506,50 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return true;
         }
 
+        protected AbstractField GetReduceResultValueField(BlittableJsonReaderObject reduceResult)
+        {
+            _reduceValueField.SetValue(GetReduceResult(reduceResult), 0, reduceResult.Size);
+
+            return _reduceValueField;
+        }
+
+        private byte[] GetReduceResult(BlittableJsonReaderObject reduceResult)
+        {
+            var necessarySize = Bits.NextPowerOf2(reduceResult.Size);
+
+            if (_reduceValueBuffer.Length < necessarySize)
+                _reduceValueBuffer = new byte[necessarySize];
+
+            unsafe
+            {
+                fixed (byte* v = _reduceValueBuffer)
+                    reduceResult.CopyTo(v);
+            }
+
+            return _reduceValueBuffer;
+        }
+
         public void Dispose()
         {
             foreach (var cachedFieldItem in _fieldsCache.Values)
             {
                 cachedFieldItem.Dispose();
             }
+        }
+
+        public static bool IsNumber(object value)
+        {
+            return value is long
+                    || value is decimal
+                    || value is int
+                    || value is byte
+                    || value is short
+                    || value is ushort
+                    || value is uint
+                    || value is sbyte
+                    || value is ulong
+                    || value is float
+                    || value is double;
         }
 
         private enum ValueType
@@ -520,8 +565,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             LazyString,
 
             LazyCompressedString,
-
-            Dictionary,
 
             Enumerable,
 
@@ -545,7 +588,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             Enum,
 
-            Lucene
+            Lucene,
+
+            ConvertToJson
         }
     }
 }

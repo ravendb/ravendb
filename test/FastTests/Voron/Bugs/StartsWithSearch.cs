@@ -33,11 +33,14 @@ namespace FastTests.Voron.Bugs
                     var tree = tx.ReadTree("data");
                     using (var it = tree.Iterate(false))
                     {
-                        Assert.True(it.Seek(Slice.From(tx.Allocator, "users-7")));
+                        Slice key;
+                        Slice.From(tx.Allocator, "users-7", out key);
+                        Assert.True(it.Seek(key));
 
                         for (int i = 0; i < 10; i++)
                         {
-                            Assert.True(it.Seek(Slice.From(tx.Allocator, "users-" +i)),i.ToString());
+                            Slice.From(tx.Allocator, "users-" + i, out key);
+                            Assert.True(it.Seek(key),i.ToString());
                         }
                     }
                 }

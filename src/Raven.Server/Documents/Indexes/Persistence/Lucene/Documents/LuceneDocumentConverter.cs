@@ -1,9 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using Lucene.Net.Documents;
-using Raven.Abstractions.Data;
 using Raven.Server.Json;
-using Sparrow.Binary;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -11,18 +9,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     public class LuceneDocumentConverter : LuceneDocumentConverterBase
     {
         private readonly BlittableJsonTraverser _blittableTraverser;
-        private readonly Field _reduceValueField = new Field(Constants.Indexing.Fields.ReduceValueFieldName, new byte[0], 0, 0, Field.Store.YES);
-
-        private byte[] _reduceValueBuffer;
 
         public LuceneDocumentConverter(ICollection<IndexField> fields, bool reduceOutput = false)
             : base(fields, reduceOutput)
         {
             if (reduceOutput)
-            {
-                _blittableTraverser = new BlittableJsonTraverser(new char[] { }); // map-reduce results have always flat structure
-                _reduceValueBuffer = new byte[0];
-            }
+                _blittableTraverser = new BlittableJsonTraverser(new char[] {}); // map-reduce results have always flat structure
             else
                 _blittableTraverser = BlittableJsonTraverser.Default;
         }
@@ -30,17 +22,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected override IEnumerable<AbstractField> GetFields(LazyStringValue key, object doc, JsonOperationContext indexContext)
         {
             var document = (Document)doc;
-            if (document.Key != null)
+            if (key != null)
             {
-                Debug.Assert(document.LoweredKey != null && key == document.LoweredKey);
+                Debug.Assert(document.LoweredKey == null || (key == document.LoweredKey));
 
-                yield return GetOrCreateKeyField(document.LoweredKey);
+                yield return GetOrCreateKeyField(key);
             }
 
             if (_reduceOutput)
             {
-                _reduceValueField.SetValue(GetReduceResult(document.Data), 0, document.Data.Size);
-                yield return _reduceValueField;
+                yield return GetReduceResultValueField(document.Data);
             }
 
             foreach (var indexField in _fields.Values)
@@ -51,22 +42,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 foreach (var luceneField in GetRegularFields(indexField, value, indexContext))
                     yield return luceneField;
             }
-        }
-
-        private byte[] GetReduceResult(BlittableJsonReaderObject reduceResult)
-        {
-            var necessarySize = Bits.NextPowerOf2(reduceResult.Size);
-
-            if (_reduceValueBuffer.Length < necessarySize)
-                _reduceValueBuffer = new byte[necessarySize];
-
-            unsafe
-            {
-                fixed (byte* v = _reduceValueBuffer)
-                    reduceResult.CopyTo(v);
-            }
-
-            return _reduceValueBuffer;
         }
     }
 }

@@ -1,0 +1,153 @@
+﻿
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="theme-color" content="#FFF">
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <title>Title</title>
+
+    <!--  <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="icon" href="favicon.ico">-->
+
+    <link href='https://fonts.googleapis.com/css?family=Lato:400,300,700,900,400italic,700italic' rel='stylesheet' type='text/css'>
+
+    <link rel="stylesheet" type="text/less" href="../wwwroot/Content/css/bootstrap/bootstrap.less" />
+    <link rel="stylesheet" type="text/less" href="../wwwroot/Content/css/styles.less">
+
+    <!--[if IE 8]>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+</head>
+<body>
+
+    <div class="processing-spinner"></div>
+
+    <nav id="topbar"
+         class="navbar navbar-inverse navbar-fixed-top"
+         data-load="partials/topbar.html">
+    </nav>
+
+    <nav id="main-menu"
+         class="main-menu"
+         data-load="partials/menu.html" >
+    </nav>
+
+    <div id="notification-center"
+         data-load="partials/notification-center.html">
+    </div>
+
+
+<div class="container-fluid content-container">
+    <div class="content-container-margin csvImport">
+        <h1>CSV Import</h1>
+
+        <div class="panel panel-default">
+
+            <div class="panel-body">
+                <p class="bg-info padding padding-md">
+                    <i class="icon-info"></i>&nbsp;
+                    Import documents from CSV file into a collection. Each column will be treated as a property.
+                </p>
+
+                <form class="form-horizontal">
+                    <div class="form-group">
+                        <label for="csvImportFile" class="col-sm-2 control-label">
+                            Import file <i class="required"></i>
+                        </label>
+                        <div class="col-sm-10 col-lg-6">
+                            <div class="input-group csvImport-importFileInput">
+                                <input required type="file" tabindex="-1" name="csvImportFile" id="csvImportFile" accept=".csv,text/csv" />
+                                <span class="static-name form-control">Select file...</span>
+                                <span class="input-group-btn">
+                                    <label for="csvImportFile" class="btn btn-default">
+                                        <i class="icon-document"></i>
+                                        Browse
+                                    </label>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="csvImportCollection" class="col-sm-2 control-label">
+                            Specific collection
+                            <br/>
+                        </label>
+                        <div class="col-sm-10 col-lg-6">
+                                <input list="collections" placeholder="Select collection" class="form-control" type="text" name="csvImportCollection" id="csvImportCollection" />
+                                <datalist id="collections">
+                                    <option value="Companies" />
+                                    <option value="Computers" />
+                                    <option value="Onions" />
+                                    <option value="Orders" />
+                                    <option value="Zombies" />
+                                </datalist>
+                            <small>
+                                <i class="icon-info"></i>
+                                If not provided documents are going to be imported into a new collection.
+                            </small>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-offset-2 col-sm-10">
+                            <div class="checkbox checkbox-primary">
+                                <input id="useIdCol" name="useIdCol" class="styled" type="checkbox" checked />
+                                <label for="useIdCol">
+                                    Use IDs as provided in <strong>@id</strong> column <br/>
+                                    <small>
+                                        If not checked random GUID will be used for ID field.
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-offset-2 col-sm-10">
+                        <button type="button" class="btn btn-primary btn btn-toggle csvImport-importBtn"
+                            data-target=".csvImport-importBtn" data-class="btn-spinner">
+                            <i class="icon-document-group"></i>&nbsp;
+                            Import
+                        </button>
+                        </div>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script type="text/javascript" src="js/setup.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/less.js/2.7.1/less.min.js"></script>
+<script src="../wwwroot/Content/ace/ace.js" type="text/javascript" charset="utf-8"></script>
+<script>
+var editor = ace.edit("docEditor");
+editor.setTheme("ace/theme/pastel_on_dark");
+editor.getSession().setMode("ace/mode/json");
+</script>
+</body>
+</html>

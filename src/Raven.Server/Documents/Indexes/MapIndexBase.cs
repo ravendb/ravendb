@@ -43,34 +43,42 @@ namespace Raven.Server.Documents.Indexes
         public override unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             writer.Delete(tombstone.LoweredKey, stats);
-            _indexedDocs.Delete(Slice.External(indexContext.Allocator, tombstone.LoweredKey.Buffer, tombstone.LoweredKey.Size));
+            Slice slice;
+            using (Slice.External(indexContext.Allocator, tombstone.LoweredKey.Buffer, tombstone.LoweredKey.Size,
+                    out slice))
+                _indexedDocs.Delete(slice);
         }
 
-        public override unsafe void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override unsafe int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            var keySlice = Slice.External(indexContext.Allocator, key.Buffer, key.Size);
-
-            if (_indexedDocs.Read(keySlice) != null)
-                writer.Delete(key, stats);
-            else
-                _indexedDocs.Add(keySlice, Stream.Null);
-
-            var numberOfOutputs = 0;
-            foreach (var mapResult in mapResults)
+            Slice keySlice;
+            using (Slice.External(indexContext.Allocator, key.Buffer, key.Size, out keySlice))
             {
-                writer.IndexDocument(key, mapResult, stats, indexContext);
-                numberOfOutputs++;
 
-                if (EnsureValidNumberOfOutputsForDocument(numberOfOutputs))
-                    continue;
+                if (_indexedDocs.Read(keySlice) != null)
+                    writer.Delete(key, stats);
+                else
+                    _indexedDocs.Add(keySlice, Stream.Null);
 
-                writer.Delete(key, stats); // TODO [ppekrol] we want to delete invalid doc from index?
-                _indexedDocs.Delete(keySlice);
+                var numberOfOutputs = 0;
+                foreach (var mapResult in mapResults)
+                {
+                    writer.IndexDocument(key, mapResult, stats, indexContext);
+                    numberOfOutputs++;
 
-                throw new InvalidOperationException($"Index '{Name}' has already produced {numberOfOutputs} map results for a source document '{key}', while the allowed max number of outputs is {MaxNumberOfIndexOutputs} per one document. Please verify this index definition and consider a re-design of your entities or index.");
+                    if (EnsureValidNumberOfOutputsForDocument(numberOfOutputs))
+                        continue;
+
+                    writer.Delete(key, stats); // TODO [ppekrol] we want to delete invalid doc from index?
+                    _indexedDocs.Delete(keySlice);
+
+                    throw new InvalidOperationException($"Index '{Name}' has already produced {numberOfOutputs} map results for a source document '{key}', while the allowed max number of outputs is {MaxNumberOfIndexOutputs} per one document. Please verify this index definition and consider a re-design of your entities or index.");
+                }
+
+                DocumentDatabase.Metrics.IndexedPerSecond.Mark();
+                return numberOfOutputs;
             }
 
-            DocumentDatabase.Metrics.IndexedPerSecond.Mark();
         }
 
         public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch)

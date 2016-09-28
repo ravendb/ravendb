@@ -20,9 +20,12 @@ namespace FastTests.Voron.Bugs
                 using (var tx = env.WriteTransaction())
                 {
                     tx.LowLevelTransaction.IsLazyTransaction = true;
-
-                    var tree = tx.FixedTreeFor(Slice.From(StorageEnvironment.LabelsContext, "World"), 8);
-                    tree.Add(1, Slice.From(StorageEnvironment.LabelsContext, "Hello123"));
+                    Slice fst;
+                    Slice.From(StorageEnvironment.LabelsContext, "World", out fst);
+                    var tree = tx.FixedTreeFor(fst, 8);
+                    Slice val;
+                    Slice.From(StorageEnvironment.LabelsContext, "Hello123", out val);
+                    tree.Add(1, val);
                     tx.Commit();
                 }
                 // delibrately not commiting non-lazy-tx, should not throw

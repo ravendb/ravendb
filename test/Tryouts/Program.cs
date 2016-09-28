@@ -1,10 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using FastTests.Server.Documents.Replication;
+using FastTests.Voron.Storage;
 using Raven.Client.Document;
 using Raven.Client.Smuggler;
+using SlowTests.SlowTests.Bugs;
 using SlowTests.Voron;
 using Voron;
 
@@ -15,29 +19,49 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+            using (var a = new SlowTests.MailingList.spokeypokey.spokeypokey3())
             {
-                using (var x = new AutomaticConflictResolution())
-                {
-                    x.Resolve_to_latest_version_tombstone_is_latest_the_incoming_document_is_replicated();
-                }
-                Console.WriteLine(i + 1);
+                a.Can_deal_with_nulls2();
+                if (DateTime.Now.Year == 2016)
+                    return;
             }
-            //Console.WriteLine("Starting");
-            //var sp = Stopwatch.StartNew();
-            //using (var store = new DocumentStore
-            //{
-            //    DefaultDatabase = "licensing",
-            //    Url = "http://localhost:8080"
-            //})
-            //{
-            //    store.Initialize();
+            Console.WriteLine("Starting");
+            using (var store = new DocumentStore
+            {
+                DefaultDatabase = "licensing",
+                Url = "http://localhost:8080"
+            })
+            {
+                store.Initialize();
 
-            //    store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-19 13-00.ravendbdump.gzip", CancellationToken.None)
-            //        .Wait();
+                var sp = Stopwatch.StartNew();
+                store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), @"C:\Users\ayende\Downloads\Dump of LicenseTracking, 2016-09-19 13-00.ravendbdump.gzip", CancellationToken.None)
+                    .Wait();
 
-            //}
-            //    Console.WriteLine(sp.Elapsed);
+
+                Console.WriteLine("Inserted in " + sp.Elapsed);
+                sp.Restart();
+                var done = new HashSet<string>();
+                while (true)
+                {
+                    bool all = true;
+                    foreach (var index in store.DatabaseCommands.GetStatistics().Indexes)
+                    {
+                        if (index.IsStale)
+                        {
+                            all = false;
+                        }
+                        else if (done.Add(index.Name))
+                        {
+                            Console.WriteLine(index.Name + " done in " + sp.Elapsed);
+                        }
+                    }
+                    if (all)
+                        break;
+                    Thread.Sleep(100);
+                }
+                Console.WriteLine("Indexed in " + sp.Elapsed);
+            }
         }
 
     }

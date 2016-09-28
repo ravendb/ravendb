@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -39,8 +38,8 @@ namespace Raven.Server.Documents.Handlers
                     await FacetedQuery(context, indexName, token).ConfigureAwait(false);
                     return;
                 }
-
-                throw new NotSupportedException($"Operation '{operation}' is not supported.");
+                
+                await Query(context, indexName, token, HttpMethod.Post).ConfigureAwait(false);
             }
         }
 
@@ -73,7 +72,7 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                await Query(context, indexName, token).ConfigureAwait(false);
+                await Query(context, indexName, token, HttpMethod.Get).ConfigureAwait(false);
             }
         }
 
@@ -85,7 +84,6 @@ namespace Raven.Server.Documents.Handlers
             long? facetsEtag = null;
             if (query.FacetSetupDoc == null)
             {
-                string f;
                 KeyValuePair<List<Facet>, long> facets;
                 if (HttpContext.Request.Method == HttpMethod.Post.Method)
                 {
@@ -94,7 +92,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else if (HttpContext.Request.Method == HttpMethod.Get.Method)
                 {
-                    f = GetStringQueryString("facets");
+                    var f = GetStringQueryString("facets");
                     if (string.IsNullOrWhiteSpace(f))
                         throw new InvalidOperationException("One of the required parameters (facetDoc or facets) was not specified.");
 
@@ -125,17 +123,25 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task Query(DocumentsOperationContext context, string indexName, OperationCancelToken token)
+        private async Task Query(DocumentsOperationContext context, string indexName, OperationCancelToken token, HttpMethod method)
         {
-            var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
+            var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
 
+            if (method == HttpMethod.Post && string.IsNullOrWhiteSpace(indexQuery.Query))
+            {
+                string queryString;
+                var request = context.Read(RequestBodyStream(), "QueryInPostBody");
+                if (request.TryGet("Query", out queryString))
+                    indexQuery.Query = queryString;
+            }
+            
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
             var includes = GetStringValuesQueryString("include", required: false);
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
             var runner = new QueryRunner(Database, context);
 
-            var result = await runner.ExecuteQuery(indexName, query, includes, existingResultEtag, token).ConfigureAwait(false);
+            var result = await runner.ExecuteQuery(indexName, indexQuery, includes, existingResultEtag, token).ConfigureAwait(false);
 
             if (result.NotModified)
             {
@@ -155,7 +161,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var query = GetMoreLikeThisQuery(context);
+            var query = MoreLikeThisQueryServerSide.Create(HttpContext, GetPageSize(Database.Configuration.Core.MaxPageSize), context);
             var runner = new QueryRunner(Database, context);
 
             var result = runner.ExecuteMoreLikeThisQuery(indexName, query, context, existingResultEtag, token);
@@ -233,9 +239,9 @@ namespace Raven.Server.Documents.Handlers
 
             var queryRunner = new QueryRunner(Database, context);
 
-            var operationId = Database.DatabaseOperations.GetNextOperationId();
+            var operationId = Database.Operations.GetNextOperationId();
 
-            var task = Database.DatabaseOperations.AddOperation(indexName, operationType, onProgress => 
+            var task = Database.Operations.AddOperation(indexName, operationType, onProgress => 
                     operation(queryRunner, indexName, query, options, onProgress, token), operationId, token);
 
             task.ContinueWith(_ => returnContextToPool.Dispose());
@@ -258,42 +264,6 @@ namespace Raven.Server.Documents.Handlers
                 StaleTimeout = GetTimeSpanQueryString("staleTimeout", required: false),
                 RetrieveDetails = GetBoolValueQueryString("details", required: false) ?? false
             };
-        }
-
-        private MoreLikeThisQueryServerSide GetMoreLikeThisQuery(JsonOperationContext context)
-        {
-            var result = new MoreLikeThisQueryServerSide
-            {
-                Fields = GetStringValuesQueryString("fields", required: false),
-                Boost = GetBoolValueQueryString("boost", required: false),
-                BoostFactor = GetFloatValueQueryString("boostFactor", required: false),
-                MaximumNumberOfTokensParsed = GetIntValueQueryString("maxNumTokens", required: false),
-                MaximumQueryTerms = GetIntValueQueryString("maxQueryTerms", required: false),
-                MaximumWordLength = GetIntValueQueryString("maxWordLen", required: false),
-                MinimumDocumentFrequency = GetIntValueQueryString("minDocFreq", required: false),
-                MaximumDocumentFrequency = GetIntValueQueryString("maxDocFreq", required: false),
-                MaximumDocumentFrequencyPercentage = GetIntValueQueryString("maxDocFreqPct", required: false),
-                MinimumTermFrequency = GetIntValueQueryString("minTermFreq", required: false),
-                MinimumWordLength = GetIntValueQueryString("minWordLen", required: false),
-                StopWordsDocumentId = GetStringQueryString("stopWords", required: false),
-                AdditionalQuery = GetStringQueryString("query", required: false),
-                Includes = GetStringValuesQueryString("include", required: false),
-                DocumentId = GetStringQueryString("docId", required: false),
-                Transformer = GetStringValuesQueryString("transformer", required: false),
-                PageSize = GetPageSize(Database.Configuration.Core.MaxPageSize)
-            };
-
-            result.TransformerParameters = new Dictionary<string, object>();
-            foreach (var tp in HttpContext.Request.Query.Where(x => x.Key.StartsWith("tp-", StringComparison.OrdinalIgnoreCase)))
-            {
-                throw new NotImplementedException();
-            }
-
-            result.MapGroupFields = new Dictionary<string, string>();
-            foreach (var mgf in HttpContext.Request.Query.Where(x => x.Key.StartsWith("mgf-", StringComparison.OrdinalIgnoreCase)))
-                result.MapGroupFields[mgf.Key.Substring(4)] = mgf.Value[0];
-
-            return result;
         }
     }
 }

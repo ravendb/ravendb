@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
+using Sparrow.Utils;
 using Voron.Global;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
@@ -96,6 +97,11 @@ namespace Voron
         public long? MaxStorageSize { get; set; }
 
         public abstract string BasePath { get; }
+
+        /// <summary>
+        /// This mode is used in the Voron recovery tool and is not intended to be set otherwise.
+        /// </summary>
+        internal bool CopyOnWriteMode { get; set; }
 
         public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
 
@@ -433,7 +439,7 @@ namespace Voron
                 IntPtr ptr;
                 if (_headers.TryGetValue(filename, out ptr) == false)
                 {
-                    ptr = Marshal.AllocHGlobal(sizeof(FileHeader));
+                    ptr = (IntPtr)NativeMemory.AllocateMemory(sizeof(FileHeader));
                     _headers[filename] = ptr;
                 }
                 Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));

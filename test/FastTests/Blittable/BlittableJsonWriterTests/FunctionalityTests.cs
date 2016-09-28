@@ -11,6 +11,7 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Compression;
 using Sparrow.Json;
+using Sparrow.Utils;
 using Voron.Util;
 using Xunit;
 
@@ -79,7 +80,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [InlineData(10000)]
         public unsafe void LZ4Test(int size)
         {
-            byte* encodeInput = (byte*)Marshal.AllocHGlobal(size);
+            byte* encodeInput = NativeMemory.AllocateMemory(size);
             int compressedSize;
             byte* encodeOutput;
 
@@ -87,10 +88,10 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
             var originStr = string.Join("", Enumerable.Repeat(1, size).Select(x => "sample"));
             var bytes = Encoding.UTF8.GetBytes(originStr);
+            var maximumOutputLength = LZ4.MaximumOutputLength(bytes.Length);
             fixed (byte* pb = bytes)
             {
-                var maximumOutputLength = LZ4.MaximumOutputLength(bytes.Length);
-                encodeOutput = (byte*)Marshal.AllocHGlobal((int)maximumOutputLength);
+                encodeOutput = NativeMemory.AllocateMemory((int)maximumOutputLength);
                 compressedSize = lz4.Encode64(pb, encodeOutput, bytes.Length, (int)maximumOutputLength);
             }
 
@@ -102,8 +103,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             var actual = Encoding.UTF8.GetString(bytes);
             Assert.Equal(originStr, actual);
 
-            Marshal.FreeHGlobal((IntPtr)encodeInput);
-            Marshal.FreeHGlobal((IntPtr)encodeOutput);            
+            NativeMemory.Free(encodeInput, size);
+            NativeMemory.Free(encodeOutput, maximumOutputLength);
         }
 
         [Theory]

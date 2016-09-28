@@ -9,7 +9,7 @@ namespace SlowTests.Tests.Bugs.TransformResults
 {
     public class ComplexValuesFromTransformResults : RavenTestBase
     {
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void CanCreateQueriesWithNestedSelected()
         {
             using (var documentStore = GetDocumentStore())
@@ -163,7 +163,7 @@ namespace SlowTests.Tests.Bugs.TransformResults
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact]
         public void write_then_read_from_complex_entity_types_with_Guids_as_keys()
         {
             using (var documentStore = GetDocumentStore())
@@ -228,7 +228,7 @@ namespace SlowTests.Tests.Bugs.TransformResults
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/roslyn/issues/12045")]
+        [Fact(Skip = "RavenDB-5278")]
         public void write_then_read_answer_with_votes()
         {
             using (var documentStore = GetDocumentStore())
@@ -362,7 +362,7 @@ namespace SlowTests.Tests.Bugs.TransformResults
         }
 
 
-        public static string CreateEntities(IDocumentStore documentStore)
+        private static string CreateEntities(IDocumentStore documentStore)
         {
             const string questionId = @"question/259";
             const string answerId = @"answer/540";

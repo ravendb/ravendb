@@ -291,8 +291,6 @@ namespace FastTests
         {
             GC.SuppressFinalize(this);
 
-            SystemTime.UtcDateTime = null;
-
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 
             foreach (var store in CreatedStores)

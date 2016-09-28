@@ -31,8 +31,8 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                     var blogPosts = from post in session.Query<BlogPost>()
                                     where post.Tags.Any(tag => tag == "RavenDB")
                                     select post;
+                    blogPosts.ToList();
 
-                    Console.WriteLine(blogPosts);
                     session.Query<User>()
                         .Where(x => x.Email == "ayende@ayende.com")
                         .ToList();

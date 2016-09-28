@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 using Raven.Server.Routing;
 
-namespace Raven.Server.Documents.Handlers.Admin
+namespace Raven.Server.Documents.Handlers
 {
     public class QueriesDebugHandler : DatabaseRequestHandler
     {

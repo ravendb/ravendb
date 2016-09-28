@@ -31,6 +31,7 @@ class changesApi {
     private allTransformersHandlers = ko.observableArray<changesCallback<Raven.Abstractions.Data.TransformerChangeNotification>>();
     //TODO: private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
     private allOperationsHandlers = ko.observableArray<changesCallback<Raven.Client.Data.OperationStatusChangeNotification>>();
+    private allAlertsHandlers = ko.observableArray<changesCallback<Raven.Server.Web.Operations.AlertNotification>>();
 
     private watchedDocuments = new Map<string, KnockoutObservableArray<changesCallback<Raven.Abstractions.Data.DocumentChangeNotification>>>();
     private watchedPrefixes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Abstractions.Data.DocumentChangeNotification>>>();
@@ -405,6 +406,23 @@ class changesApi {
             this.allOperationsHandlers.remove(callback);
             if (this.allOperationsHandlers().length === 0) {
                 this.send("unwatch-operations");
+            }
+        });
+    }
+
+    watchAlerts(onChange: (e: Raven.Server.Web.Operations.AlertNotification) => void): changeSubscription {
+        const callback = new changesCallback<Raven.Server.Web.Operations.AlertNotification>(onChange);
+
+        if (this.allAlertsHandlers().length === 0) {
+            this.send("watch-alerts");
+        }
+
+        this.allAlertsHandlers.push(callback);
+
+        return new changeSubscription(() => {
+            this.allAlertsHandlers.remove(callback);
+            if (this.allAlertsHandlers().length === 0) {
+                this.send("unwatch-alerts");
             }
         });
     }

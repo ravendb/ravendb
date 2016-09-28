@@ -205,6 +205,22 @@ namespace Voron.Impl.Journal
             // The location of the data is the base pointer, plus the space reserved for the transaction header if uncompressed. 
             byte* dataPtr = _journalPager.AcquirePagePointer(null, _readingPage) + sizeof(TransactionHeader);
 
+            if (current->CompressedSize < 0)
+            {
+                RequireHeaderUpdate = true;
+                // negative size is not supported
+                options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is negative", null);
+                return false;
+            }
+            if (current->CompressedSize >
+                (_journalPager.NumberOfAllocatedPages - _readingPage)*_journalPager.PageSize)
+            {
+                // we can't read past the end of the journal
+                RequireHeaderUpdate = true;
+                options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is too big for the journal size {_journalPager.NumberOfAllocatedPages * _journalPager.PageSize}", null);
+                return false;
+            }
+
             ulong hash = Hashing.XXHash64.Calculate(dataPtr, (ulong)current->CompressedSize);
             if (hash != current->Hash)
             {
