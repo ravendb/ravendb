@@ -819,10 +819,15 @@ namespace Raven.Server.Documents.Indexes
             var indexingThread = _indexingThread;
             if (indexingThread != null)
             {
-                var thread = NativeMemory.ThreadAllocations.Values
-                    .First(x => x.Id == indexingThread.ManagedThreadId);
-
-                stats.ThreadAllocations.SizeInBytes = thread.Allocations;
+                foreach (var threadAllocationsValue in NativeMemory.ThreadAllocations.Values)
+                {
+                    if (indexingThread.ManagedThreadId == threadAllocationsValue.Id)
+                    {
+                        stats.ThreadAllocations.SizeInBytes = threadAllocationsValue.Allocations;
+                        break;
+                    }
+                }
+               
             }
 
             return stats;
