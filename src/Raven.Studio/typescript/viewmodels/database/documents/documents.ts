@@ -291,19 +291,8 @@ class documents extends viewModelBase {
         this.allDocumentsCollection(collection.createAllDocsCollection(db));
         this.allDocumentsCollection().documentCount = ko.computed(() => !!db.statistics() ? db.statistics().countOfDocuments() : 0);
 
-        // Create the "System Documents" pseudo collection.
-        var systemDocumentsCollection = collection.createSystemDocsCollection(db);
-        systemDocumentsCollection.documentCount = ko.computed(() => {
-            var regularCollections = this.collections().filter((c: collection) => c.isAllDocuments === false && c.isSystemDocuments === false);
-            if (regularCollections.length === 0)
-                return 0;
-            var sum = regularCollections.map((c: collection) => c.documentCount()).reduce((a, b) => a + b);
-            return this.allDocumentsCollection().documentCount() - sum;
-        });
-
         // All systems a-go. Load them into the UI and select the first one.
-        var collectionsWithSysCollection = [systemDocumentsCollection].concat(collections);
-        var allCollections = [this.allDocumentsCollection()].concat(collectionsWithSysCollection);
+        var allCollections = [this.allDocumentsCollection()].concat(collections);
         this.collections(allCollections);
 
         var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection();
@@ -593,10 +582,6 @@ class documents extends viewModelBase {
             if (c1.isAllDocuments)
                 return -1;
             if (c2.isAllDocuments)
-                return 1;
-            if (c1.isSystemDocuments)
-                return -1;
-            if (c2.isSystemDocuments)
                 return 1;
             return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
         });

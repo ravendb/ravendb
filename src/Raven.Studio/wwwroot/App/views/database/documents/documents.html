@@ -26,7 +26,7 @@
                     <div class="collection-name">
                         <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
                         <span class="collection-text pull-left collection-name-part" data-bind="text: prettyLabel(name), attr: {title: name}"></span>
-                        <span class="collection-text pull-left text-muted" data-bind="visible: !isSystemDocuments && !isAllDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '&nbsp;(' + documentsCountWithThousandsSeparator() + ')', updateHighlighting: documentCount()"></span>
+                        <span class="collection-text pull-left text-muted" data-bind="visible: !isAllDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '&nbsp;(' + documentsCountWithThousandsSeparator() + ')', updateHighlighting: documentCount()"></span>
                     </div>
                 </a>
             </li>
