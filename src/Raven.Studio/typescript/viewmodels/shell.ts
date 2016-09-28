@@ -787,7 +787,6 @@ class shell extends viewModelBase {
                 this.fetchClientBuildVersion();
                 //TODO:shell.fetchLicenseStatus();
                 //TODO: this.fetchSupportCoverage();
-                //TODO :this.fetchSystemDatabaseAlerts();
                 router.activate();
             })
             .always(() => deferred.resolve());

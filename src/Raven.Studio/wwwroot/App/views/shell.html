@@ -6,7 +6,12 @@
         </div>
         <div id="navbar">
             <ul class="nav navbar-nav navbar-right">
-                <li><a href="#" class="icon-notifications btn-toggle" data-bind="{ click: notificationCenter.showNotifications.toggle.bind(notificationCenter.showNotifications) }"></a></li>
+                <li data-bind="with: notificationCenter">
+                    <a href="#" id="notification-toggle" class="btn-toggle" data-bind="{ click: showNotifications.toggle.bind(showNotifications), css: { 'active': showNotifications() } }">
+                        <span class="icon-notifications"></span>
+                        <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
+                    </a>
+                </li>
                 <li><a target="_blank" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
                 <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
                 <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>

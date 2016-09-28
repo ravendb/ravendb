@@ -72,7 +72,7 @@ class notificationCenterOperations {
                     }
                 });
             })
-            .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to get file system stats", response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to get running tasks", response.responseText, response.statusText));
     }
 
     monitorOperation<TProgress extends Raven.Client.Data.IOperationProgress, TResult extends Raven.Client.Data.IOperationResult>

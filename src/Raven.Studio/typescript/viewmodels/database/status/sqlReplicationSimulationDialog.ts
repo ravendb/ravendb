@@ -43,13 +43,14 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
                     this.simulationResults([]);
                 }
 
+                /* TODO
                 this.rolledBackTransactionPassed(!result.LastAlert);
 
                 if (!!result.LastAlert) {
                     this.lastAlert(result.LastAlert.Exception);
                 } else {
                     this.lastAlert("");
-                }
+                }*/
                 this.rolledbackTransactionPerformed(performRolledbackTransaction);
 
             })

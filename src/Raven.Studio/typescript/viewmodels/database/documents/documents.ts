@@ -14,7 +14,6 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 
 import collection = require("models/database/documents/collection");
 import database = require("models/resources/database");
-import alert = require("models/database/debug/alert");
 import changeSubscription = require("common/changeSubscription");
 import customFunctions = require("models/database/documents/customFunctions");
 import customColumns = require("models/database/documents/customColumns");
@@ -25,8 +24,6 @@ import getCollectionsStatsCommand = require("commands/database/documents/getColl
 import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
 import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
-import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
-import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
 
 class documents extends viewModelBase {
@@ -58,7 +55,6 @@ class documents extends viewModelBase {
     canCopyAllSelected: KnockoutComputed<boolean>;
 
     lastCollectionCountUpdate = ko.observable<string>();
-    alerts = ko.observable<alert[]>([]);
     static gridSelector = "#documentsGrid";
     static isInitialized = ko.observable<boolean>(false);
     isInitialized = documents.isInitialized;
@@ -153,7 +149,6 @@ class documents extends viewModelBase {
         this.collectionToSelectName = args ? args.collection : null;
 
         var db = this.activeDatabase();
-        this.fetchAlerts();
         this.fetchCollectionsStats(db).done(results => {
             this.collectionsLoaded(results, db);
             documents.isInitialized(true);
@@ -251,19 +246,6 @@ class documents extends viewModelBase {
             var url = appUrl.forExportCollectionCsv(collection, collection.ownerDatabase, customColumns);
             this.downloader.download(db, url);
         }
-    }
-
-    private fetchAlerts() {
-        new getOperationAlertsCommand(this.activeDatabase())
-            .execute()
-            .then((result: alert[]) => {
-                this.alerts(result);
-            });
-    }
-
-    dismissAlert(uniqueKey: string) {
-        new dismissAlertCommand(this.activeDatabase(), uniqueKey).execute();
-        setTimeout(() => dynamicHeightBindingHandler.stickToTarget($(".ko-grid-viewport-container")[0], 'footer', 0), 25);
     }
 
     private fetchCollectionsStats(db: database): JQueryPromise<collectionsStats> {
@@ -570,11 +552,6 @@ class documents extends viewModelBase {
         }
 
         return null;
-    }
-
-    urlForAlert(alert: alert) {
-        var index = this.alerts().indexOf(alert);
-        return appUrl.forAlerts(this.activeDatabase()) + "&item=" + index;
     }
 
     private sortCollections() {
