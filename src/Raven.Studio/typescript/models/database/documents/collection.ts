@@ -1,6 +1,4 @@
 import pagedList = require("common/pagedList");
-import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
-import getSystemDocumentsCommand = require("commands/database/documents/getSystemDocumentsCommand");
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
 import getAllDocumentsCommand = require("commands/database/documents/getAllDocumentsCommand");
 import pagedResultSet = require("common/pagedResultSet");
@@ -12,21 +10,23 @@ class collection implements ICollectionBase {
     documentCount: KnockoutObservable<number> = ko.observable(0);
     documentsCountWithThousandsSeparator = ko.computed(() => this.documentCount().toLocaleString());
     isAllDocuments = false;
-    isSystemDocuments = false;
     bindings = ko.observable<string[]>();
 
     public collectionName : string;
     private documentsList: pagedList;
-    public static allDocsCollectionName = "All Documents";
-    private static systemDocsCollectionName = "System Documents";
+    static readonly  allDocsCollectionName = "All Documents";
+    static readonly systemDocusCollectionName = "@system";
     private static collectionColorMaps: resourceStyleMap[] = [];
 
     constructor(public name: string, public ownerDatabase: database, docCount: number = 0) {
         this.collectionName = name;
         this.isAllDocuments = name === collection.allDocsCollectionName;
-        this.isSystemDocuments = name === collection.systemDocsCollectionName;
         this.colorClass = collection.getCollectionCssClass(name, ownerDatabase);
         this.documentCount(docCount);
+    }
+
+    get isSystemDocuments() {
+        return this.collectionName === collection.systemDocusCollectionName;
     }
 
     // Notifies consumers that this collection should be the selected one.
@@ -59,18 +59,11 @@ class collection implements ICollectionBase {
     }
 
     fetchDocuments(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
-        if (this.isSystemDocuments) {
-            // System documents don't follow the normal paging rules. See getSystemDocumentsCommand.execute() for more info.
-            return new getSystemDocumentsCommand(this.ownerDatabase, skip, take, this.documentCount()).execute();
-        } if (this.isAllDocuments) {
+        if (this.isAllDocuments) {
             return new getAllDocumentsCommand(this.ownerDatabase, skip, take).execute();
         } else {
             return new getDocumentsFromCollectionCommand(this, skip, take).execute();
         }
-    }
-
-    static createSystemDocsCollection(ownerDatabase: database): collection {
-        return new collection(collection.systemDocsCollectionName, ownerDatabase);
     }
 
     static createAllDocsCollection(ownerDatabase: database): collection {
@@ -82,9 +75,7 @@ class collection implements ICollectionBase {
             return "all-documents-collection";
         }
 
-        if (!entityName || entityName === collection.systemDocsCollectionName) {
-            return "system-documents-collection";
-        }
+        //TODO: any special color for system documents?
 
         return cssGenerator.getCssClass(entityName, collection.collectionColorMaps, db);
     }
