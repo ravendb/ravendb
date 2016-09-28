@@ -4,12 +4,8 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import accessHelper = require("viewmodels/shell/accessHelper");
 
-import alert = require("models/database/debug/alert");
 import resource = require("models/resources/resource");
 import database = require("models/resources/database");
-
-import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
-import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
 
 import deleteResourceConfirm = require("viewmodels/resources/deleteResourceConfirm");
 import disableResourceToggleConfirm = require("viewmodels/resources/disableResourceToggleConfirm");
@@ -49,7 +45,6 @@ class resources extends viewModelBase {
     systemDb: database;
     optionsClicked = ko.observable<boolean>(false);
     appUrls: computedAppUrls;
-    alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = accessHelper.isGlobalAdmin;
     clusterMode = ko.computed(() => shell.clusterMode());
     developerLicense = ko.computed(() => !license.licenseStatus() || !license.licenseStatus().IsCommercial);
@@ -181,7 +176,6 @@ class resources extends viewModelBase {
             this.databases().filter(x => x.isVisible()).length > 0 &&
             this.fileSystems().filter(x => x.isVisible()).length > 0);
 
-        this.fetchAlerts();
         this.visibleResource.subscribe(() => this.filterResources());
         this.filterResources();
     }
@@ -203,12 +197,6 @@ class resources extends viewModelBase {
         }
 
         return summary;
-    }
-
-    private fetchAlerts() {
-        new getOperationAlertsCommand(null)
-            .execute()
-            .then((result: alert[]) => this.alerts(result));
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -421,15 +409,6 @@ class resources extends viewModelBase {
     navigateToCreateCluster() {
         this.navigate(this.appUrls.adminSettingsCluster());
         shell.disconnectFromResourceChangesApi();
-    }
-
-    dismissAlert(uniqueKey: string) {
-        new dismissAlertCommand(null, uniqueKey).execute();
-    }
-
-    urlForAlert(alert: alert) {
-        var index = this.alerts().indexOf(alert);
-        return appUrl.forAlerts(null) + "&item=" + index;
     }
 
     newResource() {

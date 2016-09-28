@@ -15,14 +15,19 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void TimeSeries()
         {
-            var watchId = Slice.From(Allocator, "watches/12831-12345");
+            Slice watchId;
+            Slice.From(Allocator, "watches/12831-12345", out watchId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(watchId, valSize: 8);
 
-                fst.Add(DateTime.Today.AddHours(8).Ticks, Slice.From(Allocator, BitConverter.GetBytes(80D)));
-                fst.Add(DateTime.Today.AddHours(9).Ticks, Slice.From(Allocator, BitConverter.GetBytes(65D)));
-                fst.Add(DateTime.Today.AddHours(10).Ticks, Slice.From(Allocator, BitConverter.GetBytes(44D)));
+                Slice val;
+                Slice.From(Allocator, BitConverter.GetBytes(80D), out val);
+                fst.Add(DateTime.Today.AddHours(8).Ticks, val);
+                Slice.From(Allocator, BitConverter.GetBytes(65D), out val);
+                fst.Add(DateTime.Today.AddHours(9).Ticks, val);
+                Slice.From(Allocator, BitConverter.GetBytes(44D), out val);
+                fst.Add(DateTime.Today.AddHours(10).Ticks, val);
 
                 tx.Commit();
             }
@@ -34,13 +39,17 @@ namespace FastTests.Voron.FixedSize
                 var it = fst.Iterate();
                 Assert.True(it.Seek(DateTime.Today.AddHours(7).Ticks));
                 var buffer = new byte[8];
-                it.Value.CopyTo(buffer);
+                Slice val;
+                using (it.Value(out val))
+                    val.CopyTo(buffer);
                 Assert.Equal(80D, BitConverter.ToDouble(buffer, 0));
                 Assert.True(it.MoveNext());
-                it.Value.CopyTo(buffer);
+                using (it.Value(out val))
+                    val.CopyTo(buffer);
                 Assert.Equal(65D, BitConverter.ToDouble(buffer, 0));
                 Assert.True(it.MoveNext());
-                it.Value.CopyTo(buffer);
+                using (it.Value(out val))
+                    val.CopyTo(buffer);
                 Assert.Equal(44d, BitConverter.ToDouble(buffer, 0));
                 Assert.False(it.MoveNext());
 
@@ -51,7 +60,8 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanAdd()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 0);
@@ -76,7 +86,8 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void SeekShouldGiveTheNextKey()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 0);
@@ -106,7 +117,8 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanAdd_Mixed()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 0);
@@ -138,7 +150,8 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanIterate()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 0);
@@ -172,7 +185,8 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanRemove()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 0);
@@ -206,14 +220,17 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanDeleteRange()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
 
                 for (int i = 1; i <= 10; i++)
                 {
-                    fst.Add(i, Slice.From(Allocator, BitConverter.GetBytes(i + 10L)));
+                    Slice val;
+                    Slice.From(Allocator, BitConverter.GetBytes(i + 10L), out val);
+                    fst.Add(i, val);
                 }
                 tx.Commit();
             }
@@ -231,6 +248,7 @@ namespace FastTests.Voron.FixedSize
 
             using (var tx = Env.ReadTransaction())
             {
+                Slice read;
                 var fst = tx.FixedTreeFor(treeId, 8);
 
                 for (int i = 1; i <= 10; i++)
@@ -238,12 +256,14 @@ namespace FastTests.Voron.FixedSize
                     if (i >= 2 && i <= 5)
                     {
                         Assert.False(fst.Contains(i), i.ToString());
-                        Assert.False(fst.Read(i).HasValue);
+                        using (fst.Read(i, out read))
+                            Assert.False(read.HasValue);
                     }
                     else
                     {
                         Assert.True(fst.Contains(i), i.ToString());
-                        Assert.Equal(i + 10L, fst.Read(i).CreateReader().ReadLittleEndianInt64());
+                        using (fst.Read(i, out read))
+                            Assert.Equal(i + 10L, read.CreateReader().ReadLittleEndianInt64());
                     }
                 }
                 tx.Commit();
@@ -253,18 +273,23 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanDeleteRangeWithGaps()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
 
                 for (int i = 1; i <= 10; i++)
                 {
-                    fst.Add(i, Slice.From(Allocator, BitConverter.GetBytes(i + 10L)));
+                    Slice val;
+                    Slice.From(Allocator, BitConverter.GetBytes(i + 10L), out val);
+                    fst.Add(i, val);
                 }
                 for (int i = 30; i <= 40; i++)
                 {
-                    fst.Add(i, Slice.From(Allocator, BitConverter.GetBytes(i + 10L)));
+                    Slice val;
+                    Slice.From(Allocator, BitConverter.GetBytes(i + 10L), out val);
+                    fst.Add(i, val);
                 }
                 tx.Commit();
             }
@@ -279,7 +304,7 @@ namespace FastTests.Voron.FixedSize
 
                 tx.Commit();
             }
-
+            Slice read;
             using (var tx = Env.ReadTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
@@ -289,12 +314,14 @@ namespace FastTests.Voron.FixedSize
                     if (i >= 2)
                     {
                         Assert.False(fst.Contains(i), i.ToString());
-                        Assert.False(fst.Read(i).HasValue);
+                        using (fst.Read(i, out read))
+                            Assert.False(read.HasValue);
                     }
                     else
                     {
                         Assert.True(fst.Contains(i), i.ToString());
-                        Assert.Equal(i + 10L, fst.Read(i).CreateReader().ReadLittleEndianInt64());
+                        using (fst.Read(i, out read))
+                            Assert.Equal(i + 10L, read.CreateReader().ReadLittleEndianInt64());
                     }
                 }
                 for (int i = 30; i <= 40; i++)
@@ -302,12 +329,14 @@ namespace FastTests.Voron.FixedSize
                     if (i <= 35)
                     {
                         Assert.False(fst.Contains(i), i.ToString());
-                        Assert.False(fst.Read(i).HasValue);
+                        using (fst.Read(i, out read))
+                            Assert.False(read.HasValue);
                     }
                     else
                     {
                         Assert.True(fst.Contains(i), i.ToString());
-                        Assert.Equal(i + 10L, fst.Read(i).CreateReader().ReadLittleEndianInt64());
+                        using (fst.Read(i, out read))
+                            Assert.Equal(i + 10L, read.CreateReader().ReadLittleEndianInt64());
                     }
                 }
                 tx.Commit();
@@ -317,14 +346,17 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanDeleteAllRange()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
 
                 for (int i = 1; i <= 10; i++)
                 {
-                    fst.Add(i, Slice.From(Allocator, BitConverter.GetBytes(i + 10L)));
+                    Slice val;
+                    Slice.From(Allocator, BitConverter.GetBytes(i + 10L), out val);
+                    fst.Add(i, val);
                 }
                 tx.Commit();
             }
@@ -343,11 +375,12 @@ namespace FastTests.Voron.FixedSize
             using (var tx = Env.ReadTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
-
                 for (int i = 1; i <= 10; i++)
                 {
                     Assert.False(fst.Contains(i), i.ToString());
-                    Assert.False(fst.Read(i).HasValue);
+                    Slice read;
+                    using (fst.Read(i, out read))
+                        Assert.False(read.HasValue);
                 }
                 tx.Commit();
             }
@@ -356,13 +389,16 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanAdd_WithValue()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
-
-                fst.Add(1, Slice.From(Allocator, BitConverter.GetBytes(1L)));
-                fst.Add(2, Slice.From(Allocator, BitConverter.GetBytes(2L)));
+                Slice val;
+                Slice.From(Allocator, BitConverter.GetBytes(1L), out val);
+                fst.Add(1, val);
+                Slice.From(Allocator, BitConverter.GetBytes(2L), out val);
+                fst.Add(2, val);
 
                 tx.Commit();
             }
@@ -371,9 +407,15 @@ namespace FastTests.Voron.FixedSize
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
 
-                Assert.Equal(1L, fst.Read(1).CreateReader().ReadLittleEndianInt64());
-                Assert.Equal(2L, fst.Read(2).CreateReader().ReadLittleEndianInt64());
-                Assert.False(fst.Read(3).HasValue);
+                Slice read;
+
+                using (fst.Read(1, out read))
+                    Assert.Equal(1L, read.CreateReader().ReadLittleEndianInt64());
+
+                using (fst.Read(2, out read))
+                    Assert.Equal(2L, read.CreateReader().ReadLittleEndianInt64());
+                using (fst.Read(3, out read))
+                    Assert.False(read.HasValue);
                 tx.Commit();
             }
         }
@@ -381,14 +423,18 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void CanRemove_WithValue()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
-
-                fst.Add(1, Slice.From(Allocator, BitConverter.GetBytes(1L)));
-                fst.Add(2, Slice.From(Allocator, BitConverter.GetBytes(2L)));
-                fst.Add(3, Slice.From(Allocator, BitConverter.GetBytes(3L)));
+                Slice val;
+                Slice.From(Allocator, BitConverter.GetBytes(1L), out val);
+                fst.Add(1, val);
+                Slice.From(Allocator, BitConverter.GetBytes(2L), out val);
+                fst.Add(2, val);
+                Slice.From(Allocator, BitConverter.GetBytes(3L), out val);
+                fst.Add(3, val);
 
                 tx.Commit();
             }
@@ -407,9 +453,13 @@ namespace FastTests.Voron.FixedSize
             {
                 var fst = tx.FixedTreeFor(treeId, 8);
 
-                Assert.Equal(1L, fst.Read(1).CreateReader().ReadLittleEndianInt64());
-                Assert.False(fst.Read(2).HasValue);
-                Assert.Equal(3L, fst.Read(3).CreateReader().ReadLittleEndianInt64());
+                Slice read;
+                using (fst.Read(1, out read))
+                    Assert.Equal(1L, read.CreateReader().ReadLittleEndianInt64());
+                using (fst.Read(2, out read))
+                    Assert.False(read.HasValue);
+                using (fst.Read(3, out read))
+                    Assert.Equal(3L, read.CreateReader().ReadLittleEndianInt64());
                 tx.Commit();
             }
         }

@@ -41,7 +41,7 @@ namespace Raven.Server.Utils
 
             var aggregateException = new AggregateException(_errorMsg, _list);
 
-            if (_logger.IsInfoEnabled)
+            if (_logger != null && _logger.IsInfoEnabled)
                 _logger.Info(_errorMsg, aggregateException);
 
             throw aggregateException;

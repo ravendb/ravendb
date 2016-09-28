@@ -14,17 +14,33 @@ namespace Sparrow.Json
         private class Segment
         {
             public Segment Previous;
+            public bool PreviousHoldsNoData;
             public AllocatedMemoryData Allocation;
             public byte* Address;
             public int Used;
 
+            public int Depth
+            {
+                get
+                {
+                    int count = 1;
+                    var prev = Previous;
+                    while (prev != null)
+                    {
+                        if (prev.PreviousHoldsNoData)
+                            break;
+                        count++;
+                        prev = prev.Previous;
+                    }
+                    return count;
+                }
+            }
             public string DebugInfo => Encoding.UTF8.GetString(Address, Used);
         }
 
         private Segment _current;
 
         private int _sizeInBytes;
-        private bool _disposed;
 
         public int SizeInBytes => _sizeInBytes;
 
@@ -60,7 +76,7 @@ namespace Sparrow.Json
                 // Create next, bigger segment if needed
                 if (_current.Allocation.SizeInBytes == _current.Used)
                 {
-                    AllocateNextSegment(lengthLeft);
+                    AllocateNextSegment(lengthLeft, allowGrowth:true);
                 }
 
                 var bytesToWrite = Math.Min(lengthLeft, _current.Allocation.SizeInBytes - _current.Used);
@@ -75,7 +91,7 @@ namespace Sparrow.Json
             } while (bufferPosition < length);
         }
 
-        private void AllocateNextSegment(int required)
+        private void AllocateNextSegment(int required, bool allowGrowth)
         {
             // grow by doubling segment size until we get to 1 MB, then just use 1 MB segments
             // otherwise a document with 17 MB will waste 15 MB and require very big allocations
@@ -85,6 +101,11 @@ namespace Sparrow.Json
             {
                 nextSegmentSize = oneMb;
             }
+
+            if (allowGrowth && 
+                // we successfully grew the allocation, nothing to do
+                _context.GrowAllocation(_current.Allocation, nextSegmentSize))
+                return;
 
             var allocatedMemoryData = _context.GetMemory(nextSegmentSize);
             _current = new Segment
@@ -101,7 +122,7 @@ namespace Sparrow.Json
         {
             if (_current.Used == _current.Allocation.SizeInBytes)
             {
-                AllocateNextSegment(1);
+                AllocateNextSegment(1, allowGrowth: true);
             }
             _sizeInBytes++;
             *(_current.Address+ _current.Used) = data;
@@ -123,6 +144,8 @@ namespace Sparrow.Json
                 whereToWrite -= cur.Used;
                 copiedBytes += cur.Used;
                 Memory.Copy(whereToWrite, cur.Address, cur.Used);
+                if (cur.PreviousHoldsNoData)
+                    break;
                 cur = cur.Previous;
             }
             Debug.Assert(copiedBytes == _sizeInBytes);
@@ -139,12 +162,11 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            if (_disposed)
-                return;
-
-            _context.LastStreamSize(_sizeInBytes);
-
-            _disposed = true;
+            while (_current != null)
+            {
+                _context.ReturnMemory(_current.Allocation);
+                _current = _current.Previous;
+            }
         }
 
         public void EnsureSingleChunk(JsonParserState state)
@@ -153,14 +175,16 @@ namespace Sparrow.Json
         }
         public void EnsureSingleChunk(out byte* ptr, out int size)
         {
-            if (_current.Previous == null)
+            if (_current.Previous == null || _current.PreviousHoldsNoData)
             {
                 ptr = _current.Address;
                 size = _current.Used;
                 return;
             }
-
-            AllocateNextSegment(_sizeInBytes);
+            // if we are here, then we have multiple chunks, we can't
+            // allow a growth of the last chunk, since we'll by copying over it
+            // so we force a whole new chunk
+            AllocateNextSegment(_sizeInBytes, allowGrowth: false);
 
             var realCurrent = _current;
             _current = realCurrent.Previous;
@@ -168,7 +192,7 @@ namespace Sparrow.Json
             realCurrent.Used = SizeInBytes;
             
             _current = realCurrent;
-            _current.Previous = null;
+            _current.PreviousHoldsNoData = true;
             ptr = _current.Address;
             size = _current.Used;
         }

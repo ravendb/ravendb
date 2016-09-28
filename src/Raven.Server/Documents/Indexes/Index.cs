@@ -8,9 +8,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes
     public abstract class Index<TIndexDefinition> : Index
         where TIndexDefinition : IndexDefinitionBase
     {
-        public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
+        public new TIndexDefinition Definition => (TIndexDefinition) base.Definition;
 
         protected Index(int indexId, IndexType type, TIndexDefinition definition)
             : base(indexId, type, definition)
@@ -118,17 +118,26 @@ namespace Raven.Server.Documents.Indexes
                 _handleAllDocs = true;
         }
 
-        public static Index Open(int indexId, DocumentDatabase documentDatabase)
+        public static Index Open(int indexId, string path, DocumentDatabase documentDatabase)
         {
             StorageEnvironment environment = null;
 
-            var options = StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, indexId.ToString()));
+            var options = StorageEnvironmentOptions.ForPath(path);
             try
             {
                 options.SchemaVersion = 1;
 
                 environment = new StorageEnvironment(options);
-                var type = IndexStorage.ReadIndexType(indexId, environment);
+
+                IndexType type;
+                try
+                {
+                    type = IndexStorage.ReadIndexType(indexId, environment);
+                }
+                catch (Exception e)
+                {
+                    throw new IndexOpenException($"Could not read index type from storage in '{path}'. This indicates index data file corruption.", e);
+                }
 
                 switch (type)
                 {
@@ -144,14 +153,17 @@ namespace Raven.Server.Documents.Indexes
                         throw new ArgumentException($"Uknown index type {type} for index {indexId}");
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 if (environment != null)
                     environment.Dispose();
                 else
                     options.Dispose();
 
-                throw;
+                if (e is IndexOpenException)
+                    throw;
+
+                throw new IndexOpenException($"Could not open index from '{path}'.", e);
             }
         }
 
@@ -167,6 +179,7 @@ namespace Raven.Server.Documents.Indexes
 
         public bool IsRunning => _indexingThread != null;
 
+        public virtual bool HasBoostedFields => false;
         protected void Initialize(DocumentDatabase documentDatabase)
         {
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
@@ -175,9 +188,10 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' was already initialized.");
 
+                var indexPath = Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, GetIndexNameSafeForFileSystem());
                 var options = documentDatabase.Configuration.Indexing.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly()
-                    : StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, IndexId.ToString()));
+                    : StorageEnvironmentOptions.ForPath(indexPath);
 
                 options.SchemaVersion = 1;
                 try
@@ -190,6 +204,18 @@ namespace Raven.Server.Documents.Indexes
                     throw;
                 }
             }
+        }
+
+        public string GetIndexNameSafeForFileSystem()
+        {
+            var name = Name;
+            foreach (var invalidPathChar in Path.GetInvalidFileNameChars())
+            {
+                name = name.Replace(invalidPathChar, '_');
+            }
+            if (name.Length < 64)
+                return $"{IndexId:0000}-{name}";
+            return $"{IndexId:0000}-{name.Substring(0, 64)}";
         }
 
         protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase)
@@ -246,7 +272,7 @@ namespace Raven.Server.Documents.Indexes
             using (var tx = context.OpenReadTransaction())
             {
                 Priority = _indexStorage.ReadPriority(tx);
-                _lastQueryingTime = SystemTime.UtcNow;
+                _lastQueryingTime = DocumentDatabase.Time.GetUtcNow();
                 _lastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
             }
         }
@@ -271,7 +297,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _indexingThread = new Thread(ExecuteIndexing)
                 {
-                    Name = "Indexing of " + Name,
+                    Name = "Indexing of " + Name + " of " + _indexStorage.DocumentDatabase.Name,
                     IsBackground = true
                 };
 
@@ -296,7 +322,10 @@ namespace Raven.Server.Documents.Indexes
 
                 var indexingThread = _indexingThread;
                 _indexingThread = null;
-                indexingThread.Join();
+                //Cancelation was requested, the thread will exit the indexing loop and terminate.
+                //If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
+                if (Thread.CurrentThread != indexingThread)
+                    indexingThread.Join();
             }
         }
 
@@ -345,20 +374,17 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public bool IsStale(DocumentsOperationContext databaseContext, out long lastProcessedEtag)
+        public bool IsStale(DocumentsOperationContext databaseContext)
         {
             Debug.Assert(databaseContext.Transaction != null);
+
+            if (Type == IndexType.Faulty)
+                return false;
 
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (indexContext.OpenReadTransaction())
             {
-                lastProcessedEtag = 0;
-                foreach (var collection in Collections)
-                {
-                    var collectionEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
-                    lastProcessedEtag = Math.Max(lastProcessedEtag, collectionEtag);
-                }
                 return IsStale(databaseContext, indexContext);
             }
         }
@@ -367,11 +393,9 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var collection in Collections)
             {
-                long lastDocEtag;
-                if (collection == Constants.Indexing.AllDocumentsCollection)
-                    lastDocEtag = DocumentsStorage.ReadLastEtag(databaseContext.Transaction.InnerTransaction);
-                else
-                    lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                var lastDocEtag = collection == Constants.Indexing.AllDocumentsCollection
+                    ? DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction)
+                    : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
 
                 var lastProcessedDocEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
@@ -380,7 +404,10 @@ namespace Raven.Server.Documents.Indexes
                     if (lastDocEtag > lastProcessedDocEtag)
                         return true;
 
-                    var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
+                    var lastTombstoneEtag = collection == Constants.Indexing.AllDocumentsCollection
+                        ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
+                        : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
+
                     var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                     if (lastTombstoneEtag > lastProcessedTombstoneEtag)
@@ -512,7 +539,17 @@ namespace Raven.Server.Documents.Indexes
 
                         try
                         {
-                            _mre.Wait(cts.Token);
+                            if (_mre.Wait(5000, cts.Token) == false)
+                            {
+                                // there is no work to be done, and hasn't been for a while,
+                                // so this is a good time to release resource we won't need 
+                                // anytime soon
+                                ByteStringMemoryCache.Clean(keep: 1);
+                                DocumentDatabase.DocumentsStorage.ContextPool.Clean(keep: 1);
+                                _contextPool.Clean(keep: 1);
+                                IndexPersistence.Clean();
+                                _mre.Wait(cts.Token);
+                            }
                         }
                         catch (OperationCanceledException)
                         {
@@ -618,7 +655,7 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public abstract void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
+        public abstract int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         private void HandleIndexChange(IndexChangeNotification notification)
         {
@@ -699,18 +736,28 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IndexStats GetStats()
+        public IndexStats GetStats(bool calculateCollectionStats = false, DocumentsOperationContext documentsContext = null)
         {
+            if (_contextPool == null)
+            {
+                if (Type != IndexType.Faulty)
+                    throw new ObjectDisposedException("Index " + Name);
+
+                return new IndexStats
+                {
+                    Id = IndexId,
+                    Name = Name,
+                    Type = Type
+                };
+            }
+
+
+            if (calculateCollectionStats && documentsContext == null)
+                throw new InvalidOperationException("Cannot calculate collection stats without valid context.");
+
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
-            {
-                return ReadStats(tx);
-            }
-        }
-
-        private IndexStats ReadStats(RavenTransaction tx)
-        {
             using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
             {
                 var stats = _indexStorage.ReadStats(tx);
@@ -718,15 +765,67 @@ namespace Raven.Server.Documents.Indexes
                 stats.Id = IndexId;
                 stats.Name = Name;
                 stats.Type = Type;
-                stats.ForCollections = Collections.ToArray();
                 stats.EntriesCount = reader.EntriesCount();
                 stats.LockMode = Definition.LockMode;
                 stats.Priority = Priority;
 
                 stats.LastQueryingTime = _lastQueryingTime;
 
+                if (calculateCollectionStats)
+                {
+                    using (documentsContext.OpenReadTransaction())
+                    {
+                        foreach (var collection in Collections)
+                        {
+                            var collectionStats = stats.Collections[collection];
+
+                            long totalCount;
+                            collectionStats.NumberOfDocumentsToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, collectionStats.LastProcessedDocumentEtag, out totalCount);
+                            collectionStats.TotalNumberOfDocuments = totalCount;
+
+                            collectionStats.NumberOfTombstonesToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, collectionStats.LastProcessedTombstoneEtag, out totalCount);
+                            collectionStats.TotalNumberOfTombstones = totalCount;
+                        }
+                    }
+                }
+
+                stats.Memory = GetMemoryStats();
+
                 return stats;
             }
+        }
+
+        private IndexStats.MemoryStats GetMemoryStats()
+        {
+            var stats = new IndexStats.MemoryStats();
+
+            var inMemory = DocumentDatabase.Configuration.Indexing.RunInMemory;
+
+            var indexPath = Path.Combine(DocumentDatabase.Configuration.Indexing.IndexStoragePath, GetIndexNameSafeForFileSystem());
+            var totalSize = 0L;
+            foreach (var mapping in NativeMemory.FileMapping)
+            {
+                var directory = Path.GetDirectoryName(mapping.Key);
+
+                if (string.Equals(indexPath, directory, StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                totalSize += mapping.Value;
+            }
+
+            stats.InMemory = inMemory;
+            stats.DiskSize.SizeInBytes = totalSize;
+
+            var indexingThread = _indexingThread;
+            if (indexingThread != null)
+            {
+                var thread = NativeMemory.ThreadAllocations.Values
+                    .First(x => x.Id == indexingThread.ManagedThreadId);
+
+                stats.ThreadAllocations.SizeInBytes = thread.Allocations;
+            }
+
+            return stats;
         }
 
         private void MarkQueried(DateTime time)
@@ -881,7 +980,7 @@ namespace Raven.Server.Documents.Indexes
             if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
                 SetPriority(IndexingPriority.Normal);
 
-            MarkQueried(SystemTime.UtcNow);
+            MarkQueried(DocumentDatabase.Time.GetUtcNow());
 
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, null);
 
@@ -1203,6 +1302,11 @@ namespace Raven.Server.Documents.Indexes
         protected virtual bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
         {
             return numberOfAlreadyProducedOutputs <= MaxNumberOfIndexOutputs;
+        }
+
+        public virtual Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
+        {
+            return null;
         }
     }
 }

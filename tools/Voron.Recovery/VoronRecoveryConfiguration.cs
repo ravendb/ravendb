@@ -16,6 +16,7 @@ namespace Voron.Recovery
         public int InitialContextSizeInMB { get; set; } = 1;
         public int InitialContextLongLivedSizeInKB { get; set; } = 16;
         public int ProgressIntervalInSeconds { get; set; } = 5;
+        public bool DisableCopyOnWriteMode { get; set; }
 
         public static VoronRecoveryArgsProcessStatus ProcessArgs(string[] args, out VoronRecoveryConfiguration config)
         {
@@ -82,6 +83,12 @@ namespace Voron.Recovery
                         if (int.TryParse(args[i + 1], out refreshRate) == false || refreshRate < 1)
                             return VoronRecoveryArgsProcessStatus.InvalidRefreshRate;
                         config.ProgressIntervalInSeconds = refreshRate;
+                        break;
+                    case "-DisableCopyOnWriteMode":
+                        bool disableCopyOnWriteMode;
+                        if (bool.TryParse(args[i + 1], out disableCopyOnWriteMode) == false)
+                            return VoronRecoveryArgsProcessStatus.BadArg;
+                        config.DisableCopyOnWriteMode = disableCopyOnWriteMode;
                         break;
                     default:
                         return VoronRecoveryArgsProcessStatus.BadArg;

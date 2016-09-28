@@ -14,6 +14,7 @@ namespace Raven.Client.Documents.SessionOperations
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<LoadOperation>("Raven.Client");
 
         private string[] _ids;
+        private string[] _includes;
         private readonly List<string> _idsToCheckOnServer = new List<string>();
 
         public LoadOperation(InMemoryDocumentSessionOperations session)
@@ -26,12 +27,16 @@ namespace Raven.Client.Documents.SessionOperations
             if (_idsToCheckOnServer.Count == 0)
                 return null;
 
+            if (_session.CheckIfIdAlreadyIncluded(_ids, _includes))
+                return null;
+
             _session.IncrementRequestCount();
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Requesting the following ids '{string.Join(", ", _idsToCheckOnServer)}' from {_session.StoreIdentifier}");
             return new GetDocumentCommand
             {
-                Ids = _idsToCheckOnServer.ToArray()
+                Ids = _idsToCheckOnServer.ToArray(),
+                Includes = _includes
             };
         }
 
@@ -46,6 +51,11 @@ namespace Raven.Client.Documents.SessionOperations
                 return;
 
             _idsToCheckOnServer.Add(id);
+        }
+
+        public void WithIncludes(string[] includes)
+        {
+            this._includes = includes;
         }
 
         public void ByIds(IEnumerable<string> ids)
@@ -78,17 +88,18 @@ namespace Raven.Client.Documents.SessionOperations
                 return default(T);
 
             var entity = _session.ConvertToEntity(typeof(T), id, documentInfo.Document);
-            var newMetadata = new DocumentInfo
+            /*var newMetadata = new DocumentInfo
             {
                 //TODO - Add all DocumentInfo properties ??
                 Id = id,
                 Document = documentInfo.Document,
                 Entity = entity,
                 Metadata = documentInfo.Metadata
-            };
+            };*/
+            documentInfo.Entity = entity;
             try
             {
-                _session.DocumentsByEntity.Add(entity, newMetadata);
+                _session.DocumentsByEntity.Add(entity, documentInfo);
             }
             catch (Exception)
             {
@@ -96,7 +107,7 @@ namespace Raven.Client.Documents.SessionOperations
                     _logger.Info("Tried to add an exisitg entity");
             }
 
-            try
+            /*try
             {
                 _session.DocumentsById.Add(id, newMetadata);
             }
@@ -104,7 +115,7 @@ namespace Raven.Client.Documents.SessionOperations
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Tried to add an exisitg id");
-            }
+            }*/
             return (T) entity;
         }
 
@@ -127,6 +138,7 @@ namespace Raven.Client.Documents.SessionOperations
                 {
                     if (document == null)
                     {
+                        // Not sure this is possible without changing the result class
                         // TODO: _session.RegisterMissing(includeIds[i]);
                         continue;
                     }
@@ -175,6 +187,13 @@ namespace Raven.Client.Documents.SessionOperations
 
                 _session.DocumentsById[id] = newMetadata;
             }
+
+            if (_includes != null && _includes.Length > 0)
+            {
+                _session.RegisterMissingIncludes(result.Results, _includes);
+            }
+            
+
         }
     }
 }

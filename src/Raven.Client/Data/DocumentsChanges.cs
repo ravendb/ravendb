@@ -1,4 +1,6 @@
 using System;
+using Sparrow.Json;
+
 namespace Raven.Abstractions.Data
 {
     public class DocumentsChanges
@@ -6,22 +8,22 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Previous field value.
         /// </summary>
-        public string FieldOldValue { get; set; }
+        public object FieldOldValue { get; set; }
 
         /// <summary>
         /// Current field value.
         /// </summary>
-        public string FieldNewValue { get; set; }
+        public object FieldNewValue { get; set; }
 
         /// <summary>
         /// Previous field type.
         /// </summary>
-        public string FieldOldType { get; set; }
+        public BlittableJsonToken FieldOldType { get; set; }
 
         /// <summary>
         /// Current field type.
         /// </summary>
-        public string FieldNewType { get; set; }
+        public BlittableJsonToken FieldNewType { get; set; }
 
         /// <summary>
         /// Type of change that occured.
@@ -41,7 +43,8 @@ namespace Raven.Abstractions.Data
             NewField,
             RemovedField,
             ArrayValueAdded,
-            ArrayValueRemoved
+            ArrayValueRemoved,
+            FieldTypeChanged
         }
 
         protected bool Equals(DocumentsChanges other)

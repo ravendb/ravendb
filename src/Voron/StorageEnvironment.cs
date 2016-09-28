@@ -94,6 +94,7 @@ namespace Voron
         private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
         public bool Disposed;
         private Logger _log;
+        public static int MaxConcurrentFlushes = 10; // RavenDB-5221
 
         public Guid DbId { get; set; }
 
@@ -569,7 +570,6 @@ namespace Voron
             private readonly ConcurrentQueue<StorageEnvironment> _maybeNeedToFlush = new ConcurrentQueue<StorageEnvironment>();
             private readonly ManualResetEventSlim _flushWriterEvent = new ManualResetEventSlim();
             private readonly SemaphoreSlim _concurrentFlushes = new SemaphoreSlim(MaxConcurrentFlushes);
-            private const int MaxConcurrentFlushes = 10;
 
             public void VoronEnvironmentFlushing()
             {

@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return new AutoIndexDocsEnumerator(documents);
         }
 
-        public override void HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
+        public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
         {
             var document = ((Document[])mapResults)[0];
             Debug.Assert(key == document.LoweredKey);
@@ -155,9 +155,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             mapResult.Data = mappedresult;
             mapResult.ReduceKeyHash = _reduceKeyProcessor.Hash;
 
-            PutMapResults(key, _singleOutputList, indexContext);
+            var resultsCount = PutMapResults(key, _singleOutputList, indexContext);
 
             DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
+
+            return resultsCount;
         }
 
         public override int? ActualMaxNumberOfIndexOutputs { get; }

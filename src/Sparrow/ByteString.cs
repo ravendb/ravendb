@@ -9,6 +9,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Global;
+using Sparrow.Json;
 using Sparrow.Utils;
 
 namespace Sparrow
@@ -19,7 +21,7 @@ namespace Sparrow
         Immutable = 0x00, // This is a shorthand for an internal-immutable string. 
         Mutable = 0x01,
         External = 0x02,
-        Reserved1 = 0x04, // This bit is reserved for future uses.
+        Disposed = 0x04,
         Reserved2 = 0x08, // This bit is reserved for future uses.
 
         // These flags are unused and can be used by users to store custom information on the instance.
@@ -183,7 +185,10 @@ namespace Sparrow
         public bool HasValue
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _pointer != null; }
+            get
+            {
+                return _pointer != null && _pointer->Flags != ByteStringType.Disposed;
+            }
         }
 
         public byte this[int index]
@@ -334,15 +339,15 @@ namespace Sparrow
         }
     }
 
-    public sealed class UnmanagedGlobalSegment : IDisposable
+    public sealed unsafe class UnmanagedGlobalSegment : IDisposable
     {
-        public readonly IntPtr Segment;
+        public readonly byte* Segment;
         public readonly int Size;
 
         public UnmanagedGlobalSegment(int size)
         {
             Size = size;
-            Segment = Marshal.AllocHGlobal(size);
+            Segment = NativeMemory.AllocateMemory(size);
         }
 
         #region IDisposable Support
@@ -359,9 +364,9 @@ namespace Sparrow
 
                 }
 
-                if (Segment != IntPtr.Zero)
+                if (Segment != null)
                 {
-                    Marshal.FreeHGlobal(Segment);                    
+                    NativeMemory.Free(Segment, Size);
                 }
             }
         }
@@ -411,31 +416,66 @@ namespace Sparrow
     /// </summary>
     public struct ByteStringMemoryCache : IByteStringAllocator
     {
-        private static readonly ConcurrentDictionary<int, WeakReference<ConcurrentStack<UnmanagedGlobalSegment>>> Global = new ConcurrentDictionary<int, WeakReference<ConcurrentStack<UnmanagedGlobalSegment>>>();
+        //TODO: policy for reducing this when they are not needed
+        [ThreadStatic]
+        private static Stack<UnmanagedGlobalSegment> _threadLocal;
+
+        public static void Clean(int keep = 1)
+        {
+            // we are expecting to be called here when there is no
+            // more work to be done, and we want to release resources
+            // to the system
+
+            // By reversing the stack, we ensure that we keep however many
+            // segments need, that they are the newest, and that they are 
+            // the largest around, so we shouldn't need more allocation
+
+            if (_threadLocal == null || _threadLocal.Count == 0)
+                return; // nothing to do;
+
+            var latest = _threadLocal.Peek();
+
+            var reversed = new Stack<UnmanagedGlobalSegment>(_threadLocal.Count);
+            foreach (var segment in _threadLocal)
+            {
+                reversed.Push(segment);
+            }
+            _threadLocal.Clear();
+            while (keep-- > 0 && reversed.Count > 0)
+            {
+                var current = reversed.Pop();
+                if (current.Size < latest.Size)
+                {
+                    current.Dispose();
+                    continue;
+                }
+                _threadLocal.Push(current);
+            }
+            while (reversed.Count > 0)
+            {
+                reversed.Pop().Dispose();
+            }
+
+        }
 
         [ThreadStatic]
-        private static ConcurrentStack<UnmanagedGlobalSegment> _threadLocal;
-
-        [ThreadStatic]
-        private static int _lastVictimId;
+        private static int _minSize;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ConcurrentStack<UnmanagedGlobalSegment> GetThreadLocalCollection()
+        private static Stack<UnmanagedGlobalSegment> GetThreadLocalCollection()
         {
-            if (_threadLocal == null)
-            {
-                _threadLocal = new ConcurrentStack<UnmanagedGlobalSegment>();
-                Global[Thread.CurrentThread.ManagedThreadId] = new WeakReference<ConcurrentStack<UnmanagedGlobalSegment>>(_threadLocal);
-            }
-            return _threadLocal;
+            return _threadLocal ?? (_threadLocal = new Stack<UnmanagedGlobalSegment>());
         }
 
         public UnmanagedGlobalSegment Allocate(int size)
         {
+            if (_minSize < size)
+                _minSize = size;
+
             var local = GetThreadLocalCollection();
-            UnmanagedGlobalSegment memorySegment;
-            if (local.TryPop(out memorySegment))
+            while (local.Count > 0)
             {
+                var memorySegment = local.Pop();
                 if (memorySegment.Size >= size)
                 {
                     return memorySegment;
@@ -445,62 +485,20 @@ namespace Sparrow
                 memorySegment.Dispose();
             }
 
-            var victimQueue = TryGetVictimQueue();
-
-            if (victimQueue != null && victimQueue.TryPop(out memorySegment))
-            {
-                if (memorySegment.Size >= size)
-                {
-                    return memorySegment;
-                }
-                // it is not my memory to dispose of, return it to the thread's usage
-                victimQueue.Push(memorySegment);
-            }
-
             // have to allocate it directly
             return new UnmanagedGlobalSegment(size);
         }
 
-        private static ConcurrentStack<UnmanagedGlobalSegment> TryGetVictimQueue()
-        {
-            ConcurrentStack<UnmanagedGlobalSegment> victimQueue = null;
-            WeakReference<ConcurrentStack<UnmanagedGlobalSegment>> value;
-            if (Global.TryGetValue(_lastVictimId, out value))
-            {
-                if (value.TryGetTarget(out victimQueue) == false)
-                {
-                    if (Global.TryRemove(_lastVictimId, out value) && value.TryGetTarget(out victimQueue))
-                    {
-                        // a thread was reborn? new thread with same id?
-                        // should be very rare
-                        Global[_lastVictimId] = value;
-                    }
-                }
-            }
-            else
-            {
-                var prevVictim = _lastVictimId;
-                foreach (var kvp in Global)
-                {
-                    if (kvp.Key < _lastVictimId)
-                        continue; // we want to scan the list sequentially, so we ignore anything smaller
-                    if (kvp.Value.TryGetTarget(out victimQueue))
-                    {
-                        _lastVictimId = kvp.Key;
-                        break;
-                    }
-                }
-                if (prevVictim == _lastVictimId)
-                    _lastVictimId = 0; // next time, start from scratch
-            }
-            return victimQueue;
-        }
-
         public void Free(UnmanagedGlobalSegment memory)
         {
+            if (_minSize > memory.Size)
+            {
+                memory.Dispose();
+                return;
+            }
+
             var local = GetThreadLocalCollection();
             local.Push(memory);
-            local.ReduceSizeIfTooBig(4096);
         }
     }
 
@@ -548,7 +546,7 @@ namespace Sparrow
         /// This list keeps all the segments already instantiated in order to release them after context finalization. 
         /// </summary>
         private readonly List<SegmentInformation> _wholeSegments;
-        private readonly int _allocationBlockSize;
+        private int _allocationBlockSize;
 
         /// <summary>
         /// This list keeps the hot segments released for use. It is important to note that we will never put into this list
@@ -589,6 +587,11 @@ namespace Sparrow
             PrepareForValidation();
         }
 
+        private void ThrowSingleUseTaken()
+        {
+            throw new NotSupportedException("Attempt to call SingleUse when SingleUse scope is still in use");
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ByteString Allocate(int length)
         {
@@ -623,7 +626,10 @@ namespace Sparrow
             else
             {
                 if (_externalCurrentLeft == 0)
+                {
+                    _allocationBlockSize = Math.Min(16 * Constants.Size.Megabyte, _allocationBlockSize * 2);
                     AllocateExternalSegment(_allocationBlockSize);
+                }
 
                 storagePtr = (ByteStringStorage*)_externalCurrent.Current;
                 _externalCurrent.Current += _externalAlignedSize;
@@ -653,7 +659,7 @@ namespace Sparrow
             if (allocationSize > _allocationBlockSize)
                 return AllocateWholeSegment(length, type); // We will pass the length because this is a whole allocated segment able to hold a length size ByteString.
 
-            int reusablePoolIndex = GetPoolIndexForReuse(allocationSize); 
+            int reusablePoolIndex = GetPoolIndexForReuse(allocationSize);
             int allocationUnit = Bits.NextPowerOf2(allocationSize);
 
             // The allocation unit is bigger than MinBlockSize (therefore it wont be 2^n aligned).
@@ -662,11 +668,11 @@ namespace Sparrow
                 allocationUnit += sizeof(long) - allocationUnit % sizeof(long);
 
             // All allocation units are 32 bits aligned. If not we will have a performance issue.
-            Debug.Assert(allocationUnit % sizeof(int) == 0);    
+            Debug.Assert(allocationUnit % sizeof(int) == 0);
 
             // If we can reuse... we retrieve those.
             if (allocationSize <= ByteStringContext.MinBlockSizeInBytes && _internalReusableStringPoolCount[reusablePoolIndex] != 0)
-            {                
+            {
                 // This is a stack because hotter memory will be on top. 
                 Stack<IntPtr> pool = _internalReusableStringPool[reusablePoolIndex];
 
@@ -679,12 +685,12 @@ namespace Sparrow
             {
                 int currentSizeLeft = _internalCurrent.SizeLeft;
                 if (allocationUnit > currentSizeLeft) // This shouldn't happen that much, if it does you should increase your default allocation block. 
-                {                   
+                {
                     SegmentInformation segment = null;
-                    
+
                     // We will try to find a hot segment with enough space if available.
                     // Older (colder) segments are at the front of the list. That's why we would start scanning backwards.
-                    for ( int i = _internalReadyToUseMemorySegments.Count - 1; i >= 0; i--)
+                    for (int i = _internalReadyToUseMemorySegments.Count - 1; i >= 0; i--)
                     {
                         var segmentValue = _internalReadyToUseMemorySegments[i];
                         if (segmentValue.SizeLeft >= allocationUnit)
@@ -695,7 +701,7 @@ namespace Sparrow
 
                             segment = segmentValue;
                             break;
-                        }                            
+                        }
                     }
 
                     // If the size left is bigger than MinBlockSize, we release current as a reusable segment
@@ -704,9 +710,9 @@ namespace Sparrow
                         byte* start = _internalCurrent.Current;
                         byte* end = start + currentSizeLeft;
 
-                        _internalReadyToUseMemorySegments.Add(new SegmentInformation{ Start = start, Current = start, End = end, CanDispose = false });
+                        _internalReadyToUseMemorySegments.Add(new SegmentInformation { Start = start, Current = start, End = end, CanDispose = false });
                     }
-                    else if ( currentSizeLeft > sizeof(ByteStringType) + ByteStringContext.MinReusableBlockSizeInBytes)
+                    else if (currentSizeLeft > sizeof(ByteStringType) + ByteStringContext.MinReusableBlockSizeInBytes)
                     {
                         // The memory chunk left is big enough to make sense to reuse it.
                         reusablePoolIndex = GetPoolIndexForReservation(currentSizeLeft);
@@ -723,10 +729,18 @@ namespace Sparrow
                     }
 
                     // Use the segment and if there is no segment available that matches the request, just get a new one.
-                    this._internalCurrent = segment ?? AllocateSegment(_allocationBlockSize);
-                }                    
+                    if (segment != null)
+                    {
+                        _internalCurrent = segment;
+                    }
+                    else
+                    {
+                        _allocationBlockSize = Math.Min(16 * Constants.Size.Megabyte, _allocationBlockSize * 2);
+                        _internalCurrent = AllocateSegment(_allocationBlockSize);
+                    }
+                }
 
-                var byteString = Create(_internalCurrent.Current, length, allocationUnit, type);                
+                var byteString = Create(_internalCurrent.Current, length, allocationUnit, type);
                 _internalCurrent.Current += byteString._pointer->Size;
 
                 return byteString;
@@ -791,7 +805,8 @@ namespace Sparrow
 
         private ByteString AllocateWholeSegment(int length, ByteStringType type)
         {
-            SegmentInformation segment = AllocateSegment(length + sizeof(ByteStringStorage));
+            var size = Bits.NextPowerOf2(length + sizeof(ByteStringStorage));
+            SegmentInformation segment = AllocateSegment(size);
 
             var byteString = Create(segment.Current, length, segment.Size, type);
             segment.Current += byteString._pointer->Size;
@@ -819,6 +834,8 @@ namespace Sparrow
 
             Debug.Assert(value.IsExternal, "Cannot release as external an internal pointer.");
 
+			value._pointer->Flags = ByteStringType.Disposed;
+			
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
 
@@ -852,13 +869,14 @@ namespace Sparrow
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
             if (value._pointer == null)
                 return;
+            Debug.Assert(value._pointer->Flags != ByteStringType.Disposed, "Double free");
 
             Debug.Assert(!value.IsExternal, "Cannot release as internal an external pointer.");
 
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
 
-            if ( value.IsExternal )
+            if (value.IsExternal)
             {
                 // We release the pointer in the appropriate reuse pool.
                 if (this._externalFastPoolCount < ExternalFastPoolSize)
@@ -916,7 +934,7 @@ namespace Sparrow
         {
             var memorySegment = _allocator.Allocate(size);
 
-            byte* start = (byte*)memorySegment.Segment.ToPointer();
+            byte* start = memorySegment.Segment;
             byte* end = start + memorySegment.Size;
 
             var segment = new SegmentInformation { Memory = memorySegment, Start = start, Current = start, End = end, CanDispose = true };
@@ -930,7 +948,7 @@ namespace Sparrow
         {
             var memorySegment = _allocator.Allocate(size);
 
-            byte* start = (byte*)memorySegment.Segment.ToPointer();
+            byte* start = memorySegment.Segment;
             byte* end = start + memorySegment.Size;
 
             _externalCurrent = new SegmentInformation { Memory = memorySegment, Start = start, Current = start, End = end, CanDispose = true };
@@ -973,132 +991,250 @@ namespace Sparrow
             return result;
         }
 
-        public ByteString From(string value, ByteStringType type = ByteStringType.Mutable)
+        public InternalScope From(string value, out ByteString str)
+        {
+            return From(value, ByteStringType.Mutable, out str);
+        }
+
+        public InternalScope From(string value, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            int maxSize = 4 * value.Length;
-            // Important if not working with Unicode. 
-            // http://stackoverflow.com/questions/9533258/what-is-the-maximum-number-of-bytes-for-a-utf-8-encoded-character
-            var result = AllocateInternal(maxSize, type);
+            var byteCount = Encoding.UTF8.GetByteCount(value);
+            str = AllocateInternal(byteCount, type);
             fixed (char* ptr = value)
             {
-                int length = Encoding.UTF8.GetBytes(ptr, value.Length, result.Ptr, maxSize);
+                int length = Encoding.UTF8.GetBytes(ptr, value.Length, str.Ptr, byteCount);
 
                 // We can do this because it is internal. See if it makes sense to actually give this ability. 
-                result._pointer->Length = length;
+                str._pointer->Length = length;
             }
 
-            RegisterForValidation(result);
-            return result;
+            RegisterForValidation(str);
+            return new InternalScope(this, str);
         }
 
-        public ByteString From(string value, Encoding encoding, ByteStringType type = ByteStringType.Mutable)
+        public InternalScope From(string value, Encoding encoding, out ByteString str)
+        {
+            return From(value, encoding, ByteStringType.Immutable, out str);
+        }
+
+        public InternalScope From(string value, Encoding encoding, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            int maxSize = 4 * value.Length;
-            // Important if not working with Unicode. 
-            // http://stackoverflow.com/questions/9533258/what-is-the-maximum-number-of-bytes-for-a-utf-8-encoded-character
-            var result = AllocateInternal(maxSize, type);
+            var byteCount = Encoding.UTF8.GetByteCount(value);
+
+            str = AllocateInternal(byteCount, type);
             fixed (char* ptr = value)
             {
-                int length = encoding.GetBytes(ptr, value.Length, result.Ptr, maxSize);
+                int length = encoding.GetBytes(ptr, value.Length, str.Ptr, byteCount);
 
                 // We can do this because it is internal. See if it makes sense to actually give this ability. 
-                result._pointer->Length = length;
+                str._pointer->Length = length;
             }
 
-            RegisterForValidation(result);
-            return result;
+            RegisterForValidation(str);
+            return new InternalScope(this, str);
         }
 
-        public ByteString From(byte[] value, int offset, int count, ByteStringType type = ByteStringType.Mutable)
+        public InternalScope From(byte[] value, int offset, int count, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var result = AllocateInternal(count, type);
+            str = AllocateInternal(count, type);
             fixed (byte* ptr = value)
             {
-                Memory.Copy(result._pointer->Ptr, ptr + offset, count);
+                Memory.Copy(str._pointer->Ptr, ptr + offset, count);
             }
 
-            RegisterForValidation(result);
-            return result;
+            RegisterForValidation(str);
+            return new InternalScope(this, str);
         }
 
-        public ByteString From(byte[] value, int size, ByteStringType type = ByteStringType.Mutable)
+        public InternalScope From(byte[] value, int offset, int count, out ByteString str)
+        {
+            return From(value, offset, count, ByteStringType.Immutable, out str);
+        }
+
+        public InternalScope From(byte[] value, int size, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var result = AllocateInternal(size, type);
+            str = AllocateInternal(size, type);
             fixed (byte* ptr = value)
             {
-                Memory.Copy(result._pointer->Ptr, ptr, size);
+                Memory.Copy(str._pointer->Ptr, ptr, size);
             }
 
-            RegisterForValidation(result);
-            return result;
+            RegisterForValidation(str);
+            return new InternalScope(this, str);
         }
 
-        public ByteString From(int value, ByteStringType type = ByteStringType.Mutable)
+        public InternalScope From(byte[] value, int size, out ByteString str)
         {
-            var result = AllocateInternal(sizeof(int), type);
-            ((int*)result._pointer->Ptr)[0] = value;
-
-            RegisterForValidation(result);
-            return result;
+            return From(value, size, ByteStringType.Immutable, out str);
         }
 
-        public ByteString From(long value, ByteStringType type = ByteStringType.Mutable)
+        public InternalScope From(int value, out ByteString str)
         {
-            var result = AllocateInternal(sizeof(long), type);
-            ((long*)result._pointer->Ptr)[0] = value;
-
-            RegisterForValidation(result);
-            return result;
+            return From(value, ByteStringType.Immutable, out str);
         }
 
-        public ByteString From(short value, ByteStringType type = ByteStringType.Mutable)
+        public InternalScope From(int value, ByteStringType type, out ByteString str)
         {
-            var result = AllocateInternal(sizeof(short), type);
-            ((short*)result._pointer->Ptr)[0] = value;
+            str = AllocateInternal(sizeof(int), type);
+            ((int*)str._pointer->Ptr)[0] = value;
 
-            RegisterForValidation(result);
-            return result;
+            RegisterForValidation(str);
+            return new InternalScope(this, str);
         }
 
-        public ByteString From(byte value, ByteStringType type = ByteStringType.Mutable)
+        public InternalScope From(long value, out ByteString str)
         {
-            var result = AllocateInternal(1, type);
-            result._pointer->Ptr[0] = value;
-
-            RegisterForValidation(result);
-            return result;
+            return From(value, ByteStringType.Immutable, out str);
         }
 
-        public ByteString From(byte* valuePtr, int size, ByteStringType type = ByteStringType.Mutable)
+        public InternalScope From(long value, ByteStringType type, out ByteString str)
+        {
+            str = AllocateInternal(sizeof(long), type);
+            ((long*)str._pointer->Ptr)[0] = value;
+
+            RegisterForValidation(str);
+            return new InternalScope(this, str);
+        }
+
+        public InternalScope From(short value, out ByteString str)
+        {
+            return From(value, ByteStringType.Immutable, out str);
+        }
+
+        public InternalScope From(short value, ByteStringType type, out ByteString str)
+        {
+            str = AllocateInternal(sizeof(short), type);
+            ((short*)str._pointer->Ptr)[0] = value;
+
+            RegisterForValidation(str);
+            return new InternalScope(this, str);
+        }
+
+        public InternalScope From(byte value, ByteStringType type, out ByteString str)
+        {
+            str = AllocateInternal(1, type);
+            str._pointer->Ptr[0] = value;
+
+            RegisterForValidation(str);
+            return new InternalScope(this, str);
+        }
+
+        public InternalScope From(byte value, out ByteString str)
+        {
+            return From(value, ByteStringType.Immutable, out str);
+        }
+
+        public InternalScope From(byte* valuePtr, int size, out ByteString str)
+        {
+            return From(valuePtr, size, ByteStringType.Immutable, out str);
+        }
+
+        public InternalScope From(byte* valuePtr, int size, ByteStringType type, out ByteString str)
         {
             Debug.Assert(valuePtr != null, $"{nameof(valuePtr)} cant be null.");
             Debug.Assert((type & ByteStringType.External) == 0, $"{nameof(From)} is not expected to be called with the '{nameof(ByteStringType.External)}' requested type, use {nameof(FromPtr)} instead.");
 
-            var result = AllocateInternal(size, type);
-            Memory.Copy(result._pointer->Ptr, valuePtr, size);
+            str = AllocateInternal(size, type);
+            Memory.Copy(str._pointer->Ptr, valuePtr, size);
 
-            RegisterForValidation(result);
-            return result;
+            RegisterForValidation(str);
+            return new InternalScope(this, str);
         }
 
-        public ByteString FromPtr(byte* valuePtr, int size, ByteStringType type = ByteStringType.Mutable | ByteStringType.External)
+        /// <summary>
+        /// This scope should only be used whenever you can not determine
+        /// whether the scope is internal or external.
+        /// </summary>
+        public struct Scope : IDisposable
+        {
+            private ByteStringContext<TAllocator> _parent;
+            private ByteString _str;
+
+            public Scope(ByteStringContext<TAllocator> parent, ByteString str)
+            {
+                _parent = parent;
+                _str = str;
+            }
+
+            public void Dispose()
+            {
+                if (_parent != null)
+                {
+                    if (_str.IsExternal)
+                        _parent.ReleaseExternal(ref _str);
+                    else 
+                        _parent.Release(ref _str);
+                }
+                _parent = null;
+            }
+        }
+
+        public struct InternalScope : IDisposable
+        {
+            private ByteStringContext<TAllocator> _parent;
+            private ByteString _str;
+
+            public InternalScope(ByteStringContext<TAllocator> parent, ByteString str)
+            {
+                _parent = parent;
+                _str = str;
+            }
+
+            public void Dispose()
+            {
+                _parent?.Release(ref _str);
+                _parent = null;
+            }
+
+            public static implicit operator Scope(InternalScope scope)
+            {
+                return new Scope(scope._parent, scope._str);
+            }
+        }
+
+        public struct ExternalScope : IDisposable
+        {
+            private ByteStringContext<TAllocator> _parent;
+            private ByteString _str;
+
+            public ExternalScope(ByteStringContext<TAllocator> parent, ByteString str)
+            {
+                _parent = parent;
+                _str = str;
+            }
+
+            public void Dispose()
+            {
+                _parent?.ReleaseExternal(ref _str);
+                _parent = null;
+            }
+
+            public static implicit operator Scope(ExternalScope scope)
+            {
+                return new Scope(scope._parent, scope._str);
+            }
+        }
+
+        public ExternalScope FromPtr(byte* valuePtr, int size,
+            ByteStringType type,
+            out ByteString str)
         {
             Debug.Assert(valuePtr != null, $"{nameof(valuePtr)} cant be null.");
             Debug.Assert(size >= 0, $"{nameof(size)} cannot be negative.");
 
-            var result = AllocateExternal(valuePtr, size, type | ByteStringType.External); // We are allocating external, so we will force it (even if we are checking for it in debug).
+            str = AllocateExternal(valuePtr, size, type | ByteStringType.External); // We are allocating external, so we will force it (even if we are checking for it in debug).
 
-            RegisterForValidation(result);
+            RegisterForValidation(str);
 
-            return result;
+            return new ExternalScope(this, str);
         }
 
 #if VALIDATE

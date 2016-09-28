@@ -10,15 +10,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
     public class AggregatedAnonymousObjects : AggregationResult
     {
         private readonly List<object> _outputs;
+        private readonly List<BlittableJsonReaderObject> _jsons;
         private PropertyAccessor _propertyAccessor;
         private JsonOperationContext _indexContext;
-
-        private BlittableJsonReaderObject _json;
 
         public AggregatedAnonymousObjects(List<object> results, PropertyAccessor propertyAccessor, TransactionOperationContext indexContext)
         {
             _outputs = results;
             _propertyAccessor = propertyAccessor;
+            _jsons = new List<BlittableJsonReaderObject>(results.Count);
             _indexContext = indexContext;
         }
 
@@ -33,8 +33,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             foreach (var output in _outputs)
             {
-                _json?.Dispose();
-
                 var djv = new DynamicJsonValue();
 
                 foreach (var property in _propertyAccessor.Properties)
@@ -43,15 +41,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, _indexContext);
                 }
 
-                _json = _indexContext.ReadObject(djv, "map/reduce result to store");
-
-                yield return _json;
+                var item = _indexContext.ReadObject(djv, "map/reduce result to store");
+                _jsons.Add(item);
+                yield return item;
             }
         }
 
         public override void Dispose()
         {
-            _json?.Dispose();
+            for (int i = _jsons.Count - 1; i >= 0; i--)
+            {
+                _jsons[i].Dispose();
+            }
+            _jsons.Clear();
         }
     }
 }

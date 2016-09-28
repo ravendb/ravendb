@@ -11,13 +11,12 @@ namespace Sparrow.Json
     public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
     {
         private readonly BlittableJsonDocumentBuilder _builder;
-        private readonly CachedProperties _cachedProperties;
-        private readonly byte* _metadataPtr;
+        private byte* _metadataPtr;
         private readonly int _size;
         private readonly int _propCount;
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
-        private readonly byte* _objStart;
+        private byte* _objStart;
         private LazyStringValue[] _propertyNames;
 
         public DynamicJsonValue Modifications;
@@ -42,11 +41,9 @@ namespace Sparrow.Json
         }
 
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context,
-            BlittableJsonDocumentBuilder builder = null,
-            CachedProperties cachedProperties = null)
+            BlittableJsonDocumentBuilder builder = null)
         {
             _builder = builder;
-            _cachedProperties = cachedProperties;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
             _context = context;
@@ -97,14 +94,13 @@ namespace Sparrow.Json
             }
         }
 
-        public unsafe BlittableJsonReaderObject(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
+        public BlittableJsonReaderObject(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
         {
             _parent = parent;
             _context = parent._context;
             _mem = parent._mem;
             _size = parent._size;
             _propNames = parent._propNames;
-            _cachedProperties = parent._cachedProperties;
 
             var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
             switch (propNamesOffsetFlag)
@@ -131,6 +127,11 @@ namespace Sparrow.Json
             // analyze main object type and it's offset and propertyIds flags
             _currentOffsetSize = ProcessTokenOffsetFlags(type);
             _currentPropertyIdSize = ProcessTokenPropertyFlags(type);
+        }
+
+        private static void ThrowObjectDisposed()
+        {
+            throw new ObjectDisposedException("blittalbe object has been disposed");
         }
 
         public int Size => _size;
@@ -181,11 +182,8 @@ namespace Sparrow.Json
             };
         }
 
-        private unsafe LazyStringValue GetPropertyName(int propertyId)
+        private LazyStringValue GetPropertyName(int propertyId)
         {
-            if (_cachedProperties != null)
-                return _cachedProperties.GetProperty(propertyId);
-
             if (_parent != null)
                 return _parent.GetPropertyName(propertyId);
 
@@ -359,6 +357,8 @@ namespace Sparrow.Json
 
         public bool TryGetMember(StringSegment name, out object result)
         {
+            if (_mem == null)
+                ThrowObjectDisposed();
             // try get value from cache, works only with Blittable types, other objects are not stored for now
             if (_objectsPathCache != null && _objectsPathCache.TryGetValue(name, out result))
             {
@@ -418,12 +418,6 @@ namespace Sparrow.Json
         {
             if (_propCount == 0)
                 return -1;
-
-            if (_cachedProperties != null)
-            {
-                var propName = _context.GetLazyStringForFieldWithCaching(name.Value);
-                return _cachedProperties.GetPropertyId(propName);
-            }
 
             int min = 0, max = _propCount - 1;
             var comparer = _context.GetLazyStringForFieldWithCaching(name.Value);
@@ -504,6 +498,8 @@ namespace Sparrow.Json
 
         internal object GetObject(BlittableJsonToken type, int position)
         {
+            if (_mem == null)
+                ThrowObjectDisposed();
             switch (type & TypesMask)
             {
                 case BlittableJsonToken.StartObject:
@@ -529,6 +525,18 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
+            this._mem = null;
+            this._metadataPtr = null;
+            this._objStart = null;
+            if (_objectsPathCache != null)
+            {
+                foreach (var property in _objectsPathCache)
+                {
+                    var disposable = property.Value as IDisposable;
+                    disposable?.Dispose();
+                }
+            }
+
             _builder?.Dispose();
         }
 

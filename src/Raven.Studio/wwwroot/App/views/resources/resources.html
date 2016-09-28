@@ -41,15 +41,6 @@
     </div>
 </div>
 
-<!-- ko if: alerts().length > 0 -->
-<!-- ko foreach: alerts -->
-<div class="alert alert-dismissable" role="alert" data-bind="css: { 'alert-warning': alertLevel === 'Warning', 'alert-danger': alertLevel === 'Error' }">
-    <button data-bind="click: $root.dismissAlert.bind($root, uniqueKey)" type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-    <a data-bind="attr: { href: $root.urlForAlert($data) }"><span data-bind="text: title"></span></a>
-</div>
-<!-- /ko -->
-<!-- /ko -->
-
 <div class="btn-toolbar" data-bind="visible: resources().length > 0">
     <div class="btn-group">
         <div class="checkbox">

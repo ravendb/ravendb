@@ -15,15 +15,12 @@ namespace FastTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenNewAsyncSession())
                 {
-                    session.Store(new User { Name = "RavenDB" }, "users/1");
-                    session.SaveChanges();
-                }
+                    await session.StoreAsync(new User { Name = "RavenDB" }, "users/1");
+                    await session.SaveChangesAsync();
 
-                using (var newSession = store.OpenNewAsyncSession(new OpenSessionOptions()))
-                {
-                    var user = await newSession.LoadAsync<User>("users/1");
+                    var user = await session.LoadAsync<User>("users/1");
                     Assert.NotNull(user);
                     Assert.Equal(user.Name, "RavenDB");
                 }
@@ -35,16 +32,13 @@ namespace FastTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenNewAsyncSession())
                 {
-                    session.Store(new User { Name = "RavenDB" }, "users/1");
-                    session.Store(new User { Name = "Hibernating Rhinos" }, "users/2");
-                    session.SaveChanges();
-                }
+                    await session.StoreAsync(new User { Name = "RavenDB" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Hibernating Rhinos" }, "users/2");
+                    await session.SaveChangesAsync();
 
-                using (var newSession = store.OpenNewAsyncSession(new OpenSessionOptions()))
-                {
-                    var user = await newSession.LoadAsync<User>(new[] { "users/1", "users/2" });
+                    var user = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
                     Assert.Equal(user.Length, 2);
                 }
             }
@@ -55,16 +49,13 @@ namespace FastTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenNewAsyncSession())
                 {
-                    session.Store(new User { Name = "RavenDB" }, "users/1");
-                    session.Store(new User { Name = "Hibernating Rhinos" }, "users/2");
-                    session.SaveChanges();
-                }
+                    await session.StoreAsync(new User { Name = "RavenDB" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Hibernating Rhinos" }, "users/2");
+                    await session.SaveChangesAsync();
 
-                using (var newSession = store.OpenNewAsyncSession(new OpenSessionOptions()))
-                {
-                    var user = await newSession.LoadAsync<User>(2);
+                    var user = await session.LoadAsync<User>(2);
                     Assert.NotNull(user);
                     Assert.Equal(user.Name, "Hibernating Rhinos");
                 }
@@ -76,16 +67,13 @@ namespace FastTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenNewAsyncSession())
                 {
-                    session.Store(new User { Name = "RavenDB" }, "users/1");
-                    session.Store(new User { Name = "Hibernating Rhinos" }, "users/2");
-                    session.SaveChanges();
-                }
+                    await session.StoreAsync(new User { Name = "RavenDB" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Hibernating Rhinos" }, "users/2");
+                    await session.SaveChangesAsync();
 
-                using (var newSession = store.OpenNewAsyncSession(new OpenSessionOptions()))
-                {
-                    var users = await newSession.LoadAsync<User>(CancellationToken.None, 1,2);
+                    var users = await session.LoadAsync<User>(CancellationToken.None, 1,2);
                     Assert.Equal(users.Length, 2);
                 }
             }
@@ -96,18 +84,14 @@ namespace FastTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenNewAsyncSession())
                 {
-                    session.Store(new User { Name = "RavenDB" }, "users/1");
-                    session.Store(new User { Name = "Hibernating Rhinos" }, "users/2");
-                    session.SaveChanges();
-                }
+                    await session.StoreAsync(new User { Name = "RavenDB" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Hibernating Rhinos" }, "users/2");
+                    await session.SaveChangesAsync();
 
-                using (var newSession = store.OpenNewAsyncSession(new OpenSessionOptions()))
-                {
-                    var users = await newSession.LoadAsync<User>(new List<System.ValueType> { 1, 2 });
+                    var users = await session.LoadAsync<User>(new List<System.ValueType> { 1, 2 });
                     Assert.Equal(users.Length, 2);
-
                 }
             }
         }

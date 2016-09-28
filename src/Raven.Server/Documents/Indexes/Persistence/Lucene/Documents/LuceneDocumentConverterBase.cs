@@ -5,7 +5,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Lucene.Net.Documents;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
@@ -13,7 +12,6 @@ using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Json;
 using Sparrow.Json;
-
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions;
 using Raven.Server.Documents.Indexes.Static;
@@ -50,6 +48,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected readonly bool _reduceOutput;
 
         private byte[] _reduceValueBuffer;
+
+        public void Clean()
+        {
+            if (_fieldsCache.Count > 256)
+            {
+                _fieldsCache.Clear();
+            }
+        }
 
         protected LuceneDocumentConverterBase(ICollection<IndexField> fields, bool reduceOutput = false)
         {

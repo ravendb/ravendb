@@ -189,7 +189,9 @@ namespace Voron.Data.RawData
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static ActiveRawDataSmallSection Create(LowLevelTransaction tx, string owner)
         {
-            return Create(tx, Slice.From(tx.Allocator, owner, ByteStringType.Immutable));
+            Slice ownerSlice;
+            Slice.From(tx.Allocator, owner, ByteStringType.Immutable, out ownerSlice);
+            return Create(tx, ownerSlice);
         }
 
         public static ActiveRawDataSmallSection Create(LowLevelTransaction tx, Slice owner)

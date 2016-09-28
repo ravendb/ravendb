@@ -1472,8 +1472,8 @@ namespace Raven.Client.Connection.Async
         {
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url.IndexStatistics(name), HttpMethod.Get, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url))))
             {
-                var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                return json.Deserialize<IndexStats>(convention);
+                var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return json.Deserialize<IndexStats[]>(convention)[0];
             }
         }
 

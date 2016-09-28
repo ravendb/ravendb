@@ -14,7 +14,7 @@ class getIndexingStatusCommand extends commandBase {
         this.query(url, null, this.db)
             .done((indexingStatus) => result.resolve(indexingStatus))
             .fail((response: JQueryXHR) => {
-                this.reportError("Failed to create backup!", response.responseText, response.statusText);
+                this.reportError("Failed to get indexing status!", response.responseText, response.statusText);
                 result.reject();
             });
         return result;

@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
             {
                 string[] groupByFields;
-                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, out groupByFields));
+                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, out groupByFields));
 
                 var groupByFieldsArray = GetArrayCreationExpression(groupByFields);
                 statements.Add(RoslynHelper.This(nameof(StaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
@@ -234,6 +234,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (methods.HasCreateField)
                 statements.Add(RoslynHelper.This(nameof(StaticIndexBase.HasDynamicFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+
+            if (methods.HasBoost)
+                statements.Add(RoslynHelper.This(nameof(StaticIndexBase.HasBoostedFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
 
             var ctor = RoslynHelper.PublicCtor(name)
                 .AddBodyStatements(statements.ToArray());
@@ -298,13 +301,14 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, out string[] groupByFields)
+        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, out string[] groupByFields)
         {
             try
             {
                 var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
 
                 fieldNamesValidator?.Validate(reduce, expression);
+                methodsDetector.Visit(expression);
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
@@ -438,6 +442,8 @@ namespace Raven.Server.Documents.Indexes.Static
             public bool HasInclude { get; set; }
 
             public bool HasCreateField { get; set; }
+
+            public bool HasBoost { get; set; }
         }
     }
 }

@@ -20,7 +20,8 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void DeleteRangeShouldModifyPage()
         {
-            var treeId = Slice.From(Allocator, "test");
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeId, valSize: 128);

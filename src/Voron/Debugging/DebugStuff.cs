@@ -282,7 +282,13 @@ namespace Voron.Debugging
             for (int i = 0; i < page.NumberOfEntries; i++)
             {
                 var nodeHeader = page.GetNode(i);
-                var key = TreeNodeHeader.ToSlicePtr(tree.Llt.Allocator, nodeHeader).ToString();
+				
+				string key;
+                Slice keySlice;
+                using (TreeNodeHeader.ToSlicePtr(tree.Llt.Allocator, nodeHeader, out keySlice))
+                {
+                    key = keySlice.ToString();
+                }
 
                 if (page.IsLeaf)
                 {               

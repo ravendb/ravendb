@@ -477,6 +477,9 @@ namespace Raven.Server.Documents.TcpHandlers
                 finally
                 {
                     tcpConnectionOptions.Dispose();
+                    // Thread is going to die, let us release those resources early, instead of waiting for finalizer
+                    ByteStringMemoryCache.Clean(keep: 0);
+                    tcpConnectionOptions.DocumentDatabase.DocumentsStorage.ContextPool.Clean(keep: 0);
                 }
             })
             {

@@ -62,9 +62,6 @@ class viewModelBase {
         return true;
     }
 
-    /*
-     * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
-     */
     activate(args: any, isShell = false) {
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
@@ -106,28 +103,22 @@ class viewModelBase {
     }
 
     private rightPanelSetup() {
-        var $pageHostRoot = $("#page-host-root");
-        var hasRightPanel = !!$("#right-options-panel", $pageHostRoot).length;
+        const $pageHostRoot = $("#page-host-root");
+        const hasRightPanel = !!$("#right-options-panel", $pageHostRoot).length;
         $pageHostRoot.toggleClass("enable-right-options-panel", hasRightPanel);
     }
 
-    /*
-     * Called by Durandal when the view model is loaded and after the view is inserted into the DOM.
-     */
     compositionComplete() {
         this.dirtyFlag().reset(); //Resync Changes
     }
 
-    /*
-     * Called by Durandal before deactivate in order to determine whether removing from the DOM is necessary.
-     */
     canDeactivate(isClose: boolean): any {
-        var isDirty = this.dirtyFlag().isDirty();
+        const isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
-            var discard = "Discard changes";
-            var stay = "Stay on this page";
-            var discardStayResult = $.Deferred();
-            var confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?", [discard, stay], true);
+            const discard = "Discard changes";
+            const stay = "Stay on this page";
+            const discardStayResult = $.Deferred();
+            const confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?", [discard, stay], true);
             confirmation.done((result: { can: boolean; }) => {
                 if (!result.can) {
                     this.dirtyFlag().reset();    
@@ -142,9 +133,6 @@ class viewModelBase {
         return true;
     }
 
-    /*
-     * Called by Durandal when the view model is unloaded and after the view is removed from the DOM.
-     */
     detached() {
         this.currentHelpLink.unsubscribeFrom("currentHelpLink");
         this.cleanupNotifications();
@@ -156,9 +144,6 @@ class viewModelBase {
         viewModelBase.showSplash(false);
     }
 
-    /*
-     * Called by Durandal when the view model is unloading and the view is about to be removed from the DOM.
-     */
     deactivate() {
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
@@ -172,8 +157,16 @@ class viewModelBase {
     }
 
     cleanupNotifications() {
-        //TODO: this.notifications.forEach((notification: changeSubscription) => notification.off());
+        this.notifications.forEach((notification: changeSubscription) => notification.off());
         this.notifications = [];
+    }
+
+    addNotification(subscription: changeSubscription) {
+        this.notifications.push(subscription);
+    }
+
+    removeNotification(subscription: changeSubscription) {
+        this.notifications.remove(subscription);
     }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
@@ -228,7 +221,7 @@ class viewModelBase {
     }
 
     pollingWithContinuation() {
-        var poolPromise = this.modelPolling();
+        const poolPromise = this.modelPolling();
         if (poolPromise) {
             poolPromise.always(() => {
                 viewModelBase.modelPollingHandle = setTimeout(() => {
@@ -299,14 +292,6 @@ class viewModelBase {
             // For Safari
             return message;
         }
-    }
-
-    addNotification(subscription: changeSubscription) {
-        this.notifications.push(subscription);
-    }
-
-    removeNotification(subscription: changeSubscription) {
-        this.notifications.remove(subscription);
     }
 
     continueTest() {

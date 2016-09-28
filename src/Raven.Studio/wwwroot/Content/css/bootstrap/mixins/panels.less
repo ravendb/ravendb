@@ -1,7 +1,9 @@
 // Panels
 
-.panel-variant(@border; @heading-text-color; @heading-bg-color; @heading-border) {
+.panel-variant(@background; @border; @heading-text-color; @heading-bg-color; @heading-border) {
   border-color: @border;
+  color:@gray-lighter;
+  background-color:desaturate(darken(@background,8%),11%);
 
   & > .panel-heading {
     color: @heading-text-color;

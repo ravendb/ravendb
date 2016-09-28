@@ -6,11 +6,21 @@ namespace Voron.Impl.FreeSpace
 {
     public class FreeSpaceHandling : IFreeSpaceHandling
     {
-        private static readonly Slice FreeSpaceKey = Slice.From(StorageEnvironment.LabelsContext, "$free-space", Sparrow.ByteStringType.Immutable);
+        private static readonly Slice FreeSpaceKey;
 
         private readonly FreeSpaceHandlingDisabler _disableStatus = new FreeSpaceHandlingDisabler();
 
-        private readonly FreeSpaceRecursiveCallGuard _guard = new FreeSpaceRecursiveCallGuard();
+        private readonly FreeSpaceRecursiveCallGuard _guard;
+
+        static FreeSpaceHandling()
+        {
+            Slice.From(StorageEnvironment.LabelsContext, "$free-space", Sparrow.ByteStringType.Immutable, out FreeSpaceKey);
+        }
+
+        public FreeSpaceHandling()
+        {
+            _guard = new FreeSpaceRecursiveCallGuard(this);
+        }
 
         internal const int NumberOfPagesInSection = 2048;
 
@@ -28,8 +38,11 @@ namespace Voron.Impl.FreeSpace
 
             if (_disableStatus.DisableCount > 0)
                 return null;
-            
-            using (_guard.Enter())
+
+            if (_guard.IsProcessingFixedSizeTree)
+                return null;
+
+            using (_guard.Enter(tx))
             {
                 var freeSpaceTree = GetFreeSpaceTree(tx);
 
@@ -99,16 +112,20 @@ namespace Voron.Impl.FreeSpace
                         return info.StartSectionId * NumberOfPagesInSection;
                     }
 
+                    StreamBitArray next;
                     var nextSectionId = currentSectionId + 1;
-                    var read = freeSpaceTree.Read(nextSectionId);
-                    if (!read.HasValue)
+                    Slice read;
+                    using (freeSpaceTree.Read(nextSectionId, out read))
                     {
-                        //not a following next section
-                        info.Clear();
-                        continue;
-                    }
+                        if (!read.HasValue)
+                        {
+                            //not a following next section
+                            info.Clear();
+                            continue;
+                        }
 
-                    var next = new StreamBitArray(read.CreateReader());
+                        next = new StreamBitArray(read.CreateReader());
+                    }
 
                     if (next.HasStartRangeCount(numberOfExtraBitsNeeded) == false)
                     {
@@ -128,7 +145,9 @@ namespace Voron.Impl.FreeSpace
                         {
                             next.Set(i, false);
                         }
-                        freeSpaceTree.Add(nextSectionId, next.ToSlice(tx.Allocator));
+                        Slice val;
+                        using (next.ToSlice(tx.Allocator, out val))
+                            freeSpaceTree.Add(nextSectionId, val);
                     }
 
                     foreach (var section in info.Sections)
@@ -188,7 +207,7 @@ namespace Voron.Impl.FreeSpace
             return null;
         }
 
-        private bool TryFindContinuousRange(LowLevelTransaction tx, FixedSizeTree freeSpaceTree, FixedSizeTree.IFixedSizeIterator it, int num, 
+        private bool TryFindContinuousRange(LowLevelTransaction tx, FixedSizeTree freeSpaceTree, FixedSizeTree.IFixedSizeIterator it, int num,
             StreamBitArray current, long currentSectionId, out long? page)
         {
             page = -1;
@@ -228,13 +247,15 @@ namespace Voron.Impl.FreeSpace
                     current.Set(i + start, false);
                 }
 
-                freeSpaceTree.Add(it.CurrentKey, current.ToSlice(tx.Allocator));
+                Slice val;
+                using (current.ToSlice(tx.Allocator, out val))
+                    freeSpaceTree.Add(it.CurrentKey, val);
             }
 
             return true;
         }
 
-        private static bool TryFindSmallValueMergingTwoSections(LowLevelTransaction tx, FixedSizeTree freeSpacetree, long currentSectionId, int num, 
+        private static bool TryFindSmallValueMergingTwoSections(LowLevelTransaction tx, FixedSizeTree freeSpacetree, long currentSectionId, int num,
             StreamBitArray current, out long? result)
         {
             result = -1;
@@ -244,11 +265,15 @@ namespace Voron.Impl.FreeSpace
 
             var nextSectionId = currentSectionId + 1;
 
-            var read = freeSpacetree.Read(nextSectionId);
-            if (!read.HasValue)
-                return false;
+            StreamBitArray next;
+            Slice read;
+            using (freeSpacetree.Read(nextSectionId, out read))
+            {
+                if (!read.HasValue)
+                    return false;
 
-            var next = new StreamBitArray(read.CreateReader());
+                next = new StreamBitArray(read.CreateReader());
+            }
 
             var nextRange = num - currentEndRange;
             if (next.HasStartRangeCount(nextRange) == false)
@@ -264,7 +289,9 @@ namespace Voron.Impl.FreeSpace
                 {
                     next.Set(i, false);
                 }
-                freeSpacetree.Add(nextSectionId, next.ToSlice(tx.Allocator));
+                Slice val;
+                using (next.ToSlice(tx.Allocator, out val))
+                    freeSpacetree.Add(nextSectionId, val);
             }
 
             if (current.SetCount == currentEndRange)
@@ -277,7 +304,9 @@ namespace Voron.Impl.FreeSpace
                 {
                     current.Set(NumberOfPagesInSection - 1 - i, false);
                 }
-                freeSpacetree.Add(currentSectionId, current.ToSlice(tx.Allocator));
+                Slice val;
+                using (current.ToSlice(tx.Allocator, out val))
+                    freeSpacetree.Add(currentSectionId, val);
             }
 
 
@@ -319,15 +348,27 @@ namespace Voron.Impl.FreeSpace
 
         public void FreePage(LowLevelTransaction tx, long pageNumber)
         {
-            using (_guard.Enter())
+            if (_guard.IsProcessingFixedSizeTree)
+            {
+                _guard.PagesFreed.Add(pageNumber);
+                return;
+            }
+            using (_guard.Enter(tx))
             {
                 var freeSpaceTree = GetFreeSpaceTree(tx);
 
-                var section = pageNumber/NumberOfPagesInSection;
-                var result = freeSpaceTree.Read(section);
-                var sba = !result.HasValue ? new StreamBitArray() : new StreamBitArray(result.CreateReader());
-                sba.Set((int)(pageNumber%NumberOfPagesInSection), true);
-                freeSpaceTree.Add(section, sba.ToSlice(tx.Allocator));
+                StreamBitArray sba;
+                var section = pageNumber / NumberOfPagesInSection;
+                Slice result;
+                using (freeSpaceTree.Read(section, out result))
+                {
+                    sba = !result.HasValue ? new StreamBitArray() : new StreamBitArray(result.CreateReader());
+                }
+                sba.Set((int)(pageNumber % NumberOfPagesInSection), true);
+
+                Slice val;
+                using (sba.ToSlice(tx.Allocator, out val))
+                    freeSpaceTree.Add(section, val);
 
                 var onPageFreed = PageFreed;
                 onPageFreed?.Invoke(pageNumber);
@@ -352,9 +393,9 @@ namespace Voron.Impl.FreeSpace
 
         private static FixedSizeTree GetFreeSpaceTree(LowLevelTransaction tx)
         {
-            return new FixedSizeTree(tx, tx.RootObjects, FreeSpaceKey, 260)
+            return new FixedSizeTree(tx, tx.RootObjects, FreeSpaceKey, 260, clone: false)
             {
-                FreeSpaceTree =true
+                FreeSpaceTree = true
             };
         }
     }

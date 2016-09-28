@@ -161,6 +161,9 @@ namespace Raven.Abstractions.FileSystem
             const double MB = 1024 * 1024;
             const double KB = 1024;
 
+            if (absSize == 0)
+                return "0 Bytes";
+
             if (absSize > GB) // GB
                 return string.Format("{0:#,#.##} GBytes", size / GB);
             if (absSize > MB)

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -79,21 +80,21 @@ namespace SlowTests.Tests.Linq
         '@'
     })),
     Count = 1
-})", indexDefinition.Maps.First());
+})".Replace("\r\n", Environment.NewLine), indexDefinition.Maps.First());
 
             Assert.NotEqual(@"docs.Students.Select(student => new {
     EmailDomain = student.Email.Split(new char[] {
         '@'
     }).LastOrDefault(),
     Count = 1
-})", indexDefinition.Maps.First());
+})".Replace("\r\n", Environment.NewLine), indexDefinition.Maps.First());
 
             Assert.NotEqual(@"docs.Students.Select(student => new {
     EmailDomain = Enumerable.LastOrDefault(student.Email.Split(new char[] {
         '@'
     })),
     Count = 1
-})", indexDefinition.Maps.First());
+})".Replace("\r\n", Environment.NewLine), indexDefinition.Maps.First());
 
         }
     }

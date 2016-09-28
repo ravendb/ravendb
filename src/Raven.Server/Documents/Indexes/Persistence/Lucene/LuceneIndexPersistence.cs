@@ -75,6 +75,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexSearcherHolder = new IndexSearcherHolder(() => new IndexSearcher(_directory, true));
         }
 
+        public void Clean()
+        {
+            _converter?.Clean();
+        }
+
         public void Initialize(StorageEnvironment environment, IndexingConfiguration configuration)
         {
             if (_initialized)
@@ -117,7 +122,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             CheckDisposed();
             CheckInitialized();
 
-            return new IndexReadOperation(_index.Definition.Name, _index.Type, _index.MaxNumberOfIndexOutputs, _index.ActualMaxNumberOfIndexOutputs, _index.Definition.MapFields, _directory, _indexSearcherHolder, readTransaction, _index._indexStorage.DocumentDatabase);
+            return new IndexReadOperation(_index, _directory, _indexSearcherHolder, readTransaction);
         }
 
         public IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction)

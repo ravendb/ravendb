@@ -40,7 +40,9 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.NoInlining)]
         public Tree ReadTree(string treeName, RootObjectType type = RootObjectType.VariableSizeTree)
         {
-            return ReadTree(Slice.From(Allocator, treeName, ByteStringType.Immutable), type);
+            Slice treeNameSlice;
+            Slice.From(Allocator, treeName, ByteStringType.Immutable, out treeNameSlice);
+            return ReadTree(treeNameSlice, type);
         }
 
         public Tree ReadTree(Slice treeName, RootObjectType type = RootObjectType.VariableSizeTree)
@@ -49,7 +51,7 @@ namespace Voron.Impl
             if (_trees.TryGetValue(treeName, out tree))
                 return tree;
 
-            var header = (TreeRootHeader*)_lowLevelTransaction.RootObjects.DirectRead(treeName);
+            TreeRootHeader* header = (TreeRootHeader*) _lowLevelTransaction.RootObjects.DirectRead(treeName);
             if (header != null)
             {
                 if (header->RootObjectType != type)
@@ -77,7 +79,9 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.NoInlining)]
         public Table OpenTable(TableSchema schema, string name)
         {
-            return OpenTable(schema, Slice.From(Allocator, name, ByteStringType.Immutable));
+            Slice nameSlice;
+            Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice);
+            return OpenTable(schema, nameSlice);
         }
 
         public Table OpenTable(TableSchema schema, Slice name)
@@ -156,7 +160,9 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.NoInlining)]
         internal void AddTree(string name, Tree tree)
         {
-            AddTree(Slice.From(Allocator, name, ByteStringType.Immutable), tree);
+            Slice treeName;
+            Slice.From(Allocator, name, ByteStringType.Immutable, out treeName);
+            AddTree(treeName, tree);
         }
 
         internal void AddTree(Slice name, Tree tree)
@@ -175,7 +181,9 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void DeleteTree(string name)
         {
-            DeleteTree(Slice.From(Allocator, name));
+            Slice nameSlice;
+            Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice);
+            DeleteTree(nameSlice);
         }
 
         public void DeleteTree(Slice name)
@@ -220,7 +228,11 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void RenameTree(string fromName, string toName)
         {
-            RenameTree(Slice.From(Allocator, fromName, ByteStringType.Immutable), Slice.From(Allocator, toName));
+            Slice fromNameSlice;
+            Slice toNameSlice;
+            Slice.From(Allocator, fromName, ByteStringType.Immutable, out fromNameSlice);
+            Slice.From(Allocator, toName, ByteStringType.Immutable, out toNameSlice);
+            RenameTree(fromNameSlice, toNameSlice);
         }
 
         public void RenameTree(Slice fromName, Slice toName)
@@ -239,8 +251,9 @@ namespace Voron.Impl
                 throw new ArgumentException("Tree " + fromName + " does not exists");
 
             _lowLevelTransaction.RootObjects.Delete(fromName);
+			
             var ptr = _lowLevelTransaction.RootObjects.DirectAdd(toName, sizeof(TreeRootHeader));
-            fromTree.State.CopyTo((TreeRootHeader*)ptr);
+            fromTree.State.CopyTo((TreeRootHeader*) ptr);
             fromTree.Name = toName;
             fromTree.State.IsModified = true;
 
@@ -253,7 +266,9 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.NoInlining)]
         public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree)
         {
-            return CreateTree(Slice.From(Allocator, name, ByteStringType.Immutable), type);
+            Slice treeNameSlice;
+            Slice.From(Allocator, name, ByteStringType.Immutable, out treeNameSlice);
+            return CreateTree(treeNameSlice, type);
         }
 
         public Tree CreateTree(Slice name, RootObjectType type = RootObjectType.VariableSizeTree)
@@ -263,7 +278,8 @@ namespace Voron.Impl
                 return tree;
 
             if (_lowLevelTransaction.Flags == TransactionFlags.ReadWrite == false)
-                throw new InvalidOperationException("No such tree: '" + name + "' and cannot create trees in read transactions");
+                throw new InvalidOperationException("No such tree: '" + name +
+                                                    "' and cannot create trees in read transactions");
 
             tree = Tree.Create(_lowLevelTransaction, this);
             tree.Name = name;
