@@ -8,9 +8,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
@@ -312,7 +312,7 @@ namespace Raven.Server.Documents.Indexes
                 _indexingThread = null;
                 //Cancelation was requested, the thread will exit the indexing loop and terminate.
                 //If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
-                if(Thread.CurrentThread != indexingThread)
+                if (Thread.CurrentThread != indexingThread)
                     indexingThread.Join();
             }
         }
@@ -721,10 +721,14 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IndexStats GetStats(DocumentsOperationContext documentsContext = null)
+        public IndexStats GetStats(bool calculateCollectionStats = false, DocumentsOperationContext documentsContext = null)
         {
             if (_contextPool == null)
                 throw new ObjectDisposedException("Index " + Name);
+
+            if (calculateCollectionStats && documentsContext == null)
+                throw new InvalidOperationException("Cannot calculate collection stats without valid context.");
+
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
@@ -741,7 +745,7 @@ namespace Raven.Server.Documents.Indexes
 
                 stats.LastQueryingTime = _lastQueryingTime;
 
-                if (documentsContext != null)
+                if (calculateCollectionStats)
                 {
                     using (documentsContext.OpenReadTransaction())
                     {
@@ -759,8 +763,43 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
 
+                stats.Memory = GetMemoryStats();
+
                 return stats;
             }
+        }
+
+        private IndexStats.MemoryStats GetMemoryStats()
+        {
+            var stats = new IndexStats.MemoryStats();
+
+            var inMemory = DocumentDatabase.Configuration.Indexing.RunInMemory;
+
+            var indexPath = Path.Combine(DocumentDatabase.Configuration.Indexing.IndexStoragePath, GetIndexNameSafeForFileSystem());
+            var totalSize = 0L;
+            foreach (var mapping in NativeMemory.FileMapping)
+            {
+                var directory = Path.GetDirectoryName(mapping.Key);
+
+                if (string.Equals(indexPath, directory, StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                totalSize += mapping.Value;
+            }
+
+            stats.InMemory = inMemory;
+            stats.DiskSize.SizeInBytes = totalSize;
+
+            var indexingThread = _indexingThread;
+            if (indexingThread != null)
+            {
+                var thread = NativeMemory.ThreadAllocations.Values
+                    .First(x => x.Id == indexingThread.ManagedThreadId);
+
+                stats.ThreadAllocations.SizeInBytes = thread.Allocations;
+            }
+
+            return stats;
         }
 
         private void MarkQueried(DateTime time)

@@ -117,6 +117,21 @@ namespace Raven.Client.Data.Indexes
             }
         }
 
+        public MemoryStats Memory { get; set; }
+
+        public class MemoryStats
+        {
+            public MemoryStats()
+            {
+                DiskSize = new Size();
+                ThreadAllocations = new Size();
+            }
+
+            public bool InMemory { get; set; }
+            public Size DiskSize { get; set; }
+            public Size ThreadAllocations { get; set; }
+        }
+
         public class CollectionStats
         {
             public long LastProcessedDocumentEtag { get; set; }

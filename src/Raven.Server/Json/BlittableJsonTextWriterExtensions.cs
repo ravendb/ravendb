@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -820,6 +819,29 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(stats.Memory));
+            if (stats.Memory != null)
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(stats.Memory.InMemory));
+                writer.WriteBool(stats.Memory.InMemory);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(stats.Memory.DiskSize));
+                writer.WriteSize(context, stats.Memory.DiskSize);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(stats.Memory.ThreadAllocations));
+                writer.WriteSize(context, stats.Memory.ThreadAllocations);
+                writer.WriteComma();
+
+                writer.WriteEndObject();
+            }
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
             writer.WritePropertyName((nameof(stats.LastIndexingTime)));
             if (stats.LastIndexingTime.HasValue)
                 writer.WriteString((stats.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true)));
@@ -901,6 +923,20 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName((nameof(stats.IsTestIndex)));
             writer.WriteBool(stats.IsTestIndex);
+
+            writer.WriteEndObject();
+        }
+
+        private static void WriteSize(this BlittableJsonTextWriter writer, JsonOperationContext context, Size size)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(size.SizeInBytes));
+            writer.WriteInteger(size.SizeInBytes);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(size.HumaneSize));
+            writer.WriteString(size.HumaneSize);
 
             writer.WriteEndObject();
         }

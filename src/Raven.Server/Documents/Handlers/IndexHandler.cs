@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.Handlers
                     indexStats = Database.IndexStore
                         .GetIndexes()
                         .OrderBy(x => x.Name)
-                        .Select(x => x.GetStats(context))
+                        .Select(x => x.GetStats(calculateCollectionStats: true, documentsContext: context))
                         .ToArray();
                 else
                 {
@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Handlers
                     if (index == null)
                         throw new InvalidOperationException("There is not index with name: " + name);
 
-                    indexStats = new[] { index.GetStats(context) };
+                    indexStats = new[] { index.GetStats(calculateCollectionStats: true, documentsContext: context) };
                 }
 
                 writer.WriteStartArray();

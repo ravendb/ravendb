@@ -122,7 +122,8 @@ namespace FastTests.Client.Indexing
         [Fact]
         public async Task GetStats()
         {
-            using (var store = GetDocumentStore())
+            var path = NewDataPath();
+            using (var store = GetDocumentStore(path: path))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -153,7 +154,7 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(index.Name, stats.Name);
                 Assert.False(stats.IsInvalidIndex);
                 Assert.False(stats.IsTestIndex);
-                Assert.True(stats.IsInMemory);
+                Assert.False(stats.IsInMemory);
                 Assert.Equal(IndexType.AutoMap, stats.Type);
                 Assert.Equal(2, stats.EntriesCount);
                 Assert.Equal(2, stats.MapAttempts);
@@ -166,6 +167,13 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(0, stats.Collections.First().Value.NumberOfTombstonesToProcess);
                 Assert.Equal(2, stats.Collections.First().Value.TotalNumberOfDocuments);
                 Assert.Equal(0, stats.Collections.First().Value.TotalNumberOfTombstones);
+
+                Assert.False(stats.Memory.InMemory);
+                Assert.True(stats.Memory.DiskSize.SizeInBytes > 0);
+                Assert.NotNull(stats.Memory.DiskSize.HumaneSize);
+                Assert.True(stats.Memory.ThreadAllocations.SizeInBytes > 0);
+                Assert.NotNull(stats.Memory.ThreadAllocations.HumaneSize);
+
                 Assert.True(stats.LastIndexingTime.HasValue);
                 Assert.True(stats.LastQueryingTime.HasValue);
                 Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
