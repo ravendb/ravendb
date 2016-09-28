@@ -423,8 +423,12 @@ for(var customFunction in customFunctions) {{
             if (jsonDocument != null)
             {
                 var replicationStatus = jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
-                replicationStatus.LastReplicatedEtags.RemoveAll(x => x.Name == sqlReplicationName);
-                
+                var removed = replicationStatus.LastReplicatedEtags.RemoveAll(x => x.Name == sqlReplicationName);
+                //If we reset a sql replication that never ran we shouldn't mark it as reset.
+                if (removed > 0)
+                {
+                    task.ResetRequested.AddOrUpdate(sqlReplicationName, _ => true, (_, __) => true);
+                }
                 Database.Documents.Put(SqlReplicationTask.RavenSqlReplicationStatus, null, RavenJObject.FromObject(replicationStatus), new RavenJObject(), null);
             }
 
