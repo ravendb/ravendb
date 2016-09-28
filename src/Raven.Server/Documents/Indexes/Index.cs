@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes
     public abstract class Index<TIndexDefinition> : Index
         where TIndexDefinition : IndexDefinitionBase
     {
-        public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
+        public new TIndexDefinition Definition => (TIndexDefinition) base.Definition;
 
         protected Index(int indexId, IndexType type, TIndexDefinition definition)
             : base(indexId, type, definition)
@@ -128,7 +128,16 @@ namespace Raven.Server.Documents.Indexes
                 options.SchemaVersion = 1;
 
                 environment = new StorageEnvironment(options);
-                var type = IndexStorage.ReadIndexType(indexId, environment);
+
+                IndexType type;
+                try
+                {
+                    type = IndexStorage.ReadIndexType(indexId, environment);
+                }
+                catch (Exception e)
+                {
+                    throw new IndexOpenException($"Could not read index type from storage in '{path}'. This indicates index data file corruption.", e);
+                }
 
                 switch (type)
                 {
@@ -144,14 +153,17 @@ namespace Raven.Server.Documents.Indexes
                         throw new ArgumentException($"Uknown index type {type} for index {indexId}");
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 if (environment != null)
                     environment.Dispose();
                 else
                     options.Dispose();
 
-                throw;
+                if (e is IndexOpenException)
+                    throw;
+
+                throw new IndexOpenException($"Could not open index from '{path}'.", e);
             }
         }
 
