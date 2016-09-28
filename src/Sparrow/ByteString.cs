@@ -870,50 +870,33 @@ namespace Sparrow
             if (value._pointer == null)
                 return;
             Debug.Assert(value._pointer->Flags != ByteStringType.Disposed, "Double free");
-
             Debug.Assert(!value.IsExternal, "Cannot release as internal an external pointer.");
 
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
 
-            if (value.IsExternal)
+            int reusablePoolIndex = GetPoolIndexForReuse(value._pointer->Size);
+
+            if (value._pointer->Size <= ByteStringContext.MinBlockSizeInBytes)
             {
-                // We release the pointer in the appropriate reuse pool.
-                if (this._externalFastPoolCount < ExternalFastPoolSize)
+                Stack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
+                if (pool == null)
                 {
-                    // Release in the fast pool. 
-                    this._externalFastPool[this._externalFastPoolCount++] = new IntPtr(value._pointer);
+                    pool = new Stack<IntPtr>();
+                    this._internalReusableStringPool[reusablePoolIndex] = pool;
                 }
-                else
-                {
-                    this._externalStringPool.Push(new IntPtr(value._pointer));
-                }
+
+                pool.Push(new IntPtr(value._pointer));
+                this._internalReusableStringPoolCount[reusablePoolIndex]++;
             }
-            else
+            else  // The released memory is big enough, we will just release it as a new segment. 
             {
-                int reusablePoolIndex = GetPoolIndexForReuse(value._pointer->Size);
+                byte* start = (byte*)value._pointer;
+                byte* end = start + value._pointer->Size;
 
-                if (value._pointer->Size <= ByteStringContext.MinBlockSizeInBytes)
-                {
-                    Stack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
-                    if (pool == null)
-                    {
-                        pool = new Stack<IntPtr>();
-                        this._internalReusableStringPool[reusablePoolIndex] = pool;
-                    }
-
-                    pool.Push(new IntPtr(value._pointer));
-                    this._internalReusableStringPoolCount[reusablePoolIndex]++;
-                }
-                else  // The released memory is big enough, we will just release it as a new segment. 
-                {
-                    byte* start = (byte*)value._pointer;
-                    byte* end = start + value._pointer->Size;
-
-                    // Given that this is put into a reuse queue, we are not providing the Segment because it has no ownership of it.
-                    var segment = new SegmentInformation { Start = start, Current = start, End = end, CanDispose = false };
-                    _internalReadyToUseMemorySegments.Add(segment);
-                }
+                // Given that this is put into a reuse queue, we are not providing the Segment because it has no ownership of it.
+                var segment = new SegmentInformation { Start = start, Current = start, End = end, CanDispose = false };
+                _internalReadyToUseMemorySegments.Add(segment);
             }
 
 #if VALIDATE
@@ -1151,7 +1134,8 @@ namespace Sparrow
 
         /// <summary>
         /// This scope should only be used whenever you can not determine
-        /// whether the scope is internal or external.
+        /// whether the scope is internal or external, as the dispose cost
+        /// is higher than either of the options.
         /// </summary>
         public struct Scope : IDisposable
         {
