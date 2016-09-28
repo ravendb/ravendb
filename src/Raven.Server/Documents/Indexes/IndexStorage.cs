@@ -7,7 +7,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
-using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -205,6 +204,17 @@ namespace Raven.Server.Documents.Indexes
             stats.ErrorsCount = (int)table.NumberOfEntries;
 
             var lastIndexingTime = statsTree.Read(IndexSchema.LastIndexingTimeSlice);
+
+            stats.Collections = new Dictionary<string, IndexStats.CollectionStats>();
+            foreach (var collection in _index.Definition.Collections)
+            {
+                stats.Collections[collection] = new IndexStats.CollectionStats
+                {
+                    LastProcessedDocumentEtag = ReadLastIndexedEtag(tx, collection),
+                    LastProcessedTombstoneEtag = ReadLastProcessedTombstoneEtag(tx, collection)
+                };
+            }
+
             if (lastIndexingTime != null)
             {
                 stats.LastIndexingTime = DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64());
@@ -218,10 +228,6 @@ namespace Raven.Server.Documents.Indexes
                     stats.ReduceErrors = statsTree.Read(IndexSchema.ReduceErrorsSlice).Reader.ReadLittleEndianInt32();
                     stats.ReduceSuccesses = statsTree.Read(IndexSchema.ReduceSuccessesSlice).Reader.ReadLittleEndianInt32();
                 }
-
-                stats.LastIndexedEtags = new Dictionary<string, long>();
-                foreach (var collection in _index.Definition.Collections)
-                    stats.LastIndexedEtags[collection] = ReadLastIndexedEtag(tx, collection);
             }
 
             return stats;
