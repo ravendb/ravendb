@@ -106,7 +106,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 return Tuple.Create<Stream,IDisposable>(File.OpenRead(file),null);
 
             var url = GetStringQueryString("url", required: false);
-            if (string.IsNullOrEmpty(url))
+            if (string.IsNullOrEmpty(url) == false)
             {
                 var httpClient = new HttpClient();
                 
