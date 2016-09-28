@@ -48,7 +48,8 @@ namespace Raven.Server.Documents.Handlers
                         IsStale = index.IsStale(context),
                         Name = index.Name,
                         IndexId = index.IndexId,
-                        LockMode = index.Definition.LockMode
+                        LockMode = index.Definition.LockMode,
+                        Type = index.Type
                     };
                 }
 

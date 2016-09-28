@@ -648,6 +648,10 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName((nameof(index.Priority)));
                 writer.WriteString((index.Priority.ToString()));
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(index.Type));
+                writer.WriteString(index.Type.ToString());
 
                 writer.WriteEndObject();
             }
