@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using Raven.Client.Document.Batches;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
@@ -19,6 +18,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Client.Document;
+using Raven.Client.Documents.Options;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -49,6 +49,7 @@ namespace Raven.Client.Documents
 
         protected bool GenerateDocumentKeysOnStore = true;
 
+        private BatchOptions saveChangesOptions;
         /// <summary>
         /// The session id 
         /// </summary>
@@ -401,6 +402,7 @@ more responsive application.
         {
             if (id == null) throw new ArgumentNullException("id");
             DocumentInfo documentInfo;
+            long? etag = null;
             if (DocumentsById.TryGetValue(id, out documentInfo))
             {
                 BlittableJsonReaderObject newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Id, documentInfo.Entity, documentInfo);
@@ -414,14 +416,16 @@ more responsive application.
                     DocumentsByEntity.Remove(documentInfo.Entity);
                 }
                 DocumentsById.Remove(id);
+                etag = documentInfo.ETag;
             }
             KnownMissingIds.Add(id);
-
+            etag = UseOptimisticConcurrency ? etag : null;
             Defer(new DynamicJsonValue()
             {
-                ["Key"] = id,
-                ["Method"] = "DELETE",
-                ["Document"] = null
+                [Constants.Command.Key] = id,
+                [Constants.Command.Method] = "DELETE",
+                [Constants.Command.Document] = null,
+                [Constants.Command.Etag] = etag
             });
         }
 
@@ -642,7 +646,8 @@ more responsive application.
             {
                 Entities = new List<object>(),
                 Commands = new List<DynamicJsonValue>(deferedCommands),
-                DeferredCommandsCount = deferedCommands.Count
+                DeferredCommandsCount = deferedCommands.Count,
+                Options = saveChangesOptions
             };
             deferedCommands.Clear();
 
@@ -676,24 +681,27 @@ more responsive application.
                 }
                 else
                 {
-                    DocumentInfo value = null;
-                    if (DocumentsById.TryGetValue(key, out value))
+                    long? etag = null;
+                    if (DocumentsById.TryGetValue(key, out documentInfo))
                     {
-                        if (value.Entity != null)
+                        etag = documentInfo.ETag;
+                        if (documentInfo.Entity != null)
                         {
-                            DocumentsByEntity.Remove(value.Entity);
-                            result.Entities.Add(value.Entity);
+                            DocumentsByEntity.Remove(documentInfo.Entity);
+                            result.Entities.Add(documentInfo.Entity);
                         }
 
                         DocumentsById.Remove(key);
                     }
-
+                    etag = UseOptimisticConcurrency ? etag : null;
                     result.Commands.Add(new DynamicJsonValue()
                     {
-                        ["Key"] = key,
-                        ["Method"] = "DELETE",
-                        ["Document"] = null
+                        [Constants.Command.Key] = key,
+                        [Constants.Command.Method] = "DELETE",
+                        [Constants.Command.Document] = null,
+                        [Constants.Command.Etag] = etag
                     });
+                    DeletedEntities.Clear();
                 }
             }
         }
@@ -705,46 +713,66 @@ more responsive application.
                 BlittableJsonReaderObject document = null;
                 document = EntityToBlittable.ConvertEntityToBlittable(entity.Value.Id, entity.Key, entity.Value);
 
-                if ((!(entity.Value.IgnoreChanges)) && (EntityChanged(document, entity.Value, null)))
-                {
-                    if (entity.Value.IsNewDocument)
-                        entity.Value.IsNewDocument = false;
-                    result.Entities.Add(entity.Key);
+                if ((entity.Value.IgnoreChanges) || (!EntityChanged(document, entity.Value, null))) continue;
 
-                    if (entity.Value.Entity != null)
-                        DocumentsById.Remove(entity.Value.Id);
-                    entity.Value.Document = document;
-                    result.Commands.Add(new DynamicJsonValue()
-                    {
-                        ["Key"] = entity.Value.Id,
-                        ["Method"] = "PUT",
-                        ["Document"] = document
-                    });
-                }
+                entity.Value.IsNewDocument = false;
+                result.Entities.Add(entity.Key);
+
+                if (entity.Value.Entity != null)
+                    DocumentsById.Remove(entity.Value.Id);
+
+                entity.Value.Document = document;
+                var etag = UseOptimisticConcurrency || entity.Value.ForceConcurrencyCheck
+                          ? (long?)(entity.Value.ETag ?? 0)
+                          : null;
+
+                result.Commands.Add(new DynamicJsonValue()
+                {
+                    ["Key"] = entity.Value.Id,
+                    ["Method"] = "PUT",
+                    ["Document"] = document,
+                    ["Etag"] = etag
+                });
             }
+        }
+
+        public void MarkReadOnly(object entity)
+        {
+            var metadata = GetMetadataFor<object>(entity);
+            if (metadata.Modifications == null)
+                metadata.Modifications = new DynamicJsonValue(metadata)
+                {
+                    [Constants.Headers.RavenReadOnly] = true,
+                };
         }
 
         protected bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
         {
-            // prevent saves of a modified read only entity TODO- ???
+            // prevent saves of a modified read only entity
             bool readOnly;
             documentInfo.Metadata.TryGet(Constants.Headers.RavenReadOnly, out readOnly);
-            if (readOnly)
+            BlittableJsonReaderObject newMetadata;
+            var newReadOnly = false;
+            if (newObj.TryGet(Constants.Metadata.Key, out newMetadata))
+                newMetadata.TryGet(Constants.Headers.RavenReadOnly, out newReadOnly);
+
+            if ( (readOnly) && (newReadOnly))
                 return false;
+
             var docChanges = new List<DocumentsChanges>() { };
 
             if (!documentInfo.IsNewDocument && documentInfo.Document != null)
                 return CompareBlittable(documentInfo.Id, documentInfo.Document, newObj, changes, docChanges);
 
-            if (changes != null)
-            {
-                newChange(null, null, docChanges, DocumentsChanges.ChangeType.DocumentAdded);
-                changes[documentInfo.Id] = docChanges.ToArray();
-            }
+            if (changes == null)
+                return true;
+
+            NewChange(null, null, docChanges, DocumentsChanges.ChangeType.DocumentAdded);
+            changes[documentInfo.Id] = docChanges.ToArray();
             return true;
         }
 
-        public const BlittableJsonToken TypesMask =
+        private const BlittableJsonToken TypesMask =
                 BlittableJsonToken.Boolean |
                 BlittableJsonToken.Float |
                 BlittableJsonToken.Integer |
@@ -758,29 +786,35 @@ more responsive application.
             BlittableJsonReaderObject newBlittable, IDictionary<string, DocumentsChanges[]> changes, 
             List<DocumentsChanges> docChanges)
         {
-            var propertiesIds = newBlittable.GetPropertiesByInsertionOrder();
-            //TODO - Check if the old one have more props
+            //TODO - Tests for  RemovedField and NewField
+            var newBlittableProps = newBlittable.GetPropertyNames();
+            var oldBlittableProps = originalBlittable.GetPropertyNames();
+            var newFields = newBlittableProps.Except(oldBlittableProps);
+            var removedFields = oldBlittableProps.Except(newBlittableProps);
 
+            foreach (var field in removedFields)
+            {
+                if (changes == null)
+                    return true;
+                NewChange(null, field, docChanges, DocumentsChanges.ChangeType.RemovedField);
+            }
+
+            var propertiesIds = newBlittable.GetPropertiesByInsertionOrder();
             foreach (var propId in propertiesIds)
             {
                 var newPropInfo = newBlittable.GetPropertyByIndex(propId);
-
-                //TODO - need to check metadata ????
-                if (newPropInfo.Item1 == Constants.Metadata.Key)
-                    continue;
-
-                //Prop not exist
-                var oldPropId = originalBlittable.GetPropertyIndex(newPropInfo.Item1);
-                if (oldPropId < 0)
+                if (newFields.Contains(newPropInfo.Item1))
                 {
                     if (changes == null)
                         return true;
-
-                    newChange(newPropInfo.Item2, null, docChanges,
-                        DocumentsChanges.ChangeType.NewField);
+                    NewChange(newPropInfo.Item2, null, docChanges, DocumentsChanges.ChangeType.NewField);
                     continue;
                 }
+                //TODO - need to check metadata
+                if (newPropInfo.Item1 == Constants.Metadata.Key)
+                    continue;
 
+                var oldPropId = originalBlittable.GetPropertyIndex(newPropInfo.Item1);
                 var oldPropInfo = originalBlittable.GetPropertyByIndex(oldPropId);
 
                 if (newPropInfo.Item3 != oldPropInfo.Item3)
@@ -788,7 +822,7 @@ more responsive application.
                     if (changes == null)
                         return true;
 
-                    newFieldTypeChange(newPropInfo.Item3, oldPropInfo.Item3, docChanges, DocumentsChanges.ChangeType.FieldTypeChanged);
+                    NewFieldTypeChange(newPropInfo.Item3, oldPropInfo.Item3, docChanges, DocumentsChanges.ChangeType.FieldTypeChanged);
                     continue;
                 }
                 switch ((newPropInfo.Item3 & TypesMask))
@@ -798,51 +832,52 @@ more responsive application.
                     case BlittableJsonToken.Float:
                     case BlittableJsonToken.CompressedString:
                     case BlittableJsonToken.String:
-                        {
-                            if (!(newPropInfo.Item2.Equals(oldPropInfo.Item2)))
-                            {
-                                if (changes == null)
-                                    return true;
-                                newChange(newPropInfo.Item2, oldPropInfo.Item2, docChanges, DocumentsChanges.ChangeType.FieldChanged);
-                            }
+                        if (newPropInfo.Item2.Equals(oldPropInfo.Item2))
                             break;
-                        }
-                    //TODO - Check if null can be with int and all the rest
+
+                        if (changes == null)
+                            return true;
+                        NewChange(newPropInfo.Item2, oldPropInfo.Item2, docChanges,
+                            DocumentsChanges.ChangeType.FieldChanged);
+                        break;
                     case BlittableJsonToken.Null:
                         break;
                     case BlittableJsonToken.StartArray:
-                    {
-                        //TODO - Work in progress 
-                        if (((newPropInfo.Item2 as BlittableJsonReaderArray).Except(oldPropInfo.Item2 as BlittableJsonReaderArray)).Count() > 0)
-                        {
-                                if (changes == null)
-                                    return true;
-                                newChange(newPropInfo.Item2, oldPropInfo.Item2, docChanges, DocumentsChanges.ChangeType.FieldChanged);
-                        }
+                        var newArray = newPropInfo.Item2 as BlittableJsonReaderArray;
+                        var oldArray = oldPropInfo.Item2 as BlittableJsonReaderArray;
+
+                        //TODO - better exception
+                        if ((newArray == null) || (oldArray == null))
+                            throw new Exception();
+
+                        if (!(newArray.Except(oldArray).Any()))
+                            break;
+
+                        if (changes == null)
+                            return true;
+                        NewChange(newPropInfo.Item2, oldPropInfo.Item2, docChanges,
+                            DocumentsChanges.ChangeType.FieldChanged);
                         break;
-                    }
                     case BlittableJsonToken.StartObject:
                     {
-                            var changed = CompareBlittable(id, oldPropInfo.Item2 as BlittableJsonReaderObject,
-                             newPropInfo.Item2 as BlittableJsonReaderObject, changes, docChanges);
-                            if (changes == null)
-                                return changed;
-                            break;
+                        var changed = CompareBlittable(id, oldPropInfo.Item2 as BlittableJsonReaderObject,
+                            newPropInfo.Item2 as BlittableJsonReaderObject, changes, docChanges);
+                        if (changes == null)
+                            return changed;
+                        break;
                     }
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
             }
 
-            if ((changes != null ) && (docChanges.Count > 0))
-            {
-                changes[id] = docChanges.ToArray();
-                return true;
-            }
-            return false;
+            if ((changes == null) || (docChanges.Count <= 0)) return false;
+
+            changes[id] = docChanges.ToArray();
+            return true;
         }
 
-        private static void newChange(object newValue, object oldValue, List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
+        private static void NewChange(object newValue, object oldValue, List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
         {
             docChanges.Add(new DocumentsChanges()
             {
@@ -852,7 +887,7 @@ more responsive application.
             });
         }
 
-        private static void newFieldTypeChange(BlittableJsonToken newValue, BlittableJsonToken oldValue, List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
+        private static void NewFieldTypeChange(BlittableJsonToken newValue, BlittableJsonToken oldValue, List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
         {
             docChanges.Add(new DocumentsChanges()
             {
@@ -870,15 +905,37 @@ more responsive application.
             return changes;
         }
 
+        public void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, int replicas = 1, bool majority = false)
+        {
+            var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
+            if (saveChangesOptions == null)
+                saveChangesOptions = new BatchOptions();
+            saveChangesOptions.WaitForReplicas = true;
+            saveChangesOptions.Majority = majority;
+            saveChangesOptions.NumberOfReplicasToWaitFor = replicas;
+            saveChangesOptions.WaitForReplicasTimout = realTimeout;
+            saveChangesOptions.ThrowOnTimeoutInWaitForReplicas = throwOnTimeout;
+        }
+
+        public void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false, string[] indexes = null)
+        {
+            var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
+            if (saveChangesOptions == null)
+                saveChangesOptions = new BatchOptions();
+            saveChangesOptions.WaitForIndexes = true;
+            saveChangesOptions.WaitForIndexesTimeout = realTimeout;
+            saveChangesOptions.ThrowOnTimeoutInWaitForIndexes = throwOnTimeout;
+            saveChangesOptions.WaitForSpecificIndexes = indexes;
+        }
+
         private void GetAllEntitiesChanges(IDictionary<string, DocumentsChanges[]> changes)
         {
             foreach (var pair in DocumentsById)
             {
-                BlittableJsonReaderObject newObj = EntityToBlittable.ConvertEntityToBlittable(pair.Value.Id, pair.Value.Entity, pair.Value);
+                var newObj = EntityToBlittable.ConvertEntityToBlittable(pair.Value.Id, pair.Value.Entity, pair.Value);
                 EntityChanged(newObj, pair.Value, changes);
                 pair.Value.Metadata.Modifications = null;
             }
-
         }
 
         /// <summary>
@@ -1026,6 +1083,8 @@ more responsive application.
             /// </summary>
             /// <value>The commands.</value>
             public List<DynamicJsonValue> Commands { get; set; }
+
+            public BatchOptions Options { get; set; }
 
             public int DeferredCommandsCount { get; set; }
 

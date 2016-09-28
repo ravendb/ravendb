@@ -88,14 +88,6 @@ namespace Raven.Client.Documents.SessionOperations
                 return default(T);
 
             var entity = _session.ConvertToEntity(typeof(T), id, documentInfo.Document);
-            /*var newMetadata = new DocumentInfo
-            {
-                //TODO - Add all DocumentInfo properties ??
-                Id = id,
-                Document = documentInfo.Document,
-                Entity = entity,
-                Metadata = documentInfo.Metadata
-            };*/
             documentInfo.Entity = entity;
             try
             {
@@ -149,13 +141,16 @@ namespace Raven.Client.Documents.SessionOperations
                     string id;
                     if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
                         throw new InvalidOperationException("Document must have an id");
-
+                    long etag;
+                    if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
+                        throw new InvalidOperationException("Document must have an etag");
                     var newMetadata = new DocumentInfo
                     {
                         //TODO - Add all DocumentInfo properties ??
                         Id = id,
                         Document = document,
-                        Metadata = metadata
+                        Metadata = metadata,
+                        ETag = etag
                     };
 
                     _session.DocumentsById[id] = newMetadata;
@@ -177,12 +172,16 @@ namespace Raven.Client.Documents.SessionOperations
                 string id;
                 if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
                     throw new InvalidOperationException("Document must have an id");
+                long etag;
+                if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
+                    throw new InvalidOperationException("Document must have an etag");
                 var newMetadata = new DocumentInfo
                 {
                     //TODO - Add all DocumentInfo properties ??
                     Id = id,
                     Document = document,
-                    Metadata = metadata
+                    Metadata = metadata,
+                    ETag = etag
                 };
 
                 _session.DocumentsById[id] = newMetadata;
