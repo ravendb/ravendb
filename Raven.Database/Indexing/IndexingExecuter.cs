@@ -557,8 +557,8 @@ namespace Raven.Database.Indexing
 
                         foreach (var filteredOutIndex in filteredOutIndexes)
                         {
-                            indexingGroup.SignalIndexingComplete();
                             filteredOutIndex.Index.IsMapIndexingInProgress = false;
+                            indexingGroup.SignalIndexingComplete();
                         }
 
                         foreach (var indexBatch in indexBatches)
@@ -606,8 +606,8 @@ namespace Raven.Database.Indexing
                         {
                             indexingGroup.Indexes.ForEach(x =>
                             {
-                                indexingGroup.SignalIndexingComplete();
                                 x.Index.IsMapIndexingInProgress = false;
+                                indexingGroup.SignalIndexingComplete();
                             });
                         }
                     }
@@ -691,15 +691,6 @@ namespace Raven.Database.Indexing
             RemoveUnusedPrefetchers(Enumerable.Empty<PrefetchingBehavior>());
         }
 
-
-        private static IDisposable MapIndexingInProgress(IList<Index> indexesToWorkOn)
-        {
-            indexesToWorkOn.ForEach(x => x.IsMapIndexingInProgress = true);
-
-            return new DisposableAction(() => 
-                indexesToWorkOn.ForEach(x => x.IsMapIndexingInProgress = false));
-        }
-
         public void IndexPrecomputedBatch(PrecomputedIndexingBatch precomputedBatch, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
@@ -712,8 +703,9 @@ namespace Raven.Database.Indexing
                 LastIndexedEtag = Etag.Empty
             };
 
+            Debug.Assert(indexToWorkOn.Index.IsMapIndexingInProgress);
+
             using (LogContext.WithResource(context.DatabaseName))
-            using (MapIndexingInProgress(new List<Index> { indexToWorkOn.Index }))
             {
                 IndexingBatchForIndex indexingBatchForIndex;
                 if (precomputedBatch.Documents.Count > 0)
@@ -763,10 +755,7 @@ namespace Raven.Database.Indexing
 
                     context.ReportIndexingBatchCompleted(batchInfo);
 
-
-
                     indexReplacer.ReplaceIndexes(new[] { indexToWorkOn.IndexId });
-
 
                     performance = HandleIndexingFor(indexingBatchForIndex, precomputedBatch.LastIndexed, precomputedBatch.LastModified, token);
                 }
@@ -793,6 +782,24 @@ namespace Raven.Database.Indexing
                 return null;
             }
 
+            IndexingPerformanceStats performanceResult = null;
+            try
+            {
+                
+                performanceResult = ExecuteIndexingBatch(batchForIndex, lastEtag, lastModified, token);
+            }
+            finally
+            {
+                Index _;
+                currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
+                batchForIndex.Index.IsMapIndexingInProgress = false;
+                batchForIndex.SignalIndexingComplete();
+            }
+            return performanceResult;
+        }
+
+        private IndexingPerformanceStats ExecuteIndexingBatch(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified, CancellationToken token)
+        {
             IndexingPerformanceStats performanceResult = null;
             var wasOperationCanceled = false;
             try
@@ -865,72 +872,62 @@ namespace Raven.Database.Indexing
                     performanceResult.OnCompleted = null;
                 }
 
-                try
+                if (wasOperationCanceled == false)
                 {
-                    if (wasOperationCanceled == false)
+                    if (Log.IsDebugEnabled)
                     {
-                        if (Log.IsDebugEnabled)
-                        {
-                            Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
-                                batchForIndex.Batch.Docs.Count,
-                                lastEtag,
-                                batchForIndex.Index.PublicName);
-                        }
-
-                        var keepTrying = true;
-                        for (var i = 0; i < 10 && keepTrying; i++)
-                        {
-                            keepTrying = false;
-
-                            try
-                            {
-                                transactionalStorage.Batch(actions =>
-                                {
-                                    // whatever we succeeded in indexing or not, we have to update this
-                                    // because otherwise we keep trying to re-index failed documents
-                                    actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
-                                });
-                            }
-                            catch (IndexDoesNotExistsException)
-                            {
-                                //we can ignore this, no need to retry
-                            }
-                            catch (Exception e)
-                            {
-                                if (TransactionalStorageHelper.IsOutOfMemoryException(e))
-                                {
-                                    batchForIndex.Index.AddOutOfMemoryDatabaseAlert(e);
-                                    //if it's an esent/voron OOME we can keep trying
-                                    keepTrying = true;
-                                }
-                                    
-                                Exception conflictException;
-                                if (TransactionalStorageHelper.IsWriteConflict(e, out conflictException))
-                                {
-                                    Log.Info($"Write conflict encountered for index '{batchForIndex.Index.PublicName}' when updating last etag. " +
-                                             $"Will retry. Details: {conflictException.Message}");
-                                    keepTrying = true;
-                                }
-
-                                if (keepTrying == false)
-                                {
-                                    //unknown error
-                                    Log.WarnException($"Failed to update last etag for index '{batchForIndex.Index.PublicName}'", e);
-                                    context.AddError(batchForIndex.IndexId, batchForIndex.Index.PublicName, null, e);
-                                }
-                            }
-
-                            if (keepTrying)
-                                Thread.Sleep(11);
-                        }
+                        Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
+                            batchForIndex.Batch.Docs.Count,
+                            lastEtag,
+                            batchForIndex.Index.PublicName);
                     }
-                }
-                finally
-                {
-                    Index _;
-                    currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
-                    batchForIndex.SignalIndexingComplete();
-                    batchForIndex.Index.IsMapIndexingInProgress = false;
+
+                    var keepTrying = true;
+                    for (var i = 0; i < 10 && keepTrying; i++)
+                    {
+                        keepTrying = false;
+
+                        try
+                        {
+                            transactionalStorage.Batch(actions =>
+                            {
+                                // whatever we succeeded in indexing or not, we have to update this
+                                // because otherwise we keep trying to re-index failed documents
+                                actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
+                            });
+                        }
+                        catch (IndexDoesNotExistsException)
+                        {
+                            //we can ignore this, no need to retry
+                        }
+                        catch (Exception e)
+                        {
+                            if (TransactionalStorageHelper.IsOutOfMemoryException(e))
+                            {
+                                batchForIndex.Index.AddOutOfMemoryDatabaseAlert(e);
+                                //if it's an esent/voron OOME we can keep trying
+                                keepTrying = true;
+                            }
+
+                            Exception conflictException;
+                            if (TransactionalStorageHelper.IsWriteConflict(e, out conflictException))
+                            {
+                                Log.Info($"Write conflict encountered for index '{batchForIndex.Index.PublicName}' when updating last etag. " +
+                                         $"Will retry. Details: {conflictException.Message}");
+                                keepTrying = true;
+                            }
+
+                            if (keepTrying == false)
+                            {
+                                //unknown error
+                                Log.WarnException($"Failed to update last etag for index '{batchForIndex.Index.PublicName}'", e);
+                                context.AddError(batchForIndex.IndexId, batchForIndex.Index.PublicName, null, e);
+                            }
+                        }
+
+                        if (keepTrying)
+                            Thread.Sleep(11);
+                    }
                 }
             }
 
