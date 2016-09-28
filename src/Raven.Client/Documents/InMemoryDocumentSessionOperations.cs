@@ -75,6 +75,11 @@ namespace Raven.Client.Documents
         internal readonly Dictionary<string, DocumentInfo> DocumentsById = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
+        /// Translate between a key and its associated entity
+        /// </summary>
+        internal readonly Dictionary<string, DocumentInfo> includedDocumentsByKey = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
         /// </summary>
         protected internal readonly Dictionary<object, DocumentInfo> DocumentsByEntity = new Dictionary<object, DocumentInfo>(ObjectReferenceEqualityComparer<object>.Default);
@@ -248,7 +253,7 @@ namespace Raven.Client.Documents
         internal bool IsLoadedOrDeleted(string id)
         {
             DocumentInfo documentInfo;
-            return (DocumentsById.TryGetValue(id, out documentInfo) && (documentInfo.Document != null)) || IsDeleted(id);
+            return (DocumentsById.TryGetValue(id, out documentInfo) && (documentInfo.Document != null)) || IsDeleted(id) || includedDocumentsByKey.ContainsKey(id);
         }
 
         /// <summary>
@@ -356,6 +361,7 @@ more responsive application.
                 throw new InvalidOperationException(entity + " is not associated with the session, cannot delete unknown entity instance");
             }
             DeletedEntities.Add(entity);
+            includedDocumentsByKey.Remove(value.Id);
             KnownMissingIds.Add(value.Id);
         }
 
@@ -536,6 +542,11 @@ more responsive application.
             }
 
             StoreInternal(entity, etag, id, forceConcurrencyCheck);
+        }
+
+        public void TrackIncludedDocument(DocumentInfo docInfo)
+        {
+            includedDocumentsByKey[docInfo.Id] = docInfo;
         }
 
         protected abstract string GenerateKey(object entity);
@@ -1115,11 +1126,13 @@ more responsive application.
                     continue;
 
                 DocumentInfo documentInfo;
-                if (DocumentsById.TryGetValue(id, out documentInfo) == false)
-                    return false;
-                if (documentInfo.Entity == null)
+
+                // Check if document was already loaded, the check if we've received it through include
+                if (DocumentsById.TryGetValue(id, out documentInfo) == false && includedDocumentsByKey.TryGetValue(id, out documentInfo) == false) 
                     return false;
 
+                if (documentInfo.Entity == null)
+                    return false;
                 var rawData = DocumentsById[id];
 
                 if (includes==null)
