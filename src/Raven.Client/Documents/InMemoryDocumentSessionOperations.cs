@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using Raven.Client.Document.Batches;
 using System.Text.RegularExpressions;
@@ -112,7 +113,7 @@ namespace Raven.Client.Documents
         /// Gets the number of entities held in memory to manage Unit of Work
         /// </summary>
         public int NumberOfEntitiesInUnitOfWork => DocumentsByEntity.Count;
-
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
         /// </summary>
@@ -132,7 +133,7 @@ namespace Raven.Client.Documents
             UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
-            EntityToBlittable = new EntityToBlittable(documentStore, Context);
+            EntityToBlittable = new EntityToBlittable(this);
         }
 
         /// <summary>
@@ -295,31 +296,8 @@ more responsive application.
         /// <returns></returns>
         public object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject documentFound)
         {
-            try
-            {
-                var defaultValue = GetDefaultValue(entityType);
-                var entity = defaultValue;
-
-                var documentType = Conventions.GetClrType(id, documentFound);
-                if (documentType != null)
-                {
-                    var type = Type.GetType(documentType);
-                    if (type != null)
-                        entity = Conventions.JsonDeserialize(type, documentFound);
-                }
-
-                if (Equals(entity, defaultValue))
-                {
-                    entity = Conventions.JsonDeserialize(entityType, documentFound);
-                }
-                GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
-
-                return entity;
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Could not convert document {id} to entity of type {entityType}", ex);
-            }
+            //TODO: consider removing this function entirely, leaving only the EntityToBlittalbe version
+            return EntityToBlittable.ConvertToEntity(entityType, id, documentFound);
         }
 
         private void RegisterMissingProperties(object o, string key, object value)
@@ -357,7 +335,7 @@ more responsive application.
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        static object GetDefaultValue(Type type)
+        public static object GetDefaultValue(Type type)
         {
             return type.IsValueType() ? Activator.CreateInstance(type) : null;
         }
@@ -403,7 +381,7 @@ more responsive application.
             DocumentInfo documentInfo;
             if (DocumentsById.TryGetValue(id, out documentInfo))
             {
-                BlittableJsonReaderObject newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Id, documentInfo.Entity, documentInfo);
+                BlittableJsonReaderObject newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
                 if (documentInfo.Entity != null && EntityChanged(newObj, documentInfo,  null))
                 {
                     throw new InvalidOperationException(
@@ -703,7 +681,7 @@ more responsive application.
             foreach (var entity in DocumentsByEntity)
             {
                 BlittableJsonReaderObject document = null;
-                document = EntityToBlittable.ConvertEntityToBlittable(entity.Value.Id, entity.Key, entity.Value);
+                document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
 
                 if ((!(entity.Value.IgnoreChanges)) && (EntityChanged(document, entity.Value, null)))
                 {
@@ -874,7 +852,7 @@ more responsive application.
         {
             foreach (var pair in DocumentsById)
             {
-                BlittableJsonReaderObject newObj = EntityToBlittable.ConvertEntityToBlittable(pair.Value.Id, pair.Value.Entity, pair.Value);
+                BlittableJsonReaderObject newObj = EntityToBlittable.ConvertEntityToBlittable(pair.Value.Entity, pair.Value);
                 EntityChanged(newObj, pair.Value, changes);
                 pair.Value.Metadata.Modifications = null;
             }
