@@ -76,10 +76,7 @@ namespace Raven.Client.Data.Indexes
         /// </summary>
         public DateTime? LastIndexingTime { get; set; }
 
-        /// <summary>
-        /// Indicates if index is in-memory only.
-        /// </summary>
-        public bool IsInMemory { get; set; }
+        public bool IsStale { get; set; }
 
         /// <summary>
         /// Indicates current lock mode:

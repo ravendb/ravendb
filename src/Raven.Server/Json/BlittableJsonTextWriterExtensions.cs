@@ -777,8 +777,8 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(stats.IsInMemory)));
-            writer.WriteBool(stats.IsInMemory);
+            writer.WritePropertyName(nameof(stats.IsStale));
+            writer.WriteBool(stats.IsStale);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(stats.Collections));

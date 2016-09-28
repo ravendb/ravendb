@@ -327,7 +327,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
                         Assert.False(stats.IsTestIndex);
-                        Assert.True(stats.IsInMemory);
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(2, stats.EntriesCount);
                         Assert.Equal(2, stats.MapAttempts);
@@ -373,7 +372,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
                         Assert.False(stats.IsTestIndex);
-                        Assert.True(stats.IsInMemory);
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(3, stats.EntriesCount);
                         Assert.Equal(3, stats.MapAttempts);
@@ -409,7 +407,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
                         Assert.False(stats.IsTestIndex);
-                        Assert.True(stats.IsInMemory);
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(2, stats.EntriesCount);
                         Assert.Equal(3, stats.MapAttempts);

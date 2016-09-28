@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes
     public abstract class Index<TIndexDefinition> : Index
         where TIndexDefinition : IndexDefinitionBase
     {
-        public new TIndexDefinition Definition => (TIndexDefinition) base.Definition;
+        public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
 
         protected Index(int indexId, IndexType type, TIndexDefinition definition)
             : base(indexId, type, definition)
@@ -736,7 +736,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IndexStats GetStats(bool calculateCollectionStats = false, DocumentsOperationContext documentsContext = null)
+        public IndexStats GetStats(bool calculateCollectionStats = false, bool calculateStaleness = false, DocumentsOperationContext documentsContext = null)
         {
             if (_contextPool == null)
             {
@@ -750,10 +750,6 @@ namespace Raven.Server.Documents.Indexes
                     Type = Type
                 };
             }
-
-
-            if (calculateCollectionStats && documentsContext == null)
-                throw new InvalidOperationException("Cannot calculate collection stats without valid context.");
 
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -771,9 +767,18 @@ namespace Raven.Server.Documents.Indexes
 
                 stats.LastQueryingTime = _lastQueryingTime;
 
-                if (calculateCollectionStats)
+                if (calculateStaleness || calculateCollectionStats)
                 {
-                    using (documentsContext.OpenReadTransaction())
+                    if (documentsContext == null)
+                        throw new InvalidOperationException("Cannot calculate collection stats or staleness without valid context.");
+
+                    if (documentsContext.Transaction == null)
+                        throw new InvalidOperationException("Cannot calculate collection stats or staleness without valid transaction.");
+
+                    if (calculateStaleness)
+                        stats.IsStale = IsStale(documentsContext, context);
+
+                    if (calculateCollectionStats)
                     {
                         foreach (var collection in Collections)
                         {
@@ -827,7 +832,7 @@ namespace Raven.Server.Documents.Indexes
                         break;
                     }
                 }
-               
+
             }
 
             return stats;

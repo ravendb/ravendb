@@ -199,7 +199,6 @@ namespace Raven.Server.Documents.Indexes
             var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
             var stats = new IndexStats();
-            stats.IsInMemory = _environment.Options is StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions;
             stats.CreatedTimestamp = DateTime.FromBinary(statsTree.Read(IndexSchema.CreatedTimestampSlice).Reader.ReadLittleEndianInt64());
             stats.ErrorsCount = (int)table.NumberOfEntries;
 
