@@ -1,15 +1,17 @@
+import copyToClipboard = require("common/copyToClipboard");
 import viewModelBase = require("viewmodels/viewModelBase");
-import app = require("durandal/app");
 import createSampleDataCommand = require("commands/database/studio/createSampleDataCommand");
 import createSampleDataClassCommand = require("commands/database/studio/createSampleDataClassCommand");
-import showDataDialog = require("viewmodels/common/showDataDialog");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
-class createSampleData extends viewModelBase{
+class createSampleData extends viewModelBase {
 
-    isBusy = ko.observable(false);
-    isEnable = ko.observable(true);
-    isVisible =  ko.observable(false);
     classData = ko.observable<string>();
+
+    constructor() {
+        super();
+        aceEditorBindingHandler.install();
+    }
 
     generateSampleData() {
         this.isBusy(true);
@@ -22,18 +24,20 @@ class createSampleData extends viewModelBase{
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink('OGRN53');
+
+        return this.fetchSampleDataClasses();
     }
 
-    showSampleDataClass() {
-        new createSampleDataClassCommand(this.activeDatabase())
+    copyClasses() {
+        copyToClipboard.copy(this.classData(), "Copied C# classes to clipboard.");
+    }
+
+    private fetchSampleDataClasses(): JQueryPromise<string> {
+        return new createSampleDataClassCommand(this.activeDatabase())
             .execute()
             .done((results: string) => {
-                this.isVisible(true);
-                var data = results.replace("\r\n", "");
-
-                app.showDialog(new showDataDialog("Sample Data Classes", data));
-            })
-            .always(() => this.isBusy(false));
+                this.classData(results);
+            });
     }
 }
 
