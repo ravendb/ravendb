@@ -66,7 +66,8 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("mscorlib")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Collections")).Location),
-            MetadataReference.CreateFromFile(typeof(Regex).GetTypeInfo().Assembly.Location)
+            MetadataReference.CreateFromFile(typeof(Regex).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(Uri).GetTypeInfo().Assembly.Location)
         };
 
         public static TransformerBase Compile(TransformerDefinition definition)
@@ -250,6 +251,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             try
             {
+                transformResults = NormalizeFunction(transformResults);
                 var expression = SyntaxFactory.ParseExpression(transformResults).NormalizeWhitespace();
 
                 var queryExpression = expression as QueryExpressionSyntax;
@@ -276,6 +278,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             try
             {
+                map = NormalizeFunction(map);
                 var expression = SyntaxFactory.ParseExpression(map).NormalizeWhitespace();
 
                 fieldNamesValidator.Validate(map, expression);
@@ -305,6 +308,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             try
             {
+                reduce = NormalizeFunction(reduce);
                 var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
 
                 fieldNamesValidator?.Validate(reduce, expression);
@@ -423,6 +427,11 @@ namespace Raven.Server.Documents.Indexes.Static
         private static string GetCSharpSafeName(string name, bool isIndex)
         {
             return $"{(isIndex ? "Index" : "Transformer")}_{Regex.Replace(name, @"[^\w\d]", "_")}";
+        }
+
+        private static string NormalizeFunction(string function)
+        {
+            return function?.Trim().TrimEnd(';');
         }
 
         private class CompilationResult

@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
