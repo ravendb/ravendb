@@ -23,6 +23,11 @@ namespace Raven.Server.Documents.Transformers
 
         public string Source { get; set; }
 
+        public IEnumerable<dynamic> Recurse(object item, Func<dynamic, dynamic> func)
+        {
+            return new RecursiveFunction(item, func).Execute();
+        }
+
         public dynamic LoadDocument<TIGnored>(object keyOrEnumerable, string collectionName)
         {
             return LoadDocument(keyOrEnumerable, collectionName);
