@@ -1001,7 +1001,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexingPriority.Idle, index2.Priority);
 
                 var now = database.Time.GetUtcNow();
-                database.Time.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
+                database.Time.UtcDateTime = () => 
+                        now.Add(TimeSpan.FromSeconds(1))
+                           .Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
 
                 database.IndexStore.RunIdleOperations(); // nothing should happen here, because age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
 

@@ -24,9 +24,9 @@ namespace Tryouts
         public static void Main(string[] args)
         {
 
-            using (var a = new FastTests.Server.Documents.Indexing.Static.BasicStaticMapIndexing())
+            using (var a = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
             {
-                a.NumberOfDocumentsAndTombstonesToProcessShouldBeCalculatedCorrectly();
+                a.AutoIndexesShouldBeMarkedAsIdleAndDeleted().Wait();
             }
             //var start = Slices.BeforeAllKeys;
 
