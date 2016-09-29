@@ -684,7 +684,7 @@ namespace Raven.Server.Documents
                     .Count();
         }
 
-        public static ByteStringContext.Scope GetSliceFromKey(DocumentsOperationContext context, string key, out Slice keySlice)
+        public static ByteStringContext.ExternalScope GetSliceFromKey(DocumentsOperationContext context, string key, out Slice keySlice)
         {
             var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
 
@@ -1073,8 +1073,8 @@ namespace Raven.Server.Documents
                 var tbv = new TableValueBuilder
                 {
                     {lowerKey, lowerSize},
-                    {(byte*) &newEtagBigEndian, sizeof(long)},
-                    {(byte*) &documentEtagBigEndian, sizeof(long)},
+                    newEtagBigEndian,
+                    documentEtagBigEndian,
                     {keyPtr, keySize},
                     {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
                     {tombstone.Collection.Buffer, tombstone.Collection.Size}

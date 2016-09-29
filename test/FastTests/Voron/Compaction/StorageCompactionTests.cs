@@ -129,7 +129,7 @@ namespace FastTests.Voron.Compaction
                             table.Set(new TableValueBuilder
                             {
                                 entry.Key,
-                                &value
+                                value
                             });
                         }
 

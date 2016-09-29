@@ -154,7 +154,7 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(index.Name, stats.Name);
                 Assert.False(stats.IsInvalidIndex);
                 Assert.False(stats.IsTestIndex);
-                Assert.False(stats.IsInMemory);
+                Assert.False(stats.IsStale);
                 Assert.Equal(IndexType.AutoMap, stats.Type);
                 Assert.Equal(2, stats.EntriesCount);
                 Assert.Equal(2, stats.MapAttempts);

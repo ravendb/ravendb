@@ -153,19 +153,22 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 IndexStats[] indexStats;
-                if (string.IsNullOrEmpty(name))
-                    indexStats = Database.IndexStore
-                        .GetIndexes()
-                        .OrderBy(x => x.Name)
-                        .Select(x => x.GetStats(calculateCollectionStats: true, documentsContext: context))
-                        .ToArray();
-                else
+                using (context.OpenReadTransaction())
                 {
-                    var index = Database.IndexStore.GetIndex(name);
-                    if (index == null)
-                        throw new InvalidOperationException("There is not index with name: " + name);
+                    if (string.IsNullOrEmpty(name))
+                        indexStats = Database.IndexStore
+                            .GetIndexes()
+                            .OrderBy(x => x.Name)
+                            .Select(x => x.GetStats(calculateCollectionStats: true, calculateStaleness: true, documentsContext: context))
+                            .ToArray();
+                    else
+                    {
+                        var index = Database.IndexStore.GetIndex(name);
+                        if (index == null)
+                            throw new InvalidOperationException("There is not index with name: " + name);
 
-                    indexStats = new[] { index.GetStats(calculateCollectionStats: true, documentsContext: context) };
+                        indexStats = new[] { index.GetStats(calculateCollectionStats: true, calculateStaleness: true, documentsContext: context) };
+                    }
                 }
 
                 writer.WriteStartArray();

@@ -128,7 +128,16 @@ namespace Raven.Server.Documents.Indexes
                 options.SchemaVersion = 1;
 
                 environment = new StorageEnvironment(options);
-                var type = IndexStorage.ReadIndexType(indexId, environment);
+
+                IndexType type;
+                try
+                {
+                    type = IndexStorage.ReadIndexType(indexId, environment);
+                }
+                catch (Exception e)
+                {
+                    throw new IndexOpenException($"Could not read index type from storage in '{path}'. This indicates index data file corruption.", e);
+                }
 
                 switch (type)
                 {
@@ -144,14 +153,17 @@ namespace Raven.Server.Documents.Indexes
                         throw new ArgumentException($"Uknown index type {type} for index {indexId}");
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 if (environment != null)
                     environment.Dispose();
                 else
                     options.Dispose();
 
-                throw;
+                if (e is IndexOpenException)
+                    throw;
+
+                throw new IndexOpenException($"Could not open index from '{path}'.", e);
             }
         }
 
@@ -724,7 +736,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IndexStats GetStats(bool calculateCollectionStats = false, DocumentsOperationContext documentsContext = null)
+        public IndexStats GetStats(bool calculateCollectionStats = false, bool calculateStaleness = false, DocumentsOperationContext documentsContext = null)
         {
             if (_contextPool == null)
             {
@@ -738,10 +750,6 @@ namespace Raven.Server.Documents.Indexes
                     Type = Type
                 };
             }
-
-
-            if (calculateCollectionStats && documentsContext == null)
-                throw new InvalidOperationException("Cannot calculate collection stats without valid context.");
 
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -759,9 +767,18 @@ namespace Raven.Server.Documents.Indexes
 
                 stats.LastQueryingTime = _lastQueryingTime;
 
-                if (calculateCollectionStats)
+                if (calculateStaleness || calculateCollectionStats)
                 {
-                    using (documentsContext.OpenReadTransaction())
+                    if (documentsContext == null)
+                        throw new InvalidOperationException("Cannot calculate collection stats or staleness without valid context.");
+
+                    if (documentsContext.Transaction == null)
+                        throw new InvalidOperationException("Cannot calculate collection stats or staleness without valid transaction.");
+
+                    if (calculateStaleness)
+                        stats.IsStale = IsStale(documentsContext, context);
+
+                    if (calculateCollectionStats)
                     {
                         foreach (var collection in Collections)
                         {
@@ -807,10 +824,15 @@ namespace Raven.Server.Documents.Indexes
             var indexingThread = _indexingThread;
             if (indexingThread != null)
             {
-                var thread = NativeMemory.ThreadAllocations.Values
-                    .First(x => x.Id == indexingThread.ManagedThreadId);
+                foreach (var threadAllocationsValue in NativeMemory.ThreadAllocations.Values)
+                {
+                    if (indexingThread.ManagedThreadId == threadAllocationsValue.Id)
+                    {
+                        stats.ThreadAllocations.SizeInBytes = threadAllocationsValue.Allocations;
+                        break;
+                    }
+                }
 
-                stats.ThreadAllocations.SizeInBytes = thread.Allocations;
             }
 
             return stats;

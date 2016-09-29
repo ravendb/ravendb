@@ -47,7 +47,18 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
                 var docsExpression = node.Expression as MemberAccessExpressionSyntax;
                 if (docsExpression == null)
+                {
+                    var invocationExpression = node.Expression as InvocationExpressionSyntax;
+                    if (invocationExpression != null)
+                    {
+                        var methodSyntax = MethodSyntax;
+                        var newInvocationExpression = (InvocationExpressionSyntax)methodSyntax.VisitInvocationExpression(invocationExpression);
+                        CollectionName = methodSyntax.CollectionName;
+                        return node.WithExpression(newInvocationExpression);
+                    }
+
                     return node;
+                }
 
                 var docsIdentifier = docsExpression.Expression as IdentifierNameSyntax;
                 if (string.Equals(docsIdentifier?.Identifier.Text, "docs", StringComparison.OrdinalIgnoreCase) == false)

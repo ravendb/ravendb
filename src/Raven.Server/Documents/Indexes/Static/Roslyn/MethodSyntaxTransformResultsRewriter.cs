@@ -13,6 +13,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             Rewriters = new CSharpSyntaxRewriter[]
             {
                 SelectManyRewriter.MethodSyntax,
+                DynamicInvocationExpressionsRewriter.Instance,
                 DynamicExtensionMethodsRewriter.Instance,
                 DynamicLambdaExpressionsRewriter.Instance,
                 RecurseRewriter.Instance,

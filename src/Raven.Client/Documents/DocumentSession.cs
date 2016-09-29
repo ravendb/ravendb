@@ -600,11 +600,6 @@ namespace Raven.Client.Documents
             throw new NotImplementedException();
         }
 
-        public void MarkReadOnly(object entity)
-        {
-            throw new NotImplementedException();
-        }
-
         public ResponseTimeInformation ExecuteAllPendingLazyOperations()
         {
             throw new NotImplementedException();

@@ -1,7 +1,7 @@
 ﻿using System;
 using Raven.Client.Data;
 
-namespace Raven.Server.Documents.Indexes.Static
+namespace Raven.Server.Documents.Indexes.Static.Extensions
 {
     public static class DynamicExtensionMethods
     {
