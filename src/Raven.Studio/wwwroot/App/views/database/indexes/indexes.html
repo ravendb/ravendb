@@ -16,23 +16,32 @@
             </button>
             <ul class="dropdown-menu" role="menu">
                 <li data-bind="click: setLockModeSelectedIndexes.bind($root, 'Unlock', 'Unlock'), visible: lockModeCommon() !== 'Unlock'">
-                    <a href="#" title="Unlock All Indexes">Unlock All Indexes</a>
+                    <a href="#" title="Unlock selected indexes">Unlock selected</a>
                 </li>
                 <li class="divider" data-bind="visible: lockModeCommon() !== 'Unlock'"></li>
                 <li data-bind="click: setLockModeSelectedIndexes.bind($root, 'SideBySide', 'Lock Side By Side'), visible: lockModeCommon() !== 'SideBySide'">
-                    <a href="#" title="Lock (Side By Side) All Indexes">Lock (Side By Side) All Indexes</a>
+                    <a href="#" title="Lock (Side By Side) selected indexes">Lock (Side By Side) selected</a>
                 </li>
                 <li data-bind="click: setLockModeSelectedIndexes.bind($root, 'LockedIgnore', 'Lock'), visible: lockModeCommon() !== 'LockedIgnore'">
-                    <a href="#" title="Lock All Indexes">Lock All Indexes</a>
+                    <a href="#" title="Lock selected indexes">Lock selected</a>
                 </li>
                 <li data-bind="click: setLockModeSelectedIndexes.bind($root, 'LockedError', 'Locked Error'), visible: lockModeCommon() !== 'LockedError'">
-                    <a href="#" title="Lock All Indexes (Error)">Lock All Indexes (Error)</a>
+                    <a href="#" title="Lock (Error) selected indexes">Lock (Error) selected</a>
                 </li>
             </ul>
         </div>
         <div class="btn-group">
             <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedIndexes">
                 <i class="fa fa-trash-o"></i> Delete
+            </button>
+        </div>
+        
+        <div class="btn-group">
+            <button type="button" class="btn btn-default" data-bind="click: stopIndexing, visible: indexingEnabled()">
+                Disable indexing until restart
+            </button>
+            <button type="button" class="btn btn-default" data-bind="click: startIndexing, visible: !indexingEnabled()">
+                Resume indexing
             </button>
         </div>
 
@@ -71,8 +80,8 @@
                                     <input type="checkbox" data-bind="checked: $root.selectedIndexesName, checkedValue: name" />
 
                                     <span data-bind="text: name"></span>
-
-                                    <span>TODO STALE</span>
+                                    
+                                    <span data-bind="visible: isStale()">Stale</span>
 
                                     <span data-bind="text: type"></span>
                                     <span data-bind="text: entriesCount"></span> entires

@@ -25,14 +25,48 @@ describe(viewUnderTest, () => {
 
     it.skip('should bind side-by-side index list', () => { });
 
-    it.skip('should bind faulty index', () => { });
+    it('should bind faulty index', () => {
+        utils.mockCommand('commands/database/index/getIndexStatsCommand', () => getFaultyIndexStats());
+        utils.mockCommand('commands/database/index/getPendingIndexReplacementsCommand', () => []);
+
+        return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
+            .then(() => utils.runViewmodelTest(viewUnderTest, {}));
+    });
 });
 
+
+function getFaultyIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
+    return [
+        {
+            "IsStale": false,
+            IsInvalidIndex: false,
+            "Collections": null,
+            "Memory": null,
+            "LastIndexingTime": null,
+            "LastQueryingTime": null,
+            "LockMode": "Unlock",
+            "Name": "Faulty/Indexes/8",
+            "Priority": "None",
+            "Type": "Faulty",
+            "CreatedTimestamp": "0001-01-01T00:00:00.0000000Z",
+            "EntriesCount": 0,
+            "Id": 8,
+            "MapAttempts": 0,
+            "MapErrors": 0,
+            "MapSuccesses": 0,
+            "ReduceAttempts": null,
+            "ReduceErrors": null,
+            "ReduceSuccesses": null,
+            "ErrorsCount": 0,
+            "IsTestIndex": false
+        }
+    ];
+}
 
 function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
     return [
         {
-            "IsInMemory": false,
+            IsStale: false, 
             IsInvalidIndex: false,
             "Collections": {
                 "Orders": {
@@ -74,7 +108,7 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             "IsTestIndex": false
         },
         {
-            "IsInMemory": false,
+            IsStale: false,
             IsInvalidIndex: false, 
             "Collections": {
                 "Orders": {
@@ -116,7 +150,7 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             "IsTestIndex": false
         },
         {
-            "IsInMemory": false,
+            IsStale: false,
             IsInvalidIndex: false,
             "Collections": {
                 "OrderItems": {

@@ -16,6 +16,7 @@ import forceIndexReplace = require("commands/database/index/forceIndexReplace");
 import saveIndexPriorityCommand = require("commands/database/index/saveIndexPriorityCommand");
 import indexLockSelectedConfirm = require("viewmodels/database/indexes/indexLockSelectedConfirm");
 import getIndexStatsCommand = require("commands/database/index/getIndexStatsCommand");
+import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 
 type indexGroup = {
     entityName: string;
@@ -31,6 +32,8 @@ class indexes extends viewModelBase {
     searchText = ko.observable<string>();
     lockModeCommon: KnockoutComputed<string>;
     selectedIndexesName = ko.observableArray<string>();
+
+    indexingEnabled = ko.observable<boolean>(true); //TODO: populate this value from server
 
     resetsInProgress = new Set<string>();
 
@@ -215,14 +218,10 @@ class indexes extends viewModelBase {
             const deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
             app.showDialog(deleteIndexesVm);
             deleteIndexesVm.deleteTask
-                .done((closedWithoutDeletion: boolean) => {
-                    if (!closedWithoutDeletion) {
+                .done((deleted: boolean) => {
+                    if (deleted) {
                         this.removeIndexesFromAllGroups(indexes);
                     }
-                })
-                .fail(() => {
-                    this.removeIndexesFromAllGroups(indexes);
-                    this.fetchIndexes();
                 });
         }
     }
@@ -339,6 +338,20 @@ class indexes extends viewModelBase {
         dialog.pasteDeferred.done((summary: string) => {
             this.confirmationMessage("Indexes And Transformers Paste Summary", summary, ['Ok']);
         });
+    }
+
+    startIndexing(): void {
+        this.indexingEnabled(true);
+        new toggleIndexingCommand(true, this.activeDatabase())
+            .execute()
+            .fail(() => this.indexingEnabled(false));
+    }
+
+    stopIndexing() {
+        this.indexingEnabled(false);
+        new toggleIndexingCommand(false, this.activeDatabase())
+            .execute()
+            .fail(() => this.indexingEnabled(true));
     }
 }
 

@@ -19,7 +19,7 @@ class index {
     entriesCount: number;
     errorsCount: number;
     id: number;
-    isInMemory: boolean;
+    isStale = ko.observable<boolean>(false);
     isInvalidIndex: boolean;
     isTestIndex: boolean;
     lastIndexingTime?: string;
@@ -51,7 +51,7 @@ class index {
         this.entriesCount = dto.EntriesCount;
         this.errorsCount = dto.ErrorsCount;
         this.id = dto.Id;
-        this.isInMemory = dto.IsInMemory;
+        this.isStale(dto.IsStale);
         this.isInvalidIndex = dto.IsInvalidIndex;
         this.isTestIndex = dto.IsTestIndex;
         this.lastIndexingTime = dto.LastIndexingTime;
