@@ -1073,8 +1073,8 @@ namespace Raven.Server.Documents
                 var tbv = new TableValueBuilder
                 {
                     {lowerKey, lowerSize},
-                    {(byte*) &newEtagBigEndian, sizeof(long)},
-                    {(byte*) &documentEtagBigEndian, sizeof(long)},
+                    newEtagBigEndian,
+                    documentEtagBigEndian,
                     {keyPtr, keySize},
                     {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
                     {tombstone.Collection.Buffer, tombstone.Collection.Size}

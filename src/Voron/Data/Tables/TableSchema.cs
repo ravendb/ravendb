@@ -91,29 +91,23 @@ namespace Voron.Data.Tables
                 // We serialize the Type enum as ulong to be "future-proof"
                 var castedType = (long)Type;
 
-                fixed (int* startIndex = &StartIndex)
-                fixed (int* count = &Count)
-                fixed (bool* isGlobal = &IsGlobal)
-                {
-                    var serializer = new TableValueBuilder
+                var serializer = new TableValueBuilder
                             {
-                                &castedType,
-                                startIndex,
-                                count,
-                                isGlobal,
+                                castedType,
+                                StartIndex,
+                                Count,
+                                IsGlobal,
                                 Name
                             };
 
-                    byte[] serialized = new byte[serializer.Size];
+                byte[] serialized = new byte[serializer.Size];
 
-                    fixed (byte* destination = serialized)
-                    {
-                        serializer.CopyTo(destination);
-                    }
-
-                    return serialized;
+                fixed (byte* destination = serialized)
+                {
+                    serializer.CopyTo(destination);
                 }
 
+                return serialized;
             }
 
             public static SchemaIndexDef ReadFrom(ByteStringContext context, byte* location, int size)
@@ -187,25 +181,21 @@ namespace Voron.Data.Tables
 
             public byte[] Serialize()
             {
-                fixed (int* startIndex = &StartIndex)
-                fixed (bool* isGlobal = &IsGlobal)
-                {
-                    var serializer = new TableValueBuilder
+                var serializer = new TableValueBuilder
                     {
-                        startIndex,
-                        isGlobal,
+                        StartIndex,
+                        IsGlobal,
                         Name
                     };
 
-                    byte[] serialized = new byte[serializer.Size];
+                byte[] serialized = new byte[serializer.Size];
 
-                    fixed (byte* destination = serialized)
-                    {
-                        serializer.CopyTo(destination);
-                    }
-
-                    return serialized;
+                fixed (byte* destination = serialized)
+                {
+                    serializer.CopyTo(destination);
                 }
+
+                return serialized;
             }
 
             public static FixedSizeSchemaIndexDef ReadFrom(ByteStringContext context, byte* location, int size)

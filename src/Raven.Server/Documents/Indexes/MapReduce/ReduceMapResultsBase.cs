@@ -426,9 +426,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             var tvb = new TableValueBuilder
             {
-                {(byte*) &pageNumber, sizeof(long)},
-                {(byte*) &aggregatedEntries, sizeof(int)},
-                {(byte*) &numberOfOutputs, sizeof(int)}
+                pageNumber,
+                aggregatedEntries,
+                numberOfOutputs
             };
 
             foreach (var output in result.GetOutputsToStore())

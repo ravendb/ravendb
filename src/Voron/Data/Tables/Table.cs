@@ -764,22 +764,21 @@ namespace Voron.Data.Tables
         {
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
-            int size;
-            var read = builder.Read(_schema.Key.StartIndex, out size);
-
             long id;
             Slice key;
-            bool exist;
-            using (Slice.External(_tx.Allocator, read, (ushort)size, out key))
+            bool exists;
+
+            using (builder.SliceFromLocation(_tx.Allocator, _schema.Key.StartIndex, out key))
             {
-                exist = TryFindIdFromPrimaryKey(key, out id);
+                exists = TryFindIdFromPrimaryKey(key, out id);
             }
 
-            if (exist)
+            if (exists)
             {
                 id = Update(id, builder);
                 return id;
             }
+
             return Insert(builder);
         }
 
