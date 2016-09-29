@@ -143,6 +143,11 @@ a, .btn {
 .btn {
     [class^="icon-"], [class*=" icon-"] {
         margin-left: -3px;
+        margin-right:-3px;
+
+        +span {
+            margin-left:9px;
+        }
     }
 
     &:not(.btn-sm .btn-xs) {
@@ -226,11 +231,11 @@ hr {
 }
 
 .editable-input-inline {
-    display:inline-block;
+    display: inline-block;
 
     .btn.edit-button {
-        float:left;
-        margin-left:4px;
+        float: left;
+        margin-left: 4px;
         .btn-primary;
 
         .text::before {
@@ -239,27 +244,27 @@ hr {
     }
 
     .value-container {
-        display:inline-block;
-        position:relative;
-        float:left;
+        display: inline-block;
+        position: relative;
+        float: left;
 
         .static-name {
-            display:inline-block;
+            display: inline-block;
         }
 
         .edit-inline {
-            position:absolute;
-            top:0;
-            bottom:0;
-            left:0;
-            right:0;
-            width:100%;
-            height:100%;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
         }
     }
 
     .edit-inline {
-       display: none;
+        display: none;
     }
 
     .icon-edit {
@@ -290,13 +295,14 @@ hr {
     }
 
     .edit-inline {
-        padding:0;
+        padding: 0;
         font-size: inherit;
         line-height: inherit;
         color: #e9eaea;
         background-color: #333c3c;
         background-image: none;
-        border: none;
+        border: 1px solid @gray;
+        margin:-1px;
         -webkit-transition: box-shadow .2s ease-in-out;
         -moz-transition: box-shadow .2s ease-in-out;
         -ms-transition: box-shadow .2s ease-in-out;
@@ -304,8 +310,10 @@ hr {
         transition: box-shadow .2s ease-in-out;
 
         &:focus {
-            outline: none;
-            box-shadow: inset 0 -1px 0 0 @brand-primary;
+            border-color: #ff5500;
+            outline: 0;
+            -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(255, 85, 0, 0.6);
+            box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(255, 85, 0, 0.6);
         }
     }
 }
@@ -1043,9 +1051,9 @@ hr {
     }
 
     hr {
-            margin-left: 15px;
-            margin-right: 15px;
-            border-style:dashed;
+        margin-left: 15px;
+        margin-right: 15px;
+        border-style: dashed;
     }
 
     .back, .arrow-right > a {
