@@ -91,7 +91,7 @@ namespace FastTests.Voron.Tables
             var v1 = true;
             var v2 = false;
 
-            var tableValue = new TableValueBuilder { &v1, &v2 };
+            var tableValue = new TableValueBuilder { v1, v2 };
 
             fixed (byte* buffer = new byte[tableValue.Size])
             {
@@ -119,7 +119,7 @@ namespace FastTests.Voron.Tables
         {
             var v1 = 0L;
             var v2 = 1L;
-            var innerTableValue = new TableValueBuilder { &v1, &v2 };
+            var innerTableValue = new TableValueBuilder { v1, v2 };
 
             byte[] temporary = new byte[innerTableValue.Size];
 
@@ -127,7 +127,7 @@ namespace FastTests.Voron.Tables
             {
                 innerTableValue.CopyTo(ptr);
 
-                var tableValue = new TableValueBuilder { &v1, { ptr, innerTableValue.Size } };
+                var tableValue = new TableValueBuilder { v1, { ptr, innerTableValue.Size } };
 
                 fixed (byte* buffer = new byte[tableValue.Size])
                 {

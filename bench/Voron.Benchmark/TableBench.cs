@@ -67,7 +67,7 @@ namespace Voron.Benchmark
                 if (o is Slice)
                 {
                     var slice = (Slice)o;
-                    builder.Add(slice.Content.Ptr, slice.Content.Length);
+                    builder.Add(slice);
 
                     continue;
                 }
