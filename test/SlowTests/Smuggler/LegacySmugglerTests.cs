@@ -30,5 +30,39 @@ namespace SlowTests.Smuggler
                 }
             }
         }
+
+        [Theory]
+        [InlineData("SlowTests.Smuggler.Indexes_And_Transformers_3.5.ravendbdump")]
+        public async Task CanImportIndexesAndTransformers(string file)
+        {
+            using (var stream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream(file))
+            {
+                Assert.NotNull(stream);
+
+                using (var store = GetDocumentStore())
+                {
+                    await store.AsyncDatabaseCommands.Admin.StopIndexingAsync();
+
+                    await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), stream);
+
+                    var stats = store.DatabaseCommands.GetStatistics();
+
+                    Assert.Equal(0, stats.CountOfDocuments);
+
+                    // not everything can be imported
+                    // LoadDocument(key)
+                    // Spatial
+                    Assert.True(stats.CountOfIndexes >= 589);
+                    Assert.True(stats.CountOfIndexes <= 658);
+
+                    // not everything can be imported
+                    // LoadDocument(key)
+                    // Query
+                    // QueryOrDefault
+                    Assert.True(stats.CountOfTransformers >= 71);
+                    Assert.True(stats.CountOfTransformers <= 121);
+                }
+            }
+        }
     }
 }
