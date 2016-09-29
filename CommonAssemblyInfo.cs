@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCopyright("© Hibernating Rhinos 2004 - 2016 All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
-[assembly: CLSCompliant(false)]
+[assembly: CLSCompliant(true)]
 [assembly: AssemblyTitle("RavenDB")]
 [assembly: AssemblyVersion("3.0.0")]
 [assembly: AssemblyFileVersion("3.0.13.0")]
