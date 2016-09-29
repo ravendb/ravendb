@@ -23,6 +23,11 @@ namespace Raven.Server.Documents.Transformers
 
         public string Source { get; set; }
 
+        public dynamic LoadDocument<TIGnored>(object keyOrEnumerable, string collectionName)
+        {
+            return LoadDocument(keyOrEnumerable, collectionName);
+        }
+
         public dynamic LoadDocument(object keyOrEnumerable, string collectionName)
         {
             if (CurrentTransformationScope.Current == null)
