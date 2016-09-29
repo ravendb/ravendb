@@ -3,26 +3,30 @@
 .editDocument {
 
     .documentId {
+        #obj-name {
 
-        .markFavourite {
-            position: relative;
-            top: -6px;
-        }
+            .edit-inline {
+                border: 1px solid @gray;
+                margin:-1px;
 
-        .btn.edit-button {
-            margin-left: 12px;
-
-            .text::before {
-                content: 'Change ID';
+                &:focus {
+                    border-color: @brand-primary;
+                }
             }
-        }
 
-        .edit {
             .btn.edit-button {
-                display: none;
+                margin-left: 12px;
+
+                .text::before {
+                    content: 'Change ID';
+                }
+            }
+
+            &.edit {
+                .btn.edit-button {
+                    display: none;
+                }
             }
         }
-
     }
-
 }
