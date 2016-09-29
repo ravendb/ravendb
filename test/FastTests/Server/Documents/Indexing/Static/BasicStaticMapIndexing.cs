@@ -365,8 +365,11 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                             tx.Commit();
                         }
-
-                        var stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                        IndexStats stats;
+                        using (context.OpenReadTransaction())
+                        {
+                            stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                        }
 
                         Assert.Equal(0, stats.Collections["Users"].LastProcessedDocumentEtag);
                         Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
@@ -379,7 +382,10 @@ namespace FastTests.Server.Documents.Indexing.Static
                         var scope = new IndexingStatsScope(batchStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
 
-                        stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                        using (context.OpenReadTransaction())
+                        {
+                            stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                        }
 
                         Assert.Equal(2, stats.Collections["Users"].LastProcessedDocumentEtag);
                         Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
@@ -419,7 +425,10 @@ namespace FastTests.Server.Documents.Indexing.Static
                             tx.Commit();
                         }
 
-                        stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                        using (context.OpenReadTransaction())
+                        {
+                            stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                        }
 
                         Assert.Equal(2, stats.Collections["Users"].LastProcessedDocumentEtag);
                         Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
@@ -432,7 +441,10 @@ namespace FastTests.Server.Documents.Indexing.Static
                         scope = new IndexingStatsScope(batchStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
 
-                        stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                        using (context.OpenReadTransaction())
+                        {
+                            stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                        }
 
                         Assert.Equal(5, stats.Collections["Users"].LastProcessedDocumentEtag);
                         Assert.Equal(4, stats.Collections["Users"].LastProcessedTombstoneEtag);
