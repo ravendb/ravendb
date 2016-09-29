@@ -366,27 +366,33 @@ namespace FastTests.Server.Documents.Indexing.Static
                             tx.Commit();
                         }
 
-                        var stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                        using (context.OpenReadTransaction())
+                        {
+                            var stats = index.GetStats(calculateCollectionStats: true, calculateStaleness: true, documentsContext: context);
 
-                        Assert.Equal(0, stats.Collections["Users"].LastProcessedDocumentEtag);
-                        Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
-                        Assert.Equal(2, stats.Collections["Users"].NumberOfDocumentsToProcess);
-                        Assert.Equal(0, stats.Collections["Users"].NumberOfTombstonesToProcess);
-                        Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
-                        Assert.Equal(0, stats.Collections["Users"].TotalNumberOfTombstones);
+                            Assert.Equal(0, stats.Collections["Users"].LastProcessedDocumentEtag);
+                            Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
+                            Assert.Equal(2, stats.Collections["Users"].NumberOfDocumentsToProcess);
+                            Assert.Equal(0, stats.Collections["Users"].NumberOfTombstonesToProcess);
+                            Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
+                            Assert.Equal(0, stats.Collections["Users"].TotalNumberOfTombstones);
+                        }
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
 
-                        stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                        using (context.OpenReadTransaction())
+                        {
+                            var stats = index.GetStats(calculateCollectionStats: true, calculateStaleness: true, documentsContext: context);
 
-                        Assert.Equal(2, stats.Collections["Users"].LastProcessedDocumentEtag);
-                        Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
-                        Assert.Equal(0, stats.Collections["Users"].NumberOfDocumentsToProcess);
-                        Assert.Equal(0, stats.Collections["Users"].NumberOfTombstonesToProcess);
-                        Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
-                        Assert.Equal(0, stats.Collections["Users"].TotalNumberOfTombstones);
+                            Assert.Equal(2, stats.Collections["Users"].LastProcessedDocumentEtag);
+                            Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
+                            Assert.Equal(0, stats.Collections["Users"].NumberOfDocumentsToProcess);
+                            Assert.Equal(0, stats.Collections["Users"].NumberOfTombstonesToProcess);
+                            Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
+                            Assert.Equal(0, stats.Collections["Users"].TotalNumberOfTombstones);
+                        }
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -419,27 +425,33 @@ namespace FastTests.Server.Documents.Indexing.Static
                             tx.Commit();
                         }
 
-                        stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                        using (context.OpenReadTransaction())
+                        {
+                            var stats = index.GetStats(calculateCollectionStats: true, calculateStaleness: true, documentsContext: context);
 
-                        Assert.Equal(2, stats.Collections["Users"].LastProcessedDocumentEtag);
-                        Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
-                        Assert.Equal(1, stats.Collections["Users"].NumberOfDocumentsToProcess);
-                        Assert.Equal(1, stats.Collections["Users"].NumberOfTombstonesToProcess);
-                        Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
-                        Assert.Equal(1, stats.Collections["Users"].TotalNumberOfTombstones);
+                            Assert.Equal(2, stats.Collections["Users"].LastProcessedDocumentEtag);
+                            Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
+                            Assert.Equal(1, stats.Collections["Users"].NumberOfDocumentsToProcess);
+                            Assert.Equal(1, stats.Collections["Users"].NumberOfTombstonesToProcess);
+                            Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
+                            Assert.Equal(1, stats.Collections["Users"].TotalNumberOfTombstones);
+                        }
 
                         batchStats = new IndexingRunStats();
                         scope = new IndexingStatsScope(batchStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
 
-                        stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                        using (context.OpenReadTransaction())
+                        {
+                            var stats = index.GetStats(calculateCollectionStats: true, calculateStaleness: true, documentsContext: context);
 
-                        Assert.Equal(5, stats.Collections["Users"].LastProcessedDocumentEtag);
-                        Assert.Equal(4, stats.Collections["Users"].LastProcessedTombstoneEtag);
-                        Assert.Equal(0, stats.Collections["Users"].NumberOfDocumentsToProcess);
-                        Assert.Equal(0, stats.Collections["Users"].NumberOfTombstonesToProcess);
-                        Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
-                        Assert.Equal(1, stats.Collections["Users"].TotalNumberOfTombstones);
+                            Assert.Equal(5, stats.Collections["Users"].LastProcessedDocumentEtag);
+                            Assert.Equal(4, stats.Collections["Users"].LastProcessedTombstoneEtag);
+                            Assert.Equal(0, stats.Collections["Users"].NumberOfDocumentsToProcess);
+                            Assert.Equal(0, stats.Collections["Users"].NumberOfTombstonesToProcess);
+                            Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
+                            Assert.Equal(1, stats.Collections["Users"].TotalNumberOfTombstones);
+                        }
                     }
                 }
             }
