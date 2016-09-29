@@ -57,8 +57,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             ModifiedPages = new HashSet<long>();
             FreedPages = new HashSet<long>();
 
-            Tree.PageModified += page => ModifiedPages.Add(page);
-            Tree.PageFreed += page => FreedPages.Add(page);
+            Tree.PageModified += page =>
+            {
+                ModifiedPages.Add(page);
+                FreedPages.Remove(page);
+            };
+
+            Tree.PageFreed += page =>
+            {
+                FreedPages.Add(page);
+                ModifiedPages.Remove(page);
+            };
         }
 
         public void Delete(long id)
