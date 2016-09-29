@@ -894,6 +894,19 @@ namespace Raven.Database.Indexing
                                 // whatever we succeeded in indexing or not, we have to update this
                                 // because otherwise we keep trying to re-index failed documents
                                 actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
+
+                                // if we are saving the last indexed etag
+                                // we need to make sure that the last index etag is flushed to disk
+                                // otherwise we are going to reset the index etag to the last commited one on restart 
+                                // (if we discover that the last indexed etag is different from the last commited one)
+                                // we already flush the last indexed etag when we pass a certain size in ram,
+                                // however we don't do that if we only have a few of them
+                                // it's also limited to flushing for every 10 minutes if don't have any results
+                                actions.BeforeStorageCommit += () =>
+                                {
+                                    batchForIndex.Index.EnsureIndexWriter(useWriteLock: true);
+                                    batchForIndex.Index.Flush(lastEtag);
+                                };
                             });
                         }
                         catch (IndexDoesNotExistsException)
