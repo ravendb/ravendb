@@ -31,6 +31,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             switch (parentMethod)
             {
                 case "Select":
+                case "Enumerable.ToDictionary":
                     return SyntaxFactory.ParseExpression($"{node}.Cast<dynamic>()");
             }
 
@@ -40,7 +41,23 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         private static string GetParentMethod(InvocationExpressionSyntax currentInvocation)
         {
             var member = currentInvocation.Parent as MemberAccessExpressionSyntax;
-            return member?.Name.Identifier.Text;
+            if (member != null)
+                return member.Name.Identifier.Text;
+
+            var argument = currentInvocation.Parent as ArgumentSyntax;
+            if (argument == null)
+                return null;
+
+            var argumentList = argument.Parent as ArgumentListSyntax;
+            if (argumentList == null)
+                return null;
+
+            var invocation = argumentList.Parent as InvocationExpressionSyntax;
+            if (invocation == null)
+                return null;
+
+            member = invocation.Expression as MemberAccessExpressionSyntax;
+            return member?.ToString();
         }
     }
 }
