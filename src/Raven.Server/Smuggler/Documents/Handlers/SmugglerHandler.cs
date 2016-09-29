@@ -5,8 +5,10 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +18,9 @@ using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents.Data;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Smuggler.Documents.Handlers
 {
@@ -84,6 +89,17 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/smuggler/import", "GET")]
+        public Task GetImport()
+        {
+            if (HttpContext.Request.Query.ContainsKey("file") == false &&
+                HttpContext.Request.Query.ContainsKey("url") == false)
+            {
+                throw new ArgumentException("'file' or 'url' are mandatory when using GET /smuggler/import");
+            }
+            return PostImport();
+        }
+
         [RavenAction("/databases/*/smuggler/import", "POST")]
         public async Task PostImport()
         {
@@ -94,7 +110,23 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 using(tuple.Item2)
                 using (var stream = new GZipStream(tuple.Item1,CompressionMode.Decompress))
                 {
-                    await DoImport(context, stream);
+                    var sp = Stopwatch.StartNew();
+                    var result = await DoImport(context, stream);
+                    sp.Stop();
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["ElapsedMilliseconds"] =sp.ElapsedMilliseconds,
+                            ["Elapsed"] = sp.Elapsed.ToString(),
+                            ["DocumentsCount"] = result.DocumentsCount,
+                            ["RevisionDocumentsCount"] =result.RevisionDocumentsCount,
+                            ["IndexesCount"] = result.IndexesCount,
+                            ["IdentitiesCount"] = result.IdentitiesCount,
+                            ["TransformersCount"] =result.TransformersCount,
+                            ["Warnings"] = new DynamicJsonArray(result.Warnings ?? Enumerable.Empty<string>())
+                        });
+                    }
                 }
             }
         }
@@ -117,7 +149,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return Tuple.Create<Stream, IDisposable>(HttpContext.Request.Body, null);
         }
 
-        private async Task DoImport(DocumentsOperationContext context, Stream stream)
+        private async Task<ImportResult> DoImport(DocumentsOperationContext context, Stream stream)
         {
             var importer = new SmugglerImporter(Database);
 
@@ -128,7 +160,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 importer.OperateOnTypes = databaseItemType;
             }
 
-            await importer.Import(context, stream);
+            return await importer.Import(context, stream);
         }
     }
 }
