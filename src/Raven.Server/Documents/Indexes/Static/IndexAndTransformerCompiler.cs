@@ -66,7 +66,8 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("mscorlib")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Collections")).Location),
-            MetadataReference.CreateFromFile(typeof(Regex).GetTypeInfo().Assembly.Location)
+            MetadataReference.CreateFromFile(typeof(Regex).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(Uri).GetTypeInfo().Assembly.Location)
         };
 
         public static TransformerBase Compile(TransformerDefinition definition)
