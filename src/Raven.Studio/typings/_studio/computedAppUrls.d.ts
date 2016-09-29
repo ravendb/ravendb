@@ -64,7 +64,6 @@ interface computedAppUrls {
     statusDebugIndexFields: KnockoutComputed<string>;
     statusDebugIdentities: KnockoutComputed<string>;
     statusDebugWebSocket: KnockoutComputed<string>;
-    statusDebugPersistAutoIndex: KnockoutComputed<string>;
     statusDebugExplainReplication: KnockoutComputed<string>;
     infoPackage: KnockoutComputed<string>;
 

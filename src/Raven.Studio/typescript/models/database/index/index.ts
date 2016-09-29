@@ -1,115 +1,117 @@
 import appUrl = require("common/appUrl");
-import indexPriority = require("models/database/index/indexPriority");
 
 class index {
-    name: string;
-    indexingAttempts: number;
-    indexingSuccesses: number;
-    indexingErrors: number;
-    lastIndexedEtag: string;
-    lastIndexedTimestamp: string;
-    lastQueryTimestamp: string;
-    touchCount: number;
-    priority: string;
-    reduceIndexingAttempts: number;
-    reduceIndexingSuccesses: number;
-    reduceIndexingErrors: number;
-    lastReducedEtag: string;
-    lastReducedTimestamp: string;
-    createdTimestamp: string;
-    lastIndexingTime: string;
-    forEntityName: string[];
-    performance: indexPerformanceDto[];
-    docsCount: number;
+    static readonly priorityNormal: Raven.Client.Data.Indexes.IndexingPriority = "Normal";
+    static readonly priorityIdle: Raven.Client.Data.Indexes.IndexingPriority = "Idle";
+    static readonly priorityDisabled: Raven.Client.Data.Indexes.IndexingPriority = "Disabled";
+    static readonly priorityErrored: Raven.Client.Data.Indexes.IndexingPriority = "Error";
+    static readonly priorityIdleForced: Raven.Client.Data.Indexes.IndexingPriority = "Idle,Forced" as any;
+    static readonly priorityDisabledForced: Raven.Client.Data.Indexes.IndexingPriority = "Disabled,Forced" as any;
 
-    isOnRam = ko.observable<string>();
-    lockMode = ko.observable<string>();
-    isMapReduce = ko.observable<boolean>();
-    isIdle = ko.observable(false);
-    isAbandoned = ko.observable(false);
-    isErrored = ko.observable(false);
-    isDisabled = ko.observable(false);
-    isInvalid = ko.observable(false);
-    isTestIndex = ko.observable(false);
+    static readonly SideBySideIndexPrefix = "ReplacementOf/";
+    static readonly TestIndexPrefix = "Test/";
+
+    static readonly DefaultIndexGroupName = "Other";
+
+    collections: { [index: string]: Raven.Client.Data.Indexes.CollectionStats; };
+    collectionNames: Array<string>;
+    createdTimestamp: string;
+    entriesCount: number;
+    errorsCount: number;
+    id: number;
+    isInMemory: boolean;
+    isInvalidIndex: boolean;
+    isTestIndex: boolean;
+    lastIndexingTime?: string;
+    lastQueryingTime?: string;
+    lockMode = ko.observable<Raven.Abstractions.Indexing.IndexLockMode>();
+    mapAttempts: number;
+    mapErrors: number;
+    mapSuccesses: number;
+    memory: Raven.Client.Data.Indexes.MemoryStats;
+    name: string;
+    priority = ko.observable<Raven.Client.Data.Indexes.IndexingPriority>();
+    reduceAttempts?: number;
+    reduceErrors?: number;
+    reduceSuccesses?: number;
+    type: Raven.Client.Data.Indexes.IndexType;
+
+    filteredOut = ko.observable<boolean>(false); //UI only property
     editUrl: KnockoutComputed<string>;
     queryUrl: KnockoutComputed<string>;
 
-    filteredOut = ko.observable<boolean>(false); //UI only property
+    isNormalPriority: KnockoutComputed<boolean>;
+    isDisabled: KnockoutComputed<boolean>;
+    isIdle: KnockoutComputed<boolean>;
 
-    willReplaceIndex = ko.observable<string>();
-    willBeReplacedByIndex = ko.observable<string>();
-
-    isSideBySideIndex = ko.computed(() => this.willReplaceIndex() != null);
-
-    static priorityNormal = "Normal";
-    static priorityIdle = "Idle";
-    static priorityDisabled = "Disabled";
-    static priorityErrored = "Error";
-    static priorityAbandoned = "Abandoned";
-    static priorityIdleForced = "Idle,Forced";
-    static priorityDisabledForced = "Disabled,Forced";
-    static priorityAbandonedForced = "Abandoned,Forced";
-
-
-    static SideBySideIndexPrefix = "ReplacementOf/";
-
-    static TestIndexPrefix = "Test/";
-
-    constructor(dto: indexStatisticsDto) {
+    constructor(dto: Raven.Client.Data.Indexes.IndexStats) {
+        this.collections = dto.Collections;
+        this.collectionNames = index.extractCollectionNames(dto.Collections);
         this.createdTimestamp = dto.CreatedTimestamp;
-        this.docsCount = 0; //TODO: dto.DocsCount;
-        this.forEntityName = dto.ForEntityName;
-        this.indexingAttempts = dto.IndexingAttempts;
-        this.indexingErrors = dto.IndexingErrors;
-        this.indexingSuccesses = dto.IndexingSuccesses;
-        this.isOnRam(dto.IsOnRam);
-        this.lastIndexedEtag = dto.LastIndexedEtag;
-        this.lastIndexedTimestamp = dto.LastIndexedTimestamp;
+        this.entriesCount = dto.EntriesCount;
+        this.errorsCount = dto.ErrorsCount;
+        this.id = dto.Id;
+        this.isInMemory = dto.IsInMemory;
+        this.isInvalidIndex = dto.IsInvalidIndex;
+        this.isTestIndex = dto.IsTestIndex;
         this.lastIndexingTime = dto.LastIndexingTime;
-        this.lastQueryTimestamp = dto.LastQueryTimestamp;
-        this.lastReducedEtag = dto.LastReducedEtag;
-        this.lastReducedTimestamp = dto.LastReducedTimestamp;
+        this.lastQueryingTime = dto.LastQueryingTime;
         this.lockMode(dto.LockMode);
-        this.isMapReduce(dto.IsMapReduce);
+        this.mapAttempts = dto.MapAttempts;
+        this.mapErrors = dto.MapErrors;
+        this.mapSuccesses = dto.MapSuccesses;
+        this.memory = dto.Memory;
         this.name = dto.Name;
-        this.priority = dto.Priority;
-        this.reduceIndexingAttempts = dto.ReduceIndexingAttempts;
-        this.reduceIndexingErrors = dto.ReduceIndexingErrors;
-        this.reduceIndexingSuccesses = dto.ReduceIndexingSuccesses;
-        this.touchCount = dto.TouchCount;
-        this.isInvalid(dto.IsInvalidIndex);
-        this.isTestIndex(dto.IsTestIndex);
+        this.priority(dto.Priority);
+        this.reduceAttempts = dto.ReduceAttempts;
+        this.reduceErrors = dto.ReduceErrors;
+        this.reduceSuccesses = dto.ReduceSuccesses;
+        this.type = dto.Type;
 
-        this.isAbandoned(this.priority && this.priority.indexOf(index.priorityAbandoned) !== -1);
-        this.isDisabled(this.priority && this.priority.indexOf(index.priorityDisabled) !== -1);
-        this.isErrored(this.priority && this.priority.indexOf(index.priorityErrored) !== -1);
-        this.isIdle(this.priority && this.priority.indexOf(index.priorityIdle) !== -1);
-        this.editUrl = appUrl.forCurrentDatabase().editIndex(this.name);
-        this.queryUrl = appUrl.forCurrentDatabase().query(this.name);
+        this.initializeObservables();
     }
 
-    static priorityFromString(priority: string): indexPriority {
-        switch (priority) {
-            case index.priorityIdle: return indexPriority.idle;
-            case index.priorityDisabled: return indexPriority.disabled;
-            case index.priorityAbandoned: return indexPriority.abandoned;
-            case index.priorityIdleForced: return indexPriority.idleForced;
-            case index.priorityDisabledForced: return indexPriority.disabledForced;
-            case index.priorityAbandonedForced: return indexPriority.abandonedForced;
-            default: return indexPriority.normal;
+    private initializeObservables() {
+        const urls = appUrl.forCurrentDatabase();
+        this.queryUrl = urls.query(this.name);
+        this.editUrl = urls.editIndex(this.name);
+
+        this.isNormalPriority = ko.pureComputed((() => this.priority() === index.priorityNormal));
+        this.isDisabled = ko.pureComputed(() => this.priority().contains(index.priorityDisabled));
+        this.isIdle = ko.pureComputed(() => this.priority().contains(index.priorityIdle));
+    }
+
+    private static extractCollectionNames(collections: { [index: string]: Raven.Client.Data.Indexes.CollectionStats; }): string[] {
+        const result = [] as Array<string>;
+
+        for (let collection in collections) {
+            if (collections.hasOwnProperty(collection)) {
+                result.push(collection);
+            }
+        }
+        return result;
+    }
+
+    getGroupName() {
+        const collections = this.collectionNames;
+        if (collections && collections.length) {
+            return collections.slice(0).sort((l, r) => l.toLowerCase() > r.toLowerCase() ? 1 : -1).join(", ");
+        } else {
+            return index.DefaultIndexGroupName;
         }
     }
 
-    static priorityToString(priority: indexPriority): string {
-        switch (priority) {
-            case indexPriority.abandoned: return index.priorityAbandoned;
-            case indexPriority.abandonedForced: return index.priorityAbandonedForced;
-            case indexPriority.disabled: return index.priorityDisabled;
-            case indexPriority.disabledForced: return index.priorityDisabledForced;
-            case indexPriority.idle: return index.priorityIdle;
-            case indexPriority.idleForced: return index.priorityIdleForced;
-            default: return index.priorityNormal;
+    /**
+     * describes index priority/type
+     */
+    getIndexBadgeName(): string {
+        const faultyType = "Faulty" as Raven.Client.Data.Indexes.IndexType;
+        if (this.type === faultyType) {
+            return faultyType;
         }
+
+        //TODO: include stopped here as well
+        return this.priority();
     }
 }
 

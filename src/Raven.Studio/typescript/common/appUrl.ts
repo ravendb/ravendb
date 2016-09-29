@@ -98,7 +98,6 @@ class appUrl {
         statusDebugIndexFields: ko.computed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
         statusDebugIdentities: ko.computed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
         statusDebugWebSocket: ko.computed(() => appUrl.forStatusDebugWebSocket(appUrl.currentDatabase())),
-        statusDebugPersistAutoIndex: ko.computed(() => appUrl.forStatusDebugPersistAutoIndex(appUrl.currentDatabase())),
         statusDebugExplainReplication: ko.computed(() => appUrl.forStatusDebugExplainReplication(appUrl.currentDatabase())),
         infoPackage: ko.computed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
         dataSubscriptions: ko.computed(() => appUrl.forDataSubscriptions(appUrl.currentDatabase())),
@@ -479,10 +478,6 @@ class appUrl {
 
     static forStatusDebugWebSocket(db: database): string {
         return "#databases/status/debug/webSocket?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusDebugPersistAutoIndex(db: database): string {
-        return "#databases/status/debug/persist?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugExplainReplication(db: database): string {
