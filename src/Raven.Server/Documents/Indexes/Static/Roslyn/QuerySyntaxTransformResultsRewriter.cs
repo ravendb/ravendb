@@ -12,6 +12,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             _methods = new MethodDetectorRewriter();
             Rewriters = new CSharpSyntaxRewriter[]
             {
+                SelectManyRewriter.QuerySyntax,
                 DynamicInvocationExpressionsRewriter.Instance,
                 DynamicExtensionMethodsRewriter.Instance,
                 DynamicLambdaExpressionsRewriter.Instance,
