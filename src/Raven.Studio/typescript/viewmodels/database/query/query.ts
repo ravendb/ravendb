@@ -344,7 +344,6 @@ class query extends viewModelBase {
     }
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
-        /*
         if (!indexNameOrRecentQueryHash && this.indexes().length > 0) {
             var firstIndexName = this.indexes.first().name;
             this.setSelectedIndex(firstIndexName);
@@ -362,7 +361,7 @@ class query extends viewModelBase {
             // if indexName exists and we didn't fall into any case show error and redirect to documents page
             messagePublisher.reportError("Could not find " + indexNameOrRecentQueryHash + " index");
             router.navigate(appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()));
-        }*/
+        }
     }
 
     focusOnQuery() {
