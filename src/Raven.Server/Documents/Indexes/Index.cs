@@ -277,7 +277,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Start()
+        public virtual void Start()
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -305,7 +305,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Stop()
+        public virtual void Stop()
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -374,12 +374,9 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public bool IsStale(DocumentsOperationContext databaseContext)
+        public virtual bool IsStale(DocumentsOperationContext databaseContext)
         {
             Debug.Assert(databaseContext.Transaction != null);
-
-            if (Type == IndexType.Faulty)
-                return false;
 
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
@@ -679,7 +676,7 @@ namespace Raven.Server.Documents.Indexes
             return _indexStorage.ReadErrors();
         }
 
-        public void SetPriority(IndexingPriority priority)
+        public virtual void SetPriority(IndexingPriority priority)
         {
             if (Priority == priority)
                 return;
@@ -719,7 +716,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void SetLock(IndexLockMode mode)
+        public virtual void SetLock(IndexLockMode mode)
         {
             if (Definition.LockMode == mode)
                 return;
@@ -736,20 +733,10 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IndexProgress GetProgress(DocumentsOperationContext documentsContext)
+        public virtual IndexProgress GetProgress(DocumentsOperationContext documentsContext)
         {
             if (_contextPool == null)
-            {
-                if (Type != IndexType.Faulty)
-                    throw new ObjectDisposedException("Index " + Name);
-
-                return new IndexProgress
-                {
-                    Id = IndexId,
-                    Name = Name,
-                    Type = Type
-                };
-            }
+                throw new ObjectDisposedException("Index " + Name);
 
             if (documentsContext.Transaction == null)
                 throw new InvalidOperationException("Cannot calculate index progress without valid transaction.");
@@ -792,20 +779,10 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false, DocumentsOperationContext documentsContext = null)
+        public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false, DocumentsOperationContext documentsContext = null)
         {
             if (_contextPool == null)
-            {
-                if (Type != IndexType.Faulty)
-                    throw new ObjectDisposedException("Index " + Name);
-
-                return new IndexStats
-                {
-                    Id = IndexId,
-                    Name = Name,
-                    Type = Type
-                };
-            }
+                throw new ObjectDisposedException("Index " + Name);
 
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -907,7 +884,7 @@ namespace Raven.Server.Documents.Indexes
             return Definition.ConvertToIndexDefinition(this);
         }
 
-        public async Task StreamQuery(HttpResponse response, BlittableJsonTextWriter writer, IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual async Task StreamQuery(HttpResponse response, BlittableJsonTextWriter writer, IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             using (var result = new StreamDocumentQueryResult(response, writer, documentsContext))
             {
@@ -915,7 +892,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public async Task<DocumentQueryResult> Query(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual async Task<DocumentQueryResult> Query(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             var result = new DocumentQueryResult();
             await QueryInternal(result, query, documentsContext, token);
@@ -1037,7 +1014,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public async Task<FacetedQueryResult> FacetedQuery(FacetQuery query, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual async Task<FacetedQueryResult> FacetedQuery(FacetQuery query, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -1097,7 +1074,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public TermsQueryResult GetTerms(string field, string fromValue, int pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual TermsQueryResult GetTerms(string field, string fromValue, int pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
@@ -1118,7 +1095,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             Transformer transformer = null;
             if (string.IsNullOrEmpty(query.Transformer) == false)
