@@ -10,6 +10,7 @@ using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
@@ -40,11 +41,9 @@ namespace Raven.Server.Documents.Indexes.Workers
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
-            var pageSize = _configuration.MaxNumberOfDocumentsToFetchForMap;
-            var timeoutProcessing = _configuration.DocumentProcessingTimeout.AsTimeSpan;
-
+            var threadAllocations = NativeMemory.ThreadAllocations.Value;
             var moreWorkFound = false;
-
+            const long MaximumAmountOfMemoryToUsePerIndex = 1024*1024*1024L; // TODO: read from configuration value
             foreach (var collection in _index.Collections)
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
@@ -69,9 +68,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                         IEnumerable<Document> documents;
 
                         if (collection == Constants.Indexing.AllDocumentsCollection)
-                            documents = _documentsStorage.GetDocumentsAfter(databaseContext, lastEtag + 1, 0, pageSize);
+                            documents = _documentsStorage.GetDocumentsAfter(databaseContext, lastEtag + 1, 0, int.MaxValue);
                         else
-                            documents = _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize);
+                            documents = _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, int.MaxValue);
 
                         using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext))
                         {
@@ -111,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         $"Failed to execute mapping function on {current.Key}. Exception: {e}");
                                 }
 
-                                if (sw.Elapsed > timeoutProcessing )
+                                if (threadAllocations.Allocations > MaximumAmountOfMemoryToUsePerIndex)
                                     break;
                             }
                         }
