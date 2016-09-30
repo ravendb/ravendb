@@ -91,7 +91,7 @@ class Utils {
 
     static mockCommand<T>(commandName: string, resultProvider:() => T): void {
         Utils.injector.mock(commandName, () => ({
-            execute: () => $.Deferred<T>().resolve(resultProvider())
+            execute: () => $.Deferred<T>().resolve(resultProvider(), "OK", null)
         }));
     }
 

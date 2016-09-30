@@ -8,6 +8,7 @@ using Raven.Client.Connection;
 using Raven.Client.Data;
 using System.Reflection;
 using Raven.Abstractions.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 using Raven.Json.Linq;
@@ -76,6 +77,9 @@ namespace TypingsGenerator
             // alerts
             scripter.AddType(typeof(Alert));
             
+            // indexes
+            scripter.AddType(typeof(IndexStats));
+
 
 
             return scripter;

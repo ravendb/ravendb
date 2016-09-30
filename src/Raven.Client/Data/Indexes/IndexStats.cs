@@ -104,7 +104,7 @@ namespace Raven.Client.Data.Indexes
         public bool IsTestIndex { get; set; }
 
         /// <summary>
-        /// Determines if index is invalid. If more thant 15% of attemps (map or reduce) are errors then value will be <c>true</c>.
+        /// Determines if index is invalid. If more than 15% of attemps (map or reduce) are errors then value will be <c>true</c>.
         /// </summary>
         public bool IsInvalidIndex
         {
@@ -147,6 +147,7 @@ namespace Raven.Client.Data.Indexes
         }
     }
 
+    [Flags]
     public enum IndexingPriority
     {
         None = 0,
