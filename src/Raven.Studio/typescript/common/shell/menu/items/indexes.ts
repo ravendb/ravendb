@@ -11,7 +11,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             nav: true,
             route: "databases/indexes",
             moduleId: "viewmodels/database/indexes/indexes",
-            css: 'icon-plus',
+            css: 'icon-list',
             dynamicHash: appUrls.indexes
         }),
         new leafMenuItem({
@@ -19,7 +19,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             nav: true,
             route: "databases/indexes/mergeSuggestions",
             moduleId: "viewmodels/database/indexes/indexMergeSuggestions",
-            css: 'icon-plus',
+            css: 'icon-merge',
             dynamicHash: appUrls.megeSuggestions
         }),
         new leafMenuItem({
