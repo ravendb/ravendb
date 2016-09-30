@@ -47,7 +47,7 @@ namespace Sparrow.Utils
 
         public static void UnregisterFileMapping(string name, long size)
         {
-            var result = FileMapping.AddOrUpdate(name, size, (_, old) => old - size);
+            var result = FileMapping.AddOrUpdate(name, 0, (_, old) => old - size);
             if (result == 0)
             {
                 // shouldn't really happen, but let us be on the safe side

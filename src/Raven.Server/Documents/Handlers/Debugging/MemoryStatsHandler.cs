@@ -81,13 +81,16 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var threads = new DynamicJsonArray();
                 foreach (var stats in NativeMemory.ThreadAllocations.Values)
                 {
-                    totalUnmanagedAllocations += stats.Allocations;
+                    var unmanagedAllocations = stats.Allocations;
+                    totalUnmanagedAllocations += unmanagedAllocations;
+                    if (unmanagedAllocations < 0)
+                        unmanagedAllocations = 0;
                     threads.Add(new DynamicJsonValue
                     {
                         ["Name"] = stats.Name,
                         ["Id"] = stats.Id,
-                        ["Allocations"] = stats.Allocations,
-                        ["HumaneAllocations"] = FileHeader.Humane(stats.Allocations)
+                        ["Allocations"] = unmanagedAllocations,
+                        ["HumaneAllocations"] = FileHeader.Humane(unmanagedAllocations)
                     });
                 }
                 var managedMemory = GC.GetTotalMemory(false);

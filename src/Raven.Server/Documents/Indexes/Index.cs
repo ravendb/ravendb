@@ -861,6 +861,8 @@ namespace Raven.Server.Documents.Indexes
                     if (indexingThread.ManagedThreadId == threadAllocationsValue.Id)
                     {
                         stats.ThreadAllocations.SizeInBytes = threadAllocationsValue.Allocations;
+                        if (stats.ThreadAllocations.SizeInBytes < 0)
+                            stats.ThreadAllocations.SizeInBytes = 0;
                         break;
                     }
                 }
