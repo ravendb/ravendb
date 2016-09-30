@@ -32,6 +32,7 @@ class indexes extends viewModelBase {
     searchText = ko.observable<string>();
     lockModeCommon: KnockoutComputed<string>;
     selectedIndexesName = ko.observableArray<string>();
+    indexesSelectionState: KnockoutComputed<checkbox>;
 
     indexingEnabled = ko.observable<boolean>(true); //TODO: populate this value from server
 
@@ -78,6 +79,14 @@ class indexes extends viewModelBase {
                 }
             }
             return firstLockMode;
+        });
+        this.indexesSelectionState = ko.pureComputed<checkbox>(() => {
+            var selectedCount = this.selectedIndexesName().length;
+            if (selectedCount === this.getAllIndexes().length)
+                return checkbox.Checked;
+            if (selectedCount > 0)
+                return checkbox.SomeChecked;
+            return checkbox.UnChecked;
         });
     }
 
@@ -352,6 +361,32 @@ class indexes extends viewModelBase {
         new toggleIndexingCommand(false, this.activeDatabase())
             .execute()
             .fail(() => this.indexingEnabled(true));
+    }
+
+    resumeIndexing(idx: index) {
+        idx.pausedUntilRestart(false);
+        new toggleIndexingCommand(true, this.activeDatabase(), { name: [idx.name] })
+            .execute()
+            .fail(() => idx.pausedUntilRestart(true));
+    }
+
+    disableUntilRestart(idx: index) {
+        idx.pausedUntilRestart(true);
+        new toggleIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
+            .execute()
+            .fail(() => idx.pausedUntilRestart(false));
+    }
+
+
+    toggleSelectAll() {
+        const selectedIndexesCount = this.selectedIndexesName().length;
+
+        if (selectedIndexesCount > 0) {
+            this.selectedIndexesName([]);
+        } else {
+            const allIndexNames = this.getAllIndexes().map(idx => idx.name);
+            this.selectedIndexesName(allIndexNames);
+        }
     }
 }
 

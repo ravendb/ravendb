@@ -2,7 +2,10 @@
     <div class="btn-toolbar" role="toolbar" data-bind="visible: sortedGroups().length > 0">
 
         <div class="btn-group">
-            Triple state CHECKBOX
+            <div class="checkbox">
+                <input id="indexes_all" class="styled" type="checkbox" data-bind="checkboxTriple: indexesSelectionState, event: { change: toggleSelectAll }" title="Select all or none">
+                <label for="indexes_all">&nbsp;</label>
+            </div>
         </div>
         <div class="btn-group">
             <input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown', visible: indexGroups().length > 0" title="Search for an index (Alt+/)">
@@ -129,15 +132,19 @@
 
     <div class="dropdown">
         <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
-            <span data-bind="visible: isNormalPriority()">
+            <span data-bind="visible: pausedUntilRestart()">
+                <i class="fa fa-ban fa-fw"></i>
+                Disabled until restart
+            </span>
+            <span data-bind="visible: !pausedUntilRestart() && isNormalPriority()">
                 <i class="fa fa-check fa-fw"></i>
                 Normal
             </span>
-            <span data-bind="visible: isIdle()">
+            <span data-bind="visible: !pausedUntilRestart() && isIdle()">
                 <i class="fa fa-arrow-down fa-fw"></i>
                 Idle
             </span>
-            <span data-bind="visible: isDisabled()">
+            <span data-bind="visible: !pausedUntilRestart() && isDisabled()">
                 <i class="fa fa-ban fa-fw"></i>
                 Disabled
             </span>
@@ -160,6 +167,19 @@
                 <a href="#" data-bind="click: $root.disabledPriority.bind($root, $data), css: { active: isDisabled() }" title="Disabled">
                     <i class="fa fa-ban fa-fw"></i>
                     Disabled
+                </a>
+            </li>
+            <li role="presentation" data-bind="visible: canBePaused()">
+                <a href="#" data-bind="click: $root.disableUntilRestart.bind($root, $data)" title="Disable until server restart">
+                    <i class="fa fa-ban fa-fw"></i>
+                    Disable until restart
+                </a>
+            </li>
+            
+            <li role="presentation" data-bind="visible: canBeResumed()">
+                <a href="#" data-bind="click: $root.resumeIndexing.bind($root, $data)" title="Resume indexing">
+                    <i class="fa fa-check fa-fw"></i>
+                    Resume indexing
                 </a>
             </li>
         </ul>

@@ -43,6 +43,9 @@ class index {
     isNormalPriority: KnockoutComputed<boolean>;
     isDisabled: KnockoutComputed<boolean>;
     isIdle: KnockoutComputed<boolean>;
+    pausedUntilRestart = ko.observable<boolean>();
+    canBePaused: KnockoutComputed<boolean>;
+    canBeResumed: KnockoutComputed<boolean>;
 
     constructor(dto: Raven.Client.Data.Indexes.IndexStats) {
         this.collections = dto.Collections;
@@ -67,6 +70,7 @@ class index {
         this.reduceErrors = dto.ReduceErrors;
         this.reduceSuccesses = dto.ReduceSuccesses;
         this.type = dto.Type;
+        //TODO: this.pausedUntilRestart =  is paused
 
         this.initializeObservables();
     }
@@ -79,6 +83,16 @@ class index {
         this.isNormalPriority = ko.pureComputed((() => this.priority() === index.priorityNormal));
         this.isDisabled = ko.pureComputed(() => this.priority().contains(index.priorityDisabled));
         this.isIdle = ko.pureComputed(() => this.priority().contains(index.priorityIdle));
+        this.canBePaused = ko.pureComputed(() => {
+            const disabled = this.isDisabled();
+            const paused = this.pausedUntilRestart();
+            return !disabled && !paused;
+        });
+        this.canBeResumed = ko.pureComputed(() => {
+            const disabled = this.isDisabled();
+            const paused = this.pausedUntilRestart();
+            return !disabled && paused;
+        });
     }
 
     private static extractCollectionNames(collections: { [index: string]: Raven.Client.Data.Indexes.CollectionStats; }): string[] {
@@ -110,7 +124,10 @@ class index {
             return faultyType;
         }
 
-        //TODO: include stopped here as well
+        if (this.pausedUntilRestart()) {
+            return "Paused";
+        }
+
         return this.priority();
     }
 }
