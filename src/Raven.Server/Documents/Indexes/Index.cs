@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
@@ -177,9 +176,22 @@ namespace Raven.Server.Documents.Indexes
 
         public string Name => Definition?.Name;
 
-        public bool IsRunning => _indexingThread != null;
+        public IndexRunningStatus Status
+        {
+            get
+            {
+                if (_indexingThread != null)
+                    return IndexRunningStatus.Running;
+
+                if (DocumentDatabase.Configuration.Indexing.Disabled)
+                    return IndexRunningStatus.Disabled;
+
+                return IndexRunningStatus.Paused;
+            }
+        }
 
         public virtual bool HasBoostedFields => false;
+
         protected void Initialize(DocumentDatabase documentDatabase)
         {
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
@@ -797,6 +809,7 @@ namespace Raven.Server.Documents.Indexes
                 stats.EntriesCount = reader.EntriesCount();
                 stats.LockMode = Definition.LockMode;
                 stats.Priority = Priority;
+                stats.Status = Status;
 
                 stats.LastQueryingTime = _lastQueryingTime;
 

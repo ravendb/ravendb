@@ -5,9 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -17,7 +15,6 @@ using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -436,7 +433,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     database))
                 {
                     index.Start();
-                    Assert.True(index.IsRunning);
+                    Assert.Equal(IndexRunningStatus.Running, index.Status);
 
                     IndexStats stats;
                     var batchStats = new IndexingRunStats();
@@ -451,7 +448,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                     stats = index.GetStats();
                     Assert.Equal(IndexingPriority.Error, stats.Priority);
-                    Assert.True(SpinWait.SpinUntil(() => index.IsRunning == false, TimeSpan.FromSeconds(5)));
+                    Assert.True(SpinWait.SpinUntil(() => index.Status == IndexRunningStatus.Paused, TimeSpan.FromSeconds(5)));
                 }
             }
         }

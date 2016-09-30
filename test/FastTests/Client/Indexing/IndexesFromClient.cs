@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 
 using Raven.Abstractions;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
@@ -79,43 +78,48 @@ namespace FastTests.Client.Indexing
                 database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
                 database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
 
-                var statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
+                var status = await store.AsyncDatabaseCommands.Admin.GetIndexingStatusAsync();
 
-                Assert.Equal(2, statuses.Length);
-                Assert.Equal("Running", statuses[0].Status);
-                Assert.Equal("Running", statuses[1].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Status);
+                Assert.Equal(2, status.Indexes.Length);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[0].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[1].Status);
 
                 await store.AsyncDatabaseCommands.Admin.StopIndexingAsync();
 
-                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
+                status = await store.AsyncDatabaseCommands.Admin.GetIndexingStatusAsync();
 
-                Assert.Equal(2, statuses.Length);
-                Assert.Equal("Paused", statuses[0].Status);
-                Assert.Equal("Paused", statuses[1].Status);
+                Assert.Equal(IndexRunningStatus.Paused, status.Status);
+                Assert.Equal(2, status.Indexes.Length);
+                Assert.Equal(IndexRunningStatus.Paused, status.Indexes[0].Status);
+                Assert.Equal(IndexRunningStatus.Paused, status.Indexes[1].Status);
 
                 await store.AsyncDatabaseCommands.Admin.StartIndexingAsync();
 
-                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
+                status = await store.AsyncDatabaseCommands.Admin.GetIndexingStatusAsync();
 
-                Assert.Equal(2, statuses.Length);
-                Assert.Equal("Running", statuses[0].Status);
-                Assert.Equal("Running", statuses[1].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Status);
+                Assert.Equal(2, status.Indexes.Length);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[0].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[1].Status);
 
-                await store.AsyncDatabaseCommands.Admin.StopIndexAsync(statuses[1].Name);
+                await store.AsyncDatabaseCommands.Admin.StopIndexAsync(status.Indexes[1].Name);
 
-                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
+                status = await store.AsyncDatabaseCommands.Admin.GetIndexingStatusAsync();
 
-                Assert.Equal(2, statuses.Length);
-                Assert.Equal("Running", statuses[0].Status);
-                Assert.Equal("Paused", statuses[1].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Status);
+                Assert.Equal(2, status.Indexes.Length);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[0].Status);
+                Assert.Equal(IndexRunningStatus.Paused, status.Indexes[1].Status);
 
-                await store.AsyncDatabaseCommands.Admin.StartIndexAsync(statuses[1].Name);
+                await store.AsyncDatabaseCommands.Admin.StartIndexAsync(status.Indexes[1].Name);
 
-                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
+                status = await store.AsyncDatabaseCommands.Admin.GetIndexingStatusAsync();
 
-                Assert.Equal(2, statuses.Length);
-                Assert.Equal("Running", statuses[0].Status);
-                Assert.Equal("Running", statuses[1].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Status);
+                Assert.Equal(2, status.Indexes.Length);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[0].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[1].Status);
             }
         }
 
@@ -503,7 +507,7 @@ namespace FastTests.Client.Indexing
 
                 var deleteOperation = store
                     .DatabaseCommands
-                    .DeleteByIndex(indexName, new IndexQuery(), new QueryOperationOptions {AllowStale = false});
+                    .DeleteByIndex(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false });
 
                 var e = Assert.Throws<InvalidOperationException>(() =>
                 {
