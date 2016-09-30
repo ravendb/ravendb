@@ -736,7 +736,63 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IndexStats GetStats(bool calculateCollectionStats = false, bool calculateStaleness = false, DocumentsOperationContext documentsContext = null)
+        public IndexProgress GetProgress(DocumentsOperationContext documentsContext)
+        {
+            if (_contextPool == null)
+            {
+                if (Type != IndexType.Faulty)
+                    throw new ObjectDisposedException("Index " + Name);
+
+                return new IndexProgress
+                {
+                    Id = IndexId,
+                    Name = Name,
+                    Type = Type
+                };
+            }
+
+            if (documentsContext.Transaction == null)
+                throw new InvalidOperationException("Cannot calculate index progress without valid transaction.");
+
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var progress = new IndexProgress
+                {
+                    Id = IndexId,
+                    Name = Name,
+                    Type = Type
+                };
+
+                progress.IsStale = IsStale(documentsContext, context);
+
+                var stats = _indexStorage.ReadStats(tx);
+
+                progress.Collections = new Dictionary<string, IndexProgress.CollectionStats>();
+                foreach (var collection in Collections)
+                {
+                    var collectionStats = stats.Collections[collection];
+
+                    var progressStats = progress.Collections[collection] = new IndexProgress.CollectionStats
+                    {
+                        LastProcessedDocumentEtag = collectionStats.LastProcessedDocumentEtag,
+                        LastProcessedTombstoneEtag = collectionStats.LastProcessedTombstoneEtag
+                    };
+
+                    long totalCount;
+                    progressStats.NumberOfDocumentsToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, progressStats.LastProcessedDocumentEtag, out totalCount);
+                    progressStats.TotalNumberOfDocuments = totalCount;
+
+                    progressStats.NumberOfTombstonesToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, progressStats.LastProcessedTombstoneEtag, out totalCount);
+                    progressStats.TotalNumberOfTombstones = totalCount;
+                }
+
+                return progress;
+            }
+        }
+
+        public IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false, DocumentsOperationContext documentsContext = null)
         {
             if (_contextPool == null)
             {
@@ -767,29 +823,28 @@ namespace Raven.Server.Documents.Indexes
 
                 stats.LastQueryingTime = _lastQueryingTime;
 
-                if (calculateStaleness || calculateCollectionStats)
+                if (calculateStaleness || calculateLag)
                 {
                     if (documentsContext == null)
-                        throw new InvalidOperationException("Cannot calculate collection stats or staleness without valid context.");
+                        throw new InvalidOperationException("Cannot calculate staleness or lag without valid context.");
 
                     if (documentsContext.Transaction == null)
-                        throw new InvalidOperationException("Cannot calculate collection stats or staleness without valid transaction.");
+                        throw new InvalidOperationException("Cannot calculate staleness or lag without valid transaction.");
 
                     if (calculateStaleness)
                         stats.IsStale = IsStale(documentsContext, context);
 
-                    if (calculateCollectionStats)
+                    if (calculateLag)
                     {
                         foreach (var collection in Collections)
                         {
                             var collectionStats = stats.Collections[collection];
 
-                            long totalCount;
-                            collectionStats.NumberOfDocumentsToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, collectionStats.LastProcessedDocumentEtag, out totalCount);
-                            collectionStats.TotalNumberOfDocuments = totalCount;
+                            var lastDocumentEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
+                            var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection);
 
-                            collectionStats.NumberOfTombstonesToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, collectionStats.LastProcessedTombstoneEtag, out totalCount);
-                            collectionStats.TotalNumberOfTombstones = totalCount;
+                            collectionStats.DocumentLag = Math.Max(0, lastDocumentEtag - collectionStats.LastProcessedDocumentEtag);
+                            collectionStats.TombstoneLag = Math.Max(0, lastTombstoneEtag - collectionStats.LastProcessedTombstoneEtag);
                         }
                     }
                 }

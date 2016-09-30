@@ -131,17 +131,19 @@ namespace Raven.Client.Data.Indexes
 
         public class CollectionStats
         {
+            public CollectionStats()
+            {
+                DocumentLag = -1;
+                TombstoneLag = -1;
+            }
+
             public long LastProcessedDocumentEtag { get; set; }
-
-            public long NumberOfDocumentsToProcess { get; set; }
-
-            public long TotalNumberOfDocuments { get; set; }
 
             public long LastProcessedTombstoneEtag { get; set; }
 
-            public long NumberOfTombstonesToProcess { get; set; }
+            public long DocumentLag { get; set; }
 
-            public long TotalNumberOfTombstones { get; set; }
+            public long TombstoneLag { get; set; }
         }
     }
 

@@ -163,10 +163,8 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(1, stats.Collections.Count);
                 Assert.Equal(2 + 1, stats.Collections.First().Value.LastProcessedDocumentEtag); // +1 because of HiLo
                 Assert.Equal(0, stats.Collections.First().Value.LastProcessedTombstoneEtag);
-                Assert.Equal(0, stats.Collections.First().Value.NumberOfDocumentsToProcess);
-                Assert.Equal(0, stats.Collections.First().Value.NumberOfTombstonesToProcess);
-                Assert.Equal(2, stats.Collections.First().Value.TotalNumberOfDocuments);
-                Assert.Equal(0, stats.Collections.First().Value.TotalNumberOfTombstones);
+                Assert.Equal(0, stats.Collections.First().Value.DocumentLag);
+                Assert.Equal(0, stats.Collections.First().Value.TombstoneLag);
 
                 Assert.False(stats.Memory.InMemory);
                 Assert.True(stats.Memory.DiskSize.SizeInBytes > 0);

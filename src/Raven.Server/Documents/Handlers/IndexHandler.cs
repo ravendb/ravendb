@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Handlers
                         indexStats = Database.IndexStore
                             .GetIndexes()
                             .OrderBy(x => x.Name)
-                            .Select(x => x.GetStats(calculateCollectionStats: true, calculateStaleness: true, documentsContext: context))
+                            .Select(x => x.GetStats(calculateLag: true, calculateStaleness: true, documentsContext: context))
                             .ToArray();
                     else
                     {
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Handlers
                         if (index == null)
                             throw new InvalidOperationException("There is not index with name: " + name);
 
-                        indexStats = new[] { index.GetStats(calculateCollectionStats: true, calculateStaleness: true, documentsContext: context) };
+                        indexStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, documentsContext: context) };
                     }
                 }
 
@@ -184,6 +184,27 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteEndArray();
 
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/indexes/progress", "GET")]
+        public Task Progress()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
+            {
+                var index = Database.IndexStore.GetIndex(name);
+                if (index == null)
+                    throw new InvalidOperationException("There is not index with name: " + name);
+
+                var progress = index.GetProgress(context);
+                writer.WriteIndexProgress(context, progress);
             }
 
             return Task.CompletedTask;
