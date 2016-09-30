@@ -32,11 +32,11 @@ namespace Tryouts
                 DefaultDatabase = "stackoverflow"
             }.Initialize())
             {
-                new Users_Registrations_ByMonth().Execute(store);
-                new Users_Search().Execute(store);
+                //new Users_Registrations_ByMonth().Execute(store);
+                //new Users_Search().Execute(store);
                 new Questions_Tags().Execute(store);
-                new Questions_Tags_ByMonths().Execute(store);
-                new Activity_ByMonth().Execute(store);
+                //new Questions_Tags_ByMonths().Execute(store);
+                //new Activity_ByMonth().Execute(store);
 
                 var sp = Stopwatch.StartNew();
                 var done = new HashSet<string>();

@@ -17,9 +17,12 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
         private readonly CancellationToken _shutdownNotification;
         private readonly RavenConfiguration _configuration;
         private static Logger _logger;
+        private readonly ManualResetEvent _simulatedLowMemory = new ManualResetEvent(false);
+        private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
 
         public PosixLowMemoryNotification(CancellationToken shutdownNotification, RavenConfiguration configuration)
         {
+            shutdownNotification.Register(() => _shutdownRequested.Set());
             _shutdownNotification = shutdownNotification;
             _configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<PosixLowMemoryNotification>(configuration.DatabaseName);
@@ -33,35 +36,39 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
         private void MonitorMemoryUsage()
         {
             int clearInactiveHandlersCounter = 0;
-
+            var handles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested };
             while (true)
             {
-                SpinWait.SpinUntil(() => false, TimeSpan.FromSeconds(5));
-                if (_shutdownNotification.IsCancellationRequested)
-                    return;
-
-                if (++clearInactiveHandlersCounter > 60) // 5 minutes == WaitAny 5 Secs * 60
+                switch (WaitHandle.WaitAny(handles, 5 *  1000))
                 {
-                    clearInactiveHandlersCounter = 0;
-                    ClearInactiveHandlers();
-                    continue;
-                }
-
-                var availableMem = MemoryInformation.GetMemoryInfo(_configuration).AvailableMemory;
-                if (availableMem < _configuration.Memory.LowMemoryForLinuxDetection)
-                {
-                    clearInactiveHandlersCounter = 0;
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Low memory detected, will try to reduce memory usage...");
-                    RunLowMemoryHandlers();
-                    Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
+                    case WaitHandle.WaitTimeout:
+                        if (++clearInactiveHandlersCounter > 60) // 5 minutes == WaitAny 5 Secs * 60
+                        {
+                            clearInactiveHandlersCounter = 0;
+                            ClearInactiveHandlers();
+                        }
+                        var availableMem = MemoryInformation.GetMemoryInfo(_configuration).AvailableMemory;
+                        if (availableMem < _configuration.Memory.LowMemoryForLinuxDetection)
+                        {
+                            clearInactiveHandlersCounter = 0;
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info("Low memory detected, will try to reduce memory usage...");
+                            RunLowMemoryHandlers();
+                            Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
+                        }
+                        break;
+                    case 0:
+                        RunLowMemoryHandlers();
+                        break;
+                    default:
+                        return;
                 }
             }
         }
 
         public override void SimulateLowMemoryNotification()
         {
-            
+            _simulatedLowMemory.Set();
         }
     }
 }
