@@ -32,7 +32,9 @@ namespace Voron.Impl.Scratch
 
         // Local writable state. Can perform multiple reads, but must never do multiple writes simultaneously.
         private int _currentScratchNumber = -1;
-        private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers = new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.Instance);
+
+        private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers =
+            new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.Instance);
 
 
         public ScratchBufferPool(StorageEnvironment env)
@@ -45,7 +47,8 @@ namespace Voron.Impl.Scratch
         public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
         {
             // This is not risky anymore, but the caller must understand this is a monotonically incrementing snapshot. 
-            return _scratchBuffers.ToDictionary(x => x.Key, y => y.Value.File.PagerState, NumericEqualityComparer.Instance);
+            return _scratchBuffers.ToDictionary(x => x.Key, y => y.Value.File.PagerState,
+                NumericEqualityComparer.Instance);
         }
 
         internal long GetNumberOfAllocations(int scratchNumber)
@@ -57,7 +60,24 @@ namespace Voron.Impl.Scratch
         private ScratchBufferItem NextFile()
         {
             _currentScratchNumber++;
-            var scratchPager = _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber));
+            var scratchPager =
+                _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber));
+            if (_current != null)
+            {
+                try
+                {
+                    // if we need to create a new file, we'll start with one that has the same size
+                    // as the current one, to avoid additional allocations
+                    scratchPager.EnsureContinuous(0, (int) _current.File.NumberOfAllocatedPages);
+                }
+                catch (Exception)
+                {
+                    // this can fail because of disk space issue, let us just ignore it
+                    // we'll allocate the minimum amount in a bit anway
+                }
+            }
+
+            // if the previous large allocation has failed, this will allocate just enough to start with
             scratchPager.EnsureContinuous(0, (int)(Math.Max(_options.InitialFileSize ?? 0, _options.InitialLogFileSize) / _options.PageSize));
 
             var scratchFile = new ScratchBufferFile(scratchPager, _currentScratchNumber);
@@ -157,81 +177,30 @@ namespace Voron.Impl.Scratch
 
             if (sizeAfterAllocation > _sizeLimit)
             {
-                var sp = Stopwatch.StartNew();
+                // There are two reasons why we can't find enough space after the size gotten so big:
+                // * internal fragmentation - which will cause us to create a new file
+                // * we haven't flushed yet - so we'll increase the file size
 
-                // Our problem is that we don't have any available free pages, probably because
-                // there are read transactions that are holding things open. We are going to see if
-                // there are any free pages that _might_ be freed for us if we wait for a bit. The idea
-                // is that we let the read transactions time to complete and do their work, at which point
-                // we can continue running. It is possible that a long running read transaction
-                // would in fact generate enough work for us to timeout, but hopefully we can avoid that.
-
-                while (tx.IsLazyTransaction == false && // lazy transaction is holding a read tx that will stop this, nothing to do here
-                    tx.Environment.Options.ManualFlushing == false &&
-                    sp.ElapsedMilliseconds < tx.Environment.Options.ScratchBufferOverflowTimeout)
+                if (current.File.HasDiscontinuousSpaceFor(tx, size, _scratchBuffers.Count) == false)
                 {
-                    if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
-                        return result;
-                    Thread.Sleep(32);
+                    return current.File.Allocate(tx, numberOfPages, size);
                 }
 
-                sp.Stop();
+                // We need to ensure that _current stays constant through the codepath until return. 
+                current = NextFile();
 
-                bool createNextFile = false;
-
-                if (tx.IsLazyTransaction)
+                try
                 {
-                    // in lazy transaction when reaching full scratch buffer - we might still have continuous space, but because
-                    // of high insertion rate - we reach scratch buffer full, so we will create new scratch anyhow
+                    current.File.PagerState.AddRef();
+                    tx.EnsurePagerStateReference(current.File.PagerState);
 
-                    createNextFile = true;
+                    return current.File.Allocate(tx, numberOfPages, size);
                 }
-                else if (current.File.HasDiscontinuousSpaceFor(tx, size, _scratchBuffers.Count))
+                finally
                 {
-                    // there is enough space for the requested allocation but the problem is its fragmentation
-                    // so we will create a new scratch file and will allow to allocate new continuous range from there
-
-                    createNextFile = true;
+                    // That's why we update only after exiting. 
+                    _current = current;
                 }
-                else if (_scratchBuffers.Count == 1 && current.File.Size < _sizeLimit &&
-                        (current.File.ActivelyUsedBytes(oldestActiveTransaction) + size * tx.Environment.Options.PageSize) < _sizeLimit)
-                {
-                    // there is only one scratch file that hasn't reach the size limit yet and
-                    // the number of bytes being in active use allows to allocate the requested size
-                    // let it create a new file
-
-                    createNextFile = true;
-                }
-                else // TODO : RavenDB - the following block is for 'Support large tx' however also deals with the problematic max-scratch-buffer, but with inflating scratch when bursting from bulkinsert for example..
-                {
-                    // if we reached so far and weren't able to allocate space, 
-                    // we will increase the scratch over it's limit size to support large transactions (or intensive write burst)
-                    result = current.File.Allocate(tx, numberOfPages, size);
-                    _options.OnScratchBufferSizeChanged(sizeAfterAllocation);
-                    return result;
-                }
-
-
-                if (createNextFile) // TODO : remove this condition after deciding which strategy to take on max-scratch-buffer
-                {
-                    // We need to ensure that _current stays constant through the codepath until return. 
-                    current = NextFile();
-
-                    try
-                    {
-                        current.File.PagerState.AddRef();
-                        tx.EnsurePagerStateReference(current.File.PagerState);
-
-                        return current.File.Allocate(tx, numberOfPages, size);
-                    }
-                    finally
-                    {
-                        // That's why we update only after exiting. 
-                        _current = current;
-                    }
-                }
-
-                ThrowScratchBufferTooBig(tx, numberOfPages, size, oldestActiveTransaction, sizeAfterAllocation, sp, current);
             }
 
             // we don't have free pages to give out, need to allocate some
