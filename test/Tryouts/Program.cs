@@ -46,9 +46,10 @@ namespace Tryouts
                     var databaseStatistics = store.DatabaseCommands.GetStatistics();
                     foreach (var index in databaseStatistics.Indexes)
                     {
-                        if (index.IsStale == false && done.Add(index.Name))
+                        if (index.IsStale == false)
                         {
-                            Console.WriteLine(sp.Elapsed + " - " + index.Name);
+                            if (done.Add(index.Name))
+                                Console.WriteLine(sp.Elapsed + " - " + index.Name);
                         }
                         else
                         {
