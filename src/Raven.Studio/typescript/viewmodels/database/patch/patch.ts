@@ -469,7 +469,7 @@ class patch extends viewModelBase {
         var bulkDocs: Array<bulkDocumentDto> = [];
         bulkDocs.push({
             Key: this.keyOfTestedDocument(),
-            Method: 'EVAL',
+            Method: 'PATCH',
             DebugMode: true,
             Patch: {
                 Script: this.patchDocument().script(),
@@ -479,11 +479,11 @@ class patch extends viewModelBase {
         new executePatchCommand(bulkDocs, this.activeDatabase(), true)
             .execute()
             .done((result: bulkDocumentDto[]) => {
-                var testResult = new document((<any>result[0]).AdditionalData['Document']);
+                var testResult = new document((<any>result).Results[0].AdditionalData['Document']);
                 this.afterPatchDoc(JSON.stringify(testResult.toDto(), null, 4));
                 this.afterPatchMeta(JSON.stringify(documentMetadata.filterMetadata(testResult.__metadata.toDto()), null, 4));
-                this.updateActions((<any>result[0]).AdditionalData['Actions']);
-                this.outputLog((<any>result[0]).AdditionalData["Debug"]);
+                this.updateActions((<any>result).Results[0].AdditionalData['Actions']);
+                this.outputLog((<any>result).Results[0].AdditionalData["Debug"]);
             })
             .fail((result: JQueryXHR) => console.log(result.responseText));
         this.recordPatchRun();
@@ -658,7 +658,7 @@ class patch extends viewModelBase {
         keys.forEach(
             key => bulkDocs.push({
                 Key: key,
-                Method: 'EVAL',
+                Method: 'PATCH',
                 DebugMode: false,
                 Patch: {
                     Script: this.patchDocument().script(),
