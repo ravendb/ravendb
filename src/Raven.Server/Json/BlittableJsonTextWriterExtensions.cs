@@ -773,20 +773,20 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteIndexStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexStats stats)
+        public static void WriteIndexProgress(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexProgress progress)
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(nameof(stats.IsStale));
-            writer.WriteBool(stats.IsStale);
+            writer.WritePropertyName(nameof(progress.IsStale));
+            writer.WriteBool(progress.IsStale);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(stats.Collections));
-            if (stats.Collections != null)
+            writer.WritePropertyName(nameof(progress.Collections));
+            if (progress.Collections != null)
             {
                 writer.WriteStartObject();
                 var isFirst = true;
-                foreach (var kvp in stats.Collections)
+                foreach (var kvp in progress.Collections)
                 {
                     if (isFirst == false)
                         writer.WriteComma();
@@ -819,6 +819,67 @@ namespace Raven.Server.Json
 
                     writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfTombstones));
                     writer.WriteInteger(kvp.Value.TotalNumberOfTombstones);
+
+                    writer.WriteEndObject();
+                }
+                writer.WriteEndObject();
+            }
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(progress.Name));
+            writer.WriteString(progress.Name);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(progress.Type));
+            writer.WriteString(progress.Type.ToString());
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(progress.Id));
+            writer.WriteInteger(progress.Id);
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteIndexStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexStats stats)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(stats.IsStale));
+            writer.WriteBool(stats.IsStale);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.Collections));
+            if (stats.Collections != null)
+            {
+                writer.WriteStartObject();
+                var isFirst = true;
+                foreach (var kvp in stats.Collections)
+                {
+                    if (isFirst == false)
+                        writer.WriteComma();
+
+                    isFirst = false;
+
+                    writer.WritePropertyName(kvp.Key);
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(kvp.Value.LastProcessedDocumentEtag));
+                    writer.WriteInteger(kvp.Value.LastProcessedDocumentEtag);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(kvp.Value.LastProcessedTombstoneEtag));
+                    writer.WriteInteger(kvp.Value.LastProcessedTombstoneEtag);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(kvp.Value.DocumentLag));
+                    writer.WriteInteger(kvp.Value.DocumentLag);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(kvp.Value.TombstoneLag));
+                    writer.WriteInteger(kvp.Value.TombstoneLag);
 
                     writer.WriteEndObject();
                 }

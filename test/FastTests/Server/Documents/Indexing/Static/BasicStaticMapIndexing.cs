@@ -365,18 +365,19 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                             tx.Commit();
                         }
-                        IndexStats stats;
+
+                        IndexProgress progress;
                         using (context.OpenReadTransaction())
                         {
-                            stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                            progress = index.GetProgress(context);
                         }
 
-                        Assert.Equal(0, stats.Collections["Users"].LastProcessedDocumentEtag);
-                        Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
-                        Assert.Equal(2, stats.Collections["Users"].NumberOfDocumentsToProcess);
-                        Assert.Equal(0, stats.Collections["Users"].NumberOfTombstonesToProcess);
-                        Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
-                        Assert.Equal(0, stats.Collections["Users"].TotalNumberOfTombstones);
+                        Assert.Equal(0, progress.Collections["Users"].LastProcessedDocumentEtag);
+                        Assert.Equal(0, progress.Collections["Users"].LastProcessedTombstoneEtag);
+                        Assert.Equal(2, progress.Collections["Users"].NumberOfDocumentsToProcess);
+                        Assert.Equal(0, progress.Collections["Users"].NumberOfTombstonesToProcess);
+                        Assert.Equal(2, progress.Collections["Users"].TotalNumberOfDocuments);
+                        Assert.Equal(0, progress.Collections["Users"].TotalNumberOfTombstones);
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
@@ -384,15 +385,15 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                            progress = index.GetProgress(context);
                         }
 
-                        Assert.Equal(2, stats.Collections["Users"].LastProcessedDocumentEtag);
-                        Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
-                        Assert.Equal(0, stats.Collections["Users"].NumberOfDocumentsToProcess);
-                        Assert.Equal(0, stats.Collections["Users"].NumberOfTombstonesToProcess);
-                        Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
-                        Assert.Equal(0, stats.Collections["Users"].TotalNumberOfTombstones);
+                        Assert.Equal(2, progress.Collections["Users"].LastProcessedDocumentEtag);
+                        Assert.Equal(0, progress.Collections["Users"].LastProcessedTombstoneEtag);
+                        Assert.Equal(0, progress.Collections["Users"].NumberOfDocumentsToProcess);
+                        Assert.Equal(0, progress.Collections["Users"].NumberOfTombstonesToProcess);
+                        Assert.Equal(2, progress.Collections["Users"].TotalNumberOfDocuments);
+                        Assert.Equal(0, progress.Collections["Users"].TotalNumberOfTombstones);
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -427,15 +428,15 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                            progress = index.GetProgress(context);
                         }
 
-                        Assert.Equal(2, stats.Collections["Users"].LastProcessedDocumentEtag);
-                        Assert.Equal(0, stats.Collections["Users"].LastProcessedTombstoneEtag);
-                        Assert.Equal(1, stats.Collections["Users"].NumberOfDocumentsToProcess);
-                        Assert.Equal(1, stats.Collections["Users"].NumberOfTombstonesToProcess);
-                        Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
-                        Assert.Equal(1, stats.Collections["Users"].TotalNumberOfTombstones);
+                        Assert.Equal(2, progress.Collections["Users"].LastProcessedDocumentEtag);
+                        Assert.Equal(0, progress.Collections["Users"].LastProcessedTombstoneEtag);
+                        Assert.Equal(1, progress.Collections["Users"].NumberOfDocumentsToProcess);
+                        Assert.Equal(1, progress.Collections["Users"].NumberOfTombstonesToProcess);
+                        Assert.Equal(2, progress.Collections["Users"].TotalNumberOfDocuments);
+                        Assert.Equal(1, progress.Collections["Users"].TotalNumberOfTombstones);
 
                         batchStats = new IndexingRunStats();
                         scope = new IndexingStatsScope(batchStats);
@@ -443,15 +444,15 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            stats = index.GetStats(calculateCollectionStats: true, documentsContext: context);
+                            progress = index.GetProgress(context);
                         }
 
-                        Assert.Equal(5, stats.Collections["Users"].LastProcessedDocumentEtag);
-                        Assert.Equal(4, stats.Collections["Users"].LastProcessedTombstoneEtag);
-                        Assert.Equal(0, stats.Collections["Users"].NumberOfDocumentsToProcess);
-                        Assert.Equal(0, stats.Collections["Users"].NumberOfTombstonesToProcess);
-                        Assert.Equal(2, stats.Collections["Users"].TotalNumberOfDocuments);
-                        Assert.Equal(1, stats.Collections["Users"].TotalNumberOfTombstones);
+                        Assert.Equal(5, progress.Collections["Users"].LastProcessedDocumentEtag);
+                        Assert.Equal(4, progress.Collections["Users"].LastProcessedTombstoneEtag);
+                        Assert.Equal(0, progress.Collections["Users"].NumberOfDocumentsToProcess);
+                        Assert.Equal(0, progress.Collections["Users"].NumberOfTombstonesToProcess);
+                        Assert.Equal(2, progress.Collections["Users"].TotalNumberOfDocuments);
+                        Assert.Equal(1, progress.Collections["Users"].TotalNumberOfTombstones);
                     }
                 }
             }

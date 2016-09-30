@@ -277,7 +277,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Start()
+        public virtual void Start()
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -305,7 +305,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Stop()
+        public virtual void Stop()
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -374,12 +374,9 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public bool IsStale(DocumentsOperationContext databaseContext)
+        public virtual bool IsStale(DocumentsOperationContext databaseContext)
         {
             Debug.Assert(databaseContext.Transaction != null);
-
-            if (Type == IndexType.Faulty)
-                return false;
 
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
@@ -679,7 +676,7 @@ namespace Raven.Server.Documents.Indexes
             return _indexStorage.ReadErrors();
         }
 
-        public void SetPriority(IndexingPriority priority)
+        public virtual void SetPriority(IndexingPriority priority)
         {
             if (Priority == priority)
                 return;
@@ -719,7 +716,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void SetLock(IndexLockMode mode)
+        public virtual void SetLock(IndexLockMode mode)
         {
             if (Definition.LockMode == mode)
                 return;
@@ -736,20 +733,56 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IndexStats GetStats(bool calculateCollectionStats = false, bool calculateStaleness = false, DocumentsOperationContext documentsContext = null)
+        public virtual IndexProgress GetProgress(DocumentsOperationContext documentsContext)
         {
             if (_contextPool == null)
-            {
-                if (Type != IndexType.Faulty)
-                    throw new ObjectDisposedException("Index " + Name);
+                throw new ObjectDisposedException("Index " + Name);
 
-                return new IndexStats
+            if (documentsContext.Transaction == null)
+                throw new InvalidOperationException("Cannot calculate index progress without valid transaction.");
+
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var progress = new IndexProgress
                 {
                     Id = IndexId,
                     Name = Name,
                     Type = Type
                 };
+
+                progress.IsStale = IsStale(documentsContext, context);
+
+                var stats = _indexStorage.ReadStats(tx);
+
+                progress.Collections = new Dictionary<string, IndexProgress.CollectionStats>();
+                foreach (var collection in Collections)
+                {
+                    var collectionStats = stats.Collections[collection];
+
+                    var progressStats = progress.Collections[collection] = new IndexProgress.CollectionStats
+                    {
+                        LastProcessedDocumentEtag = collectionStats.LastProcessedDocumentEtag,
+                        LastProcessedTombstoneEtag = collectionStats.LastProcessedTombstoneEtag
+                    };
+
+                    long totalCount;
+                    progressStats.NumberOfDocumentsToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, progressStats.LastProcessedDocumentEtag, out totalCount);
+                    progressStats.TotalNumberOfDocuments = totalCount;
+
+                    progressStats.NumberOfTombstonesToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, progressStats.LastProcessedTombstoneEtag, out totalCount);
+                    progressStats.TotalNumberOfTombstones = totalCount;
+                }
+
+                return progress;
             }
+        }
+
+        public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false, DocumentsOperationContext documentsContext = null)
+        {
+            if (_contextPool == null)
+                throw new ObjectDisposedException("Index " + Name);
 
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -767,29 +800,28 @@ namespace Raven.Server.Documents.Indexes
 
                 stats.LastQueryingTime = _lastQueryingTime;
 
-                if (calculateStaleness || calculateCollectionStats)
+                if (calculateStaleness || calculateLag)
                 {
                     if (documentsContext == null)
-                        throw new InvalidOperationException("Cannot calculate collection stats or staleness without valid context.");
+                        throw new InvalidOperationException("Cannot calculate staleness or lag without valid context.");
 
                     if (documentsContext.Transaction == null)
-                        throw new InvalidOperationException("Cannot calculate collection stats or staleness without valid transaction.");
+                        throw new InvalidOperationException("Cannot calculate staleness or lag without valid transaction.");
 
                     if (calculateStaleness)
                         stats.IsStale = IsStale(documentsContext, context);
 
-                    if (calculateCollectionStats)
+                    if (calculateLag)
                     {
                         foreach (var collection in Collections)
                         {
                             var collectionStats = stats.Collections[collection];
 
-                            long totalCount;
-                            collectionStats.NumberOfDocumentsToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, collectionStats.LastProcessedDocumentEtag, out totalCount);
-                            collectionStats.TotalNumberOfDocuments = totalCount;
+                            var lastDocumentEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
+                            var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection);
 
-                            collectionStats.NumberOfTombstonesToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, collectionStats.LastProcessedTombstoneEtag, out totalCount);
-                            collectionStats.TotalNumberOfTombstones = totalCount;
+                            collectionStats.DocumentLag = Math.Max(0, lastDocumentEtag - collectionStats.LastProcessedDocumentEtag);
+                            collectionStats.TombstoneLag = Math.Max(0, lastTombstoneEtag - collectionStats.LastProcessedTombstoneEtag);
                         }
                     }
                 }
@@ -852,7 +884,7 @@ namespace Raven.Server.Documents.Indexes
             return Definition.ConvertToIndexDefinition(this);
         }
 
-        public async Task StreamQuery(HttpResponse response, BlittableJsonTextWriter writer, IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual async Task StreamQuery(HttpResponse response, BlittableJsonTextWriter writer, IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             using (var result = new StreamDocumentQueryResult(response, writer, documentsContext))
             {
@@ -860,7 +892,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public async Task<DocumentQueryResult> Query(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual async Task<DocumentQueryResult> Query(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             var result = new DocumentQueryResult();
             await QueryInternal(result, query, documentsContext, token);
@@ -982,7 +1014,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public async Task<FacetedQueryResult> FacetedQuery(FacetQuery query, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual async Task<FacetedQueryResult> FacetedQuery(FacetQuery query, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -1042,7 +1074,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public TermsQueryResult GetTerms(string field, string fromValue, int pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual TermsQueryResult GetTerms(string field, string fromValue, int pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
@@ -1063,7 +1095,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             Transformer transformer = null;
             if (string.IsNullOrEmpty(query.Transformer) == false)
