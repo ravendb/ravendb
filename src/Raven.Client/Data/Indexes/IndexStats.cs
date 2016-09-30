@@ -91,6 +91,8 @@ namespace Raven.Client.Data.Indexes
         /// </summary>
         public IndexType Type { get; set; }
 
+        public IndexRunningStatus Status { get; set; }
+
         /// <summary>
         /// Total number of entries in this index.
         /// </summary>
@@ -145,6 +147,13 @@ namespace Raven.Client.Data.Indexes
 
             public long TombstoneLag { get; set; }
         }
+    }
+
+    public enum IndexRunningStatus
+    {
+        Running,
+        Paused,
+        Disabled
     }
 
     [Flags]

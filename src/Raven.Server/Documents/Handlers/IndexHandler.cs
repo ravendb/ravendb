@@ -368,6 +368,13 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(IndexingStatus.Status));
+                writer.WriteString(Database.IndexStore.Status.ToString());
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(IndexingStatus.Indexes));
                 writer.WriteStartArray();
                 var isFirst = true;
                 foreach (var index in Database.IndexStore.GetIndexes())
@@ -379,24 +386,20 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(("Name"));
-                    writer.WriteString((index.Name));
+                    writer.WritePropertyName(nameof(IndexingStatus.IndexStatus.Name));
+                    writer.WriteString(index.Name);
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName(("Status"));
-                    string status;
-                    if (Database.Configuration.Indexing.Disabled)
-                        status = "Disabled";
-                    else
-                        status = index.IsRunning ? "Running" : "Paused";
-
-                    writer.WriteString((status));
+                    writer.WritePropertyName(nameof(IndexingStatus.IndexStatus.Status));
+                    writer.WriteString(index.Status.ToString());
 
                     writer.WriteEndObject();
                 }
 
                 writer.WriteEndArray();
+
+                writer.WriteEndObject();
             }
 
             return Task.CompletedTask;

@@ -184,8 +184,10 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var statements = new List<StatementSyntax>();
 
-            IndexAndTransformerMethods methods;
-            statements.Add(HandleTransformResults(definition.TransformResults, out methods));
+            var methodDetector = new MethodDetectorRewriter();
+            statements.Add(HandleTransformResults(definition.TransformResults, methodDetector));
+
+            var methods = methodDetector.Methods;
 
             if (methods.HasGroupBy)
                 statements.Add(RoslynHelper.This(nameof(TransformerBase.HasGroupBy)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
@@ -247,20 +249,21 @@ namespace Raven.Server.Documents.Indexes.Static
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));
         }
 
-        private static StatementSyntax HandleTransformResults(string transformResults, out IndexAndTransformerMethods methods)
+        private static StatementSyntax HandleTransformResults(string transformResults, MethodDetectorRewriter methodsDetector)
         {
             try
             {
                 transformResults = NormalizeFunction(transformResults);
                 var expression = SyntaxFactory.ParseExpression(transformResults).NormalizeWhitespace();
+                methodsDetector.Visit(expression);
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
-                    return HandleSyntaxInTransformResults(new QuerySyntaxTransformResultsRewriter(), queryExpression, out methods);
+                    return HandleSyntaxInTransformResults(new TransformFunctionProcessor(SelectManyRewriter.QuerySyntax), queryExpression);
 
                 var invocationExpression = expression as InvocationExpressionSyntax;
                 if (invocationExpression != null)
-                    return HandleSyntaxInTransformResults(new MethodSyntaxTransformResultsRewriter(), invocationExpression, out methods);
+                    return HandleSyntaxInTransformResults(new TransformFunctionProcessor(SelectManyRewriter.MethodSyntax), invocationExpression);
 
                 throw new InvalidOperationException("Not supported expression type.");
             }
@@ -350,10 +353,9 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleSyntaxInTransformResults(TransformResultsRewriterBase transformResultsRewriter, ExpressionSyntax expression, out IndexAndTransformerMethods methods)
+        private static StatementSyntax HandleSyntaxInTransformResults(TransformFunctionProcessor processor, ExpressionSyntax expression)
         {
-            var rewrittenExpression = (CSharpSyntaxNode)transformResultsRewriter.Visit(expression);
-            methods = transformResultsRewriter.Methods;
+            var rewrittenExpression = (CSharpSyntaxNode)processor.Visit(expression);
 
             var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("results")), rewrittenExpression);
 

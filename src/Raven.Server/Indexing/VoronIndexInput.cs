@@ -78,7 +78,10 @@ namespace Raven.Server.Indexing
             clone._isOriginal = false;
 
             if (clone._originalTransactionId != clone._currentTransaction.Value.LowLevelTransaction.Id)
+            {
                 clone.OpenInternal();
+                clone._stream.Position = _stream.Position;
+            }
             else
             {
                 clone._stream = new ChunkedMmapStream(_ptrs, VoronIndexOutput.MaxFileChunkSize)
