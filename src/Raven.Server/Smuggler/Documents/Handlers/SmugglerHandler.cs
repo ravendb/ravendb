@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -89,6 +90,65 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/smuggler/import-dir", "GET")]
+        public async Task PostImportDirectory()
+        {
+            var sp = Stopwatch.StartNew();
+
+            var directory = GetQueryStringValueAndAssertIfSingleAndNotEmpty("dir");
+            var files =
+                new BlockingCollection<string>(new ConcurrentQueue<string>(Directory.GetFiles(directory, "*.dump")));
+            var results = new ConcurrentQueue<ImportResult>();
+            var tasks = new Task[Environment.ProcessorCount];
+
+            for (int i = 0; i < tasks.Length; i++)
+            {
+                tasks[i] = Task.Run(async () =>
+                {
+                    string fileName;
+                    while (files.TryTake(out fileName))
+                    {
+                        DocumentsOperationContext context;
+                        using (ContextPool.AllocateOperationContext(out context))
+                        using (var file = File.OpenRead(fileName))
+                        using (var stream = new GZipStream(file, CompressionMode.Decompress))
+                        {
+                            var result = await DoImport(context, stream);
+                            results.Enqueue(result);
+                        }
+                    }
+                });
+            }
+            await Task.WhenAll(tasks);
+
+            var finalResult = new ImportResult();
+            ImportResult importResult;
+            while (results.TryDequeue(out importResult))
+            {
+                finalResult.DocumentsCount += importResult.DocumentsCount;
+                finalResult.IdentitiesCount += importResult.IdentitiesCount;
+                finalResult.IndexesCount += importResult.IndexesCount;
+                finalResult.RevisionDocumentsCount += importResult.RevisionDocumentsCount;
+                finalResult.TransformersCount += importResult.TransformersCount;
+                finalResult.Warnings.AddRange(importResult.Warnings);
+            }
+            sp.Stop();
+
+            DocumentsOperationContext finalContext;
+            using (ContextPool.AllocateOperationContext(out finalContext))
+            {
+                var memoryStream = new MemoryStream();
+                WriteImportResult(finalContext, sp, finalResult, memoryStream);
+                memoryStream.Position = 0;
+                using (var output = File.Create(Path.Combine(directory, "smuggler.results.txt")))
+                {
+                    memoryStream.CopyTo(output);
+                }
+                memoryStream.Position = 0;
+                memoryStream.CopyTo(ResponseBodyStream());
+            }
+        }
+
         [RavenAction("/databases/*/smuggler/import", "GET")]
         public Task GetImport()
         {
@@ -113,21 +173,26 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     var sp = Stopwatch.StartNew();
                     var result = await DoImport(context, stream);
                     sp.Stop();
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            ["ElapsedMilliseconds"] =sp.ElapsedMilliseconds,
-                            ["Elapsed"] = sp.Elapsed.ToString(),
-                            ["DocumentsCount"] = result.DocumentsCount,
-                            ["RevisionDocumentsCount"] =result.RevisionDocumentsCount,
-                            ["IndexesCount"] = result.IndexesCount,
-                            ["IdentitiesCount"] = result.IdentitiesCount,
-                            ["TransformersCount"] =result.TransformersCount,
-                            ["Warnings"] = new DynamicJsonArray(result.Warnings ?? Enumerable.Empty<string>())
-                        });
-                    }
+                    WriteImportResult(context, sp, result, ResponseBodyStream());
                 }
+            }
+        }
+
+        private void WriteImportResult(DocumentsOperationContext context, Stopwatch sp, ImportResult result, Stream stream)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, stream))
+            {
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["ElapsedMilliseconds"] = sp.ElapsedMilliseconds,
+                    ["Elapsed"] = sp.Elapsed.ToString(),
+                    ["DocumentsCount"] = result.DocumentsCount,
+                    ["RevisionDocumentsCount"] = result.RevisionDocumentsCount,
+                    ["IndexesCount"] = result.IndexesCount,
+                    ["IdentitiesCount"] = result.IdentitiesCount,
+                    ["TransformersCount"] = result.TransformersCount,
+                    ["Warnings"] = new DynamicJsonArray(result.Warnings)
+                });
             }
         }
 

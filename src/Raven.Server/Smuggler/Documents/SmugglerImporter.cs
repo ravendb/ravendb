@@ -254,7 +254,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private async Task HandleBatchOfDocuments(DocumentsOperationContext context, UnmanagedJsonParser parser, long buildVersion)
         {
-            if (_batchPutCommand.Documents.Count >= 16)
+            if (_batchPutCommand.Documents.Count >= 32)
             {
                 if (_prevCommand != null)
                 {
