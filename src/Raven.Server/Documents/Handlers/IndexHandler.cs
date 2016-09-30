@@ -339,8 +339,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET")]
         public Task GenerateCSharpIndexDefinition()
         {
-            var fullIndexName = HttpContext.Request.Query["fullIndexName"];
-            var index = Database.IndexStore.GetIndex(fullIndexName);
+            var indexName = HttpContext.Request.Query["name"];
+            var index = Database.IndexStore.GetIndex(indexName);
             if (index == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
