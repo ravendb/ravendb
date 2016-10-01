@@ -534,6 +534,18 @@ namespace Raven.Server.Documents.Indexes
 
                         AddIndexingPerformance(stats);
 
+                        if (NativeMemory.ThreadAllocations.Value.Allocations >
+                            MapDocuments.MaximumAmountOfMemoryToUsePerIndex)
+                        {
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Too much memory {NativeMemory.ThreadAllocations.Value.Allocations/1024:#,#} kb was used by '{Name} ({IndexId})', cleaning up.");
+
+                            ReduceMemoryUsage(keep: 1);
+
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"After clenaup, using {NativeMemory.ThreadAllocations.Value.Allocations / 1024:#,#} kb by '{Name} ({IndexId})'.");
+                        }
+
                         try
                         {
                             if (_mre.Wait(5000, cts.Token) == false)
@@ -541,10 +553,7 @@ namespace Raven.Server.Documents.Indexes
                                 // there is no work to be done, and hasn't been for a while,
                                 // so this is a good time to release resource we won't need 
                                 // anytime soon
-                                ByteStringMemoryCache.Clean(keep: 1);
-                                DocumentDatabase.DocumentsStorage.ContextPool.Clean(keep: 1);
-                                _contextPool.Clean(keep: 1);
-                                IndexPersistence.Clean();
+                                ReduceMemoryUsage(keep: 0);
                                 _mre.Wait(cts.Token);
                             }
                         }
@@ -559,6 +568,14 @@ namespace Raven.Server.Documents.Indexes
                     DocumentDatabase.Notifications.OnDocumentChange -= HandleDocumentChange;
                 }
             }
+        }
+
+        private void ReduceMemoryUsage(int keep)
+        {
+            ByteStringMemoryCache.Clean(keep);
+            DocumentDatabase.DocumentsStorage.ContextPool.Clean(keep);
+            _contextPool.Clean(keep);
+            IndexPersistence.Clean();
         }
 
         internal void ResetWriteErrors()

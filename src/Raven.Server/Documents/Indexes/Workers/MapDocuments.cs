@@ -38,12 +38,13 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public string Name => "Map";
 
+        public const long MaximumAmountOfMemoryToUsePerIndex = 1024 * 1024 * 1024L; // TODO: read from configuration value
+
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             var threadAllocations = NativeMemory.ThreadAllocations.Value;
             var moreWorkFound = false;
-            const long MaximumAmountOfMemoryToUsePerIndex = 1024*1024*1024L; // TODO: read from configuration value
             foreach (var collection in _index.Collections)
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
