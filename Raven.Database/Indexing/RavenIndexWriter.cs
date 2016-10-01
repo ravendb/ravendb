@@ -118,7 +118,7 @@ namespace Raven.Database.Indexing
             return indexWriter.GetReader();
         }
 
-        public void Commit(Etag lastEtag, bool forceCommit = false)
+        public void Commit(Etag lastEtag, bool forceCommit = false, bool considerLastCommitedTime = false)
         {
             var commitData = new Dictionary<string, string>
                              {
@@ -128,13 +128,19 @@ namespace Raven.Database.Indexing
             var commitDataStored = false;
 
             if (forceCommit ||
-                changesSinceCommit == 0 && SystemTime.UtcNow - lastCommitDataStoreTime > TimeSpan.FromMinutes(10))
+                (changesSinceCommit == 0 && SystemTime.UtcNow - lastCommitDataStoreTime > TimeSpan.FromMinutes(10)))
             {
                 ForceCommitDataStore();
                 commitDataStored = true;
             }
             else if (changesSinceCommit > 0)
+            {
+                if (considerLastCommitedTime && SystemTime.UtcNow - lastCommitDataStoreTime <= TimeSpan.FromMinutes(10))
+                    return;
+
                 commitDataStored = true;
+            }
+                
 
             if (lastEtag != null)
                 commitData.Add("LastEtag", lastEtag);
