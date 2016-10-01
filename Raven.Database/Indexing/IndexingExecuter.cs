@@ -905,7 +905,8 @@ namespace Raven.Database.Indexing
                                 actions.BeforeStorageCommit += () =>
                                 {
                                     batchForIndex.Index.EnsureIndexWriter(useWriteLock: true);
-                                    batchForIndex.Index.Flush(lastEtag);
+                                    // we don't to flush to disk too often
+                                    batchForIndex.Index.Flush(lastEtag, considerLastCommitedTime: true);
                                 };
                             });
                         }

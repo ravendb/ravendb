@@ -365,7 +365,7 @@ namespace Raven.Database.Indexing
             }
         }
 
-        public void Flush(Etag highestETag)
+        public void Flush(Etag highestETag, bool considerLastCommitedTime = false)
         {
             try
             {
@@ -383,7 +383,7 @@ namespace Raven.Database.Indexing
                     {
                         try
                         {
-                            indexWriter.Commit(highestETag);
+                            indexWriter.Commit(highestETag, considerLastCommitedTime);
                         }
                         catch (Exception e)
                         {
