@@ -26,34 +26,22 @@ namespace Sparrow.Json
         }
 
 
-        public void Clean(int keep = 1)
+        public void Clean()
         {
             // we are expecting to be called here when there is no
             // more work to be done, and we want to release resources
             // to the system
 
-            // By reversing the stack, we ensure that we keep however many
-            // contexts as we have, and that they are fresh
-
             var stack = _contextPool.Value;
 
             if (stack.Count == 0)
                 return; // nothing to do;
-
-            var reversed = new Stack<T>(stack.Count);
-            foreach (var ctx in stack)
+            foreach (var item in stack)
             {
-                reversed.Push(ctx);
+                item.Dispose();
             }
             stack.Clear();
-            while (keep-- > 0 && reversed.Count > 0)
-            {
-                stack.Push(reversed.Pop());
-            }
-            while (reversed.Count > 0)
-            {
-                reversed.Pop().Dispose();
-            }
+            
         }
 
         public IDisposable AllocateOperationContext(out T context)

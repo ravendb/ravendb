@@ -846,9 +846,30 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
+            writer.WritePropertyName((nameof(stats.Name)));
+            writer.WriteString((stats.Name));
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(stats.IsStale));
             writer.WriteBool(stats.IsStale);
             writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.CurrentBatchDocuments));
+            writer.WriteDouble(stats.CurrentBatchDocuments);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.MappedPerSecondRate));
+            writer.WriteDouble(stats.MappedPerSecondRate);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.ReducedPerSecondRate));
+            writer.WriteDouble(stats.ReducedPerSecondRate);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.CurrentBatchDuration));
+            writer.WriteString(stats.CurrentBatchDuration.ToString());
+            writer.WriteComma();
+
 
             writer.WritePropertyName(nameof(stats.Collections));
             if (stats.Collections != null)
@@ -894,6 +915,7 @@ namespace Raven.Server.Json
             {
                 writer.WriteStartObject();
 
+                //TODO: are we ever actually running indexes in memory now?
                 writer.WritePropertyName(nameof(stats.Memory.InMemory));
                 writer.WriteBool(stats.Memory.InMemory);
                 writer.WriteComma();
@@ -929,9 +951,7 @@ namespace Raven.Server.Json
             writer.WriteString((stats.LockMode.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(stats.Name)));
-            writer.WriteString((stats.Name));
-            writer.WriteComma();
+        
 
             writer.WritePropertyName((nameof(stats.Priority)));
             writer.WriteString((stats.Priority.ToString()));

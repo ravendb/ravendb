@@ -1,24 +1,14 @@
 ﻿using System.Linq;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.IO.Compression;
-using System.Reflection;
 using System.Text;
 using System.Threading;
-using System.Xml;
-using System.Xml.Linq;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
 using Raven.Client.Document;
-using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
-using Sparrow;
-using Voron;
+// ReSharper disable InconsistentNaming
 
 namespace Tryouts
 {
@@ -32,18 +22,34 @@ namespace Tryouts
                 DefaultDatabase = "stackoverflow"
             }.Initialize())
             {
-                //new Users_Registrations_ByMonth().Execute(store);
-                //new Users_Search().Execute(store);
+                new Users_Registrations_ByMonth().Execute(store);
+                new Users_Search().Execute(store);
                 new Questions_Tags().Execute(store);
-                //new Questions_Tags_ByMonths().Execute(store);
-                //new Activity_ByMonth().Execute(store);
+                new Questions_Tags_ByMonths().Execute(store);
+                new Activity_ByMonth().Execute(store);
 
                 var sp = Stopwatch.StartNew();
                 var done = new HashSet<string>();
                 while (true)
                 {
                     bool hasStale = false;
-                    var databaseStatistics = store.DatabaseCommands.GetStatistics();
+                    DatabaseStatistics databaseStatistics;
+                    try
+                    {
+
+                        databaseStatistics = store.DatabaseCommands.GetStatistics();
+                    }
+                    catch (Exception e)
+                    {
+                        var sb = new StringBuilder();
+                        do
+                        {
+                            sb.Append("-->").Append(e.Message);
+                            e = e.InnerException;
+                        } while (e != null);
+                        Console.WriteLine(sb.ToString());
+                        continue;
+                    }
                     foreach (var index in databaseStatistics.Indexes)
                     {
                         if (index.IsStale == false)
@@ -112,6 +118,8 @@ namespace Tryouts
                                 };
         }
     }
+
+
     public class User
     {
         public int Reputation { get; set; }
@@ -150,8 +158,7 @@ namespace Tryouts
 
             Reduce = results =>
                 from result in results
-                group result by result.Tag
-                into g
+                group result by result.Tag into g
                 select new
                 {
                     Tag = g.Key,
@@ -185,8 +192,7 @@ namespace Tryouts
 
             Reduce = results =>
                 from result in results
-                group result by new { result.Tag, result.Month}
-                into g
+                group result by new { result.Tag, result.Month} into g
                 select new
                 {
                     g.Key.Month,
@@ -216,15 +222,12 @@ namespace Tryouts
                 });
 
             AddMap<Question>(questions =>
-               from q in questions
-               from a in q.Answers
+               from q in questions from a in q.Answers
                group a by new // distinct users by month
                {
                    a.OwnerUserId,
                    Month = a.CreationDate.ToString("yyyy-MM")
-               }
-               into g
-               select new
+               } into g select new
                {
                    g.Key.Month,
                    Users = g.Count()
@@ -232,8 +235,7 @@ namespace Tryouts
 
             Reduce = results =>
                 from result in results
-                group result by result.Month
-                into g
+                group result by result.Month into g
                 select new
                 {
                     Month = g.Key,

@@ -6,9 +6,11 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Config.Categories;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.LowMemoryNotification;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
@@ -17,34 +19,31 @@ namespace Raven.Server.Documents.Indexes.Workers
     public class MapDocuments : IIndexingWork
     {
         protected Logger _logger;
-
         private readonly Index _index;
-        private readonly IndexingConfiguration _configuration;
         private readonly MapReduceIndexingContext _mapReduceContext;
         private readonly DocumentsStorage _documentsStorage;
         private readonly IndexStorage _indexStorage;
+        private readonly IndexingConfiguration _configuration;
 
-        public MapDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, 
+        public MapDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage,
                             IndexingConfiguration configuration, MapReduceIndexingContext mapReduceContext)
         {
             _index = index;
-            _configuration = configuration;
             _mapReduceContext = mapReduceContext;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
+            _configuration = configuration;
             _logger = LoggingSource.Instance
                 .GetLogger<MapDocuments>(indexStorage.DocumentDatabase.Name);
         }
 
         public string Name => "Map";
 
-        public const long MaximumAmountOfMemoryToUsePerIndex = 1024 * 1024 * 1024L; // TODO: read from configuration value
-
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
-            var threadAllocations = NativeMemory.ThreadAllocations.Value;
             var moreWorkFound = false;
+            var timeout = _configuration.DocumentProcessingTimeout.AsTimeSpan;
             foreach (var collection in _index.Collections)
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
@@ -58,7 +57,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         _logger.Info($"Executing map for '{_index.Name} ({_index.IndexId})'. LastMappedEtag: {lastMappedEtag}.");
 
                     var lastEtag = lastMappedEtag;
-                    var count = 0;
+                    _index.DocumentsInCurrentBatch = 0;
                     var resultsCount = 0;
 
                     var sw = Stopwatch.StartNew();
@@ -68,10 +67,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                     {
                         IEnumerable<Document> documents;
 
+                        var maxValue = _configuration.MaxNumberOfDocumentsToFetchForMap;
                         if (collection == Constants.Indexing.AllDocumentsCollection)
-                            documents = _documentsStorage.GetDocumentsAfter(databaseContext, lastEtag + 1, 0, int.MaxValue);
+                            documents = _documentsStorage.GetDocumentsAfter(databaseContext, lastEtag + 1, 0, maxValue);
                         else
-                            documents = _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, int.MaxValue);
+                            documents = _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, maxValue);
 
                         using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext))
                         {
@@ -91,37 +91,39 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 collectionStats.RecordMapAttempt();
 
-                                count++;
+                                _index.DocumentsInCurrentBatch++;
                                 lastEtag = current.Etag;
 
                                 try
                                 {
-                                    resultsCount  += 
-                                        _index.HandleMap(current.LoweredKey, mapResults, indexWriter, indexContext, collectionStats);
-
+                                    var numberOfResults = _index.HandleMap(current.LoweredKey, mapResults, indexWriter, indexContext, collectionStats);
+                                    _index.MapsPerSec.Mark(numberOfResults);
+                                    resultsCount += numberOfResults;
                                     collectionStats.RecordMapSuccess();
                                 }
                                 catch (Exception e)
                                 {
                                     collectionStats.RecordMapError();
                                     if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.",e);
+                                        _logger.Info($"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.", e);
 
                                     collectionStats.AddMapError(current.Key,
                                         $"Failed to execute mapping function on {current.Key}. Exception: {e}");
                                 }
 
-                                if (threadAllocations.Allocations > MaximumAmountOfMemoryToUsePerIndex)
+                                if (_index.CanContinueBatch() == false)
+                                    break;
+                                if (sw.Elapsed > timeout)
                                     break;
                             }
                         }
                     }
 
-                    if (count == 0)
+                    if (_index.DocumentsInCurrentBatch == 0)
                         continue;
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {count:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                        _logger.Info($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {_index.DocumentsInCurrentBatch:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
                     if (_index.Type.IsMap())
                     {
@@ -138,5 +140,6 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             return moreWorkFound;
         }
+
     }
 }

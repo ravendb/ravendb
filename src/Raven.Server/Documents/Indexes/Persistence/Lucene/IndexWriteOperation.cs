@@ -89,6 +89,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _logger.Info($"Indexed document for '{_indexName}'. Key: {key}. Output: {luceneDoc}.");
         }
 
+        public long GetUsedMemory()
+        {
+            return _writer.RamSizeInBytes();
+        }
+
         public void Delete(LazyStringValue key, IndexingStatsScope stats)
         {
             using (stats.For("Lucene_Delete"))

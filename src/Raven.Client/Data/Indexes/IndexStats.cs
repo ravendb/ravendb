@@ -54,6 +54,27 @@ namespace Raven.Client.Data.Indexes
         /// </summary>
         public int? ReduceErrors { get; set; }
 
+        /// <summary>
+        /// The duration of the current batch
+        /// </summary>
+        public TimeSpan CurrentBatchDuration { get; set; }
+
+        /// <summary>
+        /// The number of documents that have been processed in the current batch
+        /// </summary>
+        public int CurrentBatchDocuments { get; set; }
+
+        /// <summary>
+        /// The value of docs/sec rate for the index over the last minute
+        /// </summary>
+        public double MappedPerSecondRate { get; set; }
+
+        /// <summary>
+        /// The value of reduces/sec rate for the index over the last minute
+        /// </summary>
+        public double ReducedPerSecondRate { get; set; }
+
+
         public Dictionary<string, CollectionStats> Collections { get; set; }
 
         /// <summary>

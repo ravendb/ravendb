@@ -145,7 +145,10 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            
+            if (AllocatedMemoryData == null)
+                return;
+            Context.ReturnMemory(AllocatedMemoryData);
+            AllocatedMemoryData = null;
         }
 
         public bool Contains(string value)

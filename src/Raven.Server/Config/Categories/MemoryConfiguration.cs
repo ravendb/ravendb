@@ -10,7 +10,7 @@ namespace Raven.Server.Config.Categories
     {
         public MemoryConfiguration(RavenConfiguration configuration)
         {
-            var memoryInfo = MemoryInformation.GetMemoryInfo(configuration);
+            var memoryInfo = MemoryInformation.GetMemoryInfo();
 
             // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
             LimitForProcessing = Size.Min(new Size(1024, SizeUnit.Megabytes), memoryInfo.AvailableMemory * 0.75);

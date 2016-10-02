@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.ComTypes;
+using System.Text;
 
 namespace Sparrow.Json
 {
@@ -383,6 +385,11 @@ namespace Sparrow.Json
         {
             var lazyStringValue = val.Inner;
             WriteRawString(lazyStringValue.Buffer, lazyStringValue.Size);
+        }
+
+        public void WriteDouble(double val)
+        {
+            WriteString(val.ToString(CultureInfo.InvariantCulture));
         }
 
         public void Dispose()

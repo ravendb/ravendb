@@ -47,7 +47,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                             clearInactiveHandlersCounter = 0;
                             ClearInactiveHandlers();
                         }
-                        var availableMem = MemoryInformation.GetMemoryInfo(_configuration).AvailableMemory;
+                        var availableMem = MemoryInformation.GetMemoryInfo().AvailableMemory;
                         if (availableMem < _configuration.Memory.LowMemoryForLinuxDetection)
                         {
                             clearInactiveHandlersCounter = 0;

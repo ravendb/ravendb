@@ -14,16 +14,17 @@ namespace Sparrow.Json
         private int _allocated;
         private int _used;
 
-        private List<Tuple<IntPtr,int>> _olderBuffers;
+        private List<Tuple<IntPtr,int, NativeMemory.ThreadStats>> _olderBuffers;
 
         private bool _isDisposed;
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
+        private NativeMemory.ThreadStats _allocatingThread;
 
         public int Allocated => _allocated;
 
         public ArenaMemoryAllocator(int initialSize = 1024 * 1024)
         {
-            _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(initialSize);
+            _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(initialSize, out _allocatingThread);
             _allocated = initialSize;
             _used = 0;
 
@@ -98,13 +99,16 @@ namespace Sparrow.Json
                     $"Increased size of buffer from {_allocated:#,#;0} to {newSize:#,#;0} because we need {requestedSize:#,#;0}. _used={_used:#,#;0}");
             }
 
-                
-            var newBuffer = NativeMemory.AllocateMemory(newSize);
+
+            NativeMemory.ThreadStats thread;
+            var newBuffer = NativeMemory.AllocateMemory(newSize, out thread);
 
             // Save the old buffer pointer to be released when the arena is reset
             if (_olderBuffers == null)
-                _olderBuffers = new List<Tuple<IntPtr, int>>();
-            _olderBuffers.Add(Tuple.Create(new IntPtr(_ptrStart), _allocated));
+                _olderBuffers = new List<Tuple<IntPtr, int, NativeMemory.ThreadStats>>();
+            _olderBuffers.Add(Tuple.Create(new IntPtr(_ptrStart), _allocated, _allocatingThread));
+
+            _allocatingThread = thread;
 
             _allocated = newSize;
 
@@ -124,7 +128,7 @@ namespace Sparrow.Json
             {
                 foreach (var unusedBuffer in _olderBuffers)
                 {
-                    NativeMemory.Free((byte*)unusedBuffer.Item1, unusedBuffer.Item2);
+                    NativeMemory.Free((byte*)unusedBuffer.Item1, unusedBuffer.Item2, unusedBuffer.Item3);
                 }
                 _olderBuffers = null;
             }
@@ -146,7 +150,7 @@ namespace Sparrow.Json
 
             ResetArena();
 
-            NativeMemory.Free(_ptrStart, _allocated);
+            NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
 
             GC.SuppressFinalize(this);
         }
@@ -167,5 +171,6 @@ namespace Sparrow.Json
     {
         public byte* Address;
         public int SizeInBytes;
+        public NativeMemory.ThreadStats AllocatingThread;
     }
 }

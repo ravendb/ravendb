@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public static readonly Slice PageNumberSlice;
         private Logger _logger;
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
+        private readonly Index _index;
         protected readonly T _indexDefinition;
         private readonly IndexStorage _indexStorage;
         private readonly MetricsCountersManager _metrics;
@@ -37,8 +38,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 Name = PageNumberSlice
             });
 
-        protected ReduceMapResultsBase(T indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
+        protected ReduceMapResultsBase(Index index, T indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
         {
+            _index = index;
             _indexDefinition = indexDefinition;
             _indexStorage = indexStorage;
             _metrics = metrics;
@@ -61,14 +63,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 WriteLastEtags(indexContext); // we need to write etags here, because if we filtered everything during map then we will loose last indexed etag information and this will cause an endless indexing loop
                 return false;
             }
-            
+
             _aggregationBatch.Clear();
 
             _reduceResultsSchema.Create(indexContext.Transaction.InnerTransaction, "PageNumberToReduceResult");
             var table = indexContext.Transaction.InnerTransaction.OpenTable(_reduceResultsSchema, "PageNumberToReduceResult");
 
             var lowLevelTransaction = indexContext.Transaction.InnerTransaction.LowLevelTransaction;
-            
+
 
             var writer = writeOperation.Value;
 
@@ -112,8 +114,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        private void HandleNestedValuesReduction(TransactionOperationContext indexContext, IndexingStatsScope stats, 
-                    CancellationToken token, MapReduceResultsStore modifiedStore, 
+        private void HandleNestedValuesReduction(TransactionOperationContext indexContext, IndexingStatsScope stats,
+                    CancellationToken token, MapReduceResultsStore modifiedStore,
                     IndexWriteOperation writer, LazyStringValue reduceKeyHash)
         {
             var numberOfEntriesToReduce = 0;
@@ -142,11 +144,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     writer.IndexDocument(reduceKeyHash, output, stats, indexContext);
                 }
 
+                _index.ReducesPerSec.Mark(numberOfEntriesToReduce);
                 _metrics.MapReduceReducedPerSecond.Mark(numberOfEntriesToReduce);
 
                 stats.RecordReduceSuccesses(numberOfEntriesToReduce);
             }
-                catch (Exception e)
+            catch (Exception e)
             {
                 foreach (var item in _aggregationBatch)
                 {
@@ -202,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     var emptyPageNumber = Bits.SwapBytes(page.PageNumber);
                     Slice pageNumSlice;
-                    using(Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long),out pageNumSlice))
+                    using (Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long), out pageNumSlice))
                         table.DeleteByKey(pageNumSlice);
 
                     continue;
@@ -253,16 +256,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
 
             long tmp = 0;
-            Slice pageNumberSlice ;
-            using (Slice.External(indexContext.Allocator, (byte*) &tmp, sizeof(long), out pageNumberSlice))
+            Slice pageNumberSlice;
+            using (Slice.External(indexContext.Allocator, (byte*)&tmp, sizeof(long), out pageNumberSlice))
             {
                 foreach (var freedPage in modifiedStore.FreedPages)
                 {
                     tmp = Bits.SwapBytes(freedPage);
-                    table.DeleteByKey(pageNumberSlice); 
+                    table.DeleteByKey(pageNumberSlice);
                 }
             }
-            
+
             while (parentPagesToAggregate.Count > 0 || branchesToAggregate.Count > 0)
             {
                 token.ThrowIfCancellationRequested();
@@ -379,7 +382,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             {
                                 remainingBranchesToAggregate.Remove(pageNumber);
                             }
-                            
+
                             tvr = table.ReadByKey(childPageNumberSlice);
                         }
                         else
