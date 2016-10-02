@@ -194,7 +194,19 @@ namespace Raven.Server.Documents.Indexes
 
         public string Name => Definition?.Name;
 
-        public bool IsRunning => _indexingThread != null;
+        public IndexRunningStatus Status
+        {
+            get
+            {
+                if (_indexingThread != null)
+                    return IndexRunningStatus.Running;
+
+                if (DocumentDatabase.Configuration.Indexing.Disabled)
+                    return IndexRunningStatus.Disabled;
+
+                return IndexRunningStatus.Paused;
+            }
+        }
 
         public virtual bool HasBoostedFields => false;
 
@@ -860,6 +872,7 @@ namespace Raven.Server.Documents.Indexes
                 stats.EntriesCount = reader.EntriesCount();
                 stats.LockMode = Definition.LockMode;
                 stats.Priority = Priority;
+                stats.Status = Status;
 
                 stats.MappedPerSecondRate = MapsPerSec.OneMinuteRate;
                 stats.ReducedPerSecondRate = ReducesPerSec.OneMinuteRate;

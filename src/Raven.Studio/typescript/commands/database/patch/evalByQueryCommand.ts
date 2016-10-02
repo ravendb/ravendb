@@ -18,9 +18,9 @@ class evalByQueryCommand extends commandBase {
     execute(): JQueryPromise<any> {
         this.reportInfo("Patching documents...");
 
-        var url = endpoints.databases.batch.bulk_docs + "/" + encodeURIComponent(this.indexName);
+        var url = endpoints.databases.queries.queries$ + this.indexName;
         var urlParams = "?query=" + encodeURIComponent(this.queryStr) + "&allowStale=true";
-        var patchTask = this.evalJs(url + urlParams, this.patchPayload, this.db);
+        var patchTask = this.patch(url + urlParams, this.patchPayload, this.db);
         // patch is made asynchronically so we infom user about operation start - not about actual completion. 
         patchTask.done((response: operationIdDto) => {
             this.reportSuccess("Scheduled patch of index: " + this.indexName);

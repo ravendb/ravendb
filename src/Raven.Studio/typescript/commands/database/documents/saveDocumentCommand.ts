@@ -14,6 +14,8 @@ class saveDocumentCommand extends commandBase {
             this.reportInfo("Saving " + this.id + "...");
         }
 
+        this.document.__metadata.id = this.id;
+
         const commands: Array<bulkDocumentDto> = [this.document.toBulkDoc("PUT")];
 
         const args = ko.toJSON(commands);

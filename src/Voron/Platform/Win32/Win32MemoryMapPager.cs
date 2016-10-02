@@ -199,6 +199,8 @@ namespace Voron.Platform.Win32
                 return null;
             }
 
+            NativeMemory.RegisterFileMapping(_fileInfo.FullName, allocationSize);
+
             return new PagerState.AllocationInfo
             {
                 BaseAddress = newMappingBaseAddress,

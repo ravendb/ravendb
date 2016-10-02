@@ -1012,6 +1012,10 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName((nameof(stats.IsTestIndex)));
             writer.WriteBool(stats.IsTestIndex);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.Status));
+            writer.WriteString(stats.Status.ToString());
 
             writer.WriteEndObject();
         }

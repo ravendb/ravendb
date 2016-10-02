@@ -17,6 +17,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
@@ -151,7 +152,7 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public Task<IndexStatus[]> GetIndexesStatus(CancellationToken token = default(CancellationToken))
+        public Task<IndexingStatus> GetIndexingStatusAsync(CancellationToken token = default(CancellationToken))
         {
             return innerAsyncServerClient.ExecuteWithReplication(
                 HttpMethods.Get,
@@ -159,8 +160,8 @@ namespace Raven.Client.Connection.Async
                 {
                     using (var request = adminRequest.IndexesStatus(operationMetadata.Url))
                     {
-                        var result = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                        return result.Deserialize<IndexStatus[]>(innerAsyncServerClient.convention);
+                        var result = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                        return result.Deserialize<IndexingStatus>(innerAsyncServerClient.convention);
                     }
                 },
                 token);
