@@ -60,35 +60,89 @@
     </div>
 
     <div class="container-fluid content-container">
-        <div class="content-container-margin">
-            <div class="form-inline">
-                <div class="checkbox checkbox-inline">
-                    <input type="checkbox" class="styled" id="singleCheckbox1" value="option1" aria-label="Single checkbox One">
-                    <label></label>
+        <div class="content-container-margin indexes">
+            <div class="clearfix">
+                <div class="pull-left">
+                    <div class="form-inline state-padding">
+                        <div class="checkbox checkbox-inline">
+                            <input type="checkbox" class="styled" id="singleCheckbox1" value="option1" aria-label="Single checkbox One">
+                            <label></label>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" class="form-control input-sm" placeholder="Filter">
+                            <span class="input-group-btn">
+                                <button class="btn btn-default btn-sm">
+                                    <i class="icon-search"></i>
+                                </button>
+                            </span>
+                        </div>
+                        <button class="btn btn-default btn-sm"><i class="icon-copy"></i><span>Copy</span></button>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-default"><i class="icon-lock"></i><span>lock</span></button>
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="caret"></span>
+                                <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">Unlock</a></li>
+                                <li class="divider"></li>
+                                <li><a href="#">Lock (Side by Side)</a></li>
+                                <li><a href="#">Lock</a></li>
+                                <li><a href="#">Lock (Error)</a></li>
+                            </ul>
+                        </div>
+                        <button class="btn btn-sm btn-danger"><i class="icon-trash"></i><span>Delete</span></button>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <input type="text" class="form-control" placeholder="Filter">
-                    <span class="input-group-btn">
-                        <label for="csvImportFile" class="btn btn-default">
-                            <i class="icon-search"></i>
-                        </label>
-                    </span>
-                </div>
-                <div class="btn-group">
-                    <button type="button" class="btn btn-default"><i class="icon-copy"></i><span>Copy</span></button>
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <span class="caret"></span>
-                        <span class="sr-only">Toggle Dropdown</span>
+                <div class="pull-right">
+                    <button class="btn btn-sm btn-warning">
+                        <i class="icon-pause"></i>
+                        <span>Disable indexing untill restart</span>
                     </button>
-                    <ul class="dropdown-menu">
-                        <li><a href="#">Copy as C# class</a></li>
-
-                    </ul>
+                </div>
+            </div>
+            <hr />
+            <h2>Cars</h2>
+            <div class="panel">
+                <div class="panel-body">
+                    <div class="state state-error"></div>
                 </div>
             </div>
             <div class="panel">
-                <div class="panel-body"></div>
+                <div class="panel-body">
+                    <div class="state state-invalid"></div>
+                </div>
             </div>
+            <h2>Dinosaurs</h2>
+            <div class="panel">
+                <div class="panel-body">
+                    <div class="state state-abandoned"></div>
+                </div>
+            </div>
+            <h2>Orders</h2>
+            <div class="panel">
+                <div class="panel-body">
+                    <div class="state state-normal"></div>
+                </div>
+            </div>
+            <div class="sidebyside">
+                <div class="panel">
+                    <div class="panel-body">
+                        <div class="state state-normal"></div>
+                    </div>
+                </div>
+                <div class="panel sidebyside-actions">
+                    <div class="panel-body">
+                        <div class="state state-normal"></div>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-body">
+                        <div class="state state-normal"></div>
+                    </div>
+                </div>
+            </div>
+            <h2>Products</h2>
             <div class="panel">
                 <div class="panel-body"></div>
             </div>

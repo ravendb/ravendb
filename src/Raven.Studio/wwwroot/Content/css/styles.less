@@ -96,15 +96,20 @@ body {
 /* GLOBAL ITEMS */
 
 h1, h2, h3 {
-    font-weight: 300;
+    font-weight:700;
     margin-top: 0;
 
     [class^="icon-"], [class*=" icon-"] { 
-        top:-6px;
+        top:4px;
     }
 }
 
 h1 {
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 3.5pt;
+    word-spacing: 3pt;
+    margin-bottom: @grid-gutter-width;
 }
 
 h6 {
@@ -1764,3 +1769,4 @@ pre {
 @import "pages/tasks-csvImport";
 @import "pages/tasks-subscriptions";
 @import "pages/documents-edit";
+@import "pages/indexes.less";
