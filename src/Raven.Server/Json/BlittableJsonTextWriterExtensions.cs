@@ -254,24 +254,51 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
         }
 
-        public static void WriteIndexingPerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexingPerformanceStats stats)
+        public static void WriteIndexingPerformanceBasicStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexingPerformanceBasicStats stats, bool isPartial = false)
         {
-            writer.WriteStartObject();
+            if (isPartial == false)
+                writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(stats.Completed)));
-            writer.WriteString((stats.Completed.GetDefaultRavenFormat(isUtc: true)));
+            writer.WritePropertyName(nameof(stats.Started));
+            writer.WriteString(stats.Started.GetDefaultRavenFormat(isUtc: true));
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(stats.Started)));
-            writer.WriteString((stats.Started.GetDefaultRavenFormat(isUtc: true)));
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.DurationInMilliseconds)));
+            writer.WritePropertyName(nameof(stats.DurationInMilliseconds));
             using (var lazyStringValue = context.GetLazyString(stats.DurationInMilliseconds.ToInvariantString()))
                 writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(stats.Details)));
+            writer.WritePropertyName(nameof(stats.FailedCount));
+            writer.WriteInteger(stats.FailedCount);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.InputCount));
+            writer.WriteInteger(stats.InputCount);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.OutputCount));
+            writer.WriteInteger(stats.OutputCount);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.SuccessCount));
+            writer.WriteInteger(stats.SuccessCount);
+
+            if (isPartial == false)
+                writer.WriteEndObject();
+        }
+
+        public static void WriteIndexingPerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexingPerformanceStats stats)
+        {
+            writer.WriteStartObject();
+
+            writer.WriteIndexingPerformanceBasicStats(context, stats, isPartial: true);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.Completed));
+            writer.WriteString((stats.Completed.GetDefaultRavenFormat(isUtc: true)));
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.Details));
             writer.WriteIndexingPerformanceOperation(context, stats.Details);
 
             writer.WriteEndObject();
@@ -854,10 +881,6 @@ namespace Raven.Server.Json
             writer.WriteBool(stats.IsStale);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(stats.CurrentBatchDocuments));
-            writer.WriteDouble(stats.CurrentBatchDocuments);
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(stats.MappedPerSecondRate));
             writer.WriteDouble(stats.MappedPerSecondRate);
             writer.WriteComma();
@@ -866,10 +889,12 @@ namespace Raven.Server.Json
             writer.WriteDouble(stats.ReducedPerSecondRate);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(stats.CurrentBatchDuration));
-            writer.WriteString(stats.CurrentBatchDuration.ToString());
+            writer.WritePropertyName(nameof(stats.LastBatchStats));
+            if (stats.LastBatchStats != null)
+                writer.WriteIndexingPerformanceBasicStats(context, stats.LastBatchStats);
+            else
+                writer.WriteNull();
             writer.WriteComma();
-
 
             writer.WritePropertyName(nameof(stats.Collections));
             if (stats.Collections != null)
@@ -951,7 +976,7 @@ namespace Raven.Server.Json
             writer.WriteString((stats.LockMode.ToString()));
             writer.WriteComma();
 
-        
+
 
             writer.WritePropertyName((nameof(stats.Priority)));
             writer.WriteString((stats.Priority.ToString()));
