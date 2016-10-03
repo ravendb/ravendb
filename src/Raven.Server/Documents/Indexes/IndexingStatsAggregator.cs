@@ -163,6 +163,17 @@ namespace Raven.Server.Documents.Indexes
             _stats.IndexingOutputs++;
         }
 
+        public void RecordReduceTreePageModified(bool isLeaf)
+        {
+            if (_stats.ReduceDetails == null)
+                _stats.ReduceDetails = new ReduceRunDetails();
+
+            if (isLeaf)
+                _stats.ReduceDetails.NumberOfModifiedLeafs++;
+            else
+                _stats.ReduceDetails.NumberOfModifiedBranches++;
+        }
+
         public void RecordReduceAttempts(int numberOfEntries)
         {
             _stats.ReduceAttempts += numberOfEntries;
@@ -184,6 +195,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 Name = name
             };
+
+            if (_stats.ReduceDetails != null && name == "Tree")
+                operation.Details = _stats.ReduceDetails;
 
             if (_scopes != null)
             {

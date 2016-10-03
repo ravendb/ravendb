@@ -84,10 +84,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     switch (modifiedStore.Type)
                     {
                         case MapResultsStorageType.Tree:
-                            HandleTreeReduction(indexContext, stats, token, modifiedStore, lowLevelTransaction, writer, reduceKeyHash, table);
+                            using (var scope = stats.For("Tree"))
+                            {
+                                HandleTreeReduction(indexContext, scope, token, modifiedStore, lowLevelTransaction, writer, reduceKeyHash, table);
+                            }
                             break;
                         case MapResultsStorageType.Nested:
-                            HandleNestedValuesReduction(indexContext, stats, token, modifiedStore, writer, reduceKeyHash);
+                            using (var scope = stats.For("NestedValues"))
+                            {
+                                HandleNestedValuesReduction(indexContext, stats, token, modifiedStore, writer, reduceKeyHash);
+                            }
                             break;
 
                         default:
@@ -185,6 +191,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 token.ThrowIfCancellationRequested();
 
                 var page = lowLevelTransaction.GetPage(modifiedPage).ToTreePage();
+
+                stats.RecordReduceTreePageModified(page.IsLeaf);
+
                 if (page.IsLeaf == false)
                 {
                     Debug.Assert(page.IsBranch);

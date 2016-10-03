@@ -317,6 +317,9 @@ namespace Raven.Server.Json
             writer.WriteString((operation.Name));
             writer.WriteComma();
 
+            if (operation.Details != null)
+                operation.Details.ToJson(writer, context);
+
             writer.WritePropertyName((nameof(operation.Operations)));
             writer.WriteStartArray();
             if (operation.Operations != null)
