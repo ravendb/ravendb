@@ -8,7 +8,8 @@ import saveReplicationDocumentCommand = require("commands/database/replication/s
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import replicateIndexesCommand = require("commands/database/replication/replicateIndexesCommand");
 import replicateTransformersCommand = require("commands/database/replication/replicateTransformersCommand");
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
+import collectionsStats = require("models/database/documents/collectionsStats");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
@@ -94,8 +95,8 @@ class etl extends viewModelBase {
         this.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
 
         var db = this.activeDatabase();
-        this.fetchCollections(db).done(results => {
-            this.collections(results);
+        this.fetchCollectionsStats(db).done(results => {
+            this.collections(results.collections);
         });
     }
 
@@ -190,8 +191,8 @@ class etl extends viewModelBase {
         }
     }
 
-    private fetchCollections(db: database): JQueryPromise<Array<collection>> {
-        return new getCollectionsCommand(db, this.collections()).execute();
+    private fetchCollectionsStats(db: database): JQueryPromise<collectionsStats> {
+        return new getCollectionsStatsCommand(db).execute();
     }
 
     toggleIndexReplication(skipReplicationValue: boolean) {
@@ -221,8 +222,8 @@ class etl extends viewModelBase {
                 db.activeBundles(bundles);
                 this.replicationEnabled(true);
                 this.fetchReplications(db);
-                this.fetchCollections(db).done(results => {
-                    this.collections(results);
+                this.fetchCollectionsStats(db).done(results => {
+                    this.collections(results.collections);
                 });
             });
     }
