@@ -387,9 +387,12 @@ namespace Sparrow.Json
             WriteRawString(lazyStringValue.Buffer, lazyStringValue.Size);
         }
 
-        public void WriteDouble(double val)
+        public unsafe void WriteDouble(double val)
         {
-            WriteString(val.ToString(CultureInfo.InvariantCulture));
+            using (var lazyStr = _context.GetLazyString(val.ToString(CultureInfo.InvariantCulture)))
+            {
+                WriteRawString(lazyStr.Buffer, lazyStr.Size);
+            }
         }
 
         public void Dispose()

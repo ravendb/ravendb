@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -885,11 +886,11 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(stats.MappedPerSecondRate));
-            writer.WriteDouble(stats.MappedPerSecondRate);
+            writer.WriteDouble(Math.Round(stats.MappedPerSecondRate,2));
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(stats.ReducedPerSecondRate));
-            writer.WriteDouble(stats.ReducedPerSecondRate);
+            writer.WriteDouble(Math.Round(stats.ReducedPerSecondRate, 2));
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(stats.LastBatchStats));
