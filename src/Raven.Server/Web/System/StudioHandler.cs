@@ -67,14 +67,20 @@ namespace Raven.Server.Web.System
                 RouteMatch.MatchLength,
                 RouteMatch.Url.Length - RouteMatch.MatchLength);
 
-            var ravenPath = $"~/../../Raven.Studio/wwwroot/{filename}";
-
-#if DEBUG
-            ravenPath = Path.GetFullPath(ravenPath).Replace($"{Path.DirectorySeparatorChar}test{Path.DirectorySeparatorChar}", $"{Path.DirectorySeparatorChar}src{Path.DirectorySeparatorChar}");
-#endif
+            var ravenPath = Path.GetFullPath($"~/../../Raven.Studio/wwwroot/{filename}");
+            if (!File.Exists(ravenPath))
+            {
+                ravenPath = Path.GetFullPath($"~/../src/Raven.Studio/wwwroot/{filename}");
+            }
+            if (!File.Exists(ravenPath))
+            {
+                ravenPath =
+                    ravenPath
+                        .Replace($"{Path.DirectorySeparatorChar}test{Path.DirectorySeparatorChar}",
+                            $"{Path.DirectorySeparatorChar}src{Path.DirectorySeparatorChar}");
+            }
             if (File.Exists(ravenPath))
             {
-
                 await WriteFile(ravenPath);
                 return;
             }
