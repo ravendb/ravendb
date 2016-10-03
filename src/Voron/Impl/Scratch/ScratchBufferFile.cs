@@ -75,49 +75,14 @@ namespace Voron.Impl.Scratch
             return result;
         }
 
-        public bool HasDiscontinuousSpaceFor(LowLevelTransaction tx, long size, int scratchFilesInUse)
+        public bool HasDiscontinuousSpaceFor(long size)
         {
-            long available = 0;
-
-            if (scratchFilesInUse == 1)
-            {
-                // we can consider the space from the end of a file as available only if we have the single scratch buffer file
-                // if a scratch limit is controller over multiple files then we can use only free pages to calculate available space
-
-                available += (_scratchPager.NumberOfAllocatedPages - _lastUsedPage);
-            }
+            long available = _scratchPager.NumberOfAllocatedPages - _lastUsedPage;
 
             foreach (var freePage in _freePagesBySizeAvailableImmediately)
-                available += freePage.Key * freePage.Value.Count;
+                available += freePage.Key*freePage.Value.Count;
 
-
-            if (available >= size)
-                return true;
-
-
-            var oldestTransaction = tx.Environment.OldestTransaction;
-
-            var sizesFromLargest = _freePagesBySize.Keys.OrderByDescending(x => x);
-
-            foreach (var sizeKey in sizesFromLargest)
-            {
-                var item = _freePagesBySize[sizeKey].Last;
-
-                while (item != null && (oldestTransaction == 0 || item.Value.ValidAfterTransactionId < oldestTransaction))
-                {
-                    available += sizeKey;
-
-                    if(available >= size)
-                        break;
-
-                    item = item.Previous;
-                }
-
-                if(available >= size)
-                    break;
-            }
-
-            return available >= size;
+            return (available >= size);
         }
 
         public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, long size, out PageFromScratchBuffer result)
@@ -216,24 +181,7 @@ namespace Voron.Impl.Scratch
             return _scratchPager.AcquirePagePointer(tx, p);
         }
 
-        public long ActivelyUsedBytes(long oldestActiveTransaction)
-        {
-            long result = _allocatedPagesUsedSize;
-
-            if (oldestActiveTransaction != 0)
-            {
-                var keys = _freePagesByTransaction.Keys;
-                var values = _freePagesByTransaction.Values;
-                for (int i = 0; i < keys.Count; i++)
-                {
-                    if (keys[i] < oldestActiveTransaction)
-                        break;
-                    result += values[i];
-                }
-            }
-
-            return result * _pageSize;
-        }
+        public long ActivelyUsedBytes => _allocatedPagesUsedSize*_pageSize;
 
         internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
         {
