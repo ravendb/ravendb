@@ -106,3 +106,4 @@ test/FastTests/Databases/
 test/Studio/setup/tests.js
 test/Studio/js/
 /Databases/
+/Logs

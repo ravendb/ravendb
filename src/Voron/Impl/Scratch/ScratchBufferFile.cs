@@ -36,6 +36,8 @@ namespace Voron.Impl.Scratch
         private long _allocatedPagesUsedSize;
         private long _lastUsedPage;
 
+        public long LastUsedPage => _lastUsedPage;
+
         public ScratchBufferFile(AbstractPager scratchPager, int scratchNumber)
         {
             _scratchPager = scratchPager;
@@ -75,14 +77,14 @@ namespace Voron.Impl.Scratch
             return result;
         }
 
-        public bool HasDiscontinuousSpaceFor(long size)
+        public bool HasDiscontinuousSpaceFor(long sizeInPages)
         {
             long available = _scratchPager.NumberOfAllocatedPages - _lastUsedPage;
 
             foreach (var freePage in _freePagesBySizeAvailableImmediately)
                 available += freePage.Key*freePage.Value.Count;
 
-            return (available >= size);
+            return (available >= sizeInPages);
         }
 
         public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, long size, out PageFromScratchBuffer result)

@@ -100,8 +100,14 @@ namespace Voron.Impl.Scratch
                 throw new ArgumentNullException(nameof(tx));
             var size = Bits.NextPowerOf2(numberOfPages);
 
-            PageFromScratchBuffer result;
+
             var current = _current;
+
+            // we can allocate from the end of the file directly
+            if(current.File.LastUsedPage + size <= current.File.NumberOfAllocatedPages)
+                return current.File.Allocate(tx, numberOfPages, size);
+
+            PageFromScratchBuffer result;
             if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
                 return result;
 
