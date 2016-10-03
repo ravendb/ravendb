@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes
     public abstract class Index<TIndexDefinition> : Index
         where TIndexDefinition : IndexDefinitionBase
     {
-        public new TIndexDefinition Definition => (TIndexDefinition) base.Definition;
+        public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
 
         protected Index(int indexId, IndexType type, TIndexDefinition definition)
             : base(indexId, type, definition)
@@ -100,6 +100,8 @@ namespace Raven.Server.Documents.Indexes
         public readonly ConcurrentSet<ExecutingQueryInfo> CurrentlyRunningQueries =
             new ConcurrentSet<ExecutingQueryInfo>();
 
+        private IndexingStatsAggregator _lastStats;
+
         private readonly ConcurrentQueue<IndexingStatsAggregator> _lastIndexingStats =
             new ConcurrentQueue<IndexingStatsAggregator>();
 
@@ -109,9 +111,6 @@ namespace Raven.Server.Documents.Indexes
 
         protected internal MeterMetric MapsPerSec = new MeterMetric();
         protected internal MeterMetric ReducesPerSec = new MeterMetric();
-        protected internal int DocumentsInCurrentBatch;
-
-        private readonly Stopwatch _batchTimer = new Stopwatch();
 
         private bool _allocationCleanupNeeded;
         private Size _currentMaximumAllowedMemory = new Size(16, SizeUnit.Megabytes);
@@ -513,22 +512,20 @@ namespace Raven.Server.Documents.Indexes
 
                         _mre.Reset();
 
-                        var stats =
-                            new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId());
+                        var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId());
                         _lastIndexingTime = stats.StartTime;
                         using (var scope = stats.CreateScope())
                         {
                             try
                             {
                                 cts.Token.ThrowIfCancellationRequested();
-                                _batchTimer.Restart();
+
                                 var didWork = DoIndexingWork(scope, cts.Token);
-                                _batchTimer.Stop();
 
                                 _indexingBatchCompleted.SetAndResetAtomically();
 
                                 DocumentDatabase.Notifications.RaiseNotifications(
-                                    new IndexChangeNotification {Name = Name, Type = IndexChangeTypes.BatchCompleted});
+                                    new IndexChangeNotification { Name = Name, Type = IndexChangeTypes.BatchCompleted });
 
                                 if (didWork)
                                     ResetWriteErrors();
@@ -609,7 +606,7 @@ namespace Raven.Server.Documents.Indexes
             var beforeFree = NativeMemory.ThreadAllocations.Value.Allocations;
             if (_logger.IsInfoEnabled)
                 _logger.Info(
-                    $"{beforeFree/1024:#,#} kb is used by '{Name} ({IndexId})', reducing memory utilization.");
+                    $"{beforeFree / 1024:#,#} kb is used by '{Name} ({IndexId})', reducing memory utilization.");
 
             DocumentDatabase.DocumentsStorage.ContextPool.Clean();
             _contextPool.Clean();
@@ -619,7 +616,7 @@ namespace Raven.Server.Documents.Indexes
 
             var afterFree = NativeMemory.ThreadAllocations.Value.Allocations;
             if (_logger.IsInfoEnabled)
-                _logger.Info($"After clenaup, using {afterFree/1024:#,#} kb by '{Name} ({IndexId})'.");
+                _logger.Info($"After clenaup, using {afterFree / 1024:#,#} kb by '{Name} ({IndexId})'.");
         }
 
         internal void ResetWriteErrors()
@@ -688,7 +685,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         if (writeOperation.IsValueCreated)
                         {
-                            using (stats.For("Lucene_Write"))
+                            using (stats.For(IndexingOperation.Lucene.FlushToDisk))
                                 writeOperation.Value.Dispose();
                         }
                     }
@@ -696,17 +693,17 @@ namespace Raven.Server.Documents.Indexes
                     _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
                 }
 
-                using (stats.For("Storage_Commit"))
+                using (stats.For(IndexingOperation.Storage.Commit))
                 {
                     tx.Commit();
                 }
 
                 if (writeOperation.IsValueCreated)
                 {
-                    using (stats.For("Lucene_RecreateSearcher"))
+                    using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
                     {
                         IndexPersistence.RecreateSearcher();
-                            // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
+                        // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
                     }
                 }
 
@@ -876,9 +873,8 @@ namespace Raven.Server.Documents.Indexes
 
                 stats.MappedPerSecondRate = MapsPerSec.OneMinuteRate;
                 stats.ReducedPerSecondRate = ReducesPerSec.OneMinuteRate;
-                stats.CurrentBatchDocuments = DocumentsInCurrentBatch;
-                stats.CurrentBatchDuration = _batchTimer.Elapsed;
 
+                stats.LastBatchStats = _lastStats?.ToIndexingPerformanceLiveStats();
                 stats.LastQueryingTime = _lastQueryingTime;
 
                 if (calculateStaleness || calculateLag)
@@ -1029,7 +1025,7 @@ namespace Raven.Server.Documents.Indexes
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
                         documentsContext.OpenReadTransaction();
-                            // we have to open read tx for mapResults _after_ we open index tx
+                        // we have to open read tx for mapResults _after_ we open index tx
 
                         if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
                             query.CutoffEtag =
@@ -1058,7 +1054,7 @@ namespace Raven.Server.Documents.Indexes
                         if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0) &&
                             (transformer == null || transformer.MightRequireTransaction == false))
                             documentsContext.CloseTransaction();
-                                // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
+                        // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
 
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
@@ -1146,7 +1142,7 @@ namespace Raven.Server.Documents.Indexes
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
                         documentsContext.OpenReadTransaction();
-                            // we have to open read tx for mapResults _after_ we open index tx
+                        // we have to open read tx for mapResults _after_ we open index tx
 
                         if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
                             query.CutoffEtag =
@@ -1250,7 +1246,7 @@ namespace Raven.Server.Documents.Indexes
                 if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0) &&
                     (transformer == null || transformer.MightRequireTransaction == false))
                     documentsContext.CloseTransaction();
-                        // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
+                // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
 
                 using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                 {
@@ -1378,7 +1374,7 @@ namespace Raven.Server.Documents.Indexes
             var indexEtagBytes = new long[
                 1 + // definition hash
                 1 + // isStale
-                2*Collections.Count // last document etags and last mapped etags per collection
+                2 * Collections.Count // last document etags and last mapped etags per collection
                 ];
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, documentsContext, indexContext);
@@ -1388,7 +1384,7 @@ namespace Raven.Server.Documents.Indexes
                 fixed (long* buffer = indexEtagBytes)
                 {
                     return
-                        (long) Hashing.XXHash64.Calculate((byte*) buffer, (ulong) (indexEtagBytes.Length*sizeof(long)));
+                        (long)Hashing.XXHash64.Calculate((byte*)buffer, (ulong)(indexEtagBytes.Length * sizeof(long)));
                 }
             }
         }
