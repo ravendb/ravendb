@@ -685,7 +685,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         if (writeOperation.IsValueCreated)
                         {
-                            using (stats.For("Lucene_Write"))
+                            using (stats.For(IndexingOperation.Lucene.FlushToDisk))
                                 writeOperation.Value.Dispose();
                         }
                     }
@@ -693,14 +693,14 @@ namespace Raven.Server.Documents.Indexes
                     _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
                 }
 
-                using (stats.For("Storage_Commit"))
+                using (stats.For(IndexingOperation.Storage.Commit))
                 {
                     tx.Commit();
                 }
 
                 if (writeOperation.IsValueCreated)
                 {
-                    using (stats.For("Lucene_RecreateSearcher"))
+                    using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
                     {
                         IndexPersistence.RecreateSearcher();
                         // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes

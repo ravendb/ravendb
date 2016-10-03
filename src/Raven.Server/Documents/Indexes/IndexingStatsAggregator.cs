@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Indexes
                 Name = name
             };
 
-            if (_stats.ReduceDetails != null && name == "Tree")
+            if (_stats.ReduceDetails != null && name == IndexingOperation.Reduce.TreeScope)
                 operation.Details = _stats.ReduceDetails;
 
             if (_scopes != null)
