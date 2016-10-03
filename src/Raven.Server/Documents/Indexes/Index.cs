@@ -1482,16 +1482,21 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
-        public bool CanContinueBatch()
+        public bool CanContinueBatch(IndexingStatsScope collectionStats)
         {
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
             {
-                return TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes));
+                var tryIncreasingMemoryUsageForIndex = TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), collectionStats);
+                if (tryIncreasingMemoryUsageForIndex == false)
+                {
+                    collectionStats.RecordMapCompletedReason("Cannot budget additional memory for batch");
+                }
+                return tryIncreasingMemoryUsageForIndex;
             }
             return true;
         }
 
-        private bool TryIncreasingMemoryUsageForIndex(Size currentlyAllocated)
+        private bool TryIncreasingMemoryUsageForIndex(Size currentlyAllocated, IndexingStatsScope collectionStats)
         {
             //TODO: This has to be exposed via debug endpoint
 
@@ -1504,6 +1509,9 @@ namespace Raven.Server.Documents.Indexes
                 // rely on the OS to page it out (without needing to write, since it is read only in this case)
                 // so we try to calculate how much such memory we can use with this assumption 
                 var memoryMappedSize = new Size(currentProcess.WorkingSet64 - currentProcess.PrivateMemorySize64, SizeUnit.Bytes);
+
+                collectionStats.RecordMapMemoryStats(currentProcess.WorkingSet64, currentProcess.PrivateMemorySize64,
+                    currentlyAllocated.GetValue(SizeUnit.Bytes), _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
 
                 if (memoryMappedSize < Size.Zero)
                 {

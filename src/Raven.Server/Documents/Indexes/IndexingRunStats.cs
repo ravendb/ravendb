@@ -21,6 +21,8 @@ namespace Raven.Server.Documents.Indexes
 
         public ReduceRunDetails ReduceDetails;
 
+        public MapRunDetails MapDetails;
+
         public List<IndexingError> Errors;
 
         public override string ToString()

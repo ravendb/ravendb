@@ -75,10 +75,20 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                         using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext))
                         {
-                            IEnumerable mapResults;
 
-                            while (docsEnumerator.MoveNext(out mapResults))
+                            while (true)
                             {
+                                IEnumerable mapResults;
+                                if (docsEnumerator.MoveNext(out mapResults) == false)
+                                {
+                                    collectionStats.RecordMapCompletedReason(
+                                        maxValue == count
+                                            ? "Batch document count limited reached"
+                                            : "No more documents to index"
+                                    );
+                                    break;
+                                }
+
                                 token.ThrowIfCancellationRequested();
 
                                 if (indexWriter == null)
@@ -111,10 +121,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         $"Failed to execute mapping function on {current.Key}. Exception: {e}");
                                 }
 
-                                if (_index.CanContinueBatch() == false)
+                                if (_index.CanContinueBatch(collectionStats) == false)
                                     break;
                                 if (sw.Elapsed > timeout)
+                                {
+                                    collectionStats.RecordMapCompletedReason("Timeout expired");
                                     break;
+                                }
                             }
                         }
                     }
