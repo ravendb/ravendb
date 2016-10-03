@@ -722,6 +722,7 @@ class appUrl {
             column: customColumns
         }
 
+        //TODO: we don't have Raven/DocumentsByEntityName anymore
         return appUrl.forResourceQuery(db) + "/streams/query/Raven/DocumentsByEntityName" + appUrl.urlEncodeArgs(args);
     }
 

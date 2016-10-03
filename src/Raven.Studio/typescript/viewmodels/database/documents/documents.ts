@@ -249,7 +249,7 @@ class documents extends viewModelBase {
     }
 
     private fetchCollectionsStats(db: database): JQueryPromise<collectionsStats> {
-        return new getCollectionsStatsCommand(db, this.collections()).execute();
+        return new getCollectionsStatsCommand(db).execute();
     }
 
     private refreshCollections(): JQueryPromise<any> {
