@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Emit;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Static
     [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
     public static class IndexAndTransformerCompiler
     {
-        private static readonly bool EnableDebugging = false; // for debugging purposes
+        private static readonly bool EnableDebugging = true; // for debugging purposes
 
         private const string IndexNamespace = "Raven.Server.Documents.Indexes.Static.Generated";
 
@@ -140,7 +141,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var asm = new MemoryStream();
             var pdb = EnableDebugging ? new MemoryStream() : null;
 
-            var result = compilation.Emit(asm, pdb);
+            var result = compilation.Emit(asm, pdb, options: new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb));
 
             if (result.Success == false)
             {

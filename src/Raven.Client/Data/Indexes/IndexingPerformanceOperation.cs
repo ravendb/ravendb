@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sparrow.Json;
+using System;
 
 namespace Raven.Client.Data.Indexes
 {
@@ -13,6 +14,13 @@ namespace Raven.Client.Data.Indexes
 
         public double DurationInMilliseconds { get; }
 
+        public IDetails Details { get; set; }
+
         public IndexingPerformanceOperation[] Operations { get; set; }
+
+        public interface IDetails
+        {
+            void ToJson(BlittableJsonTextWriter writer, JsonOperationContext context);
+        }
     }
 }

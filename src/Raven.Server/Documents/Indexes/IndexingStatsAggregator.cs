@@ -41,6 +41,21 @@ namespace Raven.Server.Documents.Indexes
             return _scope = new IndexingStatsScope(_stats);
         }
 
+        public IndexingPerformanceBasicStats ToIndexingPerformanceLiveStats()
+        {
+            if (_performanceStats != null)
+                return _performanceStats;
+
+            return new IndexingPerformanceBasicStats(_scope.Duration)
+            {
+                Started = StartTime,
+                InputCount = _stats.MapAttempts,
+                SuccessCount = _stats.MapSuccesses,
+                FailedCount = _stats.MapErrors,
+                OutputCount = _stats.IndexingOutputs
+            };
+        }
+
         public IndexingPerformanceStats ToIndexingPerformanceStats()
         {
             if (_performanceStats != null)
@@ -59,7 +74,7 @@ namespace Raven.Server.Documents.Indexes
                     InputCount = _stats.MapAttempts,
                     SuccessCount = _stats.MapSuccesses,
                     FailedCount = _stats.MapErrors,
-                    OutputCount = _stats.IndexingOutputs,
+                    OutputCount = _stats.IndexingOutputs
                 };
             }
         }
@@ -148,6 +163,17 @@ namespace Raven.Server.Documents.Indexes
             _stats.IndexingOutputs++;
         }
 
+        public void RecordReduceTreePageModified(bool isLeaf)
+        {
+            if (_stats.ReduceDetails == null)
+                _stats.ReduceDetails = new ReduceRunDetails();
+
+            if (isLeaf)
+                _stats.ReduceDetails.NumberOfModifiedLeafs++;
+            else
+                _stats.ReduceDetails.NumberOfModifiedBranches++;
+        }
+
         public void RecordReduceAttempts(int numberOfEntries)
         {
             _stats.ReduceAttempts += numberOfEntries;
@@ -169,6 +195,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 Name = name
             };
+
+            if (_stats.ReduceDetails != null && name == IndexingOperation.Reduce.TreeScope)
+                operation.Details = _stats.ReduceDetails;
 
             if (_scopes != null)
             {

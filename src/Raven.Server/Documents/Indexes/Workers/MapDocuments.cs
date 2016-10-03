@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         _logger.Info($"Executing map for '{_index.Name} ({_index.IndexId})'. LastMappedEtag: {lastMappedEtag}.");
 
                     var lastEtag = lastMappedEtag;
-                    _index.DocumentsInCurrentBatch = 0;
+                    var count = 0;
                     var resultsCount = 0;
 
                     var sw = Stopwatch.StartNew();
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 collectionStats.RecordMapAttempt();
 
-                                _index.DocumentsInCurrentBatch++;
+                                count++;
                                 lastEtag = current.Etag;
 
                                 try
@@ -119,11 +119,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                         }
                     }
 
-                    if (_index.DocumentsInCurrentBatch == 0)
+                    if (count == 0)
                         continue;
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {_index.DocumentsInCurrentBatch:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                        _logger.Info($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {count:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
                     if (_index.Type.IsMap())
                     {

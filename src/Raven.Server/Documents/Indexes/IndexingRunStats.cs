@@ -3,6 +3,7 @@
 using Raven.Abstractions;
 using Raven.Client.Data;
 using Raven.Server.Exceptions;
+using Raven.Client.Data.Indexes;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -17,6 +18,8 @@ namespace Raven.Server.Documents.Indexes
         public int ReduceErrors;
 
         public int IndexingOutputs;
+
+        public ReduceRunDetails ReduceDetails;
 
         public List<IndexingError> Errors;
 
