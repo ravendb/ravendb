@@ -1,5 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import appUrl = require("common/appUrl");
 import dataExplorationRequest = require("models/database/query/dataExplorationRequest");
@@ -8,6 +8,7 @@ import pagedResultSet = require("common/pagedResultSet");
 import pagedList = require("common/pagedList");
 import document = require("models/database/documents/document");
 import messagePublisher = require("common/messagePublisher");
+import collectionsStats = require("models/database/documents/collectionsStats");
 
 class exploration extends viewModelBase {
 
@@ -32,10 +33,10 @@ class exploration extends viewModelBase {
     canActivate(args: any): any {
         var deffered = $.Deferred();
 
-        new getIndexTermsCommand("Raven/DocumentsByEntityName", "Tag", this.activeDatabase())
+        new getCollectionsStatsCommand(this.activeDatabase())
             .execute()
-            .done((terms: string[]) => {
-                this.collections(terms);
+            .done((collectionStats: collectionsStats) => {
+                this.collections(collectionStats.collections.map(x => x.name));
             })
             .always(() => deffered.resolve({ can: true }));
 
