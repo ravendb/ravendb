@@ -37,7 +37,7 @@ class deleteFilesMatchingQueryCommand extends commandBase {
                 this.reportError("Error deleting files matching query");
                 task.reject();
             }
-            fs.isImporting(false);
+            //TODO:fs.isImporting(false);
         }
         else {
             setTimeout(() => this.waitForOperationToComplete(fs, operationId, task), 1000);

@@ -792,7 +792,6 @@ interface smugglerOptionsDto {
     OperateOnTypes: number;
     BatchSize: number;
     ShouldExcludeExpired: boolean;
-    Filters: filterSettingDto[];
     TransformScript: string;
     NoneDefaultFileName: string;
     OperationId: number;
@@ -1062,13 +1061,6 @@ interface collectionStats {
     TopDocs: any[];
 }
 
-interface filterSettingDto {
-    Path: string;
-    Values: string[];
-    ShouldMatch: boolean;
-    ShouldMatchObservable?: KnockoutObservable<boolean>;
-}
-
 interface resourceStyleMap {
     resourceName: string;
     styleMap: any;
@@ -1181,10 +1173,6 @@ interface visualizerExportDto {
     docKeys: string[];
     reduceKeys: string[];
     tree: visualizerDataObjectNodeDto;
-}
-
-interface operationIdDto {
-    OperationId: number;
 }
 
 interface operationStatusDto {
