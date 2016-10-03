@@ -1,4 +1,4 @@
-﻿{
+{
   "buildOptions": {
     "allowUnsafe": true,
     "emitEntryPoint": true,
@@ -19,6 +19,7 @@
   },
 
   "dependencies": {
+    "BenchmarkDotNet": "0.9.9",
     "Microsoft.CSharp": "4.0.1",
     "Microsoft.NETCore.App": {
       "type": "platform",
