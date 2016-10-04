@@ -103,13 +103,15 @@ namespace Voron.Impl.Scratch
 
             var current = _current;
 
-            // we can allocate from the end of the file directly
-            if(current.File.LastUsedPage + size <= current.File.NumberOfAllocatedPages)
-                return current.File.Allocate(tx, numberOfPages, size);
-
+       
             PageFromScratchBuffer result;
             if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
                 return result;
+
+            // we can allocate from the end of the file directly
+            if (current.File.LastUsedPage + size <= current.File.NumberOfAllocatedPages)
+                return current.File.Allocate(tx, numberOfPages, size);
+
 
             // There are two reasons why we can't find enough space after the size gotten so big:
 
