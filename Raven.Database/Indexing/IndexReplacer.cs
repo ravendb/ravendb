@@ -54,7 +54,7 @@ namespace Raven.Database.Indexing
                 var replaceIndexId = HandleIndexReplaceDocument(document);
 
                 if (replaceIndexId != null)
-                    ReplaceIndexes(new []{ replaceIndexId.Value });
+                    ReplaceIndexes(new[] { replaceIndexId.Value });
             };
 
             Initialize();
@@ -112,7 +112,7 @@ namespace Raven.Database.Indexing
             if (indexReplaceInformation.ReplaceTimeUtc.HasValue)
             {
                 var dueTime = indexReplaceInformation.ReplaceTimeUtc.Value - SystemTime.UtcNow;
-                if (dueTime.TotalSeconds < 0) 
+                if (dueTime.TotalSeconds < 0)
                     dueTime = TimeSpan.Zero;
 
                 indexReplaceInformation.ReplaceTimer = Database.TimerManager.NewTimer(state => InternalReplaceIndexes(new Dictionary<int, IndexReplaceInformation> { { replaceIndexId, indexReplaceInformation } }), dueTime, TimeSpan.FromDays(7));
@@ -177,12 +177,7 @@ namespace Raven.Database.Indexing
                     var replaceIndex = Database.IndexStorage.GetIndexInstance(indexId);
 
                     var statistics = accessor.Indexing.GetIndexStats(indexId);
-                    if (replaceIndex.IsMapReduce)
-                    {
-                        if (statistics.LastReducedEtag != null && EtagUtil.IsGreaterThanOrEqual(statistics.LastReducedEtag, indexReplaceInformation.MinimumEtagBeforeReplace))
-                            shouldReplace = true;
-                    }
-                    else
+                    if (replaceIndex.IsMapReduce == false)
                     {
                         if (statistics.LastIndexedEtag != null && EtagUtil.IsGreaterThanOrEqual(statistics.LastIndexedEtag, indexReplaceInformation.MinimumEtagBeforeReplace))
                             shouldReplace = true;
@@ -237,7 +232,7 @@ namespace Raven.Database.Indexing
 
                             indexReplaceInformation.ErrorCount++;
                         }
-                        
+
                     }
                 }
             }
@@ -319,11 +314,11 @@ namespace Raven.Database.Indexing
                 }
             }
 
-            var message = string.Format("Index replace failed. Could not replace index '{0}' with '{1}'.", indexReplaceInformation.IndexToReplace, indexReplaceInformation.ReplaceIndex);
+            var message = string.Format("Index replace failed. Could not replace index '{0}' with '{1}'. Number of tries: '{2}'.", indexReplaceInformation.IndexToReplace, indexReplaceInformation.ReplaceIndex, indexReplaceInformation.ErrorCount);
 
             Database.AddAlert(new Alert
             {
-                AlertLevel = AlertLevel.Error,
+                AlertLevel = indexReplaceInformation.ErrorCount <= 10 ? AlertLevel.Warning : AlertLevel.Error,
                 CreatedAt = SystemTime.UtcNow,
                 Message = message,
                 Title = "Index replace failed",

@@ -13,7 +13,7 @@
                     <button type="button" class="btn btn-default" disabled="disabled">
                         <i data-bind="css: { 'fa-check': true }" class="fa fa-fw"></i> When new index become non-stale
                     </button>
-                    <button type="button" class="btn btn-default" data-bind="click: toggleEtagMode">
+                    <button type="button" class="btn btn-default" data-bind="click: toggleEtagMode, enable: canAccessEtagMode">
                         <i data-bind="css: { 'fa-check': etagMode() }" class="fa fa-fw"></i> index etag reaches last indexed etag of old index
                     </button>
                     <button type="button" class="btn btn-default" data-bind="click: toggleDateMode">
