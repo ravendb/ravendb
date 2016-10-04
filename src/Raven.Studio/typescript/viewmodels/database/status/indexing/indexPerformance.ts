@@ -11,7 +11,7 @@ class metrics extends viewModelBase {
 
     private static readonly barHeight = 10;
     private static readonly maxRecurseLevel = 4;
-    private static readonly pixelsPerSecond = 2;
+    private static readonly pixelsPerSecond = 8;
     private static readonly innerGroupPadding = 10;
     private static readonly verticalPadding = 10;
     private static readonly legendPadding = 200;
