@@ -1,5 +1,138 @@
 .indexes {
-    .state-indicator {
 
+    .vertical-divider {
+        position: relative;
+
+        &:before {
+            content: '';
+            display: block;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            border-left: 1px solid @gray-dark;
+        }
+    }
+
+    .panel {
+        padding-left: 40px;
+        position: relative;
+
+        &:hover {
+            background-color: lighten(@gray-darker, 2%);
+            transition: background-color .15s ease;
+        }
+
+        .index-name, .index-type {
+            margin-left: 30px;
+            margin-bottom: 0;
+            word-break: break-all;
+        }
+
+        .index-name {
+            margin-top: 2px;
+        }
+
+        .index-type {
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        .state {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 30px;
+
+            &:before {
+                color: #FFF;
+                font-size: 10px;
+                letter-spacing: .2pt;
+                display: block;
+                width: 80px;
+                text-align: center;
+                height: 50px;
+                -moz-transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
+                -webkit-transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
+                -o-transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg); 
+                -ms-transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
+                transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
+                position:absolute;
+                top:0;
+                left:0;
+                transform-orgin:bottom left 0;
+            }
+
+            &.state-error {
+                background-color: @brand-danger;
+
+                &:before {
+                    content: 'ERROR';
+                }
+            }
+
+            &.state-invalid {
+                background-color: @brand-danger;
+
+                &:before {
+                    content: 'INVALID';
+                }
+            }
+
+            &.state-abandoned {
+                background-color: @brand-info;
+
+                &:before {
+                    content: 'ABANDONED';
+                }
+            }
+
+            &.state-normal {
+                background-color: @brand-success;
+
+                &:before {
+                    content: 'NORMAL';
+                }
+            }
+
+            &.state-disabled {
+                background-color: @brand-warning;
+
+                &:before {
+                    content: 'DISABLED';
+                }
+            }
+        }
+
+        .checkbox {
+            position: relative;
+            margin: 0;
+            top: -8px;
+            float: left;
+        }
+    }
+
+    .properties-item {
+        display: inline-block;
+        white-space: nowrap;
+    }
+
+    .properies-value, .properies-label {
+        display: inline-block;
+        .btn-sm;
+        width: 140px;
+
+        [class^="icon-"], [class*=" icon-"] {
+            color: @brand-info;
+
+            & + span {
+                margin-left: 9px;
+                color: @brand-info;
+            }
+        }
+    }
+
+    .properies-label {
+        width: 70px;
     }
 }
