@@ -11,7 +11,7 @@ class metrics extends viewModelBase {
 
     private static readonly barHeight = 10;
     private static readonly maxRecurseLevel = 4;
-    private static readonly pixelsPerSecond = 20;
+    private static readonly pixelsPerSecond = 2;
     private static readonly innerGroupPadding = 10;
     private static readonly verticalPadding = 10;
     private static readonly legendPadding = 200;
@@ -23,6 +23,8 @@ class metrics extends viewModelBase {
 
     private yScale: d3.scale.Ordinal<string, number>;
     private yAxis: d3.svg.Axis;
+
+    private colorScale = d3.scale.category20();
 
     private xTickFormat = d3.time.format("%H:%M:%S");
 
@@ -64,7 +66,7 @@ class metrics extends viewModelBase {
 
         const ticks = d3.scale.linear()
             .domain([0, timeExtent])
-            .ticks(Math.ceil(timeExtent / 100)).map(y => self.xScale.invert(y));
+            .ticks(Math.ceil(timeExtent / 10000)).map(y => self.xScale.invert(y));
 
         this.xAxis = d3.svg.axis()
             .scale(self.xScale)
@@ -125,7 +127,6 @@ class metrics extends viewModelBase {
 
         return [this.isoParser.parse(minDate), this.isoParser.parse(maxDate)];
     }
-
 
     private findIndexNames(): Array<string> {
         const names: Array<string> = [];
@@ -192,6 +193,7 @@ class metrics extends viewModelBase {
                 .attr('height', metrics.singleIndexGroupHeight - (metrics.maxRecurseLevel - level + 1) * 2 * metrics.innerGroupPadding)
                 .attr('width', width)
                 .datum(op)
+                .attr('fill', (data) => self.colorScale(data.Name))
                 .on('click', (data) => self.showDetails(data));
 
             if (op.Operations.length > 0) {
