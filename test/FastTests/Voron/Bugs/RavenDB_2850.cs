@@ -20,7 +20,7 @@ namespace FastTests.Voron.Bugs
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [Fact(Skip = "Probably not relevant any longer - RavenDB-5403")]
         public void FlushingLogsShouldNotCauseExceptions()
         {
             // this test reproduces the issue RavenDB-2850 - very rare corner case that involves the journal applicator and the scratch buffer
