@@ -20,7 +20,21 @@ namespace Sparrow.Json
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
         private NativeMemory.ThreadStats _allocatingThread;
 
-        public int Allocated => _allocated;
+        public int Allocated
+        {
+            get
+            {
+                var totalAllocation = _allocated;
+                if (_olderBuffers != null)
+                {
+                    foreach (var olderBuffer in _olderBuffers)
+                    {
+                        totalAllocation += olderBuffer.Item2;
+                    }
+                }
+                return totalAllocation;
+            }    
+        }
 
         public ArenaMemoryAllocator(int initialSize = 1024 * 1024)
         {
@@ -35,7 +49,7 @@ namespace Sparrow.Json
 
         public bool GrowAllocation(AllocatedMemoryData allocation, int sizeIncrease)
         {
-            var end = (byte*)allocation.Address + allocation.SizeInBytes;
+            var end = allocation.Address + allocation.SizeInBytes;
             var distance = end - _ptrCurrent;
             if (distance != 0)
                 return false;
@@ -85,7 +99,7 @@ namespace Sparrow.Json
             // we need the next allocation to cover at least the next expansion (also doubling)
             // so we'll allocate 3 times as much as was requested, or twice as much as we already have
             // the idea is that a single allocation can server for multiple (increasing in size) calls
-            int newSize = Math.Max(Bits.NextPowerOf2(requestedSize)*3, _allocated * 2);
+            int newSize = Math.Max(Bits.NextPowerOf2(requestedSize)*3, _allocated);
             if (newSize < 0 || newSize > maxArenaSize)
                 newSize = maxArenaSize;
            
@@ -121,17 +135,23 @@ namespace Sparrow.Json
         {
             // Reset current arena buffer
             _ptrCurrent = _ptrStart;
-            _used = 0;
-
             // Free old buffers not being used anymore
             if (_olderBuffers != null)
             {
                 foreach (var unusedBuffer in _olderBuffers)
                 {
+                    _used += unusedBuffer.Item2;
                     NativeMemory.Free((byte*)unusedBuffer.Item1, unusedBuffer.Item2, unusedBuffer.Item3);
                 }
                 _olderBuffers = null;
+                if (_used > _allocated)  // we'll likely need more memory in the next round, double the allocation
+                {
+                    NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
+                    _allocated = Bits.NextPowerOf2(_used);
+                    _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(_allocated, out _allocatingThread);
+                }
             }
+            _used = 0;
         }
 
         ~ArenaMemoryAllocator()
@@ -148,7 +168,14 @@ namespace Sparrow.Json
                 return;
             _isDisposed = true;
 
-            ResetArena();
+            if (_olderBuffers != null)
+            {
+                foreach (var unusedBuffer in _olderBuffers)
+                {
+                    NativeMemory.Free((byte*)unusedBuffer.Item1, unusedBuffer.Item2, unusedBuffer.Item3);
+                }
+                _olderBuffers = null;
+            }
 
             NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
 
