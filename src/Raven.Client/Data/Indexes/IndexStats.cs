@@ -137,11 +137,12 @@ namespace Raven.Client.Data.Indexes
             {
                 DiskSize = new Size();
                 ThreadAllocations = new Size();
+                MemoryBudget = new Size();
             }
 
-            public bool InMemory { get; set; }
             public Size DiskSize { get; set; }
             public Size ThreadAllocations { get; set; }
+            public Size MemoryBudget { get; set; }
         }
 
         public class CollectionStats

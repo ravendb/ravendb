@@ -570,17 +570,28 @@ namespace Raven.Server.Documents.Indexes
 
                         AddIndexingPerformance(stats);
 
-                        if (_allocationCleanupNeeded)
-                        {
-                            _allocationCleanupNeeded = false;
-                            ReduceMemoryUsage();
-                            _currentMaximumAllowedMemory = new Size(16, SizeUnit.Megabytes);
-                        }
-
                         try
                         {
-                            if (_mre.Wait(5000, cts.Token) == false)
+                            // the logic here is that if we hit the memory limit on the system, we want to retain our
+                            // allocated memory as long as we still have work to do (since we will reuse it on the next batch)
+                            // and it is probably better to avoid alloc/dealloc jitter.
+                            // This is because faster indexes will tend to allocate the memory faster, and we want to give them
+                            // all the available resources so they can complete faster.
+                            var timeToWaitForCleanup = 5000;
+                            if (_allocationCleanupNeeded)
                             {
+                                timeToWaitForCleanup = 0; // if there is nothing to do, immediately cleanup everything
+
+                                // at any rate, we'll reduce the budget for this index to what it currently has allocated to avoid
+                                // the case where we freed memory at the end of the batch, but didn't adjust the budget accordingly
+                                // so it will think that it can allocate more than it actually should
+                                _currentMaximumAllowedMemory = Size.Min(_currentMaximumAllowedMemory,
+                                    new Size(NativeMemory.ThreadAllocations.Value.Allocations, SizeUnit.Bytes));
+                            }
+                            if (_mre.Wait(timeToWaitForCleanup, cts.Token) == false)
+                            {
+                                _allocationCleanupNeeded = false;
+
                                 // there is no work to be done, and hasn't been for a while,
                                 // so this is a good time to release resources we won't need 
                                 // anytime soon
@@ -612,6 +623,7 @@ namespace Raven.Server.Documents.Indexes
             _contextPool.Clean();
             ByteStringMemoryCache.Clean();
             IndexPersistence.Clean();
+            _currentMaximumAllowedMemory = new Size(16, SizeUnit.Megabytes);
 
 
             var afterFree = NativeMemory.ThreadAllocations.Value.Allocations;
@@ -918,8 +930,6 @@ namespace Raven.Server.Documents.Indexes
         {
             var stats = new IndexStats.MemoryStats();
 
-            var inMemory = DocumentDatabase.Configuration.Indexing.RunInMemory;
-
             var indexPath = Path.Combine(DocumentDatabase.Configuration.Indexing.IndexStoragePath,
                 GetIndexNameSafeForFileSystem());
             var totalSize = 0L;
@@ -933,7 +943,6 @@ namespace Raven.Server.Documents.Indexes
                 totalSize += mapping.Value;
             }
 
-            stats.InMemory = inMemory;
             stats.DiskSize.SizeInBytes = totalSize;
 
             var indexingThread = _indexingThread;
@@ -946,6 +955,7 @@ namespace Raven.Server.Documents.Indexes
                         stats.ThreadAllocations.SizeInBytes = threadAllocationsValue.Allocations;
                         if (stats.ThreadAllocations.SizeInBytes < 0)
                             stats.ThreadAllocations.SizeInBytes = 0;
+                        stats.MemoryBudget.SizeInBytes = _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes);
                         break;
                     }
                 }
@@ -1484,6 +1494,7 @@ namespace Raven.Server.Documents.Indexes
 
         public bool CanContinueBatch(IndexingStatsScope collectionStats)
         {
+            collectionStats.RecordMapAllocations(_threadAllocations.Allocations);
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
             {
                 var tryIncreasingMemoryUsageForIndex = TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), collectionStats);
@@ -1503,6 +1514,7 @@ namespace Raven.Server.Documents.Indexes
             // we run out our memory quota, so we need to see if we can increase it or break
             var memoryInfoResult = MemoryInformation.GetMemoryInfo();
 
+
             using (var currentProcess = Process.GetCurrentProcess())
             {
                 // a lot of the memory that we use is actually from memory mapped files, as such, we can
@@ -1510,8 +1522,7 @@ namespace Raven.Server.Documents.Indexes
                 // so we try to calculate how much such memory we can use with this assumption 
                 var memoryMappedSize = new Size(currentProcess.WorkingSet64 - currentProcess.PrivateMemorySize64, SizeUnit.Bytes);
 
-                collectionStats.RecordMapMemoryStats(currentProcess.WorkingSet64, currentProcess.PrivateMemorySize64,
-                    currentlyAllocated.GetValue(SizeUnit.Bytes), _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
+                collectionStats.RecordMapMemoryStats(currentProcess.WorkingSet64, currentProcess.PrivateMemorySize64, _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
 
                 if (memoryMappedSize < Size.Zero)
                 {
@@ -1520,8 +1531,9 @@ namespace Raven.Server.Documents.Indexes
                     // at any rate, we'll ignore that and just use the actual physical memory available
                     memoryMappedSize = Size.Zero;
                 }
+                var minMemoryToLeaveForMemoryMappedFiles = memoryInfoResult.TotalPhysicalMemory / 4;
 
-                var memoryAssumedFreeOrCheapToFree = (memoryInfoResult.AvailableMemory + memoryMappedSize);
+                var memoryAssumedFreeOrCheapToFree = (memoryInfoResult.AvailableMemory + memoryMappedSize - minMemoryToLeaveForMemoryMappedFiles);
 
                 // there isn't enough available memory to try, we want to leave some out for other things
                 if (memoryAssumedFreeOrCheapToFree < memoryInfoResult.TotalPhysicalMemory / 10)
@@ -1554,6 +1566,7 @@ namespace Raven.Server.Documents.Indexes
                     }
                     return false;
                 }
+
                 // even though we have twice as much memory as we have current allocated, we will 
                 // only increment by 16MB to avoid over allocation by multiple indexes. This way, 
                 // we'll check often as we go along this

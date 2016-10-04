@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Indexes
             return operation;
         }
 
-        public void RecordMapMemoryStats(long currentProcessWorkingSet, long currentProcessPrivateMemorySize, long currentlyAllocated, long currentBudget)
+        public void RecordMapMemoryStats(long currentProcessWorkingSet, long currentProcessPrivateMemorySize,long currentBudget)
         {
             if (_stats.MapDetails == null)
                 _stats.MapDetails = new MapRunDetails();
@@ -228,8 +228,15 @@ namespace Raven.Server.Documents.Indexes
             _stats.MapDetails.AllocationBudget = currentBudget;
             _stats.MapDetails.ProcessPrivateMemory = currentProcessPrivateMemorySize;
             _stats.MapDetails.ProcessWorkingSet = currentProcessWorkingSet;
-            _stats.MapDetails.CurrentlyAllocated = currentlyAllocated;
+        }
 
+
+        public void RecordMapAllocations(long allocations)
+        {
+            if (_stats.MapDetails == null)
+                _stats.MapDetails = new MapRunDetails();
+
+            _stats.MapDetails.CurrentlyAllocated = allocations;
         }
     }
 }

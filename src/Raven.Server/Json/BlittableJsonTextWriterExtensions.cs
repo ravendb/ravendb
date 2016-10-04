@@ -944,17 +944,17 @@ namespace Raven.Server.Json
             {
                 writer.WriteStartObject();
 
-                //TODO: are we ever actually running indexes in memory now?
-                writer.WritePropertyName(nameof(stats.Memory.InMemory));
-                writer.WriteBool(stats.Memory.InMemory);
-                writer.WriteComma();
-
                 writer.WritePropertyName(nameof(stats.Memory.DiskSize));
                 writer.WriteSize(context, stats.Memory.DiskSize);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(stats.Memory.ThreadAllocations));
                 writer.WriteSize(context, stats.Memory.ThreadAllocations);
+
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(stats.Memory.MemoryBudget));
+                writer.WriteSize(context, stats.Memory.MemoryBudget);
 
                 writer.WriteEndObject();
             }

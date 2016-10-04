@@ -34,12 +34,19 @@ namespace Raven.Client.Data.Indexes
 
         public void ToJson(BlittableJsonTextWriter writer, JsonOperationContext context)
         {
-            if (BatchCompleteReason == null)
-                return;
+            if (CurrentlyAllocated != 0)
+            {
+                writer.WritePropertyName(nameof(CurrentlyAllocated));
+                writer.WriteInteger(CurrentlyAllocated);
+                writer.WriteComma();
+            }
 
-            writer.WritePropertyName(nameof(BatchCompleteReason));
-            writer.WriteString(BatchCompleteReason);
-            writer.WriteComma();
+            if (BatchCompleteReason != null)
+            {
+                writer.WritePropertyName(nameof(BatchCompleteReason));
+                writer.WriteString(BatchCompleteReason);
+                writer.WriteComma();
+            }
 
             if (ProcessPrivateMemory == 0)
                 return;
@@ -52,10 +59,7 @@ namespace Raven.Client.Data.Indexes
             writer.WriteInteger(ProcessWorkingSet);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(CurrentlyAllocated));
-            writer.WriteInteger(CurrentlyAllocated);
-            writer.WriteComma();
-
+            
             writer.WritePropertyName(nameof(AllocationBudget));
             writer.WriteInteger(AllocationBudget);
             writer.WriteComma();

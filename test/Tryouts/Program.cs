@@ -24,6 +24,7 @@ namespace Tryouts
             {
                 new Users_Registrations_ByMonth().Execute(store);
                 new Users_Search().Execute(store);
+                new Questions_Search().Execute(store);
                 new Questions_Tags().Execute(store);
                 new Questions_Tags_ByMonths().Execute(store);
                 new Activity_ByMonth().Execute(store);
@@ -166,6 +167,31 @@ namespace Tryouts
                     Answers = g.Sum(x => x.Answers),
                     AcceptedAnswers = g.Sum(x => x.AcceptedAnswers)
                 };
+        }
+    }
+
+    public class Questions_Search : AbstractIndexCreationTask<Question>
+    {
+        public Questions_Search()
+        {
+            Map = questions =>
+                from q in questions
+                select new
+                {
+                    q.CreationDate,
+                    q.Tags,
+                    q.Score,
+                    q.Title,
+                    Users = new object[]
+                    {
+                        q.OwnerUserId,
+                        q.LastEditorUserId,
+                        q.Answers.Select(x => x.OwnerUserId)
+                    }
+                };
+
+            Index(x => x.Title, FieldIndexing.Analyzed);
+
         }
     }
 

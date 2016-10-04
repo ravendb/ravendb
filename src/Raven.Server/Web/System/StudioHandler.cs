@@ -14,16 +14,15 @@ using Sparrow;
 
 namespace Raven.Server.Web.System
 {
-
     public class StudioHandler : RequestHandler
     {
         private static readonly Dictionary<string, string> MimeMapping = new Dictionary<string, string>()
         {
-            { "css", "text/css"},
-            { "png", "image/png" },
-            { "svg", "image/svg+xml" },
-            { "js", "application/javascript" },
-            { "json", "application/javascript" }
+            {"css", "text/css"},
+            {"png", "image/png"},
+            {"svg", "image/svg+xml"},
+            {"js", "application/javascript"},
+            {"json", "application/javascript"}
         };
 
         //TODO: write better impl for this! - it is temporary solution to make studio work properly
@@ -63,7 +62,7 @@ namespace Raven.Server.Web.System
         public async Task GetStudioFile()
         {
             var filename = new StringSegment(
-                RouteMatch.Url, 
+                RouteMatch.Url,
                 RouteMatch.MatchLength,
                 RouteMatch.Url.Length - RouteMatch.MatchLength);
 

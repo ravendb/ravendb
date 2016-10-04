@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     {
                         IEnumerable<Document> documents;
 
-                        var maxValue = _configuration.MaxNumberOfDocumentsToFetchForMap;
+                        var maxValue = int.MaxValue; //_configuration.MaxNumberOfDocumentsToFetchForMap;
                         if (collection == Constants.Indexing.AllDocumentsCollection)
                             documents = _documentsStorage.GetDocumentsAfter(databaseContext, lastEtag + 1, 0, maxValue);
                         else
@@ -123,11 +123,11 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 if (_index.CanContinueBatch(collectionStats) == false)
                                     break;
-                                if (sw.Elapsed > timeout)
-                                {
-                                    collectionStats.RecordMapCompletedReason("Timeout expired");
-                                    break;
-                                }
+                                //if (sw.Elapsed > timeout)
+                                //{
+                                //    collectionStats.RecordMapCompletedReason("Timeout expired");
+                                //    break;
+                                //}
                             }
                         }
                     }

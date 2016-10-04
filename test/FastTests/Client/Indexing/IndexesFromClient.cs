@@ -170,7 +170,6 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(0, stats.Collections.First().Value.DocumentLag);
                 Assert.Equal(0, stats.Collections.First().Value.TombstoneLag);
 
-                Assert.False(stats.Memory.InMemory);
                 Assert.True(stats.Memory.DiskSize.SizeInBytes > 0);
                 Assert.NotNull(stats.Memory.DiskSize.HumaneSize);
                 Assert.True(stats.Memory.ThreadAllocations.SizeInBytes > 0);
