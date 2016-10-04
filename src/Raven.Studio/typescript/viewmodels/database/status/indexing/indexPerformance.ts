@@ -48,6 +48,11 @@ class metrics extends viewModelBase {
 
     private draw() {
         const self = this;
+
+        if (this.data.length === 0) {
+            return;
+        }
+
         const indexNames = self.findIndexNames();
         const [minTime, maxTime] = self.findTimeRanges();
 
