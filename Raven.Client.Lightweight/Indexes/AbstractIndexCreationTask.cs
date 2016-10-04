@@ -226,12 +226,14 @@ namespace Raven.Client.Indexes
         /// </summary>
         /// <param name="databaseCommands"></param>
         /// <param name="documentConvention"></param>
-        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
+        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped (map indexes only).</param>
         /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
         public virtual void SideBySideExecute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
+            if (minimumEtagBeforeReplace != null && indexDefinition.IsMapReduce)
+                throw new InvalidOperationException("We do not support side-by-side execution for Map-Reduce indexes when 'minimum last indexed etag' scenario is used.");
 
             var replaceIndexName = Constants.SideBySideIndexNamePrefix + IndexName;
             //check if side by side index exists
@@ -426,6 +428,8 @@ namespace Raven.Client.Indexes
         {
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
+            if (minimumEtagBeforeReplace != null && indexDefinition.IsMapReduce)
+                throw new InvalidOperationException("We do not support side-by-side execution for Map-Reduce indexes when 'minimum last indexed etag' scenario is used.");
 
             var replaceIndexName = Constants.SideBySideIndexNamePrefix + IndexName;
             //check if side by side index exists

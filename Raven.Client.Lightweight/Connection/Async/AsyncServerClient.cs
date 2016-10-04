@@ -348,6 +348,9 @@ namespace Raven.Client.Connection.Async
 
         public async Task<string[]> DirectPutSideBySideIndexesAsync(IndexToAdd[] indexesToAdd, OperationMetadata operationMetadata, Etag minimumEtagBeforeReplace, DateTime? replaceTimeUtc, CancellationToken token = default(CancellationToken))
         {
+            if (minimumEtagBeforeReplace != null && indexesToAdd != null && indexesToAdd.Any(x => x.Definition.IsMapReduce))
+                throw new InvalidOperationException("We do not support side-by-side execution for Map-Reduce indexes when 'minimum last indexed etag' scenario is used.");
+
             var sideBySideIndexes = new SideBySideIndexes
             {
                 IndexesToAdd = indexesToAdd,

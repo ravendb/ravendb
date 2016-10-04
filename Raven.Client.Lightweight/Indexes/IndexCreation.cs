@@ -226,7 +226,7 @@ namespace Raven.Client.Indexes
         /// </summary>
         /// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
         /// <param name="documentStore">The document store.</param>
-        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
+        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped (map indexes only).</param>
         /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
         public static void SideBySideCreateIndexes(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
@@ -324,7 +324,7 @@ namespace Raven.Client.Indexes
         /// </summary>
         /// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
         /// <param name="documentStore">The document store.</param>
-        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
+        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped (map indexes only).</param>
         /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
         public static void SideBySideCreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
@@ -365,7 +365,7 @@ namespace Raven.Client.Indexes
         /// </summary>
         /// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
         /// <param name="documentStore">The document store.</param>
-        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
+        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped (map indexes only).</param>
         /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
         public static Task SideBySideCreateIndexesAsync(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
@@ -378,7 +378,7 @@ namespace Raven.Client.Indexes
         /// </summary>
         /// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
         /// <param name="documentStore">The document store.</param>
-        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
+        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped (map indexes only).</param>
         /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
         public static async Task SideBySideCreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
@@ -391,7 +391,7 @@ namespace Raven.Client.Indexes
                     .ToList();
 
                 var indexesToAdd = CreateIndexesToAdd(tasks, documentStore.Conventions);
-                await documentStore.AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd).ConfigureAwait(false);
+                await documentStore.AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
 
                 foreach (var task in tasks)
                     await task.AfterExecuteAsync(documentStore.AsyncDatabaseCommands, documentStore.Conventions).ConfigureAwait(false);
