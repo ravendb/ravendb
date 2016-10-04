@@ -96,7 +96,7 @@ body {
 /* GLOBAL ITEMS */
 
 h1, h2, h3 {
-    font-weight: 700;
+    font-weight: 300;
     margin-top: 0;
 
     [class^="icon-"], [class*=" icon-"] {
@@ -121,7 +121,37 @@ h6 {
 }
 
 .btn {
-    box-shadow: 0 1px 3px rgba(0,0,0,0.22);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+
+    &:not(.dropdown-toggle) {
+        .caret {
+            margin-left: 2px;
+            margin-right: -2px;
+            float: right;
+            position: relative;
+            top: 10px;
+            margin-left: 7px;
+            margin-right: -2px;
+        }
+
+        &.btn-xs {
+            .caret {
+                top: 6px;
+            }
+        }
+
+        &.btn-sm {
+            .caret {
+                top: 8px;
+            }
+        }
+
+        &.btn-lg {
+            .caret {
+                top: 11px;
+            }
+        }
+    }
 }
 
 a, .btn {
@@ -1438,7 +1468,7 @@ input[type=file] + .form-control {
 #main-menu, .inputs-container {
 
     .icon-documents:before {
-        content: "\e927";  
+        content: "\e927";
         color: #0071bc;
     }
 

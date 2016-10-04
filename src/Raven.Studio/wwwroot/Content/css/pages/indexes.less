@@ -1,5 +1,11 @@
 .indexes {
 
+    .align-checkboxes {
+        margin-left: 20px;
+        position: relative;
+        top: -2px;
+    }
+
     .vertical-divider {
         position: relative;
 
@@ -13,12 +19,28 @@
         }
     }
 
+    #toggleIndexing {
+        .enable-indexing {
+            display: none;
+        }
+
+        &.disable {
+            .disable-indexing {
+                display: none;
+            }
+
+            .enable-indexing {
+                display: inline-block;
+            }
+        }
+    }
+
     .panel {
-        padding-left: 40px;
+        padding-left: 30px;
         position: relative;
 
         &:hover {
-            background-color: lighten(@gray-darker, 2%);
+            background-color: lighten(@gray-darker, 3%);
             transition: background-color .15s ease;
         }
 
@@ -45,26 +67,26 @@
             width: 30px;
 
             &:before {
-                color: #FFF;
-                font-size: 10px;
-                letter-spacing: .2pt;
+                color: @gray-lighter;
+                font-size: 12px;
+                letter-spacing: 1pt;
                 display: block;
                 width: 80px;
                 text-align: center;
                 height: 50px;
                 -moz-transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
                 -webkit-transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
-                -o-transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg); 
+                -o-transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
                 -ms-transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
                 transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
-                position:absolute;
-                top:0;
-                left:0;
-                transform-orgin:bottom left 0;
+                position: absolute;
+                top: 0;
+                left: 0;
+                transform-orgin: bottom left 0;
             }
 
             &.state-error {
-                background-color: @brand-danger;
+                background-color: @brand-danger-dark;
 
                 &:before {
                     content: 'ERROR';
@@ -72,7 +94,7 @@
             }
 
             &.state-invalid {
-                background-color: @brand-danger;
+                background-color: @brand-danger-dark;
 
                 &:before {
                     content: 'INVALID';
@@ -80,7 +102,7 @@
             }
 
             &.state-abandoned {
-                background-color: @brand-info;
+                background-color: @brand-info-dark;
 
                 &:before {
                     content: 'ABANDONED';
@@ -88,7 +110,7 @@
             }
 
             &.state-normal {
-                background-color: @brand-success;
+                background-color: @brand-success-dark;
 
                 &:before {
                     content: 'NORMAL';
@@ -96,7 +118,7 @@
             }
 
             &.state-disabled {
-                background-color: @brand-warning;
+                background-color: @brand-warning-dark;
 
                 &:before {
                     content: 'DISABLED';
@@ -121,6 +143,10 @@
         display: inline-block;
         .btn-sm;
         width: 140px;
+
+        .caret {
+            top: 8px;
+        }
 
         [class^="icon-"], [class*=" icon-"] {
             color: @brand-info;
