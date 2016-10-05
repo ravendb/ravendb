@@ -63,16 +63,7 @@ namespace Raven.Client.Documents
             this.asyncDatabaseCommands = asyncDatabaseCommands;
             this.isMapReduce = isMapReduce;
         }
-
-        /// <summary>
-        /// Gets the actions for customizing the generated lucene query
-        /// </summary>
-        public Action<IDocumentQueryCustomization> CustomizedQuery
-        {
-            get { return customizeQuery; }
-        }
-
-
+        
         /// <summary>
         /// Gets the name of the index.
         /// </summary>
@@ -90,6 +81,9 @@ namespace Raven.Client.Documents
             get { return queryGenerator; }
         }
 
+        /// <summary>
+        /// Gets the actions for customizing the generated lucene query
+        /// </summary>
         public Action<IDocumentQueryCustomization> CustomizeQuery
         {
             get { return customizeQuery; }
