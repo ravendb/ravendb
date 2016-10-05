@@ -21,7 +21,6 @@ namespace Raven.Client.Data.Indexes
 
         public interface IDetails
         {
-            void ToJson(BlittableJsonTextWriter writer, JsonOperationContext context);
         }
     }
 }
