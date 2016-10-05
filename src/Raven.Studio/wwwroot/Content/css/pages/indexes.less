@@ -112,19 +112,16 @@
                 color: @gray-lighter;
                 font-size: 12px;
                 letter-spacing: .5pt;
-                display: block;
-                width: 80px;
-                text-align: center;
-                height: 50px;
-                -moz-transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
-                -webkit-transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
-                -o-transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
-                -ms-transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
-                transform: scale(1) rotate(-90deg) translateX(-15%) translateY(-22%) skewX(0deg) skewY(0deg);
+
+                -moz-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+                -webkit-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+                -o-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+                -ms-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+                transform: rotate(-90deg) translateX(-50%) translateY(-50%);
                 position: absolute;
-                top: 0;
-                left: 0;
-                transform-orgin: bottom left 0;
+                top: 50%;
+                left: 50%;
+                transform-origin: top left;
             }
 
             &.state-error {
@@ -176,7 +173,8 @@
         }
     }
 
-    .properies-value, .properies-label {
+    .properties-value, .properties-label {
+        text-align:left;
         display: inline-block;
         .btn-sm;
         width: 140px;
@@ -186,7 +184,8 @@
         }
 
         .caret {
-            top: 8px;
+            margin-top: 8px;
+            float:right;
         }
 
         [class^="icon-"], [class*=" icon-"] {
@@ -208,6 +207,21 @@
         @media (min-width:@screen-xl) {
             width:50%;
 
+            /*
+            &:nth-of-type(1) {
+                order:1;
+            }
+            &:nth-of-type(2) {
+                order:3;
+            }
+            &:nth-of-type(3) {
+                order:4;
+            }
+            &:nth-of-type(4) {
+                order:2;
+            }*/
+
+            
             &:nth-of-type(1) {
                 order:2;
             }
@@ -220,6 +234,7 @@
             &:nth-of-type(4) {
                 order:3;
             }
+            
         }
 
         &.text-success {
@@ -234,7 +249,7 @@
         }
     }
 
-    .properies-label {
+    .properties-label {
         width: 70px;
     }
 }
