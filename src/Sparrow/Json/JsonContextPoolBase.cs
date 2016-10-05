@@ -41,7 +41,7 @@ namespace Sparrow.Json
                     _fastPath = null;
                     return ctx;
                 }
-                return _stack[_stackUsage--];
+                return _stack[--_stackUsage];
             }
 
             public void Push(T context)
@@ -63,7 +63,7 @@ namespace Sparrow.Json
                 {
                     var old = _stack;
                     _stack = new T[old.Length * 2];
-                    Array.Copy(_stack, old, _stackUsage);
+                    Array.Copy(old, _stack, old.Length);
                 }
                 _stack[_stackUsage++] = context;
             }
@@ -84,6 +84,8 @@ namespace Sparrow.Json
 
                 // we assume that the code is racy, stale data is fine here
                 var array = _stack;
+                if(array == null)
+                    yield break;
                 var len = Math.Min(_stackUsage, array.Length);
 
                 for (int i = len - 1; i >= 0; i--)
