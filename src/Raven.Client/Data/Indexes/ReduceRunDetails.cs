@@ -1,13 +1,13 @@
 ﻿namespace Raven.Client.Data.Indexes
 {
-    public class ReduceRunDetails : IndexingPerformanceOperation.IDetails
+    public class ReduceRunDetails
     {
         public int NumberOfModifiedLeafs { get; set; }
 
         public int NumberOfModifiedBranches { get; set; }
     }
 
-    public class MapRunDetails : IndexingPerformanceOperation.IDetails
+    public class MapRunDetails 
     {
         public string BatchCompleteReason { get; set; }
 

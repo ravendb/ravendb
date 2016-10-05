@@ -23,6 +23,8 @@ namespace Raven.Server.Documents.Indexes
 
         public MapRunDetails MapDetails;
 
+        public StorageCommitDetails CommitDetails;
+
         public List<IndexingError> Errors;
 
         public override string ToString()

@@ -42,6 +42,7 @@ using Voron;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Size = Raven.Server.Config.Settings.Size;
+using Voron.Debugging;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -707,7 +708,12 @@ namespace Raven.Server.Documents.Indexes
 
                 using (stats.For(IndexingOperation.Storage.Commit))
                 {
+                    CommitStats commitStats;
+                    tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
+
                     tx.Commit();
+
+                    stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOfPagesWrittenToDisk);
                 }
 
                 if (writeOperation.IsValueCreated)

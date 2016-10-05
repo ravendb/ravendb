@@ -13,6 +13,7 @@ using Voron.Impl.Scratch;
 using Voron.Data;
 using Voron.Global;
 using System.Runtime.InteropServices;
+using Voron.Debugging;
 
 namespace Voron.Impl
 {
@@ -55,6 +56,7 @@ namespace Voron.Impl
 
         private readonly StorageEnvironmentState _state;
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
+        private CommitStats _requestedCommitStats;
 
         public TransactionFlags Flags { get; }
 
@@ -558,11 +560,18 @@ namespace Voron.Impl
             if (IsLazyTransaction && Environment.IsFlushingScratchBuffer)
                 IsLazyTransaction = false;
 
-            if (_allocatedPagesInTransaction + _overflowPagesInTransaction > 0 || // nothing changed in this transaction
-                (IsLazyTransaction == false && _journal != null && _journal.HasDataInLazyTxBuffer()))  // allow call to writeToJournal for flushing lazy tx
+            var totalNumberOfAllocatedPages = _allocatedPagesInTransaction + _overflowPagesInTransaction;
+            if (totalNumberOfAllocatedPages > 0 || // nothing changed in this transaction
+                (this.IsLazyTransaction == false && this._journal != null && this._journal.HasDataInLazyTxBuffer()))  // allow call to writeToJournal for flushing lazy tx
             {
-                _journal.WriteToJournal(this, _allocatedPagesInTransaction + _overflowPagesInTransaction + PagesTakenByHeader);
+                var numberOfWrittenPages = _journal.WriteToJournal(this, totalNumberOfAllocatedPages + PagesTakenByHeader);
                 FlushedToJournal = true;
+
+                if (_requestedCommitStats != null)
+                {
+                    _requestedCommitStats.NumberOfModifiedPages = totalNumberOfAllocatedPages + PagesTakenByHeader;
+                    _requestedCommitStats.NumberOfPagesWrittenToDisk = numberOfWrittenPages;
+                }
             }
 
             ValidateAllPages();
@@ -600,6 +609,10 @@ namespace Voron.Impl
             _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);
 
             RolledBack = true;
+        }
+        public void RetrieveCommitStats(out CommitStats stats)
+        {
+            _requestedCommitStats = stats = new CommitStats();
         }
 
 
