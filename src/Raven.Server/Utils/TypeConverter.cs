@@ -61,7 +61,10 @@ namespace Raven.Server.Utils
                 return value;
 
             if (value is Guid)
-                return context.GetLazyString(((Guid)value).ToString("D"));
+                return ((Guid)value).ToString("D");
+
+            if (value is Enum)
+                return value.ToString();
 
             if (value is IEnumerable<IFieldable> || value is IFieldable)
                 return Constants.Indexing.Fields.IgnoredDynamicField;

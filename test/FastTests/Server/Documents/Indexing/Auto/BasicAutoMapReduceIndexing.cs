@@ -91,8 +91,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(numberOfUsers, batchStats.MapAttempts);
                 Assert.Equal(numberOfUsers, batchStats.MapSuccesses);
                 Assert.Equal(0, batchStats.MapErrors);
-                Assert.Equal(numberOfUsers, batchStats.ReduceAttempts);
-                Assert.Equal(numberOfUsers, batchStats.ReduceSuccesses);
+                Assert.True(batchStats.ReduceAttempts >= numberOfUsers, $"{batchStats.ReduceAttempts} >= {numberOfUsers}");
+                Assert.True(batchStats.ReduceSuccesses >= numberOfUsers, $"{batchStats.ReduceSuccesses} >= {numberOfUsers}");
+                Assert.Equal(batchStats.ReduceAttempts, batchStats.ReduceSuccesses);
                 Assert.Equal(0, batchStats.ReduceErrors);
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))

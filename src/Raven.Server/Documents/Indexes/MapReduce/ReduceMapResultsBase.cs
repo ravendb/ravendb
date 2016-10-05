@@ -129,8 +129,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             try
             {
-                modifiedStore.FlushNestedValues();
-
+                using (stats.For(IndexingOperation.Reduce.StoringNestedValues))
+                {
+                    modifiedStore.FlushNestedValues();
+                }
+                
                 var section = modifiedStore.GetNestedResultsSection();
 
                 foreach (var mapResult in section.GetResults())
@@ -146,7 +149,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 {
                     result = AggregateOn(_aggregationBatch, indexContext, token);
                 }
-                
+
                 if (section.IsNew == false)
                     writer.DeleteReduceResult(reduceKeyHash, stats);
 
@@ -241,16 +244,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             {
                                 writer.IndexDocument(reduceKeyHash, output, stats, indexContext);
                             }
-
-                            _metrics.MapReduceReducedPerSecond.Mark(page.NumberOfEntries);
-
-                            stats.RecordReduceSuccesses(page.NumberOfEntries);
                         }
                         else
                         {
                             StoreAggregationResult(page.PageNumber, page.NumberOfEntries, table, result, stats);
                             parentPagesToAggregate.Add(parentPage);
                         }
+
+                        _metrics.MapReduceReducedPerSecond.Mark(page.NumberOfEntries);
+
+                        stats.RecordReduceSuccesses(page.NumberOfEntries);
                     }
                 }
                 catch (Exception e)
@@ -291,8 +294,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 {
                     var page = lowLevelTransaction.GetPage(pageNumber).ToTreePage();
 
-                    int aggregatedEntries = 0;
-
                     try
                     {
                         if (page.IsBranch == false)
@@ -301,9 +302,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                                                 page.PageNumber);
                         }
 
+                        stats.RecordReduceAttempts(page.NumberOfEntries);
+
                         var parentPage = tree.GetParentPageOf(page);
 
-                        using (var result = AggregateBranchPage(page, table, indexContext, branchesToAggregate, stats, token, out aggregatedEntries))
+                        using (var result = AggregateBranchPage(page, table, indexContext, branchesToAggregate, stats, token))
                         {
                             if (parentPage == -1)
                             {
@@ -313,17 +316,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 {
                                     writer.IndexDocument(reduceKeyHash, output, stats, indexContext);
                                 }
-
-                                _metrics.MapReduceReducedPerSecond.Mark(aggregatedEntries);
-
-                                stats.RecordReduceSuccesses(aggregatedEntries);
                             }
                             else
                             {
                                 parentPagesToAggregate.Add(parentPage);
 
-                                StoreAggregationResult(page.PageNumber, aggregatedEntries, table, result, stats);
+                                StoreAggregationResult(page.PageNumber, page.NumberOfEntries, table, result, stats);
                             }
+
+                            _metrics.MapReduceReducedPerSecond.Mark(page.NumberOfEntries);
+
+                            stats.RecordReduceSuccesses(page.NumberOfEntries);
                         }
                     }
                     catch (Exception e)
@@ -334,7 +337,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         if (_logger.IsInfoEnabled)
                             _logger.Info(message, e);
 
-                        stats.RecordReduceErrors(aggregatedEntries);
+                        stats.RecordReduceErrors(page.NumberOfEntries);
                         stats.AddReduceError(message + $" Exception: {e}");
                     }
                     finally
@@ -351,7 +354,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        private AggregationResult AggregateLeafPage(TreePage page, LowLevelTransaction lowLevelTransaction, Table table, TransactionOperationContext indexContext, 
+        private AggregationResult AggregateLeafPage(TreePage page, LowLevelTransaction lowLevelTransaction, Table table, TransactionOperationContext indexContext,
                                                     IndexingStatsScope stats, CancellationToken token)
         {
             using (stats.For(IndexingOperation.Reduce.LeafAggregation))
@@ -369,12 +372,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         }
 
         private AggregationResult AggregateBranchPage(TreePage page, Table table, TransactionOperationContext indexContext, HashSet<long> remainingBranchesToAggregate,
-            IndexingStatsScope stats, CancellationToken token, out int aggregatedEntries)
+            IndexingStatsScope stats, CancellationToken token)
         {
             using (stats.For(IndexingOperation.Reduce.BranchAggregation))
             {
-                aggregatedEntries = 0;
-
                 for (int i = 0; i < page.NumberOfEntries; i++)
                 {
                     var pageNumber = page.GetNode(i)->PageNumber;
@@ -393,10 +394,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 try
                                 {
                                     var unaggregatedPage = indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber).ToTreePage();
-                                    int aggregated;
-                                    using (var result = AggregateBranchPage(unaggregatedPage, table, indexContext, remainingBranchesToAggregate, stats, token, out aggregated))
+
+                                    using (var result = AggregateBranchPage(unaggregatedPage, table, indexContext, remainingBranchesToAggregate, stats, token))
                                     {
-                                        StoreAggregationResult(unaggregatedPage.PageNumber, aggregated, table, result, stats);
+                                        StoreAggregationResult(unaggregatedPage.PageNumber, page.NumberOfEntries, table, result, stats);
                                     }
                                 }
                                 finally
@@ -413,8 +414,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         }
 
                         int size;
-                        aggregatedEntries += *(int*)tvr.Read(1, out size);
-
                         var numberOfResults = *(int*)tvr.Read(2, out size);
 
                         for (int j = 0; j < numberOfResults; j++)

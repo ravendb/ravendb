@@ -37,6 +37,10 @@ namespace Sparrow.Json
 
         private int _lastStreamSize = InitialStreamSize;
 
+
+        internal DateTime InPoolSince;
+        internal int InUse;
+
         public static JsonOperationContext ShortTermSingleUse()
         {
             return new JsonOperationContext(4096, 1024);

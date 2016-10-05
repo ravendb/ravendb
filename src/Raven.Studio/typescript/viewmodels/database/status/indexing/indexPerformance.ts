@@ -2,10 +2,12 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import app = require("durandal/app");
 import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 import getIndexesPerformance = require("commands/database/debug/getIndexesPerformance");
+import getIndexStatsCommand = require("commands/database/index/getIndexStatsCommand");
 
 class metrics extends viewModelBase { 
 
     data: Raven.Client.Data.Indexes.IndexPerformanceStats[] = [];
+    currentBatches = new Map<string, Raven.Client.Data.Indexes.IndexingPerformanceBasicStats>();
 
     private isoParser = d3.time.format.iso;
 
@@ -28,11 +30,19 @@ class metrics extends viewModelBase {
 
     private xTickFormat = d3.time.format("%H:%M:%S");
 
-    activate(args: any): JQueryPromise<Raven.Client.Data.Indexes.IndexPerformanceStats[]> {
+    activate(args: any): JQueryPromise<any> {
         super.activate(args);
-        return new getIndexesPerformance(this.activeDatabase())
+        const perfTask = new getIndexesPerformance(this.activeDatabase())
             .execute()
             .done(result => this.data = result);
+
+        return perfTask.then(() => {
+            return new getIndexStatsCommand(this.activeDatabase())
+                .execute()
+                .done(result => {
+                    this.extractCurrentlyRunning(result);
+                });
+        });
     }
 
     attached() {
@@ -44,6 +54,39 @@ class metrics extends viewModelBase {
         super.compositionComplete();
 
         this.draw();
+    }
+
+    private extractCurrentlyRunning(indexStats: Array<Raven.Client.Data.Indexes.IndexStats>) {
+        indexStats.forEach(stat => {
+            const indexName = stat.Name;
+            if (stat.LastBatchStats) {
+                const lastBatchStats = stat.LastBatchStats;
+                const startTime = lastBatchStats.Started;
+
+                // try to find duplicate in performance
+                let duplicateFound = false;
+
+                for (let i = 0; i < this.data.length; i++) {
+                    const currentPerf = this.data[i];
+                    if (currentPerf.IndexName === indexName) {
+                        for (let j = 0; j < currentPerf.Performance.length; j++) {
+                            if (currentPerf.Performance[j].Started === startTime) {
+                                duplicateFound = true;
+                                break;
+                            }
+                        }
+
+                        break;
+                    }
+                }
+
+                if (duplicateFound) {
+                    return;
+                }
+
+                this.currentBatches.set(indexName, lastBatchStats);
+            }
+        });
     }
 
     private draw() {
@@ -112,25 +155,69 @@ class metrics extends viewModelBase {
         this.data.forEach(perfStat => {
             this.graphForIndex(perfStat, graphData);
         });
+
+        this.currentBatches.forEach((stats, index) => {
+            this.graphCurrentStats(stats, index, graphData);
+        });
+    }
+
+    private graphCurrentStats(stats: Raven.Client.Data.Indexes.IndexingPerformanceBasicStats,
+        indexName: string,
+        container: d3.Selection<any>) {
+
+        const self = this;
+        const startTime = self.isoParser.parse(stats.Started);
+        const endTime = new Date(startTime.getTime() + stats.DurationInMilliseconds);
+
+        const inProgressPerfGroup = container.append("g")
+            .attr('class', 'in_progress_group_item')
+            .attr("transform", "translate(" + self.xScale(startTime) + "," + (self.yScale(indexName) + metrics.verticalPadding / 2) + ")");
+
+        const rect = inProgressPerfGroup.append("rect")
+            .attr("class", 'perf_group_bg')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('height', metrics.singleIndexGroupHeight)
+            .attr('width', metrics.extent(endTime.getTime() - startTime.getTime()))
+            .on("click", (stat: Raven.Client.Data.Indexes.IndexingPerformanceBasicStats) => self.showDetails(stat));
+
+        rect.datum(stats);
     }
 
     private findTimeRanges(): [Date, Date] {
-        let minDate: string;
-        let maxDate: string;
+        let minDateStr: string;
+        let maxDateStr: string;
 
         this.data.forEach(indexStats => {
             indexStats.Performance.forEach(perfStat => {
-                if (!minDate || perfStat.Started < minDate) {
-                    minDate = perfStat.Started;
+                if (!minDateStr || perfStat.Started < minDateStr) {
+                    minDateStr = perfStat.Started;
                 }
 
-                if (!maxDate || perfStat.Completed > maxDate) {
-                    maxDate = perfStat.Completed;
+                if (!maxDateStr || perfStat.Completed > maxDateStr) {
+                    maxDateStr = perfStat.Completed;
                 }
             });
         });
 
-        return [this.isoParser.parse(minDate), this.isoParser.parse(maxDate)];
+        let minDate: Date = minDateStr ? this.isoParser.parse(minDateStr) : null;
+        let maxDate: Date = maxDateStr ? this.isoParser.parse(maxDateStr) : null;
+
+        this.currentBatches.forEach(stats => {
+            const statsStartedAsDate = this.isoParser.parse(stats.Started);
+            if (!minDate || statsStartedAsDate.getTime() < minDate.getTime()) {
+                minDate = statsStartedAsDate;
+            }
+
+            const statsEndDate = statsStartedAsDate.getTime() + stats.DurationInMilliseconds;
+            const currentMaxDate = maxDate ? maxDate.getTime() : null;
+
+            if (!currentMaxDate || statsEndDate > currentMaxDate) {
+                maxDate = new Date(statsEndDate);
+            }
+        });
+
+        return [minDate, maxDate];
     }
 
     private findIndexNames(): Array<string> {
@@ -142,6 +229,13 @@ class metrics extends viewModelBase {
                 names.push(indexName);
             }
         });
+
+        this.currentBatches.forEach((stats, indexName) => {
+            if (!names.contains(indexName)) {
+                names.push(indexName);
+            }
+        });
+        
         return names;
     }
 
@@ -207,7 +301,7 @@ class metrics extends viewModelBase {
         }
     }
 
-    private showDetails(op: Raven.Client.Data.Indexes.IndexingPerformanceOperation) {
+    private showDetails(op: any) {
         var dialog = new tempStatDialog(op);
         app.showDialog(dialog);
     }

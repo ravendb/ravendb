@@ -219,16 +219,20 @@ namespace Voron.Data.BTrees
         public long DeleteFixedTreeFor(string key, byte valSize = 0)
         {
             Slice keySlice;
-            Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice);
-            return DeleteFixedTreeFor(keySlice, valSize);
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                return DeleteFixedTreeFor(keySlice, valSize);
+            }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public FixedSizeTree FixedTreeFor(string key, byte valSize = 0)
         {
-            Slice keySlice; // we explicitly don't dispose it here
-            Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice);
-            return FixedTreeFor(keySlice, valSize);
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            {
+                return FixedTreeFor(keySlice, valSize);
+            }
         }
     }
 }

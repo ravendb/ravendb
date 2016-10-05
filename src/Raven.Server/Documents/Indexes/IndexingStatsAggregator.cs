@@ -205,10 +205,10 @@ namespace Raven.Server.Documents.Indexes
             };
 
             if (_stats.ReduceDetails != null && name == IndexingOperation.Reduce.TreeScope)
-                operation.Details = _stats.ReduceDetails;
+                operation.ReduceDetails = _stats.ReduceDetails;
 
             if (_stats.MapDetails != null && name == "Map")
-                operation.Details = _stats.MapDetails;
+                operation.MapDetails = _stats.MapDetails;
 
             if (_scopes != null)
             {
@@ -237,6 +237,14 @@ namespace Raven.Server.Documents.Indexes
                 _stats.MapDetails = new MapRunDetails();
 
             _stats.MapDetails.CurrentlyAllocated = allocations;
+        }
+        public void RecordCommitStats(int numberOfModifiedPages, int numberOfPagesWrittenToDisk)
+        {
+            if (_stats.CommitDetails == null)
+                _stats.CommitDetails = new StorageCommitDetails();
+
+            _stats.CommitDetails.NumberOfModifiedPages = numberOfModifiedPages;
+            _stats.CommitDetails.NumberOfPagesWrittenToDisk = numberOfPagesWrittenToDisk;
         }
     }
 }
