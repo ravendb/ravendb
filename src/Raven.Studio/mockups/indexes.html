@@ -69,15 +69,15 @@
                             <label></label>
                         </div>
                         <div class="input-group">
-                            <input type="text" class="form-control input-sm" placeholder="Filter">
+                            <input type="text" class="form-control" placeholder="Filter">
                             <span class="input-group-btn">
-                                <button class="btn btn-default btn-sm">
+                                <button class="btn btn-default">
                                     <i class="icon-search"></i>
                                 </button>
                             </span>
                         </div>
-                        <button class="btn btn-default btn-sm"><i class="icon-copy"></i><span>Copy</span></button>
-                        <div class="btn-group btn-group-sm">
+                        <button class="btn btn-default"><i class="icon-copy"></i><span>Copy</span></button>
+                        <div class="btn-group ">
                             <button type="button" class="btn btn-default"><i class="icon-lock"></i><span>Lock</span></button>
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <span class="caret"></span>
@@ -112,15 +112,15 @@
                                 </li>
                             </ul>
                         </div>
-                        <button class="btn btn-sm btn-danger"><i class="icon-trash"></i><span>Delete</span></button>
+                        <button class="btn btn-danger"><i class="icon-trash"></i><span>Delete</span></button>
                     </div>
                 </div>
                 <div class="pull-right" id="toggleIndexing">
-                    <button class="btn btn-sm btn-warning btn-toggle disable-indexing" data-target="#toggleIndexing" data-class="disable">
+                    <button class="btn btn-warning btn-toggle disable-indexing" data-target="#toggleIndexing" data-class="disable">
                         <i class="icon-pause"></i>
                         <span>Disable indexing until restart</span>
                     </button>
-                    <button class="btn btn-sm btn-success btn-toggle enable-indexing" data-target="#toggleIndexing" data-class="disable">
+                    <button class="btn btn-success btn-toggle enable-indexing" data-target="#toggleIndexing" data-class="disable">
                         <i class="icon-play"></i>
                         <span>Enable indexing</span>
                     </button>
@@ -132,7 +132,7 @@
                 <div class="padding padding-sm">
                     <div class="state state-error"></div>
                     <div class="row">
-                        <div class="col-sm-5 col-xl-4">
+                        <div class="col-sm-6 col-xl-4 col-flex info-container">
                             <div class="checkbox">
                                 <input type="checkbox" class="styled">
                                 <label></label>
@@ -140,10 +140,13 @@
                             <h3 class="index-name"><a href="#">Cars/ByMakerAndModel</a></h3>
                             <div class="index-type">AutoMap</div>
                         </div>
-                        <div class="col-sm-7 col-xl-5 vertical-divider">
+                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
 
                             <div class="properties-item">
-                                <div class="properies-value"><i class="icon-reset"></i><span>Stale</span></div>
+                                <div class="properies-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
+                            </div>
+                            <div class="properties-item">
+                                <div class="properies-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
                             </div>
                             <div class="properties-item">
                                 <span class="properies-label">Priority:</span>
@@ -153,15 +156,13 @@
                                     </button>
                                     <ul class="dropdown-menu">
                                         <li><a href="#"><i class="icon-check"></i><span>Normal</span></a></li>
-                                        <li><a href="#"><i class="icon-coffee"></i><span>idle</span></a></li>
+                                        <li><a href="#"><i class="icon-coffee"></i><span>Idle</span></a></li>
                                         <li><a href="#"><i class="icon-cancel"></i><span>Disabled</span></a></li>
                                     </ul>
                                 </div>
                             </div>
-                            <br />
-                            <div class="properties-item">
-                                <div class="properies-value"><i class="icon-list"></i><span>1024 entries</span></div>
-                            </div>
+
+
                             <div class="properties-item">
                                 <span class="properies-label">Status:</span>
                                 <div class="btn-group btn-group-xs">
@@ -198,20 +199,23 @@
                                     </ul>
                                 </div>
                             </div>
+
+
+
                         </div>
-                        <div class="col-sm-12 col-xl-3">
-                            <div class="padding padding-sm">
-                                <div class="btn-toolbar pull-right" role="toolbar">
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <button class="btn btn-info btn-sm"><i class="icon-search"></i><span>Query</span></button>
+                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                            <div class="actions">
+                                <div class="btn-toolbar pull-right-sm" role="toolbar">
+                                    <div class="btn-group " role="group">
+                                        <button class="btn btn-info"><i class="icon-search"></i><span>Query</span></button>
                                     </div>
-                                    <div class="btn-group btn-group-sm" role="group">
+                                    <div class="btn-group " role="group">
                                         <button class="btn btn-default"><i class="icon-copy"></i></button>
                                         <button class="btn btn-default"><i class="icon-edit"></i></button>
                                         <button class="btn btn-warning"><i class="icon-reset"></i></button>
 
                                     </div>
-                                    <div class="btn-group btn-group-sm" role="group">
+                                    <div class="btn-group " role="group">
                                         <button class="btn btn-danger"><i class="icon-trash"></i></button>
                                     </div>
                                 </div>
@@ -222,7 +226,7 @@
             </div>
             <div class="panel">
                 <div class="padding padding-sm">
-                    <div class="state state-invalid"></div>
+                    <div class="state state-faulty"></div>
                     <div class="row">
                         <div class="col-sm-5 col-xl-4">
                             <div class="checkbox">
@@ -232,17 +236,27 @@
                             <h3 class="index-name"><a href="#">Cars/ByProductionYear</a></h3>
                             <div class="index-type">AutoMap</div>
                         </div>
-                        <div class="col-sm-7 col-xl-5 vertical-divider">
+                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
+
+                            <div class="properties-item text-success">
+                                <div class="properies-value value-only">
+                                    <i class="icon-check"></i><span>Up to date</span>
+                                </div>
+                            </div>
 
                             <div class="properties-item">
-                                <div class="properies-value"><i class="icon-reset"></i><span>Stale</span></div>
+                                <div class="properies-value value-only">
+                                    <i class="icon-list"></i>
+                                    <span>1024 entries</span>
+                                </div>
                             </div>
+
                             <div class="properties-item">
                                 <span class="properies-label">Priority:</span>
                                 <div class="btn-group btn-group-xs">
                                     <button type="button" class="btn properies-value dropdown-toggle" data-toggle="dropdown">
                                         <i class="icon-coffee"></i>
-                                        <span>idle</span>
+                                        <span>Idle</span>
                                         <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu">
@@ -255,7 +269,7 @@
                                         <li>
                                             <a href="#">
                                                 <i class="icon-coffee"></i>
-                                                <span>idle</span>
+                                                <span>Idle</span>
                                             </a>
                                         </li>
                                         <li>
@@ -267,13 +281,7 @@
                                     </ul>
                                 </div>
                             </div>
-                            <br />
-                            <div class="properties-item">
-                                <div class="properies-value">
-                                    <i class="icon-list"></i>
-                                    <span>1024 entries</span>
-                                </div>
-                            </div>
+
                             <div class="properties-item">
                                 <span class="properies-label">Status:</span>
                                 <div class="btn-group btn-group-xs">
@@ -313,19 +321,19 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-12 col-xl-3">
-                            <div class="padding padding-sm">
-                                <div class="btn-toolbar pull-right" role="toolbar">
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <button class="btn btn-info btn-sm"><i class="icon-search"></i><span>Query</span></button>
+                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                            <div class="actions">
+                                <div class="btn-toolbar pull-right-sm" role="toolbar">
+                                    <div class="btn-group " role="group">
+                                        <button class="btn btn-info"><i class="icon-search"></i><span>Query</span></button>
                                     </div>
-                                    <div class="btn-group btn-group-sm" role="group">
+                                    <div class="btn-group " role="group">
                                         <button class="btn btn-default"><i class="icon-copy"></i></button>
                                         <button class="btn btn-default"><i class="icon-edit"></i></button>
                                         <button class="btn btn-warning"><i class="icon-reset"></i></button>
 
                                     </div>
-                                    <div class="btn-group btn-group-sm" role="group">
+                                    <div class="btn-group " role="group">
                                         <button class="btn btn-danger"><i class="icon-trash"></i></button>
                                     </div>
                                 </div>
@@ -339,7 +347,7 @@
                 <div class="padding padding-sm">
                     <div class="state state-disabled"></div>
                     <div class="row">
-                        <div class="col-sm-5 col-xl-4">
+                        <div class="col-sm-6 col-xl-4 col-flex info-container">
                             <div class="checkbox">
                                 <input type="checkbox" class="styled">
                                 <label></label>
@@ -347,10 +355,13 @@
                             <h3 class="index-name"><a href="#">Dinosaurs/ByNumberOfTeeth</a></h3>
                             <div class="index-type">AutoMap</div>
                         </div>
-                        <div class="col-sm-7 col-xl-5 vertical-divider">
+                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
 
                             <div class="properties-item">
-                                <div class="properies-value"><i class="icon-reset"></i><span>Stale</span></div>
+                                <div class="properies-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
+                            </div>
+                            <div class="properties-item">
+                                <div class="properies-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
                             </div>
                             <div class="properties-item">
                                 <span class="properies-label">Priority:</span>
@@ -360,15 +371,12 @@
                                     </button>
                                     <ul class="dropdown-menu">
                                         <li><a href="#"><i class="icon-check"></i><span>Normal</span></a></li>
-                                        <li><a href="#"><i class="icon-coffee"></i><span>idle</span></a></li>
+                                        <li><a href="#"><i class="icon-coffee"></i><span>Idle</span></a></li>
                                         <li><a href="#"><i class="icon-cancel"></i><span>Disabled</span></a></li>
                                     </ul>
                                 </div>
                             </div>
-                            <br />
-                            <div class="properties-item">
-                                <div class="properies-value"><i class="icon-list"></i><span>1024 entries</span></div>
-                            </div>
+                            
                             <div class="properties-item">
                                 <span class="properies-label">Status:</span>
                                 <div class="btn-group btn-group-xs">
@@ -406,19 +414,19 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-12 col-xl-3">
-                            <div class="padding padding-sm">
-                                <div class="btn-toolbar pull-right" role="toolbar">
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <button class="btn btn-info btn-sm"><i class="icon-search"></i><span>Query</span></button>
+                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                            <div class="actions">
+                                <div class="btn-toolbar pull-right-sm" role="toolbar">
+                                    <div class="btn-group " role="group">
+                                        <button class="btn btn-info"><i class="icon-search"></i><span>Query</span></button>
                                     </div>
-                                    <div class="btn-group btn-group-sm" role="group">
+                                    <div class="btn-group " role="group">
                                         <button class="btn btn-default"><i class="icon-copy"></i></button>
                                         <button class="btn btn-default"><i class="icon-edit"></i></button>
                                         <button class="btn btn-warning"><i class="icon-reset"></i></button>
 
                                     </div>
-                                    <div class="btn-group btn-group-sm" role="group">
+                                    <div class="btn-group " role="group">
                                         <button class="btn btn-danger"><i class="icon-trash"></i></button>
                                     </div>
                                 </div>
@@ -432,7 +440,7 @@
                 <div class="padding padding-sm">
                     <div class="state state-normal"></div>
                     <div class="row">
-                        <div class="col-sm-5 col-xl-4">
+                        <div class="col-sm-6 col-xl-4 col-flex info-container">
                             <div class="checkbox">
                                 <input type="checkbox" class="styled">
                                 <label></label>
@@ -440,10 +448,13 @@
                             <h3 class="index-name"><a href="#">Orders/ByCompany</a></h3>
                             <div class="index-type">AutoMap</div>
                         </div>
-                        <div class="col-sm-7 col-xl-5 vertical-divider">
+                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
 
                             <div class="properties-item">
-                                <div class="properies-value"><i class="icon-reset"></i><span>Stale</span></div>
+                                <div class="properies-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
+                            </div>
+                            <div class="properties-item">
+                                <div class="properies-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
                             </div>
                             <div class="properties-item">
                                 <span class="properies-label">Priority:</span>
@@ -453,15 +464,12 @@
                                     </button>
                                     <ul class="dropdown-menu">
                                         <li><a href="#"><i class="icon-check"></i><span>Normal</span></a></li>
-                                        <li><a href="#"><i class="icon-coffee"></i><span>idle</span></a></li>
+                                        <li><a href="#"><i class="icon-coffee"></i><span>Idle</span></a></li>
                                         <li><a href="#"><i class="icon-cancel"></i><span>Disabled</span></a></li>
                                     </ul>
                                 </div>
                             </div>
-                            <br />
-                            <div class="properties-item">
-                                <div class="properies-value"><i class="icon-list"></i><span>1024 entries</span></div>
-                            </div>
+
                             <div class="properties-item">
                                 <span class="properies-label">Status:</span>
                                 <div class="btn-group btn-group-xs">
@@ -499,19 +507,19 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-12 col-xl-3">
-                            <div class="padding padding-sm">
-                                <div class="btn-toolbar pull-right" role="toolbar">
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <button class="btn btn-info btn-sm"><i class="icon-search"></i><span>Query</span></button>
+                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                            <div class="actions">
+                                <div class="btn-toolbar pull-right-sm" role="toolbar">
+                                    <div class="btn-group " role="group">
+                                        <button class="btn btn-info"><i class="icon-search"></i><span>Query</span></button>
                                     </div>
-                                    <div class="btn-group btn-group-sm" role="group">
+                                    <div class="btn-group " role="group">
                                         <button class="btn btn-default"><i class="icon-copy"></i></button>
                                         <button class="btn btn-default"><i class="icon-edit"></i></button>
                                         <button class="btn btn-warning"><i class="icon-reset"></i></button>
 
                                     </div>
-                                    <div class="btn-group btn-group-sm" role="group">
+                                    <div class="btn-group " role="group">
                                         <button class="btn btn-danger"><i class="icon-trash"></i></button>
                                     </div>
                                 </div>
@@ -520,117 +528,26 @@
                     </div>
                 </div>
             </div>
-            <div class="sidebyside">
-                <div class="panel">
-                    <div class="padding padding-sm">
-                        <div class="state state-normal"></div>
-                        <div class="row">
-                            <div class="col-sm-5 col-xl-4">
-                                <div class="checkbox">
-                                    <input type="checkbox" class="styled">
-                                    <label></label>
-                                </div>
-                                <h3 class="index-name"><a href="#">Orders/ByProduct</a></h3>
-                                <div class="index-type">AutoMap</div>
-                            </div>
-                            <div class="col-sm-7 col-xl-5 vertical-divider">
 
-                                <div class="properties-item">
-                                    <div class="properies-value"><i class="icon-reset"></i><span>Stale</span></div>
-                                </div>
-                                <div class="properties-item">
-                                    <span class="properies-label">Priority:</span>
-                                    <div class="btn-group btn-group-xs">
-                                        <button type="button" class="btn properies-value dropdown-toggle" data-toggle="dropdown">
-                                            <i class="icon-check"></i><span>Normal</span> <span class="caret"></span>
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            <li><a href="#"><i class="icon-check"></i><span>Normal</span></a></li>
-                                            <li><a href="#"><i class="icon-coffee"></i><span>idle</span></a></li>
-                                            <li><a href="#"><i class="icon-cancel"></i><span>Disabled</span></a></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                                <br />
-                                <div class="properties-item">
-                                    <div class="properies-value"><i class="icon-list"></i><span>1024 entries</span></div>
-                                </div>
-                                <div class="properties-item">
-                                    <span class="properies-label">Status:</span>
-                                    <div class="btn-group btn-group-xs">
-                                        <button type="button" class="btn btn-block properies-value dropdown-toggle" data-toggle="dropdown">
-                                            <i class="icon-lock"></i><span>Locked</span> <span class="caret"></span>
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            <li>
-                                                <a href="#">
-                                                    <i class="icon-unlock"></i>
-                                                    <span>Unlock</span>
-                                                </a>
-                                            </li>
-                                            <li class="divider"></li>
-                                            <li>
-                                                <a href="#">
-                                                    <i class="icon-lock"></i>
-                                                    <span>Lock</span>
-
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="#">
-                                                    <i class="icon-lock-sidebyside"></i>
-                                                    <span>Lock (Side by Side)</span>
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="#">
-                                                    <i class="icon-lock-error"></i>
-                                                    <span>Lock (Error)</span>
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-sm-12 col-xl-3">
-                                <div class="padding padding-sm">
-                                    <div class="btn-toolbar pull-right" role="toolbar">
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <button class="btn btn-info btn-sm"><i class="icon-search"></i><span>Query</span></button>
-                                        </div>
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <button class="btn btn-default"><i class="icon-copy"></i></button>
-                                            <button class="btn btn-default"><i class="icon-edit"></i></button>
-                                            <button class="btn btn-warning"><i class="icon-reset"></i></button>
-
-                                        </div>
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <button class="btn btn-danger"><i class="icon-trash"></i></button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <h2>Products</h2>
             <div class="panel">
                 <div class="padding padding-sm">
                     <div class="state state-normal"></div>
                     <div class="row">
-                        <div class="col-sm-5 col-xl-4">
+                        <div class="col-sm-6 col-xl-4 col-flex info-container">
                             <div class="checkbox">
                                 <input type="checkbox" class="styled">
                                 <label></label>
                             </div>
-                            <h3 class="index-name"><a href="#">Products/ByType</a></h3>
+                            <h3 class="index-name"><a href="#">Orders/ByProduct</a></h3>
                             <div class="index-type">AutoMap</div>
                         </div>
-                        <div class="col-sm-7 col-xl-5 vertical-divider">
+                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
 
                             <div class="properties-item">
-                                <div class="properies-value"><i class="icon-reset"></i><span>Stale</span></div>
+                                <div class="properies-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
+                            </div>
+                            <div class="properties-item">
+                                <div class="properies-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
                             </div>
                             <div class="properties-item">
                                 <span class="properies-label">Priority:</span>
@@ -640,15 +557,12 @@
                                     </button>
                                     <ul class="dropdown-menu">
                                         <li><a href="#"><i class="icon-check"></i><span>Normal</span></a></li>
-                                        <li><a href="#"><i class="icon-coffee"></i><span>idle</span></a></li>
+                                        <li><a href="#"><i class="icon-coffee"></i><span>Idle</span></a></li>
                                         <li><a href="#"><i class="icon-cancel"></i><span>Disabled</span></a></li>
                                     </ul>
                                 </div>
                             </div>
-                            <br />
-                            <div class="properties-item">
-                                <div class="properies-value"><i class="icon-list"></i><span>1024 entries</span></div>
-                            </div>
+
                             <div class="properties-item">
                                 <span class="properies-label">Status:</span>
                                 <div class="btn-group btn-group-xs">
@@ -686,19 +600,113 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-12 col-xl-3">
-                            <div class="padding padding-sm">
-                                <div class="btn-toolbar pull-right" role="toolbar">
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <button class="btn btn-info btn-sm"><i class="icon-search"></i><span>Query</span></button>
+                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                            <div class="actions">
+                                <div class="btn-toolbar pull-right-sm" role="toolbar">
+                                    <div class="btn-group " role="group">
+                                        <button class="btn btn-info"><i class="icon-search"></i><span>Query</span></button>
                                     </div>
-                                    <div class="btn-group btn-group-sm" role="group">
+                                    <div class="btn-group " role="group">
                                         <button class="btn btn-default"><i class="icon-copy"></i></button>
                                         <button class="btn btn-default"><i class="icon-edit"></i></button>
                                         <button class="btn btn-warning"><i class="icon-reset"></i></button>
 
                                     </div>
-                                    <div class="btn-group btn-group-sm" role="group">
+                                    <div class="btn-group " role="group">
+                                        <button class="btn btn-danger"><i class="icon-trash"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h2>Products</h2>
+            <div class="panel">
+                <div class="padding padding-sm">
+                    <div class="state state-normal"></div>
+                    <div class="row">
+                        <div class="col-sm-6 col-xl-4 col-flex info-container">
+                            <div class="checkbox">
+                                <input type="checkbox" class="styled">
+                                <label></label>
+                            </div>
+                            <h3 class="index-name"><a href="#">Products/ByType</a></h3>
+                            <div class="index-type">AutoMap</div>
+                        </div>
+                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
+
+                            <div class="properties-item">
+                                <div class="properies-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
+                            </div>
+                            <div class="properties-item">
+                                <div class="properies-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
+                            </div>
+                            <div class="properties-item">
+                                <span class="properies-label">Priority:</span>
+                                <div class="btn-group btn-group-xs">
+                                    <button type="button" class="btn properies-value dropdown-toggle" data-toggle="dropdown">
+                                        <i class="icon-check"></i><span>Normal</span> <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a href="#"><i class="icon-check"></i><span>Normal</span></a></li>
+                                        <li><a href="#"><i class="icon-coffee"></i><span>Idle</span></a></li>
+                                        <li><a href="#"><i class="icon-cancel"></i><span>Disabled</span></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="properties-item">
+                                <span class="properies-label">Status:</span>
+                                <div class="btn-group btn-group-xs">
+                                    <button type="button" class="btn btn-block properies-value dropdown-toggle" data-toggle="dropdown">
+                                        <i class="icon-lock"></i><span>Locked</span> <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a href="#">
+                                                <i class="icon-unlock"></i>
+                                                <span>Unlock</span>
+                                            </a>
+                                        </li>
+                                        <li class="divider"></li>
+                                        <li>
+                                            <a href="#">
+                                                <i class="icon-lock"></i>
+                                                <span>Lock</span>
+
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#">
+                                                <i class="icon-lock-sidebyside"></i>
+                                                <span>Lock (Side by Side)</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#">
+                                                <i class="icon-lock-error"></i>
+                                                <span>Lock (Error)</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                            <div class="actions">
+                                <div class="btn-toolbar pull-right-sm" role="toolbar">
+                                    <div class="btn-group " role="group">
+                                        <button class="btn btn-info"><i class="icon-search"></i><span>Query</span></button>
+                                    </div>
+                                    <div class="btn-group " role="group">
+                                        <button class="btn btn-default"><i class="icon-copy"></i></button>
+                                        <button class="btn btn-default"><i class="icon-edit"></i></button>
+                                        <button class="btn btn-warning"><i class="icon-reset"></i></button>
+
+                                    </div>
+                                    <div class="btn-group " role="group">
                                         <button class="btn btn-danger"><i class="icon-trash"></i></button>
                                     </div>
                                 </div>

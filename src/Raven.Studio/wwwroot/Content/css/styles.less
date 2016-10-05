@@ -223,6 +223,8 @@ hr {
     }
 }
 
+/*  RESPONSIVE PULLS  */
+
 .pull-right-sm {
     @media (min-width: @screen-sm) {
         float: right;
@@ -246,6 +248,32 @@ hr {
         float: left;
     }
 }
+
+.pull-right-lg {
+    @media (min-width: @screen-lg) {
+        float: right;
+    }
+}
+
+.pull-left-lg {
+    @media (min-width: @screen-lg) {
+        float: left;
+    }
+}
+
+.pull-right-xl {
+    @media (min-width: @screen-xl) {
+        float: right;
+    }
+}
+
+.pull-left-xl {
+    @media (min-width: @screen-xl) {
+        float: left;
+    }
+}
+
+
 
 
 .text-right-sm {
@@ -405,6 +433,12 @@ input[type=file] + .form-control {
     &::-moz-selection {
         background: @brand-primary;
     }
+}
+
+.vcenter-container {
+    position:absolute;
+    top:0;
+    bottom:0;
 }
 
 .vcenter {
