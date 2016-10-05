@@ -205,10 +205,10 @@ namespace Raven.Server.Documents.Indexes
             };
 
             if (_stats.ReduceDetails != null && name == IndexingOperation.Reduce.TreeScope)
-                operation.Details = _stats.ReduceDetails;
+                operation.ReduceDetails = _stats.ReduceDetails;
 
             if (_stats.MapDetails != null && name == "Map")
-                operation.Details = _stats.MapDetails;
+                operation.MapDetails = _stats.MapDetails;
 
             if (_scopes != null)
             {

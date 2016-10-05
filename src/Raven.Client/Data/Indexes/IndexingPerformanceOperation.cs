@@ -15,12 +15,10 @@ namespace Raven.Client.Data.Indexes
 
         public double DurationInMilliseconds { get; }
 
-        public IDetails Details { get; set; }
+        public ReduceRunDetails ReduceDetails { get; set; }
+
+        public MapRunDetails MapDetails { get; set; }
 
         public IndexingPerformanceOperation[] Operations { get; set; }
-
-        public interface IDetails
-        {
-        }
     }
 }

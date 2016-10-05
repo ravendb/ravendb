@@ -18,38 +18,5 @@
         public long CurrentlyAllocated { get; set; }
 
         public long AllocationBudget { get; set; }
-
-        public void ToJson(BlittableJsonTextWriter writer, JsonOperationContext context)
-        {
-            if (CurrentlyAllocated != 0)
-            {
-                writer.WritePropertyName(nameof(CurrentlyAllocated));
-                writer.WriteInteger(CurrentlyAllocated);
-                writer.WriteComma();
-            }
-
-            if (BatchCompleteReason != null)
-            {
-                writer.WritePropertyName(nameof(BatchCompleteReason));
-                writer.WriteString(BatchCompleteReason);
-                writer.WriteComma();
-            }
-
-            if (ProcessPrivateMemory == 0)
-                return;
-
-            writer.WritePropertyName(nameof(ProcessPrivateMemory));
-            writer.WriteInteger(ProcessPrivateMemory);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(ProcessWorkingSet));
-            writer.WriteInteger(ProcessWorkingSet);
-            writer.WriteComma();
-
-            
-            writer.WritePropertyName(nameof(AllocationBudget));
-            writer.WriteInteger(AllocationBudget);
-            writer.WriteComma();
-        }
     }
 }
