@@ -3,12 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data.Indexes
 {
-    public class IndexStatus
-    {
-        public string Name { get; set; }
 
-        public string Status { get; set; }
-    }
 }

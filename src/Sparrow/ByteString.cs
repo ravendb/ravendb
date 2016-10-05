@@ -132,11 +132,11 @@ namespace Sparrow
                 EnsureIsNotBadPointer();
 
                 return _pointer->Ptr;
-            }
+            }            
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetUserDefinedFlags(ByteStringType flags)
+        public void SetUserDefinedFlags( ByteStringType flags)
         {
             if ((flags & ByteStringType.ByteStringMask) != 0)
                 throw new ArgumentException("The flags passed contains reserved bits.");
@@ -223,7 +223,7 @@ namespace Sparrow
         }
 
         public void CopyTo(byte[] dest)
-        {
+        { 
             Debug.Assert(HasValue);
 
             EnsureIsNotBadPointer();
@@ -247,7 +247,7 @@ namespace Sparrow
             if ( this.Key != _pointer->Key)
             {
                 if (this.Key >> 16 != _pointer->Key >> 16)
-                    throw new InvalidOperationException("The owner context for the ByteString and the unmanaged storage are different. This is a defect on the implementation of the ByteStringContext class");
+                    throw new InvalidOperationException("The owner context for the ByteString and the unmanaged storage are different. Make sure you havent killed the allocator and kept a reference to the ByteString outside of its scope.");
 
                 Debug.Assert((this.Key & 0x0000000FFFFFFFF) != (_pointer->Key & 0x0000000FFFFFFFF));
                 throw new InvalidOperationException("The key for the ByteString and the unmanaged storage are different. This is a dangling pointer. Check your .Release() statements and aliases in the calling code.");                                    
@@ -343,11 +343,12 @@ namespace Sparrow
     {
         public readonly byte* Segment;
         public readonly int Size;
+        private NativeMemory.ThreadStats _thread;
 
         public UnmanagedGlobalSegment(int size)
         {
             Size = size;
-            Segment = NativeMemory.AllocateMemory(size);
+            Segment = NativeMemory.AllocateMemory(size, out _thread);
         }
 
         #region IDisposable Support
@@ -366,13 +367,13 @@ namespace Sparrow
 
                 if (Segment != null)
                 {
-                    NativeMemory.Free(Segment, Size);
+                    NativeMemory.Free(Segment, Size, _thread);
                 }
             }
         }
 
         ~UnmanagedGlobalSegment()
-        {
+        {            
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(false);
         }
@@ -383,7 +384,7 @@ namespace Sparrow
             GC.SuppressFinalize(this);
 
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
+            Dispose(true);            
         }
         #endregion
     }
@@ -420,46 +421,21 @@ namespace Sparrow
         [ThreadStatic]
         private static Stack<UnmanagedGlobalSegment> _threadLocal;
 
-        [ThreadStatic]
-        private static int _minSize;
-
-        public static void Clean(int keep = 1)
+        public static void Clean()
         {
-            // we are expecting to be called here when there is no
-            // more work to be done, and we want to release resources
-            // to the system
-
-            // By reversing the stack, we ensure that we keep however many
-            // segments need, that they are the newest, and that they are 
-            // the largest around, so we shouldn't need more allocation
-
             if (_threadLocal == null || _threadLocal.Count == 0)
                 return; // nothing to do;
 
-            var latest = _threadLocal.Peek();
-
-            var reversed = new Stack<UnmanagedGlobalSegment>(_threadLocal.Count);
             foreach (var segment in _threadLocal)
             {
-                reversed.Push(segment);
+                segment.Dispose();
             }
             _threadLocal.Clear();
-            while (keep-- > 0 && reversed.Count > 0)
-            {
-                var current = reversed.Pop();
-                if (current.Size < latest.Size)
-                {
-                    current.Dispose();
-                    continue;
-                }
-                _threadLocal.Push(current);
-            }
-            while (reversed.Count > 0)
-            {
-                reversed.Pop().Dispose();
-            }
 
         }
+
+        [ThreadStatic]
+        private static int _minSize;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Stack<UnmanagedGlobalSegment> GetThreadLocalCollection()
@@ -509,7 +485,7 @@ namespace Sparrow
         public const int DefaultAllocationBlockSizeInBytes = 1 * MinBlockSizeInBytes;
         public const int MinReusableBlockSizeInBytes = 8;
 
-        public ByteStringContext(int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base(allocationBlockSize)
+        public ByteStringContext(int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base (allocationBlockSize)
         { }
     }
 
@@ -541,7 +517,7 @@ namespace Sparrow
         }
 
         private const int LogMinBlockSize = 16;
-
+        
         /// <summary>
         /// This list keeps all the segments already instantiated in order to release them after context finalization. 
         /// </summary>
@@ -555,8 +531,8 @@ namespace Sparrow
         private readonly List<SegmentInformation> _internalReadyToUseMemorySegments;
         private readonly int[] _internalReusableStringPoolCount;
         private readonly Stack<IntPtr>[] _internalReusableStringPool;
-        private SegmentInformation _internalCurrent;
-
+        private SegmentInformation _internalCurrent;        
+        
 
         private const int ExternalFastPoolSize = 16;
         private int _externalAlignedSize = 0;
@@ -574,7 +550,7 @@ namespace Sparrow
             this._allocationBlockSize = allocationBlockSize;
 
             this._wholeSegments = new List<SegmentInformation>();
-            this._internalReadyToUseMemorySegments = new List<SegmentInformation>();
+            this._internalReadyToUseMemorySegments = new List<SegmentInformation>();            
 
             this._internalReusableStringPool = new Stack<IntPtr>[LogMinBlockSize];
             this._internalReusableStringPoolCount = new int[LogMinBlockSize];
@@ -583,7 +559,6 @@ namespace Sparrow
             this._externalCurrent = AllocateSegment(allocationBlockSize);
 
             this._externalStringPool = new Stack<IntPtr>(64);
-
 
             PrepareForValidation();
         }
@@ -795,7 +770,7 @@ namespace Sparrow
             var basePtr = (ByteStringStorage*)ptr;
             basePtr->Flags = type;
             basePtr->Length = length;
-            basePtr->Ptr = (byte*)ptr + sizeof(ByteStringStorage);
+            basePtr->Ptr = (byte*)ptr + sizeof(ByteStringStorage);                        
             basePtr->Size = size;
 
             // We are registering the storage for validation here. Not the ByteString itself
@@ -833,8 +808,10 @@ namespace Sparrow
             if (value._pointer == null)
                 return;
 
-            value._pointer->Flags = ByteStringType.Disposed;
+            Debug.Assert(value.IsExternal, "Cannot release as external an internal pointer.");
 
+			value._pointer->Flags = ByteStringType.Disposed;
+			
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
 
@@ -869,48 +846,33 @@ namespace Sparrow
             if (value._pointer == null)
                 return;
             Debug.Assert(value._pointer->Flags != ByteStringType.Disposed, "Double free");
+            Debug.Assert(!value.IsExternal, "Cannot release as internal an external pointer.");
 
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
 
-            if (value.IsExternal)
+            int reusablePoolIndex = GetPoolIndexForReuse(value._pointer->Size);
+
+            if (value._pointer->Size <= ByteStringContext.MinBlockSizeInBytes)
             {
-                // We release the pointer in the appropriate reuse pool.
-                if (this._externalFastPoolCount < ExternalFastPoolSize)
+                Stack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
+                if (pool == null)
                 {
-                    // Release in the fast pool. 
-                    this._externalFastPool[this._externalFastPoolCount++] = new IntPtr(value._pointer);
+                    pool = new Stack<IntPtr>();
+                    this._internalReusableStringPool[reusablePoolIndex] = pool;
                 }
-                else
-                {
-                    this._externalStringPool.Push(new IntPtr(value._pointer));
-                }
+
+                pool.Push(new IntPtr(value._pointer));
+                this._internalReusableStringPoolCount[reusablePoolIndex]++;
             }
-            else
+            else  // The released memory is big enough, we will just release it as a new segment. 
             {
-                int reusablePoolIndex = GetPoolIndexForReuse(value._pointer->Size);
+                byte* start = (byte*)value._pointer;
+                byte* end = start + value._pointer->Size;
 
-                if (value._pointer->Size <= ByteStringContext.MinBlockSizeInBytes)
-                {
-                    Stack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
-                    if (pool == null)
-                    {
-                        pool = new Stack<IntPtr>();
-                        this._internalReusableStringPool[reusablePoolIndex] = pool;
-                    }
-
-                    pool.Push(new IntPtr(value._pointer));
-                    this._internalReusableStringPoolCount[reusablePoolIndex]++;
-                }
-                else  // The released memory is big enough, we will just release it as a new segment. 
-                {
-                    byte* start = (byte*)value._pointer;
-                    byte* end = start + value._pointer->Size;
-
-                    // Given that this is put into a reuse queue, we are not providing the Segment because it has no ownership of it.
-                    var segment = new SegmentInformation { Start = start, Current = start, End = end, CanDispose = false };
-                    _internalReadyToUseMemorySegments.Add(segment);
-                }
+                // Given that this is put into a reuse queue, we are not providing the Segment because it has no ownership of it.
+                var segment = new SegmentInformation { Start = start, Current = start, End = end, CanDispose = false };
+                _internalReadyToUseMemorySegments.Add(segment);
             }
 
 #if VALIDATE
@@ -988,12 +950,12 @@ namespace Sparrow
             return result;
         }
 
-        public Scope From(string value, out ByteString str)
+        public InternalScope From(string value, out ByteString str)
         {
             return From(value, ByteStringType.Mutable, out str);
         }
 
-        public Scope From(string value, ByteStringType type, out ByteString str)
+        public InternalScope From(string value, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
@@ -1008,15 +970,15 @@ namespace Sparrow
             }
 
             RegisterForValidation(str);
-            return new Scope(this, str);
+            return new InternalScope(this, str);
         }
 
-        public Scope From(string value, Encoding encoding, out ByteString str)
+        public InternalScope From(string value, Encoding encoding, out ByteString str)
         {
             return From(value, encoding, ByteStringType.Immutable, out str);
         }
 
-        public Scope From(string value, Encoding encoding, ByteStringType type, out ByteString str)
+        public InternalScope From(string value, Encoding encoding, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
@@ -1032,15 +994,10 @@ namespace Sparrow
             }
 
             RegisterForValidation(str);
-            return new Scope(this, str);
+            return new InternalScope(this, str);
         }
 
-        public Scope From(byte[] value, int offset, int count, out ByteString str)
-        {
-            return From(value, offset, count, ByteStringType.Immutable, out str);
-        }
-
-        public Scope From(byte[] value, int offset, int count, ByteStringType type, out ByteString str)
+        public InternalScope From(byte[] value, int offset, int count, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
@@ -1051,15 +1008,15 @@ namespace Sparrow
             }
 
             RegisterForValidation(str);
-            return new Scope(this, str);
+            return new InternalScope(this, str);
         }
 
-        public Scope From(byte[] value, int size, out ByteString str)
+        public InternalScope From(byte[] value, int offset, int count, out ByteString str)
         {
-            return From(value, size, ByteStringType.Immutable, out str);
+            return From(value, offset, count, ByteStringType.Immutable, out str);
         }
 
-        public Scope From(byte[] value, int size, ByteStringType type, out ByteString str)
+        public InternalScope From(byte[] value, int size, ByteStringType type, out ByteString str)
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
@@ -1070,71 +1027,76 @@ namespace Sparrow
             }
 
             RegisterForValidation(str);
-            return new Scope(this, str);
+            return new InternalScope(this, str);
         }
 
-        public Scope From(int value, out ByteString str)
+        public InternalScope From(byte[] value, int size, out ByteString str)
+        {
+            return From(value, size, ByteStringType.Immutable, out str);
+        }
+
+        public InternalScope From(int value, out ByteString str)
         {
             return From(value, ByteStringType.Immutable, out str);
         }
 
-        public Scope From(int value, ByteStringType type, out ByteString str)
+        public InternalScope From(int value, ByteStringType type, out ByteString str)
         {
             str = AllocateInternal(sizeof(int), type);
             ((int*)str._pointer->Ptr)[0] = value;
 
             RegisterForValidation(str);
-            return new Scope(this, str);
+            return new InternalScope(this, str);
         }
 
-        public Scope From(long value, out ByteString str)
+        public InternalScope From(long value, out ByteString str)
         {
             return From(value, ByteStringType.Immutable, out str);
         }
 
-        public Scope From(long value, ByteStringType type, out ByteString str)
+        public InternalScope From(long value, ByteStringType type, out ByteString str)
         {
             str = AllocateInternal(sizeof(long), type);
             ((long*)str._pointer->Ptr)[0] = value;
 
             RegisterForValidation(str);
-            return new Scope(this, str);
+            return new InternalScope(this, str);
         }
 
-        public Scope From(short value, out ByteString str)
+        public InternalScope From(short value, out ByteString str)
         {
             return From(value, ByteStringType.Immutable, out str);
         }
 
-        public Scope From(short value, ByteStringType type, out ByteString str)
+        public InternalScope From(short value, ByteStringType type, out ByteString str)
         {
             str = AllocateInternal(sizeof(short), type);
             ((short*)str._pointer->Ptr)[0] = value;
 
             RegisterForValidation(str);
-            return new Scope(this, str);
+            return new InternalScope(this, str);
         }
 
-        public Scope From(byte value, out ByteString str)
-        {
-            return From(value, ByteStringType.Immutable, out str);
-        }
-
-        public Scope From(byte value, ByteStringType type, out ByteString str)
+        public InternalScope From(byte value, ByteStringType type, out ByteString str)
         {
             str = AllocateInternal(1, type);
             str._pointer->Ptr[0] = value;
 
             RegisterForValidation(str);
-            return new Scope(this, str);
+            return new InternalScope(this, str);
         }
 
-        public Scope From(byte* valuePtr, int size, out ByteString str)
+        public InternalScope From(byte value, out ByteString str)
+        {
+            return From(value, ByteStringType.Immutable, out str);
+        }
+
+        public InternalScope From(byte* valuePtr, int size, out ByteString str)
         {
             return From(valuePtr, size, ByteStringType.Immutable, out str);
         }
 
-        public Scope From(byte* valuePtr, int size, ByteStringType type, out ByteString str)
+        public InternalScope From(byte* valuePtr, int size, ByteStringType type, out ByteString str)
         {
             Debug.Assert(valuePtr != null, $"{nameof(valuePtr)} cant be null.");
             Debug.Assert((type & ByteStringType.External) == 0, $"{nameof(From)} is not expected to be called with the '{nameof(ByteStringType.External)}' requested type, use {nameof(FromPtr)} instead.");
@@ -1143,9 +1105,14 @@ namespace Sparrow
             Memory.Copy(str._pointer->Ptr, valuePtr, size);
 
             RegisterForValidation(str);
-            return new Scope(this, str);
+            return new InternalScope(this, str);
         }
 
+        /// <summary>
+        /// This scope should only be used whenever you can not determine
+        /// whether the scope is internal or external, as the dispose cost
+        /// is higher than either of the options.
+        /// </summary>
         public struct Scope : IDisposable
         {
             private ByteStringContext<TAllocator> _parent;
@@ -1159,12 +1126,64 @@ namespace Sparrow
 
             public void Dispose()
             {
-                _parent?.Release(ref _str);
+                if (_parent != null)
+                {
+                    if (_str.IsExternal)
+                        _parent.ReleaseExternal(ref _str);
+                    else 
+                        _parent.Release(ref _str);
+                }
                 _parent = null;
             }
         }
 
-        public Scope FromPtr(byte* valuePtr, int size,
+        public struct InternalScope : IDisposable
+        {
+            private ByteStringContext<TAllocator> _parent;
+            private ByteString _str;
+
+            public InternalScope(ByteStringContext<TAllocator> parent, ByteString str)
+            {
+                _parent = parent;
+                _str = str;
+            }
+
+            public void Dispose()
+            {
+                _parent?.Release(ref _str);
+                _parent = null;
+            }
+
+            public static implicit operator Scope(InternalScope scope)
+            {
+                return new Scope(scope._parent, scope._str);
+            }
+        }
+
+        public struct ExternalScope : IDisposable
+        {
+            private ByteStringContext<TAllocator> _parent;
+            private ByteString _str;
+
+            public ExternalScope(ByteStringContext<TAllocator> parent, ByteString str)
+            {
+                _parent = parent;
+                _str = str;
+            }
+
+            public void Dispose()
+            {
+                _parent?.ReleaseExternal(ref _str);
+                _parent = null;
+            }
+
+            public static implicit operator Scope(ExternalScope scope)
+            {
+                return new Scope(scope._parent, scope._str);
+            }
+        }
+
+        public ExternalScope FromPtr(byte* valuePtr, int size,
             ByteStringType type,
             out ByteString str)
         {
@@ -1175,7 +1194,7 @@ namespace Sparrow
 
             RegisterForValidation(str);
 
-            return new Scope(this, str);
+            return new ExternalScope(this, str);
         }
 
 #if VALIDATE
@@ -1325,7 +1344,7 @@ namespace Sparrow
             GC.SuppressFinalize(this);
         }
 
-        #endregion
+#endregion
     }
 
     public class ByteStringValidationException : Exception

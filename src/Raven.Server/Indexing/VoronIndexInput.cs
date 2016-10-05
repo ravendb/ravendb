@@ -57,11 +57,7 @@ namespace Raven.Server.Indexing
                 {
                     var readResult = fileTree.Read(it.CurrentKey);
 
-                    _ptrs[index] = new PtrSize
-                    {
-                        Ptr = readResult.Reader.Base,
-                        Size = readResult.Reader.Length
-                    };
+                    _ptrs[index] = PtrSize.Create(readResult.Reader.Base, readResult.Reader.Length);
 
                     index++;
                 } while (it.MoveNext());
@@ -82,7 +78,10 @@ namespace Raven.Server.Indexing
             clone._isOriginal = false;
 
             if (clone._originalTransactionId != clone._currentTransaction.Value.LowLevelTransaction.Id)
+            {
                 clone.OpenInternal();
+                clone._stream.Position = _stream.Position;
+            }
             else
             {
                 clone._stream = new ChunkedMmapStream(_ptrs, VoronIndexOutput.MaxFileChunkSize)

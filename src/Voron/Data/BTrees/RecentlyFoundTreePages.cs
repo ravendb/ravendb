@@ -18,14 +18,12 @@ namespace Voron.Data.BTrees
             public readonly Slice FirstKey;
             public readonly Slice LastKey;
             public readonly long[] CursorPath;
-            private ByteStringContext<ByteStringMemoryCache>.Scope _firstScope;
-            private ByteStringContext<ByteStringMemoryCache>.Scope _lastScope;
+            private readonly ByteStringContext<ByteStringMemoryCache>.Scope _firstScope;
+            private readonly ByteStringContext<ByteStringMemoryCache>.Scope _lastScope;
 
             public TreePage Page;
 
-            public FoundTreePage(long number, TreePage page, Slice firstKey, Slice lastKey, long[] cursorPath,
-                ByteStringContext.Scope firstScope,
-                ByteStringContext.Scope lastScope)
+            public FoundTreePage(long number, TreePage page, Slice firstKey, Slice lastKey, long[] cursorPath, ByteStringContext.Scope firstScope, ByteStringContext.Scope lastScope)
             {
                 Number = number;
                 Page = page;
@@ -40,7 +38,6 @@ namespace Voron.Data.BTrees
             {
                _firstScope.Dispose();
                _lastScope.Dispose();
-
             }
         }
 

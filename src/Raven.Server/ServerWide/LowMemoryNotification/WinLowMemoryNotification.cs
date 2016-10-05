@@ -39,7 +39,6 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
 
         private readonly IntPtr lowMemorySimulationEvent;
         private readonly IntPtr lowMemoryNotificationHandle;
-        private readonly IntPtr softMemoryReleaseEvent;
 
         public WinLowMemoryNotification(CancellationToken shutdownNotification, RavenConfiguration configuration)
         {
@@ -49,8 +48,6 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
 
             var appDomainUnloadEvent = CreateEvent(IntPtr.Zero, false, false, null);
             shutdownNotification.Register(() => SetEvent(appDomainUnloadEvent));
-
-            softMemoryReleaseEvent = CreateEvent(IntPtr.Zero, false, false, null);
 
             if (lowMemoryNotificationHandle == null)
             {
@@ -71,8 +68,8 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             IntPtr appDomainUnloadEvent = (IntPtr) state;
             while (true)
             {
-                var waitForResult = WaitForMultipleObjects(4,
-                    new[] {lowMemoryNotificationHandle, appDomainUnloadEvent, lowMemorySimulationEvent, softMemoryReleaseEvent},
+                var waitForResult = WaitForMultipleObjects(3,
+                    new[] {lowMemoryNotificationHandle, appDomainUnloadEvent, lowMemorySimulationEvent},
                     false,
                     5*60*1000);
 
@@ -113,11 +110,6 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
         public override void SimulateLowMemoryNotification()
         {
             SetEvent(lowMemorySimulationEvent);
-        }
-
-        public void InitiateSoftMemoryRelease()
-        {
-            SetEvent(softMemoryReleaseEvent);
         }
     }
 }

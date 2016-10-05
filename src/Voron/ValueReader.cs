@@ -222,7 +222,7 @@ namespace Voron
             return Length - other.Length;
         }
 
-        public ByteStringContext.Scope AsSlice(ByteStringContext context, out Slice str)
+        public ByteStringContext.InternalScope AsSlice(ByteStringContext context, out Slice str)
         {
             if (_len >= ushort.MaxValue)
                 throw new InvalidOperationException("Cannot convert to slice, len is too big: " + _len);
@@ -230,7 +230,7 @@ namespace Voron
             return Slice.From(context, _val, _len, out str);
         }
 
-        public ByteStringContext.Scope AsPartialSlice(ByteStringContext context, int removeFromEnd, out Slice str)
+        public ByteStringContext.InternalScope AsPartialSlice(ByteStringContext context, int removeFromEnd, out Slice str)
         {
             if (_len >= ushort.MaxValue)
                 throw new InvalidOperationException("Cannot convert to slice, len is too big: " + _len);

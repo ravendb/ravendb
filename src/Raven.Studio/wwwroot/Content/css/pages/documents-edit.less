@@ -1,0 +1,32 @@
+@import "../icons";
+
+.editDocument {
+
+    .documentId {
+        #obj-name {
+
+            .edit-inline {
+                border: 1px solid @gray;
+                margin:-1px;
+
+                &:focus {
+                    border-color: @brand-primary;
+                }
+            }
+
+            .btn.edit-button {
+                margin-left: 12px;
+
+                .text::before {
+                    content: 'Change ID';
+                }
+            }
+
+            &.edit {
+                .btn.edit-button {
+                    display: none;
+                }
+            }
+        }
+    }
+}

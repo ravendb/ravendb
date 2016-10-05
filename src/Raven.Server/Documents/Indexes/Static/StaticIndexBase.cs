@@ -50,6 +50,11 @@ namespace Raven.Server.Documents.Indexes.Static
             return new RecursiveFunction(item, func).Execute();
         }
 
+        public dynamic LoadDocument<TIGnored>(object keyOrEnumerable, string collectionName)
+        {
+            return LoadDocument(keyOrEnumerable, collectionName);
+        }
+
         public dynamic LoadDocument(object keyOrEnumerable, string collectionName)
         {
             if (CurrentIndexingScope.Current == null)

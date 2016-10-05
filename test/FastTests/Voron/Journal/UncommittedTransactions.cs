@@ -29,7 +29,7 @@ namespace FastTests.Voron.Journal
 
 				pageAllocatedInUncommittedTransaction = page.PageNumber;
 
-				Assert.NotNull(tx1.LowLevelTransaction.GetReadOnlyTreePage(pageAllocatedInUncommittedTransaction));
+				Assert.NotNull(tx1.LowLevelTransaction.GetPage(pageAllocatedInUncommittedTransaction).ToTreePage());
 				
 				// tx.Commit(); do not commit
 			}

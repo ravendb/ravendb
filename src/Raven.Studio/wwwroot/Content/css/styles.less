@@ -98,6 +98,10 @@ body {
 h1, h2, h3 {
     font-weight: 300;
     margin-top: 0;
+
+    [class^="icon-"], [class*=" icon-"] { 
+        top:-6px;
+    }
 }
 
 h1 {
@@ -143,6 +147,11 @@ a, .btn {
 .btn {
     [class^="icon-"], [class*=" icon-"] {
         margin-left: -3px;
+        margin-right:-3px;
+
+        +span {
+            margin-left:9px;
+        }
     }
 
     &:not(.btn-sm .btn-xs) {
@@ -226,11 +235,11 @@ hr {
 }
 
 .editable-input-inline {
-    display:inline-block;
+    display: inline-block;
 
     .btn.edit-button {
-        float:left;
-        margin-left:4px;
+        float: left;
+        margin-left: 4px;
         .btn-primary;
 
         .text::before {
@@ -239,34 +248,52 @@ hr {
     }
 
     .value-container {
-        display:inline-block;
-        position:relative;
-        float:left;
+        display: inline-block;
+        position: relative;
+        float: left;
 
         .static-name {
-            display:inline-block;
+            display: inline-block;
         }
 
         .edit-inline {
-            position:absolute;
-            top:0;
-            bottom:0;
-            left:0;
-            right:0;
-            width:100%;
-            height:100%;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            border:none;
         }
-    }
-
-    .edit-inline {
-       display: none;
     }
 
     .icon-edit {
         font-size: 100%;
     }
 
-    &.edit {
+    .edit-inline {
+        display:none;
+        padding: 0;
+        font-size: inherit;
+        line-height: inherit;
+        color: #e9eaea;
+        background-color: #333c3c;
+        background-image: none;        
+        -webkit-transition: box-shadow .2s ease-in-out;
+        -moz-transition: box-shadow .2s ease-in-out;
+        -ms-transition: box-shadow .2s ease-in-out;
+        -o-transition: box-shadow .2s ease-in-out;
+        transition: box-shadow .2s ease-in-out;
+
+        &:focus {
+            outline: 0;
+            -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(255, 85, 0, 0.6);
+            box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(255, 85, 0, 0.6);
+        }
+    }
+
+     &.edit {
         .static-name {
             opacity: 0;
         }
@@ -286,26 +313,6 @@ hr {
             .text::before {
                 content: 'Save';
             }
-        }
-    }
-
-    .edit-inline {
-        padding:0;
-        font-size: inherit;
-        line-height: inherit;
-        color: #e9eaea;
-        background-color: #333c3c;
-        background-image: none;
-        border: none;
-        -webkit-transition: box-shadow .2s ease-in-out;
-        -moz-transition: box-shadow .2s ease-in-out;
-        -ms-transition: box-shadow .2s ease-in-out;
-        -o-transition: box-shadow .2s ease-in-out;
-        transition: box-shadow .2s ease-in-out;
-
-        &:focus {
-            outline: none;
-            box-shadow: inset 0 -1px 0 0 @brand-primary;
         }
     }
 }
@@ -343,6 +350,10 @@ hr {
             line-height: 100%;
         }
     }
+}
+
+input[type=file]+.form-control {
+    line-height:initial;
 }
 
 .form-control {
@@ -771,12 +782,12 @@ hr {
                 }
             }
 
-            .database-filter-container {
+            .resource-filter-container {
                 position: relative;
 
-                .database-filter {
-                    background-color: transparent;
-                    border-color: @gray-light !important;
+                .resource-filter {
+                    background-color: @gray !important;
+                    //border-color: @gray !important;
                     padding: 2px (@grid-gutter-width / 2);
                     height: 34px;
                     margin-bottom: (@grid-gutter-width / 4);
@@ -1040,6 +1051,12 @@ hr {
             -ms-transform: translateX(0%);
             transform: translateX(0%);
         }
+    }
+
+    hr {
+        margin-left: 15px;
+        margin-right: 15px;
+        border-style: dashed;
     }
 
     .back, .arrow-right > a {
@@ -1637,14 +1654,12 @@ pre {
     right: 0;
     bottom: 0;
     padding: @grid-gutter-width / 8;
-    //background-color: @gray-darker;
-    z-index: 9999;
     -moz-transform: translateX(100%);
     -webkit-transform: translateX(100%);
     -o-transform: translateX(100%);
     -ms-transform: translateX(100%);
     transform: translateX(100%);
-    z-index: 9970;
+    z-index: 990;
     background-color: @gray-base;
     border-left: 1px solid @gray-dark;
     -webkit-transition: transform @menu-transition-ease;
@@ -1748,3 +1763,4 @@ pre {
 @import "pages/tasks-sampleData";
 @import "pages/tasks-csvImport";
 @import "pages/tasks-subscriptions";
+@import "pages/documents-edit";

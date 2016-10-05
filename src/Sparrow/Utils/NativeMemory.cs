@@ -18,26 +18,58 @@ namespace Sparrow.Utils
             public string Name;
             public int Id;
             public long Allocations;
+            public long ReleasesFromOtherThreads;
+            public Thread ThreadInstance;
 
             public ThreadStats()
             {
-                var currentThread = Thread.CurrentThread;
-                Name = currentThread.Name ?? "<ThreadPool>";
-                Id = currentThread.ManagedThreadId;
+                ThreadInstance = Thread.CurrentThread;
+                Name = ThreadInstance.Name;
+                Id = ThreadInstance.ManagedThreadId;
             }
+        }
+        public static void Free(byte* ptr, long size, ThreadStats stats)
+        {
+            var currentThreadValue = ThreadAllocations.Value;
+            if (currentThreadValue == stats)
+            {
+                currentThreadValue.Allocations -= size;
+                FixupReleasesFromOtherThreads(currentThreadValue);
+            }
+            else
+            {
+                Interlocked.Add(ref stats.ReleasesFromOtherThreads, size);
+            }
+            Marshal.FreeHGlobal((IntPtr)ptr);
         }
 
         public static void Free(byte* ptr, long size)
         {
-            ThreadAllocations.Value.Allocations -= size;
-            Marshal.FreeHGlobal((IntPtr)ptr);
+            Free(ptr, size, ThreadAllocations.Value);
         }
 
         public static byte* AllocateMemory(long size)
         {
-            ThreadAllocations.Value.Allocations += size;
+            ThreadStats _;
+            return AllocateMemory(size, out _);
+        }
+
+        public static byte* AllocateMemory(long size, out ThreadStats thread)
+        {
+            thread = ThreadAllocations.Value;
+            thread.Allocations += size;
 
             return (byte*)Marshal.AllocHGlobal((IntPtr)size).ToPointer();
+        }
+
+        private static void FixupReleasesFromOtherThreads(ThreadStats thread)
+        {
+            var released = thread.ReleasesFromOtherThreads;
+            if (released > 0)
+            {
+                thread.Allocations -= released;
+                Interlocked.Add(ref thread.ReleasesFromOtherThreads, -released);
+            }
         }
 
         public static void RegisterFileMapping(string name, long size)
@@ -47,7 +79,7 @@ namespace Sparrow.Utils
 
         public static void UnregisterFileMapping(string name, long size)
         {
-            var result = FileMapping.AddOrUpdate(name, size, (_, old) => old - size);
+            var result = FileMapping.AddOrUpdate(name, 0, (_, old) => old - size);
             if (result == 0)
             {
                 // shouldn't really happen, but let us be on the safe side

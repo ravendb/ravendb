@@ -239,7 +239,7 @@ namespace Voron.Data.Fixed
                         {
                             _parent._cursor.Push(_currentPage);
                             var childParentNumber = _parent.PageValueFor(_currentPage, _currentPage.LastSearchPosition);
-                            _currentPage = _parent._tx.GetReadOnlyFixedSizeTreePage(childParentNumber);
+                            _currentPage = _parent.GetReadOnlyPage(childParentNumber);
 
                             _currentPage.LastSearchPosition = 0;
                         }
@@ -271,7 +271,7 @@ namespace Voron.Data.Fixed
                         {
                             _parent._cursor.Push(_currentPage);
                             var childParentNumber = _parent.PageValueFor(_currentPage, _currentPage.LastSearchPosition);
-                            _currentPage = _parent._tx.GetReadOnlyFixedSizeTreePage(childParentNumber);
+                            _currentPage = _parent.GetReadOnlyPage(childParentNumber);
 
                             _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
                         }

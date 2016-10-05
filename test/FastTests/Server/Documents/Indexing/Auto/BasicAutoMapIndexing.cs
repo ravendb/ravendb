@@ -5,9 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -17,7 +15,6 @@ using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -327,7 +324,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
                         Assert.False(stats.IsTestIndex);
-                        Assert.True(stats.IsInMemory);
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(2, stats.EntriesCount);
                         Assert.Equal(2, stats.MapAttempts);
@@ -373,7 +369,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
                         Assert.False(stats.IsTestIndex);
-                        Assert.True(stats.IsInMemory);
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(3, stats.EntriesCount);
                         Assert.Equal(3, stats.MapAttempts);
@@ -409,7 +404,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
                         Assert.False(stats.IsTestIndex);
-                        Assert.True(stats.IsInMemory);
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(2, stats.EntriesCount);
                         Assert.Equal(3, stats.MapAttempts);
@@ -439,7 +433,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     database))
                 {
                     index.Start();
-                    Assert.True(index.IsRunning);
+                    Assert.Equal(IndexRunningStatus.Running, index.Status);
 
                     IndexStats stats;
                     var batchStats = new IndexingRunStats();
@@ -454,7 +448,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                     stats = index.GetStats();
                     Assert.Equal(IndexingPriority.Error, stats.Priority);
-                    Assert.True(SpinWait.SpinUntil(() => index.IsRunning == false, TimeSpan.FromSeconds(5)));
+                    Assert.True(SpinWait.SpinUntil(() => index.Status == IndexRunningStatus.Paused, TimeSpan.FromSeconds(5)));
                 }
             }
         }
@@ -1004,7 +998,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexingPriority.Idle, index2.Priority);
 
                 var now = database.Time.GetUtcNow();
-                database.Time.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
+                database.Time.UtcDateTime = () => 
+                        now.Add(TimeSpan.FromSeconds(1))
+                           .Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
 
                 database.IndexStore.RunIdleOperations(); // nothing should happen here, because age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
 

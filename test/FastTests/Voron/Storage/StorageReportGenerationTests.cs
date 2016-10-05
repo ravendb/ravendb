@@ -8,6 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Sparrow;
+using Voron;
 using Xunit;
 using Voron.Global;
 using Voron.Data.BTrees;
@@ -49,8 +51,8 @@ namespace FastTests.Voron.Storage
                     var entries = AddEntries(tree, i).Count;
                     var overflows = AddOverflows(tx, tree, i, r);
 
-                    numberOfEntries.Add(tree.Name, entries + overflows.AddedEntries.Count);
-                    numberOfOverflowPages.Add(tree.Name, overflows.NumberOfOverflowPages);
+                    numberOfEntries.Add(tree.Name.ToString(), entries + overflows.AddedEntries.Count);
+                    numberOfOverflowPages.Add(tree.Name.ToString(), overflows.NumberOfOverflowPages);
                 }
 
                 tx.Commit();
@@ -65,15 +67,15 @@ namespace FastTests.Voron.Storage
 
                 foreach (var treeReport in report.Trees)
                 {
-                    if(treeReport.Name == "$Database-Metadata")
+                    if (SliceComparer.Equals(treeReport.Name, Constants.MetadataTreeNameSlice))
                         continue;
 
                     Assert.True(treeReport.PageCount > 0);
                     Assert.Equal(treeReport.PageCount, treeReport.BranchPages + treeReport.LeafPages + treeReport.OverflowPages);
 
-                    Assert.Equal(numberOfOverflowPages[treeReport.Name], treeReport.OverflowPages);
+                    Assert.Equal(numberOfOverflowPages[treeReport.Name.ToString()], treeReport.OverflowPages);
 
-                    Assert.Equal(numberOfEntries[treeReport.Name], treeReport.NumberOfEntries);
+                    Assert.Equal(numberOfEntries[treeReport.Name.ToString()], treeReport.NumberOfEntries);
 
                     Assert.True(treeReport.Density > 0 && treeReport.Density <= 1.0);
                 }
@@ -99,7 +101,7 @@ namespace FastTests.Voron.Storage
                     var entries = AddEntries(tree, i);
                     var overflows = AddOverflows(tx, tree, i, r);
 
-                    addedEntries.Add(tree.Name, entries.Union(overflows.AddedEntries).ToList());
+                    addedEntries.Add(tree.Name.ToString(), entries.Union(overflows.AddedEntries).ToList());
                 }
 
                 tx.Commit();
@@ -129,7 +131,7 @@ namespace FastTests.Voron.Storage
 
                 foreach (var treeReport in report.Trees)
                 {
-                    if(treeReport.Name == "$Database-Metadata")
+                    if (SliceComparer.Equals(treeReport.Name, Constants.MetadataTreeNameSlice))
                         continue;
 
                     Assert.Equal(1, treeReport.PageCount); // root

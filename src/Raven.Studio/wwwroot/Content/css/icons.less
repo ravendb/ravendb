@@ -1,3 +1,5 @@
+@tick-character: "\e92e";
+
 @font-face {
     font-family: 'icomoon';
     src: url('fonts/icomoon.eot?vnwqsf');
@@ -18,9 +20,31 @@
     /* Better Font Rendering =========== */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    top: 3px;
+    top: 2px;
     line-height: 100%;
     font-size: 120%;
+}
+
+.icon-copy:before {
+  content: "\e933";
+}
+.icon-paste:before {
+  content: "\e934";
+}
+.icon-cut:before {
+  content: "\e935";
+}
+.icon-clone:before {
+  content: "\e936";
+}
+.icon-merge:before {
+  content: "\e932";
+}
+.icon-import:before {
+  content: "\e930";
+}
+.icon-export:before {
+  content: "\e931";
 }
 
 .icon-toggle-off:before {
@@ -28,7 +52,7 @@
 }
 
 .icon-tick:before {
-    content: "\e92e";
+    content: @tick-character;
 }
 
 .icon-toggle-on:before {
@@ -49,10 +73,6 @@
 
 .icon-collapse:before {
     content: "\e91e";
-}
-
-.icon-copy:before {
-    content: "\e91f";
 }
 
 .icon-danger:before {

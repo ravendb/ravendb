@@ -14,16 +14,31 @@ namespace Sparrow.Json
         private int _allocated;
         private int _used;
 
-        private List<Tuple<IntPtr,int>> _olderBuffers;
+        private List<Tuple<IntPtr,int, NativeMemory.ThreadStats>> _olderBuffers;
 
         private bool _isDisposed;
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
+        private NativeMemory.ThreadStats _allocatingThread;
 
-        public int Allocated => _allocated;
+        public int Allocated
+        {
+            get
+            {
+                var totalAllocation = _allocated;
+                if (_olderBuffers != null)
+                {
+                    foreach (var olderBuffer in _olderBuffers)
+                    {
+                        totalAllocation += olderBuffer.Item2;
+                    }
+                }
+                return totalAllocation;
+            }    
+        }
 
         public ArenaMemoryAllocator(int initialSize = 1024 * 1024)
         {
-            _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(initialSize);
+            _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(initialSize, out _allocatingThread);
             _allocated = initialSize;
             _used = 0;
 
@@ -34,7 +49,7 @@ namespace Sparrow.Json
 
         public bool GrowAllocation(AllocatedMemoryData allocation, int sizeIncrease)
         {
-            var end = (byte*)allocation.Address + allocation.SizeInBytes;
+            var end = allocation.Address + allocation.SizeInBytes;
             var distance = end - _ptrCurrent;
             if (distance != 0)
                 return false;
@@ -84,7 +99,7 @@ namespace Sparrow.Json
             // we need the next allocation to cover at least the next expansion (also doubling)
             // so we'll allocate 3 times as much as was requested, or twice as much as we already have
             // the idea is that a single allocation can server for multiple (increasing in size) calls
-            int newSize = Math.Max(Bits.NextPowerOf2(requestedSize)*3, _allocated * 2);
+            int newSize = Math.Max(Bits.NextPowerOf2(requestedSize)*3, _allocated);
             if (newSize < 0 || newSize > maxArenaSize)
                 newSize = maxArenaSize;
            
@@ -98,13 +113,16 @@ namespace Sparrow.Json
                     $"Increased size of buffer from {_allocated:#,#;0} to {newSize:#,#;0} because we need {requestedSize:#,#;0}. _used={_used:#,#;0}");
             }
 
-                
-            var newBuffer = NativeMemory.AllocateMemory(newSize);
+
+            NativeMemory.ThreadStats thread;
+            var newBuffer = NativeMemory.AllocateMemory(newSize, out thread);
 
             // Save the old buffer pointer to be released when the arena is reset
             if (_olderBuffers == null)
-                _olderBuffers = new List<Tuple<IntPtr, int>>();
-            _olderBuffers.Add(Tuple.Create(new IntPtr(_ptrStart), _allocated));
+                _olderBuffers = new List<Tuple<IntPtr, int, NativeMemory.ThreadStats>>();
+            _olderBuffers.Add(Tuple.Create(new IntPtr(_ptrStart), _allocated, _allocatingThread));
+
+            _allocatingThread = thread;
 
             _allocated = newSize;
 
@@ -117,17 +135,23 @@ namespace Sparrow.Json
         {
             // Reset current arena buffer
             _ptrCurrent = _ptrStart;
-            _used = 0;
-
             // Free old buffers not being used anymore
             if (_olderBuffers != null)
             {
                 foreach (var unusedBuffer in _olderBuffers)
                 {
-                    NativeMemory.Free((byte*)unusedBuffer.Item1, unusedBuffer.Item2);
+                    _used += unusedBuffer.Item2;
+                    NativeMemory.Free((byte*)unusedBuffer.Item1, unusedBuffer.Item2, unusedBuffer.Item3);
                 }
                 _olderBuffers = null;
+                if (_used > _allocated)  // we'll likely need more memory in the next round, double the allocation
+                {
+                    NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
+                    _allocated = Bits.NextPowerOf2(_used);
+                    _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(_allocated, out _allocatingThread);
+                }
             }
+            _used = 0;
         }
 
         ~ArenaMemoryAllocator()
@@ -144,9 +168,16 @@ namespace Sparrow.Json
                 return;
             _isDisposed = true;
 
-            ResetArena();
+            if (_olderBuffers != null)
+            {
+                foreach (var unusedBuffer in _olderBuffers)
+                {
+                    NativeMemory.Free((byte*)unusedBuffer.Item1, unusedBuffer.Item2, unusedBuffer.Item3);
+                }
+                _olderBuffers = null;
+            }
 
-            NativeMemory.Free(_ptrStart, _allocated);
+            NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
 
             GC.SuppressFinalize(this);
         }
@@ -167,5 +198,6 @@ namespace Sparrow.Json
     {
         public byte* Address;
         public int SizeInBytes;
+        public NativeMemory.ThreadStats AllocatingThread;
     }
 }

@@ -11,6 +11,7 @@ import getStatsMenuItem = require("common/shell/menu/items/stats");
 import getSettingsMenuItem = require("common/shell/menu/items/settings");
 import getTasksMenuItem = require("common/shell/menu/items/tasks");
 import getQueryMenuItem = require("common/shell/menu/items/query");
+import getTransformersMenuItem = require("common/shell/menu/items/transformers");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 
@@ -55,6 +56,7 @@ function generateActiveDatabaseMenuItems() {
     return [
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),
+        getTransformersMenuItem(appUrls),
         getQueryMenuItem(appUrls),
         new separatorMenuItem('Manage'),
         getTasksMenuItem(appUrls),

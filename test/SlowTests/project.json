@@ -7,7 +7,7 @@
     "compile": {
       "include": [ "**/*.cs", "../../src/CommonAssemblyInfo.cs" ]
     },
-    "embed": [ "Data/*.txt", "MailingList/Everett/*.txt", "Smuggler/Northwind_3.5.35168.ravendbdump" ],
+    "embed": [ "Data/*.txt", "MailingList/Everett/*.txt", "Smuggler/Northwind_3.5.35168.ravendbdump", "Smuggler/Indexes_And_Transformers_3.5.ravendbdump", "Smuggler/test.ravendbdump" ],
     "copyToOutput": {
       "include": [ "../xunit.runner.json"]
     }

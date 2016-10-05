@@ -94,7 +94,8 @@ namespace Voron.Impl.Journal
             long minRequiredSize = numberOfPages * _compressionPager.PageSize;
             if (_currentJournalFileSize < minRequiredSize)
             {
-                actualLogSize = minRequiredSize;
+                _currentJournalFileSize = Bits.NextPowerOf2(minRequiredSize);
+                actualLogSize = _currentJournalFileSize;
             }
 
             _lastFile = now;

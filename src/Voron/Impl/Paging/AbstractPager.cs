@@ -16,15 +16,9 @@ namespace Voron.Impl.Paging
     {
         private readonly StorageEnvironmentOptions _options;
 
-        protected int MinIncreaseSize
-        {
-            get { return 16*_pageSize; }
-        } // 64 KB with 4Kb pages. 
+        protected int MinIncreaseSize => 16*_pageSize; // 64 KB with 4Kb pages. 
 
-        protected int MaxIncreaseSize
-        {
-            get { return Constants.Size.Gigabyte; }
-        }
+        protected int MaxIncreaseSize => Constants.Size.Gigabyte;
 
         private long _increaseSize;
         private DateTime _lastIncrease;

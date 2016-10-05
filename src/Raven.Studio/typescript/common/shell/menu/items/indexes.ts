@@ -1,24 +1,25 @@
 ﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import separatorMenuItem = require('common/shell/menu/separatorMenuItem');
 
 export = getIndexesMenuItem;
 
 function getIndexesMenuItem(appUrls: computedAppUrls) {
     let indexesChildren = [
         new leafMenuItem({
-            title: "Indexes",
+            title: "List of indexes",
             nav: true,
             route: "databases/indexes",
             moduleId: "viewmodels/database/indexes/indexes",
-            css: 'icon-plus',
+            css: 'icon-list',
             dynamicHash: appUrls.indexes
         }),
         new leafMenuItem({
-            title: "Index merge suggestions",
+            title: "Merge suggestions",
             nav: true,
             route: "databases/indexes/mergeSuggestions",
             moduleId: "viewmodels/database/indexes/indexMergeSuggestions",
-            css: 'icon-plus',
+            css: 'icon-merge',
             dynamicHash: appUrls.megeSuggestions
         }),
         new leafMenuItem({
@@ -35,20 +36,14 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             nav: false
         }),
+        new separatorMenuItem(),
         new leafMenuItem({
-            title: 'Transformers',
-            route: 'databases/transformers',
-            moduleId: 'viewmodels/database/transformers/transformers',
+            title: 'Add Index',
+            route: 'databases/indexes/add',
+            moduleId: 'viewmodels/database/indexes/editIndex',
             css: 'icon-plus',
             nav: true,
-            dynamicHash: appUrls.transformers
-        }),
-        new leafMenuItem({
-            route: 'databases/transformers/edit(/:transformerName)',
-            moduleId: 'viewmodels/database/transformers/editTransformer',
-            title: 'Edit Transformer',
-            css: 'icon-plus',
-            nav: false
+            dynamicHash: appUrls.newIndex
         })
     ];
 

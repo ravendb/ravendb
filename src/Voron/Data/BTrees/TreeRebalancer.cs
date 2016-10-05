@@ -35,7 +35,7 @@ namespace Voron.Data.BTrees
         {
             using (DisableFreeSpaceUsageIfSplittingRootTree())
             {
-                _tree.ClearRecentFoundPages();
+                _tree.ClearPagesCache();
                 if (_cursor.PageCount <= 1) // the root page
                 {
                     RebalanceRoot(page);
@@ -300,12 +300,11 @@ namespace Voron.Data.BTrees
                         var leftPageNumber = implicitLeftNode->PageNumber;
 
                         Slice implicitLeftKeyToInsert;
-                        ByteStringContext<ByteStringMemoryCache>.Scope? externalScope;
+                        ByteStringContext<ByteStringMemoryCache>.ExternalScope? externalScope;
 
                         if (implicitLeftNode == actualKeyNode)
                         {
-                            externalScope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, actualKeyNode,
-                                out implicitLeftKeyToInsert);
+                            externalScope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, actualKeyNode, out implicitLeftKeyToInsert);
                         }
                         else
                         {
@@ -361,21 +360,21 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext.Scope GetActualKey(TreePage page, int pos, out Slice slice)
+        private ByteStringContext.ExternalScope GetActualKey(TreePage page, int pos, out Slice slice)
         {
             TreeNodeHeader* _;
             return GetActualKey(page, pos, out _, out slice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext.Scope GetActualKey(TreePage page, int pos, out TreeNodeHeader* node, out Slice key)
+        private ByteStringContext.ExternalScope GetActualKey(TreePage page, int pos, out TreeNodeHeader* node, out Slice key)
         {
             node = page.GetNode(pos);
             var scope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out key);
             while (key.Size == 0)
             {
                 Debug.Assert(page.IsBranch);
-                page = _tx.GetReadOnlyTreePage(node->PageNumber);
+                page = _tree.GetReadOnlyTreePage(node->PageNumber);
                 node = page.GetNode(0);
                 scope.Dispose();
                 scope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out key);

@@ -9,6 +9,10 @@
     private alertTimeout = 0;
     private biggestTimeToAlert = 0;
 
+    constructor() {
+        this.showSpinner.subscribe((show: boolean) => $("body").toggleClass("processing", show));
+    }
+
     progressReceived(timeToAlert: number) {
         clearTimeout(this.alertTimeout);
         this.alertTimeout = setTimeout(() => this.showServerNotRespondingAlert(), timeToAlert);

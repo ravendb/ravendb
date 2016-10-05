@@ -631,7 +631,7 @@ namespace Raven.Client.Connection
         /// <summary>
         ///     Get the indexing status
         /// </summary>
-        IndexStatus[] GetIndexesStatus();
+        IndexingStatus GetIndexingStatus();
 
         /// <summary>
         ///     Enables indexing.
