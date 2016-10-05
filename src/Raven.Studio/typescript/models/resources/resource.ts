@@ -11,8 +11,6 @@ class resource {
     disabled = ko.observable<boolean>(false);
     isLicensed: KnockoutComputed<boolean>;
     activeBundles = ko.observableArray<string>();
-    isImporting = ko.observable<boolean>(false);
-    importStatus = ko.observable<string>("");
     statistics: KnockoutObservable<any>;
     fullTypeName: string;
 

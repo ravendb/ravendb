@@ -32,6 +32,7 @@ class importDatabase extends viewModelBase {
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
+            /* TODO
             ko.postbox.subscribe("UploadProgress", (percentComplete: number) => {
                 var fs = this.activeFilesystem();
                 if (!fs) {
@@ -48,11 +49,12 @@ class importDatabase extends viewModelBase {
                 fs.importStatus("");
                 fs.isImporting(false);
                 this.isUploading(false);
-            })
+            })*/
         ];
     }
 
     fileSelected(fileName: string) {
+        /* TODO:
         var fs: filesystem = this.activeFilesystem();
         var isFileSelected = !!$.trim(fileName);
         var importFileName = $(this.filePickerTag).val().split(/(\\|\/)/g).pop();
@@ -70,10 +72,11 @@ class importDatabase extends viewModelBase {
                     this.hasFileSelected(false);
                     this.importedFileName("");
                 });
-        }
+        }*/
     }
 
     importFs() {
+        /* TODO
         var fs: filesystem = this.activeFilesystem();
         fs.isImporting(true);
         this.isUploading(true);
@@ -94,7 +97,7 @@ class importDatabase extends viewModelBase {
                 fs.importStatus("");
                 fs.isImporting(false);
             })
-            .always(() => this.isUploading(false));
+            .always(() => this.isUploading(false));*/
     }
 
     private waitForOperationToComplete(fs: filesystem, operationId: number) {
@@ -104,6 +107,7 @@ class importDatabase extends viewModelBase {
     }
 
     private importStatusRetrieved(fs: filesystem, operationId: number, result: dataDumperOperationStatusDto) {
+        /* TODO
         if (result.Completed) {
             if (result.ExceptionDetails == null) {
                 this.hasFileSelected(false);
@@ -124,7 +128,7 @@ class importDatabase extends viewModelBase {
                 fs.importStatus("Processing uploaded file, " + result.State.Progress.toLocaleLowerCase());
             }
             setTimeout(() => this.waitForOperationToComplete(fs, operationId), 1000);
-        }
+        }*/
     }
 }
 
