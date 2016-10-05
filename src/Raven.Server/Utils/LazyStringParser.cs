@@ -120,6 +120,13 @@ namespace Raven.Server.Utils
                         return Result.Failed;
                     dt = new DateTime(year, month, day, hour, minute, second, DateTimeKind.Utc);
                     return Result.DateTime;
+                case 23:
+                    if (buffer[19] != '.')
+                        return Result.Failed;
+                    if (TryParseNumber(buffer + 20, 3, out fractions) == false)
+                        return Result.Failed;
+                    dt = new DateTime(year, month, day, hour, minute, second).AddTicks(fractions);
+                    return Result.DateTime;
                 case 27://"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"
                     if (buffer[19] != '.')
                         return Result.Failed;
