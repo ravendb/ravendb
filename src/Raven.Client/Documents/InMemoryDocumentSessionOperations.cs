@@ -92,10 +92,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// all the listeners for this session
         /// </summary>
-        public DocumentSessionListeners Listeners
-        {
-            get { return theListeners; }
-        }
+        public DocumentSessionListeners Listeners => theListeners;
 
         ///<summary>
         /// The document store associated with this session

@@ -320,7 +320,7 @@ namespace Raven.Client.Document
             {
                 var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
                 var requestExecuter = GetRequestExecuter(databaseName);
-                var session = new Documents.DocumentSession(databaseName, this, Listeners, sessionId,
+                var session = new Documents.DocumentSession(databaseName, this, NewClientListeners, sessionId,
                     SetupCommands(DatabaseCommands, databaseName, options.Credentials, options), requestExecuter);
                 // AfterSessionCreated(session);
                 return session;
@@ -660,7 +660,7 @@ namespace Raven.Client.Document
 
                 var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
                 var requestExecuter = GetRequestExecuter(databaseName);
-                var session = new Documents.Async.AsyncDocumentSession(databaseName, this, asyncDatabaseCommands, Listeners, requestExecuter, sessionId);
+                var session = new Documents.Async.AsyncDocumentSession(databaseName, this, asyncDatabaseCommands, NewClientListeners, requestExecuter, sessionId);
                 //AfterSessionCreated(session);
                 return session;
             }
