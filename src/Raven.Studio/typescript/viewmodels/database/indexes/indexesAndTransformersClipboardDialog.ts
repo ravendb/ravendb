@@ -9,11 +9,13 @@ import saveTransformerCommand = require("commands/database/transformers/saveTran
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
+
+//TODO: we will probably split this class into indexes and transformers
 class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
 
     json = ko.observable<string>("");
-    indexes = ko.observableArray < indexDefinitionListItemDto>([]);
-    transformers = ko.observableArray<transformerDto>([]);
+    indexes = ko.observableArray < indexDefinitionListItemDto>([]); //TODO: use server side type?
+    //TODO: transformers = ko.observableArray<transformerDto>([]);
     pasteDeferred = $.Deferred();
 
 
@@ -35,17 +37,17 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
                     });
             var getTransformersPromise =
                 new getTransformersCommand(this.db)
-                    .execute()
+                    .execute();/* TODO
                     .done((results: transformerDto[]) => {
                         this.transformers(results);
-                    });
+                    });*/
             $.when<any>(getTransformersPromise, getIndexDefinitionsPromise)
                 .then(() => {
                     canActivateResult.resolve({ can: true });
                     var prettifySpacing = 4;
                     this.json(JSON.stringify({
                         Indexes: this.indexes(),
-                        Transformers: this.transformers()
+                        //TODO:Transformers: this.transformers()
                     }, null, prettifySpacing));
                 },
                 () => {
@@ -73,6 +75,7 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
     }
 
     saveAll() {
+        /* TODO
         if (this.isPaste && this.json()) {
             var indexesAndTransformers: { Indexes: indexDefinitionListItemDto[]; Transformers: transformerDto[] };
             var indexesDefinitions: indexDefinitionDto[] = [];
@@ -123,7 +126,7 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
 
                 });
             }
-
+            
             if (transformersDefinitions.length > 0) {
                 transformersDefinitions.forEach((transformer: savedTransformerDto) => {
                     var curDeferred = $.Deferred();
@@ -144,7 +147,7 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
                 .always(() => this.summarize(succeededIndexes, failedIndexes, succeededTransformers, failedTransformers));
         } else {
             this.close();
-        }
+        }*/
     }
 
     summarize(succeededIndexes: string[], failedIndexes: string[], succeededTransformers: string[], failedTransformers:string[]) {

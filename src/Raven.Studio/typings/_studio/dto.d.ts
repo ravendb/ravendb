@@ -57,6 +57,11 @@ interface saveDocumentResponseItemDto {
     Deleted: boolean;
 }
 
+
+interface transformerParamInfo {
+    name: string;
+    hasDefault: boolean;
+}
 interface operationIdDto {
     OperationId: number;
 }

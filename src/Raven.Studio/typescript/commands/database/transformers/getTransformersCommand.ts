@@ -1,17 +1,18 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class getTransformersCommand extends commandBase {
-    constructor(private db: database, private skip = 0, private take = 256) {
+    constructor(private db: database, private skip = 0, private take = 1024) {
         super();
     }
 
-    execute(): JQueryPromise<transformerDto[]> {
-        var args = {
+    execute(): JQueryPromise<Array<Raven.Abstractions.Indexing.TransformerDefinition>> {
+        const args = {
             start: this.skip,
             pageSize: this.take
         };
-        var url = "/transformers" + this.urlEncodeArgs(args);//TODO: use endpoints
+        const url = endpoints.databases.transformer.transformers + this.urlEncodeArgs(args);
         return this.query(url, null, this.db);
     }
 }

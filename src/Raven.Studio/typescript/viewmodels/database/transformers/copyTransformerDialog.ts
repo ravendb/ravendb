@@ -25,14 +25,14 @@ class copyTransformerDialog extends dialogViewModelBase {
         else {
             var canActivateResult = $.Deferred();
             new getSingleTransformerCommand(this.transformerName, this.db)
-                .execute()
+                .execute();/* TODO
                 .done((results: savedTransformerDto) => {
                     var prettifySpacing = 4;
                     var jsonString = JSON.stringify(results, null, prettifySpacing);
                     this.transformerJSON(jsonString);
                     canActivateResult.resolve({ can: true });
                 })
-                .fail(() => canActivateResult.reject());
+                .fail(() => canActivateResult.reject());*/
             canActivateResult.resolve({ can: true });
             return canActivateResult;
         }
@@ -55,7 +55,7 @@ class copyTransformerDialog extends dialogViewModelBase {
         return true;
     }
 
-    saveTransformer() {
+    saveTransformer() {/* TODO
         var transformerJson = this.transformerJSON();
         if (!this.isPaste) {
             this.close();
@@ -98,7 +98,7 @@ class copyTransformerDialog extends dialogViewModelBase {
             }
         } else {
             this.close();
-        }
+        }*/
     }
 
     close() {

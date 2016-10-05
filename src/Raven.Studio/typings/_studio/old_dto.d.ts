@@ -523,43 +523,9 @@ interface windowsAuthDto {
     RequiredUsers: windowsAuthDataDto[];
 }
 
-interface transformerDto {
-    name: string;
-    definition: {
-        TransformResults: string;
-        Name: string;
-        LockMode: string;
-    }
-}
-
-
-
 interface indexDefinitionListItemDto {
     name: string;
     definition: indexDefinitionDto;
-}
-
-interface saveTransformerDto {
-    Name: string;
-    TransformResults: string;
-}
-
-interface getTransformerResultDto {
-    'Transformer': string;
-}
-
-interface savedTransformerDto {
-    "Transformer":
-    {
-        "TransformResults": string;
-        "Name": string;
-        "LockMode": string;
-    }
-}
-
-interface transformerParamInfo {
-  name: string;
-  hasDefault: boolean;
 }
 
 interface transformerParamDto {

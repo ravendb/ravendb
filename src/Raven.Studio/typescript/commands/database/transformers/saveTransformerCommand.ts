@@ -1,40 +1,23 @@
 import commandBase = require("commands/commandBase");
-import getSingleTransformerCommand = require("commands/database/transformers/getSingleTransformerCommand");
 import database = require("models/resources/database");
 import transformer = require("models/database/index/transformer");
-
+import endpoints = require("endpoints");
 
 class saveTransformerCommand extends commandBase {
-    constructor(private trans: transformer, private db: database) {
+    constructor(private transformer: transformer, private db: database) {
         super();
     }
 
-    execute(): JQueryPromise<transformer> {
-        var doneTask = $.Deferred();
-        
-        var saveTransformerUrl = "/transformers/" + this.trans.name();//TODO: use endpoints
-        var saveTransformerPutArgs = JSON.stringify(this.trans.toSaveDto());
-        
+    execute(): JQueryPromise<void> {
+        const args = {
+            name: this.transformer.name()
+        };
+        const url = endpoints.databases.transformer.transformers + this.urlEncodeArgs(args);
+        const saveTransformerPutArgs = JSON.stringify(this.transformer.toDto());
 
-        this.put(saveTransformerUrl, saveTransformerPutArgs, this.db)
-            .fail((result:JQueryXHR)=> {
-                
-                this.reportError("Unable to save transformer", result.responseText, result.statusText);
-                doneTask.reject(result);
-            })
-            .done((result: getTransformerResultDto) => {
-                doneTask.resolve();
-                new getSingleTransformerCommand(result.Transformer, this.db).execute()
-                    .fail(xhr=> doneTask.reject(xhr))
-                    .done((savedTransformer: savedTransformerDto) => {
-                        this.reportSuccess("Saved " + this.trans.name());
-                        doneTask.resolve(new transformer().initFromSave(savedTransformer));
-                });
-        });
-    
-                
-
-        return doneTask;
+        return this.put(url, saveTransformerPutArgs, this.db)
+            .done(() => this.reportSuccess("Saved " + this.transformer.name()))
+            .fail((result: JQueryXHR) => this.reportError("Unable to save transformer", result.responseText, result.statusText));
 
     }
     
