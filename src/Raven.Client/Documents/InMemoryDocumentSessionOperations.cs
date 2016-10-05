@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using Raven.Client.Document.Batches;
 using System.Threading;
@@ -178,15 +179,30 @@ namespace Raven.Client.Documents
             return GetDocumentMetadata(instance).ETag;
         }
 
+        //TODO - Metadata WIP
+        private readonly List<object> _entitiesWithMetadataInstance = new List<object>();
+
         /// <summary>
         /// Gets the metadata for the specified entity.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="instance">The instance.</param>
         /// <returns></returns>
-        public BlittableJsonReaderObject GetMetadataFor<T>(T instance)
+        public DynamicJsonValue GetMetadataFor<T>(T instance)
         {
-            return GetDocumentMetadata(instance).Metadata;
+            //TODO - Metadata WIP
+            var documentInfo = GetDocumentMetadata(instance);
+            var metadataAsBlittable = documentInfo.Metadata;
+            var indexes = metadataAsBlittable.GetPropertiesByInsertionOrder();
+            var metadata = new DynamicJsonValue(metadataAsBlittable);
+            foreach (var index in indexes)
+            {
+                var prop = metadataAsBlittable.GetPropertyByIndex(index);
+                metadata[prop.Item1] = prop.Item2;
+            }
+            _entitiesWithMetadataInstance.Add(documentInfo.Entity);
+            documentInfo.MetadataInstance = metadata;
+            return metadata;
         }
 
         private DocumentInfo GetDocumentMetadata<T>(T instance)
@@ -648,10 +664,34 @@ more responsive application.
             };
             deferedCommands.Clear();
 
+            //TODO - Metadata WIP
+            UpdateMetadata();
+
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
 
             return result;
+        }
+
+        private void UpdateMetadata()
+        {
+            foreach (var entity in _entitiesWithMetadataInstance)
+            {
+                DocumentInfo documentInfo;
+                if (DocumentsByEntity.TryGetValue(entity, out documentInfo))
+                {
+                    if (documentInfo.Metadata.Modifications == null)
+                    {
+                        documentInfo.Metadata.Modifications = documentInfo.MetadataInstance;
+                        break;
+                    }
+                    foreach (var prop in documentInfo.MetadataInstance.Properties)
+                    {
+                        documentInfo.Metadata.Modifications[prop.Item1] = prop.Item2;
+                    }
+                }
+            }
+            _entitiesWithMetadataInstance.Clear();
         }
 
         private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
@@ -684,6 +724,11 @@ more responsive application.
                         etag = documentInfo.ETag;
                         if (documentInfo.Entity != null)
                         {
+                            foreach (var deleteListener in theListeners.DeleteListeners)
+                            {
+                                deleteListener.BeforeDelete(key, documentInfo.Entity, documentInfo.Metadata);
+                            }
+
                             DocumentsByEntity.Remove(documentInfo.Entity);
                             result.Entities.Add(documentInfo.Entity);
                         }
@@ -707,6 +752,12 @@ more responsive application.
         {
             foreach (var entity in DocumentsByEntity)
             {
+                foreach (var documentStoreListener in theListeners.StoreListeners)
+                {
+                    documentStoreListener.BeforeStore(entity.Value.Id, entity.Key, entity.Value.Metadata,
+                        entity.Value.Document);
+                }
+
                 BlittableJsonReaderObject document = null;
                 document = EntityToBlittable.ConvertEntityToBlittable(entity.Value.Id, entity.Key, entity.Value);
 
@@ -735,12 +786,7 @@ more responsive application.
 
         public void MarkReadOnly(object entity)
         {
-            var metadata = GetMetadataFor<object>(entity);
-            if (metadata.Modifications == null)
-                metadata.Modifications = new DynamicJsonValue(metadata)
-                {
-                    [Constants.Headers.RavenReadOnly] = true,
-                };
+            GetMetadataFor(entity)[Constants.Headers.RavenReadOnly] = true;
         }
 
         protected bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
@@ -764,7 +810,7 @@ more responsive application.
             if (changes == null)
                 return true;
 
-            NewChange(null, null, docChanges, DocumentsChanges.ChangeType.DocumentAdded);
+            NewChange(null, null, null, docChanges, DocumentsChanges.ChangeType.DocumentAdded);
             changes[documentInfo.Id] = docChanges.ToArray();
             return true;
         }
@@ -779,49 +825,53 @@ more responsive application.
                 BlittableJsonToken.String |
                 BlittableJsonToken.CompressedString;
 
-        private static bool CompareBlittable(string id, BlittableJsonReaderObject originalBlittable, 
+        private bool CompareBlittable(string id, BlittableJsonReaderObject originalBlittable, 
             BlittableJsonReaderObject newBlittable, IDictionary<string, DocumentsChanges[]> changes, 
             List<DocumentsChanges> docChanges)
         {
-            //TODO - Tests for  RemovedField and NewField
             var newBlittableProps = newBlittable.GetPropertyNames();
             var oldBlittableProps = originalBlittable.GetPropertyNames();
             var newFields = newBlittableProps.Except(oldBlittableProps);
             var removedFields = oldBlittableProps.Except(newBlittableProps);
 
+            var propertiesIds = newBlittable.GetPropertiesByInsertionOrder();
+
             foreach (var field in removedFields)
             {
                 if (changes == null)
                     return true;
-                NewChange(null, field, docChanges, DocumentsChanges.ChangeType.RemovedField);
+                NewChange(field, null, null, docChanges, DocumentsChanges.ChangeType.RemovedField);
             }
 
-            var propertiesIds = newBlittable.GetPropertiesByInsertionOrder();
             foreach (var propId in propertiesIds)
             {
                 var newPropInfo = newBlittable.GetPropertyByIndex(propId);
+
+                //TODO - mybe?
+                if (newPropInfo.Item1.Equals(Constants.Headers.RavenLastModified))
+                    continue;
+
                 if (newFields.Contains(newPropInfo.Item1))
                 {
                     if (changes == null)
                         return true;
-                    NewChange(newPropInfo.Item2, null, docChanges, DocumentsChanges.ChangeType.NewField);
+                    NewChange(newPropInfo.Item1, newPropInfo.Item2, null, docChanges, DocumentsChanges.ChangeType.NewField);
                     continue;
                 }
-                //TODO - need to check metadata
-                if (newPropInfo.Item1 == Constants.Metadata.Key)
-                    continue;
+                
 
                 var oldPropId = originalBlittable.GetPropertyIndex(newPropInfo.Item1);
                 var oldPropInfo = originalBlittable.GetPropertyByIndex(oldPropId);
 
-                if (newPropInfo.Item3 != oldPropInfo.Item3)
+                //TODO - problem when was null , mybe just remove it
+                /*if (newPropInfo.Item3 != oldPropInfo.Item3)
                 {
                     if (changes == null)
                         return true;
 
                     NewFieldTypeChange(newPropInfo.Item3, oldPropInfo.Item3, docChanges, DocumentsChanges.ChangeType.FieldTypeChanged);
                     continue;
-                }
+                }*/
                 switch ((newPropInfo.Item3 & TypesMask))
                 {
                     case BlittableJsonToken.Integer:
@@ -834,7 +884,7 @@ more responsive application.
 
                         if (changes == null)
                             return true;
-                        NewChange(newPropInfo.Item2, oldPropInfo.Item2, docChanges,
+                        NewChange(newPropInfo.Item1, newPropInfo.Item2, oldPropInfo.Item2, docChanges,
                             DocumentsChanges.ChangeType.FieldChanged);
                         break;
                     case BlittableJsonToken.Null:
@@ -843,16 +893,15 @@ more responsive application.
                         var newArray = newPropInfo.Item2 as BlittableJsonReaderArray;
                         var oldArray = oldPropInfo.Item2 as BlittableJsonReaderArray;
 
-                        //TODO - better exception
                         if ((newArray == null) || (oldArray == null))
-                            throw new Exception();
+                            throw new InvalidDataException("Invalid blittable");
 
                         if (!(newArray.Except(oldArray).Any()))
                             break;
 
                         if (changes == null)
                             return true;
-                        NewChange(newPropInfo.Item2, oldPropInfo.Item2, docChanges,
+                        NewChange(newPropInfo.Item1, newPropInfo.Item2, oldPropInfo.Item2, docChanges,
                             DocumentsChanges.ChangeType.FieldChanged);
                         break;
                     case BlittableJsonToken.StartObject:
@@ -874,10 +923,11 @@ more responsive application.
             return true;
         }
 
-        private static void NewChange(object newValue, object oldValue, List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
+        private static void NewChange(string name, object newValue, object oldValue, List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
         {
             docChanges.Add(new DocumentsChanges()
             {
+                FieldName = name,
                 FieldNewValue = newValue,
                 FieldOldValue = oldValue,
                 Change = change
@@ -897,9 +947,52 @@ more responsive application.
         public IDictionary<string, DocumentsChanges[]> WhatChanged()
         {
             var changes = new Dictionary<string, DocumentsChanges[]>();
+            //TODO - Metadata WIP
+            UpdateMetadata();
+
             PrepareForEntitiesDeletion(null, changes);
             GetAllEntitiesChanges(changes);
             return changes;
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether any of the entities tracked by the session has changes.
+        /// </summary>
+        /// <value></value>
+        public bool HasChanges
+        {
+            get
+            {
+                foreach (var entity in DocumentsByEntity)
+                {
+                    var document = EntityToBlittable.ConvertEntityToBlittable(entity.Value.Id, entity.Key, entity.Value);
+                    //TODO = FIX and remove
+                    entity.Value.Metadata.Modifications = null;
+                    if (EntityChanged(document, entity.Value, null))
+                    {
+                        return true;
+                    }
+                }
+                return DeletedEntities.Count > 0;
+            }
+        }
+
+        /// <summary>
+        /// Determines whether the specified entity has changed.
+        /// </summary>
+        /// <param name="entity">The entity.</param>
+        /// <returns>
+        /// 	<c>true</c> if the specified entity has changed; otherwise, <c>false</c>.
+        /// </returns>
+        public bool HasChanged(object entity)
+        {
+            DocumentInfo documentInfo;
+            if (DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
+                return false;
+            var document = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Id, entity, documentInfo);
+            //TODO = FIX and remove
+            documentInfo.Metadata.Modifications = null;
+            return EntityChanged(document, documentInfo, null); ;
         }
 
         public void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, int replicas = 1, bool majority = false)
@@ -931,6 +1024,7 @@ more responsive application.
             {
                 var newObj = EntityToBlittable.ConvertEntityToBlittable(pair.Value.Id, pair.Value.Entity, pair.Value);
                 EntityChanged(newObj, pair.Value, changes);
+                //TODO = FIX and remove
                 pair.Value.Metadata.Modifications = null;
             }
         }
@@ -996,10 +1090,12 @@ more responsive application.
         /// <param name="entity">The entity.</param>
         public void ExplicitlyVersion(object entity)
         {
-            var metadata = GetMetadataFor(entity);
+            //TODO - Check (Metadata WIP)
+            GetMetadataFor(entity)[Constants.Versioning.RavenEnableVersioning] = true;
+            /*var metadata = GetDocumentMetadata(entity).Metadata;
             if (metadata.Modifications == null)
                 metadata.Modifications = new DynamicJsonValue();
-            metadata.Modifications[Constants.Versioning.RavenEnableVersioning] = true;
+            metadata.Modifications[Constants.Versioning.RavenEnableVersioning] = true;*/
         }
 
         private void Dispose(bool isDisposing)
@@ -1058,6 +1154,8 @@ more responsive application.
             public BlittableJsonReaderObject Metadata { get; set; }
 
             public BlittableJsonReaderObject Document { get; set; }
+
+            public DynamicJsonValue MetadataInstance { get; set; }
 
             public object Entity { get; set; }
 

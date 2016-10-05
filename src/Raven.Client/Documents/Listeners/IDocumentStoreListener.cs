@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Raven.Json.Linq;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Listeners
 {
@@ -25,7 +26,7 @@ namespace Raven.Client.Documents.Listeners
         /// Returning true would force re-serialization of the entity, returning false would 
         /// mean that any changes to the entityInstance would be ignored in the current SaveChanges call.
         /// </returns>
-        bool BeforeStore(string key, object entityInstance, RavenJObject metadata, RavenJObject original);
+        bool BeforeStore(string key, object entityInstance, BlittableJsonReaderObject metadata, BlittableJsonReaderObject original);
 
         /// <summary>
         /// Invoked after the store request is sent to the server.
@@ -33,6 +34,6 @@ namespace Raven.Client.Documents.Listeners
         /// <param name="key">The key.</param>
         /// <param name="entityInstance">The entity instance.</param>
         /// <param name="metadata">The metadata.</param>
-        void AfterStore(string key, object entityInstance, RavenJObject metadata);
+        void AfterStore(string key, object entityInstance, BlittableJsonReaderObject metadata);
     }
 }
