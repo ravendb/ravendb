@@ -1,13 +1,8 @@
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using Raven.Client.Document;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.SessionOperations.Commands;
-using Raven.Json.Linq;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Client.Documents.SessionOperations
@@ -39,50 +34,53 @@ namespace Raven.Client.Documents.SessionOperations
             }
         }
 
-        private List<object> entities;
-        private int DeferredCommandsCount;
+        private List<object> _entities;
+        private int _deferredCommandsCount;
 
         public BatchCommand CreateRequest()
         {
+            var result = _session.PrepareForSaveChanges();
             _session.IncrementRequestCount();
             LogBatch();
 
-            var result = _session.PrepareForSaveChanges();
-            entities = result.Entities;
-            DeferredCommandsCount = result.DeferredCommandsCount;
+            _entities = result.Entities;
+            _deferredCommandsCount = result.DeferredCommandsCount;
+
             return new BatchCommand()
             {
                 Commands = result.Commands,
                 Context = _session.Context
             };
-
         }
 
         public void SetResult(BatchResult result)
         {
             //TODO - work in grogress
-            for (var i = DeferredCommandsCount; i < result.Results.Length; i++)
+            for (var i = _deferredCommandsCount; i < result.Results.Length; i++)
             {
                 var batchResult = result.Results[i] as BlittableJsonReaderObject;
+                if (batchResult == null)
+                    throw new ArgumentNullException();
+
                 string methodType;
                 batchResult.TryGet("Method", out methodType);
 
                 if (methodType != "PUT")
                     continue;
 
-                var entity = entities[i - DeferredCommandsCount];
+                var entity = _entities[i - _deferredCommandsCount];
                 InMemoryDocumentSessionOperations.DocumentInfo documentInfo;
 
                 if (_session.DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
                     continue;
 
-                string Key;
+                string key;
 
                 BlittableJsonReaderObject metadata;
                  batchResult.TryGet("Metadata", out metadata);
                 documentInfo.Metadata = metadata;
-                batchResult.TryGet("Key", out Key);
-                _session.DocumentsById[Key] = documentInfo;
+                batchResult.TryGet("Key", out key);
+                _session.DocumentsById[key] = documentInfo;
                 /*documentMetadata.ETag = batchResult.Etag;
                 documentMetadata.Key = batchResult.Key;
                 documentMetadata.OriginalMetadata = (RavenJObject)batchResult.Metadata.CloneToken();

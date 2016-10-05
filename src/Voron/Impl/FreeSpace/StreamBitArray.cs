@@ -180,12 +180,12 @@ namespace Voron.Impl.FreeSpace
             return tmpBuffer;
         }
 
-        public ByteStringContext.Scope ToSlice(ByteStringContext context, out Slice str)
+        public ByteStringContext.InternalScope ToSlice(ByteStringContext context, out Slice str)
         {
             return ToSlice(context, ByteStringType.Immutable, out str);
         }
 
-        public ByteStringContext.Scope ToSlice(ByteStringContext context, ByteStringType type, out Slice str)
+        public ByteStringContext.InternalScope ToSlice(ByteStringContext context, ByteStringType type, out Slice str)
         {
             var buffer = ToBuffer();
             ByteString byteString;

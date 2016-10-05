@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Client.Connection;
 using Raven.Client.Data;
-using System.Reflection;
 using Raven.Abstractions.Data;
-using Raven.Client.Data.Queries;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Json.Linq;
 using Raven.Server.Documents;
@@ -35,6 +30,7 @@ namespace TypingsGenerator
 
             scripter
                 .WithTypeMapping(TsPrimitive.String, typeof(Guid))
+                .WithTypeMapping(TsPrimitive.String, typeof(TimeSpan))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
                 .WithTypeMapping(TsPrimitive.Any, typeof(RavenJObject))
                 .WithTypeMapping(TsPrimitive.Any, typeof(RavenJValue))
@@ -76,6 +72,10 @@ namespace TypingsGenerator
             // alerts
             scripter.AddType(typeof(Alert));
             
+            // indexes
+            scripter.AddType(typeof(IndexStats));
+            scripter.AddType(typeof(IndexPerformanceStats));
+
 
 
             return scripter;

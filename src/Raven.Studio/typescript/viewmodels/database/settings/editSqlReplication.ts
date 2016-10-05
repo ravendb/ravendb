@@ -8,7 +8,8 @@ import app = require("durandal/app");
 import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
 import sqlReplication = require("models/database/sqlReplication/sqlReplication");
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
+import collectionsStats = require("models/database/documents/collectionsStats");
 import sqlReplicationStatsDialog = require("viewmodels/database/status/sqlReplicationStatsDialog");
 import document = require("models/database/documents/document");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
@@ -165,10 +166,10 @@ class editSqlReplication extends viewModelBase {
     }
 
     private fetchCollections(db: database): JQueryPromise<any> {
-        return new getCollectionsCommand(db)
+        return new getCollectionsStatsCommand(db)
             .execute()
-            .done((collections: Array<collection>) => {
-                this.collections(collections.map((collection: collection) => { return collection.name; }));
+            .done((collectionsStats: collectionsStats) => {
+                this.collections(collectionsStats.collections.map(x => x.name));
             });
     }
 

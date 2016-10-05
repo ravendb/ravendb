@@ -47,7 +47,7 @@ namespace Raven.Server.Config.Categories
         }
 
         [Description("Maximum number of documents to map by index during single indexing run")]
-        [DefaultValue(128 * 1024)]
+        [DefaultValue(1024 * 1024)]
         [MinValue(128)]
         [ConfigurationEntry("Raven/Indexing/MaxNumberOfDocumentsToFetchForMap")]
         [LegacyConfigurationEntry("Raven/MaxNumberOfItemsToPreFetch")]
@@ -61,8 +61,8 @@ namespace Raven.Server.Config.Categories
         public int MaxNumberOfTombstonesToFetch { get; set; }
 
         [Description("Number of seconds after which index will stop reading documents from disk and writing documents to index")]
-        [DefaultValue(10)]
-        [TimeUnit(TimeUnit.Seconds)]
+        [DefaultValue(3)]
+        [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/Indexing/DocumentProcessingTimeout")]
         [LegacyConfigurationEntry("Raven/Prefetcher/FetchingDocumentsFromDiskTimeout")]
         public TimeSetting DocumentProcessingTimeout { get; set; }

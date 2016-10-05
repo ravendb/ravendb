@@ -25,6 +25,10 @@ class leafMenuItem implements menuItem {
         css?: string,
         enabled?: KnockoutObservable<boolean>;
     }) {
+        if (nav && !hash && !dynamicHash) {
+            console.error("Invalid route configuration:" + title);
+        }
+
         this.title = title;
         this.route = route;
         this.moduleId = moduleId;

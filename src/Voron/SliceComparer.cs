@@ -16,7 +16,7 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int Compare( Slice x, Slice y)
+        public static int Compare(Slice x, Slice y)
         {
             return CompareInline(x, y);
         }
@@ -24,6 +24,7 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int CompareInline(Slice x, Slice y)
         {
+            Debug.Assert(x.HasValue && y.HasValue);
             Debug.Assert(x.Options == SliceOptions.Key);
             Debug.Assert(y.Options == SliceOptions.Key);
 
@@ -86,7 +87,7 @@ namespace Voron
             return obj.GetHashCode();
         }
 
-        public unsafe static bool StartWith(Slice value, Slice prefix)
+        public static unsafe bool StartWith(Slice value, Slice prefix)
         {
             int prefixSize = prefix.Content.Length;
             if (!value.Content.HasValue || prefixSize > value.Content.Length)

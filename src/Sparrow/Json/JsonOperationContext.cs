@@ -23,7 +23,7 @@ namespace Sparrow.Json
         private readonly ArenaMemoryAllocator _arenaAllocator;
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
-        private Dictionary<StringSegment, LazyStringValue> _fieldNames;
+        private readonly Dictionary<string, LazyStringValue> _fieldNames = new Dictionary<string, LazyStringValue>(StringComparer.Ordinal);
         private bool _disposed;
 
         private byte[] _managedBuffer;
@@ -117,38 +117,36 @@ namespace Sparrow.Json
 
         public LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
-            var key = new StringSegment(field, 0, field.Length);
             LazyStringValue value;
-            if (_fieldNames == null)
-                _fieldNames = new Dictionary<StringSegment, LazyStringValue>();
-
-            if (_fieldNames.TryGetValue(key, out value))
+            
+            if (_fieldNames.TryGetValue(field, out value))
                 return value;
 
-            value = GetLazyString(field, longLived: true);
-            _fieldNames[key] = value;
+            var key = new StringSegment(field, 0, field.Length);
+            value = GetLazyString(key, longLived: true);
+            _fieldNames[field] = value;
             return value;
         }
 
         public LazyStringValue GetLazyString(string field)
         {
-            return GetLazyString(field, longLived: false);
-        }
-
-        private unsafe LazyStringValue GetLazyString(string field, bool longLived)
-        {
             if (field == null)
                 return null;
 
+            return GetLazyString(field, longLived: false);
+        }
+
+        private unsafe LazyStringValue GetLazyString(StringSegment field, bool longLived)
+        {
             var state = new JsonParserState();
             state.FindEscapePositionsIn(field);
             var maxByteCount = Encoding.GetMaxByteCount(field.Length);
             var memory = GetMemory(maxByteCount + state.GetEscapePositionsSize(), longLived: longLived);
 
-            fixed (char* pField = field)
+            fixed (char* pField = field.String)
             {
-                var address = (byte*)memory.Address;
-                var actualSize = Encoding.GetBytes(pField, field.Length, address, memory.SizeInBytes);
+                var address = memory.Address;
+                var actualSize = Encoding.GetBytes(pField + field.Start, field.Length, address, memory.SizeInBytes);
                 state.WriteEscapePositionsTo(address + actualSize);
                 var result = new LazyStringValue(field, address, actualSize, this)
                 {

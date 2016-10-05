@@ -14,16 +14,15 @@ using Sparrow;
 
 namespace Raven.Server.Web.System
 {
-
     public class StudioHandler : RequestHandler
     {
         private static readonly Dictionary<string, string> MimeMapping = new Dictionary<string, string>()
         {
-            { "css", "text/css"},
-            { "png", "image/png" },
-            { "svg", "image/svg+xml" },
-            { "js", "application/javascript" },
-            { "json", "application/javascript" }
+            {"css", "text/css"},
+            {"png", "image/png"},
+            {"svg", "image/svg+xml"},
+            {"js", "application/javascript"},
+            {"json", "application/javascript"}
         };
 
         //TODO: write better impl for this! - it is temporary solution to make studio work properly
@@ -63,18 +62,24 @@ namespace Raven.Server.Web.System
         public async Task GetStudioFile()
         {
             var filename = new StringSegment(
-                RouteMatch.Url, 
+                RouteMatch.Url,
                 RouteMatch.MatchLength,
                 RouteMatch.Url.Length - RouteMatch.MatchLength);
 
-            var ravenPath = $"~/../../Raven.Studio/wwwroot/{filename}";
-
-#if DEBUG
-            ravenPath = Path.GetFullPath(ravenPath).Replace($"{Path.DirectorySeparatorChar}test{Path.DirectorySeparatorChar}", $"{Path.DirectorySeparatorChar}src{Path.DirectorySeparatorChar}");
-#endif
+            var ravenPath = Path.GetFullPath($"~/../../Raven.Studio/wwwroot/{filename}");
+            if (!File.Exists(ravenPath))
+            {
+                ravenPath = Path.GetFullPath($"~/../src/Raven.Studio/wwwroot/{filename}");
+            }
+            if (!File.Exists(ravenPath))
+            {
+                ravenPath =
+                    ravenPath
+                        .Replace($"{Path.DirectorySeparatorChar}test{Path.DirectorySeparatorChar}",
+                            $"{Path.DirectorySeparatorChar}src{Path.DirectorySeparatorChar}");
+            }
             if (File.Exists(ravenPath))
             {
-
                 await WriteFile(ravenPath);
                 return;
             }

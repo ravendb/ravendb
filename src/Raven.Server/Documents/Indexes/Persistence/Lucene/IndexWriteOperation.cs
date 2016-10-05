@@ -12,6 +12,7 @@ using Sparrow.Logging;
 using Voron.Impl;
 
 using Constants = Raven.Abstractions.Data.Constants;
+using Raven.Client.Data.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -77,10 +78,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public void IndexDocument(LazyStringValue key, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             global::Lucene.Net.Documents.Document luceneDoc;
-            using (stats.For("Lucene_ConvertTo"))
+            using (stats.For(IndexingOperation.Lucene.Convert))
                 luceneDoc = _converter.ConvertToCachedDocument(key, document, indexContext);
 
-            using (stats.For("Lucene_AddDocument"))
+            using (stats.For(IndexingOperation.Lucene.AddDocument))
                 _writer.AddDocument(luceneDoc, _analyzer);
 
             stats.RecordIndexingOutput(); // TODO [ppekrol] in future we will have to support multiple index outputs from single document
@@ -89,9 +90,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _logger.Info($"Indexed document for '{_indexName}'. Key: {key}. Output: {luceneDoc}.");
         }
 
+        public long GetUsedMemory()
+        {
+            return _writer.RamSizeInBytes();
+        }
+
         public void Delete(LazyStringValue key, IndexingStatsScope stats)
         {
-            using (stats.For("Lucene_Delete"))
+            using (stats.For(IndexingOperation.Lucene.Delete))
                 _writer.DeleteDocuments(_documentId.CreateTerm(key));
 
             if (_logger.IsInfoEnabled)
@@ -100,7 +106,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void DeleteReduceResult(string reduceKeyHash, IndexingStatsScope stats)
         {
-            using (stats.For("Lucene_Delete"))
+            using (stats.For(IndexingOperation.Lucene.Delete))
                 _writer.DeleteDocuments(_reduceKeyHash.CreateTerm(reduceKeyHash));
 
             if (_logger.IsInfoEnabled)

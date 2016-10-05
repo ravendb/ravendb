@@ -12,6 +12,7 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -79,15 +80,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
 
                 var threads = new DynamicJsonArray();
-                foreach (var stats in NativeMemory.ThreadAllocations.Values)
+                foreach (var stats in NativeMemory.ThreadAllocations.Values
+                    .Where(x=> x.ThreadInstance.IsAlive)
+                    .GroupBy(x=>x.Name))
                 {
-                    totalUnmanagedAllocations += stats.Allocations;
+                    var unmanagedAllocations = stats.Sum(x => x.Allocations);
+                    totalUnmanagedAllocations += unmanagedAllocations;
+                    var ids = new DynamicJsonArray(stats.Select(x=>(object)x.Id));
                     threads.Add(new DynamicJsonValue
                     {
-                        ["Name"] = stats.Name,
-                        ["Id"] = stats.Id,
-                        ["Allocations"] = stats.Allocations,
-                        ["HumaneAllocations"] = FileHeader.Humane(stats.Allocations)
+                        ["Name"] = stats.Key,
+                        ["NumberOfThreads"] = ids.Count,
+                        ["Ids"] = ids,
+                        ["Allocations"] = unmanagedAllocations,
+                        ["HumaneAllocations"] = FileHeader.Humane(unmanagedAllocations)
                     });
                 }
                 var managedMemory = GC.GetTotalMemory(false);
@@ -104,7 +110,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         ["TotalUnmanagedAllocations"] = FileHeader.Humane(totalUnmanagedAllocations),
                         ["ManagedAllocations"] = FileHeader.Humane(managedMemory),
                         ["TotalMemoryMapped"] = FileHeader.Humane(totalMapping),
-
                     },
 
                     ["Threads"] = threads,

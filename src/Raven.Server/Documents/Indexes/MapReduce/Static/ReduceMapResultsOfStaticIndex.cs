@@ -18,8 +18,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private readonly IndexingFunc _reducingFunc;
         private PropertyAccessor _propertyAccessor;
 
-        public ReduceMapResultsOfStaticIndex(IndexingFunc reducingFunc, MapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
-            : base(indexDefinition, indexStorage, metrics, mapReduceContext)
+        public ReduceMapResultsOfStaticIndex(Index index, IndexingFunc reducingFunc, MapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
+            : base(index, indexDefinition, indexStorage, metrics, mapReduceContext)
         {
             _reducingFunc = reducingFunc;
         }

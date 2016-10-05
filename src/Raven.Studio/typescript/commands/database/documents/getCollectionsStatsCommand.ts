@@ -9,8 +9,7 @@ class getCollectionsStatsCommand extends commandBase {
     /**
     * @param ownerDb The database the collections will belong to.
     */
-    //TODO: use or delete previous values
-    constructor(private ownerDb: database, private previousValues: collection[]=[]) {
+    constructor(private ownerDb: database) {
         super();
 
         if (!this.ownerDb) {

@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly TransactionOperationContext _indexContext;
         private readonly MapReduceIndexingContext _mapReduceContext;
         private readonly Slice _nestedValueKey;
-        private ByteStringContext.Scope _nestedValueKeyScope;
+        private ByteStringContext.InternalScope _nestedValueKeyScope;
         private readonly Transaction _tx;
 
         private NestedMapResultsSection _nestedSection;
@@ -57,8 +57,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             ModifiedPages = new HashSet<long>();
             FreedPages = new HashSet<long>();
 
-            Tree.PageModified += page => ModifiedPages.Add(page);
-            Tree.PageFreed += page => FreedPages.Add(page);
+            Tree.PageModified += page =>
+            {
+                ModifiedPages.Add(page);
+                FreedPages.Remove(page);
+            };
+
+            Tree.PageFreed += page =>
+            {
+                FreedPages.Add(page);
+                ModifiedPages.Remove(page);
+            };
         }
 
         public void Delete(long id)

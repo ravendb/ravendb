@@ -4,14 +4,14 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import saveIndexLockModeCommand = require("commands/database/index/saveIndexLockModeCommand");
 import index = require("models/database/index/index");
 
-class indexLockAllConfirm extends dialogViewModelBase {
+class indexLockSelectedConfirm extends dialogViewModelBase {
 
-    constructor(private setLockOperation: string, private db: database, private allIndexes: index[], private message: string) {
+    constructor(private setLockOperation: Raven.Abstractions.Indexing.IndexLockMode, private db: database, private indexes: index[], private message: string) {
         super();
     }
 
-    indexLockAllIndex() {
-        this.allIndexes.forEach(i => {
+    indexLockIndexes() {
+        this.indexes.forEach(i => {
             var originalLockMode = i.lockMode();
             if (originalLockMode !== this.setLockOperation) {
                 i.lockMode(this.setLockOperation);
@@ -28,4 +28,4 @@ class indexLockAllConfirm extends dialogViewModelBase {
     }
 }
 
-export = indexLockAllConfirm;
+export = indexLockSelectedConfirm;

@@ -120,9 +120,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     using (Slice.External(indexContext.Allocator, (byte*) &reduceKeyHash, sizeof(ulong), out val))
                         documentMapEntries.Add(id, val);
                 }
-
                 GetResultsStore(reduceKeyHash, indexContext, true).Add(id, mapResult.Data);
             }
+
+            DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
 
             if (existingIdsPerReduceKey != null && existingIdsPerReduceKey.Count > 0)
             {

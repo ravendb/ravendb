@@ -103,7 +103,10 @@ namespace Voron.Data.BTrees
 
                             Slice pageKey;
                             using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out pageKey))
+                            {
                                 LastMatch = SliceComparer.CompareInline(key, pageKey);
+                            }
+
                             LastSearchPosition = LastMatch > 0 ? 1 : 0;
                             return LastSearchPosition == 0 ? node : null;
                         }
@@ -122,7 +125,10 @@ namespace Voron.Data.BTrees
 
                             Slice pageKey;
                             using (TreeNodeHeader.ToSlicePtr(allocator, node, out pageKey))
-                                LastMatch = SliceComparer.CompareInline(key, pageKey);
+							{
+								LastMatch = SliceComparer.CompareInline(key, pageKey);
+							}
+
 
                             if (LastMatch == 0)
                                 break;
@@ -530,15 +536,13 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext.Scope GetNodeKey(LowLevelTransaction tx, int nodeNumber,
-            out Slice result)
+        public ByteStringContext.Scope GetNodeKey(LowLevelTransaction tx, int nodeNumber, out Slice result)
         {
             return GetNodeKey(tx, nodeNumber, ByteStringType.Mutable | ByteStringType.External, out result);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext.Scope GetNodeKey(LowLevelTransaction tx, int nodeNumber, ByteStringType type/* = ByteStringType.Mutable | ByteStringType.External*/,
-            out Slice result)
+        public ByteStringContext.Scope GetNodeKey(LowLevelTransaction tx, int nodeNumber, ByteStringType type/* = ByteStringType.Mutable | ByteStringType.External*/, out Slice result)
         {            
             var node = GetNode(nodeNumber);
 
@@ -570,7 +574,7 @@ namespace Voron.Data.BTrees
         }
 
         [Conditional("VALIDATE")]
-        public void DebugValidate(LowLevelTransaction tx, long root)
+        public void DebugValidate(Tree tree, long root)
         {
             if (NumberOfEntries == 0)
                 return;
@@ -581,35 +585,35 @@ namespace Voron.Data.BTrees
             }
 
             Slice prev;
-            var prevScope = GetNodeKey(tx, 0, out prev);
+            var prevScope = GetNodeKey(tree.Llt, 0, out prev);
             try
             {
-                var pages = new HashSet<long>();
-                for (int i = 1; i < NumberOfEntries; i++)
-                {
-                    var node = GetNode(i);
+            var pages = new HashSet<long>();
+            for (int i = 1; i < NumberOfEntries; i++)
+            {
+                var node = GetNode(i);
                     Slice current;
-                    var currentScope = GetNodeKey(tx, i, out current);
+                    var currentScope = GetNodeKey(tree.Llt, i, out current);
 
                     if (SliceComparer.CompareInline(prev, current) >= 0)
-                    {
-                        DebugStuff.RenderAndShowTree(tx, root);
-                        throw new InvalidOperationException("The page " + PageNumber + " is not sorted");
-                    }
-
-                    if (node->Flags == (TreeNodeFlags.PageRef))
-                    {
-                        if (pages.Add(node->PageNumber) == false)
-                        {
-                            DebugStuff.RenderAndShowTree(tx, root);
-                            throw new InvalidOperationException("The page " + PageNumber + " references same page multiple times");
-                        }
-                    }
-                    prevScope.Dispose();
-                    prev = current;
-                    prevScope = currentScope;
+                {
+                    DebugStuff.RenderAndShowTree(tree, root);
+                    throw new InvalidOperationException("The page " + PageNumber + " is not sorted");
                 }
+
+                if (node->Flags == (TreeNodeFlags.PageRef))
+                {
+                    if (pages.Add(node->PageNumber) == false)
+                    {
+                        DebugStuff.RenderAndShowTree(tree, root);
+                        throw new InvalidOperationException("The page " + PageNumber + " references same page multiple times");
+                    }
+                }
+                    prevScope.Dispose();
+                prev = current;
+                    prevScope = currentScope;
             }
+        }
             finally
             {
                 prevScope.Dispose();

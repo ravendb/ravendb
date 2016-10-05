@@ -1,9 +1,8 @@
 using Sparrow;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Runtime.CompilerServices;
 using Sparrow.Binary;
 using Voron.Data.BTrees;
 using Voron.Data.RawData;
@@ -60,7 +59,7 @@ namespace Voron.Data.Tables
             public bool IsGlobal;
             public Slice Name;
 
-            public ByteStringContext.Scope GetSlice(ByteStringContext context, TableValueReader value, out Slice slice)
+            public ByteStringContext.ExternalScope GetSlice(ByteStringContext context, TableValueReader value, out Slice slice)
             {
                 int totalSize;
                 var ptr = value.Read(StartIndex, out totalSize);
@@ -92,29 +91,23 @@ namespace Voron.Data.Tables
                 // We serialize the Type enum as ulong to be "future-proof"
                 var castedType = (long)Type;
 
-                fixed (int* startIndex = &StartIndex)
-                fixed (int* count = &Count)
-                fixed (bool* isGlobal = &IsGlobal)
-                {
-                    var serializer = new TableValueBuilder
+                var serializer = new TableValueBuilder
                             {
-                                &castedType,
-                                startIndex,
-                                count,
-                                isGlobal,
+                                castedType,
+                                StartIndex,
+                                Count,
+                                IsGlobal,
                                 Name
                             };
 
-                    byte[] serialized = new byte[serializer.Size];
+                byte[] serialized = new byte[serializer.Size];
 
-                    fixed (byte* destination = serialized)
-                    {
-                        serializer.CopyTo(destination);
-                    }
-
-                    return serialized;
+                fixed (byte* destination = serialized)
+                {
+                    serializer.CopyTo(destination);
                 }
 
+                return serialized;
             }
 
             public static SchemaIndexDef ReadFrom(ByteStringContext context, byte* location, int size)
@@ -188,25 +181,21 @@ namespace Voron.Data.Tables
 
             public byte[] Serialize()
             {
-                fixed (int* startIndex = &StartIndex)
-                fixed (bool* isGlobal = &IsGlobal)
-                {
-                    var serializer = new TableValueBuilder
+                var serializer = new TableValueBuilder
                     {
-                        startIndex,
-                        isGlobal,
+                        StartIndex,
+                        IsGlobal,
                         Name
                     };
 
-                    byte[] serialized = new byte[serializer.Size];
+                byte[] serialized = new byte[serializer.Size];
 
-                    fixed (byte* destination = serialized)
-                    {
-                        serializer.CopyTo(destination);
-                    }
-
-                    return serialized;
+                fixed (byte* destination = serialized)
+                {
+                    serializer.CopyTo(destination);
                 }
+
+                return serialized;
             }
 
             public static FixedSizeSchemaIndexDef ReadFrom(ByteStringContext context, byte* location, int size)
@@ -287,6 +276,14 @@ namespace Voron.Data.Tables
             return this;
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void Create(Transaction tx, string name)
+        {
+            Slice nameSlice;
+            Slice.From(tx.Allocator, name, ByteStringType.Immutable, out nameSlice);
+            Create(tx, nameSlice);
+        }
+
         /// <summary>
         /// A table is stored inside a tree, and has the following keys in it
         /// 
@@ -301,7 +298,7 @@ namespace Voron.Data.Tables
         ///  - schemas -> schema definition for the table
         /// 
         /// </summary>
-        public void Create(Transaction tx, string name)
+        public void Create(Transaction tx, Slice name)
         {
             if (_primaryKey == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0)
                 throw new InvalidOperationException($"Cannot create table {name} without a primary key and no indexes");
@@ -317,7 +314,7 @@ namespace Voron.Data.Tables
             Slice pageNumber;
             using (Slice.External(tx.Allocator, (byte*)&val, sizeof(long), ByteStringType.Immutable, out pageNumber))
             {
-                tableTree.Add(ActiveSectionSlice, pageNumber);
+            	tableTree.Add(ActiveSectionSlice, pageNumber);
             }
             
             var stats = (TableSchemaStats*)tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats));

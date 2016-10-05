@@ -70,9 +70,9 @@ namespace Voron.Data.BTrees
             if (item->Flags == TreeNodeFlags.PageRef)
                 throw new InvalidOperationException("Multi trees don't use overflows");
 
-            var nestedPagePtr = TreeNodeHeader.DirectAccess(_llt, item);
+            var nestedPagePtr = DirectAccessFromHeader(item);
 
-            var nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, item));
+            var nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)GetDataSize(item));
 
             var existingItem = nestedPage.Search(_llt, value);
             if (nestedPage.LastMatch != 0)
@@ -243,7 +243,7 @@ namespace Voron.Data.BTrees
             }
             else // we use a nested page here
             {
-                var nestedPage = new TreePage(TreeNodeHeader.DirectAccess(_llt, item), "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, item));
+                var nestedPage = new TreePage(DirectAccessFromHeader(item), "multi tree", (ushort)GetDataSize(item));
                 var nestedItem = nestedPage.Search(_llt, value);
                 if (nestedPage.LastMatch != 0) // value not found
                     return;
@@ -251,9 +251,9 @@ namespace Voron.Data.BTrees
                 if (item->Flags == TreeNodeFlags.PageRef)
                     throw new InvalidOperationException("Multi trees don't use overflows");
 
-                var nestedPagePtr = TreeNodeHeader.DirectAccess(_llt, item);
+                var nestedPagePtr = DirectAccessFromHeader(item);
 
-                nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, item))
+                nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)GetDataSize(item))
                 {
                     LastSearchPosition = nestedPage.LastSearchPosition
                 };
@@ -291,7 +291,7 @@ namespace Voron.Data.BTrees
                 return tree.State.NumberOfEntries;
             }
 
-            var nestedPage = new TreePage(TreeNodeHeader.DirectAccess(_llt, node), "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, node));
+            var nestedPage = new TreePage(DirectAccessFromHeader(node), "multi tree", (ushort)GetDataSize(node));
 
             return nestedPage.NumberOfEntries;
         }
@@ -321,9 +321,8 @@ namespace Voron.Data.BTrees
                 return tree.Iterate(false);
             }
 
-            var ptr = TreeNodeHeader.DirectAccess(_llt, node);
-            var dataSize = (ushort)TreeNodeHeader.GetDataSize(_llt, node);
-            var nestedPage = new TreePage(ptr, "multi tree", dataSize);
+            var ptr = DirectAccessFromHeader(node);
+            var nestedPage = new TreePage(ptr, "multi tree", (ushort)GetDataSize(node));
                 
             return new TreePageIterator(_llt, key ,this, nestedPage);
         }
@@ -359,7 +358,7 @@ namespace Voron.Data.BTrees
                         {
                             CheckConcurrency(key, version, updatedNode->Version, TreeActionType.Add);
 
-                            if (updatedNode->Version == ushort.MaxValue)
+                            if (updatedNode->Version == UInt16.MaxValue)
                                 updatedNode->Version = 0;
                             updatedNode->Version++;
 
@@ -391,8 +390,8 @@ namespace Voron.Data.BTrees
             // HasSpaceFor could called Defrag internally and read item has moved
             // need to ensure the nested page has a valid pointer
 
-            nestedPagePtr = TreeNodeHeader.DirectAccess(_llt, movedItem);
-            nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, movedItem));
+            nestedPagePtr = DirectAccessFromHeader(movedItem);
+            nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)GetDataSize(movedItem));
         }
     }
 }

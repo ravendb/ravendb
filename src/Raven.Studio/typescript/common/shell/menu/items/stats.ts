@@ -174,14 +174,6 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
                 dynamicHash: appUrls.statusDebugWebSocket
             }),
             new leafMenuItem({
-                route: 'databases/status/debug/persist',
-                moduleId: 'viewmodels/database/status/debug/statusDebugPersistAutoIndex',
-                title: 'Persist auto index',
-                tooltip: "Persists auto index",
-                nav: true,
-                dynamicHash: appUrls.statusDebugPersistAutoIndex
-            }),
-            new leafMenuItem({
                 route: 'databases/status/debug/explainReplication',
                 moduleId: 'viewmodels/database/status/debug/statusDebugExplainReplication',
                 title: 'Explain replication',

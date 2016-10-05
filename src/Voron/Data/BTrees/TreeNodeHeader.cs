@@ -41,45 +41,34 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext.Scope ToSlice(ByteStringContext context, TreeNodeHeader* node, out Slice str)
+        public static ByteStringContext.InternalScope ToSlice(ByteStringContext context, TreeNodeHeader* node, out Slice str)
         {
             return ToSlice(context, node, ByteStringType.Immutable, out str);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext.Scope ToSlice(ByteStringContext context, TreeNodeHeader* node, ByteStringType type, out Slice str)
+        public static ByteStringContext.InternalScope ToSlice(ByteStringContext context, TreeNodeHeader* node, ByteStringType type, out Slice str)
         {
             ByteString byteString;
-            var scope = context.From((byte*) node + Constants.NodeHeaderSize, node->KeySize,
-                type | (ByteStringType) SliceOptions.Key, out byteString);
+            var scope = context.From((byte*) node + Constants.NodeHeaderSize, node->KeySize, type | (ByteStringType) SliceOptions.Key, out byteString);
             str = new Slice(byteString);
             return scope;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext.Scope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, out Slice slice)
+        public static ByteStringContext.ExternalScope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, out Slice slice)
         {
             return ToSlicePtr(context, node, ByteStringType.Mutable | (ByteStringType) SliceOptions.Key, out slice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext.Scope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, ByteStringType type, out Slice slice)
+        public static ByteStringContext.ExternalScope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, ByteStringType type, out Slice slice)
         {
             ByteString str;
             var scope = context.FromPtr((byte*)node + Constants.NodeHeaderSize, node->KeySize,
                 type, out str);
             slice = new Slice(str);
             return scope;
-        }
-
-        public static byte* DirectAccess(LowLevelTransaction tx, TreeNodeHeader* node)
-        {
-            if (node->Flags == (TreeNodeFlags.PageRef))
-            {
-                var overFlowPage = tx.GetReadOnlyTreePage(node->PageNumber);
-                return overFlowPage.Base + Constants.TreePageHeaderSize;
-            }
-            return (byte*) node + node->KeySize + Constants.NodeHeaderSize;
         }
 
         public static ValueReader Reader(LowLevelTransaction tx, TreeNodeHeader* node)
@@ -96,7 +85,7 @@ namespace Voron.Data.BTrees
             return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
         }
 
-        public static ByteStringContext.Scope GetData(LowLevelTransaction tx, TreeNodeHeader* node, out Slice slice)
+        public static ByteStringContext.ExternalScope GetData(LowLevelTransaction tx, TreeNodeHeader* node, out Slice slice)
         {
             if (node->Flags == (TreeNodeFlags.PageRef))
             {
@@ -106,27 +95,6 @@ namespace Voron.Data.BTrees
                 return Slice.External(tx.Allocator, overFlowPage.Pointer + Constants.TreePageHeaderSize, (ushort)overFlowPage.OverflowSize, out slice);
             }
             return Slice.External(tx.Allocator, (byte*)node + node->KeySize + Constants.NodeHeaderSize, (ushort) node->DataSize, out slice);
-        }
-
-
-        public static void CopyTo(LowLevelTransaction tx, TreeNodeHeader* node, byte* dest)
-        {
-            if (node->Flags == (TreeNodeFlags.PageRef))
-            {
-                var overFlowPage = tx.GetPage(node->PageNumber);
-                Memory.Copy(dest, overFlowPage.Pointer + Constants.TreePageHeaderSize, overFlowPage.OverflowSize);
-            }
-            Memory.Copy(dest, (byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
-        }
-
-        public static int GetDataSize(LowLevelTransaction tx, TreeNodeHeader* node)
-        {
-            if (node->Flags == (TreeNodeFlags.PageRef))
-            {
-                var overFlowPage = tx.GetPage(node->PageNumber);
-                return overFlowPage.OverflowSize;
-            }
-            return node->DataSize;
         }
     }
 }

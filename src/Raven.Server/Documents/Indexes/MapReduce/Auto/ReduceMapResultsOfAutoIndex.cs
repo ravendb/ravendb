@@ -13,9 +13,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
     public unsafe class ReduceMapResultsOfAutoIndex : ReduceMapResultsBase<AutoMapReduceIndexDefinition>
     {
-        public ReduceMapResultsOfAutoIndex(AutoMapReduceIndexDefinition indexDefinition, IndexStorage indexStorage,
-            MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
-            : base(indexDefinition, indexStorage, metrics, mapReduceContext)
+        public ReduceMapResultsOfAutoIndex(Index index, AutoMapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
+            : base(index, indexDefinition, indexStorage, metrics, mapReduceContext)
         {
         }
 

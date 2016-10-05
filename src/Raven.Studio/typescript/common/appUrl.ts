@@ -98,7 +98,6 @@ class appUrl {
         statusDebugIndexFields: ko.computed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
         statusDebugIdentities: ko.computed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
         statusDebugWebSocket: ko.computed(() => appUrl.forStatusDebugWebSocket(appUrl.currentDatabase())),
-        statusDebugPersistAutoIndex: ko.computed(() => appUrl.forStatusDebugPersistAutoIndex(appUrl.currentDatabase())),
         statusDebugExplainReplication: ko.computed(() => appUrl.forStatusDebugExplainReplication(appUrl.currentDatabase())),
         infoPackage: ko.computed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
         dataSubscriptions: ko.computed(() => appUrl.forDataSubscriptions(appUrl.currentDatabase())),
@@ -481,10 +480,6 @@ class appUrl {
         return "#databases/status/debug/webSocket?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forStatusDebugPersistAutoIndex(db: database): string {
-        return "#databases/status/debug/persist?" + appUrl.getEncodedDbPart(db);
-    }
-
     static forStatusDebugExplainReplication(db: database): string {
         return "#databases/status/debug/explainReplication?" + appUrl.getEncodedDbPart(db);
     }
@@ -727,12 +722,8 @@ class appUrl {
             column: customColumns
         }
 
+        //TODO: we don't have Raven/DocumentsByEntityName anymore
         return appUrl.forResourceQuery(db) + "/streams/query/Raven/DocumentsByEntityName" + appUrl.urlEncodeArgs(args);
-    }
-
-    static forToggleIndexing(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/toggleIndexing?" + databasePart;
     }
 
     static forSetAcknowledgedEtag(db: database): string {

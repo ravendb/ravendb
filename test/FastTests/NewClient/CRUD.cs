@@ -89,5 +89,75 @@ namespace FastTests.NewClient
                 }
             }
         }
+
+        [Fact]
+        public void CRUD_Operations_With_Array_In_Object()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenNewSession())
+                {
+                    var family = new Family()
+                    {
+                        Names = new[] {"Hibernating Rhinos", "RavenDB"}
+                    };
+                    newSession.Store(family, "family/1");
+                    newSession.SaveChanges();
+
+                    var newFamily = newSession.Load<Family>("family/1");
+                    newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos" };
+                    Assert.Equal(newSession.WhatChanged().Count, 0);
+                    newFamily.Names = new[] {"Toli", "Mitzi", "Boki"};
+                    Assert.Equal(newSession.WhatChanged().Count, 1);
+                    newSession.SaveChanges();
+                }
+            }
+        }
+
+        [Fact]
+        public void CRUD_Operations_With_Null()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenNewSession())
+                {
+                    newSession.Store(new User { Name = null }, "users/1");
+                    newSession.SaveChanges();
+                    var user = newSession.Load<User>("users/1");
+                    Assert.Equal(newSession.WhatChanged().Count, 0);
+                    user.Age = 3;
+                    Assert.Equal(newSession.WhatChanged().Count, 1);
+                }
+            }
+        }
+
+        [Fact]
+        public void CRUD_Operations_With_Mark_Read_Only()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenNewSession())
+                {
+                    newSession.Store(new User { Name = "AAA", Age = 1}, "users/1");
+                    newSession.SaveChanges();
+                    var user = newSession.Load<User>("users/1");
+                    newSession.Advanced.MarkReadOnly(user);
+                    user.Age = 2;
+                    newSession.SaveChanges();
+                    user.Age = 3;
+                    newSession.SaveChanges();
+                }
+                using (var newSession = store.OpenNewSession())
+                {
+                    var user = newSession.Load<User>("users/1");
+                    Assert.Equal(user.Age, 2);
+                }
+            }
+        }
+
+        public class Family
+        {
+            public string[] Names { get; set; }
+        }
     }
 }

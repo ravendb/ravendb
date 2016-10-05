@@ -11,6 +11,21 @@ namespace Raven.Abstractions.Data
             InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
         }
 
+        public class Command
+        {
+            private Command()
+            {
+            }
+
+            public const string Key = "Key";
+
+            public const string Method = "Method";
+
+            public const string Etag = "Etag";
+
+            public const string Document = "Document";
+        }
+
         public class Metadata
         {
             private Metadata()

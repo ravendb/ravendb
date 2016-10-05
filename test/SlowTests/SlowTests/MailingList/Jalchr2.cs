@@ -12,7 +12,7 @@ namespace SlowTests.SlowTests.MailingList
 {
     public class Jalchr2 : RavenTestBase
     {
-        [Fact(Skip = "requires further investigation")]
+        [Fact]
         public void Streaming_documents_will_respect_the_sorting_order()
         {
             using (var store = GetDocumentStore())
@@ -46,7 +46,7 @@ namespace SlowTests.SlowTests.MailingList
                         session.SaveChanges();
                     }
                 }
-
+                //WaitForIndexing(store);
                 int count;
                 // Warm-up
                 using (var session = store.OpenSession())

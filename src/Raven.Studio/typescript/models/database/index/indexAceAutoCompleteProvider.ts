@@ -2,9 +2,9 @@ import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import indexDefinition = require("models/database/index/indexDefinition");
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
-import getDocumentsByEntityNameCommand = require("commands/database/documents/getDocumentsByEntityNameCommand");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import pagedResultSet = require("common/pagedResultSet");
+import collectionsStats = require("models/database/documents/collectionsStats");
 
 class indexAceAutoCompleteProvider {
     constructor(private activeDatabase: database, private editedIndex: KnockoutObservable<indexDefinition>) {
@@ -54,8 +54,8 @@ class indexAceAutoCompleteProvider {
             if (!!matchingAliasKeyValue) {
                 // get list of fields according to it's collection's first row
                 if (matchingAliasKeyValue.aliasValuePrefix.toLowerCase() === "docs") {
-                    new getDocumentsByEntityNameCommand(new collection(matchingAliasKeyValue.aliasValueSuffix, this.activeDatabase), 0, 1)
-                        .execute()
+                    new collection(matchingAliasKeyValue.aliasValuePrefix, this.activeDatabase)
+                        .fetchDocuments(0, 1)
                         .done((result: pagedResultSet<any>) => {
                             if (!!result && result.totalResultCount > 0) {
                                 var documentPattern: document = new document(result.items[0]);
@@ -77,28 +77,28 @@ class indexAceAutoCompleteProvider {
         return deferred;
     }
 
-    getIndexMapCompleterValues(editor: any, session: any, pos: AceAjax.Position): JQueryPromise<any> {
-        /*
-        var currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
+    getIndexMapCompleterValues(editor: any, session: AceAjax.IEditSession, pos: AceAjax.Position): JQueryPromise<any> {
+        var currentToken: any = session.getTokenAt(pos.row, pos.column);
         var completedToken: AceAjax.TokenInfo;
         var TokenIterator = require("ace/token_iterator").TokenIterator;
         var curPosIterator = new TokenIterator(editor.getSession(), pos.row, pos.column);
         var prevToken = curPosIterator.stepBackward();
 
         var returnedDeferred = $.Deferred();
-        var suggestionsArray = [];
+        var suggestionsArray: Array<string> = [];
         // validation: if is null or it's type is represented by a string
         if (!currentToken || typeof currentToken.type == "string") {
             // if in beginning of text or in free text token
-            if (!currentToken || currentToken.type == "text") {
+            if (!currentToken || currentToken.type === "text") {
                 suggestionsArray.push("from");
                 suggestionsArray.push("docs");
             }
             // if it's a docs predicate, return all collections in the db
-            else if (!!currentToken.value && (currentToken.type == "docs" || (!!prevToken && prevToken.type == "docs"))) {
-                new getCollectionsCommand(this.activeDatabase)
+            else if (!!currentToken.value && (currentToken.type === "docs" || (!!prevToken && prevToken.type === "docs"))) {
+                new getCollectionsStatsCommand(this.activeDatabase)
                     .execute()
-                    .done((collections: collection[]) => {
+                    .done((collectionsStats: collectionsStats) => {
+                        const collections = collectionsStats.collections;
                         collections.forEach((curCollection: collection) =>
                             suggestionsArray.push(curCollection.name));
                         returnedDeferred.resolve(suggestionsArray);
@@ -106,8 +106,8 @@ class indexAceAutoCompleteProvider {
                     .fail(() => returnedDeferred.reject());
             }
             // if it's a general "collection" predicate, return all fields from first document in the collection
-            else if (currentToken.type == "collections" || currentToken.type == "collectionName") {
-                if (currentToken.type == "collections") {
+            else if (currentToken.type === "collections" || currentToken.type === "collectionName") {
+                if (currentToken.type === "collections") {
                     completedToken = currentToken;
                 } else {
                     completedToken = prevToken;
@@ -117,9 +117,9 @@ class indexAceAutoCompleteProvider {
                     .done(x=> returnedDeferred.resolve(x))
                     .fail(() => returnedDeferred.reject());
             }
-            else if (currentToken.type == "data.prefix" || currentToken.type == "data.suffix") {
+            else if (currentToken.type === "data.prefix" || currentToken.type === "data.suffix") {
 
-                if (currentToken.type == "data.prefix") {
+                if (currentToken.type === "data.prefix") {
                     completedToken = currentToken;
                 } else {
                     completedToken = prevToken;
@@ -127,7 +127,7 @@ class indexAceAutoCompleteProvider {
 
                 var firstToken = session.getTokenAt(0, 0);
                 // treat a "from [foo] in [bar] type of index syntax
-                if (firstToken.value == "from") {
+                if (firstToken.value === "from") {
                     var aliases: { aliasKey: string; aliasValuePrefix: string; aliasValueSuffix: string }[] = this.getCollectionAliasesInsideIndexText(session);
 
                     this.getIndexMapCollectionFieldsForAutocomplete(session, completedToken)
@@ -146,8 +146,7 @@ class indexAceAutoCompleteProvider {
             returnedDeferred.reject();
         }
 
-        return returnedDeferred;*/
-        return null;
+        return returnedDeferred;
     }
 
     indexMapCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {

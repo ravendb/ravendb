@@ -6,7 +6,7 @@ import messagePublisher = require("common/messagePublisher");
 
 class deleteIndexesConfirm extends dialogViewModelBase {
 
-    deleteTask = $.Deferred();
+    deleteTask = $.Deferred<boolean>();
     title: string;
 
     constructor(private indexNames: string[], private db: database, title?: string) {
@@ -16,28 +16,25 @@ class deleteIndexesConfirm extends dialogViewModelBase {
             throw new Error("Indexes must not be null or empty.");
         }
 
-        this.title = !!title ? title : indexNames.length == 1 ? 'Delete index?' : 'Delete indexes?';
+        this.title = title || (indexNames.length === 1 ? "Delete index?" : "Delete indexes?");
     }
 
     deleteIndexes() {
-        var deleteTasks = this.indexNames.map(name => new deleteIndexCommand(name, this.db).execute());
-        var myDeleteTask = this.deleteTask;
+        const deleteTasks = this.indexNames.map(name => new deleteIndexCommand(name, this.db).execute());
 
         $.when.apply($, deleteTasks)
             .done(() => {
                 if (this.indexNames.length > 1) {
                     messagePublisher.reportSuccess("Successfully deleted " + this.indexNames.length + " indexes!");
                 }
-                myDeleteTask.resolve(false);
+                this.deleteTask.resolve(true);
             })
-            .fail(()=> {
-                myDeleteTask.reject();
-            });
+            .fail(() => this.deleteTask.reject());
         dialog.close(this);
     }
 
     cancel() {
-        this.deleteTask.reject();
+        this.deleteTask.resolve(false);
         dialog.close(this);
     }
 }

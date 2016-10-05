@@ -12,7 +12,7 @@ namespace SlowTests.SlowTests.MailingList
 {
     public class Jalchr3 : RavenTestBase
     {
-        [Fact(Skip = "requires further investigation")]
+        [Fact]
         public void Streaming_documents_will_respect_the_sorting_order()
         {
             using (var store = GetDocumentStore())
