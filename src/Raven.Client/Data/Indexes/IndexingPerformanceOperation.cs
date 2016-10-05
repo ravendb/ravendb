@@ -19,6 +19,8 @@ namespace Raven.Client.Data.Indexes
 
         public MapRunDetails MapDetails { get; set; }
 
+        public StorageCommitDetails CommitDetails { get; set; }
+
         public IndexingPerformanceOperation[] Operations { get; set; }
     }
 }
