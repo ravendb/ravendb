@@ -35,7 +35,6 @@ namespace Raven.Server.ServerWide.Context
     {
         private List<GCHandle> _pinnedObjects;
 
-        public ByteStringContext Allocator;
         public TTransaction Transaction;
 
         protected TransactionOperationContext(int initialSize, int longLivedSize): 
@@ -105,9 +104,6 @@ namespace Raven.Server.ServerWide.Context
             base.Reset();
 
             CloseTransaction();
-
-            Allocator?.Dispose();
-            Allocator = new ByteStringContext();
         }
     }
 }

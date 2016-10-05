@@ -272,7 +272,7 @@ namespace Raven.Server.Documents
         {
             var tree = context.Transaction.InnerTransaction.ReadTree("ChangeVector");
             ReplicationUtils.WriteChangeVectorTo(context, changeVector, tree);
-            }
+            
         }
 
         public static long ReadLastDocumentEtag(Transaction tx)
@@ -286,10 +286,10 @@ namespace Raven.Server.Documents
             {
                 if (it.SeekToLast())
                     return it.CurrentKey;
-                }
+            }
 
             return 0;
-            }
+        }
 
         public static long ReadLastTombstoneEtag(Transaction tx)
         {
@@ -302,10 +302,10 @@ namespace Raven.Server.Documents
             {
                 if (it.SeekToLast())
                     return it.CurrentKey;
-                }
+            }
 
             return 0;
-            }
+        }
 
         public static long ReadLastEtag(Transaction tx)
         {
@@ -1440,7 +1440,7 @@ namespace Raven.Server.Documents
             using (Slice.From(context.Allocator, lowerKey, lowerSize, out key))
             {
                 tombstoneTable.DeleteByKey(key);
-        }
+            }
         }
 
         private ChangeVectorEntry[] SetDocumentChangeVectorForLocalChange(
@@ -1538,8 +1538,8 @@ namespace Raven.Server.Documents
             {
                 if (table.ReadByKey(finalKeySlice) == null)
                 {
-                return finalKey;
-            }
+                    return finalKey;
+                }   
             }
 
             /* We get here if the user inserted a document with a specified id.
@@ -1564,15 +1564,17 @@ namespace Raven.Server.Documents
                     }
                     lastKnownFree = maybeFree;
                     maybeFree = Math.Max(maybeFree - (maybeFree - lastKnownBusy) / 2, lastKnownBusy + 1);
-                }
-                else
-                {
-                    lastKnownBusy = maybeFree;
-                    maybeFree = Math.Min(lastKnownFree, maybeFree * 2);
+                    }
+                    else
+                    {
+                        lastKnownBusy = maybeFree;
+                        maybeFree = Math.Min(lastKnownFree, maybeFree * 2);
+                    }
                 }
             }
         }
-        }
+
+        
 
         public long IdentityFor(DocumentsOperationContext ctx, string key)
         {

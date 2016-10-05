@@ -33,9 +33,9 @@ namespace Sparrow.Json
         public UTF8Encoding Encoding;
 
         public CachedProperties CachedProperties;
-        public readonly ByteStringContext Allocator;
+        public ByteStringContext Allocator;
 
-        private int _lastStreamSize = InitialStreamSize;
+        //private int _lastStreamSize = InitialStreamSize;
 
 
         internal DateTime InPoolSince;
@@ -530,6 +530,9 @@ namespace Sparrow.Json
                 CachedProperties = new CachedProperties(this);// need to reset this as well
                 _fieldNames.Clear();
             }
+
+            Allocator?.Dispose();
+            Allocator = new ByteStringContext();
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
