@@ -14,6 +14,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly int _singleBloomFilterCapacity;
         private readonly TransactionOperationContext _context;
         private BloomFilter[] _filters;
+        private BloomFilter _currentFilter;
         private readonly Tree _tree;
 
         private CollectionOfBloomFilters(int singleBloomFilterCapacity, Tree tree, TransactionOperationContext context)
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.Indexes
                     do
                     {
                         collection.AddFilter(count == numberOfFilters - 1
-                            ? CreateCurrentFilter(count, it.CreateReaderForCurrent().Base, tree, indexContext)
+                            ? CreateCurrentFilter(it.CurrentKey, count, it.CreateReaderForCurrent().Base, tree)
                             : new BloomFilter(count, it.CreateReaderForCurrent().Base));
 
                         count++;
@@ -60,15 +61,11 @@ namespace Raven.Server.Documents.Indexes
             return collection;
         }
 
-        private static unsafe BloomFilter CreateCurrentFilter(int number, byte* src, Tree tree, TransactionOperationContext context)
+        private static unsafe BloomFilter CreateCurrentFilter(Slice key, int number, byte* src, Tree tree)
         {
-            Slice key;
-            using (Slice.From(context.Allocator, number.ToString("D9"), out key))
-            {
-                var ptr = tree.DirectAdd(key, BloomFilter.PtrSize);
-                Memory.Copy(ptr, src, BloomFilter.PtrSize);
-                return new BloomFilter(number, ptr);
-            }
+            var ptr = tree.DirectAdd(key, BloomFilter.PtrSize);
+            Memory.Copy(ptr, src, BloomFilter.PtrSize);
+            return new BloomFilter(number, ptr);
         }
 
         private void Initialize()
@@ -79,8 +76,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
             }
 
-            _filters = new BloomFilter[1];
-            _filters[0] = CreateNewFilter(0);
+            AddFilter(CreateNewFilter(0));
         }
 
         private unsafe BloomFilter CreateNewFilter(int number)
@@ -99,28 +95,27 @@ namespace Raven.Server.Documents.Indexes
             if (_filters == null)
             {
                 _filters = new BloomFilter[1];
-                _filters[0] = filter;
+                _filters[0] = _currentFilter = filter;
                 return;
             }
 
             var length = _filters.Length;
             Array.Resize(ref _filters, length + 1);
             _filters[length - 1].ReadOnly();
-            _filters[length] = filter;
+            _filters[length] = _currentFilter = filter;
         }
 
         public bool Add(LazyStringValue key)
         {
-            bool result;
-            BloomFilter filter;
             if (_filters.Length == 1)
             {
-                filter = _filters[0];
-                result = filter.Add(key);
-                if (result)
+                if (_currentFilter.Add(key))
+                {
                     ExpandFiltersIfNecessary();
+                    return true;
+                }
 
-                return result;
+                return false;
             }
 
             for (var i = 0; i < _filters.Length - 1; i++)
@@ -129,17 +124,18 @@ namespace Raven.Server.Documents.Indexes
                     return false;
             }
 
-            filter = _filters[_filters.Length - 1];
-            result = filter.Add(key);
-            if (result)
+            if (_currentFilter.Add(key))
+            {
                 ExpandFiltersIfNecessary();
+                return true;
+            }
 
-            return result;
+            return false;
         }
 
         private void ExpandFiltersIfNecessary()
         {
-            if (_filters[_filters.Length - 1].Count < _singleBloomFilterCapacity)
+            if (_currentFilter.Count < _singleBloomFilterCapacity)
                 return;
 
             AddFilter(CreateNewFilter(_filters.Length));
