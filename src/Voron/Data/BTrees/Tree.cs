@@ -237,9 +237,9 @@ namespace Voron.Data.BTrees
 #if DEBUG
                 Slice nodeCheck;
                 using(TreeNodeHeader.ToSlicePtr(_llt.Allocator, node,out nodeCheck))
-				{
-					Debug.Assert(SliceComparer.EqualsInline(nodeCheck, key));	
-				}                
+                {
+                    Debug.Assert(SliceComparer.EqualsInline(nodeCheck, key));	
+                }                
 #endif
                 shouldGoToOverflowPage = ShouldGoToOverflowPage(len);
 
@@ -1001,7 +1001,7 @@ namespace Voron.Data.BTrees
                             }
                         }
                     }
-            	}
+                }
             }
             return results;
         }
@@ -1120,7 +1120,8 @@ namespace Voron.Data.BTrees
             FixedSizeTree fixedTree;
             if (_fixedSizeTrees.TryGetValue(key, out fixedTree) == false)
             {
-                _fixedSizeTrees[key] = fixedTree = new FixedSizeTree(_llt, this, key, valSize, clone: false);
+                fixedTree = new FixedSizeTree(_llt, this, key, valSize);
+                _fixedSizeTrees[fixedTree.Name] = fixedTree;
             }
 
             State.Flags |= TreeFlags.FixedSizeTrees;
