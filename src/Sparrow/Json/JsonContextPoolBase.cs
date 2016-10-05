@@ -197,6 +197,7 @@ namespace Sparrow.Json
             {
                 var stack = Parent._contextPool.Value;
                 Context.Reset();
+                Interlocked.Exchange(ref Context.InUse, 0);
                 Context.InPoolSince = DateTime.UtcNow;
                 stack.Push(Context);
             }
