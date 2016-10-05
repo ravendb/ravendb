@@ -30,13 +30,6 @@ const enum TenantType {
     TimeSeries = 3
 }
 
-const enum ImportItemType {
-    Documents = 0x1,
-    Indexes = 0x2,
-    Transformers = 0x8,
-    RemoveAnalyzers = 0x8000
-}
-
 const enum filesystemSynchronizationType {
     Unknown = 0,
     ContentUpdate = 1,
