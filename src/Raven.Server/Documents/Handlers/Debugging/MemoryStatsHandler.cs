@@ -81,20 +81,32 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 var threads = new DynamicJsonArray();
                 foreach (var stats in NativeMemory.ThreadAllocations.Values
-                    .Where(x=> x.ThreadInstance.IsAlive)
-                    .GroupBy(x=>x.Name))
+                    .Where(x => x.ThreadInstance.IsAlive)
+                    .GroupBy(x => x.Name))
                 {
                     var unmanagedAllocations = stats.Sum(x => x.Allocations);
                     totalUnmanagedAllocations += unmanagedAllocations;
-                    var ids = new DynamicJsonArray(stats.Select(x=>(object)x.Id));
-                    threads.Add(new DynamicJsonValue
+                    var ids = new DynamicJsonArray(stats.Select(x => new DynamicJsonValue
+                    {
+                        ["Id"] = x.Id,
+                        ["Allocations"] = x.Allocations,
+                        ["HumaneAllocations"] = FileHeader.Humane(x.Allocations)
+                    }));
+                    var groupStats = new DynamicJsonValue
                     {
                         ["Name"] = stats.Key,
-                        ["NumberOfThreads"] = ids.Count,
-                        ["Ids"] = ids,
                         ["Allocations"] = unmanagedAllocations,
                         ["HumaneAllocations"] = FileHeader.Humane(unmanagedAllocations)
-                    });
+                    };
+                    if (ids.Count == 1)
+                    {
+                        groupStats["Id"] = stats.First().Id;
+                    }
+                    else
+                    {
+                        groupStats["Ids"] = ids;
+                    }
+                    threads.Add(groupStats);
                 }
                 var managedMemory = GC.GetTotalMemory(false);
                 var djv = new DynamicJsonValue
