@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Indexes
         protected internal MeterMetric ReducesPerSec = new MeterMetric();
 
         private bool _allocationCleanupNeeded;
-        private Size _currentMaximumAllowedMemory = new Size(16, SizeUnit.Megabytes);
+        private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
 
 
@@ -265,7 +265,7 @@ namespace Raven.Server.Documents.Indexes
                     DocumentDatabase = documentDatabase;
                     _environment = environment;
                     _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{IndexId}");
-                    _contextPool = new TransactionContextPool(_environment);
+                    _contextPool = new TransactionContextPool(_environment, 1024 * 1024 * 32);
                     _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
                     _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                     _indexStorage.Initialize(_environment);
@@ -623,7 +623,7 @@ namespace Raven.Server.Documents.Indexes
             _contextPool.Clean();
             ByteStringMemoryCache.Clean();
             IndexPersistence.Clean();
-            _currentMaximumAllowedMemory = new Size(16, SizeUnit.Megabytes);
+            _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
 
 
             var afterFree = NativeMemory.ThreadAllocations.Value.Allocations;
