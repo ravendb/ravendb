@@ -171,14 +171,12 @@ namespace Raven.Server.Documents.Indexes
                     throw new InvalidOperationException($"Cannot add new item to a read-only bloom filter '{_key}'.");
 
                 var newItem = false;
-                var primaryHash = key.GetHashCode();
-                var secondaryHash = Hashing.XXHash64.CalculateInline(key.Buffer, (ulong)key.Size);
+                var primaryHash = CalculatePrimaryHash(key);
+                var secondaryHash = CalculateSecondaryHash(key);
                 for (ulong i = 0; i < K; i++)
                 {
                     // Dillinger and Manolios double hashing
-                    var finalHash = (primaryHash + (long)(i * secondaryHash)) % M;
-                    if (finalHash < 0)
-                        finalHash = -finalHash;
+                    var finalHash = (primaryHash + (i * secondaryHash)) % M;
 
                     var ptrPosition = finalHash / BitVector.BitsPerByte;
                     var bitPosition = (int)(finalHash % BitVector.BitsPerByte);
@@ -202,14 +200,12 @@ namespace Raven.Server.Documents.Indexes
 
             public bool Contains(LazyStringValue key)
             {
-                var primaryHash = key.GetHashCode();
-                var secondaryHash = Hashing.XXHash64.CalculateInline(key.Buffer, (ulong)key.Size);
+                var primaryHash = CalculatePrimaryHash(key);
+                var secondaryHash = CalculateSecondaryHash(key);
                 for (ulong i = 0; i < K; i++)
                 {
                     // Dillinger and Manolios double hashing
-                    var finalHash = (primaryHash + (long)(i * secondaryHash)) % M;
-                    if (finalHash < 0)
-                        finalHash = -finalHash;
+                    var finalHash = (primaryHash + (i * secondaryHash)) % M;
 
                     var ptrPosition = finalHash / BitVector.BitsPerByte;
                     var bitPosition = (int)(finalHash % BitVector.BitsPerByte);
@@ -228,13 +224,25 @@ namespace Raven.Server.Documents.Indexes
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static bool GetBit(byte* ptr, long ptrPosition, int bitPosition)
+            private static ulong CalculatePrimaryHash(LazyStringValue key)
+            {
+                return Hashing.XXHash64.CalculateInline(key.Buffer, (ulong)key.Size, seed: 1);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static ulong CalculateSecondaryHash(LazyStringValue key)
+            {
+                return Hashing.XXHash64.CalculateInline(key.Buffer, (ulong)key.Size, seed: 1337);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static bool GetBit(byte* ptr, ulong ptrPosition, int bitPosition)
             {
                 return (ptr[ptrPosition] & (1 << bitPosition)) != 0;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static void SetBitToTrue(byte* ptr, long ptrPosition, int bitPosition)
+            private static void SetBitToTrue(byte* ptr, ulong ptrPosition, int bitPosition)
             {
                 ptr[ptrPosition] |= (byte)(1 << bitPosition);
             }
