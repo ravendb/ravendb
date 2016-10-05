@@ -107,7 +107,7 @@ namespace Raven.Server.Utils
             var inner = new DynamicJsonValue();
             var accessor = GetPropertyAccessor(value);
 
-            foreach (var property in accessor.Properties)
+            foreach (var property in accessor.PropertiesInOrder)
             {
                 var propertyValue = property.Value.GetValue(value);
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;

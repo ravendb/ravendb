@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             DynamicJsonValue reduceResult = _reduceOutput ? new DynamicJsonValue() : null;
 
-            foreach (var property in _propertyAccessor.Properties)
+            foreach (var property in _propertyAccessor.PropertiesInOrder)
             {
                 var value = property.Value.GetValue(documentToProcess);
 
