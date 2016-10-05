@@ -92,7 +92,7 @@ namespace FastTests.Server.Documents.Indexing
                     var filter = new CollectionOfBloomFilters.BloomFilter(0, read.Reader.Base);
 
                     Assert.False(filter.Add(key1));
-                    Assert.Equal(1, filter.Count); // TODO
+                    Assert.Equal(1, filter.Count);
                 }
             }
         }

@@ -143,14 +143,16 @@ namespace Raven.Server.Documents.Indexes
 
         public unsafe class BloomFilter
         {
+            public const int CountSize = sizeof(int);
             public const int PtrSize = 16 * 1024 * 1024;
             public const int Capacity = 10000000;
 
-            private const long M = PtrSize * BitVector.BitsPerByte;
+            private const long M = (PtrSize - CountSize) * BitVector.BitsPerByte;
             private const long K = 10;
 
             private readonly int _key;
             private readonly byte* _ptr;
+            private readonly int* _countPtr;
             private bool _readOnly;
 
             public int Count { get; private set; }
@@ -158,7 +160,9 @@ namespace Raven.Server.Documents.Indexes
             public BloomFilter(int key, byte* ptr)
             {
                 _key = key;
-                _ptr = ptr;
+                _countPtr = (int*)ptr;
+                _ptr = ptr + CountSize;
+                Count = *_countPtr;
             }
 
             public bool Add(LazyStringValue key)
@@ -187,7 +191,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (newItem)
                 {
-                    Count++;
+                    *_countPtr = ++Count;
                     return true;
                 }
 
