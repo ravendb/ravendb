@@ -238,5 +238,13 @@ namespace Raven.Server.Documents.Indexes
 
             _stats.MapDetails.CurrentlyAllocated = allocations;
         }
+        public void RecordCommitStats(int numberOfModifiedPages, int numberOfPagesWrittenToDisk)
+        {
+            if (_stats.CommitDetails == null)
+                _stats.CommitDetails = new StorageCommitDetails();
+
+            _stats.CommitDetails.NumberOfModifiedPages = numberOfModifiedPages;
+            _stats.CommitDetails.NumberOfPagesWrittenToDisk = numberOfPagesWrittenToDisk;
+        }
     }
 }

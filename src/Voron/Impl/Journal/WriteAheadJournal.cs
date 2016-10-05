@@ -836,7 +836,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public void WriteToJournal(LowLevelTransaction tx, int pageCount)
+        public int WriteToJournal(LowLevelTransaction tx, int pageCount)
         {
             var pages = PrepreToWriteToJournal(tx, _compressionPager, pageCount);
 
@@ -858,6 +858,8 @@ namespace Voron.Impl.Journal
                 _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                 CurrentFile = null;
             }
+
+            return pages.NumberOfPages;
         }
 
         private CompressedPagesResult PrepreToWriteToJournal(LowLevelTransaction tx, AbstractPager compressionPager, int pageCountIncludingAllOverflowPages)
