@@ -77,9 +77,10 @@ namespace Voron.Benchmark.Table
 
             var randomSeed = RandomSeed == -1 ? null : RandomSeed as int?;
 
-            Utils.GenerateWornoutTree(
+            Utils.GenerateWornoutTable(
                 Env,
                 TableNameSlice,
+                Schema,
                 GenerationTableSize,
                 GenerationBatchSize,
                 KeyLength,
