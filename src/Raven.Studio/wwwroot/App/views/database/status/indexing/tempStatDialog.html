@@ -1,0 +1,16 @@
+<div class="messageBox" tabindex="-1">
+    <div class="modal-header">
+        <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+            <i class="fa fa-times"></i>
+        </button>
+        <h4 class="modal-title" data-bind="Details"></h4>
+    </div>
+    <div class="modal-body">
+        <div>
+            <pre data-bind="aceEditor: { code: json, lang: 'ace/mode/json' }" style="width: 800px; height: 600px;"></pre>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-bind="click: close">Close</button>
+    </div>
+</div>

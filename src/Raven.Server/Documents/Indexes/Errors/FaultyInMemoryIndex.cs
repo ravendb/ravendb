@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
@@ -61,6 +66,76 @@ namespace Raven.Server.Documents.Indexes.Errors
             {
                 throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
             }
+        }
+
+        public override bool IsStale(DocumentsOperationContext databaseContext)
+        {
+            return false;
+        }
+
+        public override IndexProgress GetProgress(DocumentsOperationContext documentsContext)
+        {
+            return new IndexProgress
+            {
+                Name = Name,
+                Id = IndexId,
+                Type = Type
+            };
+        }
+
+        public override IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false, DocumentsOperationContext documentsContext = null)
+        {
+            return new IndexStats
+            {
+                Name = Name,
+                Id = IndexId,
+                Type = Type
+            };
+        }
+
+        public override void Start()
+        {
+            // no-op
+        }
+
+        public override void Stop()
+        {
+            // no-op
+        }
+
+        public override void SetPriority(IndexingPriority priority)
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
+        }
+
+        public override void SetLock(IndexLockMode mode)
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
+        }
+
+        public override Task StreamQuery(HttpResponse response, BlittableJsonTextWriter writer, IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
+        }
+
+        public override Task<DocumentQueryResult> Query(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
+        }
+
+        public override Task<FacetedQueryResult> FacetedQuery(FacetQuery query, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
+        }
+
+        public override TermsQueryResult GetTerms(string field, string fromValue, int pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
+        }
+
+        public override MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }
     }
 }

@@ -57,6 +57,26 @@ namespace FastTests.NewClient
         }
 
         [Fact]
+        public void Query_Long_Request()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenNewSession())
+                {
+                    var longName = new string('x', 2048);
+                    newSession.Store(new User { Name = longName }, "users/1");
+                    newSession.SaveChanges();
+
+                    var queryResult = newSession.Query<User>()
+                        .Where(x => x.Name.Equals(longName))
+                        .ToList();
+
+                    Assert.Equal(queryResult.Count, 1);
+                }
+            }
+        }
+
+        [Fact]
         public void Query_By_Index()
         {
             using (var store = GetDocumentStore())

@@ -13,6 +13,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     {
         public readonly Dictionary<string, Accessor> Properties = new Dictionary<string, Accessor>();
 
+        public readonly List<KeyValuePair<string, Accessor>> PropertiesInOrder =
+            new List<KeyValuePair<string, Accessor>>();
+
         public static PropertyAccessor Create(Type type)
         {
             return new PropertyAccessor(type);
@@ -37,6 +40,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     : CreateGetMethodForClass(prop, type);
 
                 Properties.Add(prop.Name, getMethod);
+                PropertiesInOrder.Add(new KeyValuePair<string, Accessor>(prop.Name, getMethod));
             }
         }
 

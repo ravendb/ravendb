@@ -48,9 +48,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 // 2nd from clause
 
                 var toCast = node.Expression; // order.Lines
-                var castExpression = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(IEnumerable<dynamic>){toCast}");
+                var castExpression = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(IEnumerable<dynamic>)({toCast})");
 
-                return node.ReplaceNode(toCast, castExpression);
+                return base.VisitFromClause(node.ReplaceNode(toCast, castExpression));
             }
         }
     }

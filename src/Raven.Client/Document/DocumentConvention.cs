@@ -59,6 +59,9 @@ namespace Raven.Client.Document
         private readonly IList<Tuple<Type, Func<ValueType, string>>> listOfRegisteredIdLoadConventions = 
             new List<Tuple<Type, Func<ValueType, string>>>();
 
+        public Action<object, StreamWriter> SerializeEntityToJsonStream;
+        public Func<Type, StreamReader, object> DeserializeEntityFromJsonStream;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentConvention"/> class.
         /// </summary>
@@ -102,7 +105,7 @@ namespace Raven.Client.Document
             MaxLengthOfQueryUsingGetUrl = 1024 + 512;
             ApplyReduceFunction = DefaultApplyReduceFunction;
             ReplicationInformerFactory = (url, jsonRequestFactory) => new ReplicationInformer(this, jsonRequestFactory);
-            CustomizeJsonSerializer = serializer => { }; // todo: remove this or merge with SerializeEntityToJson
+            CustomizeJsonSerializer = serializer => { }; // todo: remove this or merge with SerializeEntityToJsonStream
             FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
             ShouldAggressiveCacheTrackChanges = true;
             ShouldSaveChangesForceAggressiveCacheCheck = true;
@@ -110,19 +113,22 @@ namespace Raven.Client.Document
             AcceptGzipContent = true;
             RequestTimeThresholdInMilliseconds = 100;
 
-            SerializeEntityToJson  = (object entity, out Stream jsonStream) =>
+            SerializeEntityToJsonStream  = (entity, streamWriter) =>
             {
                 var jsonSerializer = CreateSerializer();
-
-                jsonStream = new MemoryStream();
-                var streamWriter = new StreamWriter(jsonStream);
-
                 jsonSerializer.Serialize(streamWriter, entity);
                 streamWriter.Flush();
-                jsonStream.Position = 0;
-                return jsonStream;
+            };
+
+            DeserializeEntityFromJsonStream = (type, streamReader) =>
+            {
+                var jsonSerializer = CreateSerializer();
+                var deserializedObject = jsonSerializer.Deserialize(streamReader, type);
+                return deserializedObject;
+                
             };
         }
+
 
         private IEnumerable<object> DefaultApplyReduceFunction(
             Type indexType,
@@ -826,39 +832,6 @@ namespace Raven.Client.Document
                 {
                     yield return propertyInfo;
                 }
-            }
-        }
-
-        public object JsonDeserialize(Type type, BlittableJsonReaderObject document)
-        {
-            var jsonSerializer = CreateSerializer();
-            /*TODO: Use a 4KB memory stream which we be allocated once per session */
-            using (var ms = new MemoryStream())
-            {
-                document.WriteJsonTo(ms);
-                ms.Position = 0;
-                using (var reader = new StreamReader(ms))
-                {
-                    return jsonSerializer.Deserialize(reader, type);
-                }
-            }
-        }
-
-        public delegate IDisposable JsonSerializerDelegate(object entity, out Stream jsonStream);
-
-        public JsonSerializerDelegate SerializeEntityToJson;
-
-        public BlittableJsonReaderObject JsonSerialize(object entity, JsonOperationContext context)
-        {
-
-            var jsonSerializer = CreateSerializer();
-
-            /*TODO: Use a 4KB memory stream which we be allocated once per session */
-            Stream jsonStream;
-
-            using (SerializeEntityToJson(entity, out jsonStream))
-            {
-                return context.ReadForMemory(jsonStream, "convention.Serialize");
             }
         }
     }

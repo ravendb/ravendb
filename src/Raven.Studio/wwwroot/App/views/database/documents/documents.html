@@ -1,12 +1,4 @@
 <div id="documents-pane" class="documents-page no-outline row" tabindex="0" data-bind="enableResize: true">
-    <!-- ko if: alerts().length > 0 -->
-    <!-- ko foreach: alerts -->
-    <div class="alert alert-dismissable" role="alert" data-bind="css: { 'alert-warning': alertLevel === 'Warning', 'alert-danger': alertLevel === 'Error' }">
-        <button data-bind="click: $root.dismissAlert.bind($root, uniqueKey)" type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-        <a data-bind="attr: { href: $root.urlForAlert($data) }"><span data-bind="text: title"></span></a>
-    </div>
-    <!-- /ko -->
-    <!-- /ko -->
 
     <div id="documents-page-container" class="col-md-2 col-resizable-target">
 
@@ -26,7 +18,7 @@
                     <div class="collection-name">
                         <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
                         <span class="collection-text pull-left collection-name-part" data-bind="text: prettyLabel(name), attr: {title: name}"></span>
-                        <span class="collection-text pull-left text-muted" data-bind="visible: !isSystemDocuments && !isAllDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '&nbsp;(' + documentsCountWithThousandsSeparator() + ')', updateHighlighting: documentCount()"></span>
+                        <span class="collection-text pull-left text-muted" data-bind="visible: !isAllDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '&nbsp;(' + documentsCountWithThousandsSeparator() + ')', updateHighlighting: documentCount()"></span>
                     </div>
                 </a>
             </li>

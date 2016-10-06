@@ -1,56 +1,63 @@
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import index = require("models/database/index/index");
 import appUrl = require("common/appUrl");
 import saveIndexLockModeCommand = require("commands/database/index/saveIndexLockModeCommand");
-import saveIndexAsPersistentCommand = require("commands/database/index/saveIndexAsPersistentCommand");
-import querySort = require("models/database/query/querySort");
 import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/database/indexes/resetIndexConfirm");
 import changeSubscription = require("common/changeSubscription");
-import recentQueriesStorage = require("common/recentQueriesStorage");
 import changesContext = require("common/changesContext");
 import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
 import indexesAndTransformersClipboardDialog = require("viewmodels/database/indexes/indexesAndTransformersClipboardDialog");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
-import d3 = require('d3');
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 import forceIndexReplace = require("commands/database/index/forceIndexReplace");
 import saveIndexPriorityCommand = require("commands/database/index/saveIndexPriorityCommand");
-import indexPriority = require("models/database/index/indexPriority");
-import tryRecoverCorruptedIndexes = require("commands/database/index/tryRecoverCorruptedIndexes");
-import indexLockAllConfirm = require("viewmodels/database/indexes/indexLockAllConfirm");
+import indexLockSelectedConfirm = require("viewmodels/database/indexes/indexLockSelectedConfirm");
+import getIndexStatsCommand = require("commands/database/index/getIndexStatsCommand");
+import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
+
+type indexGroup = {
+    entityName: string;
+    indexes: KnockoutObservableArray<index>;
+    groupHidden: KnockoutObservable<boolean>;
+};
 
 class indexes extends viewModelBase {
 
-    resetsInProgress = d3.set();
-
-    indexGroups = ko.observableArray<{ 
-        entityName: string; 
-        indexes: KnockoutObservableArray<index>; 
-        groupHidden: KnockoutObservable<boolean>;
-    }>();
-    queryUrl = ko.observable<string>();
+    indexGroups = ko.observableArray<indexGroup>();
+    sortedGroups: KnockoutComputed<indexGroup[]>;
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
-    containerSelector = "#indexesContainer";
-    recentQueries = ko.observableArray<storedQueryDto>();
-    indexMutex = true;
-    btnState = ko.observable<boolean>(false);
-    btnStateTooltip = ko.observable<string>("ExpandAll");
-    btnTitle = ko.computed(() => this.btnState() ? "Expand all" : "Collapse all");
-    sortedGroups: KnockoutComputed<{ entityName: string; indexes: KnockoutObservableArray<index>; }[]>;
-    corruptedIndexes: KnockoutComputed<index[]>;
-    lockModeCommon: KnockoutComputed<string>;
     searchText = ko.observable<string>();
-    summary: KnockoutComputed<string>;
+    lockModeCommon: KnockoutComputed<string>;
+    selectedIndexesName = ko.observableArray<string>();
+    indexesSelectionState: KnockoutComputed<checkbox>;
+
+    indexingEnabled = ko.observable<boolean>(true); //TODO: populate this value from server
+
+    resetsInProgress = new Set<string>();
 
     constructor() {
         super();
-        this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterIndexes());
+        this.initObservables();
+    }
 
-        this.sortedGroups = ko.computed(() => {
+    private getAllIndexes(): index[] {
+        const all: index[] = [];
+        this.indexGroups().forEach(g => all.pushAll(g.indexes()));
+        return all.distinct();
+    }
+
+    private getSelectedIndexes(): Array<index> {
+        const selectedIndexes = this.selectedIndexesName();
+        return this.getAllIndexes().filter(x => selectedIndexes.contains(x.name));
+    }
+
+    private initObservables() {
+        this.searchText.throttle(200).subscribe(() => this.filterIndexes());
+
+        this.sortedGroups = ko.computed<indexGroup[]>(() => {
             var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
 
             groups.forEach((group: { entityName: string; indexes: KnockoutObservableArray<index> }) => {
@@ -60,148 +67,83 @@ class indexes extends viewModelBase {
             return groups;
         });
 
-        this.corruptedIndexes = ko.computed(() => {
-            var corrupted: index[] = [];
-            this.indexGroups().forEach(g => corrupted.pushAll(g.indexes().filter(i => i.priority && i.priority.indexOf(index.priorityErrored) !== -1)));
-
-            return corrupted.distinct();
-        });
-
         this.lockModeCommon = ko.computed(() => {
-            var allIndexes = this.getAllIndexes();
-            if (allIndexes.length === 0)
+            const selectedIndexes = this.getSelectedIndexes();
+            if (selectedIndexes.length === 0)
                 return "None";
 
-            var firstLockMode = allIndexes[0].lockMode();
-            for (var i = 1; i < allIndexes.length; i++) {
-                if (allIndexes[i].lockMode() !== firstLockMode) {
+            const firstLockMode = selectedIndexes[0].lockMode();
+            for (let i = 1; i < selectedIndexes.length; i++) {
+                if (selectedIndexes[i].lockMode() !== firstLockMode) {
                     return "Mixed";
                 }
             }
             return firstLockMode;
         });
-
-        
-        this.summary = ko.computed(() => {
-            var indexesCount = 0;
-            var mapReduceCount = 0;
-            this.indexGroups().forEach(g => {
-                g.indexes().forEach(index => {
-                    indexesCount += 1;
-                    if (index.isMapReduce()) {
-                        mapReduceCount++;
-                    }
-                });
-            });
-
-            var summary = "";
-            if (indexesCount === 0) {
-                return summary;
-            }
-
-            summary += indexesCount + " index";
-            if (indexesCount > 1) {
-                summary += "es";
-            }
-
-            var groupsCount = this.indexGroups().length;
-            summary += " for " + groupsCount + " collection";
-            if (groupsCount > 1) {
-                summary += "s";
-            }
-
-            if (mapReduceCount > 0) {
-                summary += " (" + mapReduceCount + " MapReduce)";
-            }
-
-            return summary;
+        this.indexesSelectionState = ko.pureComputed<checkbox>(() => {
+            var selectedCount = this.selectedIndexesName().length;
+            if (selectedCount === this.getAllIndexes().length)
+                return checkbox.Checked;
+            if (selectedCount > 0)
+                return checkbox.SomeChecked;
+            return checkbox.UnChecked;
         });
-    }
-
-    canActivate(args: any) {
-        super.canActivate(args);
-
-        var deferred = $.Deferred();
-
-        this.fetchRecentQueries();
-
-        $.when(this.fetchIndexes())
-            .done(() => deferred.resolve({ can: true }))
-            .fail(() => deferred.resolve({ can: false }));
-
-        return deferred;
     }
 
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink('AIHAR1');
 
-        this.queryUrl(appUrl.forQuery(this.activeDatabase(), null));
+        return this.fetchIndexes();
     }
 
     attached() {
         super.attached();
-        // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
-        //this.createKeyboardShortcut("Alt+=", () => this.toggleExpandAll(), this.containerSelector);
-        ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexesRawData(this.activeDatabase()));
-
-        var self = this;
-        $(window).bind('storage', () => {
-            self.fetchRecentQueries();
-        });
+        ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexesRawData(this.activeDatabase())); //TODO: do we need it?
     }
 
-    idlePriority(idx: index) {
-        this.setIndexPriority(idx, indexPriority.idleForced);
-    }
-
-    disabledPriority(idx: index) {
-        this.setIndexPriority(idx, indexPriority.disabledForced);
-    }
-
-    abandonedPriority(idx: index) {
-        this.setIndexPriority(idx, indexPriority.abandonedForced);
-    }
-
-    normalPriority(idx: index) {
-        this.setIndexPriority(idx, indexPriority.normal);
-    }
-
-    private setIndexPriority(idx: index, newPriority: indexPriority) {
-        new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
-            .execute()
-            .done(() => {
-                this.fetchIndexes();
-            });
-    }
-
-    private fetchIndexes() {
-        var deferred = $.Deferred();
-
-        var statsTask = new getDatabaseStatsCommand(this.activeDatabase())
+    private fetchIndexes(): JQueryPromise<void> {
+        const statsTask = new getIndexStatsCommand(this.activeDatabase())
             .execute();
 
-        var replacementTask = new getPendingIndexReplacementsCommand(this.activeDatabase()).execute();
+        const replacementTask = new getPendingIndexReplacementsCommand(this.activeDatabase()).execute(); //TODO: this is not working yet!
 
-        $.when<any>(statsTask, replacementTask)
-            .done((statsTaskResult: [databaseStatisticsDto], replacements: indexReplaceDocument[]) => {
-
-                var stats: databaseStatisticsDto = statsTaskResult[0];
-                this.processData(stats, replacements);
-
-                deferred.resolve(stats);
-            })
-            .fail(xhr => deferred.reject(xhr));
-
-        return deferred.promise();
+        return $.when<any>(statsTask, replacementTask)
+            .done(([stats]: [Array<Raven.Client.Data.Indexes.IndexStats>], [replacements]: [indexReplaceDocument[]]) => this.processData(stats, replacements));
     }
 
-    private fetchRecentQueries() {
-        this.recentQueries(recentQueriesStorage.getRecentQueries(this.activeDatabase()));
+    processData(stats: Array<Raven.Client.Data.Indexes.IndexStats>, replacements: indexReplaceDocument[]) {
+        //TODO: handle replacements
+
+        stats
+            .map(i => new index(i))
+            .forEach(i => this.putIndexIntoGroups(i));
+    }
+
+    private putIndexIntoGroups(i: index): void {
+        this.putIndexIntoGroupNamed(i, i.getGroupName());
+    }
+
+    private putIndexIntoGroupNamed(i: index, groupName: string): void {
+        const group = this.indexGroups.first(g => g.entityName === groupName);
+        if (group) {
+            const oldIndex = group.indexes.first((cur: index) => cur.name === i.name);
+            if (oldIndex) {
+                group.indexes.replace(oldIndex, i);
+            } else {
+                group.indexes.push(i);
+            }
+        } else {
+            this.indexGroups.push({
+                entityName: groupName,
+                indexes: ko.observableArray([i]),
+                groupHidden: ko.observable<boolean>(false)
+            });
+        }
     }
 
     private filterIndexes() {
-        var filterLower = this.searchText().toLowerCase();
+        const filterLower = this.searchText().toLowerCase();
         this.indexGroups().forEach(indexGroup => {
             var hasAnyInGroup = false;
             indexGroup.indexes().forEach(index => {
@@ -216,116 +158,58 @@ class indexes extends viewModelBase {
         });
     }
 
-    getRecentQueryUrl(query: storedQueryDto) {
-        return appUrl.forQuery(this.activeDatabase(), query.Hash);
+    copyIndex(i: index) {
+        app.showDialog(new copyIndexDialog(i.name, this.activeDatabase(), false));
     }
 
-    getRecentQuerySortText(sorts: string[]) {
-        if (sorts.length > 0) {
-            return sorts
-                .map(s => querySort.fromQuerySortString(s))
-                .map(s => s.toHumanizedString())
-                .reduce((first, second) => first + ", " + second);
-        }
-
-        return "";
+    copySelectedIndexes() {
+        alert("implement me!"); //TODO:
     }
 
-    getStoredQueryTransformerParameters(queryParams: Array<transformerParamDto>): string {
-        if (queryParams.length > 0) {
-            return "(" +
-                queryParams
-                    .map((param: transformerParamDto) => param.name + "=" + param.value)
-                    .join(", ") + ")";
-        }
+    resetIndex(indexToReset: index) {
+        const resetIndexVm = new resetIndexConfirm(indexToReset.name, this.activeDatabase());
 
-        return "";
+        // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
+        // let's issue marker to ignore index delete information for next few seconds because it might be caused by reset.
+        // Unfortunettely we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
+        // is resolved. 
+        this.resetsInProgress.add(indexToReset.name);
+
+        setTimeout(() => {
+            this.resetsInProgress.delete(indexToReset.name);
+        }, 30000);
+
+        app.showDialog(resetIndexVm);
     }
 
-    processData(stats: databaseStatisticsDto, replacements: indexReplaceDocument[]) {
-        var willReplaceMap = d3.map([]);
-        var willBeReplacedMap = d3.map([]);
-        replacements.forEach(r => {
-            willBeReplacedMap.set(r.indexToReplace, r.extractReplaceWithIndexName());
-            willReplaceMap.set(r.extractReplaceWithIndexName(), r.indexToReplace);
-        });
-
-        stats.Indexes
-            .map((i: indexStatisticsDto) => {
-                var idx = new index(i);
-                if (willBeReplacedMap.has(idx.name)) {
-                    idx.willBeReplacedByIndex(willBeReplacedMap.get(idx.name));
-                }
-                if (willReplaceMap.has(idx.name)) {
-                    idx.willReplaceIndex(willReplaceMap.get(idx.name));
-                }
-                return idx;
-            })
-            .forEach(i => this.putIndexIntoGroups(i));
-    }
-
-    putIndexIntoGroups(i: index) {
-        if (!i.forEntityName || i.forEntityName.length === 0) {
-            this.putIndexIntoGroupNamed(i, "Other");
-        } else {
-            this.putIndexIntoGroupNamed(i, this.getGroupName(i));
-        }
-    }
-
-    getGroupName(i: index) {
-        return i.forEntityName.sort((l, r) => l.toLowerCase() > r.toLowerCase() ? 1 : -1).join(", ");
-    }
-
-    putIndexIntoGroupNamed(i: index, groupName: string) {
-        var group = this.indexGroups.first(g => g.entityName === groupName);
-        var oldIndex: index;
-        if (group) {
-            oldIndex = group.indexes.first((cur: index) => cur.name === i.name);
-            if (!!oldIndex) {
-                group.indexes.replace(oldIndex, i);
-            } else {
-                group.indexes.push(i);
-            }
-        } else {
-            this.indexGroups.push({ 
-                entityName: groupName, 
-                indexes: ko.observableArray([i]), 
-                groupHidden: ko.observable<boolean>(false) });
-        }
-    }
-
-    createNotifications(): Array<changeSubscription> {
-        return [
-            //TODO: changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
-            changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent())
-        ];
-    }
-
-    processReplaceEvent() {
-         if (this.indexMutex) {
-            this.indexMutex = false;
-            setTimeout(() => {
-                this.fetchIndexes().always(() => this.indexMutex = true);
-            }, 10);
-        }
+    deleteIndex(i: index) {
+        this.promptDeleteIndexes([i]);
+        this.resetsInProgress.delete(i.name);
     }
 
     processIndexEvent(e: Raven.Abstractions.Data.IndexChangeNotification) {
-        if (e.Type === "IndexRemoved") {
+        const indexRemovedEvent = "IndexRemoved" as Raven.Abstractions.Data.IndexChangeTypes;
+        if (e.Type === indexRemovedEvent) {
             if (!this.resetsInProgress.has(e.Name)) {
                 this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
             }
         } else {
-            if (this.indexMutex) {
-                this.indexMutex = false;
-                setTimeout(() => {
-                    this.fetchIndexes().always(() => this.indexMutex = true);
-                }, 5000);
-            }
+            setTimeout(() => {
+                this.fetchIndexes();
+            }, 5000);
         }
     }
 
-    findIndexesByName(indexName: string) {
+    private removeIndexesFromAllGroups(indexes: index[]) {
+        this.indexGroups().forEach(g => {
+            g.indexes.removeAll(indexes);
+        });
+
+        // Remove any empty groups.
+        this.indexGroups.remove((item: indexGroup) => item.indexes().length === 0);
+    }
+
+    private findIndexesByName(indexName: string): index[] {
         var result = new Array<index>();
         this.indexGroups().forEach(g => {
             g.indexes().forEach(i => {
@@ -338,65 +222,87 @@ class indexes extends viewModelBase {
         return result;
     }
 
-    copyIndex(i: index) {
-        app.showDialog(new copyIndexDialog(i.name, this.activeDatabase(), false));
-    }
-
-    pasteIndex() {
-        app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
-    }
-
-    copyIndexesAndTransformers() {
-        app.showDialog(new indexesAndTransformersClipboardDialog(this.activeDatabase(), false));
-    }
-
-    pasteIndexesAndTransformers() {
-        var dialog = new indexesAndTransformersClipboardDialog(this.activeDatabase(), true);
-        app.showDialog(dialog);
-        dialog.pasteDeferred.done((summary: string) => {
-            this.confirmationMessage("Indexes And Transformers Paste Summary", summary, ['Ok']);
-        });
-    }
-    toggleExpandAll() {
-        if (this.btnState()) {
-            $(".index-group-content").collapse('show');
-        } else {
-            $(".index-group-content").collapse('hide');
+    private promptDeleteIndexes(indexes: index[]) {
+        if (indexes.length > 0) {
+            const deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
+            app.showDialog(deleteIndexesVm);
+            deleteIndexesVm.deleteTask
+                .done((deleted: boolean) => {
+                    if (deleted) {
+                        this.removeIndexesFromAllGroups(indexes);
+                    }
+                });
         }
-        
-        this.btnState.toggle();
     }
 
-    deleteIdleIndexes() {
-        var idleIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Idle") !== -1);
-        this.promptDeleteIndexes(idleIndexes);
+    unlockIndex(i: index) {
+        this.updateIndexLockMode(i, "Unlock");
     }
 
-    deleteDisabledIndexes() {
-        var abandonedIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Disabled") !== -1);
-        this.promptDeleteIndexes(abandonedIndexes);
+    lockIndex(i: index) {
+        this.updateIndexLockMode(i, "LockedIgnore");
     }
 
-    deleteAbandonedIndexes() {
-        var abandonedIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Abandoned") !== -1);
-        this.promptDeleteIndexes(abandonedIndexes);
+    lockErrorIndex(i: index) {
+        this.updateIndexLockMode(i, "LockedError");
     }
 
-    deleteAllIndexes() {
-        this.promptDeleteIndexes(this.getAllIndexes().filter(i => i.name !== "Raven/DocumentsByEntityName"));
+    lockSideBySide(i: index) {
+        this.updateIndexLockMode(i, "SideBySide");
     }
 
-    deleteIndex(i: index) {
-        this.promptDeleteIndexes([i]);
-        this.resetsInProgress.remove(i.name);
+    private updateIndexLockMode(i: index, newLockMode: Raven.Abstractions.Indexing.IndexLockMode) {
+        const originalLockMode = i.lockMode();
+        if (originalLockMode !== newLockMode) {
+            i.lockMode(newLockMode);
+
+            new saveIndexLockModeCommand(i, newLockMode, this.activeDatabase())
+                .execute()
+                .fail(() => i.lockMode(originalLockMode));
+        }
     }
 
-    deleteIndexGroup(i: { entityName: string; indexes: KnockoutObservableArray<index> }) {
-        this.promptDeleteIndexes(i.indexes());
+    idlePriority(idx: index) {
+        const idle = "Idle" as Raven.Client.Data.Indexes.IndexingPriority;
+        const forced = "Forced" as Raven.Client.Data.Indexes.IndexingPriority;
+        this.setIndexPriority(idx, idle + "," + forced as any);
     }
 
-    cancelIndex(i: index) {
-        var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([i.name], this.activeDatabase());
+    disabledPriority(idx: index) {
+        const disabled = "Disabled" as Raven.Client.Data.Indexes.IndexingPriority;
+        const forced = "Forced" as Raven.Client.Data.Indexes.IndexingPriority;
+        this.setIndexPriority(idx, disabled + "," + forced as any);
+    }
+
+    normalPriority(idx: index) {
+        this.setIndexPriority(idx, "Normal");
+    }
+
+    private setIndexPriority(idx: index, newPriority: Raven.Client.Data.Indexes.IndexingPriority) {
+        const originalPriority = idx.priority();
+        if (originalPriority !== newPriority) {
+            idx.priority(newPriority);
+
+            new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
+                .execute()
+                .fail(() => idx.priority(originalPriority));
+        }
+    }
+
+    createNotifications(): Array<changeSubscription> {
+        return [
+            //TODO: it isn't implemented on server side yet: changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
+            //TODO: use cool down
+            changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent())
+        ];
+    }
+
+    processReplaceEvent() {
+        setTimeout(() => this.fetchIndexes(), 10);
+    }
+
+    cancelSideBySideIndex(i: index) {
+        const cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([i.name], this.activeDatabase());
         app.showDialog(cancelSideBySideIndexViewModel);
         cancelSideBySideIndexViewModel.cancelTask
             .done((closedWithoutDeletion: boolean) => {
@@ -410,105 +316,78 @@ class indexes extends viewModelBase {
             });
     }
 
-    promptDeleteIndexes(indexes: index[]) {
-        if (indexes.length > 0) {
-            var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
-            app.showDialog(deleteIndexesVm);
-            deleteIndexesVm.deleteTask
-                .done((closedWithoutDeletion: boolean) => {
-                    if (!closedWithoutDeletion) {
-                        this.removeIndexesFromAllGroups(indexes);
-                    }
-                })
-                .fail(() => {
-                    this.removeIndexesFromAllGroups(indexes);
-                    this.fetchIndexes();
-            });
-        }
-    }
-
-
-    resetIndex(indexToReset: index) {
-        var resetIndexVm = new resetIndexConfirm(indexToReset.name, this.activeDatabase());
-
-        // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
-        // let's issue marker to ignore index delete information for next few seconds because it might be caused by reset.
-        // Unfortunettely we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
-        // if resolved. 
-        this.resetsInProgress.add(indexToReset.name);
-
-        setTimeout(() => {
-            this.resetsInProgress.remove(indexToReset.name);
-        }, 30000);
-        
-        app.showDialog(resetIndexVm);
-    }
-    
-    removeIndexesFromAllGroups(indexes: index[]) {
-        this.indexGroups().forEach(g => {
-            g.indexes.removeAll(indexes);
-        });
-
-        // Remove any empty groups.
-        this.indexGroups.remove((item: { entityName: string; indexes: KnockoutObservableArray<index> }) => item.indexes().length === 0);
-    }
-
-    unlockIndex(i: index) {
-        this.updateIndexLockMode(i, "Unlock");
-    }
-
-    lockIndex(i: index) { 
-        this.updateIndexLockMode(i, "LockedIgnore");
-    }
-
-    lockErrorIndex(i: index) {
-        this.updateIndexLockMode(i, "LockedError");
-    }
-
-    lockSideBySide(i: index) {
-        this.updateIndexLockMode(i, 'SideBySide');
-    }
-
-    updateIndexLockMode(i: index, newLockMode: string) {
-        // The old Studio would prompt if you were sure.
-        // However, changing the lock status is easily reversible, so we're skipping the prompt.
-
-        var originalLockMode = i.lockMode();
-        if (originalLockMode !== newLockMode) {
-            i.lockMode(newLockMode);
-
-            new saveIndexLockModeCommand(i, newLockMode, this.activeDatabase())
-                .execute()
-                .fail(() => i.lockMode(originalLockMode));
-        }
-    }
-
-    getAllIndexes(): index[]{
-        var all: index[] = [];
-        this.indexGroups().forEach(g => all.pushAll(g.indexes()));
-        return all.distinct();
-    }
-
-    makeIndexPersistent(index: index) {
-        new saveIndexAsPersistentCommand(index, this.activeDatabase()).execute();
-    }
-
     forceSideBySide(idx: index) {
         new forceIndexReplace(idx.name, this.activeDatabase()).execute();
     }
 
-    tryRecoverCorruptedIndexes() {
-        new tryRecoverCorruptedIndexes(this.activeDatabase()).execute();
-    }
-
-    setLockModeAllIndexes(lockModeString: string, lockModeStrForTitle: string) {
+    setLockModeSelectedIndexes(lockModeString: Raven.Abstractions.Indexing.IndexLockMode, lockModeStrForTitle: string) {
         if (this.lockModeCommon() === lockModeString)
             return;
 
-        var lockModeTitle = "Do you want to " + lockModeStrForTitle + " ALL Indexes?";
+        const lockModeTitle = `Do you want to ${lockModeStrForTitle} selected indexes?`;
 
-        var indexLockAllVm = new indexLockAllConfirm(lockModeString, this.activeDatabase(), this.getAllIndexes(), lockModeTitle);
+        const indexLockAllVm = new indexLockSelectedConfirm(lockModeString, this.activeDatabase(), this.getSelectedIndexes(), lockModeTitle);
         app.showDialog(indexLockAllVm);
+    }
+
+    deleteSelectedIndexes() {
+        this.promptDeleteIndexes(this.getSelectedIndexes());
+    }
+
+    pasteIndex() { //TODO: do we need this method in this class?
+        app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
+    }
+
+    copyIndexesAndTransformers() {//TODO: do we need this method in this class?
+        app.showDialog(new indexesAndTransformersClipboardDialog(this.activeDatabase(), false));
+    }
+
+    pasteIndexesAndTransformers() {//TODO: do we need this method in this class?
+        var dialog = new indexesAndTransformersClipboardDialog(this.activeDatabase(), true);
+        app.showDialog(dialog);
+        dialog.pasteDeferred.done((summary: string) => {
+            this.confirmationMessage("Indexes And Transformers Paste Summary", summary, ['Ok']);
+        });
+    }
+
+    startIndexing(): void {
+        this.indexingEnabled(true);
+        new toggleIndexingCommand(true, this.activeDatabase())
+            .execute()
+            .fail(() => this.indexingEnabled(false));
+    }
+
+    stopIndexing() {
+        this.indexingEnabled(false);
+        new toggleIndexingCommand(false, this.activeDatabase())
+            .execute()
+            .fail(() => this.indexingEnabled(true));
+    }
+
+    resumeIndexing(idx: index) {
+        idx.pausedUntilRestart(false);
+        new toggleIndexingCommand(true, this.activeDatabase(), { name: [idx.name] })
+            .execute()
+            .fail(() => idx.pausedUntilRestart(true));
+    }
+
+    disableUntilRestart(idx: index) {
+        idx.pausedUntilRestart(true);
+        new toggleIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
+            .execute()
+            .fail(() => idx.pausedUntilRestart(false));
+    }
+
+
+    toggleSelectAll() {
+        const selectedIndexesCount = this.selectedIndexesName().length;
+
+        if (selectedIndexesCount > 0) {
+            this.selectedIndexesName([]);
+        } else {
+            const allIndexNames = this.getAllIndexes().map(idx => idx.name);
+            this.selectedIndexesName(allIndexNames);
+        }
     }
 }
 

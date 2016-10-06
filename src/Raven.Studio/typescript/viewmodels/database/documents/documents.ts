@@ -14,7 +14,6 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 
 import collection = require("models/database/documents/collection");
 import database = require("models/resources/database");
-import alert = require("models/database/debug/alert");
 import changeSubscription = require("common/changeSubscription");
 import customFunctions = require("models/database/documents/customFunctions");
 import customColumns = require("models/database/documents/customColumns");
@@ -25,8 +24,6 @@ import getCollectionsStatsCommand = require("commands/database/documents/getColl
 import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
 import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
-import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
-import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
 
 class documents extends viewModelBase {
@@ -58,7 +55,6 @@ class documents extends viewModelBase {
     canCopyAllSelected: KnockoutComputed<boolean>;
 
     lastCollectionCountUpdate = ko.observable<string>();
-    alerts = ko.observable<alert[]>([]);
     static gridSelector = "#documentsGrid";
     static isInitialized = ko.observable<boolean>(false);
     isInitialized = documents.isInitialized;
@@ -153,7 +149,6 @@ class documents extends viewModelBase {
         this.collectionToSelectName = args ? args.collection : null;
 
         var db = this.activeDatabase();
-        this.fetchAlerts();
         this.fetchCollectionsStats(db).done(results => {
             this.collectionsLoaded(results, db);
             documents.isInitialized(true);
@@ -253,21 +248,8 @@ class documents extends viewModelBase {
         }
     }
 
-    private fetchAlerts() {
-        new getOperationAlertsCommand(this.activeDatabase())
-            .execute()
-            .then((result: alert[]) => {
-                this.alerts(result);
-            });
-    }
-
-    dismissAlert(uniqueKey: string) {
-        new dismissAlertCommand(this.activeDatabase(), uniqueKey).execute();
-        setTimeout(() => dynamicHeightBindingHandler.stickToTarget($(".ko-grid-viewport-container")[0], 'footer', 0), 25);
-    }
-
     private fetchCollectionsStats(db: database): JQueryPromise<collectionsStats> {
-        return new getCollectionsStatsCommand(db, this.collections()).execute();
+        return new getCollectionsStatsCommand(db).execute();
     }
 
     private refreshCollections(): JQueryPromise<any> {
@@ -291,19 +273,8 @@ class documents extends viewModelBase {
         this.allDocumentsCollection(collection.createAllDocsCollection(db));
         this.allDocumentsCollection().documentCount = ko.computed(() => !!db.statistics() ? db.statistics().countOfDocuments() : 0);
 
-        // Create the "System Documents" pseudo collection.
-        var systemDocumentsCollection = collection.createSystemDocsCollection(db);
-        systemDocumentsCollection.documentCount = ko.computed(() => {
-            var regularCollections = this.collections().filter((c: collection) => c.isAllDocuments === false && c.isSystemDocuments === false);
-            if (regularCollections.length === 0)
-                return 0;
-            var sum = regularCollections.map((c: collection) => c.documentCount()).reduce((a, b) => a + b);
-            return this.allDocumentsCollection().documentCount() - sum;
-        });
-
         // All systems a-go. Load them into the UI and select the first one.
-        var collectionsWithSysCollection = [systemDocumentsCollection].concat(collections);
-        var allCollections = [this.allDocumentsCollection()].concat(collectionsWithSysCollection);
+        var allCollections = [this.allDocumentsCollection()].concat(collections);
         this.collections(allCollections);
 
         var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection();
@@ -583,20 +554,11 @@ class documents extends viewModelBase {
         return null;
     }
 
-    urlForAlert(alert: alert) {
-        var index = this.alerts().indexOf(alert);
-        return appUrl.forAlerts(this.activeDatabase()) + "&item=" + index;
-    }
-
     private sortCollections() {
         this.collections.sort((c1: collection, c2: collection) => {
             if (c1.isAllDocuments)
                 return -1;
             if (c2.isAllDocuments)
-                return 1;
-            if (c1.isSystemDocuments)
-                return -1;
-            if (c2.isSystemDocuments)
                 return 1;
             return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
         });

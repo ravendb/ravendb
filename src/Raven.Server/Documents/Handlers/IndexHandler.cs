@@ -146,19 +146,65 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/stats", "GET")]
         public Task Stats()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                throw new InvalidOperationException("There is not index with name: " + name);
-
-            var stats = index.GetStats();
+            var name = GetStringQueryString("name", required: false);
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteIndexStats(context, stats);
+                IndexStats[] indexStats;
+                using (context.OpenReadTransaction())
+                {
+                    if (string.IsNullOrEmpty(name))
+                        indexStats = Database.IndexStore
+                            .GetIndexes()
+                            .OrderBy(x => x.Name)
+                            .Select(x => x.GetStats(calculateLag: true, calculateStaleness: true, documentsContext: context))
+                            .ToArray();
+                    else
+                    {
+                        var index = Database.IndexStore.GetIndex(name);
+                        if (index == null)
+                            throw new InvalidOperationException("There is not index with name: " + name);
+
+                        indexStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, documentsContext: context) };
+                    }
+                }
+
+                writer.WriteStartArray();
+                var first = true;
+                foreach (var stats in indexStats)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+
+                    first = false;
+                    writer.WriteIndexStats(context, stats);
+                }
+
+                writer.WriteEndArray();
+
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/indexes/progress", "GET")]
+        public Task Progress()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
+            {
+                var index = Database.IndexStore.GetIndex(name);
+                if (index == null)
+                    throw new InvalidOperationException("There is not index with name: " + name);
+
+                var progress = index.GetProgress(context);
+                writer.WriteIndexProgress(context, progress);
             }
 
             return Task.CompletedTask;
@@ -190,8 +236,8 @@ namespace Raven.Server.Documents.Handlers
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             HttpContext.Response.StatusCode = Database.IndexStore.TryDeleteIndexIfExists(name)
-                ? (int) HttpStatusCode.NoContent
-                : (int) HttpStatusCode.NotFound;
+                ? (int)HttpStatusCode.NoContent
+                : (int)HttpStatusCode.NotFound;
 
             return Task.CompletedTask;
         }
@@ -293,8 +339,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET")]
         public Task GenerateCSharpIndexDefinition()
         {
-            var fullIndexName = HttpContext.Request.Query["fullIndexName"];
-            var index = Database.IndexStore.GetIndex(fullIndexName);
+            var indexName = HttpContext.Request.Query["name"];
+            var index = Database.IndexStore.GetIndex(indexName);
             if (index == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -322,6 +368,13 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(IndexingStatus.Status));
+                writer.WriteString(Database.IndexStore.Status.ToString());
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(IndexingStatus.Indexes));
                 writer.WriteStartArray();
                 var isFirst = true;
                 foreach (var index in Database.IndexStore.GetIndexes())
@@ -333,24 +386,20 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(("Name"));
-                    writer.WriteString((index.Name));
+                    writer.WritePropertyName(nameof(IndexingStatus.IndexStatus.Name));
+                    writer.WriteString(index.Name);
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName(("Status"));
-                    string status;
-                    if (Database.Configuration.Indexing.Disabled)
-                        status = "Disabled";
-                    else
-                        status = index.IsRunning ? "Running" : "Paused";
-
-                    writer.WriteString((status));
+                    writer.WritePropertyName(nameof(IndexingStatus.IndexStatus.Status));
+                    writer.WriteString(index.Status.ToString());
 
                     writer.WriteEndObject();
                 }
 
                 writer.WriteEndArray();
+
+                writer.WriteEndObject();
             }
 
             return Task.CompletedTask;

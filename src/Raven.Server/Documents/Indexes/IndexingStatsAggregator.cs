@@ -41,6 +41,21 @@ namespace Raven.Server.Documents.Indexes
             return _scope = new IndexingStatsScope(_stats);
         }
 
+        public IndexingPerformanceBasicStats ToIndexingPerformanceLiveStats()
+        {
+            if (_performanceStats != null)
+                return _performanceStats;
+
+            return new IndexingPerformanceBasicStats(_scope.Duration)
+            {
+                Started = StartTime,
+                InputCount = _stats.MapAttempts,
+                SuccessCount = _stats.MapSuccesses,
+                FailedCount = _stats.MapErrors,
+                OutputCount = _stats.IndexingOutputs
+            };
+        }
+
         public IndexingPerformanceStats ToIndexingPerformanceStats()
         {
             if (_performanceStats != null)
@@ -59,7 +74,7 @@ namespace Raven.Server.Documents.Indexes
                     InputCount = _stats.MapAttempts,
                     SuccessCount = _stats.MapSuccesses,
                     FailedCount = _stats.MapErrors,
-                    OutputCount = _stats.IndexingOutputs,
+                    OutputCount = _stats.IndexingOutputs
                 };
             }
         }
@@ -148,6 +163,25 @@ namespace Raven.Server.Documents.Indexes
             _stats.IndexingOutputs++;
         }
 
+        public void RecordMapCompletedReason(string reason)
+        {
+            if (_stats.MapDetails == null)
+                _stats.MapDetails = new MapRunDetails();
+
+            _stats.MapDetails.BatchCompleteReason = reason;
+        }
+
+        public void RecordReduceTreePageModified(bool isLeaf)
+        {
+            if (_stats.ReduceDetails == null)
+                _stats.ReduceDetails = new ReduceRunDetails();
+
+            if (isLeaf)
+                _stats.ReduceDetails.NumberOfModifiedLeafs++;
+            else
+                _stats.ReduceDetails.NumberOfModifiedBranches++;
+        }
+
         public void RecordReduceAttempts(int numberOfEntries)
         {
             _stats.ReduceAttempts += numberOfEntries;
@@ -170,6 +204,12 @@ namespace Raven.Server.Documents.Indexes
                 Name = name
             };
 
+            if (_stats.ReduceDetails != null && name == IndexingOperation.Reduce.TreeScope)
+                operation.ReduceDetails = _stats.ReduceDetails;
+
+            if (_stats.MapDetails != null && name == "Map")
+                operation.MapDetails = _stats.MapDetails;
+
             if (_scopes != null)
             {
                 operation.Operations = _scopes
@@ -178,6 +218,33 @@ namespace Raven.Server.Documents.Indexes
             }
 
             return operation;
+        }
+
+        public void RecordMapMemoryStats(long currentProcessWorkingSet, long currentProcessPrivateMemorySize,long currentBudget)
+        {
+            if (_stats.MapDetails == null)
+                _stats.MapDetails = new MapRunDetails();
+
+            _stats.MapDetails.AllocationBudget = currentBudget;
+            _stats.MapDetails.ProcessPrivateMemory = currentProcessPrivateMemorySize;
+            _stats.MapDetails.ProcessWorkingSet = currentProcessWorkingSet;
+        }
+
+
+        public void RecordMapAllocations(long allocations)
+        {
+            if (_stats.MapDetails == null)
+                _stats.MapDetails = new MapRunDetails();
+
+            _stats.MapDetails.CurrentlyAllocated = allocations;
+        }
+        public void RecordCommitStats(int numberOfModifiedPages, int numberOfPagesWrittenToDisk)
+        {
+            if (_stats.CommitDetails == null)
+                _stats.CommitDetails = new StorageCommitDetails();
+
+            _stats.CommitDetails.NumberOfModifiedPages = numberOfModifiedPages;
+            _stats.CommitDetails.NumberOfPagesWrittenToDisk = numberOfPagesWrittenToDisk;
         }
     }
 }

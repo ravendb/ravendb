@@ -188,7 +188,7 @@ namespace Voron
 
                 var treesTx = new Transaction(tx);
 
-                var metadataTree = treesTx.ReadTree(Constants.MetadataTreeName);
+                var metadataTree = treesTx.ReadTree(Constants.MetadataTreeNameSlice);
                 if (metadataTree == null)
                     throw new VoronUnrecoverableErrorException("Could not find metadata tree in database, possible mismatch / corruption?");
 
@@ -239,7 +239,7 @@ namespace Voron
 
                 DbId = Guid.NewGuid();
 
-                var metadataTree = treesTx.CreateTree(Constants.MetadataTreeName);
+                var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
                 metadataTree.Add("db-id", DbId.ToByteArray());
                 metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(Options.SchemaVersion));
 
@@ -511,17 +511,18 @@ namespace Voron
                 {
                     do
                     {
-                        var curretKey = rootIterator.CurrentKey.Clone(tx.Allocator);
-                        switch (tx.GetRootObjectType(curretKey))
+                        var currentKey = rootIterator.CurrentKey.Clone(tx.Allocator);
+                        var type = tx.GetRootObjectType(currentKey);
+                        switch (type)
                         {
                             case RootObjectType.VariableSizeTree:
-                                var tree = tx.ReadTree(curretKey.ToString());
+                                var tree = tx.ReadTree(currentKey.ToString());
                                 trees.Add(tree);
                                 break;
                             case RootObjectType.EmbeddedFixedSizeTree:
                                 break;
                             case RootObjectType.FixedSizeTree:
-                                fixedSizeTrees.Add(tx.FixedTreeFor(curretKey, 0));
+                                fixedSizeTrees.Add(tx.FixedTreeFor(currentKey, 0));
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
@@ -699,7 +700,7 @@ namespace Voron
             _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo);
         }
 
-        internal IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)
+        public IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)
         {
             if (tx.Flags != TransactionFlags.ReadWrite)
                 throw new ArgumentException("Temporary pages are only available for write transactions");

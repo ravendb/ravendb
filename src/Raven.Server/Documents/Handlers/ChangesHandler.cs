@@ -37,6 +37,10 @@ namespace Raven.Server.Documents.Handlers
                     {
                         await HandleConnection(webSocket, context, sendStartTime);
                     }
+                    catch (OperationCanceledException)
+                    {
+                        
+                    }
                     catch (Exception ex)
                     {
                         if (Logger.IsInfoEnabled)
@@ -50,7 +54,8 @@ namespace Raven.Server.Documents.Handlers
                                 {
                                     context.Write(writer, new DynamicJsonValue
                                     {
-                                        ["Exception"] = ex,
+                                        ["Type"] = "Error",
+                                        ["Exception"] = ex.ToString(),
                                     });
                                 }
 

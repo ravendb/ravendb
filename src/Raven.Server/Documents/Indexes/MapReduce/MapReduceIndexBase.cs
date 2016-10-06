@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         internal const string ResultsStoreTypesTreeName = "ResultsStoreTypes";
 
         internal readonly MapReduceIndexingContext _mapReduceWorkContext = new MapReduceIndexingContext();
+        private FixedSizeTree _documentMapEntries;
 
         protected MapReduceIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
@@ -29,24 +30,36 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _mapReduceWorkContext.MapEntries = GetMapEntriesTree(indexContext.Transaction.InnerTransaction);
             _mapReduceWorkContext.ResultsStoreTypes = _mapReduceWorkContext.MapEntries.FixedTreeFor(ResultsStoreTypesTreeName, sizeof(byte));
 
+            _documentMapEntries = new FixedSizeTree(
+                   indexContext.Transaction.InnerTransaction.LowLevelTransaction,
+                   _mapReduceWorkContext.MapEntries,
+                   Slices.Empty,
+                   sizeof(ulong),
+                   clone: false);
+
             return _mapReduceWorkContext;
         }
 
-        public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer,
+            TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            var documentMapEntries = _mapReduceWorkContext.MapEntries.FixedTreeFor(tombstone.LoweredKey, sizeof(ulong));
-
-            if (documentMapEntries.NumberOfEntries == 0)
-                return;
-
-            foreach (var mapEntry in GetMapEntries(documentMapEntries))
+            Slice docKeyAsSlice;
+            using (Slice.External(indexContext.Allocator, tombstone.LoweredKey.Buffer, tombstone.LoweredKey.Length, out docKeyAsSlice))
             {
-                var store = GetResultsStore(mapEntry.ReduceKeyHash, indexContext, create: false);
-                
-                store.Delete(mapEntry.Id);
-            }
+                _documentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
 
-            _mapReduceWorkContext.MapEntries.DeleteFixedTreeFor(tombstone.LoweredKey, sizeof(ulong));
+                if (_documentMapEntries.NumberOfEntries == 0)
+                    return;
+
+                foreach (var mapEntry in GetMapEntries(_documentMapEntries))
+                {
+                    var store = GetResultsStore(mapEntry.ReduceKeyHash, indexContext, create: false);
+
+                    store.Delete(mapEntry.Id);
+                }
+
+                _mapReduceWorkContext.MapEntries.DeleteFixedTreeFor(tombstone.LoweredKey, sizeof(ulong));
+            }
         }
 
         public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch)
@@ -70,83 +83,89 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         protected unsafe int PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext)
         {
-            var documentMapEntries = _mapReduceWorkContext.MapEntries.FixedTreeFor(documentKey, sizeof(ulong));
-
-            Dictionary<ulong, Queue<long>> existingIdsPerReduceKey = null;
-
-            if (documentMapEntries.NumberOfEntries > 0)
+            Slice docKeyAsSlice;
+            using (Slice.External(indexContext.Allocator, documentKey.Buffer, documentKey.Length, out docKeyAsSlice))
             {
-                // update operation, let's retrieve ids of existing entries to try to reuse them 
+               _documentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
 
-                existingIdsPerReduceKey = new Dictionary<ulong, Queue<long>>();
+                Dictionary<ulong, Queue<long>> existingIdsPerReduceKey = null;
 
-                var mapEntries = GetMapEntries(documentMapEntries);
-
-                foreach (var mapEntry in mapEntries)
+                if (_documentMapEntries.NumberOfEntries > 0)
                 {
-                    Queue<long> ids;
-                    if (existingIdsPerReduceKey.TryGetValue(mapEntry.ReduceKeyHash, out ids) == false)
+                    // update operation, let's retrieve ids of existing entries to try to reuse them 
+
+                    existingIdsPerReduceKey = new Dictionary<ulong, Queue<long>>();
+
+                    var mapEntries = GetMapEntries(_documentMapEntries);
+
+                    foreach (var mapEntry in mapEntries)
                     {
-                        ids = new Queue<long>();
-                        existingIdsPerReduceKey[mapEntry.ReduceKeyHash] = ids;
-                    }
+                        Queue<long> ids;
+                        if (existingIdsPerReduceKey.TryGetValue(mapEntry.ReduceKeyHash, out ids) == false)
+                        {
+                            ids = new Queue<long>();
+                            existingIdsPerReduceKey[mapEntry.ReduceKeyHash] = ids;
+                        }
 
-                    ids.Enqueue(mapEntry.Id);
-                }
-            }
-
-            int resultsCount = 0;
-            foreach (var mapResult in mappedResults)
-            {
-                resultsCount++;
-                var reduceKeyHash = mapResult.ReduceKeyHash;
-
-                long id;
-
-                Queue<long> availableIds;
-                if (existingIdsPerReduceKey != null && existingIdsPerReduceKey.TryGetValue(reduceKeyHash, out availableIds))
-                {
-                    // reuse id of an old entry
-                    id = availableIds.Dequeue();
-
-                    if (availableIds.Count == 0)
-                        existingIdsPerReduceKey.Remove(reduceKeyHash);
-                }
-                else
-                {
-                    id = _mapReduceWorkContext.GetNextIdentifier();
-
-                    Slice val;
-                    using (Slice.External(indexContext.Allocator, (byte*) &reduceKeyHash, sizeof(ulong), out val))
-                        documentMapEntries.Add(id, val);
-                }
-
-                GetResultsStore(reduceKeyHash, indexContext, true).Add(id, mapResult.Data);
-            }
-
-            if (existingIdsPerReduceKey != null && existingIdsPerReduceKey.Count > 0)
-            {
-                // need to remove remaining old entries
-
-                foreach (var stillExisting in existingIdsPerReduceKey)
-                {
-                    var reduceKeyHash = stillExisting.Key;
-                    var ids = stillExisting.Value;
-
-                    var oldState = GetResultsStore(reduceKeyHash, indexContext, create: false);
-
-                    while (ids.Count > 0)
-                    {
-                        var idToDelete = ids.Dequeue();
-
-                        oldState.Delete(idToDelete);
-
-                        documentMapEntries.Delete(idToDelete);
+                        ids.Enqueue(mapEntry.Id);
                     }
                 }
-            }
 
-            return resultsCount;
+                int resultsCount = 0;
+                foreach (var mapResult in mappedResults)
+                {
+                    resultsCount++;
+                    var reduceKeyHash = mapResult.ReduceKeyHash;
+
+                    long id;
+
+                    Queue<long> availableIds;
+                    if (existingIdsPerReduceKey != null &&
+                        existingIdsPerReduceKey.TryGetValue(reduceKeyHash, out availableIds))
+                    {
+                        // reuse id of an old entry
+                        id = availableIds.Dequeue();
+
+                        if (availableIds.Count == 0)
+                            existingIdsPerReduceKey.Remove(reduceKeyHash);
+                    }
+                    else
+                    {
+                        id = _mapReduceWorkContext.GetNextIdentifier();
+
+                        Slice val;
+                        using (Slice.External(indexContext.Allocator, (byte*) &reduceKeyHash, sizeof(ulong), out val))
+                            _documentMapEntries.Add(id, val);
+                    }
+                    GetResultsStore(reduceKeyHash, indexContext, true).Add(id, mapResult.Data);
+                }
+
+                DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
+
+                if (existingIdsPerReduceKey != null && existingIdsPerReduceKey.Count > 0)
+                {
+                    // need to remove remaining old entries
+
+                    foreach (var stillExisting in existingIdsPerReduceKey)
+                    {
+                        var reduceKeyHash = stillExisting.Key;
+                        var ids = stillExisting.Value;
+
+                        var oldState = GetResultsStore(reduceKeyHash, indexContext, create: false);
+
+                        while (ids.Count > 0)
+                        {
+                            var idToDelete = ids.Dequeue();
+
+                            oldState.Delete(idToDelete);
+
+                            _documentMapEntries.Delete(idToDelete);
+                        }
+                    }
+                }
+
+                return resultsCount;
+            }
         }
 
         private static unsafe List<MapEntry> GetMapEntries(FixedSizeTree documentMapEntries)

@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             {
                 new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
                 new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
-                new ReduceMapResultsOfAutoIndex(Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext),
+                new ReduceMapResultsOfAutoIndex(this, Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext),
             };
         }
 
@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 // explicitly adding this even if the value isn't there, as a null
                 mappedResult[groupByFieldName] = result;
 
-                _reduceKeyProcessor.Process(result);
+                _reduceKeyProcessor.Process(indexContext.Allocator,result);
             }
 
             var mappedresult = indexContext.ReadObject(mappedResult, key);
@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
             var resultsCount = PutMapResults(key, _singleOutputList, indexContext);
 
-            DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
+            DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
 
             return resultsCount;
         }

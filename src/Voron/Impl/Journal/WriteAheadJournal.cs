@@ -94,7 +94,8 @@ namespace Voron.Impl.Journal
             long minRequiredSize = numberOfPages * _compressionPager.PageSize;
             if (_currentJournalFileSize < minRequiredSize)
             {
-                actualLogSize = minRequiredSize;
+                _currentJournalFileSize = Bits.NextPowerOf2(minRequiredSize);
+                actualLogSize = _currentJournalFileSize;
             }
 
             _lastFile = now;
@@ -835,7 +836,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public void WriteToJournal(LowLevelTransaction tx, int pageCount)
+        public int WriteToJournal(LowLevelTransaction tx, int pageCount)
         {
             var pages = PrepreToWriteToJournal(tx, _compressionPager, pageCount);
 
@@ -857,6 +858,8 @@ namespace Voron.Impl.Journal
                 _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                 CurrentFile = null;
             }
+
+            return pages.NumberOfPages;
         }
 
         private CompressedPagesResult PrepreToWriteToJournal(LowLevelTransaction tx, AbstractPager compressionPager, int pageCountIncludingAllOverflowPages)

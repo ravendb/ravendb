@@ -1,50 +1,46 @@
-<ul class="breadcrumb">
-    <li>
-        <h3>
-            <a href="#resources">
-                Databases
-            </a>
-        </h3>
-    </li>
-    <li data-bind="with: activeDatabase">
-        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
-    </li>
-    <li class="active">
-        Transformers
-    </li>
-</ul>
-
 <div id="transformersContainer">
-    <div class="btn-toolbar" role="toolbar">
-        <div class="btn-group">
-            <a class="btn btn-primary" data-bind="attr: { href: newTransformerUrl }" title="Add a new transformer (Alt+N)" accesskey="N">
-                <i class="fa fa-plus"></i> New transformer
-            </a>
-        </div>
-        <div class="btn-group" data-bind="visible: transformersGroups().length > 0">
-            <button class="btn btn-default" data-bind="click: toggleExpandAll, attr: { title: expandCollapseTitle }" accesskey="=">
-                <i data-bind="css: { 'fa-plus-square-o': !allTransformersExpanded(), 'fa-minus-square-o': allTransformersExpanded }" class="fa fa-fw"></i>
-            </button>
-        </div>
-        <div class="btn-group">
-            <button class="btn btn-default" data-bind="click: pasteTransformer" title="Paste transformer from JSON (Alt+V)" accesskey="V">
-                <i class="fa fa-paste"></i>
-            </button>
-        </div>
-        <div class="btn-group" data-bind="visible: transformersGroups().length > 0">
-            <button type="button" class="btn btn-danger" data-bind="click: deleteAllTransformers" title="Delete All Transformers"><i class="fa fa-trash-o"></i></button>
-        </div>
-    </div>
-
     <div data-bind="visible: transformersGroups().length == 0" class="text-center">
         <h4 class="page-header text-info">No transformers have been created for this database. <a href="#" data-bind="attr: { href: newTransformerUrl }">Create one now</a>.</h4>
     </div>
+    
+    <div class="btn-toolbar" role="toolbar">
+        <div class="btn-group">
+            <div class="checkbox">
+                <input id="transformers_all" class="styled" type="checkbox" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }" title="Select all or none">
+                <label for="transformers_all">&nbsp;</label>
+            </div>
+        </div>
+        <div class="btn-group">
+            <input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a transformer (Alt+/)">
+            <button data-bind="enable: selectedTransformersName().length, click: copySelectedTransformers" class="btn btn-default">Copy</button>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Set lock mode to selected transformers" data-bind="enable: selectedTransformersName().length">
+                <i class="fa fa-lock fa-fw"></i>
+                Lock mode
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+                <li data-bind="click: setLockModeSelectedTransformers.bind($root, 'Unlock', 'Unlock')">
+                    <a href="#" title="Unlock selected transformers">Unlock selected</a>
+                </li>
+                <li data-bind="click: setLockModeSelectedTransformers.bind($root, 'LockedIgnore', 'Lock')">
+                    <a href="#" title="Lock selected transformers">Lock selected</a>
+                </li>
+            </ul>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedTransformers">
+                <i class="fa fa-trash-o"></i> Delete
+            </button>
+        </div>
+    </div>
 
-    <br />
+    <br/>
 
-    <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="overflow: auto">
+    <div >
         <div class="transformers-container panel-group" id="transformersAccordion" data-bind="foreach: transformersGroups">
-            <div class="transformers-group panel panel-default">
+            <div class="transformers-group panel panel-default" data-bind="visible: !groupHidden()">
                 <div class="panel-heading">
                     <h4 class="panel-title">
                         <a data-toggle="collapse" data-bind="attr: { href: '#transformerCollapse' + $index() }">
@@ -56,9 +52,11 @@
                 <div class="index-group-content panel-collapse in" data-bind="attr: { id: 'transformerCollapse' + $index() }">
                     <div style="overflow: visible;">
                         <div class="panel-body" data-bind="foreach: transformers">
-                            <div class="index panel panel-default">
+                            <div class="index panel panel-default" data-bind="visible: !filteredOut()">
                                 <div class="panel-body">
+                                    TODO: badge
                                     <h4 class="pull-left">
+                                        <input type="checkbox" data-bind="checked: $root.selectedTransformersName, checkedValue: name"/>
                                         <a data-bind="attr: { href: editUrl }"><span data-bind="text: name"></span></a>
                                         <i class="fa" data-bind="css: { 'fa-lock': isLocked(), 'fa-unlock': !isLocked() }"></i>
                                     </h4>

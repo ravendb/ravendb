@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 
 using Raven.Abstractions;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
@@ -79,50 +78,56 @@ namespace FastTests.Client.Indexing
                 database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
                 database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
 
-                var statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
+                var status = await store.AsyncDatabaseCommands.Admin.GetIndexingStatusAsync();
 
-                Assert.Equal(2, statuses.Length);
-                Assert.Equal("Running", statuses[0].Status);
-                Assert.Equal("Running", statuses[1].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Status);
+                Assert.Equal(2, status.Indexes.Length);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[0].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[1].Status);
 
                 await store.AsyncDatabaseCommands.Admin.StopIndexingAsync();
 
-                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
+                status = await store.AsyncDatabaseCommands.Admin.GetIndexingStatusAsync();
 
-                Assert.Equal(2, statuses.Length);
-                Assert.Equal("Paused", statuses[0].Status);
-                Assert.Equal("Paused", statuses[1].Status);
+                Assert.Equal(IndexRunningStatus.Paused, status.Status);
+                Assert.Equal(2, status.Indexes.Length);
+                Assert.Equal(IndexRunningStatus.Paused, status.Indexes[0].Status);
+                Assert.Equal(IndexRunningStatus.Paused, status.Indexes[1].Status);
 
                 await store.AsyncDatabaseCommands.Admin.StartIndexingAsync();
 
-                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
+                status = await store.AsyncDatabaseCommands.Admin.GetIndexingStatusAsync();
 
-                Assert.Equal(2, statuses.Length);
-                Assert.Equal("Running", statuses[0].Status);
-                Assert.Equal("Running", statuses[1].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Status);
+                Assert.Equal(2, status.Indexes.Length);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[0].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[1].Status);
 
-                await store.AsyncDatabaseCommands.Admin.StopIndexAsync(statuses[1].Name);
+                await store.AsyncDatabaseCommands.Admin.StopIndexAsync(status.Indexes[1].Name);
 
-                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
+                status = await store.AsyncDatabaseCommands.Admin.GetIndexingStatusAsync();
 
-                Assert.Equal(2, statuses.Length);
-                Assert.Equal("Running", statuses[0].Status);
-                Assert.Equal("Paused", statuses[1].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Status);
+                Assert.Equal(2, status.Indexes.Length);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[0].Status);
+                Assert.Equal(IndexRunningStatus.Paused, status.Indexes[1].Status);
 
-                await store.AsyncDatabaseCommands.Admin.StartIndexAsync(statuses[1].Name);
+                await store.AsyncDatabaseCommands.Admin.StartIndexAsync(status.Indexes[1].Name);
 
-                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus();
+                status = await store.AsyncDatabaseCommands.Admin.GetIndexingStatusAsync();
 
-                Assert.Equal(2, statuses.Length);
-                Assert.Equal("Running", statuses[0].Status);
-                Assert.Equal("Running", statuses[1].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Status);
+                Assert.Equal(2, status.Indexes.Length);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[0].Status);
+                Assert.Equal(IndexRunningStatus.Running, status.Indexes[1].Status);
             }
         }
 
         [Fact]
         public async Task GetStats()
         {
-            using (var store = GetDocumentStore())
+            var path = NewDataPath();
+            using (var store = GetDocumentStore(path: path))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -147,22 +152,29 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(1, indexes.Length);
 
                 var index = indexes[0];
-                var request = store.AsyncDatabaseCommands.CreateRequest("/indexes/stats?name=" + index.Name, HttpMethod.Get);
-                var json = await request.ReadResponseJsonAsync();
-                var stats = json.JsonDeserialization<IndexStats>();
+                var stats = await store.AsyncDatabaseCommands.GetIndexStatisticsAsync(index.Name);
 
                 Assert.Equal(index.IndexId, stats.Id);
                 Assert.Equal(index.Name, stats.Name);
                 Assert.False(stats.IsInvalidIndex);
                 Assert.False(stats.IsTestIndex);
-                Assert.True(stats.IsInMemory);
+                Assert.False(stats.IsStale);
                 Assert.Equal(IndexType.AutoMap, stats.Type);
                 Assert.Equal(2, stats.EntriesCount);
                 Assert.Equal(2, stats.MapAttempts);
                 Assert.Equal(0, stats.MapErrors);
                 Assert.Equal(2, stats.MapSuccesses);
-                Assert.Equal(1, stats.ForCollections.Length);
-                Assert.Equal(2 + 1, stats.LastIndexedEtags[stats.ForCollections[0]]); // +1 because of HiLo
+                Assert.Equal(1, stats.Collections.Count);
+                Assert.Equal(2 + 1, stats.Collections.First().Value.LastProcessedDocumentEtag); // +1 because of HiLo
+                Assert.Equal(0, stats.Collections.First().Value.LastProcessedTombstoneEtag);
+                Assert.Equal(0, stats.Collections.First().Value.DocumentLag);
+                Assert.Equal(0, stats.Collections.First().Value.TombstoneLag);
+
+                Assert.True(stats.Memory.DiskSize.SizeInBytes > 0);
+                Assert.NotNull(stats.Memory.DiskSize.HumaneSize);
+                Assert.True(stats.Memory.ThreadAllocations.SizeInBytes > 0);
+                Assert.NotNull(stats.Memory.ThreadAllocations.HumaneSize);
+
                 Assert.True(stats.LastIndexingTime.HasValue);
                 Assert.True(stats.LastQueryingTime.HasValue);
                 Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
@@ -198,9 +210,7 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(1, indexes.Length);
 
                 var index = indexes[0];
-                var request = store.AsyncDatabaseCommands.CreateRequest("/indexes/stats?name=" + index.Name, HttpMethod.Get);
-                var json = await request.ReadResponseJsonAsync();
-                var stats = json.JsonDeserialization<IndexStats>();
+                var stats = await store.AsyncDatabaseCommands.GetIndexStatisticsAsync(index.Name);
 
                 Assert.Equal(index.IndexId, stats.Id);
                 Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
@@ -209,9 +219,7 @@ namespace FastTests.Client.Indexing
                 await store.AsyncDatabaseCommands.SetIndexLockAsync(index.Name, IndexLockMode.LockedIgnore);
                 await store.AsyncDatabaseCommands.SetIndexPriorityAsync(index.Name, IndexingPriority.Error);
 
-                request = store.AsyncDatabaseCommands.CreateRequest("/indexes/stats?name=" + index.Name, HttpMethod.Get);
-                json = await request.ReadResponseJsonAsync();
-                stats = json.JsonDeserialization<IndexStats>();
+                stats = await store.AsyncDatabaseCommands.GetIndexStatisticsAsync(index.Name);
 
                 Assert.Equal(index.IndexId, stats.Id);
                 Assert.Equal(IndexLockMode.LockedIgnore, stats.LockMode);
@@ -498,7 +506,7 @@ namespace FastTests.Client.Indexing
 
                 var deleteOperation = store
                     .DatabaseCommands
-                    .DeleteByIndex(indexName, new IndexQuery(), new QueryOperationOptions {AllowStale = false});
+                    .DeleteByIndex(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false });
 
                 var e = Assert.Throws<InvalidOperationException>(() =>
                 {

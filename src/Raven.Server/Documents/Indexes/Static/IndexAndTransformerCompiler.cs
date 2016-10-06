@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Emit;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Static
     [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
     public static class IndexAndTransformerCompiler
     {
-        private static readonly bool EnableDebugging = false; // for debugging purposes
+        private static readonly bool EnableDebugging = true; // for debugging purposes
 
         private const string IndexNamespace = "Raven.Server.Documents.Indexes.Static.Generated";
 
@@ -66,7 +67,8 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("mscorlib")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Collections")).Location),
-            MetadataReference.CreateFromFile(typeof(Regex).GetTypeInfo().Assembly.Location)
+            MetadataReference.CreateFromFile(typeof(Regex).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(Uri).GetTypeInfo().Assembly.Location)
         };
 
         public static TransformerBase Compile(TransformerDefinition definition)
@@ -139,7 +141,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var asm = new MemoryStream();
             var pdb = EnableDebugging ? new MemoryStream() : null;
 
-            var result = compilation.Emit(asm, pdb);
+            var result = compilation.Emit(asm, pdb, options: new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb));
 
             if (result.Success == false)
             {
@@ -183,8 +185,10 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var statements = new List<StatementSyntax>();
 
-            IndexAndTransformerMethods methods;
-            statements.Add(HandleTransformResults(definition.TransformResults, out methods));
+            var methodDetector = new MethodDetectorRewriter();
+            statements.Add(HandleTransformResults(definition.TransformResults, methodDetector));
+
+            var methods = methodDetector.Methods;
 
             if (methods.HasGroupBy)
                 statements.Add(RoslynHelper.This(nameof(TransformerBase.HasGroupBy)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
@@ -246,19 +250,21 @@ namespace Raven.Server.Documents.Indexes.Static
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));
         }
 
-        private static StatementSyntax HandleTransformResults(string transformResults, out IndexAndTransformerMethods methods)
+        private static StatementSyntax HandleTransformResults(string transformResults, MethodDetectorRewriter methodsDetector)
         {
             try
             {
+                transformResults = NormalizeFunction(transformResults);
                 var expression = SyntaxFactory.ParseExpression(transformResults).NormalizeWhitespace();
+                methodsDetector.Visit(expression);
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
-                    return HandleSyntaxInTransformResults(new QuerySyntaxTransformResultsRewriter(), queryExpression, out methods);
+                    return HandleSyntaxInTransformResults(new TransformFunctionProcessor(SelectManyRewriter.QuerySyntax), queryExpression);
 
                 var invocationExpression = expression as InvocationExpressionSyntax;
                 if (invocationExpression != null)
-                    return HandleSyntaxInTransformResults(new MethodSyntaxTransformResultsRewriter(), invocationExpression, out methods);
+                    return HandleSyntaxInTransformResults(new TransformFunctionProcessor(SelectManyRewriter.MethodSyntax), invocationExpression);
 
                 throw new InvalidOperationException("Not supported expression type.");
             }
@@ -276,6 +282,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             try
             {
+                map = NormalizeFunction(map);
                 var expression = SyntaxFactory.ParseExpression(map).NormalizeWhitespace();
 
                 fieldNamesValidator.Validate(map, expression);
@@ -305,6 +312,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             try
             {
+                reduce = NormalizeFunction(reduce);
                 var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
 
                 fieldNamesValidator?.Validate(reduce, expression);
@@ -346,10 +354,9 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleSyntaxInTransformResults(TransformResultsRewriterBase transformResultsRewriter, ExpressionSyntax expression, out IndexAndTransformerMethods methods)
+        private static StatementSyntax HandleSyntaxInTransformResults(TransformFunctionProcessor processor, ExpressionSyntax expression)
         {
-            var rewrittenExpression = (CSharpSyntaxNode)transformResultsRewriter.Visit(expression);
-            methods = transformResultsRewriter.Methods;
+            var rewrittenExpression = (CSharpSyntaxNode)processor.Visit(expression);
 
             var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("results")), rewrittenExpression);
 
@@ -423,6 +430,11 @@ namespace Raven.Server.Documents.Indexes.Static
         private static string GetCSharpSafeName(string name, bool isIndex)
         {
             return $"{(isIndex ? "Index" : "Transformer")}_{Regex.Replace(name, @"[^\w\d]", "_")}";
+        }
+
+        private static string NormalizeFunction(string function)
+        {
+            return function?.Trim().TrimEnd(';');
         }
 
         private class CompilationResult

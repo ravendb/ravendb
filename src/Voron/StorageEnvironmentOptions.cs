@@ -35,8 +35,6 @@ namespace Voron
             handler(this, new RecoveryErrorEventArgs(message, e));
         }
 
-        public Action<long> OnScratchBufferSizeChanged = delegate { };
-
         public long? InitialFileSize { get; set; }
 
         public long MaxLogFileSize

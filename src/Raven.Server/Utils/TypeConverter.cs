@@ -61,7 +61,10 @@ namespace Raven.Server.Utils
                 return value;
 
             if (value is Guid)
-                return context.GetLazyString(((Guid)value).ToString("D"));
+                return ((Guid)value).ToString("D");
+
+            if (value is Enum)
+                return value.ToString();
 
             if (value is IEnumerable<IFieldable> || value is IFieldable)
                 return Constants.Indexing.Fields.IgnoredDynamicField;
@@ -104,7 +107,7 @@ namespace Raven.Server.Utils
             var inner = new DynamicJsonValue();
             var accessor = GetPropertyAccessor(value);
 
-            foreach (var property in accessor.Properties)
+            foreach (var property in accessor.PropertiesInOrder)
             {
                 var propertyValue = property.Value.GetValue(value);
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
@@ -193,33 +196,20 @@ namespace Raven.Server.Utils
 
             if (lazyString != null)
             {
-                if (lazyString.Size == 0)
-                    return value;
-
-                var firstChar = (char)lazyString.Buffer[0];
-
-                //optimizations, don't try to call TryParse if first char isn't a digit or '-'
-                if (char.IsDigit(firstChar) == false && firstChar != '-')
-                    return value;
-
-                // optimize this
-                var valueAsString = lazyString.ToString();
-
-                DateTime dateTime;
-                if (DateTime.TryParseExact(valueAsString, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
+                DateTime dt;
+                DateTimeOffset dto;
+                switch (LazyStringParser.TryParseDateTime(lazyString.Buffer, lazyString.Size, out dt, out dto))
                 {
-                    if (valueAsString.EndsWith("Z"))
-                        return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
-                    return dateTime;
+                    case LazyStringParser.Result.DateTime:
+                        return dt;
+                    case LazyStringParser.Result.DateTimeOffset:
+                        return dto;
                 }
 
-                DateTimeOffset dateTimeOffset;
-                if (DateTimeOffset.TryParseExact(valueAsString, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
-                    return dateTimeOffset;
+                TimeSpan ts;
+                if (LazyStringParser.TryParseTimeSpan(lazyString.Buffer, lazyString.Size, out ts))
+                    return ts;
 
-                TimeSpan timeSpan;
-                if (valueAsString.Contains(":") && valueAsString.Length >= 6 && TimeSpan.TryParseExact(valueAsString, "c", CultureInfo.InvariantCulture, out timeSpan))
-                    return timeSpan;
             }
 
             return value;

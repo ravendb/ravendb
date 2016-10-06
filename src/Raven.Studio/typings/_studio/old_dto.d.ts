@@ -305,22 +305,6 @@ interface logDto {
     StackTrace: string;
 }
 
-
-interface alertContainerDto extends documentDto {
-    Alerts: alertDto[];
-}
-
-interface alertDto {
-    Title: string;
-    CreatedAt: string;
-    Observed: boolean;
-    LastDismissedAt: string;
-    Message: string;
-    AlertLevel: string;
-    Exception: string;
-    UniqueKey: string;
-}
-
 interface serverErrorDto {
     Index: number;
     IndexName: string;
@@ -539,43 +523,9 @@ interface windowsAuthDto {
     RequiredUsers: windowsAuthDataDto[];
 }
 
-interface transformerDto {
-    name: string;
-    definition: {
-        TransformResults: string;
-        Name: string;
-        LockMode: string;
-    }
-}
-
-
-
 interface indexDefinitionListItemDto {
     name: string;
     definition: indexDefinitionDto;
-}
-
-interface saveTransformerDto {
-    Name: string;
-    TransformResults: string;
-}
-
-interface getTransformerResultDto {
-    'Transformer': string;
-}
-
-interface savedTransformerDto {
-    "Transformer":
-    {
-        "TransformResults": string;
-        "Name": string;
-        "LockMode": string;
-    }
-}
-
-interface transformerParamInfo {
-  name: string;
-  hasDefault: boolean;
 }
 
 interface transformerParamDto {
@@ -722,7 +672,7 @@ interface tableQuerySummary {
 
 interface sqlReplicationSimulationResultDto {
     Results: tableQuerySummary[];
-    LastAlert: alertDto;
+    //TODO: LastAlert: alertDto;
 }
 
 interface sqlReplicationConnectionsDto extends documentDto {
@@ -808,7 +758,6 @@ interface smugglerOptionsDto {
     OperateOnTypes: number;
     BatchSize: number;
     ShouldExcludeExpired: boolean;
-    Filters: filterSettingDto[];
     TransformScript: string;
     NoneDefaultFileName: string;
     OperationId: number;
@@ -1055,7 +1004,7 @@ interface sqlReplicationStatisticsDto {
     ScriptSuccessCount: number;
     WriteErrorCount: number;
     SuccessCount: number;
-    LastAlert: alertDto;
+    //TODO: LastAlert: alertDto;
 }
 
 interface statusDebugIndexFieldsDto {
@@ -1076,13 +1025,6 @@ interface collectionStats {
     Stats: histogramDataDto;
     TotalSize: number;
     TopDocs: any[];
-}
-
-interface filterSettingDto {
-    Path: string;
-    Values: string[];
-    ShouldMatch: boolean;
-    ShouldMatchObservable?: KnockoutObservable<boolean>;
 }
 
 interface resourceStyleMap {
@@ -1197,10 +1139,6 @@ interface visualizerExportDto {
     docKeys: string[];
     reduceKeys: string[];
     tree: visualizerDataObjectNodeDto;
-}
-
-interface operationIdDto {
-    OperationId: number;
 }
 
 interface operationStatusDto {

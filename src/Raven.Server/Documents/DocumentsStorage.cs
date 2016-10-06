@@ -308,7 +308,8 @@ namespace Raven.Server.Documents
         {
             var fst = new FixedSizeTree(tx.LowLevelTransaction,
                 tx.LowLevelTransaction.RootObjects,
-                AllDocsEtagsSlice, sizeof(long));
+                AllDocsEtagsSlice, sizeof(long),
+                clone: false);
 
             using (var it = fst.Iterate())
             {
@@ -323,7 +324,8 @@ namespace Raven.Server.Documents
         {
             var fst = new FixedSizeTree(tx.LowLevelTransaction,
                 tx.LowLevelTransaction.RootObjects,
-                AllTombstonesEtagsSlice, sizeof(long));
+                AllTombstonesEtagsSlice, sizeof(long),
+                clone: false);
 
             using (var it = fst.Iterate())
             {
@@ -684,7 +686,7 @@ namespace Raven.Server.Documents
                     .Count();
         }
 
-        public static ByteStringContext.Scope GetSliceFromKey(DocumentsOperationContext context, string key, out Slice keySlice)
+        public static ByteStringContext.ExternalScope GetSliceFromKey(DocumentsOperationContext context, string key, out Slice keySlice)
         {
             var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
 
@@ -1073,8 +1075,8 @@ namespace Raven.Server.Documents
                 var tbv = new TableValueBuilder
                 {
                     {lowerKey, lowerSize},
-                    {(byte*) &newEtagBigEndian, sizeof(long)},
-                    {(byte*) &documentEtagBigEndian, sizeof(long)},
+                    newEtagBigEndian,
+                    documentEtagBigEndian,
                     {keyPtr, keySize},
                     {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
                     {tombstone.Collection.Buffer, tombstone.Collection.Size}
@@ -1630,6 +1632,41 @@ namespace Raven.Server.Documents
         {
             var identities = ctx.Transaction.InnerTransaction.ReadTree("Identities");
             return identities.Increment(key, 1);
+        }
+
+        public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
+        {
+            return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: false, totalCount: out totalCount);
+        }
+
+        public long GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
+        {
+            return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: true, totalCount: out totalCount);
+        }
+
+        private long GetNumberOfItemsToProcess(DocumentsOperationContext context, string collection, long afterEtag, bool tombstones, out long totalCount)
+        {
+            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            Table table;
+            TableSchema.FixedSizeSchemaIndexDef indexDef;
+            if (tombstones)
+            {
+                table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+                indexDef = TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice];
+            }
+            else
+            {
+                table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                indexDef = DocsSchema.FixedSizeIndexes[CollectionEtagsSlice];
+            }
+
+            return table.GetNumberEntriesFor(indexDef, afterEtag, out totalCount);
         }
 
         public long GetNumberOfDocuments(DocumentsOperationContext context)

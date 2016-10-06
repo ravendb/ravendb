@@ -6,7 +6,6 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import pagedList = require("common/pagedList");
@@ -27,7 +26,6 @@ import customColumnParams = require("models/database/documents/customColumnParam
 import customColumns = require("models/database/documents/customColumns");
 import selectColumns = require("viewmodels/common/selectColumns");
 import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
-import getDocumentsByEntityNameCommand = require("commands/database/documents/getDocumentsByEntityNameCommand");
 import queryStatsDialog = require("viewmodels/database/query/queryStatsDialog");
 import customFunctions = require("models/database/documents/customFunctions");
 import transformerType = require("models/database/index/transformer");
@@ -58,7 +56,7 @@ class query extends viewModelBase {
     sortBys = ko.observableArray<querySort>();
     indexFields = ko.observableArray<string>();
     transformer = ko.observable<transformerType>();
-    allTransformers = ko.observableArray<transformerDto>();
+    allTransformers = ko.observableArray<Raven.Abstractions.Indexing.TransformerDefinition>();
     isDefaultOperatorOr = ko.observable(true);
     showFields = ko.observable(false);
     indexEntries = ko.observable(false);
@@ -263,21 +261,10 @@ class query extends viewModelBase {
         return deferred;
     }
     
-    private fetchAllTransformers(db: database): JQueryPromise<any> {
-        var deferred = $.Deferred();
-
-        this.allTransformers([]);
-        deferred.resolve();
-        /*TODO
-
-        new getTransformersCommand(db)
+    private fetchAllTransformers(db: database): JQueryPromise<Array<Raven.Abstractions.Indexing.TransformerDefinition>> {
+        return new getTransformersCommand(db)
             .execute()
-            .done((results: transformerDto[]) => {
-                this.allTransformers(results);
-                deferred.resolve();
-            });*/
-
-        return deferred;
+            .done(transformers => this.allTransformers(transformers));
     }
 
     private fetchAllCollections(db: database): JQueryPromise<any> {
@@ -344,7 +331,6 @@ class query extends viewModelBase {
     }
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
-        /*
         if (!indexNameOrRecentQueryHash && this.indexes().length > 0) {
             var firstIndexName = this.indexes.first().name;
             this.setSelectedIndex(firstIndexName);
@@ -362,7 +348,7 @@ class query extends viewModelBase {
             // if indexName exists and we didn't fall into any case show error and redirect to documents page
             messagePublisher.reportError("Could not find " + indexNameOrRecentQueryHash + " index");
             router.navigate(appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()));
-        }*/
+        }
     }
 
     focusOnQuery() {
@@ -577,14 +563,12 @@ class query extends viewModelBase {
     }
 
     addTransformer() {
-        this.transformer(new transformerType());
+        this.transformer(transformerType.empty());
     }
 
-    selectTransformer(dto: transformerDto) {
-        if (!!dto) {
-            var t = new transformerType();
-            t.initFromLoad(dto);
-            this.transformer(t);
+    selectTransformer(dto: Raven.Abstractions.Indexing.TransformerDefinition) {
+        if (dto) {
+            this.transformer(new transformerType(dto));
             this.runQuery();
         } else {
             this.transformer(null);
@@ -674,8 +658,8 @@ class query extends viewModelBase {
             //if index is dynamic, get columns using index definition, else get it using first index result
             if (indexName.indexOf(this.dynamicPrefix) === 0) {
                 var collectionName = indexName.substring(8);
-                new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
-                    .execute()
+                new collection(collectionName, this.activeDatabase())
+                    .fetchDocuments(0, 1)
                     .done((result: pagedResultSet<any>) => {
                         if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
                             var dynamicIndexPattern: document = new document(result.items[0]);
@@ -695,12 +679,8 @@ class query extends viewModelBase {
         }
     }
 
-    findTransformerByName(transformerName: string): transformerDto {
-        try {
-            return this.allTransformers().filter((dto: transformerDto) => transformerName === dto.name)[0];
-        } catch (e) {
-            return null;
-        }
+    findTransformerByName(transformerName: string): Raven.Abstractions.Indexing.TransformerDefinition {
+        return this.allTransformers().first(x => x.Name === transformerName);
     }
 
     private getStoredQueryTransformerName(query: storedQueryDto): string {

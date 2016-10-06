@@ -344,8 +344,24 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public IndexRunningStatus Status
+        {
+            get
+            {
+                if (_documentDatabase.Configuration.Indexing.Disabled)
+                    return IndexRunningStatus.Disabled;
+
+                if (_run)
+                    return IndexRunningStatus.Running;
+
+                return IndexRunningStatus.Paused;
+            }
+        }
+
         public void StartIndexing()
         {
+            _run = true;
+
             StartIndexing(_indexes);
         }
 
@@ -363,8 +379,6 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_documentDatabase.Configuration.Indexing.Disabled)
                 return;
-
-            _run = true;
 
             Parallel.ForEach(indexes, index => index.Start());
         }
@@ -389,6 +403,8 @@ namespace Raven.Server.Documents.Indexes
 
         public void StopIndexing()
         {
+            _run = false;
+
             StopIndexing(_indexes);
         }
 
@@ -406,8 +422,6 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_documentDatabase.Configuration.Indexing.Disabled)
                 return;
-
-            _run = false;
 
             Parallel.ForEach(indexes, index => index.Stop());
         }
@@ -454,10 +468,9 @@ namespace Raven.Server.Documents.Indexes
                     if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
                         return;
 
-                    var parts = indexDirectory.Name.Split(new [] { '-' },StringSplitOptions.RemoveEmptyEntries);
-
                     int indexId;
-                    if (int.TryParse(parts[0], out indexId) == false)
+                    string indexName;
+                    if (IndexDefinitionBase.TryReadIdFromDirectory(indexDirectory, out indexId, out indexName) == false)
                         continue;
 
                     List<Exception> exceptions = null;
@@ -478,7 +491,7 @@ namespace Raven.Server.Documents.Indexes
                         exceptions?.Add(e);
 
                         // TODO arek: I think we can ignore auto indexes here, however for static ones try to retrieve names
-                        var fakeIndex = new FaultyInMemoryIndex(indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexDirectory));
+                        var fakeIndex = new FaultyInMemoryIndex(indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexDirectory) ?? indexName);
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Could not open index with id {indexId}. Created in-memory, fake instance: {fakeIndex.Name}", e);

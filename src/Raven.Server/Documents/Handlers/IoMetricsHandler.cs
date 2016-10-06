@@ -10,7 +10,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 
-namespace Raven.Server.Documents.Handlers.Admin
+namespace Raven.Server.Documents.Handlers
 {
     public class IoMetricsHandler : DatabaseRequestHandler
     {

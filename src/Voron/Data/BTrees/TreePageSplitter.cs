@@ -80,7 +80,7 @@ namespace Voron.Data.BTrees
 
                 if (_page.IsLeaf)
                 {
-                    _tree.ClearRecentFoundPages();
+                    _tree.ClearPagesCache();
                 }
 
                 if (_page.LastSearchPosition >= _page.NumberOfEntries)
@@ -304,7 +304,7 @@ namespace Voron.Data.BTrees
             if (_cursor.CurrentPage.PageNumber == page.PageNumber)
             {
                 _cursor.Pop();
-                _cursor.Push(_tx.GetReadOnlyTreePage(pageRefNumber));
+                _cursor.Push(_tree.GetReadOnlyTreePage(pageRefNumber));
             }
 
             _tree.FreePage(page);

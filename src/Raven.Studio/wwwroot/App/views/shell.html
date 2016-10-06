@@ -1,15 +1,19 @@
 <nav class="navbar navbar-inverse navbar-fixed-top">
     <div class="container-fluid">
         <div class="navbar-header">
-            <a class="navbar-brand" href="#">RavenDB</a>
-            <a class="menu-collapse-button icon-menu-collapse" title="collapse menu"></a>
+            <a class="navbar-brand hidden-xs" href="#">RavenDB</a>
         </div>
         <div id="navbar">
             <ul class="nav navbar-nav navbar-right">
-                <li><a href="#" class="icon-notifications btn-toggle" data-bind="{ click: notificationCenter.showNotifications.toggle.bind(notificationCenter.showNotifications) }"></a></li>
+                <li data-bind="with: notificationCenter">
+                    <a href="#" id="notification-toggle" class="btn-toggle" data-bind="{ click: showNotifications.toggle.bind(showNotifications), css: { 'active': showNotifications() } }">
+                        <span class="icon-notifications"></span>
+                        <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
+                    </a>
+                </li>
                 <li><a target="_blank" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
-                <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
-                <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
+                <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
+                <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
             </ul>
             <div class="inputs-container hidden-xs">
                 <div class="search-container">
@@ -57,7 +61,7 @@
                                     <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/Company</a></li>
                                 </ul>
                             </section>
-                            <section>
+                            <section class="text-center">
                                 <div class="global-spinner"></div>
                             </section>
                         </div>
@@ -68,7 +72,7 @@
                         <span class="database" data-bind="text: $root.activeResource() ? $root.activeResource().name:''"></span>
                     </div>
                     <div class="box-container">
-                        <div class="database-filter-container">
+                        <div class="resource-filter-container">
                             <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
                         </div>
                         <div class="scroller">

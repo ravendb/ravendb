@@ -33,11 +33,18 @@ namespace Raven.Server
                     Console.WriteLine("Server started, listening to requests...");
 
                     //TODO: Move the command line options to here
-                    while (true)
+                    var run = true;
+                    while (run)
                     {
-                        if (Console.ReadLine() == "q")
-                            break;
-
+                        switch (Console.ReadLine()?.ToLower())
+                        {
+                            case "q":
+                                run = false;
+                                break;
+                            case "cls":
+                                Console.Clear();
+                                break;
+                        }
                         // Console.ForegroundColor++;
                     }
                     if (_logger.IsInfoEnabled)

@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly TransactionOperationContext _indexContext;
         private readonly MapReduceIndexingContext _mapReduceContext;
         private readonly Slice _nestedValueKey;
-        private ByteStringContext.Scope _nestedValueKeyScope;
+        private ByteStringContext.InternalScope _nestedValueKeyScope;
         private readonly Transaction _tx;
 
         private NestedMapResultsSection _nestedSection;
@@ -57,8 +57,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             ModifiedPages = new HashSet<long>();
             FreedPages = new HashSet<long>();
 
-            Tree.PageModified += page => ModifiedPages.Add(page);
-            Tree.PageFreed += page => FreedPages.Add(page);
+            Tree.PageModified += page =>
+            {
+                ModifiedPages.Add(page);
+                FreedPages.Remove(page);
+            };
+
+            Tree.PageFreed += page =>
+            {
+                FreedPages.Add(page);
+                ModifiedPages.Remove(page);
+            };
         }
 
         public void Delete(long id)
@@ -87,38 +96,36 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Add(long id, BlittableJsonReaderObject result)
         {
-            switch (Type)
+            using (result)
             {
-                case MapResultsStorageType.Tree:
-                    using (result)
-                    {
+                switch (Type)
+                {
+                    case MapResultsStorageType.Tree:
                         Slice entrySlice;
                         using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
                         {
                             var pos = Tree.DirectAdd(entrySlice, result.Size);
                             result.CopyTo(pos);
                         }
-                    }
 
-                    break;
-                case MapResultsStorageType.Nested:
-                    var section = GetNestedResultsSection();
+                        break;
+                    case MapResultsStorageType.Nested:
+                        var section = GetNestedResultsSection();
 
-                    section.Add(id, result);
-
-                    if (_mapReduceContext.MapEntries.ShouldGoToOverflowPage(_nestedSection.Size))
-                    {
-                        // would result in an overflow, that would be a space waste anyway, let's move to tree mode
-                        MoveExistingResultsToTree(section);
-
-                        _nestedSection.Dispose();
-                        _nestedSection = null;
-
-                        _mapReduceContext.MapEntries.Delete(_nestedValueKey);
-                    }
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(Type.ToString());
+                        if (_mapReduceContext.MapEntries.ShouldGoToOverflowPage(_nestedSection.SizeAfterAdding(result)))
+                        {
+                            // would result in an overflow, that would be a space waste anyway, let's move to tree mode
+                            MoveExistingResultsToTree(section);
+                            Add(id, result);// now re-add the value
+                        }
+                        else
+                        {
+                            section.Add(id, result);
+                        }
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(Type.ToString());
+                }
             }
         }
 
@@ -133,10 +140,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 _mapReduceContext.ResultsStoreTypes.Add((long)_reduceKeyHash, val);
             InitializeTree(create: true);
 
-            foreach (var mapResult in section.GetResults())
-            {
-                Add(mapResult.Key, mapResult.Value);
-            }
+            section.MoveTo(Tree);
         }
 
         public NestedMapResultsSection GetNestedResultsSection()
@@ -144,35 +148,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             if (_nestedSection != null)
                 return _nestedSection;
 
-            var read = _mapReduceContext.MapEntries.Read(_nestedValueKey);
-
-            _nestedSection = read == null ? new NestedMapResultsSection() : new NestedMapResultsSection(read.Reader.Base, read.Reader.Length, _indexContext);
+            _nestedSection = new NestedMapResultsSection(_indexContext.Environment,_mapReduceContext.MapEntries, _nestedValueKey);
 
             return _nestedSection;
-        }
-
-        public void FlushNestedValues()
-        {
-            if (_nestedSection.Size > 0)
-            {
-                var pos = _mapReduceContext.MapEntries.DirectAdd(_nestedValueKey, _nestedSection.Size);
-
-                _nestedSection.CopyTo(pos);
-            }
-            else
-            {
-                _mapReduceContext.MapEntries.Delete(_nestedValueKey);
-            }
         }
 
         public void Dispose()
         {
             _nestedValueKeyScope.Dispose();
-            if (_nestedSection != null)
-            {
-                _nestedSection.Dispose();
-                _nestedSection = null;
-            }
         }
     }
 }

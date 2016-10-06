@@ -12,6 +12,7 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -79,16 +80,33 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
 
                 var threads = new DynamicJsonArray();
-                foreach (var stats in NativeMemory.ThreadAllocations.Values)
+                foreach (var stats in NativeMemory.ThreadAllocations.Values
+                    .Where(x => x.ThreadInstance.IsAlive)
+                    .GroupBy(x => x.Name))
                 {
-                    totalUnmanagedAllocations += stats.Allocations;
-                    threads.Add(new DynamicJsonValue
+                    var unmanagedAllocations = stats.Sum(x => x.Allocations);
+                    totalUnmanagedAllocations += unmanagedAllocations;
+                    var ids = new DynamicJsonArray(stats.Select(x => new DynamicJsonValue
                     {
-                        ["Name"] = stats.Name,
-                        ["Id"] = stats.Id,
-                        ["Allocations"] = stats.Allocations,
-                        ["HumaneAllocations"] = FileHeader.Humane(stats.Allocations)
-                    });
+                        ["Id"] = x.Id,
+                        ["Allocations"] = x.Allocations,
+                        ["HumaneAllocations"] = FileHeader.Humane(x.Allocations)
+                    }));
+                    var groupStats = new DynamicJsonValue
+                    {
+                        ["Name"] = stats.Key,
+                        ["Allocations"] = unmanagedAllocations,
+                        ["HumaneAllocations"] = FileHeader.Humane(unmanagedAllocations)
+                    };
+                    if (ids.Count == 1)
+                    {
+                        groupStats["Id"] = stats.First().Id;
+                    }
+                    else
+                    {
+                        groupStats["Ids"] = ids;
+                    }
+                    threads.Add(groupStats);
                 }
                 var managedMemory = GC.GetTotalMemory(false);
                 var djv = new DynamicJsonValue
@@ -104,7 +122,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         ["TotalUnmanagedAllocations"] = FileHeader.Humane(totalUnmanagedAllocations),
                         ["ManagedAllocations"] = FileHeader.Humane(managedMemory),
                         ["TotalMemoryMapped"] = FileHeader.Humane(totalMapping),
-
                     },
 
                     ["Threads"] = threads,

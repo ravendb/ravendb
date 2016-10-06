@@ -77,7 +77,8 @@ namespace Raven.Client.Documents.SessionOperations
                 index = indexName,
                 includes = new string[0],
                 MetadataOnly = false,
-                IndexEntriesOnly = false
+                IndexEntriesOnly = false,
+                Context = _session.Context
             };
         }
 

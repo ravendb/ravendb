@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Raven.Abstractions.Logging;
-using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Voron;
 using Voron.Platform.Posix;
@@ -11,7 +10,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
 {
     public static class MemoryInformation
     {
-        private static Logger _logger;
+        private static Logger _logger = LoggingSource.Instance.GetLogger<MemoryInfoResult>("Raven/Server");
 
         private static int memoryLimit;
         private static bool failedToGetAvailablePhysicalMemory;
@@ -20,9 +19,6 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             AvailableMemory = new Size(256, SizeUnit.Megabytes),
             TotalPhysicalMemory = new Size(256, SizeUnit.Megabytes),
         };
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern IntPtr CreateMemoryResourceNotification(int notificationType);
 
         [StructLayout(LayoutKind.Sequential)]
         public struct MemoryStatusEx
@@ -40,7 +36,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
 
         [return: MarshalAs(UnmanagedType.Bool)]
         [DllImport("kernel32.dll",SetLastError = true)]
-        public static unsafe extern bool GlobalMemoryStatusEx(MemoryStatusEx* lpBuffer);
+        public static extern unsafe bool GlobalMemoryStatusEx(MemoryStatusEx* lpBuffer);
 
         /// <summary>
         /// This value is in MB
@@ -54,9 +50,8 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             }
         }
 
-        public static unsafe MemoryInfoResult GetMemoryInfo(RavenConfiguration configuration)
+        public static unsafe MemoryInfoResult GetMemoryInfo()
         {
-            _logger = LoggingSource.Instance.GetLogger<MemoryInfoResult>(configuration.DatabaseName);
             if (failedToGetAvailablePhysicalMemory)
             {
                 if (_logger.IsInfoEnabled)

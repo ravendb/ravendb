@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Abstractions.Data;
+using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Voron;
 
@@ -100,6 +101,17 @@ namespace Raven.Server.Documents
                 return SystemCollection;
 
             return GetCollectionName(document);
+        }
+
+        public static string GetCollectionName(DynamicBlittableJson document)
+        {
+            dynamic dynamicDocument = document;
+            string key = dynamicDocument.Id;
+
+            if (key != null && key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+                return SystemCollection;
+
+            return GetCollectionName(document.BlittableJson);
         }
 
         public static string GetCollectionName(BlittableJsonReaderObject document)

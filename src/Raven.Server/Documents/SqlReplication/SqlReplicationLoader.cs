@@ -97,13 +97,17 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     ["LastAlert"] = new Alert
                     {
-                        IsError = true,
+                        Type = AlertType.SqlReplicationError, 
+                        Severity = AlertSeverity.Error,
                         CreatedAt = SystemTime.UtcNow,
-                        Message = "Last SQL replication operation for " + simulateSqlReplication.Configuration.Name + " was failed",
-                        Title = "SQL replication error",
-                        Exception = e.ToString(),
-                        UniqueKey = "Sql Replication Error: " + simulateSqlReplication.Configuration.Name
-                    },
+                        Key = simulateSqlReplication.Configuration.Name,
+                        Message = "SQL replication error",
+                        Content = new ExceptionAlertContent
+                        {
+                            Message = "Last SQL replication operation for " + simulateSqlReplication.Configuration.Name + " was failed",
+                            Exception = e.ToString()
+                        }
+                    }
                 };
             }
         }

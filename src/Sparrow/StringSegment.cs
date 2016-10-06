@@ -71,7 +71,7 @@ namespace Sparrow
             String = s;
             Start = start;
             Length = count == -1 ? String.Length - start : count;
-            _valueString = null;			
+            _valueString = start == 0 && Length == s.Length ? s : null;			
 
             if (Start + Length > String.Length)
                 throw new IndexOutOfRangeException();

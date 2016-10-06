@@ -5,9 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -17,7 +15,6 @@ using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -327,14 +324,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
                         Assert.False(stats.IsTestIndex);
-                        Assert.True(stats.IsInMemory);
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(2, stats.EntriesCount);
                         Assert.Equal(2, stats.MapAttempts);
                         Assert.Equal(0, stats.MapErrors);
                         Assert.Equal(2, stats.MapSuccesses);
-                        Assert.Equal(1, stats.ForCollections.Length);
-                        Assert.Equal(2, stats.LastIndexedEtags[stats.ForCollections[0]]);
+                        Assert.Equal(1, stats.Collections.Count);
+                        Assert.Equal(2, stats.Collections.First().Value.LastProcessedDocumentEtag);
                         Assert.Equal(now, stats.LastIndexingTime);
                         Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
@@ -373,14 +369,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
                         Assert.False(stats.IsTestIndex);
-                        Assert.True(stats.IsInMemory);
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(3, stats.EntriesCount);
                         Assert.Equal(3, stats.MapAttempts);
                         Assert.Equal(0, stats.MapErrors);
                         Assert.Equal(3, stats.MapSuccesses);
-                        Assert.Equal(1, stats.ForCollections.Length);
-                        Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
+                        Assert.Equal(1, stats.Collections.Count);
+                        Assert.Equal(3, stats.Collections.First().Value.LastProcessedDocumentEtag);
                         Assert.Equal(now, stats.LastIndexingTime);
                         Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
@@ -409,14 +404,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
                         Assert.False(stats.IsTestIndex);
-                        Assert.True(stats.IsInMemory);
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(2, stats.EntriesCount);
                         Assert.Equal(3, stats.MapAttempts);
                         Assert.Equal(0, stats.MapErrors);
                         Assert.Equal(3, stats.MapSuccesses);
-                        Assert.Equal(1, stats.ForCollections.Length);
-                        Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
+                        Assert.Equal(1, stats.Collections.Count);
+                        Assert.Equal(3, stats.Collections.First().Value.LastProcessedDocumentEtag);
                         Assert.Equal(now, stats.LastIndexingTime);
                         Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
@@ -439,7 +433,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     database))
                 {
                     index.Start();
-                    Assert.True(index.IsRunning);
+                    Assert.Equal(IndexRunningStatus.Running, index.Status);
 
                     IndexStats stats;
                     var batchStats = new IndexingRunStats();
@@ -454,7 +448,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                     stats = index.GetStats();
                     Assert.Equal(IndexingPriority.Error, stats.Priority);
-                    Assert.True(SpinWait.SpinUntil(() => index.IsRunning == false, TimeSpan.FromSeconds(5)));
+                    Assert.True(SpinWait.SpinUntil(() => index.Status == IndexRunningStatus.Paused, TimeSpan.FromSeconds(5)));
                 }
             }
         }
@@ -1004,7 +998,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexingPriority.Idle, index2.Priority);
 
                 var now = database.Time.GetUtcNow();
-                database.Time.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
+                database.Time.UtcDateTime = () => 
+                        now.Add(TimeSpan.FromSeconds(1))
+                           .Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
 
                 database.IndexStore.RunIdleOperations(); // nothing should happen here, because age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
 
@@ -1111,6 +1107,50 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(indexName, index.Name);
 
                 // TODO arek: verify that alert was created as well
+            }
+        }
+
+        [Fact]
+        public void CanDeleteFaultyIndex()
+        {
+            var path = NewDataPath();
+            string indexStoragePath;
+            string indexSafeName;
+
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            {
+                var name1 = new IndexField
+                {
+                    Name = "Name1",
+                    Highlighted = true,
+                    Storage = FieldStorage.No,
+                    SortOption = SortOptions.String
+                };
+
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })));
+                var index = database.IndexStore.GetIndex(1);
+                indexSafeName = index.GetIndexNameSafeForFileSystem();
+
+                indexStoragePath = Path.Combine(database.Configuration.Indexing.IndexStoragePath,
+                    index.GetIndexNameSafeForFileSystem());
+            }
+
+            IOExtensions.DeleteDirectory(indexStoragePath);
+            Directory.CreateDirectory(indexStoragePath); // worst case, we have no info
+
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false))
+            {
+                var index = database
+                    .IndexStore
+                    .GetIndex(1);
+
+                Assert.IsType<FaultyInMemoryIndex>(index);
+                Assert.Equal(IndexingPriority.Error, index.Priority);
+                Assert.Equal(indexSafeName, index.GetIndexNameSafeForFileSystem());
+
+                database.IndexStore.DeleteIndex(index.IndexId);
+
+                Assert.False(Directory.Exists(indexStoragePath));
             }
         }
     }

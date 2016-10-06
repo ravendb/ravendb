@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Client.Connection;
 using Raven.Client.Data;
-using System.Reflection;
 using Raven.Abstractions.Data;
-using Raven.Client.Data.Queries;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Json.Linq;
 using Raven.Server.Documents;
+using Raven.Server.Web.Operations;
+using Sparrow.Json;
 using TypeScripter;
 using TypeScripter.TypeScript;
 
@@ -32,13 +30,15 @@ namespace TypingsGenerator
                 });
 
             scripter
-               .WithTypeMapping(TsPrimitive.String, typeof(Guid))
-               .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
-               .WithTypeMapping(TsPrimitive.Any, typeof(RavenJObject))
-               .WithTypeMapping(TsPrimitive.Any, typeof(RavenJValue))
-               .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
-               .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(RavenJArray))
-               .WithTypeMapping(TsPrimitive.Any, typeof(RavenJToken));
+                .WithTypeMapping(TsPrimitive.String, typeof(Guid))
+                .WithTypeMapping(TsPrimitive.String, typeof(TimeSpan))
+                .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
+                .WithTypeMapping(TsPrimitive.Any, typeof(RavenJObject))
+                .WithTypeMapping(TsPrimitive.Any, typeof(RavenJValue))
+                .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
+                .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(RavenJArray))
+                .WithTypeMapping(TsPrimitive.Any, typeof(RavenJToken))
+                .WithTypeMapping(TsPrimitive.Any, typeof(BlittableJsonReaderObject));
 
             scripter = ConfigureTypes(scripter);
             Directory.Delete(TargetDirectory, true);
@@ -68,6 +68,19 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexChangeNotification));
             scripter.AddType(typeof(TransformerChangeNotification));
             scripter.AddType(typeof(DatabaseOperations.PendingOperation));
+            scripter.AddType(typeof(AlertNotification));
+
+            // alerts
+            scripter.AddType(typeof(Alert));
+            
+            // indexes
+            scripter.AddType(typeof(IndexStats));
+            scripter.AddType(typeof(IndexPerformanceStats));
+
+
+            // transformers
+            scripter.AddType(typeof(TransformerDefinition));
+
 
 
             return scripter;

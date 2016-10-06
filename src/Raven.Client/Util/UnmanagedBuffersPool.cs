@@ -47,7 +47,7 @@ namespace Raven.Client.Util
                 while (stack.TryPop(out allocatedMemoryDatas))
                 {
                     size += allocatedMemoryDatas.SizeInBytes;
-                    NativeMemory.Free(allocatedMemoryDatas.Address, allocatedMemoryDatas.SizeInBytes);
+                    NativeMemory.Free(allocatedMemoryDatas.Address, allocatedMemoryDatas.SizeInBytes, allocatedMemoryDatas.AllocatingThread);
                 }
             }
             return size;
@@ -96,12 +96,14 @@ namespace Raven.Client.Util
 
             var index = GetIndexFromSize(actualSize);
 
+                NativeMemory.ThreadStats stats;
             if (index == -1)
             {
                 return new AllocatedMemoryData
                 {
                     SizeInBytes = size,
-                    Address = NativeMemory.AllocateMemory(size)
+                    Address = NativeMemory.AllocateMemory(size, out stats),
+                    AllocatingThread = stats
                 };
             }
 
@@ -114,7 +116,8 @@ namespace Raven.Client.Util
             return new AllocatedMemoryData
             {
                 SizeInBytes = actualSize,
-                Address = NativeMemory.AllocateMemory(size)
+                Address = NativeMemory.AllocateMemory(size,out stats),
+                AllocatingThread = stats
             };
         }
 
@@ -157,7 +160,7 @@ namespace Raven.Client.Util
             var index = GetIndexFromSize(returned.SizeInBytes);
             if (index == -1)
             {
-                NativeMemory.Free(returned.Address, returned.SizeInBytes);
+                NativeMemory.Free(returned.Address, returned.SizeInBytes, returned.AllocatingThread);
 
                 return; // strange size, just free it
             }

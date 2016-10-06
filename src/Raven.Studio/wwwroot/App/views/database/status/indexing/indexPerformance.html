@@ -1,135 +1,57 @@
 <style>
-    .batchRange rect {
-        opacity: 0.4;
-    }
-    .batchRange rect:hover {
-        opacity: 0.6;
-    }
-    .rect_legend {
-        width: 15px;
-        height: 15px;
-        border: solid 1px black;
-        display: inline-block;
-    }
-    .op {
-        cursor: pointer;
-    }
-    #metricsIndexingGraph text {
-         pointer-events: none;
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-        -khtml-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
-    }
-    .op rect {
-        opacity: 1;
-    }
-    .op:hover rect {
-        opacity: 0.8;
-    }
-    .filter_op {
-        fill: #aaa;
-        opacity: 0.4;
-        cursor: pointer;
+    svg {
+        background-color: white;
     }
 
-    .filter_op:hover {
-        opacity: 1;
+    .in_progress_group_item  rect {
+        fill: black;
+        stroke: blue;
+        stroke-dasharray: 5, 5;
     }
 
-    .batchRange {
-        cursor: pointer;
-    }
-    .selectable-tooltip .close, .selectable-tooltip .handle {
-        pointer-events: all;
-        -webkit-touch-callout: all;
-        -webkit-user-select: all;
-        -khtml-user-select: all;
-        -moz-user-select: all;
-        -ms-user-select: all;
-        user-select: all;
-    }
+     .axis path {
+         fill: none;
+         stroke: #000;
+         shape-rendering: crispEdges;
+     }
 
-    line.reduce_split_line {
-        stroke:black;
+    .perf_group_bg {
+        stroke: none;
+        fill: pink;
+    }   
+
+    .op_group_level_4 {
+        fill: red;
+        stroke: black;
         stroke-width: 1;
-        opacity: 0.5;
     }
 
-    .prefetch_op rect {
-        opacity: 0.6;
-        fill: #2ca02c;
-        cursor: pointer;
-    }
-    .prefetch_op rect:hover {
-        opacity: 0.7;
+    .op_group_level_3 {
+        fill: blue;
+        stroke: black;
+        stroke-width: 1;
     }
 
-    .LoadDocument { fill: #17becf; background-color: #17becf }
-
-    .Linq_MapExecution { fill: #1f77b4; background-color: #1f77b4 }
-    .Linq_ReduceLinqExecution { fill: #ff7f0e; background-color: #ff7f0e }
-    .Lucene_DeleteExistingDocument { fill: #2ca02c; background-color: #2ca02c }
-    .Lucene_ConvertToLuceneDocument { fill: #d62728; background-color: #d62728 }
-    .Lucene_AddDocument { fill: #9467bd; background-color: #9467bd }
-    .Lucene_FlushToDisk { fill: #8c564b; background-color: #8c564b }
-    .Lucene_RecreateSearcher { fill: #e377c2; background-color: #e377c2 }
-
-    .Map_DeleteMappedResults { fill: #aec7e8; background-color: #aec7e8 }
-    .Map_ConvertToRavenJObject { fill: #e0e5a3; background-color: #e0e5a3 }
-    .Map_PutMappedResults { fill: #98df8a; background-color: #98df8a }
-    .Map_ScheduleReductions { fill: #ffbb78; background-color: #ffbb78 }
-    
-    .Reduce_GetItemsToReduce { fill: #c5b0d5; background-color: #c5b0d5 }
-    .Reduce_DeleteScheduledReductions { fill: #c49c94; background-color: #c49c94 }
-    .Reduce_ScheduleReductions { fill: #f7b6d2; background-color: #f7b6d2 }
-    .Reduce_GetMappedResults { fill: #bcbd22; background-color: #bcbd22 }
-    .Reduce_RemoveReduceResults { fill: #dbdb8d; background-color: #dbdb8d }
-
-    .StorageCommit { fill: #9edae5; background-color: #9edae5 }
-
-    .Delete_DeleteMappedResultsForDocumentId { fill: #e0e5a3; background-color: #e0e5a3 }
-    .Delete_Documents { fill: #d62728; background-color: #d62728 } 
-    .Delete_IndexUpdateTriggers {  fill: #1f77b4; background-color: #1f77b4 }
-
-    .UpdateDocumentReferences { fill: #ff9896; background-color: #ff9896 }
-
-    .Extension_Suggestions { fill: #55fa9a; background-color: #55fa9a; }
-
-    .ParallelBlock {
-       background:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAI0lEQVQIW2NkwAT/GdHE/gP5jMiCYAGQIpggXAAmiCIAEgQAAE4FBbECyZcAAAAASUVORK5CYII=') repeat;
+    .op_group_level_2 {
+        fill: green;
+        stroke: black;
+        stroke-width: 1;
     }
 
-    #reduceStatsInfo .mto_indent, #mapStatsInfo .mto_indent {
-        padding-left: 25px;
+    .op_group_level_1 {
+        fill: yellow;
+        stroke: black;
+        stroke-width: 1;
     }
 
-    .no_data {
-        font-size: 18px;
-        font-weight: bold;
+    .op_group_level_0 {
+        fill: white;
+        stroke: #ccc;
+        stroke-width: 1;
     }
-
 </style>
 
 <section id="indexingPerformance" style="position: relative">
-    <div>
-        <div class="btn-group">
-            <button class="btn btn-default" data-bind="event: { mousedown: startZoomIn, mouseup: stopZoomIn }" title="Zoom in"><i class="fa fa-search-plus"></i></button>
-            <button class="btn btn-default" data-bind="event: { mousedown: startZoomOut, mouseup: stopZoomOut }" title="Zoom out"><i class="fa fa-search-minus"></i></button>    
-        </div>
-        <div class="btn-group">
-            <select id="visibleIndexesSelector" data-bind="options: allIndexNames, selectedOptions: selectedIndexNames" multiple="multiple"></select>
-        </div>
-        
-        <div class="btn-group">
-            <button id="fullScreenButton" class="btn btn-default" data-bind="click: toggleFullscreen" title="Fullscreen mode">
-                <i class="fa fa-expand"></i>
-            </button>
-        </div>
-    </div>
-
     <section id="metricsContainer" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
         <svg id="indexPerformanceGraph" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
     </section>
