@@ -16,12 +16,6 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Server.Documents.Indexing.Static.BasicStaticMapReduceIndexing())
-            {
-                a.The_simpliest_static_map_reduce_index().Wait();
-                if (a.GetHashCode() != 1)
-                    return;
-            }
             using (var store = new DocumentStore
             {
                 Url = "http://localhost:8080",
