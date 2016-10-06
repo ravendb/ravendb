@@ -196,7 +196,6 @@ namespace Raven.Server.Utils
 
             if (lazyString != null)
             {
-                
                 DateTime dt;
                 DateTimeOffset dto;
                 switch (LazyStringParser.TryParseDateTime(lazyString.Buffer, lazyString.Size, out dt, out dto))
@@ -209,7 +208,8 @@ namespace Raven.Server.Utils
 
                 TimeSpan ts;
                 if (LazyStringParser.TryParseTimeSpan(lazyString.Buffer, lazyString.Size, out ts))
-                    return ts; ;
+                    return ts;
+
             }
 
             return value;

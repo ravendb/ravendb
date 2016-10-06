@@ -22,10 +22,20 @@ namespace Raven.Server.Utils
             if (len < 8)
                 return false;
 
+            bool negate = false;
+            if (buffer[0] == '-')
+            {
+                negate = true;
+                buffer++;
+                len--;
+            }
+
             int indexOfDays = -1, indexOfMilliseconds = -1;
 
             for (int i = 0; i < len; i++)
             {
+                if (buffer[i] == ':')
+                    break;
                 if (buffer[i] == '.')
                 {
                     indexOfDays = i;
@@ -33,19 +43,19 @@ namespace Raven.Server.Utils
                 }
             }
 
-            if (indexOfDays != -1)
+            if (len < indexOfDays + 1 + 8)
+                return false;
+
+            for (int i = indexOfDays + 1 + 8; i < len; i++)
             {
-                for (int i = indexOfDays; i < len; i++)
+                if (buffer[i] == '.')
                 {
-                    if (buffer[i] == '.')
-                    {
-                        indexOfMilliseconds = i;
-                        break;
-                    }
+                    indexOfMilliseconds = i;
+                    break;
                 }
             }
 
-            int days = 0, hours, minutes, seconds, milliseconds = 0;
+            int days = 0, hours, minutes, seconds, ticks = 0;
 
             if (indexOfDays != -1)
             {
@@ -68,12 +78,21 @@ namespace Raven.Server.Utils
 
             if (indexOfMilliseconds != -1)
             {
-                if (TryParseNumber(buffer + 8, len - indexOfMilliseconds, out milliseconds) == false)
+                var remainingLen = len - indexOfMilliseconds -1;
+                if (remainingLen > 7)
                     return false;
+                if (TryParseNumber(buffer + 9, remainingLen, out ticks) == false)
+                    return false;
+
+                for (int i = remainingLen; i < 7; i++)
+                {
+                    ticks *= 10;
+                }
             }
 
-            ts = new TimeSpan(days, hours, minutes, seconds, milliseconds);
-
+            ts = new TimeSpan(days, hours, minutes, seconds).Add(TimeSpan.FromTicks(ticks));
+            if (negate)
+                ts = -ts;
             return true;
         }
 
@@ -110,39 +129,45 @@ namespace Raven.Server.Utils
             if (TryParseNumber(buffer + 17, 2, out second) == false)
                 return Result.Failed;
 
+            var kind = DateTimeKind.Unspecified;
+
             switch (len)
             {
                 case 19://"yyyy'-'MM'-'dd'T'HH':'mm':'ss",
-                    dt = new DateTime(year, month, day, hour, minute, second);
+                    dt = new DateTime(year, month, day, hour, minute, second, kind);
                     return Result.DateTime;
                 case 20: //"yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'",
                     if (buffer[19] != 'Z')
                         return Result.Failed;
-                    dt = new DateTime(year, month, day, hour, minute, second, DateTimeKind.Utc);
-                    return Result.DateTime;
-                case 23:
+                    kind = DateTimeKind.Utc;
+                    goto case 19;
+                case 23://"yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff",
                     if (buffer[19] != '.')
                         return Result.Failed;
                     if (TryParseNumber(buffer + 20, 3, out fractions) == false)
                         return Result.Failed;
-                    dt = new DateTime(year, month, day, hour, minute, second).AddTicks(fractions);
+                    dt = new DateTime(year, month, day, hour, minute, second, kind).AddTicks(fractions);
                     return Result.DateTime;
+                case 24://"yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'",
+                    if (buffer[23] != 'Z')
+                        return Result.Failed;
+                    kind = DateTimeKind.Utc;
+                    goto case 23;
                 case 27://"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"
                     if (buffer[19] != '.')
                         return Result.Failed;
                     if (TryParseNumber(buffer + 20, 7, out fractions) == false)
                         return Result.Failed;
-                    dt = new DateTime(year, month, day, hour, minute, second).AddTicks(fractions);
+                    dt = new DateTime(year, month, day, hour, minute, second, kind).AddTicks(fractions);
                     return Result.DateTime;
                 case 28://"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'Z'"
-                    if (buffer[19] != '.' || buffer[27] != 'Z')
+                    if (buffer[27] != 'Z')
                         return Result.Failed;
-                    if (TryParseNumber(buffer + 20, 7, out fractions) == false)
-                        return Result.Failed;
-                    dt = new DateTime(year, month, day, hour, minute, second, DateTimeKind.Utc).AddTicks(fractions);
-                    return Result.DateTime;
+                    kind = DateTimeKind.Utc;
+                    goto case 27;
                 case 33://"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'+'dd':'dd"
-                    if (buffer[19] != '.' || buffer[27] != '+' || buffer[30] != ':')
+                    if (buffer[19] != '.' || buffer[30] != ':' || 
+                        (buffer[27] != '+' && buffer[27] != '-'))
                         return Result.Failed;
 
                     if (TryParseNumber(buffer + 20, 7, out fractions) == false)
@@ -152,8 +177,11 @@ namespace Raven.Server.Utils
                     if (TryParseNumber(buffer + 31, 2, out offsetMinute) == false)
                         return Result.Failed;
 
+                    var offset = new TimeSpan(offsetHour, offsetMinute, 0);
+                    if (buffer[27] == '-')
+                        offset = -offset;
                     dto = new DateTimeOffset(year, month, day, hour, minute, second,
-                        new TimeSpan(offsetHour, offsetMinute, 0)).AddTicks(fractions);
+                        offset).AddTicks(fractions);
                     return Result.DateTimeOffset;
                 default:
                     return Result.Failed;

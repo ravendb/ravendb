@@ -30,6 +30,25 @@ namespace FastTests.Utils
         }
 
         [Theory]
+        [InlineData("21:07:32.2082285")]
+        [InlineData("21:07:32")]
+        [InlineData("2.21:07:32")]
+        [InlineData("-2.21:07:32")]
+        [InlineData("2.21:07:32.232")]
+        public void CanParseValidTimeSpans(string dt)
+        {
+            var expected = TimeSpan.ParseExact(dt,"c", CultureInfo.InvariantCulture);
+
+            var bytes = Encoding.UTF8.GetBytes(dt);
+            fixed (byte* buffer = bytes)
+            {
+                TimeSpan ts;
+                Assert.True(LazyStringParser.TryParseTimeSpan(buffer, bytes.Length, out ts));
+                Assert.Equal(expected, ts);
+            }
+        }
+
+        [Theory]
         [InlineData("2016-10-05T21:07:32.2082285+03:00")]
         [InlineData("2016-10-05T21:17:32.2082285+01:00")]
         public void CanParseValidDatesTimeOffset(string dt)
