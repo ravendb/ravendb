@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
+using FastTests.Utils;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Document;
@@ -16,6 +17,14 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
+
+            using (var a = new TimeParsing())
+            {
+                a.CanParseValidTimeSpans("2.21:07:32.232");
+                if (a.GetHashCode() != 1)
+                    return;
+            }
+
             using (var store = new DocumentStore
             {
                 Url = "http://localhost:8080",

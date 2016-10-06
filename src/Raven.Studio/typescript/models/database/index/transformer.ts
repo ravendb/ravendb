@@ -3,69 +3,65 @@
 import appUrl = require("common/appUrl");
 
 class transformer {
-    public name = ko.observable<string>().extend({ required: true });
-    public transformResults = ko.observable<string>().extend({ required: true });
-    public lockMode = ko.observable<string>();
+    name = ko.observable<string>();
+    transformResults = ko.observable<string>();
+    lockMode = ko.observable<Raven.Abstractions.Indexing.TransformerLockMode>();
     private originalName = ko.observable<string>();
-    public wasNameChanged = ko.computed<boolean>(()=> this.name() != this.originalName());
-    
+    temporary = ko.observable<boolean>();
+    nameChanged = ko.pureComputed<boolean>(() => this.name() !== this.originalName());
+    transformerId = ko.observable<number>();
+
     editUrl: KnockoutComputed<string>;
+
+    isLocked = ko.pureComputed(() => this.lockMode() === ("LockedIgnore" as Raven.Abstractions.Indexing.TransformerLockMode));
+
+    filteredOut = ko.observable<boolean>(false); //UI only property
     
+    constructor(dto: Raven.Abstractions.Indexing.TransformerDefinition) {
+        this.originalName(dto.Name);
+        this.name(dto.Name);
+        this.lockMode(dto.LockMode);
+        this.temporary(dto.Temporary);
+        this.transformerId(dto.TransfomerId);
+        this.transformResults(dto.TransformResults);
 
-    initFromLoad(dto: transformerDto): transformer {
-        this.originalName(dto.name.toString());
-        this.name(dto.name);
-        this.editUrl = appUrl.forCurrentDatabase().editTransformer(this.name());
-        this.transformResults(dto.definition.TransformResults);
-        this.lockMode(dto.definition.LockMode);
-        return this;
+        this.initializeObservables();
     }
 
-    initFromSave(dto: savedTransformerDto): transformer{
-        this.originalName(dto.Transformer.Name.toString());
-        this.name(dto.Transformer.Name);
-        this.editUrl = appUrl.forCurrentDatabase().editTransformer(this.name());
-        this.transformResults(dto.Transformer.TransformResults);
-        this.lockMode(dto.Transformer.LockMode);
-        return this;
+    private initializeObservables() {
+        const urls = appUrl.forCurrentDatabase();
+        this.editUrl = urls.editTransformer(this.name());
     }
 
-    toDto(): transformerDto {
+    toDto(): Raven.Abstractions.Indexing.TransformerDefinition {
         return {
-            'name': this.name(),
-            'definition': {
-                'Name': this.name(),
-                'TransformResults': this.transformResults(),
-                'LockMode': this.lockMode()
-            }
-        };
-    }
-
-    toSaveDto(): saveTransformerDto {
-        return {
-            'Name': this.name(),
-            'TransformResults': this.transformResults()
-        };
+            LockMode: this.lockMode(),
+            Name: this.name(),
+            Temporary: this.temporary(),
+            TransfomerId: this.transformerId(),
+            TransformResults: this.transformResults()
+        }
     }
 
     extractInputs(): Array<transformerParamInfo> {
-        var matcher = /(Query|Parameter)\(["'].*?["']\)/g;
-        var defaultMatcher = /(Query|Parameter)OrDefault\(["'].*?["'],\s+["'].*?["']\)/g;
         if (this.transformResults()) {
-            var parameters: string[] = this.transformResults().match(matcher);
-            var parametersWithDefault: string[] = this.transformResults().match(defaultMatcher);
-            var results: Array<{name : string, hasDefault: boolean}> = [];
+            const matcher = /(Query|Parameter)\(["'].*?["']\)/g;
+            const defaultMatcher = /(Query|Parameter)OrDefault\(["'].*?["'],\s+["'].*?["']\)/g;
 
-            if (parameters !== null) {
-                parameters.forEach((value: string) => results.push( {
-                    name: value.substring(value.indexOf('(') + 2, value.length - 2),
+            const parameters: string[] = this.transformResults().match(matcher);
+            const parametersWithDefault: string[] = this.transformResults().match(defaultMatcher);
+            const results: Array<transformerParamInfo> = [];
+
+            if (parameters) {
+                parameters.forEach((value: string) => results.push({
+                    name: value.substring(value.indexOf("(") + 2, value.length - 2),
                     hasDefault: false
                 }));
             }
 
-            if (parametersWithDefault !== null) {
+            if (parametersWithDefault) {
                 parametersWithDefault.forEach((value: string) => results.push({
-                    name: value.substring(value.indexOf('(') + 2, value.indexOf(',') - 1),
+                    name: value.substring(value.indexOf("(") + 2, value.indexOf(",") - 1),
                     hasDefault: true
                 }));
             }
@@ -75,20 +71,14 @@ class transformer {
         return [];
     }
     
-    static empty(): transformer{
-        return new transformer().initFromLoad({
-            'name': "",
-            'definition': {
-                'Name': "",
-                'TransformResults': "",
-                'LockMode':"Unlock"
-            }
-        });
+    static empty(): transformer {
+        return new transformer({
+            LockMode: "Unlock",
+            Name: "",
+            TransformResults: ""
+        } as Raven.Abstractions.Indexing.TransformerDefinition);
     }
-
-    isLocked(): boolean {
-        return this.lockMode() === "LockedIgnore";
-    }
+    
 }
 
 export = transformer;

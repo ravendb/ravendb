@@ -1105,11 +1105,9 @@ namespace Voron.Data.BTrees
 
         public void ClearPagesCache()
         {
-            if (_recentlyFoundPages != null)
-                _recentlyFoundPages.Clear();
+            _recentlyFoundPages?.Clear();
 
-            if (_pageLocator != null)
-                _pageLocator.Clear();
+            _pageLocator?.Clear();
         }
 
         public FixedSizeTree FixedTreeFor(Slice key, byte valSize = 0)

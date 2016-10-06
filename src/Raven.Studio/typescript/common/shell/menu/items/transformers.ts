@@ -25,7 +25,7 @@ function getTransformersMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             title: 'Add Transformer',
             route: 'databases/transformers/add',
-            moduleId: 'viewmodels/database/transformers/editIndex',
+            moduleId: 'viewmodels/database/transformers/editTransformer',
             css: 'icon-plus',
             nav: true,
             dynamicHash: appUrls.newTransformer

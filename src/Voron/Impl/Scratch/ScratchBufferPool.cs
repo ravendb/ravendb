@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Voron.Exceptions;
+using Voron.Global;
 
 namespace Voron.Impl.Scratch
 {
@@ -36,12 +37,15 @@ namespace Voron.Impl.Scratch
         private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers =
             new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.Instance);
 
+        private int _numberOfPagesForScratchFile;
+
 
         public ScratchBufferPool(StorageEnvironment env)
         {
             _options = env.Options;
             _sizeLimit = env.Options.MaxScratchBufferSize;
             _current = NextFile();
+            _numberOfPagesForScratchFile = (int)(Math.Max(_options.InitialFileSize ?? 0, _options.InitialLogFileSize) / _options.PageSize);
         }
 
         public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
@@ -62,23 +66,17 @@ namespace Voron.Impl.Scratch
             _currentScratchNumber++;
             var scratchPager =
                 _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber));
-            if (_current != null)
+            try
             {
-                try
-                {
-                    // if we need to create a new file, we'll start with one that has the same size
-                    // as the current one, to avoid additional allocations
-                    scratchPager.EnsureContinuous(0, (int) _current.File.NumberOfAllocatedPages);
-                }
-                catch (Exception)
-                {
-                    // this can fail because of disk space issue, let us just ignore it
-                    // we'll allocate the minimum amount in a bit anway
-                }
+                scratchPager.EnsureContinuous(0, _numberOfPagesForScratchFile);
+            }
+            catch (Exception)
+            {
+                // this can fail because of disk space issue, let us just ignore it
+                // we'll allocate the minimum amount in a bit anway
+                scratchPager.EnsureContinuous(0, 64); 
             }
 
-            // if the previous large allocation has failed, this will allocate just enough to start with
-            scratchPager.EnsureContinuous(0, (int)(Math.Max(_options.InitialFileSize ?? 0, _options.InitialLogFileSize) / _options.PageSize));
 
             var scratchFile = new ScratchBufferFile(scratchPager, _currentScratchNumber);
             var item = new ScratchBufferItem(scratchFile.Number, scratchFile);
@@ -87,6 +85,7 @@ namespace Voron.Impl.Scratch
 
             return item;
         }
+
         public PagerState GetPagerState(int scratchNumber)
         {
             // Not thread-safe but only called by a single writer.
@@ -100,9 +99,7 @@ namespace Voron.Impl.Scratch
                 throw new ArgumentNullException(nameof(tx));
             var size = Bits.NextPowerOf2(numberOfPages);
 
-
             var current = _current;
-
        
             PageFromScratchBuffer result;
             if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
@@ -112,19 +109,18 @@ namespace Voron.Impl.Scratch
             if (current.File.LastUsedPage + size <= current.File.NumberOfAllocatedPages)
                 return current.File.Allocate(tx, numberOfPages, size);
 
+            // We run out of scratch space, increasing the size of the file will require to allocate
+            // all the memory again, so we'll just double the size (until 1 GB, at which point we'll 
+            // grow by 1 GB each time)
 
-            // There are two reasons why we can't find enough space after the size gotten so big:
-
-            // we haven't flushed yet - so we'll increase the file size rather than
-            // use create a new one
-            if (current.File.HasDiscontinuousSpaceFor(size) == false)
+            var oldPages = _numberOfPagesForScratchFile;
+            var pagesInGb = Constants.Size.Gigabyte/_options.PageSize;
+            _numberOfPagesForScratchFile *= 2;
+            if (oldPages + pagesInGb < _numberOfPagesForScratchFile || 
+                _numberOfPagesForScratchFile < 0)
             {
-                return current.File.Allocate(tx, numberOfPages, size);
+                _numberOfPagesForScratchFile = oldPages + pagesInGb;
             }
-
-            // We have internal fragmentation - there is enough space in the file, but
-            // split into too small chunks that we can't use. Instead of trying to merge
-            // it all we'll just create a new file with the same size
 
             // We need to ensure that _current stays constant through the codepath until return. 
             current = NextFile();

@@ -68,7 +68,7 @@ class indexes extends viewModelBase {
         });
 
         this.lockModeCommon = ko.computed(() => {
-            var selectedIndexes = this.getSelectedIndexes();
+            const selectedIndexes = this.getSelectedIndexes();
             if (selectedIndexes.length === 0)
                 return "None";
 
@@ -143,7 +143,7 @@ class indexes extends viewModelBase {
     }
 
     private filterIndexes() {
-        var filterLower = this.searchText().toLowerCase();
+        const filterLower = this.searchText().toLowerCase();
         this.indexGroups().forEach(indexGroup => {
             var hasAnyInGroup = false;
             indexGroup.indexes().forEach(index => {
@@ -292,6 +292,7 @@ class indexes extends viewModelBase {
     createNotifications(): Array<changeSubscription> {
         return [
             //TODO: it isn't implemented on server side yet: changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
+            //TODO: use cool down
             changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent())
         ];
     }

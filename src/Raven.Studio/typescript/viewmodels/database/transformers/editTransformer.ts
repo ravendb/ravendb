@@ -31,9 +31,9 @@ class editTransformer extends viewModelBase {
         this.transformerName = ko.computed(() => (!!this.editedTransformer() && this.isEditingExistingTransformer()) ? this.editedTransformer().name() : null);
     }
 
-    canActivate(transformerToEditName: string) {
+    canActivate(transformerToEditName: string): JQueryPromise<canActivateResultDto> {
         if (transformerToEditName) {
-            var canActivateResult = $.Deferred();
+            var canActivateResult = $.Deferred<canActivateResultDto>();
             this.editExistingTransformer(transformerToEditName)
                 .done(() => canActivateResult.resolve({ can: true }))
                 .fail(() => {
@@ -85,22 +85,22 @@ class editTransformer extends viewModelBase {
         }
     }
 
-    editExistingTransformer(unescapedTransformerName: string): JQueryPromise<any> {
-        var transformerName = decodeURIComponent(unescapedTransformerName);
+    editExistingTransformer(unescapedTransformerName: string): JQueryPromise<Raven.Abstractions.Indexing.TransformerDefinition> {
+        const transformerName = decodeURIComponent(unescapedTransformerName);
         this.loadedTransformerName(transformerName);
         return this.fetchTransformerToEdit(transformerName)
-            .done((trans: savedTransformerDto) => this.editedTransformer(new transformer().initFromSave(trans)));
+            .done((trans: Raven.Abstractions.Indexing.TransformerDefinition) => this.editedTransformer(new transformer(trans))); 
     }
 
-    fetchTransformerToEdit(transformerName: string): JQueryPromise<savedTransformerDto> {
+    fetchTransformerToEdit(transformerName: string): JQueryPromise<Raven.Abstractions.Indexing.TransformerDefinition> {
         return new getSingleTransformerCommand(transformerName, this.activeDatabase()).execute();
     }
 
     saveTransformer() {
-        if (this.isEditingExistingTransformer() && this.editedTransformer().wasNameChanged()) {
+        if (this.isEditingExistingTransformer() && this.editedTransformer().nameChanged()) {
             var db = this.activeDatabase();
             var saveTransformerWithNewNameViewModel = new saveTransformerWithNewNameConfirm(this.editedTransformer(), db);
-            saveTransformerWithNewNameViewModel.saveTask.done((trans: transformer) => {
+            saveTransformerWithNewNameViewModel.saveTask.done(() => {
                 this.dirtyFlag().reset(); // Resync Changes
                 this.updateUrl(this.editedTransformer().name());
             });
@@ -130,7 +130,7 @@ class editTransformer extends viewModelBase {
                 var transformerName = this.loadedTransformerName();
                 this.fetchTransformerToEdit(transformerName)
                     .always(() => this.dirtyFlag().reset())
-                    .done((trans: savedTransformerDto) => this.editedTransformer().initFromSave(trans))
+                    .done((trans: Raven.Abstractions.Indexing.TransformerDefinition) => this.editedTransformer(new transformer(trans)))
                     .fail(() => {
                         messagePublisher.reportError("Could not find " + transformerName + " transformer");
                         this.navigate(appUrl.forTransformers(this.activeDatabase()));
@@ -154,11 +154,11 @@ class editTransformer extends viewModelBase {
     }
 
     deleteTransformer() {
-        var transformer = this.editedTransformer();
+        const transformer = this.editedTransformer();
 
         if (transformer) {
-            var db = this.activeDatabase();
-            var deleteViewmodel = new deleteTransformerConfirm([transformer.name()], db);
+            const db = this.activeDatabase();
+            const deleteViewmodel = new deleteTransformerConfirm([transformer.name()], db);
             deleteViewmodel.deleteTask.done(() => {
                 router.navigate(appUrl.forTransformers(db));
             });
