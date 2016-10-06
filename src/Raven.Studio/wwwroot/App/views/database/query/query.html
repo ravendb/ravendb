@@ -225,7 +225,7 @@
                                     <span data-bind="text: transformer() && transformer().name() ? transformer().name() : 'Select a transformer'"></span> <span class="caret"></span>
                                 </button>
                                 <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.allTransformers">
-                                    <li><a href="#" data-bind="text: name, click: $root.selectTransformer.bind($root, $data)"></a></li>
+                                    <li><a href="#" data-bind="text: Name, click: $root.selectTransformer.bind($root, $data)"></a></li>
                                 </ul>
 
                             </div>

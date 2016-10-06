@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.Transformers
             var inner = new DynamicJsonValue();
             var accessor = TypeConverter.GetPropertyAccessor(value);
 
-            foreach (var property in accessor.Properties)
+            foreach (var property in accessor.PropertiesInOrder)
             {
                 var propertyValue = property.Value.GetValue(value);
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;

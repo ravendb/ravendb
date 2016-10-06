@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 // explicitly adding this even if the value isn't there, as a null
                 mappedResult[groupByFieldName] = result;
 
-                _reduceKeyProcessor.Process(result);
+                _reduceKeyProcessor.Process(indexContext.Allocator,result);
             }
 
             var mappedresult = indexContext.ReadObject(mappedResult, key);

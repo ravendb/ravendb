@@ -7,7 +7,7 @@ import messagePublisher = require("common/messagePublisher");
 
 class saveTransformerWithNewNameConfirm extends dialogViewModelBase {
 
-    saveTask= $.Deferred();
+    saveTask = $.Deferred<void>();
     message: string;
 
     constructor(private savedTransformer: transformer, private db: database) {
@@ -21,7 +21,7 @@ class saveTransformerWithNewNameConfirm extends dialogViewModelBase {
     }
 
     saveTransformer() {
-        new saveTransformerCommand(this.savedTransformer, this.db).execute().done((trans: transformer) => this.saveTask.resolve(trans));
+        new saveTransformerCommand(this.savedTransformer, this.db).execute().done(() => this.saveTask.resolve());
         dialog.close(this);
     }
 

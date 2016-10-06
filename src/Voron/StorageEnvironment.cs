@@ -700,7 +700,7 @@ namespace Voron
             _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo);
         }
 
-        internal IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)
+        public IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)
         {
             if (tx.Flags != TransactionFlags.ReadWrite)
                 throw new ArgumentException("Temporary pages are only available for write transactions");

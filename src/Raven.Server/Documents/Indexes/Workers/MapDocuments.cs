@@ -43,7 +43,6 @@ namespace Raven.Server.Documents.Indexes.Workers
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             var moreWorkFound = false;
-            var timeout = _configuration.DocumentProcessingTimeout.AsTimeSpan;
             foreach (var collection in _index.Collections)
             {
                 using (var collectionStats = stats.For("Collection_" + collection))

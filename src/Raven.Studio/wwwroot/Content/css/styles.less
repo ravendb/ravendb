@@ -99,12 +99,17 @@ h1, h2, h3 {
     font-weight: 300;
     margin-top: 0;
 
-    [class^="icon-"], [class*=" icon-"] { 
-        top:-6px;
+    [class^="icon-"], [class*=" icon-"] {
+        top: 4px;
     }
 }
 
 h1 {
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 3.5pt;
+    word-spacing: 3pt;
+    margin-bottom: @grid-gutter-width;
 }
 
 h6 {
@@ -113,6 +118,40 @@ h6 {
 
 .nobr {
     white-space: nowrap;
+}
+
+.btn {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+
+    &:not(.dropdown-toggle) {
+        .caret {
+            margin-left: 2px;
+            margin-right: -2px;
+            float: right;
+            position: relative;
+            top: 10px;
+            margin-left: 7px;
+            margin-right: -2px;
+        }
+
+        &.btn-xs {
+            .caret {
+                top: 6px;
+            }
+        }
+
+        &.btn-sm {
+            .caret {
+                top: 8px;
+            }
+        }
+
+        &.btn-lg {
+            .caret {
+                top: 11px;
+            }
+        }
+    }
 }
 
 a, .btn {
@@ -147,10 +186,10 @@ a, .btn {
 .btn {
     [class^="icon-"], [class*=" icon-"] {
         margin-left: -3px;
-        margin-right:-3px;
+        margin-right: -3px;
 
-        +span {
-            margin-left:9px;
+        + span {
+            margin-left: 9px;
         }
     }
 
@@ -184,6 +223,8 @@ hr {
     }
 }
 
+/*  RESPONSIVE PULLS  */
+
 .pull-right-sm {
     @media (min-width: @screen-sm) {
         float: right;
@@ -207,6 +248,32 @@ hr {
         float: left;
     }
 }
+
+.pull-right-lg {
+    @media (min-width: @screen-lg) {
+        float: right;
+    }
+}
+
+.pull-left-lg {
+    @media (min-width: @screen-lg) {
+        float: left;
+    }
+}
+
+.pull-right-xl {
+    @media (min-width: @screen-xl) {
+        float: right;
+    }
+}
+
+.pull-left-xl {
+    @media (min-width: @screen-xl) {
+        float: left;
+    }
+}
+
+
 
 
 .text-right-sm {
@@ -264,7 +331,7 @@ hr {
             right: 0;
             width: 100%;
             height: 100%;
-            border:none;
+            border: none;
         }
     }
 
@@ -273,13 +340,13 @@ hr {
     }
 
     .edit-inline {
-        display:none;
+        display: none;
         padding: 0;
         font-size: inherit;
         line-height: inherit;
         color: #e9eaea;
         background-color: #333c3c;
-        background-image: none;        
+        background-image: none;
         -webkit-transition: box-shadow .2s ease-in-out;
         -moz-transition: box-shadow .2s ease-in-out;
         -ms-transition: box-shadow .2s ease-in-out;
@@ -293,7 +360,7 @@ hr {
         }
     }
 
-     &.edit {
+    &.edit {
         .static-name {
             opacity: 0;
         }
@@ -303,7 +370,7 @@ hr {
         }
 
         .icon-edit:before {
-            content: "\e917";
+            content: "\e92a";
             color: @brand-success;
         }
 
@@ -352,8 +419,8 @@ hr {
     }
 }
 
-input[type=file]+.form-control {
-    line-height:initial;
+input[type=file] + .form-control {
+    line-height: initial;
 }
 
 .form-control {
@@ -366,6 +433,12 @@ input[type=file]+.form-control {
     &::-moz-selection {
         background: @brand-primary;
     }
+}
+
+.vcenter-container {
+    position:absolute;
+    top:0;
+    bottom:0;
 }
 
 .vcenter {
@@ -746,7 +819,7 @@ input[type=file]+.form-control {
 
                     &:before {
                         .icon-style;
-                        content: "\e916";
+                        content: "\e91e";
                         font-size: 110%;
                         margin-right: 3px;
                         top: 1px;
@@ -859,7 +932,7 @@ input[type=file]+.form-control {
             .database {
                 &:before {
                     .icon-style;
-                    content: "\e90c";
+                    content: "\e926";
                     color: @brand-database-color;
                 }
             }
@@ -867,7 +940,7 @@ input[type=file]+.form-control {
             .filesystem {
                 &:before {
                     .icon-style;
-                    content: "\e90c";
+                    content: "\e926";
                     color: @brand-filesystem-color;
                 }
             }
@@ -875,7 +948,7 @@ input[type=file]+.form-control {
             .counter {
                 &:before {
                     .icon-style;
-                    content: "\e90c";
+                    content: "\e926";
                     color: @brand-counter-color;
                 }
             }
@@ -883,7 +956,7 @@ input[type=file]+.form-control {
             .timeseries {
                 &:before {
                     .icon-style;
-                    content: "\e90c";
+                    content: "\e926";
                     color: @brand-timeseries-color;
                 }
             }
@@ -977,7 +1050,7 @@ input[type=file]+.form-control {
                 position: absolute;
                 right: 10px;
                 top: 10px;
-                content: "\e900";
+                content: "\e918";
             }
         }
     }
@@ -1112,7 +1185,7 @@ input[type=file]+.form-control {
         font-weight: 700;
 
         &:before {
-            content: "\e905";
+            content: "\e91d";
             margin-right: 6px;
             font-size: 10px;
         }
@@ -1128,7 +1201,7 @@ input[type=file]+.form-control {
             right: 5px;
             top: 20px;
             color: @brand-primary;
-            content: "\e906";
+            content: "\e91e";
         }
     }
 
@@ -1425,52 +1498,53 @@ input[type=file]+.form-control {
     border: 1px solid @gray;
 }
 
-
-
 /* MENU ICONS */
-.icon-documents:before {
-    content: "\e90d";
-    color: #0071bc;
-}
+#main-menu, .inputs-container {
 
-.icon-indexes:before {
-    content: "\e90c";
-    color: #f7931e;
-}
+    .icon-documents:before {
+        content: "\e927";
+        color: #0071bc;
+    }
 
-.icon-query:before {
-    content: "\e90b";
-    color: #c7b299;
-}
+    .icon-indexes:before {
+        content: "\e926";
+        color: #f7931e;
+    }
 
-.icon-new:before {
-    content: "\e90d";
-    color: #d9e021;
-}
+    .icon-query:before {
+        content: "\e923";
+        color: #c7b299;
+    }
 
-.icon-tasks:before {
-    content: "\e912";
-    color: #fbb03b;
-}
+    .icon-new:before {
+        content: "\e927";
+        color: #d9e021;
+    }
 
-.icon-settings:before {
-    content: "\e919";
-    color: #998675;
-}
+    .icon-tasks:before {
+        content: "\e930";
+        color: #fbb03b;
+    }
 
-.icon-stats:before {
-    content: "\e90d";
-    color: #0071bc;
-}
+    .icon-settings:before {
+        content: "\e93b";
+        color: #998675;
+    }
 
-.icon-manage-server:before {
-    content: "\e919";
-    color: #998675;
-}
+    .icon-stats:before {
+        content: "\e927";
+        color: #0071bc;
+    }
 
-.icon-license:before {
-    content: "\e90d";
-    color: #e9eaea;
+    .icon-manage-server:before {
+        content: "\e93b";
+        color: #998675;
+    }
+
+    .icon-license:before {
+        content: "\e927";
+        color: #e9eaea;
+    }
 }
 
 .flex-window {
@@ -1764,3 +1838,4 @@ pre {
 @import "pages/tasks-csvImport";
 @import "pages/tasks-subscriptions";
 @import "pages/documents-edit";
+@import "pages/indexes.less";

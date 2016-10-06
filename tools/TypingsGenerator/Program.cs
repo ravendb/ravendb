@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Data;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Json.Linq;
@@ -75,6 +76,10 @@ namespace TypingsGenerator
             // indexes
             scripter.AddType(typeof(IndexStats));
             scripter.AddType(typeof(IndexPerformanceStats));
+
+
+            // transformers
+            scripter.AddType(typeof(TransformerDefinition));
 
 
 
