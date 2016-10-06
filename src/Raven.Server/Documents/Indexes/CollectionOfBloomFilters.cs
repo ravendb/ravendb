@@ -35,23 +35,19 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public BloomFilter this[int index] => _filters[index];
+
         public static unsafe CollectionOfBloomFilters Load(int singleBloomFilterCapacity, TransactionOperationContext indexContext)
         {
             var tree = indexContext.Transaction.InnerTransaction.CreateTree("IndexedDocs");
             var collection = new CollectionOfBloomFilters(singleBloomFilterCapacity, tree, indexContext);
-            var numberOfFilters = tree.State.NumberOfEntries;
             using (var it = tree.Iterate(prefetch: false))
             {
-                var count = 0;
                 if (it.Seek(Slices.BeforeAllKeys))
                 {
                     do
                     {
-                        collection.AddFilter(count == numberOfFilters - 1
-                            ? CreateCurrentFilter(it.CurrentKey, count, it.CreateReaderForCurrent().Base, tree)
-                            : new BloomFilter(count, it.CreateReaderForCurrent().Base));
-
-                        count++;
+                        collection.AddFilter(new BloomFilter(it.CurrentKey, it.CreateReaderForCurrent().Base, tree, writeable: false));
                     } while (it.MoveNext());
                 }
             }
@@ -59,13 +55,6 @@ namespace Raven.Server.Documents.Indexes
             collection.Initialize();
 
             return collection;
-        }
-
-        private static unsafe BloomFilter CreateCurrentFilter(Slice key, int number, byte* src, Tree tree)
-        {
-            var ptr = tree.DirectAdd(key, BloomFilter.PtrSize);
-            Memory.Copy(ptr, src, BloomFilter.PtrSize);
-            return new BloomFilter(number, ptr);
         }
 
         private void Initialize()
@@ -85,8 +74,7 @@ namespace Raven.Server.Documents.Indexes
             using (Slice.From(_context.Allocator, number.ToString("D9"), out key))
             {
                 var ptr = _tree.DirectAdd(key, BloomFilter.PtrSize);
-                Memory.Set(ptr, 0, BloomFilter.PtrSize);
-                return new BloomFilter(number, ptr);
+                return new BloomFilter(key, ptr, _tree, writeable: true);
             }
         }
 
@@ -101,7 +89,7 @@ namespace Raven.Server.Documents.Indexes
 
             var length = _filters.Length;
             Array.Resize(ref _filters, length + 1);
-            _filters[length - 1].ReadOnly();
+            _filters[length - 1].MakeReadOnly();
             _filters[length] = _currentFilter = filter;
         }
 
@@ -150,24 +138,31 @@ namespace Raven.Server.Documents.Indexes
             private const long M = (PtrSize - CountSize) * BitVector.BitsPerByte;
             private const long K = 10;
 
-            private readonly int _key;
-            private readonly byte* _ptr;
-            private readonly int* _countPtr;
-            private bool _readOnly;
+            private readonly Slice _key;
+            private readonly byte* _basePtr;
+            private readonly Tree _tree;
+            private byte* _dataPtr;
+            private int* _countPtr;
 
             public int Count { get; private set; }
 
-            public BloomFilter(int key, byte* ptr)
+            public bool ReadOnly { get; private set; }
+
+            public bool Writeable { get; private set; }
+
+            public BloomFilter(Slice key, byte* basePtr, Tree tree, bool writeable)
             {
                 _key = key;
-                _countPtr = (int*)ptr;
-                _ptr = ptr + CountSize;
-                Count = *_countPtr;
+                _basePtr = basePtr;
+                _tree = tree;
+                Writeable = writeable;
+
+                Initialize(basePtr);
             }
 
             public bool Add(LazyStringValue key)
             {
-                if (_readOnly)
+                if (ReadOnly)
                     throw new InvalidOperationException($"Cannot add new item to a read-only bloom filter '{_key}'.");
 
                 var newItem = false;
@@ -181,11 +176,14 @@ namespace Raven.Server.Documents.Indexes
                     var ptrPosition = finalHash / BitVector.BitsPerByte;
                     var bitPosition = (int)(finalHash % BitVector.BitsPerByte);
 
-                    var bitValue = GetBit(_ptr, ptrPosition, bitPosition);
+                    var bitValue = GetBit(_dataPtr, ptrPosition, bitPosition);
                     if (bitValue)
                         continue;
 
-                    SetBitToTrue(_ptr, ptrPosition, bitPosition);
+                    if (Writeable == false)
+                        MakeWriteable();
+
+                    SetBitToTrue(_dataPtr, ptrPosition, bitPosition);
                     newItem = true;
                 }
 
@@ -210,7 +208,7 @@ namespace Raven.Server.Documents.Indexes
                     var ptrPosition = finalHash / BitVector.BitsPerByte;
                     var bitPosition = (int)(finalHash % BitVector.BitsPerByte);
 
-                    var bitValue = GetBit(_ptr, ptrPosition, bitPosition);
+                    var bitValue = GetBit(_dataPtr, ptrPosition, bitPosition);
                     if (bitValue == false)
                         return false;
                 }
@@ -218,9 +216,29 @@ namespace Raven.Server.Documents.Indexes
                 return true;
             }
 
-            public void ReadOnly()
+            public void MakeReadOnly()
             {
-                _readOnly = true;
+                ReadOnly = true;
+            }
+
+            private void MakeWriteable()
+            {
+                if (Writeable)
+                    return;
+
+                var ptr = _tree.DirectAdd(_key, PtrSize);
+                UnmanagedMemory.Copy(ptr, _basePtr, PtrSize);
+
+                Initialize(ptr);
+
+                Writeable = true;
+            }
+
+            private void Initialize(byte* ptr)
+            {
+                _countPtr = (int*)ptr;
+                _dataPtr = ptr + CountSize;
+                Count = *_countPtr;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
