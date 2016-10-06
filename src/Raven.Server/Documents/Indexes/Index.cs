@@ -267,7 +267,6 @@ namespace Raven.Server.Documents.Indexes
                     _environment = environment;
                     _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{IndexId}");
                     _contextPool = new TransactionContextPool(_environment);
-                    _contextPool.SetMostWorkInGoingToHappenonThisThread();
                     _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
                     _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                     _indexStorage.Initialize(_environment);
@@ -499,12 +498,13 @@ namespace Raven.Server.Documents.Indexes
             Threading.TryLowerCurrentThreadPriority();
 
             using (CultureHelper.EnsureInvariantCulture())
-            using (
-                var cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown,
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown,
                     _cancellationTokenSource.Token))
             {
                 try
                 {
+                    _contextPool.SetMostWorkInGoingToHappenonThisThread();
+
                     DocumentDatabase.Notifications.OnDocumentChange += HandleDocumentChange;
 
                     while (true)
