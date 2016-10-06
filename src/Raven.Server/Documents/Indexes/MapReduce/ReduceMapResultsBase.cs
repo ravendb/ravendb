@@ -131,6 +131,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 var section = modifiedStore.GetNestedResultsSection();
 
+                if (section.IsModified == false)
+                    return;
+
                 numberOfEntriesToReduce += section.GetResults(indexContext, _aggregationBatch);
 
                 stats.RecordReduceAttempts(numberOfEntriesToReduce);

@@ -10,6 +10,8 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Impl;
+using Sparrow;
+using Voron.Util;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
@@ -87,90 +89,84 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             using (Slice.External(indexContext.Allocator, documentKey.Buffer, documentKey.Length, out docKeyAsSlice))
             {
                _documentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
-
-                Dictionary<ulong, Queue<long>> existingIdsPerReduceKey = null;
+                
+                Queue<MapEntry> existingEntries = null;
 
                 if (_documentMapEntries.NumberOfEntries > 0)
-                {
-                    // update operation, let's retrieve ids of existing entries to try to reuse them 
-
-                    existingIdsPerReduceKey = new Dictionary<ulong, Queue<long>>();
-
-                    var mapEntries = GetMapEntries(_documentMapEntries);
-
-                    foreach (var mapEntry in mapEntries)
-                    {
-                        Queue<long> ids;
-                        if (existingIdsPerReduceKey.TryGetValue(mapEntry.ReduceKeyHash, out ids) == false)
-                        {
-                            ids = new Queue<long>();
-                            existingIdsPerReduceKey[mapEntry.ReduceKeyHash] = ids;
-                        }
-
-                        ids.Enqueue(mapEntry.Id);
-                    }
-                }
+                    existingEntries = GetMapEntries(_documentMapEntries);
 
                 int resultsCount = 0;
+
                 foreach (var mapResult in mappedResults)
                 {
                     resultsCount++;
+
                     var reduceKeyHash = mapResult.ReduceKeyHash;
 
-                    long id;
+                    long id = -1;
 
-                    Queue<long> availableIds;
-                    if (existingIdsPerReduceKey != null &&
-                        existingIdsPerReduceKey.TryGetValue(reduceKeyHash, out availableIds))
+                    if (existingEntries?.Count > 0)
                     {
-                        // reuse id of an old entry
-                        id = availableIds.Dequeue();
+                        var existing = existingEntries.Dequeue();
+                        var storeOfExisting = GetResultsStore(existing.ReduceKeyHash, indexContext, false);
 
-                        if (availableIds.Count == 0)
-                            existingIdsPerReduceKey.Remove(reduceKeyHash);
+                        if (reduceKeyHash == existing.ReduceKeyHash)
+                        {
+                            var existingResult = storeOfExisting.Get(existing.Id);
+
+                            if (ResultsBinaryEqual(mapResult.Data, existingResult))
+                            {
+                                continue;
+                            }
+
+                            id = existing.Id;
+                        }
+                        else
+                        {
+                            _documentMapEntries.Delete(existing.Id);
+                            storeOfExisting.Delete(existing.Id);
+                        }
                     }
-                    else
+
+                    if (id == -1)
                     {
                         id = _mapReduceWorkContext.GetNextIdentifier();
 
                         Slice val;
-                        using (Slice.External(indexContext.Allocator, (byte*) &reduceKeyHash, sizeof(ulong), out val))
+                        using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))
                             _documentMapEntries.Add(id, val);
                     }
+
                     GetResultsStore(reduceKeyHash, indexContext, true).Add(id, mapResult.Data);
                 }
 
                 DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
 
-                if (existingIdsPerReduceKey != null && existingIdsPerReduceKey.Count > 0)
+                while (existingEntries?.Count > 0)
                 {
                     // need to remove remaining old entries
 
-                    foreach (var stillExisting in existingIdsPerReduceKey)
-                    {
-                        var reduceKeyHash = stillExisting.Key;
-                        var ids = stillExisting.Value;
+                    var oldResult = existingEntries.Dequeue();
 
-                        var oldState = GetResultsStore(reduceKeyHash, indexContext, create: false);
+                    var oldState = GetResultsStore(oldResult.ReduceKeyHash, indexContext, create: false);
 
-                        while (ids.Count > 0)
-                        {
-                            var idToDelete = ids.Dequeue();
-
-                            oldState.Delete(idToDelete);
-
-                            _documentMapEntries.Delete(idToDelete);
-                        }
-                    }
+                    oldState.Delete(oldResult.Id);
+                    _documentMapEntries.Delete(oldResult.Id);
                 }
 
                 return resultsCount;
             }
         }
 
-        private static unsafe List<MapEntry> GetMapEntries(FixedSizeTree documentMapEntries)
+        private static unsafe bool ResultsBinaryEqual(BlittableJsonReaderObject newResult, PtrSize existingData)
         {
-            var entries = new List<MapEntry>((int)documentMapEntries.NumberOfEntries);
+            return newResult.Size == existingData.Size &&
+                   Memory.CompareInline(newResult.BasePointer, existingData.Ptr, existingData.Size) == 0;
+        }
+
+        private static unsafe Queue<MapEntry> GetMapEntries(FixedSizeTree documentMapEntries)
+        {
+            var entries = new Queue<MapEntry>((int)documentMapEntries.NumberOfEntries);
 
             using (var it = documentMapEntries.Iterate())
             {
@@ -181,7 +177,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     it.CreateReaderForCurrent().Read((byte*)&reduceKeyHash, sizeof(ulong));
 
-                    entries.Add(new MapEntry
+                    entries.Enqueue(new MapEntry
                     {
                         Id = currentKey,
                         ReduceKeyHash = reduceKeyHash
