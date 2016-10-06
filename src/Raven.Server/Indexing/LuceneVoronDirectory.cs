@@ -108,6 +108,7 @@ namespace Raven.Server.Indexing
 
         public IDisposable SetTransaction(Transaction tx)
         {
+            if (tx == null) throw new ArgumentNullException(nameof(tx));
             _currentTransaction.Value = tx;
 
             return new DisposableAction(() => _currentTransaction.Value = null);

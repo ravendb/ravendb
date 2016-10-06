@@ -148,6 +148,10 @@ namespace Raven.Server.Indexing
         {
             if (_cts.IsCancellationRequested)
                 throw new ObjectDisposedException("VoronIndexInput");
+            if(_currentTransaction.Value == null)
+                throw new ObjectDisposedException("No Transaction in thread");
+            if (_currentTransaction.Value.LowLevelTransaction.IsDisposed)
+                throw new ObjectDisposedException("No Transaction in thread");
         }
     }
 }
