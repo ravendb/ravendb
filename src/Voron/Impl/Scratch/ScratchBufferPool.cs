@@ -44,8 +44,9 @@ namespace Voron.Impl.Scratch
         {
             _options = env.Options;
             _sizeLimit = env.Options.MaxScratchBufferSize;
-            _current = NextFile();
             _numberOfPagesForScratchFile = (int)(Math.Max(_options.InitialFileSize ?? 0, _options.InitialLogFileSize) / _options.PageSize);
+            PagerState _;
+            _current = NextFile(out _);
         }
 
         public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
@@ -61,24 +62,24 @@ namespace Voron.Impl.Scratch
             return _scratchBuffers[scratchNumber].File.NumberOfAllocations;
         }
 
-        private ScratchBufferItem NextFile()
+        private ScratchBufferItem NextFile(out PagerState pagerState)
         {
             _currentScratchNumber++;
             var scratchPager =
                 _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber));
             try
             {
-                scratchPager.EnsureContinuous(0, _numberOfPagesForScratchFile);
+                pagerState = scratchPager.EnsureContinuous(0, _numberOfPagesForScratchFile);
             }
             catch (Exception)
             {
                 // this can fail because of disk space issue, let us just ignore it
                 // we'll allocate the minimum amount in a bit anway
-                scratchPager.EnsureContinuous(0, 64); 
+                pagerState = scratchPager.EnsureContinuous(0, 64);
             }
 
 
-            var scratchFile = new ScratchBufferFile(scratchPager, _currentScratchNumber);
+           var scratchFile = new ScratchBufferFile(scratchPager, _currentScratchNumber);
             var item = new ScratchBufferItem(scratchFile.Number, scratchFile);
 
             _scratchBuffers.TryAdd(item.Number, item);
@@ -113,17 +114,12 @@ namespace Voron.Impl.Scratch
             // all the memory again, so we'll just double the size (until 1 GB, at which point we'll 
             // grow by 1 GB each time)
 
-            var oldPages = _numberOfPagesForScratchFile;
-            var pagesInGb = Constants.Size.Gigabyte/_options.PageSize;
-            _numberOfPagesForScratchFile *= 2;
-            if (oldPages + pagesInGb < _numberOfPagesForScratchFile || 
-                _numberOfPagesForScratchFile < 0)
-            {
-                _numberOfPagesForScratchFile = oldPages + pagesInGb;
-            }
+            CalculateNextSize(numberOfPages);
 
             // We need to ensure that _current stays constant through the codepath until return. 
-            current = NextFile();
+            PagerState state;
+            current = NextFile(out state);
+            tx.EnsurePagerStateReference(state);
 
             try
             {
@@ -136,6 +132,19 @@ namespace Voron.Impl.Scratch
             {
                 // That's why we update only after exiting. 
                 _current = current;
+            }
+        }
+
+        private void CalculateNextSize(int numberOfPages)
+        {
+            var oldPages = _numberOfPagesForScratchFile;
+            var pagesInGb = Constants.Size.Gigabyte/_options.PageSize;
+            _numberOfPagesForScratchFile = Math.Max(Bits.NextPowerOf2(numberOfPages), _numberOfPagesForScratchFile*2);
+
+            if (oldPages + pagesInGb < _numberOfPagesForScratchFile ||
+                _numberOfPagesForScratchFile < 0)
+            {
+                _numberOfPagesForScratchFile = oldPages + pagesInGb;
             }
         }
 
