@@ -174,6 +174,9 @@ namespace Raven.Abstractions.Data
 
         public unsafe static Etag Parse(byte[] bytes)
         {
+            if (bytes.Length == 0)
+                throw new InvalidOperationException("Etag is not valid, bytes is zero");
+
             var etag = new Etag();
             fixed (byte* restarts = bytes)
             {
