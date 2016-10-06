@@ -306,7 +306,7 @@ namespace Voron
             }
 
 
-            public override AbstractPager CreateScratchPager(string name)
+            public override AbstractPager CreateScratchPager(string name, long initialSize)
             {
                 var scratchFile = Path.Combine(TempPath, name);
                 if (File.Exists(scratchFile))
@@ -314,12 +314,12 @@ namespace Voron
 
                 if (RunningOnPosix)
                 {
-                    return new PosixMemoryMapPager(this, scratchFile, InitialFileSize)
+                    return new PosixMemoryMapPager(this, scratchFile, initialSize)
                     {
                         DeleteOnClose = true
                     };
                 }
-                return new Win32MemoryMapPager(this, scratchFile, InitialFileSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
+                return new Win32MemoryMapPager(this, scratchFile, initialSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
             }
 
             public override AbstractPager OpenJournalPager(long journalNumber)
@@ -443,7 +443,7 @@ namespace Voron
                 Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
             }
 
-            public override AbstractPager CreateScratchPager(string name)
+            public override AbstractPager CreateScratchPager(string name, long intialSize)
             {
                 var guid = Guid.NewGuid();
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{guid}";
@@ -495,7 +495,7 @@ namespace Voron
 
         public unsafe abstract void WriteHeader(string filename, FileHeader* header);
 
-        public abstract AbstractPager CreateScratchPager(string name);
+        public abstract AbstractPager CreateScratchPager(string name, long initialSize);
 
         public abstract AbstractPager OpenJournalPager(long journalNumber);
 

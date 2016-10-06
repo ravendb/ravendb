@@ -1050,7 +1050,6 @@ namespace Raven.Server.Documents.Indexes
                                     x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
 
                         var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
-
                         if (WillResultBeAcceptable(isStale, query, wait) == false)
                         {
                             documentsContext.CloseTransaction();

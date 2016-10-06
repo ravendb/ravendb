@@ -66,7 +66,7 @@ namespace Voron.Impl.Journal
                 header->IncrementalBackup.LastCreatedJournal = _journalIndex;
             };
 
-            _compressionPager = _env.Options.CreateScratchPager("compression.buffers");
+            _compressionPager = _env.Options.CreateScratchPager("compression.buffers", env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
             _journalApplicator = new JournalApplicator(this);
         }
 
@@ -148,7 +148,9 @@ namespace Voron.Impl.Journal
             long lastSyncedJournal = logInfo.LastSyncedJournal;
             for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
             {
-                using (var recoveryPager = _env.Options.CreateScratchPager(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)))
+                var initialSize = _env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize;
+                var journalRecoveryName = StorageEnvironmentOptions.JournalRecoveryName(journalNumber);
+                using (var recoveryPager = _env.Options.CreateScratchPager(journalRecoveryName,initialSize))
                 using (var pager = _env.Options.OpenJournalPager(journalNumber))
                 {
                     RecoverCurrentJournalSize(pager);

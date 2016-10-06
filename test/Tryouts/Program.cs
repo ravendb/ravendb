@@ -4,11 +4,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
-using FastTests.Utils;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Voron;
+using Voron.Impl;
+using Directory = System.IO.Directory;
+
 // ReSharper disable InconsistentNaming
 
 namespace Tryouts
@@ -17,13 +20,59 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-
-            using (var a = new TimeParsing())
+            if (Directory.Exists("foo"))
+                Directory.Delete("foo", true);
+            var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath("foo");
+            storageEnvironmentOptions.ManualFlushing = true;
+            using (var env = new StorageEnvironment(storageEnvironmentOptions))
             {
-                a.CanParseValidTimeSpans("2.21:07:32.232");
-                if (a.GetHashCode() != 1)
-                    return;
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var txw = env.WriteTransaction())
+                    {
+                        txw.CreateTree("foo").Add("blah1" + i, new byte[3 * 1024]);
+                        txw.CreateTree("foo").Add("blah2" + i, new byte[2 * 1024]);
+                        txw.Commit();
+                    }
+                }
+
+                env.FlushLogToDataFile();
+
+                using (var txw = env.WriteTransaction())
+                {
+                    txw.CreateTree("foo").Add("blah10", new byte[3 * 1024]);
+                    txw.Commit();
+                }
+
+                for (int i = 0; i < 5; i++)
+                {
+
+                    using (var txw = env.WriteTransaction())
+                    {
+                        txw.CreateTree("foo").Add("blah3", new byte[4 * 1024]);
+                        txw.CreateTree("foo").Add("blah2", new byte[14 * 1024]);
+
+
+                        txw.Commit();
+                    }
+                }
+
+                Transaction txr;
+                ReadResult readResult;
+                txr = env.ReadTransaction();
+                readResult = txr.ReadTree("foo").Read("blah10");
+
+                env.FlushLogToDataFile();
+
+                var asStream = readResult.Reader.AsStream();
+                while (asStream.ReadByte() != -1)
+                {
+
+                }
             }
+
+            if (DateTime.Now.Ticks > 1)
+                return;
 
             using (var store = new DocumentStore
             {
@@ -227,7 +276,7 @@ namespace Tryouts
 
             Reduce = results =>
                 from result in results
-                group result by new { result.Tag, result.Month} into g
+                group result by new { result.Tag, result.Month } into g
                 select new
                 {
                     g.Key.Month,
@@ -257,12 +306,14 @@ namespace Tryouts
                 });
 
             AddMap<Question>(questions =>
-               from q in questions from a in q.Answers
+               from q in questions
+               from a in q.Answers
                group a by new // distinct users by month
                {
                    a.OwnerUserId,
                    Month = a.CreationDate.ToString("yyyy-MM")
-               } into g select new
+               } into g
+               select new
                {
                    g.Key.Month,
                    Users = g.Count()

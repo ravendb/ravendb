@@ -364,7 +364,8 @@ namespace Voron.Impl.Backup
 
                             var recoveryPager =
                                 env.Options.CreateScratchPager(Path.Combine(tempDir,
-                                    StorageEnvironmentOptions.JournalRecoveryName(journalNumber)));
+                                    StorageEnvironmentOptions.JournalRecoveryName(journalNumber)),
+                                    env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
                             toDispose.Add(recoveryPager);
 
                             var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, 0, lastTxHeader);
