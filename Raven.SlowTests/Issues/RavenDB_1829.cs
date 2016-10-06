@@ -191,9 +191,13 @@ namespace Raven.SlowTests.Issues
 
                 StopDatabase(0);
 
-                var e = Assert.Throws<ErrorResponseException>(() => store1.DatabaseCommands.StreamDocs(fromEtag: startEtag1));
+                var e = Assert.Throws<AggregateException>(() => store1.DatabaseCommands.StreamDocs(fromEtag: startEtag1));
+                var ex = e.InnerExceptions[0] as ErrorResponseException;
 
-                Assert.Equal(HttpStatusCode.ServiceUnavailable, e.StatusCode);
+                Assert.NotNull(ex);
+                Assert.Equal(HttpStatusCode.BadGateway, ex.StatusCode);
+                
+                
             }
         }
 
