@@ -77,16 +77,6 @@ namespace Voron.Impl.Scratch
             return result;
         }
 
-        public bool HasDiscontinuousSpaceFor(long sizeInPages)
-        {
-            long available = _scratchPager.NumberOfAllocatedPages - _lastUsedPage;
-
-            foreach (var freePage in _freePagesBySizeAvailableImmediately)
-                available += freePage.Key*freePage.Value.Count;
-
-            return (available >= sizeInPages);
-        }
-
         public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, long size, out PageFromScratchBuffer result)
         {
             result = null;
