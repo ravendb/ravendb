@@ -177,12 +177,7 @@ namespace Raven.Database.Indexing
                     var replaceIndex = Database.IndexStorage.GetIndexInstance(indexId);
 
                     var statistics = accessor.Indexing.GetIndexStats(indexId);
-                    if (replaceIndex.IsMapReduce)
-                    {
-                        if (statistics.LastReducedEtag != null && EtagUtil.IsGreaterThanOrEqual(statistics.LastReducedEtag, indexReplaceInformation.MinimumEtagBeforeReplace))
-                            shouldReplace = true;
-                    }
-                    else
+                    if (replaceIndex.IsMapReduce == false)
                     {
                         if (statistics.LastIndexedEtag != null && EtagUtil.IsGreaterThanOrEqual(statistics.LastIndexedEtag, indexReplaceInformation.MinimumEtagBeforeReplace))
                             shouldReplace = true;
@@ -306,11 +301,11 @@ namespace Raven.Database.Indexing
                 }
             }
 
-            var message = string.Format("Index replace failed. Could not replace index '{0}' with '{1}'.", indexReplaceInformation.IndexToReplace, indexReplaceInformation.ReplaceIndex);
+            var message = string.Format("Index replace failed. Could not replace index '{0}' with '{1}'. Number of tries: '{2}'.", indexReplaceInformation.IndexToReplace, indexReplaceInformation.ReplaceIndex, indexReplaceInformation.ErrorCount);
 
             Database.AddAlert(new Alert
             {
-                AlertLevel = AlertLevel.Error,
+                AlertLevel = indexReplaceInformation.ErrorCount <= 10 ? AlertLevel.Warning : AlertLevel.Error,
                 CreatedAt = SystemTime.UtcNow,
                 Message = message,
                 Title = "Index replace failed",
