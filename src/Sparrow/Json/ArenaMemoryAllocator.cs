@@ -176,8 +176,11 @@ namespace Sparrow.Json
                 }
                 _olderBuffers = null;
             }
-
-            NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
+            if (_ptrStart != null)
+            {
+                NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
+                _ptrStart = null;
+            }
 
             GC.SuppressFinalize(this);
         }

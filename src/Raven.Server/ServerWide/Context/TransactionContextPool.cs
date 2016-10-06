@@ -5,10 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
-using System.Diagnostics;
-
-using Raven.Server.Json;
+using System.Threading;
 using Sparrow.Json;
 using Voron;
 
@@ -17,17 +14,33 @@ namespace Raven.Server.ServerWide.Context
     public class TransactionContextPool : JsonContextPoolBase<TransactionOperationContext> ,ITransactionContextPool
     {
         private readonly StorageEnvironment _storageEnvironment;
-        private readonly int _initialSize;
 
-        public TransactionContextPool(StorageEnvironment storageEnvironment, int initialSize = 1024 * 1024)
+        private ThreadLocal<bool> _mostlyThreadDedicatedWork;
+
+        public void SetMostWorkInGoingToHappenonThisThread()
+        {
+            _mostlyThreadDedicatedWork = new ThreadLocal<bool>();
+            _mostlyThreadDedicatedWork.Value = true;
+        }
+
+        public TransactionContextPool(StorageEnvironment storageEnvironment)
         {
             _storageEnvironment = storageEnvironment;
-            _initialSize = initialSize;
         }
 
         protected override TransactionOperationContext CreateContext()
         {
-            return new TransactionOperationContext(_storageEnvironment, _initialSize, 16*1024);
+            var initialSize = 1024 *1024;
+            if (_mostlyThreadDedicatedWork != null)
+            {
+                // if this is a context pool dedicated for a thread (like for indexes), we probably won't do a lot of 
+                // work on that outside of its thread, so let not allocate a lot of memory for that. We just need enough
+                // there process simple stuff like IsStale, etc, so let us start small
+                initialSize = _mostlyThreadDedicatedWork.Value ? 32*1024*1024 : 32*1024;
+            }
+            return new TransactionOperationContext(_storageEnvironment,
+                initialSize, 
+                16*1024);
         }
     }
 }

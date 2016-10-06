@@ -28,6 +28,8 @@ namespace Raven.Server.ServerWide.Context
         {
             return new RavenTransaction(_environment.WriteTransaction(context));
         }
+
+        public StorageEnvironment Environment => _environment;
     }
 
     public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext
