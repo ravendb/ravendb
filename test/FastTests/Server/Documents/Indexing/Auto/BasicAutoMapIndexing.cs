@@ -1109,5 +1109,49 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 // TODO arek: verify that alert was created as well
             }
         }
+
+        [Fact]
+        public void CanDeleteFaultyIndex()
+        {
+            var path = NewDataPath();
+            string indexStoragePath;
+            string indexSafeName;
+
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            {
+                var name1 = new IndexField
+                {
+                    Name = "Name1",
+                    Highlighted = true,
+                    Storage = FieldStorage.No,
+                    SortOption = SortOptions.String
+                };
+
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })));
+                var index = database.IndexStore.GetIndex(1);
+                indexSafeName = index.GetIndexNameSafeForFileSystem();
+
+                indexStoragePath = Path.Combine(database.Configuration.Indexing.IndexStoragePath,
+                    index.GetIndexNameSafeForFileSystem());
+            }
+
+            IOExtensions.DeleteDirectory(indexStoragePath);
+            Directory.CreateDirectory(indexStoragePath); // worst case, we have no info
+
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false))
+            {
+                var index = database
+                    .IndexStore
+                    .GetIndex(1);
+
+                Assert.IsType<FaultyInMemoryIndex>(index);
+                Assert.Equal(IndexingPriority.Error, index.Priority);
+                Assert.Equal(indexSafeName, index.GetIndexNameSafeForFileSystem());
+
+                database.IndexStore.DeleteIndex(index.IndexId);
+
+                Assert.False(Directory.Exists(indexStoragePath));
+            }
+        }
     }
 }

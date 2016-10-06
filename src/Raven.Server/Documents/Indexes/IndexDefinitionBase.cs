@@ -222,6 +222,24 @@ namespace Raven.Server.Documents.Indexes
             return name;
         }
 
+        public static bool TryReadIdFromDirectory(DirectoryInfo directory, out int indexId, out string indexName)
+        {
+            var index = directory.Name.IndexOf('-');
+            var maybeId = index >= 0 
+                ? directory.Name.Substring(0, index) 
+                : directory.Name;
+
+            if (int.TryParse(maybeId, out indexId) == false)
+            {
+                indexId = -1;
+                indexName = null;
+                return false;
+            }
+
+            indexName = directory.Name.Substring(index + 1);
+            return true;
+        }
+
         protected static string ReadName(BlittableJsonReaderObject reader)
         {
             string name;
