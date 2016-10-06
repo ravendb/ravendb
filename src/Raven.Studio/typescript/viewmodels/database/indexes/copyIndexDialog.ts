@@ -13,6 +13,7 @@ class copyIndexDialog extends dialogViewModelBase {
 
     indexJSON = ko.observable("");
 
+    //TODO: isPAste in copy dialog ? 
     constructor(private indexName: string, private db: database, private isPaste: boolean = false, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
         aceEditorBindingHandler.install();

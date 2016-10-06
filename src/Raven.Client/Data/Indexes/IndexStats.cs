@@ -54,6 +54,17 @@ namespace Raven.Client.Data.Indexes
         /// </summary>
         public int? ReduceErrors { get; set; }
 
+        /// <summary>
+        /// The value of docs/sec rate for the index over the last minute
+        /// </summary>
+        public double MappedPerSecondRate { get; set; }
+
+        /// <summary>
+        /// The value of reduces/sec rate for the index over the last minute
+        /// </summary>
+        public double ReducedPerSecondRate { get; set; }
+
+
         public Dictionary<string, CollectionStats> Collections { get; set; }
 
         /// <summary>
@@ -91,6 +102,8 @@ namespace Raven.Client.Data.Indexes
         /// </summary>
         public IndexType Type { get; set; }
 
+        public IndexRunningStatus Status { get; set; }
+
         /// <summary>
         /// Total number of entries in this index.
         /// </summary>
@@ -104,7 +117,7 @@ namespace Raven.Client.Data.Indexes
         public bool IsTestIndex { get; set; }
 
         /// <summary>
-        /// Determines if index is invalid. If more thant 15% of attemps (map or reduce) are errors then value will be <c>true</c>.
+        /// Determines if index is invalid. If more than 15% of attemps (map or reduce) are errors then value will be <c>true</c>.
         /// </summary>
         public bool IsInvalidIndex
         {
@@ -116,35 +129,48 @@ namespace Raven.Client.Data.Indexes
 
         public MemoryStats Memory { get; set; }
 
+        public IndexingPerformanceBasicStats LastBatchStats { get; set; }
+
         public class MemoryStats
         {
             public MemoryStats()
             {
                 DiskSize = new Size();
                 ThreadAllocations = new Size();
+                MemoryBudget = new Size();
             }
 
-            public bool InMemory { get; set; }
             public Size DiskSize { get; set; }
             public Size ThreadAllocations { get; set; }
+            public Size MemoryBudget { get; set; }
         }
 
         public class CollectionStats
         {
+            public CollectionStats()
+            {
+                DocumentLag = -1;
+                TombstoneLag = -1;
+            }
+
             public long LastProcessedDocumentEtag { get; set; }
-
-            public long NumberOfDocumentsToProcess { get; set; }
-
-            public long TotalNumberOfDocuments { get; set; }
 
             public long LastProcessedTombstoneEtag { get; set; }
 
-            public long NumberOfTombstonesToProcess { get; set; }
+            public long DocumentLag { get; set; }
 
-            public long TotalNumberOfTombstones { get; set; }
+            public long TombstoneLag { get; set; }
         }
     }
 
+    public enum IndexRunningStatus
+    {
+        Running,
+        Paused,
+        Disabled
+    }
+
+    [Flags]
     public enum IndexingPriority
     {
         None = 0,
@@ -158,80 +184,5 @@ namespace Raven.Client.Data.Indexes
         Error = 16,
 
         Forced = 512,
-    }
-
-    public enum IndexingOperation
-    {
-        // ReSharper disable InconsistentNaming
-        LoadDocument,
-
-        Linq_MapExecution,
-        Linq_ReduceLinqExecution,
-
-        Lucene_DeleteExistingDocument,
-        Lucene_ConvertToLuceneDocument,
-        Lucene_AddDocument,
-        Lucene_FlushToDisk,
-        Lucene_RecreateSearcher,
-
-        Map_DeleteMappedResults,
-        Map_ConvertToRavenJObject,
-        Map_PutMappedResults,
-        Map_ScheduleReductions,
-
-        Reduce_GetItemsToReduce,
-        Reduce_DeleteScheduledReductions,
-        Reduce_ScheduleReductions,
-        Reduce_GetMappedResults,
-        Reduce_RemoveReduceResults,
-
-        UpdateDocumentReferences,
-
-        Extension_Suggestions,
-
-        StorageCommit,
-        // ReSharper restore InconsistentNaming
-    }
-
-    public abstract class BasePerformanceStats
-    {
-        public long DurationMs { get; set; }
-    }
-
-    public class PerformanceStats : BasePerformanceStats
-    {
-        public IndexingOperation Name { get; set; }
-
-
-        public static PerformanceStats From(IndexingOperation name, long durationMs)
-        {
-            return new PerformanceStats
-            {
-                Name = name,
-                DurationMs = durationMs
-            };
-        }
-    }
-
-    public class ParallelPerformanceStats : BasePerformanceStats
-    {
-        public ParallelPerformanceStats()
-        {
-            BatchedOperations = new List<ParallelBatchStats>();
-        }
-        public long NumberOfThreads { get; set; }
-
-        public List<ParallelBatchStats> BatchedOperations { get; set; }
-    }
-
-    public class ParallelBatchStats
-    {
-
-        public ParallelBatchStats()
-        {
-            Operations = new List<PerformanceStats>();
-        }
-        public long StartDelay { get; set; }
-        public List<PerformanceStats> Operations { get; set; }
     }
 }

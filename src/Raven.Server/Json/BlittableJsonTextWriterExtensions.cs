@@ -11,7 +11,9 @@ using Raven.Client.Replication.Messages;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Json
 {
@@ -256,58 +258,8 @@ namespace Raven.Server.Json
 
         public static void WriteIndexingPerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexingPerformanceStats stats)
         {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName((nameof(stats.Completed)));
-            writer.WriteString((stats.Completed.GetDefaultRavenFormat(isUtc: true)));
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.Started)));
-            writer.WriteString((stats.Started.GetDefaultRavenFormat(isUtc: true)));
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.DurationInMilliseconds)));
-            using (var lazyStringValue = context.GetLazyString(stats.DurationInMilliseconds.ToInvariantString()))
-                writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.Details)));
-            writer.WriteIndexingPerformanceOperation(context, stats.Details);
-
-            writer.WriteEndObject();
-        }
-
-        public static void WriteIndexingPerformanceOperation(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexingPerformanceOperation operation)
-        {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName((nameof(operation.DurationInMilliseconds)));
-            using (var lazyStringValue = context.GetLazyString(operation.DurationInMilliseconds.ToInvariantString()))
-                writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(operation.Name)));
-            writer.WriteString((operation.Name));
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(operation.Operations)));
-            writer.WriteStartArray();
-            if (operation.Operations != null)
-            {
-                var isFirstInternal = true;
-                foreach (var op in operation.Operations)
-                {
-                    if (isFirstInternal == false)
-                        writer.WriteComma();
-
-                    isFirstInternal = false;
-
-                    writer.WriteIndexingPerformanceOperation(context, op);
-                }
-            }
-            writer.WriteEndArray();
-
-            writer.WriteEndObject();
+            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats, context);
+            writer.WriteObject(context.ReadObject(djv, "index/performance"));
         }
 
         public static void WriteIndexQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexQueryServerSide query)
@@ -773,20 +725,20 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteIndexStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexStats stats)
+        public static void WriteIndexProgress(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexProgress progress)
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(nameof(stats.IsStale));
-            writer.WriteBool(stats.IsStale);
+            writer.WritePropertyName(nameof(progress.IsStale));
+            writer.WriteBool(progress.IsStale);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(stats.Collections));
-            if (stats.Collections != null)
+            writer.WritePropertyName(nameof(progress.Collections));
+            if (progress.Collections != null)
             {
                 writer.WriteStartObject();
                 var isFirst = true;
-                foreach (var kvp in stats.Collections)
+                foreach (var kvp in progress.Collections)
                 {
                     if (isFirst == false)
                         writer.WriteComma();
@@ -828,125 +780,24 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(stats.Memory));
-            if (stats.Memory != null)
-            {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(stats.Memory.InMemory));
-                writer.WriteBool(stats.Memory.InMemory);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(stats.Memory.DiskSize));
-                writer.WriteSize(context, stats.Memory.DiskSize);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(stats.Memory.ThreadAllocations));
-                writer.WriteSize(context, stats.Memory.ThreadAllocations);
-
-                writer.WriteEndObject();
-            }
-            else
-                writer.WriteNull();
+            writer.WritePropertyName(nameof(progress.Name));
+            writer.WriteString(progress.Name);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(stats.LastIndexingTime)));
-            if (stats.LastIndexingTime.HasValue)
-                writer.WriteString((stats.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true)));
-            else
-                writer.WriteNull();
+            writer.WritePropertyName(nameof(progress.Type));
+            writer.WriteString(progress.Type.ToString());
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(stats.LastQueryingTime)));
-            if (stats.LastQueryingTime.HasValue)
-                writer.WriteString((stats.LastQueryingTime.Value.GetDefaultRavenFormat(isUtc: true)));
-            else
-                writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.LockMode)));
-            writer.WriteString((stats.LockMode.ToString()));
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.Name)));
-            writer.WriteString((stats.Name));
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.Priority)));
-            writer.WriteString((stats.Priority.ToString()));
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.Type)));
-            writer.WriteString((stats.Type.ToString()));
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.CreatedTimestamp)));
-            writer.WriteString((stats.CreatedTimestamp.GetDefaultRavenFormat(isUtc: true)));
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.EntriesCount)));
-            writer.WriteInteger(stats.EntriesCount);
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.Id)));
-            writer.WriteInteger(stats.Id);
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.MapAttempts)));
-            writer.WriteInteger(stats.MapAttempts);
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.MapErrors)));
-            writer.WriteInteger(stats.MapErrors);
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.MapSuccesses)));
-            writer.WriteInteger(stats.MapSuccesses);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(stats.ReduceAttempts));
-            if (stats.ReduceAttempts.HasValue)
-                writer.WriteInteger(stats.ReduceAttempts.Value);
-            else
-                writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(stats.ReduceErrors));
-            if (stats.ReduceErrors.HasValue)
-                writer.WriteInteger(stats.ReduceErrors.Value);
-            else
-                writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(stats.ReduceSuccesses));
-            if (stats.ReduceSuccesses.HasValue)
-                writer.WriteInteger(stats.ReduceSuccesses.Value);
-            else
-                writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.ErrorsCount)));
-            writer.WriteInteger(stats.ErrorsCount);
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(stats.IsTestIndex)));
-            writer.WriteBool(stats.IsTestIndex);
+            writer.WritePropertyName(nameof(progress.Id));
+            writer.WriteInteger(progress.Id);
 
             writer.WriteEndObject();
         }
 
-        private static void WriteSize(this BlittableJsonTextWriter writer, JsonOperationContext context, Size size)
+        public static void WriteIndexStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexStats stats)
         {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(size.SizeInBytes));
-            writer.WriteInteger(size.SizeInBytes);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(size.HumaneSize));
-            writer.WriteString(size.HumaneSize);
-
-            writer.WriteEndObject();
+            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats, context);
+            writer.WriteObject(context.ReadObject(djv, "index/stats"));
         }
 
         private static void WriteIndexFieldOptions(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexFieldOptions options)

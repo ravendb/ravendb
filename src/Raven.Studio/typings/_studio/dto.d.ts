@@ -56,3 +56,11 @@ interface saveDocumentResponseItemDto {
     PatchResult: string;
     Deleted: boolean;
 }
+
+interface operationIdDto {
+    OperationId: number;
+}
+
+interface importDatabaseRequestDto {
+    batchSize: number,
+}

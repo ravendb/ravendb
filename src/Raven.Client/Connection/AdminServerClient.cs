@@ -12,6 +12,7 @@ using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
@@ -75,9 +76,9 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncAdminServerClient.StartRestoreAsync(restoreRequest));
         }
 
-        public IndexStatus[] GetIndexesStatus()
+        public IndexingStatus GetIndexingStatus()
         {
-            return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetIndexesStatus());
+            return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetIndexingStatusAsync());
         }
 
         public RavenJObject GetDatabaseConfiguration()

@@ -308,7 +308,8 @@ namespace Raven.Server.Documents
         {
             var fst = new FixedSizeTree(tx.LowLevelTransaction,
                 tx.LowLevelTransaction.RootObjects,
-                AllDocsEtagsSlice, sizeof(long));
+                AllDocsEtagsSlice, sizeof(long),
+                clone: false);
 
             using (var it = fst.Iterate())
             {
@@ -323,7 +324,8 @@ namespace Raven.Server.Documents
         {
             var fst = new FixedSizeTree(tx.LowLevelTransaction,
                 tx.LowLevelTransaction.RootObjects,
-                AllTombstonesEtagsSlice, sizeof(long));
+                AllTombstonesEtagsSlice, sizeof(long),
+                clone: false);
 
             using (var it = fst.Iterate())
             {

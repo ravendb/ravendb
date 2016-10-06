@@ -1,8 +1,17 @@
-﻿@selectionColor: #ffc;
+﻿@selectionColor:rgba(255, 255, 255, 0.05);
 
 .ko-grid {
     &:focus {
         outline: 0;
+    }
+
+    .checkbox {
+        margin: 0;
+        padding-top: 0;
+    }
+    input[type=checkbox] {
+        margin: 0;
+        margin-left: -20px;
     }
 
     .ko-grid-column-container-clip {

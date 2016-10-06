@@ -15,6 +15,8 @@ namespace Raven.Server.Config.Settings
         public static readonly Type TypeOf = typeof(Size);
         public static readonly Type NullableTypeOf = typeof(Size?);
 
+        public static readonly Size Zero = new Size(0, SizeUnit.Bytes);
+
         private const long OneKb = 1024;
         private const long OneMb = OneKb * 1024;
         private const long OneGb = OneMb * 1024;
@@ -139,14 +141,14 @@ namespace Raven.Server.Config.Settings
 
         public override string ToString()
         {
-            if (_valueInBytes > OneTb)
-                return $"{_valueInBytes / OneTb:#,#.##} TBytes";
-            if (_valueInBytes > OneGb)
-                return $"{_valueInBytes / OneGb:#,#.##} GBytes";
-            if (_valueInBytes > OneMb)
-                return $"{_valueInBytes / OneMb:#,#.##} MBytes";
-            if (_valueInBytes > OneKb)
-                return $"{_valueInBytes / OneKb:#,#.##} KBytes";
+            if (Math.Abs(_valueInBytes) > OneTb)
+                return $"{Math.Round(_valueInBytes / (double)OneTb, 4):#,#.####} TBytes";
+            if (Math.Abs(_valueInBytes) > OneGb)
+                return $"{Math.Round(_valueInBytes / (double)OneGb, 3):#,#.###} GBytes";
+            if (Math.Abs(_valueInBytes) > OneMb)
+                return $"{Math.Round(_valueInBytes / (double)OneMb, 2):#,#.##} MBytes";
+            if (Math.Abs(_valueInBytes) > OneKb)
+                return $"{Math.Round(_valueInBytes / (double)OneKb, 2):#,#.##} KBytes";
             return $"{_valueInBytes:#,#} Bytes";
         }
     }

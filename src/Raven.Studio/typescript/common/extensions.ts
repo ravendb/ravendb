@@ -469,7 +469,7 @@ class extensions {
 
         ko.bindingHandlers["checkboxTriple"] = {
             update(element, valueAccessor, allBindings, viewModel, bindingContext) {
-                var checkboxValue: checkbox = ko.unwrap(valueAccessor());
+                const checkboxValue: checkbox = ko.unwrap(valueAccessor());
                 switch (checkboxValue) {
                 case checkbox.Checked:
                     element.checked = true;

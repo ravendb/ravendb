@@ -17,15 +17,17 @@ namespace Raven.Server.ServerWide.Context
     public class TransactionContextPool : JsonContextPoolBase<TransactionOperationContext> ,ITransactionContextPool
     {
         private readonly StorageEnvironment _storageEnvironment;
+        private readonly int _initialSize;
 
-        public TransactionContextPool(StorageEnvironment storageEnvironment)
+        public TransactionContextPool(StorageEnvironment storageEnvironment, int initialSize = 1024 * 1024)
         {
             _storageEnvironment = storageEnvironment;
+            _initialSize = initialSize;
         }
 
         protected override TransactionOperationContext CreateContext()
         {
-            return new TransactionOperationContext(_storageEnvironment, 1024*1024, 16*1024);
+            return new TransactionOperationContext(_storageEnvironment, _initialSize, 16*1024);
         }
     }
 }

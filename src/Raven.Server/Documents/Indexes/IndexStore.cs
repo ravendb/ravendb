@@ -344,8 +344,24 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public IndexRunningStatus Status
+        {
+            get
+            {
+                if (_documentDatabase.Configuration.Indexing.Disabled)
+                    return IndexRunningStatus.Disabled;
+
+                if (_run)
+                    return IndexRunningStatus.Running;
+
+                return IndexRunningStatus.Paused;
+            }
+        }
+
         public void StartIndexing()
         {
+            _run = true;
+
             StartIndexing(_indexes);
         }
 
@@ -363,8 +379,6 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_documentDatabase.Configuration.Indexing.Disabled)
                 return;
-
-            _run = true;
 
             Parallel.ForEach(indexes, index => index.Start());
         }
@@ -389,6 +403,8 @@ namespace Raven.Server.Documents.Indexes
 
         public void StopIndexing()
         {
+            _run = false;
+
             StopIndexing(_indexes);
         }
 
@@ -406,8 +422,6 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_documentDatabase.Configuration.Indexing.Disabled)
                 return;
-
-            _run = false;
 
             Parallel.ForEach(indexes, index => index.Stop());
         }

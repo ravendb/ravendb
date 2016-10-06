@@ -12,10 +12,8 @@
         
         <link rel="shortcut icon" href="favicon.ico" />
         
-        <!-- TODO: embed this! -->
-        <link href='https://fonts.googleapis.com/css?family=Lato:400,300,700,900,400italic,700italic' rel='stylesheet' type='text/css'>
-
         <!-- build:css App/styles.css -->
+            <link rel="stylesheet" href="lib/nvd3/build/nv.d3.css" />
             <link rel="stylesheet" href="lib/Durandal/css/durandal.css" />
             <link rel="stylesheet" href="Content/css/bootstrap/bootstrap.css" />
             <link rel="stylesheet" href="Content/css/styles.css" />
@@ -36,9 +34,11 @@
     <div id="applicationHost">
         <div class="loading-overlay"></div>
     </div>
+    <div class="processing-spinner"></div>
     <iframe id="downloadFrame" style="display: none"></iframe>
 
     <!-- build:js App/external-libs.js -->
+        <script type="text/javascript" src="lib/d3/d3.js"></script>
         <script type="text/javascript" src="lib/jquery/dist/jquery.js"></script>
         <script type="text/javascript" src="lib/blockUI/jquery.blockUI.js"></script>
         <script type="text/javascript" src="lib/knockout/dist/knockout.debug.js"></script>

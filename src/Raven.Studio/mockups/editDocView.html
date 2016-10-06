@@ -60,7 +60,7 @@
     </div>
 
     <div class="container-fluid content-container enable-right-options-panel">
-        <div class="content-container-margin">
+        <div class="content-container-margin editDocument">
             <div id="right-options-panel" class="flex-window">
                 <div class="panel flex-window-head">
                     <div class="panel-body">
@@ -156,45 +156,68 @@
             <div class="flex-window">
                 <div class="flex-window-head">
                     <div class="clearfix">
-                        <h2 class="pull-left-md">
-                            <a class="reset-color btn-toggle" data-target=".fav-object" data-class="icon-star-filled favorite">
-                                <span class="icon-star fav-object"></span>
+                        <h2 class="documentId pull-left-md">
+                            <a class="reset-color btn-toggle markFavourite"
+                                data-target=".fav-object"
+                                data-class="icon-star-filled favorite"
+                                >
+                                <i class="icon-star fav-object"></i>
                             </a>
                             <span id="obj-name" class="editable-input-inline">
                                 <span class="value-container">
-                                    <span class="static-name">Orders/123123123</span>
-                                    <input type="text" class="edit-inline" value="Orders/123123123" />
+                                    <span class="static-name padding padding-xs">
+                                        Orders/<span class="text-primary">&lt;auto-generated&gt;</span>
+                                    </span>
+                                    <input type="text" name="documentId" id="documentIdInput"
+                                        class="edit-inline padding padding-xs" value="Orders/" />
                                 </span>
-                                <a class="icon-edit reset-color btn-toggle small" data-target="#obj-name" data-class="edit"></a>
+                            <button class="edit-button btn-toggle btn btn-sm"
+                                    data-target="#obj-name"
+                                    data-class="edit">
+                                <i class="icon-edit"></i>
+                                <span class="text"></span>
+                            </button>
+                            <script id="INLINE_EDITION_MOCKUP_CODE_ONLY--DO_NOT_INCLUDE_IN_THE_ACTUAL_STUDIO_CODE">
+                                $('.documentId .edit-button').click(function () {
+                                    var inp = document.getElementById('documentIdInput');
+                                    setTimeout(() => {
+                                        inp.focus();
+                                        inp.selectionStart = inp.selectionEnd = 10000;
+                                    });
+                                });
+                            </script>
+
                             </span>
                         </h2>
                         <p class="pull-right-md bg-warning padding padding-xs"><small><span class="icon-warning"></span> Document has beend modified outside of studio 1 minute ago. <a href="#">click here to refresh</a></small></p>
                     </div>
                     <div class="btn-bar">
-                        <div class="pull-left-sm">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-success"><span class="icon-save"></span> Save</button>
-                                <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    <span class="caret"></span>
-                                    <span class="sr-only">Toggle Dropdown</span>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a href="#">Save as new Order</a></li>
-                                    <li><a href="#">Save as...</a></li>
-                                </ul>
-                            </div>
-                            <button type="button" class="btn btn-danger"><span class="icon-trash"></span> Delete</button>
+                        <div class="pull-left-sm" >
+                            <button type="button" class="save-btn btn btn-success">
+                                <i class="icon-save"></i>
+                                <span>Save</span>
+                            </button>
+                            <button type="button" class="clone-btn btn btn-default">
+                                <i class="icon-document-group"></i>
+                                <span>Clone</span>
+</button>
+                            <button type="button" class="delete-btn btn btn-danger">
+                                <i class="icon-trash"></i>
+                                <span>Delete</span>
+                            </button>
                         </div>
                         <div class="pull-right-sm">
                             <div class="btn-group">
-                                <button type="button" class="btn btn-default"><span class="icon-copy"></span> Copy</button>
+                                <button type="button" class="btn btn-default">
+                                    <i class="icon-copy"></i>
+                                    <span>Copy to clipboard</span>
+                                </button>
                                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     <span class="caret"></span>
                                     <span class="sr-only">Toggle Dropdown</span>
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li><a href="#">Copy as C# class</a></li>
-
                                 </ul>
                             </div>
                         </div>
@@ -202,47 +225,47 @@
                     <hr class="small" />
                     <div class="clearfix">
                         <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
-                            <button type="button" class="btn btn-default"><span class="icon-indent"></span> Format</button>
-                            <button type="button" class="btn btn-default"><span class="icon-collapse"></span> Toggle collapse</button>
-                            <button type="button" class="btn btn-default"><span class="icon-newline"></span> Toggle new lines</button>
+                            <button type="button" class="btn btn-default"><span class="icon-indent"></span> <span>Format</span></button>
+                            <button type="button" class="btn btn-default"><span class="icon-collapse"></span> <span>Toggle collapse</span></button>
+                            <button type="button" class="btn btn-default"><span class="icon-newline"></span> <span>Toggle new lines</span></button>
                         </div>
                     </div>
                 </div>
                 <div class="flex-window-scroll">
                     <div id="docEditor">
-                        {
-                        "Company": "companies/65",
-                        "Employee": "employees/1",
-                        "OrderedAt": "1998-05-06T00:00:00.0000000",
-                        "RequireAt": "1998-06-03T00:00:00.0000000",
-                        "ShippedAt": null,
-                        "ShipTo": {
-                        "Line1": "2817 Milton Dr.",
-                        "Line2": null,
-                        "City": "Albuquerque",
-                        "Region": "NM",
-                        "PostalCode": "87110",
-                        "Country": "USA"
-                        },
-                        "ShipVia": "shippers/2",
-                        "Freight": 8.53,
-                        "Lines": [
-                        {
-                        "Product": "products/2",
-                        "ProductName": "Chang",
-                        "PricePerUnit": 19,
-                        "Quantity": 24,
-                        "Discount": 0.2
-                        },
-                        {
-                        "Product": "products/3",
-                        "ProductName": "Aniseed Syrup",
-                        "PricePerUnit": 10,
-                        "Quantity": 4,
-                        "Discount": 0
-                        }
-                        ]
-                        }
+{
+   "Company":"companies/65",
+   "Employee":"employees/1",
+   "OrderedAt":"1998-05-06T00:00:00.0000000",
+   "RequireAt":"1998-06-03T00:00:00.0000000",
+   "ShippedAt":null,
+   "ShipTo":{
+      "Line1":"2817 Milton Dr.",
+      "Line2":null,
+      "City":"Albuquerque",
+      "Region":"NM",
+      "PostalCode":"87110",
+      "Country":"USA"
+   },
+   "ShipVia":"shippers/2",
+   "Freight":8.53,
+   "Lines":[
+      {
+         "Product":"products/2",
+         "ProductName":"Chang",
+         "PricePerUnit":19,
+         "Quantity":24,
+         "Discount":0.2
+      },
+      {
+         "Product":"products/3",
+         "ProductName":"Aniseed Syrup",
+         "PricePerUnit":10,
+         "Quantity":4,
+         "Discount":0
+      }
+   ]
+}
                     </div>
                 </div>
             </div>

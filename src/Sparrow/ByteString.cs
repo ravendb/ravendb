@@ -343,11 +343,12 @@ namespace Sparrow
     {
         public readonly byte* Segment;
         public readonly int Size;
+        private NativeMemory.ThreadStats _thread;
 
         public UnmanagedGlobalSegment(int size)
         {
             Size = size;
-            Segment = NativeMemory.AllocateMemory(size);
+            Segment = NativeMemory.AllocateMemory(size, out _thread);
         }
 
         #region IDisposable Support
@@ -366,7 +367,7 @@ namespace Sparrow
 
                 if (Segment != null)
                 {
-                    NativeMemory.Free(Segment, Size);
+                    NativeMemory.Free(Segment, Size, _thread);
                 }
             }
         }
@@ -420,41 +421,16 @@ namespace Sparrow
         [ThreadStatic]
         private static Stack<UnmanagedGlobalSegment> _threadLocal;
 
-        public static void Clean(int keep = 1)
+        public static void Clean()
         {
-            // we are expecting to be called here when there is no
-            // more work to be done, and we want to release resources
-            // to the system
-
-            // By reversing the stack, we ensure that we keep however many
-            // segments need, that they are the newest, and that they are 
-            // the largest around, so we shouldn't need more allocation
-
             if (_threadLocal == null || _threadLocal.Count == 0)
                 return; // nothing to do;
 
-            var latest = _threadLocal.Peek();
-
-            var reversed = new Stack<UnmanagedGlobalSegment>(_threadLocal.Count);
             foreach (var segment in _threadLocal)
             {
-                reversed.Push(segment);
+                segment.Dispose();
             }
             _threadLocal.Clear();
-            while (keep-- > 0 && reversed.Count > 0)
-            {
-                var current = reversed.Pop();
-                if (current.Size < latest.Size)
-                {
-                    current.Dispose();
-                    continue;
-                }
-                _threadLocal.Push(current);
-            }
-            while (reversed.Count > 0)
-            {
-                reversed.Pop().Dispose();
-            }
 
         }
 

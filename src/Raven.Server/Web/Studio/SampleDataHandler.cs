@@ -22,12 +22,12 @@ namespace Raven.Server.Studio.Handlers
             {
                 using (context.OpenReadTransaction())
                 {
-                    //TODO: verify if it works properly when creating empty database with bundles configuration - maybe we should find info about collections? Database.DocumentsStorage.GetCollections(context)
-                    var documentCount = Database.DocumentsStorage.GetNumberOfDocuments(context);
-
-                    if (documentCount > 0)
+                    foreach (var collection in Database.DocumentsStorage.GetCollections(context))
                     {
-                        throw new InvalidOperationException("You cannot create sample data in a database that already contains documents");
+                        if (collection.Count > 0 && collection.Name != CollectionName.SystemCollection)
+                        {
+                            throw new InvalidOperationException("You cannot create sample data in a database that already contains documents");
+                        }
                     }
                 }
 

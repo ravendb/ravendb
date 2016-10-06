@@ -78,6 +78,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "GroupBy":
                 case "OrderBy":
                 case "OrderByDescending":
+                case "Recurse":
                     return Visit(ModifyLambdaForSelect(node, invocation));
                 case "SelectMany":
                     return ModifyLambdaForSelectMany(node, invocation);

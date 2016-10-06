@@ -69,8 +69,8 @@ namespace Raven.Server.Utils
             var metricsStatsJsonValue = new DynamicJsonValue
             {
                 ["DocsPerSecond"] = self.DocPutsPerSecond.CreateMeterData(),
-                ["IndexedPerSecond"] = self.DocPutsPerSecond.CreateMeterData(),
-                ["RequestDuationMetric"] = self.DocPutsPerSecond.CreateMeterData(),
+                ["IndexedPerSecond"] = self.IndexedPerSecond.CreateMeterData(),
+
                 ["RequestsMeter "] = self.RequestsMeter.CreateMeterData(),
                 ["RequestsPerSecondCounter"] = self.RequestsPerSecondCounter.CreateMeterData(),
                 ["MapReduceMappedPerSecond"] = self.MapReduceMappedPerSecond.CreateMeterData(),

@@ -3,7 +3,8 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import patchDocument = require("models/database/patch/patchDocument");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import collectionsStats = require("models/database/documents/collectionsStats");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import pagedList = require("common/pagedList");
@@ -18,7 +19,6 @@ import executePatchCommand = require("commands/database/patch/executePatchComman
 import virtualTable = require("widgets/virtualTable/viewModel");
 import evalByQueryCommand = require("commands/database/patch/evalByQueryCommand");
 import documentMetadata = require("models/database/documents/documentMetadata");
-import getDocumentsByEntityNameCommand = require("commands/database/documents/getDocumentsByEntityNameCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import queryUtil = require("common/queryUtil");
@@ -354,10 +354,11 @@ class patch extends viewModelBase {
         }
     }
 
-    fetchAllCollections(): JQueryPromise<any> {
-        return new getCollectionsCommand(this.activeDatabase())
+    fetchAllCollections(): JQueryPromise<collectionsStats> {
+        return new getCollectionsStatsCommand(this.activeDatabase())
             .execute()
-            .done((colls: collection[]) => {
+            .done((stats: collectionsStats) => {
+                const colls = stats.collections;
                 var currentlySelectedCollection: collection = null;
 
                 if (this.patchDocument().selectedItem()) {
@@ -469,7 +470,7 @@ class patch extends viewModelBase {
         var bulkDocs: Array<bulkDocumentDto> = [];
         bulkDocs.push({
             Key: this.keyOfTestedDocument(),
-            Method: 'EVAL',
+            Method: 'PATCH',
             DebugMode: true,
             Patch: {
                 Script: this.patchDocument().script(),
@@ -479,11 +480,11 @@ class patch extends viewModelBase {
         new executePatchCommand(bulkDocs, this.activeDatabase(), true)
             .execute()
             .done((result: bulkDocumentDto[]) => {
-                var testResult = new document((<any>result[0]).AdditionalData['Document']);
+                var testResult = new document((<any>result).Results[0].AdditionalData['Document']);
                 this.afterPatchDoc(JSON.stringify(testResult.toDto(), null, 4));
                 this.afterPatchMeta(JSON.stringify(documentMetadata.filterMetadata(testResult.__metadata.toDto()), null, 4));
-                this.updateActions((<any>result[0]).AdditionalData['Actions']);
-                this.outputLog((<any>result[0]).AdditionalData["Debug"]);
+                this.updateActions((<any>result).Results[0].AdditionalData['Actions']);
+                this.outputLog((<any>result).Results[0].AdditionalData["Debug"]);
             })
             .fail((result: JQueryXHR) => console.log(result.responseText));
         this.recordPatchRun();
@@ -561,7 +562,7 @@ class patch extends viewModelBase {
         var index: string = null;
         var query: string = null;
         switch (this.patchDocument().patchOnOption()) {
-            case "Collection":
+            case "Collection": //TODO: use new endpoint RavenDB-5371
                 index = "Raven/DocumentsByEntityName";
                 query = "Tag:" + queryUtil.escapeTerm(this.patchDocument().selectedItem());
                 break;
@@ -658,7 +659,7 @@ class patch extends viewModelBase {
         keys.forEach(
             key => bulkDocs.push({
                 Key: key,
-                Method: 'EVAL',
+                Method: 'PATCH',
                 DebugMode: false,
                 Patch: {
                     Script: this.patchDocument().script(),
@@ -758,8 +759,8 @@ class patch extends viewModelBase {
             //if index is dynamic, get columns using index definition, else get it using first index result
             if (indexName.indexOf(this.dynamicPrefix) === 0) {
                 var collectionName = indexName.substring(8);
-                new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
-                    .execute()
+                new collection(collectionName, this.activeDatabase())
+                    .fetchDocuments(0, 1)
                     .done((result: pagedResultSet<any>) => {
                         if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
                             var dynamicIndexPattern: document = new document(result.items[0]);
