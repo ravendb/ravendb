@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     do
                     {
-                        collection.AddFilter(new BloomFilter(it.CurrentKey, it.CreateReaderForCurrent().Base, tree, writeable: false));
+                        collection.AddFilter(new BloomFilter(it.CurrentKey.Clone(indexContext.Allocator, ByteStringType.Immutable), it.CreateReaderForCurrent().Base, tree, writeable: false));
                     } while (it.MoveNext());
                 }
             }
@@ -71,11 +71,9 @@ namespace Raven.Server.Documents.Indexes
         private unsafe BloomFilter CreateNewFilter(int number)
         {
             Slice key;
-            using (Slice.From(_context.Allocator, number.ToString("D9"), out key))
-            {
-                var ptr = _tree.DirectAdd(key, BloomFilter.PtrSize);
-                return new BloomFilter(key, ptr, _tree, writeable: true);
-            }
+            Slice.From(_context.Allocator, number.ToString("D9"), out key);
+            var ptr = _tree.DirectAdd(key, BloomFilter.PtrSize);
+            return new BloomFilter(key, ptr, _tree, writeable: true);
         }
 
         private void AddFilter(BloomFilter filter)
