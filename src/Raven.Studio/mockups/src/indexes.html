@@ -25,27 +25,24 @@
                             </span>
                         </div>
                         <button class="btn btn-default"><i class="icon-copy"></i><span>Copy</span></button>
-                        <div class="btn-group ">
-                            <button type="button" class="btn btn-default">
-                                <i class="icon-lock"></i><span>Lock</span>
-                            </button>
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-bind="enable: selectedIndexesName().length" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="icon-lock"></i>
+                                <span>Lock</span>&nbsp;&nbsp;
                                 <span class="caret"></span>
                                 <span class="sr-only">Toggle Dropdown</span>
                             </button>
                             <ul class="dropdown-menu">
                                 <li>
-                                    <a href="#">
+                                    <a href="#" title="Unlock selected indexes">
                                         <i class="icon-unlock"></i>
                                         <span>Unlock</span>
                                     </a>
                                 </li>
-                                <li class="divider"></li>
                                 <li>
-                                    <a href="#">
+                                    <a href="#" title="Lock selected indexes">
                                         <i class="icon-lock"></i>
                                         <span>Lock</span>
-
                                     </a>
                                 </li>
                                 <li>
@@ -78,7 +75,7 @@
             </div>
             <hr />
             <h2>Cars</h2>
-            <div class="panel">
+            <div class="panel index">
                 <div class="padding padding-sm">
                     <div class="state state-error"></div>
                     <div class="row">

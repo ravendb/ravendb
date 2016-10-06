@@ -1,0 +1,138 @@
+.transformers {
+
+    .align-checkboxes {
+        position: relative;
+        top: -2px;
+    }
+
+    .vertical-divider {
+        position: relative;
+        @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
+            margin-left: 20px;
+        }
+
+        @media (min-width:@screen-xl) {
+            &:before {
+                content: '';
+                display: block;
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left:0;
+                border-left: 1px solid @gray-dark;
+            }
+        }
+    }
+
+    .inline-block {
+        display: inline-block;
+    }
+
+    .transformer {
+        padding-left: 10px;
+        position: relative;
+
+        &:hover {
+            background-color: lighten(@gray-darker, 3%);
+            transition: background-color .15s ease;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+
+            @media (min-width:@screen-sm) {
+                .actions {
+                    .vcenter;
+                    width: 100%;
+                    padding: 0 15px;
+                }
+            }
+
+            @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
+                .info-container {
+                    order: 1;
+                }
+
+                .properties-container {
+                    order: 3;
+                }
+
+                .actions-container {
+                    order: 2;
+                }
+            }
+
+            .col-flex {
+                padding: 0 15px;
+            }
+        }
+
+        .transformer-name {
+            margin-top: 5px;
+            margin-left: 30px;
+            margin-bottom: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .checkbox {
+            position: relative;
+            margin: 0;
+            top: -4px;
+            float: left;
+        }
+    }
+
+    .properties-value, .properties-label {
+        text-align:left;
+        display: inline-block;
+        .btn-sm;
+        width: 140px;
+
+        &.value-only {
+            width: auto;
+        }
+
+        .caret {
+            margin-top: 8px;
+            float:right;
+        }
+
+        [class^="icon-"], [class*=" icon-"] {
+            color: @brand-info;
+
+            & + span {
+                margin-left: 9px;
+                color: @brand-info;
+            }
+        }
+    }
+
+    .properties-container {
+        display:flex;
+        flex-wrap:wrap;
+    }
+
+    .properties-item {
+        @media (min-width:@screen-xl) {
+            width:50%;
+
+        }
+
+        &.text-success {
+            [class^="icon-"], [class*=" icon-"] {
+                color: inherit;
+
+                & + span {
+                    margin-left: 9px;
+                    color: inherit;
+                }
+            }
+        }
+    }
+
+    .properties-label {
+        width: 70px;
+    }
+}

@@ -3747,9 +3747,6 @@ pre {
 .indexes .properties-label {
   width: 70px;
 }
-.transformers .transformer {
-  min-height: 40px;
-}
 .transformers .align-checkboxes {
   position: relative;
   top: -2px;
@@ -3757,32 +3754,39 @@ pre {
 .transformers .vertical-divider {
   position: relative;
 }
-.transformers .vertical-divider:before {
-  content: '';
-  display: block;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  border-left: 1px solid #3a4242;
+@media (min-width: 768px) and (max-width: 1599px) {
+  .transformers .vertical-divider {
+    margin-left: 20px;
+  }
+}
+@media (min-width: 1600px) {
+  .transformers .vertical-divider:before {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-left: 1px solid #3a4242;
+  }
 }
 .transformers .inline-block {
   display: inline-block;
 }
-.transformers .panel {
-  padding-left: 9px;
+.transformers .transformer {
+  padding-left: 10px;
   position: relative;
 }
-.transformers .panel:hover {
+.transformers .transformer:hover {
   background-color: #333b3b;
   transition: background-color 0.15s ease;
 }
-.transformers .panel .row {
+.transformers .transformer .row {
   display: flex;
   flex-wrap: wrap;
 }
 @media (min-width: 768px) {
-  .transformers .panel .row .actions {
+  .transformers .transformer .row .actions {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -3795,16 +3799,28 @@ pre {
     padding: 0 15px;
   }
 }
-.transformers .panel .row .col-flex {
+@media (min-width: 768px) and (max-width: 1599px) {
+  .transformers .transformer .row .info-container {
+    order: 1;
+  }
+  .transformers .transformer .row .properties-container {
+    order: 3;
+  }
+  .transformers .transformer .row .actions-container {
+    order: 2;
+  }
+}
+.transformers .transformer .row .col-flex {
   padding: 0 15px;
 }
-.transformers .panel .transformer-name {
+.transformers .transformer .transformer-name {
+  margin-top: 5px;
+  margin-left: 30px;
   margin-bottom: 0;
-  margin-top: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.transformers .panel .checkbox {
+.transformers .transformer .checkbox {
   position: relative;
   margin: 0;
   top: -4px;
