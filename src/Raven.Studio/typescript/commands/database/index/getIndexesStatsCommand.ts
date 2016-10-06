@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class getIndexStatsCommand extends commandBase {
+class getIndexesStatsCommand extends commandBase {
 
     constructor(private db: database) {
         super();
@@ -14,4 +14,4 @@ class getIndexStatsCommand extends commandBase {
     }
 } 
 
-export = getIndexStatsCommand;
+export = getIndexesStatsCommand;

@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Indexes
 
         public string Name => Definition?.Name;
 
-        public IndexRunningStatus Status
+        public virtual IndexRunningStatus Status
         {
             get
             {

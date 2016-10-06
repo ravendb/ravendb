@@ -75,6 +75,7 @@ namespace TypingsGenerator
             
             // indexes
             scripter.AddType(typeof(IndexStats));
+            scripter.AddType(typeof(IndexingStatus));
             scripter.AddType(typeof(IndexPerformanceStats));
 
 

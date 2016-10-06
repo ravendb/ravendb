@@ -2,7 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import app = require("durandal/app");
 import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 import getIndexesPerformance = require("commands/database/debug/getIndexesPerformance");
-import getIndexStatsCommand = require("commands/database/index/getIndexStatsCommand");
+import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 
 class metrics extends viewModelBase { 
 
@@ -37,7 +37,7 @@ class metrics extends viewModelBase {
             .done(result => this.data = result);
 
         return perfTask.then(() => {
-            return new getIndexStatsCommand(this.activeDatabase())
+            return new getIndexesStatsCommand(this.activeDatabase())
                 .execute()
                 .done(result => {
                     this.extractCurrentlyRunning(result);
