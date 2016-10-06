@@ -18,6 +18,7 @@ class replaceIndexDialog extends dialogViewModelBase {
     private etagMode = ko.observable<boolean>(false);
     private dateMode = ko.observable<boolean>(false);
     private lastIndexedEtag = ko.observable<string>();
+    private canAccessEtagMode = ko.observable<boolean>(false);
 
     private replaceDate = ko.observable<Moment>(moment(new Date()));
     private replaceDateText = ko.computed(() => {
@@ -47,7 +48,8 @@ class replaceIndexDialog extends dialogViewModelBase {
 
     processDbStats(stats: databaseStatisticsDto) {
         var oldIndex = stats.Indexes.first(i => i.Name == this.indexName);
-        this.lastIndexedEtag(oldIndex.LastIndexedEtag);       
+        this.lastIndexedEtag(oldIndex.LastIndexedEtag);
+        this.canAccessEtagMode(!oldIndex.IsMapReduce);    
     }
 
     saveReplace() {

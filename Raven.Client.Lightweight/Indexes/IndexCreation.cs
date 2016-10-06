@@ -223,6 +223,8 @@ namespace Raven.Client.Indexes
         /// </summary>
         /// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
         /// <param name="documentStore">The document store.</param>
+        /// <param name="minimumEtagBeforeReplace">Minimum last indexed etag after which index will be replaced (map indexes only)</param>
+        /// <param name="replaceTimeUtc"></param>
         public static void SideBySideCreateIndexes(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             var catalog = new CompositionContainer(new AssemblyCatalog(assemblyToScanForIndexingTasks));
@@ -288,7 +290,7 @@ namespace Raven.Client.Indexes
                 foreach (var task in tasks)
                     await task.AfterExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
             }
-                // For old servers that don't have the new endpoint for executing multiple indexes
+            // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception)
             {
                 failed = true;
@@ -319,6 +321,8 @@ namespace Raven.Client.Indexes
         /// </summary>
         /// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
         /// <param name="documentStore">The document store.</param>
+        /// <param name="minimumEtagBeforeReplace">Minimum last indexed etag after which index will be replaced (map indexes only)</param>
+        /// <param name="replaceTimeUtc"></param>
         public static void SideBySideCreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             var indexCompilationExceptions = new List<IndexCompilationException>();
@@ -358,6 +362,8 @@ namespace Raven.Client.Indexes
         /// </summary>
         /// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
         /// <param name="documentStore">The document store.</param>
+        /// <param name="minimumEtagBeforeReplace">Minimum last indexed etag after which index will be replaced (map indexes only)</param>
+        /// <param name="replaceTimeUtc"></param>
         public static Task SideBySideCreateIndexesAsync(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             var catalog = new CompositionContainer(new AssemblyCatalog(assemblyToScanForIndexingTasks));
@@ -369,6 +375,8 @@ namespace Raven.Client.Indexes
         /// </summary>
         /// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
         /// <param name="documentStore">The document store.</param>
+        /// <param name="minimumEtagBeforeReplace">Minimum last indexed etag after which index will be replaced (map indexes only)</param>
+        /// <param name="replaceTimeUtc"></param>
         public static async Task SideBySideCreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             var indexCompilationExceptions = new List<IndexCompilationException>();
@@ -380,7 +388,7 @@ namespace Raven.Client.Indexes
                     .ToList();
 
                 var indexesToAdd = CreateIndexesToAdd(tasks, documentStore.Conventions);
-                await documentStore.AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd).ConfigureAwait(false);
+                await documentStore.AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
 
                 foreach (var task in tasks)
                     await task.AfterExecuteAsync(documentStore.AsyncDatabaseCommands, documentStore.Conventions).ConfigureAwait(false);
