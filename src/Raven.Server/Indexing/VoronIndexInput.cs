@@ -17,8 +17,8 @@ namespace Raven.Server.Indexing
     {
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        private readonly long _originalTransactionId;
-        private readonly ThreadLocal<Transaction> _currentTransaction;
+        private readonly Transaction _originalTransaction;
+        private readonly AsyncLocal<Transaction> _currentTransaction;
 
         private readonly string _name;
         private ChunkedMmapStream _stream;
@@ -26,10 +26,10 @@ namespace Raven.Server.Indexing
         private bool _isOriginal = true;
         private PtrSize[] _ptrs;
 
-        public VoronIndexInput(ThreadLocal<Transaction> transaction, string name)
+        public VoronIndexInput(AsyncLocal<Transaction> transaction, string name)
         {
             _name = name;
-            _originalTransactionId = transaction.Value.LowLevelTransaction.Id;
+            _originalTransaction = transaction.Value;
             _currentTransaction = transaction;
 
             OpenInternal();
@@ -77,7 +77,7 @@ namespace Raven.Server.Indexing
             GC.SuppressFinalize(clone);
             clone._isOriginal = false;
 
-            if (clone._originalTransactionId != clone._currentTransaction.Value.LowLevelTransaction.Id)
+            if (clone._originalTransaction != clone._currentTransaction.Value)
             {
                 clone.OpenInternal();
                 clone._stream.Position = _stream.Position;

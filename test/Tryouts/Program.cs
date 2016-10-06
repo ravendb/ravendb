@@ -20,54 +20,12 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            if (Directory.Exists("foo"))
-                Directory.Delete("foo", true);
-            var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath("foo");
-            storageEnvironmentOptions.ManualFlushing = true;
-            using (var env = new StorageEnvironment(storageEnvironmentOptions))
+            for (int i = 0; i < 1000; i++)
             {
-                for (int i = 0; i < 10; i++)
+                Console.WriteLine(i);
+                using (var a = new SlowTests.MailingList.Mouhong())
                 {
-                    using (var txw = env.WriteTransaction())
-                    {
-                        txw.CreateTree("foo").Add("blah1" + i, new byte[3 * 1024]);
-                        txw.CreateTree("foo").Add("blah2" + i, new byte[2 * 1024]);
-                        txw.Commit();
-                    }
-                }
-
-                env.FlushLogToDataFile();
-
-                using (var txw = env.WriteTransaction())
-                {
-                    txw.CreateTree("foo").Add("blah10", new byte[3 * 1024]);
-                    txw.Commit();
-                }
-
-                for (int i = 0; i < 5; i++)
-                {
-
-                    using (var txw = env.WriteTransaction())
-                    {
-                        txw.CreateTree("foo").Add("blah3", new byte[4 * 1024]);
-                        txw.CreateTree("foo").Add("blah2", new byte[14 * 1024]);
-
-
-                        txw.Commit();
-                    }
-                }
-
-                Transaction txr;
-                ReadResult readResult;
-                txr = env.ReadTransaction();
-                readResult = txr.ReadTree("foo").Read("blah10");
-
-                env.FlushLogToDataFile();
-
-                var asStream = readResult.Reader.AsStream();
-                while (asStream.ReadByte() != -1)
-                {
-
+                    a.CanSortDescending();
                 }
             }
 
