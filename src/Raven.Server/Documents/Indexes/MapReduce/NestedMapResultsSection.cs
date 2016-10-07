@@ -6,6 +6,8 @@ using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl.Paging;
+using System;
+using Voron.Util;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
@@ -38,8 +40,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public int Size => _dataSize;
 
+        public bool IsModified { get; private set; }
+
         public void Add(long id, BlittableJsonReaderObject result)
         {
+            IsModified = true;
+
             TemporaryPage tmp;
             using (_env.GetTemporaryPage(_parent.Llt, out tmp))
             {
@@ -80,6 +86,27 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 _dataSize += result.Size + sizeof(ResultHeader);
             }
 
+        }
+        public PtrSize Get(long id)
+        {
+            var readResult = _parent.Read(_nestedValueKey);
+            if (readResult == null)
+                throw new InvalidOperationException($"Could not find a map result wit id '{id}' within a nested values section stored under '{_nestedValueKey}' key");
+
+            var reader = readResult.Reader;
+            var entry = (ResultHeader*)reader.Base;
+            var end = reader.Base + reader.Length;
+            while (entry < end)
+            {
+                if (entry->Id == id)
+                {
+                    return PtrSize.Create((byte*)entry + sizeof(ResultHeader), entry->Size);
+                }
+
+                entry = (ResultHeader*)((byte*)entry + sizeof(ResultHeader) + entry->Size);
+            }
+
+            throw new InvalidOperationException($"Could not find a map result wit id '{id}' within a nested values section stored under '{_nestedValueKey}' key");
         }
 
         public void MoveTo(Tree newHome)
@@ -124,10 +151,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return entries;
 
         }
-
-
+        
         public void Delete(long id)
         {
+            IsModified = true;
+
             TemporaryPage tmp;
             using (_env.GetTemporaryPage(_parent.Llt, out tmp))
             {

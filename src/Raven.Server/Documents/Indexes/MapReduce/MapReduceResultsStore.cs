@@ -6,6 +6,7 @@ using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
@@ -126,6 +127,29 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     default:
                         throw new ArgumentOutOfRangeException(Type.ToString());
                 }
+            }
+        }
+
+        public PtrSize Get(long id)
+        {
+            switch (Type)
+            {
+                case MapResultsStorageType.Tree:
+                    Slice entrySlice;
+                    using (Slice.External(_indexContext.Allocator, (byte*)&id, sizeof(long), out entrySlice))
+                    {
+                        var read = Tree.Read(entrySlice);
+
+                        if (read == null)
+                            throw new InvalidOperationException($"Could not find a map result wit id '{id}' in '{Tree.Name}' tree");
+
+                        return PtrSize.Create(read.Reader.Base, read.Reader.Length);
+                    }
+                case MapResultsStorageType.Nested:
+                    var section = GetNestedResultsSection();
+                    return section.Get(id);
+                default:
+                    throw new ArgumentOutOfRangeException(Type.ToString());
             }
         }
 
