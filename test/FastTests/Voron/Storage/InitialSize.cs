@@ -47,8 +47,8 @@ namespace FastTests.Voron.Storage
                 var dataFile = Path.Combine(DataDir, Constants.DatabaseFilename);
                 var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
 
-                Assert.Equal(GetExpectedInitialSize() * 2, new FileInfo(dataFile).Length);
-                Assert.Equal(GetExpectedInitialSize() * 2, new FileInfo(scratchFile).Length);
+                Assert.Equal(0, new FileInfo(dataFile).Length % GetExpectedInitialSize());
+                Assert.Equal(0, new FileInfo(scratchFile).Length % GetExpectedInitialSize());
             }
         }
 
