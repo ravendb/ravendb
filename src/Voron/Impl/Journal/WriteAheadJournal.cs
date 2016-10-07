@@ -11,12 +11,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Compression;
+using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Data;
-using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
@@ -45,15 +44,18 @@ namespace Voron.Impl.Journal
         internal JournalFile CurrentFile;
 
         private readonly HeaderAccessor _headerAccessor;
-        private readonly AbstractPager _compressionPager;
+        private AbstractPager _compressionPager;
+        private long _compressionPagerCounter;
 
         private LazyTransactionBuffer _lazyTransactionBuffer;
         private readonly DiffPages _diffPage = new DiffPages();
+        private Logger _logger;
         public bool HasDataInLazyTxBuffer() => _lazyTransactionBuffer?.HasDataInBuffer() ?? false;
 
         public WriteAheadJournal(StorageEnvironment env)
         {
             _env = env;
+            _logger = LoggingSource.Instance.GetLogger<WriteAheadJournal>(Path.GetFileName(env.ToString()));
             _dataPager = _env.Options.DataPager;
             _currentJournalFileSize = env.Options.InitialLogFileSize;
             _headerAccessor = env.HeaderAccessor;
@@ -66,18 +68,13 @@ namespace Voron.Impl.Journal
                 header->IncrementalBackup.LastCreatedJournal = _journalIndex;
             };
 
-            _compressionPager = _env.Options.CreateScratchPager("compression.buffers", env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
+            _compressionPager = _env.Options.CreateScratchPager($"compression.{_compressionPagerCounter++:D10}.buffers", env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
             _journalApplicator = new JournalApplicator(this);
         }
 
         public ImmutableAppendOnlyList<JournalFile> Files { get { return _files; } }
 
         public JournalApplicator Applicator { get { return _journalApplicator; } }
-
-        internal long CompressionBufferSize
-        {
-            get { return _compressionPager.NumberOfAllocatedPages * _compressionPager.PageSize; }
-        }
 
         public bool HasLazyTransactions { get; set; }
 
@@ -91,7 +88,7 @@ namespace Voron.Impl.Journal
                 _currentJournalFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentJournalFileSize * 2);
             }
             var actualLogSize = _currentJournalFileSize;
-            long minRequiredSize = numberOfPages * _compressionPager.PageSize;
+            long minRequiredSize = numberOfPages * _dataPager.PageSize;
             if (_currentJournalFileSize < minRequiredSize)
             {
                 _currentJournalFileSize = Bits.NextPowerOf2(minRequiredSize);
@@ -170,7 +167,7 @@ namespace Voron.Impl.Journal
 
                     if (lastSyncedTxId != -1 && (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal))
                     {
-                        var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * _compressionPager.PageSize);
+                        var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * _dataPager.PageSize);
                         var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
                         jrnlFile.InitFrom(journalReader);
                         jrnlFile.AddRef(); // creator reference - write ahead log
@@ -241,23 +238,6 @@ namespace Voron.Impl.Journal
                 {
                     break;
                 }
-            }
-        }
-
-        private void ApplyPagesToDataFileFromJournal(List<TreePage> sortedPagesToWrite)
-        {
-            var last = sortedPagesToWrite.Last();
-
-            var numberOfPagesInLastPage = last.IsOverflow == false ? 1 :
-                _env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
-
-            _dataPager.EnsureContinuous(last.PageNumber, numberOfPagesInLastPage);
-
-            _dataPager.MaybePrefetchMemory(sortedPagesToWrite);
-
-            foreach (var page in sortedPagesToWrite)
-            {
-                _dataPager.Write(page);
             }
         }
 
@@ -861,6 +841,24 @@ namespace Voron.Impl.Journal
                 CurrentFile = null;
             }
 
+            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages*_compressionPager.PageSize;
+            if (compressionBufferSize > _env.Options.MaxScratchBufferSize)
+            {
+                // the compression pager is too large, we probably had a big transaction and now can 
+                // free all of that and come back to more reasonable values.
+                if (_logger.IsOperationsEnabled)
+                {
+                    _logger.Operations(
+                        $"Compression buffer: {_compressionPager} has reached size {compressionBufferSize/1024:#,#} kb which is more than the limit " +
+                        $"of {_env.Options.MaxScratchBufferSize/1024:#,#} kb. Will trim it no to the max size allowed. If this is happen on a regular basis," +
+                        " consider raising the limt (MaxScratchBufferSize option control it), since it can cause performance issues");
+                }
+
+                _compressionPager.Dispose();
+                _compressionPager = _env.Options.CreateScratchPager($"compression.{_compressionPagerCounter++:D10}.buffers", _env.Options.MaxScratchBufferSize);
+
+            }
+
             return pages.NumberOfPages;
         }
 
@@ -874,7 +872,7 @@ namespace Voron.Impl.Journal
 
             // We want to include the Transaction Header straight into the compression buffer.
             var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
-            var diffOverhead = (long)sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
+            var diffOverhead = sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
             var diffOverheadInPages = checked((int) (diffOverhead/pageSize + (diffOverhead%pageSize == 0 ? 0 : 1)));
             long maxSizeRequiringCompression = ((long) pageCountIncludingAllOverflowPages*(long) pageSize) + diffOverhead;
             var outputBufferSize = LZ4.MaximumOutputLength(maxSizeRequiringCompression);
