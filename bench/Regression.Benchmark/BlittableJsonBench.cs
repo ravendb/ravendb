@@ -14,51 +14,61 @@ namespace Regression
         [Benchmark]
         public void ParseJsonFromStream()
         {
+            var streams = new List<Tuple<string, Stream>>();
             foreach (var name in new[] { "1.json", "2.json", "3.json", "monsters.json" })
+            {
+                var resource = "Regression.Benchmark.Data." + name;
+
+                streams.Add(new Tuple<string, Stream>("id/" + name, typeof(BlittableJsonBench).GetTypeInfo().Assembly.GetManifestResourceStream(resource)));
+            }
+
+            ExecuteBenchmark(() =>
             {
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var resource = "Regression.Benchmark.Data." + name;
 
-                    using (var stream = typeof(BlittableJsonBench).GetTypeInfo().Assembly
-                        .GetManifestResourceStream(resource))
+                    foreach (var tuple in streams)
                     {
-                        ExecuteBenchmark(() =>
-                        {
-                            // We parse the whole thing.
-                            var obj = context.Read(stream, "id/" + name);
+                        // We parse the whole thing.
+                        var obj = context.Read(tuple.Item2, tuple.Item1);
 
-                            // Perform validation (Include when fixed)
-                            // obj.BlittableValidation();
-                        });
+                        // Perform validation (Include when fixed)
+                        obj.BlittableValidation();                       
                     }
                 }
-            }
+            });
         }
 
         [Benchmark]
         public void WriteJsonFromStream()
         {
-            foreach (var name in new[] { "1.json", "2.json", "3.json", "monsters.json" })
+            var objects = new List<BlittableJsonReaderObject>();
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                {
+                foreach (var name in new[] { "1.json", "2.json", "3.json", "monsters.json" })
+                {                
                     var resource = "Regression.Benchmark.Data." + name;
 
-                    using (var stream = typeof(BlittableJsonBench).GetTypeInfo().Assembly
-                        .GetManifestResourceStream(resource))
+                    using (var stream = typeof(BlittableJsonBench).GetTypeInfo().Assembly.GetManifestResourceStream(resource))
                     {
                         // We parse the whole thing.
                         var obj = context.Read(stream, "id/" + name);
-
-                        ExecuteBenchmark(() =>
-                        {
-                            // We write the whole thing.
-                            var memoryStream = new MemoryStream();
-                            context.Write(memoryStream, obj);
-                        });
+                        objects.Add(obj);
                     }
                 }
+
+                var memoryStream = new MemoryStream();
+
+                ExecuteBenchmark(() =>
+                {
+
+                        foreach (var obj in objects)
+                        {
+                            // We write the whole thing.
+                            context.Write(memoryStream, obj);
+                        }
+
+                });
             }
         }
     }
