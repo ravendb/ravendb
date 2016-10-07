@@ -105,9 +105,6 @@ namespace Raven.Abstractions.Util
 
             if (buffer == null)
             {
-                if (makePhrase == false)
-                    return term;
-                // no changes required
                 switch (term)
                 {
                     case "OR":
