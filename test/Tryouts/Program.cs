@@ -23,9 +23,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new SlowTests.Voron.InvalidReleasesOfScratchPages())
+                using (var a = new FastTests.Server.Documents.Replication.ReplicationConflictsTests())
                 {
-                    a.ParallelWritesInBatchesAndReadsByUsingTreeIterator();
+                    a.Conflict_then_put_request_will_return_409_and_conflict_data().Wait();
                 }
             }
 

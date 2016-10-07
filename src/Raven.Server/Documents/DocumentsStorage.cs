@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Exceptions;
@@ -164,7 +165,7 @@ namespace Raven.Server.Documents
         public DocumentsContextPool ContextPool;
         private UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
-        private bool _hasConflicts;
+        private int _hasConflicts;
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {
@@ -239,7 +240,7 @@ namespace Raven.Server.Documents
                     ConflictsSchema.Create(tx, "Conflicts");
                     CollectionsSchema.Create(tx, "Collections");
 
-                    _hasConflicts = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries > 0;
+                    _hasConflicts = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries > 0 ? 1 : 0;
                     
                     _lastEtag = ReadLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
@@ -575,7 +576,7 @@ namespace Raven.Server.Documents
             var tvr = table.ReadByKey(loweredKey);
             if (tvr == null)
             {
-                if(_hasConflicts)
+                if(_hasConflicts != 0)
                     ThrowDocumentConflictIfNeeded(context, loweredKey);
                 return null;
             }
@@ -902,7 +903,7 @@ namespace Raven.Server.Documents
                     throw new ConcurrencyException(
                         $"Document {loweredKey} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
 
-                if(_hasConflicts)
+                if (_hasConflicts != 0)
                     ThrowDocumentConflictIfNeeded(context, loweredKey);
                 return false;
             }
@@ -998,7 +999,7 @@ namespace Raven.Server.Documents
             Slice loweredKey;
             using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
             {
-                if(_hasConflicts)
+                if(_hasConflicts != 0)
                     ThrowDocumentConflictIfNeeded(context, loweredKey);
 
                 var result = GetDocumentOrTombstone(context, loweredKey);
@@ -1251,7 +1252,7 @@ namespace Raven.Server.Documents
 
         public IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context, string key)
         {
-            if (_hasConflicts == false)
+            if (_hasConflicts == 0)
                 return ImmutableAppendOnlyList<DocumentConflict>.Empty;
 
             byte* lowerKey;
@@ -1374,7 +1375,7 @@ namespace Raven.Server.Documents
                     {doc, docSize}
                 };
 
-                _hasConflicts = true;
+                Interlocked.Increment(ref _hasConflicts);
                 conflictsTable.Set(tvb);
             }
         }
@@ -1404,7 +1405,7 @@ namespace Raven.Server.Documents
             int keySize;
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
-            if(_hasConflicts)
+            if(_hasConflicts != 0)
                 ThrowDocumentConflictIfNeeded(context, key);
 
             // delete a tombstone if it exists
