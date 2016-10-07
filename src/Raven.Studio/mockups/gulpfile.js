@@ -14,6 +14,13 @@ var TEMPLATE_OPTIONS = {
 
 var TEMPLATE_DATA = {};
 
+handlebars.registerHelper('ifEq', function(v1, v2, options) {
+  if(v1 === v2) {
+    return options.fn(this);
+  }
+  return options.inverse(this);
+});
+
 gulp.task('clean', function () {
     del.sync('dist');
 });

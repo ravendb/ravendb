@@ -1,0 +1,271 @@
+.resources {
+
+    .resourcesToolbar-toggleCompactView {
+
+        display: inline-block;
+        margin-left:10px;
+
+    }
+
+    .resourcesToolbar-actions {
+        display: inline-block;
+        margin-left: 30px;
+    }
+
+    .resourcesToolbar-typeSelector {
+        .btn {
+            .badge {
+                margin: 0 3px;
+            }
+
+            &.active {
+                background-color: @brand-primary;
+            }
+        }
+    }
+
+    .align-checkboxes {
+        margin-left: 20px;
+        position: relative;
+        top: -2px;
+    }
+
+    .vertical-divider {
+        position: relative;
+        @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
+            margin-left: 20px;
+        }
+        @media (min-width:@screen-xl) {
+            &:before {
+                content: '';
+                display: block;
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                border-left: 1px solid @gray-dark;
+            }
+        }
+    }
+
+    .inline-block {
+        display: inline-block;
+    }
+
+    .resource {
+        padding-left: 30px;
+        position: relative;
+
+        &:hover {
+            background-color: lighten(@gray-darker, 3%);
+            transition: background-color 0.15s ease;
+        }
+
+        .info-container {
+            font-size: 150%;
+
+            .icon-database {
+                color: @brand-database-color;
+            }
+
+            .icon-filesystem {
+                color: @brand-filesystem-color;
+            }
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+
+            @media (min-width:@screen-sm) {
+                .actions {
+                    .vcenter;
+                    width: 100%;
+                    padding: 0 15px;
+                }
+            }
+            @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
+                .info-container {
+                    order: 1;
+                }
+
+                .properties-container {
+                    order: 3;
+                }
+
+                .actions-container {
+                    order: 2;
+                }
+            }
+
+            .col-flex {
+                padding: 0 15px;
+            }
+        }
+
+        .resource-name {
+            color: @brand-primary;
+            font-size: 120%;
+            margin-left: 30px;
+            margin-top: 7px;
+            margin-bottom: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .state {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 30px;
+
+            &:before {
+                color: @gray-lighter;
+                font-size: 12px;
+                letter-spacing: 0.5pt;
+                -moz-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+                -webkit-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+                -o-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+                -ms-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+                transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform-origin: top left;
+            }
+
+            &.state-disabled {
+                background-color: @brand-warning-dark;
+
+                &:before {
+                    content: 'DISABLED';
+                }
+            }
+
+            &.state-offline  {
+                background-color: @gray-light;
+
+                &:before {
+                    content: 'OFFLINE';
+                }
+            }
+
+            &.state-online {
+                background-color: @brand-success-dark;
+
+                &:before {
+                    content: 'NORMAL';
+                }
+            }
+        }
+
+        .checkbox {
+            position: relative;
+            margin: 0;
+            top: 4px;
+            float: left;
+        }
+    }
+
+    .properties-label,
+    .properties-value {
+        text-align: left;
+        display: inline-block;
+
+        .btn-sm;
+        width: 140px;
+
+        &.value-only {
+            width: auto;
+        }
+
+        .caret {
+            margin-top: 8px;
+            float: right;
+        }
+
+
+        [class*=" icon-"],
+        [class^="icon-"] {
+
+            & + span {
+                margin-left: 9px;
+            }
+        }
+    }
+
+    .properties-container {
+        display: flex;
+        height: 90px;
+        flex-wrap: wrap;
+        flex-direction: column;
+        flex-grow: 0;
+        align-content: flex-start;
+        overflow: hidden;
+    }
+
+    .properties-item {
+
+        width: 200px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        &.text-success {
+            [class*=" icon-"],
+            [class^="icon-"] {
+                color: inherit;
+
+                & + span {
+                    margin-left: 9px;
+                    color: inherit;
+                }
+            }
+        }
+    }
+
+    .properties-label {
+        width: 70px;
+    }
+
+    &.resources_compact {
+
+        .resource  {
+
+            .checkbox {
+                top: 0;
+            }
+
+            .resource-name {
+                top: 0;
+                font-size: 85%;
+            }
+
+            .state::before {
+                content: '';
+            }
+
+            .properties-container {
+                // height: 56px;
+                top: 5px;
+                height: 25px;
+                display: inline;
+
+                .properties-item {
+                    float:left;
+                    font-size: 90%;
+                    width: auto;
+                    text-overflow: ellipsis;
+                }
+            }
+
+            .resource {
+                .btn-group .btn {
+                    .btn-sm;
+                }
+            }
+        }
+
+    }
+}
