@@ -23,6 +23,8 @@ namespace Voron
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
 
+        public abstract override string ToString();
+
         public void InvokeRecoveryError(object sender, string message, Exception e)
         {
             var handler = OnRecoveryError;
@@ -203,6 +205,11 @@ namespace Voron
 
             public string FilePath { get; private set; }
 
+            public override string ToString()
+            {
+                return _basePath;
+            }
+
             public override AbstractPager DataPager
             {
                 get
@@ -362,6 +369,11 @@ namespace Voron
                         return new PosixTempMemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize);
                     return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize, Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
                 }, true);
+            }
+
+            public override string ToString()
+            {
+                return "mem #" + _instanceId;
             }
 
             public override AbstractPager DataPager

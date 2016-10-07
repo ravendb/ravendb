@@ -599,7 +599,7 @@ namespace Voron
                             // we haven't reached the point where we have to flush, but we might want to, if we have enough 
                             // resources available, if we have more than half the flushing capacity, we can do it now, otherwise, we'll wait
                             // until it is actually required.
-                            if (_concurrentFlushes.CurrentCount > MaxConcurrentFlushes / 2)
+                            if (_concurrentFlushes.CurrentCount < MaxConcurrentFlushes / 2)
                                 continue;
                         }
 
@@ -610,11 +610,10 @@ namespace Voron
                         if (ThreadPool.QueueUserWorkItem(env =>
                         {
                             var storageEnvironment = ((StorageEnvironment)env);
-                            if (storageEnvironment.Disposed)
-                                return;
-
                             try
                             {
+                                if (storageEnvironment.Disposed)
+                                    return;
                                 storageEnvironment.BackgroundFlushWritesToDataFile();
                             }
                             catch (Exception e)
@@ -627,6 +626,7 @@ namespace Voron
                             }
                         }, envToFlush) == false)
                         {
+                            _concurrentFlushes.Release();
                             MaybeFlushEnvironment(envToFlush);// re-register if the thread pool is full
                             Thread.Sleep(0); // but let it give up the execution slice so we'll let the TP time to run
                         }
@@ -771,7 +771,7 @@ namespace Voron
                     tx.IsLazyTransaction = false;
                     // we only commit here, the rest of the of the options are without 
                     // commit and we use the tx lock
-                    tx.Commit(); 
+                    tx.Commit();
                 }
 
                 if (oldMode == TransactionsMode.Danger)
@@ -812,6 +812,11 @@ namespace Voron
         internal void ResetTheChanceForGettingTheTransactionLock()
         {
             Volatile.Write(ref _otherThreadsShouldWaitBeforeGettingWriteTxLock, -1);
+        }
+
+        public override string ToString()
+        {
+            return Options.ToString();
         }
     }
 }
