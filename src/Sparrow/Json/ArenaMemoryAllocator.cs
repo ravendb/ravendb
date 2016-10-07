@@ -143,9 +143,17 @@ namespace Sparrow.Json
                     NativeMemory.Free((byte*)unusedBuffer.Item1, unusedBuffer.Item2, unusedBuffer.Item3);
                 }
                 _olderBuffers = null;
-                if (_used > _allocated)  // we'll likely need more memory in the next round, double the allocation
+                if (_used > _allocated)  // we'll likely need more memory in the next round, let us increase the size we hold on to
                 {
                     NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
+
+                    // we'll allocate some multiple of the currently allocated amount, that will prevent big spikes in memory 
+                    // consumption and has the worst case usage of doubling memory utilization
+
+                    var newSize = (_used/_allocated + (_used%_allocated == 0 ? 0 : 1))*_allocated;
+
+                    _allocated = newSize;
+
                     _allocated = Bits.NextPowerOf2(_allocated * 2);
 
                     if (_allocated > MaxArenaSize)
