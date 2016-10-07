@@ -15,7 +15,6 @@
     .topexpand-style (used in expandable search)
 */
 
-
 @import "testing-elements.less"; /* do not include in final build */
 
 /* LOCAL VARIABLES AND KEYFRAMES*/
@@ -299,6 +298,11 @@ hr {
         display: block;
         clear: both;
     }
+}
+
+.file-input input[type='file'] {
+    visibility:hidden;
+    height:0;
 }
 
 .editable-input-inline {
@@ -1699,7 +1703,7 @@ pre {
         &.document {
             &:before {
                 .icon-style;
-                content: "\e90d";
+                content: "\e926";
                 margin-right: @grid-gutter-width/4;
             }
         }

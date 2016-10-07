@@ -430,10 +430,14 @@
                     <p class="text-warning"><i class="icon-warning"></i> Note: Importing will overwrite any existing documents and indexes.</p>
                     <div class="row">
                         <div class="col-sm-6">
-                            <div class="input-group">
-                                <input type="text" value="filename.ravendbdump" class="form-control">
+                            <div class="input-group file-input">
+                                <input required="" type="file" tabindex="-1" name="importFile" id="importFile" accept=".ravedbdump">
+                                <span class="static-name form-control">Select file...</span>
                                 <span class="input-group-btn">
-                                    <button class="btn btn-default btn-success input-group-addon-button"><span class="icon-document"></span> <span>Choose File</span></button>
+                                    <label for="importFile" class="btn btn-default">
+                                        <i class="icon-document"></i>
+                                        <span>Browse</span>
+                                    </label>
                                 </span>
                             </div>
                         </div>

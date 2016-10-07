@@ -1219,6 +1219,27 @@ input[type="button"].btn-block {
 .icon-style + span {
   margin-left: 9px;
 }
+.icon-backup:before {
+  content: "\e944";
+}
+.icon-drive:before {
+  content: "\e945";
+}
+.icon-exclamation:before {
+  content: "\e946";
+}
+.icon-hash:before {
+  content: "\e947";
+}
+.icon-umbrella:before {
+  content: "\e948";
+}
+.icon-copy-to-clipboard:before {
+  content: "\e943";
+}
+.icon-filesystem:before {
+  content: "\e942";
+}
 .icon-coffee:before {
   content: "\e941";
 }
@@ -1919,6 +1940,10 @@ hr.small {
   content: '';
   display: block;
   clear: both;
+}
+.file-input input[type='file'] {
+  visibility: hidden;
+  height: 0;
 }
 .editable-input-inline {
   display: inline-block;
@@ -3380,7 +3405,7 @@ pre {
   top: 2px;
   line-height: 100%;
   font-size: 120%;
-  content: "\e90d";
+  content: "\e926";
   margin-right: 7.5px;
 }
 .objects-list a.document:before + span {
@@ -3501,13 +3526,12 @@ pre {
   height: 500px;
   padding: 10px;
 }
-.csvImport .csvImport-importFileInput input[type="file"] {
-  visibility: hidden;
-  width: 0;
-  height: 0;
+.editDocument .documentId .fav-object {
+  position: relative;
+  top: -3px;
 }
 .editDocument .documentId #obj-name .edit-inline {
-  border: 1px solid #686f6f;
+  border: 1px solid #3a4242;
   margin: -1px;
 }
 .editDocument .documentId #obj-name .edit-inline:focus {
