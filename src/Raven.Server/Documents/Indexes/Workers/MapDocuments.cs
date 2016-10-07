@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
-using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -23,16 +22,13 @@ namespace Raven.Server.Documents.Indexes.Workers
         private readonly MapReduceIndexingContext _mapReduceContext;
         private readonly DocumentsStorage _documentsStorage;
         private readonly IndexStorage _indexStorage;
-        private readonly IndexingConfiguration _configuration;
 
-        public MapDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage,
-                            IndexingConfiguration configuration, MapReduceIndexingContext mapReduceContext)
+        public MapDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, MapReduceIndexingContext mapReduceContext)
         {
             _index = index;
             _mapReduceContext = mapReduceContext;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
-            _configuration = configuration;
             _logger = LoggingSource.Instance
                 .GetLogger<MapDocuments>(indexStorage.DocumentDatabase.Name);
         }
@@ -61,72 +57,70 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                     var sw = Stopwatch.StartNew();
                     IndexWriteOperation indexWriter = null;
-
-                    using (databaseContext.OpenReadTransaction())
+                    var maxTimeForReadTxToRemainOpen = TimeSpan.FromSeconds(15);
+                    var keepRunning = true;
+                    while (keepRunning)
                     {
-                        IEnumerable<Document> documents;
-
-                        var maxValue = int.MaxValue; //_configuration.MaxNumberOfDocumentsToFetchForMap;
-                        if (collection == Constants.Indexing.AllDocumentsCollection)
-                            documents = _documentsStorage.GetDocumentsAfter(databaseContext, lastEtag + 1, 0, maxValue);
-                        else
-                            documents = _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, maxValue);
-
-                        using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))
+                        using (databaseContext.OpenReadTransaction())
                         {
+                            var documents = GetDocumentsEnumerator(databaseContext, collection, lastEtag);
 
-                            while (true)
+                            using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext,collectionStats))
                             {
-                                IEnumerable mapResults;
-                                if (docsEnumerator.MoveNext(out mapResults) == false)
+                                while (true)
                                 {
-                                    collectionStats.RecordMapCompletedReason(
-                                        maxValue == count
-                                            ? "Batch document count limited reached"
-                                            : "No more documents to index"
-                                    );
-                                    break;
-                                }
+                                    IEnumerable mapResults;
+                                    if (docsEnumerator.MoveNext(out mapResults) == false)
+                                    {
+                                        collectionStats.RecordMapCompletedReason("No more documents to index");
+                                        keepRunning = false;
+                                        break;
+                                    }
 
-                                token.ThrowIfCancellationRequested();
+                                    token.ThrowIfCancellationRequested();
 
-                                if (indexWriter == null)
-                                    indexWriter = writeOperation.Value;
+                                    if (indexWriter == null)
+                                        indexWriter = writeOperation.Value;
 
-                                var current = docsEnumerator.Current;
+                                    var current = docsEnumerator.Current;
 
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Executing map for '{_index.Name} ({_index.IndexId})'. Processing document: {current.Key}.");
-
-                                collectionStats.RecordMapAttempt();
-
-                                count++;
-                                lastEtag = current.Etag;
-
-                                try
-                                {
-                                    var numberOfResults = _index.HandleMap(current.LoweredKey, mapResults, indexWriter, indexContext, collectionStats);
-                                    _index.MapsPerSec.Mark(numberOfResults);
-                                    resultsCount += numberOfResults;
-                                    collectionStats.RecordMapSuccess();
-                                }
-                                catch (Exception e)
-                                {
-                                    collectionStats.RecordMapError();
                                     if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.", e);
+                                        _logger.Info(
+                                            $"Executing map for '{_index.Name} ({_index.IndexId})'. Processing document: {current.Key}.");
 
-                                    collectionStats.AddMapError(current.Key,
-                                        $"Failed to execute mapping function on {current.Key}. Exception: {e}");
+                                    collectionStats.RecordMapAttempt();
+
+                                    count++;
+                                    lastEtag = current.Etag;
+
+                                    try
+                                    {
+                                        var numberOfResults = _index.HandleMap(current.LoweredKey, mapResults,
+                                            indexWriter, indexContext, collectionStats);
+                                        _index.MapsPerSec.Mark(numberOfResults);
+                                        resultsCount += numberOfResults;
+                                        collectionStats.RecordMapSuccess();
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        collectionStats.RecordMapError();
+                                        if (_logger.IsInfoEnabled)
+                                            _logger.Info(
+                                                $"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.",
+                                                e);
+
+                                        collectionStats.AddMapError(current.Key,
+                                            $"Failed to execute mapping function on {current.Key}. Exception: {e}");
+                                    }
+
+                                    if (_index.CanContinueBatch(collectionStats) == false)
+                                    {
+                                        keepRunning = false;
+                                        break;
+                                    }
+                                    if (sw.Elapsed > maxTimeForReadTxToRemainOpen)
+                                        break;
                                 }
-
-                                if (_index.CanContinueBatch(collectionStats) == false)
-                                    break;
-                                //if (sw.Elapsed > timeout)
-                                //{
-                                //    collectionStats.RecordMapCompletedReason("Timeout expired");
-                                //    break;
-                                //}
                             }
                         }
                     }
@@ -153,5 +147,12 @@ namespace Raven.Server.Documents.Indexes.Workers
             return moreWorkFound;
         }
 
+        private IEnumerable<Document> GetDocumentsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag)
+        {
+            var maxValue = int.MaxValue;
+            if (collection == Constants.Indexing.AllDocumentsCollection)
+                return _documentsStorage.GetDocumentsAfter(databaseContext, lastEtag + 1, 0, maxValue);
+            return _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, maxValue);
+        }
     }
 }

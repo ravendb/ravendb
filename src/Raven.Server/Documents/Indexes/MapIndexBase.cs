@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes
             return new IIndexingWork[]
             {
                 new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, null),
             };
         }
 

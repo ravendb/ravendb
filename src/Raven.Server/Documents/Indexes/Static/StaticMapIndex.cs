@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
 
-            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null));
+            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, null));
 
             return workers.ToArray();
         }
