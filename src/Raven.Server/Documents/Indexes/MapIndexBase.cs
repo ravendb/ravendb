@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Runtime.CompilerServices;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
@@ -13,6 +14,8 @@ namespace Raven.Server.Documents.Indexes
     public abstract class MapIndexBase<T> : Index<T> where T : IndexDefinitionBase
     {
         private CollectionOfBloomFilters _filter;
+        private IndexingStatsScope _stats;
+        private IndexingStatsScope _bloomStats;
 
         protected MapIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
@@ -41,10 +44,12 @@ namespace Raven.Server.Documents.Indexes
 
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            using (var bloomStats = stats.For(IndexingOperation.Map.Bloom))
+            EnsureValidStats(stats);
+
+            using (_bloomStats?.Start() ?? (_bloomStats = stats.For(IndexingOperation.Map.Bloom)))
             {
                 if (_filter.Add(key) == false)
-                    writer.Delete(key, bloomStats);
+                    writer.Delete(key, _bloomStats);
             }
 
             var numberOfOutputs = 0;
@@ -68,6 +73,16 @@ namespace Raven.Server.Documents.Indexes
         public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch)
         {
             return new MapQueryResultRetriever(DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureValidStats(IndexingStatsScope stats)
+        {
+            if (_stats == stats)
+                return;
+
+            _stats = stats;
+            _bloomStats = null;
         }
     }
 }

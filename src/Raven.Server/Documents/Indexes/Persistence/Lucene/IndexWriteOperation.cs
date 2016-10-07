@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
@@ -26,6 +26,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
+
+        private IndexingStatsScope _stats;
+        private IndexingStatsScope _deleteStats;
+        private IndexingStatsScope _convertStats;
+        private IndexingStatsScope _addStats;
 
         public IndexWriteOperation(string indexName, Dictionary<string, IndexField> fields,
             LuceneVoronDirectory directory, LuceneDocumentConverterBase converter,
@@ -77,11 +82,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void IndexDocument(LazyStringValue key, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
+            EnsureValidStats(stats);
+
             global::Lucene.Net.Documents.Document luceneDoc;
-            using (stats.For(IndexingOperation.Lucene.Convert))
+            using (_convertStats?.Start() ?? (_convertStats = stats.For(IndexingOperation.Lucene.Convert)))
                 luceneDoc = _converter.ConvertToCachedDocument(key, document, indexContext);
 
-            using (stats.For(IndexingOperation.Lucene.AddDocument))
+            using (_addStats?.Start() ?? (_addStats = stats.For(IndexingOperation.Lucene.AddDocument)))
                 _writer.AddDocument(luceneDoc, _analyzer);
 
             stats.RecordIndexingOutput();
@@ -97,7 +104,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void Delete(LazyStringValue key, IndexingStatsScope stats)
         {
-            using (stats.For(IndexingOperation.Lucene.Delete))
+            EnsureValidStats(stats);
+
+            using (_deleteStats?.Start() ?? (_deleteStats = stats.For(IndexingOperation.Lucene.Delete)))
                 _writer.DeleteDocuments(_documentId.CreateTerm(key));
 
             if (_logger.IsInfoEnabled)
@@ -106,11 +115,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void DeleteReduceResult(string reduceKeyHash, IndexingStatsScope stats)
         {
-            using (stats.For(IndexingOperation.Lucene.Delete))
+            EnsureValidStats(stats);
+
+            using (_deleteStats?.Start() ?? (_deleteStats = stats.For(IndexingOperation.Lucene.Delete)))
                 _writer.DeleteDocuments(_reduceKeyHash.CreateTerm(reduceKeyHash));
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Deleted document for '{_indexName}'. Reduce key hash: {reduceKeyHash}.");
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureValidStats(IndexingStatsScope stats)
+        {
+            if (_stats == stats)
+                return;
+
+            _stats = stats;
+            _deleteStats = null;
+            _convertStats = null;
+            _addStats = null;
         }
     }
 }
