@@ -124,7 +124,7 @@ namespace Voron
 
             InitialLogFileSize = 64 * Constants.Size.Kilobyte;
 
-            MaxScratchBufferSize = 512 * Constants.Size.Megabyte;
+            MaxScratchBufferSize = 256 * Constants.Size.Megabyte;
 
             MaxNumberOfPagesInJournalBeforeFlush = 8192; // 32 MB when 4Kb             
 
@@ -449,9 +449,9 @@ namespace Voron
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{guid}";
 
                 if (RunningOnPosix)
-                    return new PosixTempMemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize);
+                    return new PosixTempMemoryMapPager(this, Path.Combine(TempPath, filename), intialSize);
 
-                return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize,
+                return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), intialSize,
                         Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
             }
 

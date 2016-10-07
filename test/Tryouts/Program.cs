@@ -23,9 +23,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new SlowTests.MailingList.Mouhong())
+                using (var a = new SlowTests.Voron.InvalidReleasesOfScratchPages())
                 {
-                    a.CanSortDescending();
+                    a.ParallelWritesInBatchesAndReadsByUsingTreeIterator();
                 }
             }
 
