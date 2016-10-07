@@ -8,7 +8,8 @@ namespace Raven.Server.Documents
 {
     public class ResourceCache<TResource> : IEnumerable<KeyValuePair<StringSegment, Task<TResource>>>
     {
-        readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseInsensitive = new ConcurrentDictionary<StringSegment, Task<TResource>>();
+        readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseInsensitive = 
+                    new ConcurrentDictionary<StringSegment, Task<TResource>>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
         readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseSensitive = new ConcurrentDictionary<StringSegment, Task<TResource>>();
 
         public IEnumerable<Task<TResource>> Values => _caseSensitive.Values;
