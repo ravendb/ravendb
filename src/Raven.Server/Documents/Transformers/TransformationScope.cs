@@ -53,8 +53,7 @@ namespace Raven.Server.Documents.Transformers
         {
             if (_transformer.HasGroupBy == false)
             {
-                var docsEnumerator = new StaticIndexDocsEnumerator(documents, _transformer.TransformResults, null,
-                    StaticIndexDocsEnumerator.EnumerationType.Transformer);
+                var docsEnumerator = new StaticIndexDocsEnumerator(documents, _transformer.TransformResults, null, null, StaticIndexDocsEnumerator.EnumerationType.Transformer);
 
                 IEnumerable transformedResults;
                 while (docsEnumerator.MoveNext(out transformedResults))
@@ -172,7 +171,7 @@ namespace Raven.Server.Documents.Transformers
 
                 public void Dispose()
                 {
-                   
+
                 }
             }
         }

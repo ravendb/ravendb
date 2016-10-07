@@ -41,8 +41,11 @@ namespace Raven.Server.Documents.Indexes
 
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            if (_filter.Add(key) == false)
-                writer.Delete(key, stats);
+            using (var bloomStats = stats.For(IndexingOperation.Map.Bloom))
+            {
+                if (_filter.Add(key) == false)
+                    writer.Delete(key, bloomStats);
+            }
 
             var numberOfOutputs = 0;
             foreach (var mapResult in mapResults)

@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Indexes
 
         public TimeSpan Duration => _sw.Elapsed;
 
-        public IndexingStatsScope For(string name)
+        public IndexingStatsScope For(string name, bool start = true)
         {
             if (_scopes == null)
                 _scopes = new Dictionary<string, IndexingStatsScope>(StringComparer.OrdinalIgnoreCase);
@@ -105,17 +105,19 @@ namespace Raven.Server.Documents.Indexes
             if (_scopes.TryGetValue(name, out scope) == false)
                 _scopes[name] = scope = new IndexingStatsScope(_stats);
 
-            scope.Start();
+            if (start)
+                scope.Start();
 
             return scope;
         }
 
-        private void Start()
+        public IndexingStatsScope Start()
         {
             if (_sw == null)
                 _sw = new Stopwatch();
 
             _sw.Start();
+            return this;
         }
 
         public void Dispose()
@@ -220,7 +222,7 @@ namespace Raven.Server.Documents.Indexes
             return operation;
         }
 
-        public void RecordMapMemoryStats(long currentProcessWorkingSet, long currentProcessPrivateMemorySize,long currentBudget)
+        public void RecordMapMemoryStats(long currentProcessWorkingSet, long currentProcessPrivateMemorySize, long currentBudget)
         {
             if (_stats.MapDetails == null)
                 _stats.MapDetails = new MapRunDetails();

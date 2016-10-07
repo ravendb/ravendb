@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             using (stats.For(IndexingOperation.Lucene.AddDocument))
                 _writer.AddDocument(luceneDoc, _analyzer);
 
-            stats.RecordIndexingOutput(); // TODO [ppekrol] in future we will have to support multiple index outputs from single document
+            stats.RecordIndexingOutput();
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Indexed document for '{_indexName}'. Key: {key}. Output: {luceneDoc}.");

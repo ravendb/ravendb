@@ -1,47 +1,55 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Transformers;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     public class StaticIndexDocsEnumerator : IIndexedDocumentsEnumerator
     {
+        private readonly IndexingStatsScope _documentReadStats;
         private readonly EnumerationType _enumerationType;
         private readonly IEnumerable _resultsOfCurrentDocument;
         private readonly IEnumerator<Document> _docsEnumerator;
 
-        public StaticIndexDocsEnumerator(IEnumerable<Document> docs, IndexingFunc func, string collection, EnumerationType enumerationType)
+        public StaticIndexDocsEnumerator(IEnumerable<Document> docs, IndexingFunc func, string collection, IndexingStatsScope stats, EnumerationType enumerationType)
         {
+            _documentReadStats = stats?.For(IndexingOperation.Map.DocumentRead, start: false);
             _enumerationType = enumerationType;
             _docsEnumerator = docs.GetEnumerator();
-            _resultsOfCurrentDocument = func(new DynamicIteratonOfCurrentDocumentWrapper(this));
 
             switch (enumerationType)
             {
                 case EnumerationType.Index:
-                    CurrentIndexingScope.Current.SourceCollection = collection;
+                    _resultsOfCurrentDocument = new TimeCountingEnumerable(func(new DynamicIteratonOfCurrentDocumentWrapper(this)), stats, IndexingOperation.Map.Linq);
+                    CurrentIndexingScope.Current.SetSourceCollection(collection, stats);
                     break;
                 case EnumerationType.Transformer:
+                    _resultsOfCurrentDocument = func(new DynamicIteratonOfCurrentDocumentWrapper(this));
                     break;
             }
         }
 
         public bool MoveNext(out IEnumerable resultsOfCurrentDocument)
         {
-            Current?.Data.Dispose();
-
-            if (_docsEnumerator.MoveNext() == false)
+            using (_documentReadStats?.Start())
             {
-                Current = null;
-                resultsOfCurrentDocument = null;
+                Current?.Data.Dispose();
 
-                return false;
+                if (_docsEnumerator.MoveNext() == false)
+                {
+                    Current = null;
+                    resultsOfCurrentDocument = null;
+
+                    return false;
+                }
+
+                Current = _docsEnumerator.Current;
+                resultsOfCurrentDocument = _resultsOfCurrentDocument;
+
+                return true;
             }
-
-            Current = _docsEnumerator.Current;
-            resultsOfCurrentDocument = _resultsOfCurrentDocument;
-
-            return true;
         }
 
         public Document Current { get; private set; }
@@ -118,7 +126,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 public void Reset()
                 {
-                    throw new System.NotImplementedException();
+                    throw new NotSupportedException();
                 }
 
                 public DynamicBlittableJson Current { get; private set; }

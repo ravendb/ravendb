@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         documents.Add(doc);
                                 }
 
-                                using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext))
+                                using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))
                                 {
                                     IEnumerable mapResults;
 

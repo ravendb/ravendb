@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         else
                             documents = _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, maxValue);
 
-                        using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext))
+                        using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))
                         {
 
                             while (true)

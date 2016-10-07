@@ -8,6 +8,17 @@ namespace Raven.Client.Data.Indexes
 {
     public static class IndexingOperation
     {
+        public const string LoadDocument = "LoadDocument";
+
+        public static class Map
+        {
+            public const string DocumentRead = "Document/Read";
+
+            public const string Linq = "Linq";
+
+            public const string Bloom = "Bloom";
+        }
+
         public static class Lucene
         {
             public const string Delete = "Lucene/Delete";
