@@ -82,11 +82,11 @@ namespace Raven.Client.Documents
                 IsStale = IsStale,
                 SkippedResults = SkippedResults,
                 TotalResults = TotalResults,
-                Highlightings = Highlightings == null ? null : Highlightings.ToDictionary(
+                Highlightings = Highlightings?.ToDictionary(
                     pair => pair.Key,
                     x => new Dictionary<string, string[]>(x.Value)),
-                ScoreExplanations = ScoreExplanations == null ? null : ScoreExplanations.ToDictionary(x => x.Key, x => x.Value),
-                TimingsInMilliseconds = TimingsInMilliseconds == null ? null : TimingsInMilliseconds.ToDictionary(x => x.Key, x => x.Value),
+                ScoreExplanations = ScoreExplanations?.ToDictionary(x => x.Key, x => x.Value),
+                TimingsInMilliseconds = TimingsInMilliseconds?.ToDictionary(x => x.Key, x => x.Value),
                 LastQueryTime = LastQueryTime,
                 DurationMilliseconds = DurationMilliseconds,
                 ResultEtag = ResultEtag
