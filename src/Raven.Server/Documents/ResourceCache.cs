@@ -30,7 +30,7 @@ namespace Raven.Server.Documents
         {
             Task<TResource> _;
             _caseSensitive.TryRemove(resourceName, out _);
-            return _caseInsensitive.TryGetValue(resourceName, out resourceTask);
+            return _caseInsensitive.TryRemove(resourceName, out resourceTask);
         }
 
         public IEnumerator<KeyValuePair<StringSegment, Task<TResource>>> GetEnumerator()
