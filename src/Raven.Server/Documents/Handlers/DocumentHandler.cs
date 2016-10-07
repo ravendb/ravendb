@@ -166,17 +166,17 @@ namespace Raven.Server.Documents.Handlers
             }
 
             IEnumerable<Document> documentsToWrite;
-                if (transformer != null)
-                {
-                    var transformerParameters = GetTransformerParameters(context);
+            if (transformer != null)
+            {
+                var transformerParameters = GetTransformerParameters(context);
 
-                    using (var scope = transformer.OpenTransformationScope(transformerParameters, includeDocs, Database.DocumentsStorage, Database.TransformerStore, context))
-                    {
+                using (var scope = transformer.OpenTransformationScope(transformerParameters, includeDocs, Database.DocumentsStorage, Database.TransformerStore, context))
+                {
                     documentsToWrite = scope.Transform(documents).ToList();
                     etags = scope.LoadedDocumentEtags;
-                    }
                 }
-                else
+            }
+            else
                 documentsToWrite = documents;
 
             includeDocs.Fill(includes);
@@ -187,10 +187,10 @@ namespace Raven.Server.Documents.Handlers
 
             var etag = GetLongFromHeaders("If-None-Match");
             if (etag == actualEtag)
-                {
+            {
                 HttpContext.Response.StatusCode = 304;
                 return;
-                }
+            }
 
             HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             HttpContext.Response.Headers[Constants.MetadataEtagField] = actualEtag.ToString();
@@ -204,7 +204,15 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentResult.Includes));
+                if (includes.Count > 0)
+                {
                     writer.WriteDocuments(context, includes, metadataOnly);
+                }
+                else
+                {
+                    writer.WriteStartArray();
+                    writer.WriteEndArray();
+                }
 
                 writer.WriteEndObject();
             }
@@ -238,9 +246,9 @@ namespace Raven.Server.Documents.Handlers
                     if (index < documentsCount)
                     {
                         var document = documents[index];
-                    buffer[j] = document?.Etag ?? -1;
+                        buffer[j] = document?.Etag ?? -1;
                         continue;
-                }
+                    }
 
                     if (includesCount > 0 && index >= documentsCount && index < documentsCount + includesCount)
                     {
