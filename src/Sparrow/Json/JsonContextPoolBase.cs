@@ -57,6 +57,8 @@ namespace Sparrow.Json
                     _stack = new T[4];
                     _stack[0] = context;
                     _stackUsage = 1;
+
+                    return;
                 }
 
                 if (_stackUsage >= _stack.Length)
