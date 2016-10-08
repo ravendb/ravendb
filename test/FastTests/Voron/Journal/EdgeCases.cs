@@ -17,6 +17,7 @@ namespace FastTests.Voron.Journal
         // all tests here relay on the fact than one log file can contains max 10 pages 
         protected override void Configure(StorageEnvironmentOptions options)
         {
+            options.ManualFlushing = true;
             options.PageSize = 4 * Constants.Size.Kilobyte;
             options.MaxLogFileSize = 5 * options.PageSize;
         }

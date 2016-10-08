@@ -23,9 +23,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Voron.Bugs.FlushingToDataFile())
+                using (var a = new FastTests.Voron.Journal.EdgeCases())
                 {
-                    a.OldestActiveTransactionShouldBeCalculatedProperly();
+                    a.TransactionCommitShouldSetCurrentLogFileToNullIfItIsFull();
                 }
             }
 
