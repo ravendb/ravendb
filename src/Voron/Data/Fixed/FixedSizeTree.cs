@@ -1060,6 +1060,7 @@ namespace Voron.Data.Fixed
 
         private void RemoveEntryFromPage(FixedSizeTreePage page, int pos)
         {
+            System.Diagnostics.Debug.Assert(pos >= 0 && pos < page.NumberOfEntries);
             page.NumberOfEntries--;
             var size = (ushort)(page.IsLeaf ? _entrySize : BranchEntrySize);
             if (pos == 0)
