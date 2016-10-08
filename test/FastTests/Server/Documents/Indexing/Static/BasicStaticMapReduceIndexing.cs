@@ -87,7 +87,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         Assert.Equal(1, queryResult.Results.Count);
 
-                        context.Reset();
+                        context.ResetAndRenew();
 
                         queryResult = await index.Query(new IndexQueryServerSide() { Query = "Location:Poland" }, context, OperationCancelToken.None);
 
@@ -196,7 +196,7 @@ select new
 
                         Assert.Equal(2, queryResult.Results.Count);
 
-                        context.Reset();
+                        context.ResetAndRenew();
 
                         queryResult = await index.Query(new IndexQueryServerSide { Query = "Product:Milk" }, context, OperationCancelToken.None);
 

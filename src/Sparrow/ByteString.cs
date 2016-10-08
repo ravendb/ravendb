@@ -1283,68 +1283,50 @@ namespace Sparrow
 
 #endif
 
-        #region IDisposable
+        private bool _disposed; 
 
-        private bool isDisposed = false; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!isDisposed)
-            {
-                if (disposing)
-                {
-                    // TODO: dispose managed state (managed objects).
-#if VALIDATE
-                    foreach (var item in _immutableTracker.ToArray())
-                    {
-                        var storage = (ByteStringStorage*)item.Value.Item1.ToPointer();
-
-                        ValidateAndUnregister(storage);
-                    }
-#endif
-
-                    foreach (var segment in _wholeSegments)
-                    {
-                        if (segment.CanDispose)
-                        {
-                            // Check if we can release this memory segment back to the pool.
-                            if (segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes)
-                            {
-                                segment.Memory.Dispose();
-                            }
-                            else
-                            {
-                                _allocator.Free(segment.Memory);
-                            }
-                        }
-                    }
-
-                    _wholeSegments.Clear();
-                    _internalReadyToUseMemorySegments.Clear();
-                }
-
-                isDisposed = true;
-            }
-        }
-
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
         ~ByteStringContext()
         {
-
-
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(false);
+            Dispose();
         }
 
-        // This code added to correctly implement the disposable pattern.
         public void Dispose()
         {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+            if (_disposed)
+                return;
 
-#endregion
+            GC.SuppressFinalize(this);
+
+            _disposed = true;
+
+#if VALIDATE
+                foreach (var item in _immutableTracker.ToArray())
+                {
+                    var storage = (ByteStringStorage*)item.Value.Item1.ToPointer();
+
+                    ValidateAndUnregister(storage);
+                }
+#endif
+
+            foreach (var segment in _wholeSegments)
+            {
+                if (segment.CanDispose)
+                {
+                    // Check if we can release this memory segment back to the pool.
+                    if (segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes)
+                    {
+                        segment.Memory.Dispose();
+                    }
+                    else
+                    {
+                        _allocator.Free(segment.Memory);
+                    }
+                }
+            }
+
+            _wholeSegments.Clear();
+            _internalReadyToUseMemorySegments.Clear();
+        }
     }
 
     public class ByteStringValidationException : Exception

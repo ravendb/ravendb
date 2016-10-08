@@ -173,6 +173,7 @@ namespace Sparrow.Json
                 context = stack.Pop();
                 if (Interlocked.CompareExchange(ref context.InUse, 1, 0) != 0)
                     continue;
+                context.Renew();
                 return new ReturnRequestContext
                 {
                     Parent = this,

@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     while (!_cts.IsCancellationRequested)
                     {
-                        _context.Reset();
+                        _context.ResetAndRenew();
 
                         using (var message = _multiDocumentParser.ParseToMemory("IncomingReplication/read-message"))
                         {

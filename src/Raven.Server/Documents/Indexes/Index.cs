@@ -1048,7 +1048,7 @@ namespace Raven.Server.Documents.Indexes
                         if (WillResultBeAcceptable(isStale, query, wait) == false)
                         {
                             documentsContext.CloseTransaction();
-                            indexContext.Reset();
+                            indexContext.ResetAndRenew();
 
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 
@@ -1165,7 +1165,7 @@ namespace Raven.Server.Documents.Indexes
                         if (WillResultBeAcceptable(isStale, query, wait) == false)
                         {
                             documentsContext.CloseTransaction();
-                            indexContext.Reset();
+                            indexContext.ResetAndRenew();
 
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 

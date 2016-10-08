@@ -113,7 +113,7 @@ namespace Sparrow.Json
             Reset();
 
             _arenaAllocator.Dispose();
-            _arenaAllocatorForLongLivedValues.Dispose();
+            _arenaAllocatorForLongLivedValues?.Dispose();
 
             _disposed = true;
         }
@@ -497,7 +497,23 @@ namespace Sparrow.Json
                 _liveBuilders.Remove(disposedNode);
         }
 
-        public virtual unsafe void Reset()
+        public virtual void ResetAndRenew()
+        {
+            Reset();
+            Renew();
+        }
+
+        protected internal virtual void Renew()
+        {
+            _arenaAllocator.RenewArena();
+            if (_arenaAllocatorForLongLivedValues == null)
+            {
+                _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(_longLivedSize);
+                CachedProperties = new CachedProperties(this);
+            }
+        }
+
+        protected internal virtual unsafe void Reset()
         {
             if (_tempBuffer != null)
                 _tempBuffer.Address = null;
@@ -521,9 +537,9 @@ namespace Sparrow.Json
                 // property names before this kicks in, which is a true abuse of the system. In this case, 
                 // in order to avoid unlimited growth, we'll reset the long lived section
                 _arenaAllocatorForLongLivedValues.Dispose();
-                _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(_longLivedSize);
-                CachedProperties = new CachedProperties(this);// need to reset this as well
+                _arenaAllocatorForLongLivedValues = null;
                 _fieldNames.Clear();
+                CachedProperties = null; // need to release this so can be collected
             }
         }
 

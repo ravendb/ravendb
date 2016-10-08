@@ -130,6 +130,14 @@ namespace Sparrow.Json
             _used = 0;
         }
 
+        public void RenewArena()
+        {
+            if (_ptrStart != null)
+                return;
+            _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(_allocated, out _allocatingThread);
+            _used = 0;
+        }
+
         public void ResetArena()
         {
             // Reset current arena buffer
@@ -154,12 +162,9 @@ namespace Sparrow.Json
 
                     _allocated = newSize;
 
-                    _allocated = Bits.NextPowerOf2(_allocated * 2);
-
                     if (_allocated > MaxArenaSize)
                         _allocated = MaxArenaSize;
-
-                    _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(_allocated, out _allocatingThread);
+                    _ptrCurrent = _ptrStart = null;
                 }
             }
             _used = 0;

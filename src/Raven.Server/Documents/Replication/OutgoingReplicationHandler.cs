@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Replication
 
                         while (_cts.IsCancellationRequested == false)
                         {
-                            _context.Reset();							
+                            _context.ResetAndRenew();							
                             if (sender.ExecuteReplicationOnce() == false)
                             {
                                 using (_context.OpenReadTransaction())
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Replication
                             //if this returns false, this means either timeout or canceled token is activated                    
                             while (_waitForChanges.Wait(_minimalHeartbeatInterval, _cts.Token) == false)
                             {
-                                _context.Reset();
+                                _context.ResetAndRenew();
                                 using (_context.OpenReadTransaction())
                                 {
                                     SendHeartbeat();
