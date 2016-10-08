@@ -12,25 +12,35 @@ namespace Sparrow.Json
         private readonly Stack<BuildingState> _continuationState = new Stack<BuildingState>();
 
         private readonly JsonOperationContext _context;
-        private readonly UsageMode _mode;
-        private readonly IJsonParser _reader;
+        private UsageMode _mode;
+        private  IJsonParser _reader;
         private readonly JsonParserState _state;
-        private readonly UnmanagedWriteBuffer _unmanagedWriteBuffer;
+        private UnmanagedWriteBuffer _unmanagedWriteBuffer;
         private AllocatedMemoryData _compressionBuffer;
         private int _position;
         private WriteToken _writeToken;
-        private readonly string _debugTag;
+        private  string _debugTag;
 
         public int DiscardedCompressions, Compressed;
 
-        public BlittableJsonDocumentBuilder(JsonOperationContext context, UsageMode mode, string debugTag, IJsonParser reader, JsonParserState state)
+        public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, IJsonParser reader)
         {
-            _reader = reader;
-            _debugTag = debugTag;
-            _unmanagedWriteBuffer = context.GetStream();
             _context = context;
-            _mode = mode;
             _state = state;
+            _reader = reader;
+        }
+
+        public void Reset(string debugTag, UsageMode mode)
+        {
+            _debugTag = debugTag;
+            _mode = mode;
+            _unmanagedWriteBuffer.Dispose();
+            _unmanagedWriteBuffer = _context.GetStream();
+            _position = 0;
+            _continuationState.Clear();
+            _writeToken = default(WriteToken);
+            DiscardedCompressions = 0;
+            Compressed = 0;
         }
 
         public void ReadArray()
@@ -59,13 +69,16 @@ namespace Sparrow.Json
 
         public int SizeInBytes => _unmanagedWriteBuffer.SizeInBytes;
 
-        internal LinkedListNode<BlittableJsonDocumentBuilder> DisposeTrackingReference;
+
+        public BlittableJsonDocumentBuilder(JsonOperationContext context, UsageMode mode, string debugTag, UnmanagedJsonParser jsonParser, JsonParserState state)
+            :this(context, state, jsonParser)
+        {
+            Reset(debugTag, mode);
+        }
 
         public void Dispose()
         {
             _unmanagedWriteBuffer.Dispose();
-            if (DisposeTrackingReference != null)
-                _context.BuilderDisposed(DisposeTrackingReference);
         }
 
         public bool Read()
@@ -709,7 +722,9 @@ namespace Sparrow.Json
             byte* ptr;
             int size;
             _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out size);
-            return new BlittableJsonReaderObject(ptr, size, _context, this);
+            var reader = new BlittableJsonReaderObject(ptr, size, _context, _unmanagedWriteBuffer);
+            _unmanagedWriteBuffer = default(UnmanagedWriteBuffer);
+            return reader;
         }
 
         public BlittableJsonReaderArray CreateArrayReader()

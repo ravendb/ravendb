@@ -10,7 +10,7 @@ namespace Sparrow.Json
 {
     public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
     {
-        private readonly BlittableJsonDocumentBuilder _builder;
+        private UnmanagedWriteBuffer _buffer;
         private byte* _metadataPtr;
         private readonly int _size;
         private readonly int _propCount;
@@ -20,6 +20,7 @@ namespace Sparrow.Json
         private LazyStringValue[] _propertyNames;
 
         public DynamicJsonValue Modifications;
+        internal LinkedListNode<BlittableJsonReaderObject> DisposeTrackingReference;
 
         private Dictionary<StringSegment, object> _objectsPathCache;
         private Dictionary<int, object> _objectsPathCacheByIndex;
@@ -41,9 +42,9 @@ namespace Sparrow.Json
         }
 
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context,
-            BlittableJsonDocumentBuilder builder = null)
+            UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
         {
-            _builder = builder;
+            _buffer = buffer;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
             _context = context;
@@ -525,9 +526,9 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            this._mem = null;
-            this._metadataPtr = null;
-            this._objStart = null;
+            _mem = null;
+            _metadataPtr = null;
+            _objStart = null;
             if (_objectsPathCache != null)
             {
                 foreach (var property in _objectsPathCache)
@@ -537,7 +538,9 @@ namespace Sparrow.Json
                 }
             }
 
-            _builder?.Dispose();
+            _buffer.Dispose();
+            if (DisposeTrackingReference != null)
+                _context.ReaderDisposed(DisposeTrackingReference);
         }
 
         public void CopyTo(byte* ptr)
