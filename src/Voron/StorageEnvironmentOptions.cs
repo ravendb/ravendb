@@ -161,15 +161,6 @@ namespace Voron
             return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath);
         }
 
-        public IDisposable AllowManualFlushing()
-        {
-            var old = ManualFlushing;
-            ManualFlushing = true;
-
-            return new DisposableAction(() => ManualFlushing = old);
-        }
-
-
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
             private readonly string _journalPath;

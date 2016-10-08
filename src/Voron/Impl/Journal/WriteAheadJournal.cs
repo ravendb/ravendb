@@ -504,7 +504,7 @@ namespace Voron.Impl.Journal
                         {
                             _lastSyncedJournal = lastProcessedJournal;
                             _lastSyncedTransactionId = lastFlushedTransactionId;
-
+                            
                             _lastFlushedJournal = _waj._files.First(x => x.Number == _lastSyncedJournal);
 
                             if (unusedJournals.Count > 0)

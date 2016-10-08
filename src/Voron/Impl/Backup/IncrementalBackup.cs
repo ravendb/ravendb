@@ -250,6 +250,7 @@ namespace Voron.Impl.Backup
             options.OwnsPagers = false;
             try
             {
+                options.ManualFlushing = true;
                 using (var env = new StorageEnvironment(options))
                 {
                     foreach (var backupPath in backupPaths)
@@ -276,6 +277,7 @@ namespace Voron.Impl.Backup
                     {
                         using (var options = StorageEnvironmentOptions.ForPath(Path.Combine(outPath, dir.Key)))
                         {
+                            options.ManualFlushing = true;
                             using (var env = new StorageEnvironment(options))
                             {
                                 Restore(env, dir);
@@ -292,10 +294,7 @@ namespace Voron.Impl.Backup
             {
                 using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite))
                 {
-                    using (env.Options.AllowManualFlushing())
-                    {
-                        env.FlushLogToDataFile(txw);
-                    }
+                    env.FlushLogToDataFile(txw);
 
                     using (var package = ZipFile.Open(singleBackupFile, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
                     {
@@ -318,10 +317,7 @@ namespace Voron.Impl.Backup
             {
                 using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite))
                 {
-                    using (env.Options.AllowManualFlushing())
-                    {
-                        env.FlushLogToDataFile(txw);
-                    }
+                    env.FlushLogToDataFile(txw);
 
                     var toDispose = new List<IDisposable>();
 

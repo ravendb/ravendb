@@ -140,6 +140,9 @@ namespace Voron
                 if (Disposed)
                     return;
 
+                if (Options.ManualFlushing)
+                    return;
+
                 try
                 {
                     await Task.Delay(Options.IdleFlushTimeout, cancellationToken);
@@ -584,7 +587,7 @@ namespace Voron
                     StorageEnvironment envToFlush;
                     while (_maybeNeedToFlush.TryDequeue(out envToFlush))
                     {
-                        if (envToFlush.Disposed)
+                        if (envToFlush.Disposed || envToFlush.Options.ManualFlushing)
                             continue;
 
                         var sizeOfUnflushedTransactionsInJournalFile = Volatile.Read(ref envToFlush._sizeOfUnflushedTransactionsInJournalFile);
