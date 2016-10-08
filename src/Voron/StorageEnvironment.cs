@@ -309,25 +309,35 @@ namespace Voron
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
-            Disposed = true;
             try
             {
-                // if there is a pending flush operation, we need to wait for it
                 if (_journal != null) // error during ctor
                 {
+                    // if there is a pending flush operation, we need to wait for it
                     bool lockTaken = false;
                     using (_journal.Applicator.TryTakeFlushingLock(ref lockTaken))
                     {
+                        // note that we have to set the dispose flag when under the lock 
+                        // (either with TryTake or Take), to avoid data race between the 
+                        // flusher & the dispose. The flusher will check the dispose status
+                        // only after it successfully took the lock.
+
                         if (lockTaken == false)
                         {
                             // if we are here, then we didn't get the flush lock, so it is currently being run
                             // we need to wait for it to complete (so we won't be shutting down the db while we 
-                            // are flushing and maybe access in valid memory.
+                            // are flushing and maybe access invalid memory.
                             using (_journal.Applicator.TakeFlushingLock())
                             {
                                 // when we are here, we know that we aren't flushing, and we can dispose, 
                                 // any future calls to flush will abort because we are marked as disposed
+
+                                Disposed = true;
                             }
+                        }
+                        else
+                        {
+                            Disposed = true;
                         }
                     }
                 }

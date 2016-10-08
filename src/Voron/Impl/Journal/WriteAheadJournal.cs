@@ -398,10 +398,7 @@ namespace Voron.Impl.Journal
                 {
                     _waj._env.IsFlushingScratchBuffer = true;
                     Monitor.TryEnter(_flushingLock, timeToWait, ref lockTaken);
-
-                    if (_waj._env.Disposed)
-                        return;
-
+                 
                     if (lockTaken == false)
                     {
                         if (timeToWait == TimeSpan.Zero)
@@ -411,6 +408,10 @@ namespace Voron.Impl.Journal
 
                         throw new TimeoutException($"Could not acquire the write lock in {timeToWait.TotalSeconds} seconds");
                     }
+
+                    if (_waj._env.Disposed)
+                        return;
+
 
                     var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
 
