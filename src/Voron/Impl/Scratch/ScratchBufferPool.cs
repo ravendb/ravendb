@@ -149,7 +149,9 @@ namespace Voron.Impl.Scratch
                 }
                 // this is the current one, but the size is too big, since no one is using the scratch 
                 // right now (and we hold the write transaction), let us trim it
-                NextFile(_options.InitialLogFileSize, _options.MaxScratchBufferSize);
+                var newCurrent = NextFile(_options.InitialLogFileSize, _options.MaxScratchBufferSize);
+                newCurrent.File.PagerState.AddRef();
+                _current = newCurrent;
             }
             ScratchBufferItem _;
             _scratchBuffers.TryRemove(scratchNumber, out _);
