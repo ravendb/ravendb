@@ -46,6 +46,9 @@ namespace Raven.Server.Documents.Indexes
             if (_performanceStats != null)
                 return _performanceStats;
 
+            if (_scope == null || _stats == null)
+                return null;
+
             return new IndexingPerformanceBasicStats(_scope.Duration)
             {
                 Started = StartTime,
