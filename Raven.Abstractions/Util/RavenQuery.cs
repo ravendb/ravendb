@@ -113,6 +113,12 @@ namespace Raven.Abstractions.Util
                         return "\"AND\"";
                     case "NOT":
                         return "\"NOT\"";
+                    case "TO":
+                        return "\"TO\"";
+                    case "INTERSECT":
+                        return "\"INTERSECT\"";
+                    case "NULL":
+                        return "\"NULL\"";
                     default:
                         return term;
                 }

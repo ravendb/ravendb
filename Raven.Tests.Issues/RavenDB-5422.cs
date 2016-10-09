@@ -19,11 +19,18 @@ namespace Raven.Tests.Issues
                     session.Store(new User() { Name = "OR" });
                     session.Store(new User() { Name = "AND" });
                     session.Store(new User() { Name = "NOT" });
+                    session.Store(new User() { Name = "TO" });
+                    session.Store(new User() { Name = "INTERSECT" });
+                    session.Store(new User() { Name = "NULL" });
+                    
                     session.SaveChanges();
                     WaitForIndexing(store);
                     session.Query<User, Users_ByName>().Search(user => user.Name, "OR").Single();
                     session.Query<User, Users_ByName>().Search(user => user.Name, "AND").Single();
                     session.Query<User, Users_ByName>().Search(user => user.Name, "NOT").Single();
+                    session.Query<User, Users_ByName>().Search(user => user.Name, "TO").Single();
+                    session.Query<User, Users_ByName>().Search(user => user.Name, "INTERSECT").Single();
+                    session.Query<User, Users_ByName>().Search(user => user.Name, "NULL").Single();
                 }
             }
         }
