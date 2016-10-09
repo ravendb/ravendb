@@ -340,7 +340,7 @@ namespace Voron.Data.BTrees
             Debug.Assert(childTreeHeader->Flags == TreeFlags.MultiValue);
             
             tree = Open(_llt, _tx,childTreeHeader);
-
+            tree.Name = key;
             _tx.AddMultiValueTree(this, key, tree);
             return tree;
         }

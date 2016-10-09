@@ -186,6 +186,7 @@ namespace Voron
             using (var tx = NewLowLevelTransaction(TransactionFlags.ReadWrite))
             {
                 var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root);
+                root.Name = Constants.RootTreeNameSlice;
 
                 tx.UpdateRootsIfNeeded(root);
 

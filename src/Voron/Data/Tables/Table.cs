@@ -461,7 +461,7 @@ namespace Voron.Data.Tables
         private FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeSchemaIndexDef indexDef)
         {
             if (indexDef.IsGlobal)
-                return GetFixedSizeTree(_tx.LowLevelTransaction.RootObjects, indexDef.Name, sizeof(long));
+                return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long));
 
             var tableTree = _tx.ReadTree(Name);
             return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long));
@@ -471,13 +471,10 @@ namespace Voron.Data.Tables
         {
             Dictionary<Slice, FixedSizeTree> cache;
 
-            // explicitly not disposing this, will be handled in the end of the tx
-            Slice parentName = parent.Name.HasValue ? parent.Name : Constants.RootTreeNameSlice;
-
-            if (_fixedSizeTreeCache.TryGetValue(parentName, out cache) == false)
+            if (_fixedSizeTreeCache.TryGetValue(parent.Name, out cache) == false)
             {
                 cache = new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
-                _fixedSizeTreeCache[parentName] = cache;
+                _fixedSizeTreeCache[parent.Name] = cache;
             }
             
             FixedSizeTree tree;
@@ -545,6 +542,7 @@ namespace Voron.Data.Tables
 
             tree = Tree.Open(_tx.LowLevelTransaction, _tx, (TreeRootHeader*)treeHeader);
             _treesBySliceCache[name] = tree;
+            tree.Name = name;
             return tree;
         }
 
