@@ -396,7 +396,6 @@ namespace Voron.Impl.Journal
                 bool lockTaken = false;
                 try
                 {
-                    _waj._env.IsFlushingScratchBuffer = true;
                     Monitor.TryEnter(_flushingLock, timeToWait, ref lockTaken);
                  
                     if (lockTaken == false)
@@ -552,7 +551,6 @@ namespace Voron.Impl.Journal
                 {
                     if (lockTaken)
                         Monitor.Exit(_flushingLock);
-                    _waj._env.IsFlushingScratchBuffer = false;
                 }
             }
 

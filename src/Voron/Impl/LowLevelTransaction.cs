@@ -557,9 +557,6 @@ namespace Voron.Impl
 
             _txHeader->TxMarker |= TransactionMarker.Commit;
 
-            if (IsLazyTransaction && Environment.IsFlushingScratchBuffer)
-                IsLazyTransaction = false;
-
             var totalNumberOfAllocatedPages = _allocatedPagesInTransaction + _overflowPagesInTransaction;
             if (totalNumberOfAllocatedPages > 0 || // nothing changed in this transaction
                 (this.IsLazyTransaction == false && this._journal != null && this._journal.HasDataInLazyTxBuffer()))  // allow call to writeToJournal for flushing lazy tx

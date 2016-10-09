@@ -84,7 +84,6 @@ namespace Voron
         private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         private readonly HeaderAccessor _headerAccessor;
-        public bool IsFlushingScratchBuffer { get; set; }
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ScratchBufferPool _scratchBufferPool;
