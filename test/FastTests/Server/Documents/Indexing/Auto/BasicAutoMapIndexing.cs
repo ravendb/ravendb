@@ -1150,7 +1150,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 database.IndexStore.DeleteIndex(index.IndexId);
 
-                Assert.False(Directory.Exists(indexStoragePath));
+                for (int i = 0; i < 5; i++)
+                {
+                    if (Directory.Exists(indexStoragePath) == false)
+                        return;
+                    Thread.Sleep(16);
+                }
+
+                Assert.False(true, indexStoragePath + " exists");
             }
         }
     }
