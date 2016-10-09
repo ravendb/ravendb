@@ -365,19 +365,16 @@ namespace Voron.Impl.Journal
 
         public class JournalApplicator : IDisposable
         {
-            private const long DelayedDataFileSynchronizationBytesLimit = 2L * Constants.Size.Gigabyte;
-
-            private readonly TimeSpan _delayedDataFileSynchronizationTimeLimit = TimeSpan.FromMinutes(1);
             private readonly Dictionary<long, JournalFile> _journalsToDelete = new Dictionary<long, JournalFile>();
             private readonly object _flushingLock = new object();
             private readonly WriteAheadJournal _waj;
 
             private long _lastSyncedTransactionId;
             private long _lastSyncedJournal;
-            private long _totalWrittenButUnsyncedBytes;
             private DateTime _lastDataFileSyncTime;
             private JournalFile _lastFlushedJournal;
             private bool _ignoreLockAlreadyTaken;
+            private readonly object _syncLocker = new object();
 
             public JournalApplicator(WriteAheadJournal waj)
             {
@@ -539,13 +536,6 @@ namespace Voron.Impl.Journal
                         if (tryEnterReadLock)
                             _waj._env.FlushInProgressLock.ExitWriteLock();
                     }
-
-                    if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
-                        DateTime.UtcNow - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit)
-                    {
-                        SyncDataFile(oldestActiveTransaction);
-                    }
-
                 }
                 finally
                 {
@@ -554,23 +544,37 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            internal void SyncDataFile(long oldestActiveTransaction)
+            internal bool SyncDataFile(long oldestActiveTransaction)
             {
-                _waj._dataPager.Sync();
-
-                UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, oldestActiveTransaction);
-
-                foreach (var toDelete in _journalsToDelete.Values)
+                bool lockTaken = false;
+                try
                 {
-                    if (_waj._env.Options.IncrementalBackupEnabled == false)
-                        toDelete.DeleteOnClose = true;
+                    Monitor.TryEnter(_syncLocker, ref lockTaken);
+                    if (lockTaken == false)
+                        return false;
+                    // ADIADI TODO: Metrics!
 
-                    toDelete.Release();
+                    _waj._dataPager.Sync();
+
+                    UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, oldestActiveTransaction);
+
+                    foreach (var toDelete in _journalsToDelete.Values)
+                    {
+                        if (_waj._env.Options.IncrementalBackupEnabled == false)
+                            toDelete.DeleteOnClose = true;
+
+                        toDelete.Release();
+                    }
+
+                    _journalsToDelete.Clear();
+                    _lastDataFileSyncTime = DateTime.UtcNow;
                 }
-
-                _journalsToDelete.Clear();
-                _totalWrittenButUnsyncedBytes = 0;
-                _lastDataFileSyncTime = DateTime.UtcNow;
+                finally 
+                {
+                    if (lockTaken)
+                        Monitor.Exit(_syncLocker);
+                }
+                return true;
             }
 
             private void ApplyPagesToDataFileFromScratch(Dictionary<long, PagePosition> pagesToWrite, LowLevelTransaction transaction, bool alreadyInWriteTx)
@@ -619,8 +623,6 @@ namespace Voron.Impl.Journal
                             written += _waj._dataPager.WritePage(page);
                         }
                     }
-
-                    _totalWrittenButUnsyncedBytes += written;
                 }
                 finally
                 {

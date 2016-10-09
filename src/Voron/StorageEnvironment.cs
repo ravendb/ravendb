@@ -463,6 +463,8 @@ namespace Voron
             get { return Volatile.Read(ref _transactionsCounter) + 1; }
         }
 
+        public bool IsDataFileEnqueuedToSync { get; set; }
+
         internal void TransactionAfterCommit(LowLevelTransaction tx)
         {
             if (_activeTransactions.Contains(tx) == false)

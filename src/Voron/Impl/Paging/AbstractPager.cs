@@ -16,6 +16,8 @@ namespace Voron.Impl.Paging
     {
         private readonly StorageEnvironmentOptions _options;
 
+        public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new ConcurrentDictionary<string, uint>();
+
         protected int MinIncreaseSize => 16*_pageSize; // 64 KB with 4Kb pages. 
 
         protected int MaxIncreaseSize => Constants.Size.Gigabyte;
@@ -142,6 +144,7 @@ namespace Voron.Impl.Paging
 
 
         public bool Disposed { get; private set; }
+        public uint UniquePhysicalDriveId;
 
         public virtual void Dispose()
         {
