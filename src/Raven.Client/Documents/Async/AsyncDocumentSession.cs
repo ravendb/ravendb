@@ -29,6 +29,7 @@ using Raven.Client.Documents.SessionOperations;
 using Raven.Client.Http;
 using Sparrow.Json;
 using LoadOperation = Raven.Client.Documents.SessionOperations.LoadOperation;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Async
 {
@@ -439,6 +440,11 @@ namespace Raven.Client.Documents.Async
         }
 
         public IDictionary<string, DocumentsChanges[]> WhatChanged()
+        {
+            throw new NotImplementedException();
+        }
+
+        DynamicJsonValue IAdvancedDocumentSessionOperations.GetMetadataFor<T>(T instance)
         {
             throw new NotImplementedException();
         }

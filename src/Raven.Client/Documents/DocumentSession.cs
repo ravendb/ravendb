@@ -574,28 +574,8 @@ namespace Raven.Client.Documents
                 saveChangesOeration.SetResult(command.Result);
             }
         }
-        
-        public bool HasChanges { get; }
-
-        Client.ISyncAdvancedSessionOperation IDocumentSession.Advanced
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-        }
 
         public void Defer(params ICommandData[] commands)
-        {
-            throw new NotImplementedException();
-        }
-
-        public RavenJObject GetMetadataFor<T>(T instance)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool HasChanged(object entity)
         {
             throw new NotImplementedException();
         }
@@ -605,17 +585,17 @@ namespace Raven.Client.Documents
             throw new NotImplementedException();
         }
 
-        Linq.IRavenQueryable<T> IDocumentSession.Query<T>(string indexName, bool isMapReduce)
+        IRavenQueryable<T> IDocumentSession.Query<T>(string indexName, bool isMapReduce)
         {
             throw new NotImplementedException();
         }
 
-        Linq.IRavenQueryable<T> IDocumentSession.Query<T>()
+        IRavenQueryable<T> IDocumentSession.Query<T>()
         {
             throw new NotImplementedException();
         }
 
-        Linq.IRavenQueryable<T> IDocumentSession.Query<T, TIndexCreator>()
+        IRavenQueryable<T> IDocumentSession.Query<T, TIndexCreator>()
         {
             throw new NotImplementedException();
         }
