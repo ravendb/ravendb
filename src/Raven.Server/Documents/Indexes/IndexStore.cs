@@ -70,7 +70,6 @@ namespace Raven.Server.Documents.Indexes
                         Directory.CreateDirectory(_path);
                 }
 
-                _metadataStorage.Initialize();
                 _initialized = true;
 
                 return Task.Factory.StartNew(OpenIndexes, TaskCreationOptions.LongRunning);
@@ -454,7 +453,6 @@ namespace Raven.Server.Documents.Indexes
                 });
             }
 
-            exceptionAggregator.Execute(() => _metadataStorage.Dispose());
             exceptionAggregator.ThrowIfNeeded();
         }
 

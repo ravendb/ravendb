@@ -53,7 +53,6 @@ namespace Raven.Server.Documents.Transformers
                     if (Directory.Exists(_path) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
                         Directory.CreateDirectory(_path);
                 }
-                _metadataStorage.Initialize();
                 _initialized = true;
 
                 return Task.Factory.StartNew(OpenTransformers, TaskCreationOptions.LongRunning);
@@ -213,7 +212,6 @@ namespace Raven.Server.Documents.Transformers
 
         public void Dispose()
         {
-            _metadataStorage.Dispose();
         }
     }
 }

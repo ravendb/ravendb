@@ -160,7 +160,7 @@ namespace Raven.Server.Documents
         private void InitializeInternal()
         {
             TxMerger.Start();
-            IndexTransformerMetadataStorage.Initialize();
+            IndexTransformerMetadataStorage.Initialize(DocumentsStorage.Environment);
             _indexStoreTask = IndexStore.InitializeAsync();
             _transformerStoreTask = TransformerStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
@@ -282,6 +282,12 @@ namespace Raven.Server.Documents
             {
                 DocumentsStorage?.Dispose();
                 DocumentsStorage = null;
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                IndexTransformerMetadataStorage?.Dispose();
+                IndexTransformerMetadataStorage = null;
             });
 
             exceptionAggregator.ThrowIfNeeded();

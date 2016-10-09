@@ -81,7 +81,7 @@ namespace FastTests.Server.Documents.Indexing
                 using (var tx = documentDatabase.IndexTransformerMetadataStorage.Environment.ReadTransaction())
                     Assert.Equal(4, documentDatabase.IndexTransformerMetadataStorage.ReadLastEtag(tx));
             }
-        }
+        }     
 
         [Fact]
         public async Task Read_and_write_index_tombstones_should_work()
@@ -120,7 +120,7 @@ namespace FastTests.Server.Documents.Indexing
             using (var documentDatabase = await GetDatabase(store.DefaultDatabase))
             using (var indexMetadataStorage = new MetadataStorage(documentDatabase))
             {
-                indexMetadataStorage.Initialize();
+                indexMetadataStorage.Initialize(documentDatabase.DocumentsStorage.Environment);
 
                 var indexMetadata1 = new IndexTransformerMetadata
                 {
@@ -160,7 +160,7 @@ namespace FastTests.Server.Documents.Indexing
             using (var documentDatabase = await GetDatabase(store.DefaultDatabase))
             using (var indexMetadataStorage = new MetadataStorage(documentDatabase))
             {
-                indexMetadataStorage.Initialize();
+                indexMetadataStorage.Initialize(documentDatabase.DocumentsStorage.Environment);
 
                 var indexMetadata1 = new IndexTransformerMetadata
                 {
@@ -201,7 +201,7 @@ namespace FastTests.Server.Documents.Indexing
             using (var documentDatabase = await GetDatabase(store.DefaultDatabase))
             using (var indexMetadataStorage = new MetadataStorage(documentDatabase))
             {
-                indexMetadataStorage.Initialize();
+                indexMetadataStorage.Initialize(documentDatabase.DocumentsStorage.Environment);
 
                 var indexMetadata1 = new IndexTransformerMetadata
                 {

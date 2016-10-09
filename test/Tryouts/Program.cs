@@ -2,14 +2,20 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
 using FastTests.Server.Documents.Indexing.Auto;
 using FastTests.Server.Documents.Queries.Dynamic.MapReduce;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Sparrow;
+using Voron;
+
 // ReSharper disable InconsistentNaming
 
 namespace Tryouts
@@ -18,14 +24,46 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+            using (var byteStringContext = new ByteStringContext())
             {
-                using (var test = new BasicAutoMapReduceIndexing())
-                {
-                    test.MultipleReduceKeys(5000,new []{ "Canada", "France"}).Wait();
-                    Console.WriteLine(i);
-                }
+                Slice labelA;
+                Slice labelB;
+                Parallel.Invoke(() =>
+                    {
+                        using (Slice.From(byteStringContext, "A", ByteStringType.Immutable, out labelA))
+                        {
+                            var labelAsString = labelA.ToString();
+                            if (labelAsString != "A")
+                                throw new InvalidDataException("Should be equal A, but equals " + labelAsString);
+                        }
+                    },
+                    () =>
+                    {
+                        using (Slice.From(byteStringContext, "B", ByteStringType.Immutable, out labelB))
+                        {
+                            var labelBsString = labelB.ToString();
+                            if (labelBsString != "B")
+                                throw new InvalidDataException("Should be equal B, but equals " + labelBsString);
+                        }
+                    });
             }
+            //for (int i = 0; i < 1000; i++)
+            //{
+            //    Parallel.Invoke(() =>
+            //    {
+            //        using (var test = new BasicIndexMetadataStorageTests())
+            //        {
+            //            test.Writing_indexes_transformers_and_tombstones_should_share_etags().Wait();
+            //        }
+            //    },
+            //    () => {
+            //        using (var test = new BasicIndexMetadataStorageTests())
+            //        {
+            //            test.Deleting_index_metadata_should_work().Wait();
+            //        }
+            //    });
+            //    Console.WriteLine(i);
+            //}
 
         }
     }

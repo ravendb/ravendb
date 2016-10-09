@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -23,16 +24,10 @@ namespace Raven.Server.Documents.Indexes
     public class MetadataStorage : IDisposable
     {
         private static readonly Slice MetadataIdKeyName;
-        private static readonly ByteStringContext<ByteStringMemoryCache>.Scope _metadataIdKeyNameScope;
         private static readonly Slice TombstoneKeyName;
-        private static readonly ByteStringContext<ByteStringMemoryCache>.Scope _tombstoneKeyNameScope;
         private static readonly Slice ChangeVectorIndexName;
-        private static readonly ByteStringContext<ByteStringMemoryCache>.Scope _changeVectorName;
         private static readonly Slice MetadataEtagIndexName;
-        private static readonly ByteStringContext<ByteStringMemoryCache>.Scope _etagName;
-
         private static readonly Slice TombstoneEtagIndexName;
-        private static readonly ByteStringContext<ByteStringMemoryCache>.Scope _storageTypeAndEtagIndexName;
 
         private const string GlobalChangeVectorTreeName = "GlobalMetadata";
         private const string IndexMetadataTableName = "IndexMetadataTable";
@@ -46,22 +41,21 @@ namespace Raven.Server.Documents.Indexes
         private TransactionContextPool _contextPool;
 
         private bool _isInitialized;
-        private bool _isDisposed;
 
         public StorageEnvironment Environment { get; private set; }
 
         static MetadataStorage()
         {
-            _metadataIdKeyNameScope = Slice.From(StorageEnvironment.LabelsContext, "MetadataIdKeyName", 
+            Slice.From(StorageEnvironment.LabelsContext, "MetadataIdKeyName", 
                 ByteStringType.Immutable, out MetadataIdKeyName);
-            _tombstoneKeyNameScope = Slice.From(StorageEnvironment.LabelsContext, "TombstoneKeyName",
+            Slice.From(StorageEnvironment.LabelsContext, "TombstoneKeyName",
                 ByteStringType.Immutable, out TombstoneKeyName);
-            _changeVectorName = Slice.From(StorageEnvironment.LabelsContext, "ChangeVectorIndexName",
+            Slice.From(StorageEnvironment.LabelsContext, "ChangeVectorIndexName",
                 ByteStringType.Immutable, out ChangeVectorIndexName);
-            _etagName = Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", ByteStringType.Immutable,
+            Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", ByteStringType.Immutable,
                 out MetadataEtagIndexName);
 
-            _storageTypeAndEtagIndexName = Slice.From(StorageEnvironment.LabelsContext, "StorageTypeAndEtagIndex", ByteStringType.Immutable,
+            Slice.From(StorageEnvironment.LabelsContext, "StorageTypeAndEtagIndex", ByteStringType.Immutable,
                 out TombstoneEtagIndexName);
         }
 
@@ -72,37 +66,14 @@ namespace Raven.Server.Documents.Indexes
         }
 
 
-        public void Initialize()
+        public void Initialize(StorageEnvironment environment)
         {
             if (_isInitialized)
                 return;
             _isInitialized = true;
-
-            if (_logger.IsInfoEnabled)
-                _logger.Info
-                    ("Starting to open index/transformer metadata storage for " + (_documentDatabase.Configuration.Indexing.RunInMemory ?
-                    "<memory>" : _documentDatabase.Configuration.Indexing.IndexStoragePath));
-            var options = _documentDatabase.Configuration.Indexing.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly()
-                : StorageEnvironmentOptions.ForPath(_documentDatabase.Configuration.Indexing.IndexStoragePath);
-
+            Environment = environment;
             try
             {
-                Initialize(options);
-            }
-            catch (Exception)
-            {
-                options.Dispose();
-                throw;
-            }
-        }
-
-        public void Initialize(StorageEnvironmentOptions options)
-        {
-            options.SchemaVersion = 1;
-            try
-            {
-                Environment = new StorageEnvironment(options);
                 _contextPool = new TransactionContextPool(Environment);
 
                 using (var tx = Environment.WriteTransaction())
@@ -159,7 +130,6 @@ namespace Raven.Server.Documents.Indexes
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations("Could not open index metadata store for " + _documentDatabase.Name, e);
 
-                options.Dispose();
                 Dispose();
                 throw;
             }
@@ -254,8 +224,10 @@ namespace Raven.Server.Documents.Indexes
                 var metadataTable = GetMetadataTableByType(type, tx);
                 TableValueReader result;
                 Slice key;
-                using (Slice.External(context.Allocator, (byte*) &id, sizeof(int), out key))
+                using (Slice.From(context.Allocator, (byte*) &id, sizeof(int), out key))
                 {                    
+                    if(metadataTable.Schema.Key.Name.ToString().Contains("Last"))
+                        Debugger.Break();
                     result = metadataTable.ReadByKey(key);
                 }
 
@@ -501,29 +473,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public void Dispose()
-        {
-            if (_isDisposed)
-                return;
-            _isDisposed = true;
-
-            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(MetadataStorage)}");
-            
-            exceptionAggregator.Execute(() =>
-            {
-                Environment?.Dispose();
-                Environment = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                _changeVectorName.Dispose();
-                _metadataIdKeyNameScope.Dispose();
-                _etagName.Dispose();            
-                _storageTypeAndEtagIndexName.Dispose();
-                _tombstoneKeyNameScope.Dispose();
-            });
-
-            exceptionAggregator.ThrowIfNeeded();
+        {           
         }
 
         private unsafe IndexTransformerMetadata TableValueToMetadata(TableValueReader tvr)
