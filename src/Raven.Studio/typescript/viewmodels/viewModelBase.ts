@@ -99,7 +99,6 @@ class viewModelBase {
         window.addEventListener("beforeunload", this.beforeUnloadListener, false);
         this.isAttached = true;
         viewModelBase.showSplash(false);
-        this.rightPanelSetup();
     }
 
     private rightPanelSetup() {
@@ -109,6 +108,7 @@ class viewModelBase {
     }
 
     compositionComplete() {
+        this.rightPanelSetup();
         this.dirtyFlag().reset(); //Resync Changes
     }
 
@@ -246,20 +246,20 @@ class viewModelBase {
         viewModelBase.modelPollingHandle = null;
     }
 
-    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ["No", "Yes"], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
-        var viewTask = $.Deferred();
-        var confirmTask = app.showDialog(new confirmationDialog(confirmationMessage, title, options));
+    confirmationMessage(title: string, confirmationMessage: string, options: string[] = ["No", "Yes"], forceRejectWithResolve: boolean = false): JQueryPromise<confirmDialogResult> {
+        const viewTask = $.Deferred<confirmDialogResult>();
 
-        confirmTask.done((answer) => {
-            var isConfirmed = answer === options.last();
-            if (isConfirmed) {
-                viewTask.resolve({ can: true });
-            } else if (!forceRejectWithResolve) {
-                viewTask.reject();
-            } else {
-                viewTask.resolve({ can: false });
-            }
-        });
+        app.showDialog(new confirmationDialog(confirmationMessage, title, options))
+            .done((answer) => {
+                var isConfirmed = answer === options.last();
+                if (isConfirmed) {
+                    viewTask.resolve({ can: true });
+                } else if (!forceRejectWithResolve) {
+                    viewTask.reject();
+                } else {
+                    viewTask.resolve({ can: false });
+                }
+            });
 
         return viewTask;
     }
@@ -321,6 +321,10 @@ class viewModelBase {
         } else {
             ko.postbox.publish('globalHelpLink', null);
         }
+    }
+
+    pluralize(count: number, singular: string, plural: string) {
+        return count === 1 ? count + " " + singular : count + " " + plural;
     }
 
     

@@ -8,8 +8,6 @@ class createSampleDataCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        this.reportInfo("Creating Sample Data, Please wait...");
-
         return this.post(endpoints.databases.sampleData.studioSampleData, null, this.db, { dataType: undefined })
             .fail((response: JQueryXHR) => this.reportError("Failed to create sample data", response.responseText, response.statusText))
             .done(() => this.reportSuccess("Sample data creation completed"));

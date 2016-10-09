@@ -93,6 +93,8 @@ namespace Raven.Server.Documents.Indexes.Errors
             };
         }
 
+        public override IndexRunningStatus Status => IndexRunningStatus.Disabled;
+
         public override void Start()
         {
             // no-op

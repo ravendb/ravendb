@@ -10,7 +10,6 @@ class saveIndexLockModeCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        this.reportInfo("Saving " + this.index.name + " lock mode");
         const args = {
             mode: this.lockMode,
             name: this.index.name
@@ -19,7 +18,6 @@ class saveIndexLockModeCommand extends commandBase {
         const url = endpoints.databases.index.indexesSetLock + this.urlEncodeArgs(args);
 
         return this.post(url, null, this.db, { dataType: undefined })
-            .done(() => this.reportSuccess("Saved " + this.index.name))
             .fail((response: JQueryXHR) => this.reportError("Failed to set index lock mode", response.responseText));
     }
 } 
