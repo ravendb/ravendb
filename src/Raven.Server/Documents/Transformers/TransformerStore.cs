@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Server.Documents.Indexes;
 using Sparrow;
 using Sparrow.Logging;
 using Voron.Platform.Posix;
@@ -16,18 +17,19 @@ namespace Raven.Server.Documents.Transformers
         private readonly Logger _log;
 
         private readonly DocumentDatabase _documentDatabase;
-
+        private readonly MetadataStorage _metadataStorage;
         private readonly CollectionOfTransformers _transformers = new CollectionOfTransformers();
-
+        
         private readonly object _locker = new object();
 
         private bool _initialized;
 
         private string _path;
 
-        public TransformerStore(DocumentDatabase documentDatabase)
+        public TransformerStore(DocumentDatabase documentDatabase, MetadataStorage metadataStorage)
         {
             _documentDatabase = documentDatabase;
+            _metadataStorage = metadataStorage;
             _log = LoggingSource.Instance.GetLogger<TransformerStore>(_documentDatabase.Name);
         }
 
@@ -51,7 +53,7 @@ namespace Raven.Server.Documents.Transformers
                     if (Directory.Exists(_path) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
                         Directory.CreateDirectory(_path);
                 }
-
+                _metadataStorage.Initialize();
                 _initialized = true;
 
                 return Task.Factory.StartNew(OpenTransformers, TaskCreationOptions.LongRunning);
@@ -181,7 +183,7 @@ namespace Raven.Server.Documents.Transformers
                 throw new InvalidOperationException("There is no transformer with id: " + id);
 
             transformer.Delete();
-
+            _metadataStorage.DeleteMetadata(id, MetadataStorageType.Transformer);
             _documentDatabase.Notifications.RaiseNotifications(new TransformerChangeNotification
             {
                 Name = transformer.Name,
@@ -197,7 +199,7 @@ namespace Raven.Server.Documents.Transformers
             _transformers.Add(transformer);
 
             _documentDatabase.Notifications.RaiseNotifications(new TransformerChangeNotification { Name = transformer.Name, Type = TransformerChangeTypes.TransformerAdded });
-
+            _metadataStorage.WriteNewMetadataFor(transformerId, MetadataStorageType.Transformer);
             return transformerId;
         }
 
@@ -211,6 +213,7 @@ namespace Raven.Server.Documents.Transformers
 
         public void Dispose()
         {
+            _metadataStorage.Dispose();
         }
     }
 }

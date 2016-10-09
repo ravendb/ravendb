@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
+using FastTests.Server.Documents.Indexing.Auto;
+using FastTests.Server.Documents.Queries.Dynamic.MapReduce;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Document;
@@ -16,61 +18,13 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var store = new DocumentStore
+            for (int i = 0; i < 1000; i++)
             {
-                Url = "http://localhost:8080",
-                DefaultDatabase = "stackoverflow"
-            }.Initialize())
-            {
-                new Users_Registrations_ByMonth().Execute(store);
-                new Users_Search().Execute(store);
-                new Questions_Search().Execute(store);
-                new Questions_Tags().Execute(store);
-                new Questions_Tags_ByMonths().Execute(store);
-                new Activity_ByMonth().Execute(store);
-
-                var sp = Stopwatch.StartNew();
-                var done = new HashSet<string>();
-                while (true)
+                using (var test = new BasicAutoMapReduceIndexing())
                 {
-                    bool hasStale = false;
-                    DatabaseStatistics databaseStatistics;
-                    try
-                    {
-
-                        databaseStatistics = store.DatabaseCommands.GetStatistics();
-                    }
-                    catch (Exception e)
-                    {
-                        var sb = new StringBuilder();
-                        do
-                        {
-                            sb.Append("-->").Append(e.Message);
-                            e = e.InnerException;
-                        } while (e != null);
-                        Console.WriteLine(sb.ToString());
-                        continue;
-                    }
-                    foreach (var index in databaseStatistics.Indexes)
-                    {
-                        if (index.IsStale == false)
-                        {
-                            if (done.Add(index.Name))
-                                Console.WriteLine(sp.Elapsed + " - " + index.Name);
-                        }
-                        else
-                        {
-                            hasStale = true;
-                        }
-                    }
-                    if (hasStale == false)
-                        break;
-                    Thread.Sleep(250);
+                    test.MultipleReduceKeys(5000,new []{ "Canada", "France"}).Wait();
+                    Console.WriteLine(i);
                 }
-
-                Console.WriteLine();
-                Console.WriteLine();
-                Console.WriteLine(sp.Elapsed + " all done! :-)");
             }
 
         }

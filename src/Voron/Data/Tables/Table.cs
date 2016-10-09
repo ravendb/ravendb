@@ -86,6 +86,11 @@ namespace Voron.Data.Tables
             }
         }
 
+        public TableSchema Schema
+        {
+            get { return _schema; }
+        }
+
         private void OnDataMoved(long previousId, long newId, byte* data, int size)
         {
             DeleteValueFromIndex(previousId, new TableValueReader(data, size));
@@ -451,6 +456,7 @@ namespace Voron.Data.Tables
 
                 foreach (var indexDef in _schema.FixedSizeIndexes.Values)
                 {
+                    var name = this.Name.ToString();
                     var index = GetFixedSizeTree(indexDef);
                     long key = indexDef.GetValue(value);
                     index.Add(key, idAsSlice);

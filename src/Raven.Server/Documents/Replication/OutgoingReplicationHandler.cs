@@ -20,6 +20,7 @@ using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Extensions;
 using Sparrow;
 
@@ -37,8 +38,8 @@ namespace Raven.Server.Documents.Replication
 
         private long _lastSentDocumentEtag;
 
-        //private long _lastSentIndexEtag;
-        //private long _lastSentTransformerEtag;
+        private long _lastSentIndexEtag = 0;
+        private long _lastSentTransformerEtag = 0;
 
         private DateTime _lastSentTime;
         private readonly Dictionary<Guid, long> _destinationLastKnownChangeVector = new Dictionary<Guid, long>();
@@ -65,7 +66,7 @@ namespace Raven.Server.Documents.Replication
 
         public void Start()
         {
-            _sendingThread = new Thread(ReplicateDocuments)
+            _sendingThread = new Thread(ReplicateAll)
             {
                 Name = $"Outgoing replication {FromToString}",
                 IsBackground = true
@@ -93,7 +94,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void ReplicateDocuments()
+        private void ReplicateAll()
         {
             try
             {
@@ -102,55 +103,61 @@ namespace Raven.Server.Documents.Replication
                 {
                     ConnectSocket(connectionInfo, _tcpClient);                    
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context))
-                    using (var sender = new ReplicationSender(this, _tcpClient, _log))
-                    using (_writer = new BlittableJsonTextWriter(_context, sender.Stream))
-                    using (_parser = _context.ParseMultiFrom(sender.Stream))
+                    using (var outgoingStream = _tcpClient.GetStream())
                     {
-                        //send initial connection information
-                        _context.Write(_writer, new DynamicJsonValue
-                        {
-                            ["DatabaseName"] = _destination.Database,
-                            ["Operation"] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
-                        });
+                        var documentsReplicationSender = new DocumentsReplicationSender(this, _log, outgoingStream);
+                        var indexesTransformersReplicationSender = new IndexesTransformersReplicationSender(this, _log, outgoingStream);
 
-                        //start request/response for fetching last etag
-                        _context.Write(_writer, new DynamicJsonValue
+                        using (_writer = new BlittableJsonTextWriter(_context, documentsReplicationSender.Stream))
+                        using (_parser = _context.ParseMultiFrom(documentsReplicationSender.Stream))
                         {
-                            ["Type"] = "GetLastEtag",
-                            ["SourceDatabaseId"] = _database.DbId.ToString(),
-                            ["SourceDatabaseName"] = _database.Name,
-                            ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
-                            ["MachineName"] = Environment.MachineName,
-                        });
-                        _writer.Flush();						
-                        using (_context.OpenReadTransaction())
-                        {
-                            HandleServerResponse();
-                        }
-
-                        while (_cts.IsCancellationRequested == false)
-                        {
-                            _context.Reset();							
-                            if (sender.ExecuteReplicationOnce() == false)
+                            //send initial connection information
+                            _context.Write(_writer, new DynamicJsonValue
                             {
-                                using (_context.OpenReadTransaction())
-                                {
-                                    var currentEtag = DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
-                                    if (currentEtag < _lastSentDocumentEtag)
-                                        continue;
-                                }
+                                ["DatabaseName"] = _destination.Database,
+                                ["Operation"] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
+                            });
+
+                            //start request/response for fetching last etag
+                            _context.Write(_writer, new DynamicJsonValue
+                            {
+                                ["Type"] = "GetLastEtag",
+                                ["SourceDatabaseId"] = _database.DbId.ToString(),
+                                ["SourceDatabaseName"] = _database.Name,
+                                ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
+                                ["MachineName"] = Environment.MachineName,
+                            });
+                            _writer.Flush();
+                            using (_context.OpenReadTransaction())
+                            {
+                                HandleServerResponse();
                             }
 
-                            //if this returns false, this means either timeout or canceled token is activated                    
-                            while (_waitForChanges.Wait(_minimalHeartbeatInterval, _cts.Token) == false)
+                            while (_cts.IsCancellationRequested == false)
                             {
                                 _context.Reset();
-                                using (_context.OpenReadTransaction())
+                                if (documentsReplicationSender.ExecuteReplicationOnce() == false)
                                 {
-                                    SendHeartbeat();
+                                    using (_context.OpenReadTransaction())
+                                    {
+                                        var currentEtag =
+                                            DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
+                                        if (currentEtag < _lastSentDocumentEtag)
+                                            continue;
+                                    }
                                 }
+
+                                //if this returns false, this means either timeout or canceled token is activated                    
+                                while (_waitForChanges.Wait(_minimalHeartbeatInterval, _cts.Token) == false)
+                                {
+                                    _context.Reset();
+                                    using (_context.OpenReadTransaction())
+                                    {
+                                        SendHeartbeat();
+                                    }
+                                }
+                                _waitForChanges.Reset();
                             }
-                            _waitForChanges.Reset();
                         }
                     }
                 }
@@ -247,23 +254,68 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
-        private class ReplicationSender : IDisposable
+        private class IndexesTransformersReplicationSender
         {
             private readonly OutgoingReplicationHandler _parent;
             private readonly Logger _log;
             private readonly DocumentsOperationContext _context;
-            private long _lastEtag;
+            private long _lastIndexEtag;
+            private long _lastTransformerEtag;
             private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems;
             private readonly byte[] _tempBuffer = new byte[32 * 1024];
             private readonly NetworkStream _stream;
 
-            public ReplicationSender(OutgoingReplicationHandler parent, TcpClient tcpClient, Logger log)
+            public IndexesTransformersReplicationSender(OutgoingReplicationHandler parent, Logger log, NetworkStream inputStream)
             {
                 _parent = parent;
                 _log = log;
                 _context = _parent._context;
                 _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
-                _stream = tcpClient.GetStream();
+                _stream = inputStream;
+            }
+
+            public void ExecuteReplicationOnce()
+            {
+                var sp = Stopwatch.StartNew();
+                var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
+                while (sp.ElapsedMilliseconds < timeout)
+                {
+
+                    _lastIndexEtag = _parent._lastSentIndexEtag;
+                    _lastTransformerEtag = _parent._lastSentTransformerEtag;
+
+                    using (var tx = _context.OpenReadTransaction())
+                    {
+                        var indexMetadata =
+                            _parent._database.IndexTransformerMetadataStorage.GetMetadataAfter(_lastIndexEtag, MetadataStorageType.Index)
+                                .ToList();
+                        var transformerMetadata =
+                            _parent._database.IndexTransformerMetadataStorage.GetMetadataAfter(_lastTransformerEtag,
+                                MetadataStorageType.Transformer).ToList();
+
+                        _lastIndexEtag = indexMetadata.Last().Etag;
+                    }
+                }
+            }
+        }
+
+        private class DocumentsReplicationSender
+        {
+            private readonly OutgoingReplicationHandler _parent;
+            private readonly Logger _log;
+            private readonly DocumentsOperationContext _context;
+            private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems;
+            private readonly byte[] _tempBuffer = new byte[32 * 1024];
+            private readonly NetworkStream _stream;
+            private long _lastEtag;
+
+            public DocumentsReplicationSender(OutgoingReplicationHandler parent, Logger log, NetworkStream outgoingStream)
+            {
+                _parent = parent;
+                _log = log;
+                _context = _parent._context;
+                _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
+                _stream = outgoingStream;
             }
 
             public NetworkStream Stream => _stream;
@@ -271,26 +323,27 @@ namespace Raven.Server.Documents.Replication
             public bool ExecuteReplicationOnce()
             {
                 _orderedReplicaItems.Clear();
-                var readTx = _context.OpenReadTransaction();
-                try
+                using (_context.OpenReadTransaction())
                 {
 
                     // we scan through the documents to send to the other side, we need to be careful about
                     // filtering a lot of documents, because we need to let the other side know about this, and 
                     // at the same time, we need to send a heartbeat to keep the tcp connection alive
                     var sp = Stopwatch.StartNew();
-                    var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
+                    var timeout = Debugger.IsAttached ? 60*1000 : 1000;
                     while (sp.ElapsedMilliseconds < timeout)
                     {
                         _lastEtag = _parent._lastSentDocumentEtag;
 
                         _parent._cts.Token.ThrowIfCancellationRequested();
 
-                        var docs = _parent._database.DocumentsStorage.GetDocumentsAfter(_context, _lastEtag + 1, 0, 1024)
-                            .ToList();
-                        var tombstones = _parent._database.DocumentsStorage.GetTombstonesAfter(_context, _lastEtag + 1, 0, 1024)
-                            .ToList();
-                        
+                        var docs =
+                            _parent._database.DocumentsStorage.GetDocumentsAfter(_context, _lastEtag + 1, 0, 1024)
+                                .ToList();
+                        var tombstones =
+                            _parent._database.DocumentsStorage.GetTombstonesAfter(_context, _lastEtag + 1, 0, 1024)
+                                .ToList();
+
                         long maxEtag;
                         maxEtag = _lastEtag;
                         if (docs.Count > 0)
@@ -357,11 +410,6 @@ namespace Raven.Server.Documents.Replication
 
                     SendDocuments();
                     return true;
-                }
-                finally
-                {
-                    if (readTx.Disposed == false)
-                        readTx.Dispose();
                 }
             }
 
@@ -502,11 +550,7 @@ namespace Raven.Server.Documents.Replication
                     _stream.Write(_tempBuffer, 0, tempBufferPos);
                 }
             }
-
-            public void Dispose()
-            {
-                _stream.Dispose();
-            }
+            
         }
 
         private static void ThrowTooManyChangeVectorEntries(LazyStringValue key, ChangeVectorEntry[] changeVector)

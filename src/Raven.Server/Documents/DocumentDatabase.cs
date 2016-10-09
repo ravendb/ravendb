@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -12,12 +11,9 @@ using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Impl.Backup;
@@ -46,8 +42,9 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
-            IndexStore = new IndexStore(this);
-            TransformerStore = new TransformerStore(this);
+            IndexTransformerMetadataStorage = new MetadataStorage(this);
+            IndexStore = new IndexStore(this, IndexTransformerMetadataStorage);
+            TransformerStore = new TransformerStore(this,IndexTransformerMetadataStorage);
             SqlReplicationLoader = new SqlReplicationLoader(this);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
@@ -97,6 +94,8 @@ namespace Raven.Server.Documents
         public IoMetrics IoMetrics { get; }
 
         public IndexStore IndexStore { get; private set; }
+
+        public MetadataStorage IndexTransformerMetadataStorage { get; private set; }
 
         public TransformerStore TransformerStore { get; private set; }
 
@@ -161,6 +160,7 @@ namespace Raven.Server.Documents
         private void InitializeInternal()
         {
             TxMerger.Start();
+            IndexTransformerMetadataStorage.Initialize();
             _indexStoreTask = IndexStore.InitializeAsync();
             _transformerStoreTask = TransformerStore.InitializeAsync();
             SqlReplicationLoader.Initialize();

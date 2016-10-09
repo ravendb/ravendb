@@ -38,8 +38,11 @@ namespace Raven.Server.Utils
             {
                 var dbId = kvp.Key;
                 var etagBigEndian = IPAddress.HostToNetworkOrder(kvp.Value);
-                tree.Add(Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid)),
-                    Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long)));
+                Slice key;
+                Slice value;
+                using (Slice.External(context.Allocator, (byte*) &dbId, sizeof(Guid), out key))
+                using (Slice.External(context.Allocator, (byte*) &etagBigEndian, sizeof(long), out value))
+                    tree.Add(key, value);
             }
         }
 
@@ -49,8 +52,11 @@ namespace Raven.Server.Utils
             {
                 var dbId = item.DbId;
                 var etagBigEndian = IPAddress.HostToNetworkOrder(item.Etag);
-                tree.Add(Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid)),
-                    Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long)));
+                Slice key;
+                Slice value;
+                using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out key))
+                using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out value))
+                    tree.Add(key, value);
             }
 
         }

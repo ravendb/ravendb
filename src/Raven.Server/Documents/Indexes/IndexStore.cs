@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes
 
         private static Logger _logger;
         private readonly DocumentDatabase _documentDatabase;
-        private readonly IndexMetadataStorage _indexMetadataStorage;
+        private readonly MetadataStorage _metadataStorage;
 
         private readonly CollectionOfIndexes _indexes = new CollectionOfIndexes();
 
@@ -42,11 +42,11 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly IndexIdentities Identities = new IndexIdentities();
 
-        public IndexStore(DocumentDatabase documentDatabase)
+        public IndexStore(DocumentDatabase documentDatabase, MetadataStorage metadataStorage)
         {
             _documentDatabase = documentDatabase;
             _logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
-            _indexMetadataStorage = new IndexMetadataStorage(documentDatabase);
+            _metadataStorage = metadataStorage;
         }
 
         public Task InitializeAsync()
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Indexes
                         Directory.CreateDirectory(_path);
                 }
 
-                _indexMetadataStorage.Initialize();
+                _metadataStorage.Initialize();
                 _initialized = true;
 
                 return Task.Factory.StartNew(OpenIndexes, TaskCreationOptions.LongRunning);
@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Indexes
                 index.Start();
 
             _indexes.Add(index);
-            _indexMetadataStorage.WriteNewMetadataFor(indexId);
+            _metadataStorage.WriteNewMetadataFor(indexId,MetadataStorageType.Index);
             _documentDatabase.Notifications.RaiseNotifications(
                 new IndexChangeNotification { Name = index.Name, Type = IndexChangeTypes.IndexAdded });
 
@@ -338,7 +338,7 @@ namespace Raven.Server.Documents.Indexes
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not dispose index '{index.Name}' ({id}).", e);
                 }
-                _indexMetadataStorage.DeleteMetadata(id);
+                _metadataStorage.DeleteMetadata(id,MetadataStorageType.Index);
                 _documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
                 {
                     Name = index.Name,
@@ -454,7 +454,7 @@ namespace Raven.Server.Documents.Indexes
                 });
             }
 
-            exceptionAggregator.Execute(() => _indexMetadataStorage.Dispose());
+            exceptionAggregator.Execute(() => _metadataStorage.Dispose());
             exceptionAggregator.ThrowIfNeeded();
         }
 

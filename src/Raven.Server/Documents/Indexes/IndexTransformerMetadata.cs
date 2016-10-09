@@ -2,9 +2,9 @@
 
 namespace Raven.Server.Documents.Indexes
 {
-    public struct IndexMetadata
+    public struct IndexTransformerMetadata
     {
-        public int IndexId;
+        public int Id;
         public ChangeVectorEntry[] ChangeVector;
         public long Etag;
     }
