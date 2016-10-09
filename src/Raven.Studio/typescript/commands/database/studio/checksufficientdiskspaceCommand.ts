@@ -7,14 +7,12 @@ class checkSufficientDiskSpaceCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {
-        var args = {
+    execute(): JQueryPromise<void> {
+        const args = {
             fileSize: this.fileSize
         }
-        var url = "/studio-tasks/check-sufficient-diskspace";//TODO: use endpoints
-        var checkTask = this.query(url, args, this.database, undefined, { dataType: undefined });
-
-        return checkTask;
+        const url = "/studio-tasks/check-sufficient-diskspace";//TODO: use endpoints
+        return this.query<void>(url, args, this.database, undefined, { dataType: undefined });
     }
 }
 

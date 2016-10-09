@@ -2,6 +2,7 @@ namespace Sparrow.Json.Parsing
 {
     public enum JsonParserToken
     {
+        None            = 0,
         Null            = 1 << 1,
         False           = 1 << 2,
         True            = 1 << 3,

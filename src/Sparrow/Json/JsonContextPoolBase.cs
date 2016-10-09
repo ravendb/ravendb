@@ -57,6 +57,8 @@ namespace Sparrow.Json
                     _stack = new T[4];
                     _stack[0] = context;
                     _stackUsage = 1;
+
+                    return;
                 }
 
                 if (_stackUsage >= _stack.Length)
@@ -171,6 +173,7 @@ namespace Sparrow.Json
                 context = stack.Pop();
                 if (Interlocked.CompareExchange(ref context.InUse, 1, 0) != 0)
                     continue;
+                context.Renew();
                 return new ReturnRequestContext
                 {
                     Parent = this,
@@ -195,11 +198,28 @@ namespace Sparrow.Json
 
             public void Dispose()
             {
-                var stack = Parent._contextPool.Value;
+                var stack = GetCurrentThreadStack();
+                if (stack == null)
+                {
+                    Context.Dispose();
+                    return;
+                }
                 Context.Reset();
                 Interlocked.Exchange(ref Context.InUse, 0);
                 Context.InPoolSince = DateTime.UtcNow;
                 stack.Push(Context);
+            }
+
+            private MutliReaderSingleWriterStack GetCurrentThreadStack()
+            {
+                try
+                {
+                    return Parent._contextPool.Value;
+                }
+                catch (ObjectDisposedException)
+                {
+                    return null;
+                }
             }
         }
 

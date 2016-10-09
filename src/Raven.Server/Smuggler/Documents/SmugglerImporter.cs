@@ -273,7 +273,7 @@ namespace Raven.Server.Smuggler.Documents
         private static void ResetContextAndParser(DocumentsOperationContext context, UnmanagedJsonParser parser)
         {
             parser.ResetStream();
-            context.Reset();
+            context.ResetAndRenew();
             parser.SetStream();
         }
 

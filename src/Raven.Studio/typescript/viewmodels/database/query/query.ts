@@ -56,7 +56,7 @@ class query extends viewModelBase {
     sortBys = ko.observableArray<querySort>();
     indexFields = ko.observableArray<string>();
     transformer = ko.observable<transformerType>();
-    allTransformers = ko.observableArray<transformerDto>();
+    allTransformers = ko.observableArray<Raven.Abstractions.Indexing.TransformerDefinition>();
     isDefaultOperatorOr = ko.observable(true);
     showFields = ko.observable(false);
     indexEntries = ko.observable(false);
@@ -261,21 +261,10 @@ class query extends viewModelBase {
         return deferred;
     }
     
-    private fetchAllTransformers(db: database): JQueryPromise<any> {
-        var deferred = $.Deferred();
-
-        this.allTransformers([]);
-        deferred.resolve();
-        /*TODO
-
-        new getTransformersCommand(db)
+    private fetchAllTransformers(db: database): JQueryPromise<Array<Raven.Abstractions.Indexing.TransformerDefinition>> {
+        return new getTransformersCommand(db)
             .execute()
-            .done((results: transformerDto[]) => {
-                this.allTransformers(results);
-                deferred.resolve();
-            });*/
-
-        return deferred;
+            .done(transformers => this.allTransformers(transformers));
     }
 
     private fetchAllCollections(db: database): JQueryPromise<any> {
@@ -574,14 +563,12 @@ class query extends viewModelBase {
     }
 
     addTransformer() {
-        this.transformer(new transformerType());
+        this.transformer(transformerType.empty());
     }
 
-    selectTransformer(dto: transformerDto) {
-        if (!!dto) {
-            var t = new transformerType();
-            t.initFromLoad(dto);
-            this.transformer(t);
+    selectTransformer(dto: Raven.Abstractions.Indexing.TransformerDefinition) {
+        if (dto) {
+            this.transformer(new transformerType(dto));
             this.runQuery();
         } else {
             this.transformer(null);
@@ -692,12 +679,8 @@ class query extends viewModelBase {
         }
     }
 
-    findTransformerByName(transformerName: string): transformerDto {
-        try {
-            return this.allTransformers().filter((dto: transformerDto) => transformerName === dto.name)[0];
-        } catch (e) {
-            return null;
-        }
+    findTransformerByName(transformerName: string): Raven.Abstractions.Indexing.TransformerDefinition {
+        return this.allTransformers().first(x => x.Name === transformerName);
     }
 
     private getStoredQueryTransformerName(query: storedQueryDto): string {

@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Indexes
                     DocumentDatabase = documentDatabase;
                     _environment = environment;
                     _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{IndexId}");
-                    _contextPool = new TransactionContextPool(_environment, 1024 * 1024 * 32);
+                    _contextPool = new TransactionContextPool(_environment);
                     _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
                     _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                     _indexStorage.Initialize(_environment);
@@ -498,12 +498,13 @@ namespace Raven.Server.Documents.Indexes
             Threading.TryLowerCurrentThreadPriority();
 
             using (CultureHelper.EnsureInvariantCulture())
-            using (
-                var cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown,
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown,
                     _cancellationTokenSource.Token))
             {
                 try
                 {
+                    _contextPool.SetMostWorkInGoingToHappenonThisThread();
+
                     DocumentDatabase.Notifications.OnDocumentChange += HandleDocumentChange;
 
                     while (true)
@@ -670,13 +671,9 @@ namespace Raven.Server.Documents.Indexes
             using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenWriteTransaction())
-            using (
-                CurrentIndexingScope.Current =
-                    new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, indexContext))
+            using (CurrentIndexingScope.Current = new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, indexContext))
             {
-                var writeOperation =
-                    new Lazy<IndexWriteOperation>(
-                        () => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction));
+                var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction));
 
                 using (InitializeIndexingWork(indexContext))
                 {
@@ -729,8 +726,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public abstract IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection,
-            TransactionOperationContext indexContext);
+        public abstract IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         public abstract void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
@@ -1049,11 +1045,10 @@ namespace Raven.Server.Documents.Indexes
                                     x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
 
                         var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
-
                         if (WillResultBeAcceptable(isStale, query, wait) == false)
                         {
                             documentsContext.CloseTransaction();
-                            indexContext.Reset();
+                            indexContext.ResetAndRenew();
 
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 
@@ -1170,7 +1165,7 @@ namespace Raven.Server.Documents.Indexes
                         if (WillResultBeAcceptable(isStale, query, wait) == false)
                         {
                             documentsContext.CloseTransaction();
-                            indexContext.Reset();
+                            indexContext.ResetAndRenew();
 
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 

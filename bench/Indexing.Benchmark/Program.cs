@@ -19,12 +19,12 @@ namespace Indexing.Benchmark
     {
         private const string DbName = "indexing-benchmark";
 
-        private const int NumberOfOrderDocuments = 100000;
+        private const int NumberOfOrderDocuments = 200000;
         private const int NumberOfCompanyDocuments = 50000;
         private const int NumberOfEmployeeDocuments = 50000;
 
         private readonly IDocumentStore _store;
-        private readonly Random _random;
+        private Random _random;
 
         public static void Main(string[] args)
         {
@@ -36,7 +36,7 @@ namespace Indexing.Benchmark
 
         public Program(string url = "http://localhost:8080", int? seed = null)
         {
-            _random = new Random(seed ?? Environment.TickCount);
+            _random = new Random(1);
 
             _store = new DocumentStore
             {
@@ -59,85 +59,11 @@ namespace Indexing.Benchmark
         {
             InsertDocs();
 
-            Console.WriteLine("Starting map benchmark");
-            var mapIndexesBench = new MapIndexesBench(_store, NumberOfOrderDocuments);
-            mapIndexesBench.Execute();
-            Console.WriteLine($"{Environment.NewLine}-----------------------------");
+            _random = new Random(1);
 
-            Console.WriteLine("Starting map-reduce benchmark");
-            var mapReduceIndexesBench = new MapReduceIndexesBench(_store, NumberOfOrderDocuments);
-            mapReduceIndexesBench.Execute();
-            Console.WriteLine($"{Environment.NewLine}-----------------------------");
+            InsertDocs();
 
-            _store.DatabaseCommands.Admin.StopIndexing();
-
-            Console.WriteLine($"Indexing stopped. Number of indexes in the database: {_store.DatabaseCommands.GetStatistics().Indexes.Length}");
-
-            var staleIndexes = new HashSet<string>();
-
-            foreach (var indexName in _store.DatabaseCommands.GetIndexNames(0, 1024))
-            {
-                _store.DatabaseCommands.ResetIndex(indexName);
-                staleIndexes.Add(indexName);
-            }
-
-            Console.WriteLine("All indexes have been reset");
-
-            _store.DatabaseCommands.Admin.StartIndexing();
-
-            var sw = Stopwatch.StartNew();
-
-            Console.WriteLine("Indexing is working again. Waiting for non stale results");
-
-            WaitForNonStaleIndexes(staleIndexes, sw);
-
-            _store.DatabaseCommands.Admin.StopIndexing();
-
-            Console.WriteLine($"Indexing stopped. Number of indexes in the database: {_store.DatabaseCommands.GetStatistics().Indexes.Length}");
-
-            staleIndexes = new HashSet<string>();
-
-            foreach (var indexName in _store.DatabaseCommands.GetIndexNames(0, 1024))
-            {
-                _store.DatabaseCommands.ResetIndex(indexName);
-                staleIndexes.Add(indexName);
-            }
-
-            Console.WriteLine("All indexes have been reset");
-
-            var numberOfAdditionaMapIndexes = 10;
-            var numberOfAdditionalMapReduceIndexes = 5;
-
-            Console.WriteLine($"Putting additional indexes: {numberOfAdditionaMapIndexes} map and {numberOfAdditionalMapReduceIndexes} map-reduce");
-
-            for (int i = 0; i < numberOfAdditionaMapIndexes / 2; i++)
-            {
-                var employeesByNameAndAddress = new MapIndexesBench.Employees_ByNameAndAddress(i);
-                employeesByNameAndAddress.Execute(_store);
-
-                staleIndexes.Add(employeesByNameAndAddress.IndexName);
-
-                var companiesByNameAndEmail = new MapIndexesBench.Companies_ByNameAndEmail(i);
-                companiesByNameAndEmail.Execute(_store);
-
-                staleIndexes.Add(companiesByNameAndEmail.IndexName);
-            }
-
-            for (int i = 0; i < numberOfAdditionalMapReduceIndexes; i++)
-            {
-                var employeesGroupByCountry = new MapReduceIndexesBench.Employees_GroupByCountry(i);
-                employeesGroupByCountry.Execute(_store);
-
-                staleIndexes.Add(employeesGroupByCountry.IndexName);
-            }
-
-            _store.DatabaseCommands.Admin.StartIndexing();
-
-            sw = Stopwatch.StartNew();
-
-            Console.WriteLine($"Indexing is working again. Number of indexes in the database: {_store.DatabaseCommands.GetStatistics().Indexes.Length}. Waiting for non stale results");
-
-            WaitForNonStaleIndexes(staleIndexes, sw);
+            return;
         }
 
         private void WaitForNonStaleIndexes(HashSet<string> staleIndexes, Stopwatch sw)
@@ -180,6 +106,7 @@ namespace Indexing.Benchmark
                     {
                         var order = new Order
                         {
+                            Id = "orders/" + i,
                             Company = $"companies/{_random.Next(1, NumberOfCompanyDocuments)}",
                             Employee = $"employees/{_random.Next(1, NumberOfEmployeeDocuments)}",
                             Lines = CreateOrderLines(_random.Next(0, 15)),
@@ -208,6 +135,7 @@ namespace Indexing.Benchmark
                     {
                         var company = new Company()
                         {
+                            Id = "companies/" + i,
                             Name = $"Company-{i}",
                             Desc = "Lorem ipsum ble ble ble",
                             Contacts = new List<Contact>()
@@ -233,6 +161,7 @@ namespace Indexing.Benchmark
                     {
                         var employee = new Employee()
                         {
+                            Id = "employees/" + i,
                             FirstName = $"FirstName-{i % 123}",
                             LastName = $"LastName-{i % 456}",
                             Address = new Address()

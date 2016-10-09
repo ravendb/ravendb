@@ -22,7 +22,7 @@ namespace Voron.Data.Fixed
         internal const int BranchEntrySize = sizeof(long) + sizeof(long);
         private readonly LowLevelTransaction _tx;
         private readonly Tree _parent;
-        private readonly Slice _treeName;
+        private Slice _treeName;
         private readonly ushort _valSize;
         private readonly int _entrySize;
         private readonly int _maxEmbeddedEntries;
@@ -49,18 +49,21 @@ namespace Voron.Data.Fixed
             return header->ValueSize;
         }
 
-        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true)
+        public void RepurposeInstance(Slice treeName, bool clone)
         {
-            _tx = tx;
-            _parent = parent;
-            _valSize = valSize;
-            _treeName = clone ? treeName.Clone(_tx.Allocator) : treeName;
-            _pageLocator = new PageLocator(tx, _tx.Flags == TransactionFlags.Read ? 16 : 8);
+            if (clone)
+            {
+                if(_treeName .HasValue)
+                    _tx.Allocator.Release(ref _treeName.Content);
 
-            _entrySize = sizeof(long) + _valSize;
-            _maxEmbeddedEntries = 512 / _entrySize;
-            if (_maxEmbeddedEntries == 0)
-                throw new ArgumentException("The value size must be ");
+                _treeName = treeName.Clone(_tx.Allocator);
+            }
+            else
+            {
+                _treeName = treeName;
+            }
+
+            _type = null;
 
             var header = (FixedSizeTreeHeader.Embedded*)_parent.DirectRead(_treeName);
             if (header == null)
@@ -72,14 +75,41 @@ namespace Voron.Data.Fixed
                 case RootObjectType.FixedSizeTree:
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException("Tried to open '" + treeName + "' as FixedSizeTree, but is actually " + header->RootObjectType);
+                    ThrowInvalidFixedSizeTree(treeName, header);
+                    break; // will never get here
             }
 
             _type = header->RootObjectType;
 
-            if (header->ValueSize != valSize)
-                throw new InvalidOperationException("The expected value len " + valSize + " does not match actual value len " +
-                                                    header->ValueSize + " for " + _treeName);
+            if (header->ValueSize != _valSize)
+                ThrowInvalidFixedSizeTreeSize(header);
+        }
+
+        private void ThrowInvalidFixedSizeTreeSize(FixedSizeTreeHeader.Embedded* header)
+        {
+            throw new InvalidOperationException("The expected value len " + _valSize + " does not match actual value len " +
+                                                header->ValueSize + " for " + _treeName);
+        }
+
+        private static void ThrowInvalidFixedSizeTree(Slice treeName, FixedSizeTreeHeader.Embedded* header)
+        {
+            throw new ArgumentOutOfRangeException("Tried to open '" + treeName + "' as FixedSizeTree, but is actually " +
+                                                  header->RootObjectType);
+        }
+
+        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true)
+        {
+            _tx = tx;
+            _parent = parent;
+            _valSize = valSize;
+            _pageLocator = new PageLocator(tx, _tx.Flags == TransactionFlags.Read ? 16 : 8);
+
+            _entrySize = sizeof(long) + _valSize;
+            _maxEmbeddedEntries = 512 / _entrySize;
+            if (_maxEmbeddedEntries == 0)
+                throw new ArgumentException("The value size must be ");
+
+            RepurposeInstance(treeName, clone);
         }
 
         public long[] Debug(FixedSizeTreePage p)
@@ -1030,6 +1060,7 @@ namespace Voron.Data.Fixed
 
         private void RemoveEntryFromPage(FixedSizeTreePage page, int pos)
         {
+            System.Diagnostics.Debug.Assert(pos >= 0 && pos < page.NumberOfEntries);
             page.NumberOfEntries--;
             var size = (ushort)(page.IsLeaf ? _entrySize : BranchEntrySize);
             if (pos == 0)

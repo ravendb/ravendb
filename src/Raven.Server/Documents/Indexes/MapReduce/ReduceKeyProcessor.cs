@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using Raven.Client.Linq;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private AllocatedMemoryData _buffer;
         private int _bufferPos;
         private ulong _singleValueHash;
-        private int _numberOfReduceFields;
+        private readonly int _numberOfReduceFields;
         private int _processedFields;
 
         public ReduceKeyProcessor(int numberOfReduceFields, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool)
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        public void Process(object value, bool internalCall = false)
+        public void Process(ByteStringContext context,object value, bool internalCall = false)
         {
             if (internalCall == false)
                 _processedFields++;
@@ -88,15 +88,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var s = value as string;
             if (s != null)
             {
-                fixed (char* p = s)
+                Slice str;
+                using(Slice.From(context,s,out str))
                 {
                     switch (_mode)
                     {
                         case Mode.SingleValue:
-                            _singleValueHash = Hashing.XXHash64.Calculate((byte*)p, (ulong)s.Length * sizeof(char));
+                            _singleValueHash = Hashing.XXHash64.Calculate(str.Content.Ptr, (ulong)str.Size);
                             break;
                         case Mode.MultipleValues:
-                            CopyToBuffer((byte*)p, s.Length * sizeof(char));
+                            CopyToBuffer(str.Content.Ptr, str.Size);
                             break;
                     }
                 }
@@ -229,7 +230,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     // this call ensures properties to be returned in the same order, regardless their storing order
                     var property = json.GetPropertyByIndex(i);
 
-                    Process(property.Item2, true);
+                    Process(context, property.Item2, true);
                 }
 
                 return;
@@ -246,7 +247,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 foreach (var item in array)
                 {
-                    Process(item, true);
+                    Process(context, item, true);
                 }
 
                 return;

@@ -1,0 +1,1702 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="theme-color" content="#FFF">
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <title></title>
+
+    <!--  <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+      <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+      <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+      <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+      <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+      <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+      <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+      <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+      <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+      <link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png">
+      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+      <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+      <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+      <link rel="manifest" href="/manifest.json">
+      <meta name="msapplication-TileColor" content="#ffffff">
+      <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+      <meta name="theme-color" content="#ffffff">
+      <link rel="shortcut icon" href="favicon.ico">
+      <link rel="icon" href="favicon.ico">-->
+
+    <link href='https://fonts.googleapis.com/css?family=Lato:400,300,700,900,400italic,700italic' rel='stylesheet' type='text/css'>
+
+    <link rel="stylesheet" type="text/css" href="./content/css/bootstrap/bootstrap.css" />
+    <link rel="stylesheet" type="text/css" href="./content/css/styles.css">
+
+    <!--[if IE 8]>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+</head>
+<body>
+    <div class="processing-spinner"></div>
+    <nav id="topbar" class="navbar navbar-inverse navbar-fixed-top" >
+        <div class="container-fluid">
+            <div class="navbar-header">
+    
+                <a class="navbar-brand hidden-xs" href="#">RavenDB</a>
+            </div>
+            <div id="navbar">
+                <ul class="nav navbar-nav navbar-right">
+    
+                    <li class="pull-left"><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" id="menu-toggle" data-target="#main-menu" data-class="show-menu"></a></li>
+                    <li class="btn-toggle" data-target="#notification-toggle" data-class="active"><a href="#" id="notification-toggle" class="btn-toggle" data-target="#notification-center" data-class="show-notifications"><span class="icon-notifications"></span><span class="notification-counter show" data-count="2">2</span></a></li>
+                    <li><a href="#" class="icon-help btn-toggle" data-target="body" data-class="processing"></a></li>
+                    <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
+                </ul>
+                <div class="inputs-container hidden-xs">
+                    <div class="search-container active">
+                        <input type="search" class="form-control omnisearch" placeholder="search" />
+                        <div class="icon-search"></div>
+                        <div class="autocomplete-list box-container">
+                            <div class="scroller">
+                                <section>
+                                    <h4>Menu</h4>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-documents"></span>Compact</a></li>
+                                    </ul>
+                                </section>
+                                <section>
+                                    <h4>Documents</h4>
+                                    <ul>
+                                        <li>
+                                            <a href="#"><span class="icon-document-group" style="color:#93278f;"></span>Companies</a>
+                                            <ul>
+                                                <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/1</a></li>
+                                                <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/2</a></li>
+                                                <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/3</a></li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <a href="#"><span class="icon-document-group" style="color:#ff0351;"></span>Computers</a>
+                                            <ul>
+                                                <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Computers/1</a></li>
+                                                <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/2</a></li>
+                                                <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/3</a></li>
+                                            </ul>
+                                        </li>
+                                        <li><a href="#" class="more">MORE</a></li>
+                                    </ul>
+                                </section>
+                                <section>
+                                    <h4>Indexes</h4>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/ByCompany</a></li>
+                                    </ul>
+                                </section>
+                                <section>
+                                    <h4>Transformers</h4>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/Company</a></li>
+                                    </ul>
+                                </section>
+                                <section class="text-center">
+                                    <div class="global-spinner"></div>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="resource-switcher-container active">
+                        <div class="form-control btn-toggle resource-switcher">
+                            <span class="database">db/IdentityTryOuts</span>
+                        </div>
+                        <div class="box-container">
+                            <div class="resource-filter-container">
+                                <input type="search" class="resource-filter form-control" placeholder="filter" />
+                            </div>
+                            <div class="scroller">
+                                <section>
+                                    <ul class="database-list">
+                                        <li><a href="#" class="database">brickpile</a></li>
+                                        <li><a href="#" class="database">brics</a></li>
+                                        <li><a href="#" class="database">fs</a></li>
+                                        <li><a href="#" class="database">IdentityTests</a></li>
+                                        <li><a href="#" class="database">IdentityTryOuts</a></li>
+                                        <li><a href="#" class="filesystem">jspatchtest</a></li>
+                                        <li><a href="#" class="database">logs</a></li>
+                                        <li><a href="#" class="database">Media</a></li>
+                                        <li><a href="#" class="database">Northwind</a></li>
+                                        <li><a href="#" class="database">QuartzDemo</a></li>
+                                        <li><a href="#" class="database">r1</a></li>
+                                        <li><a href="#" class="database">rep1</a></li>
+                                        <li><a href="#" class="filesystem">rep2</a></li>
+                                        <li><a href="#" class="filesystem">sortings</a></li>
+                                        <li><a href="#" class="database">T1</a></li>
+                                        <li><a href="#" class="database">test</a></li>
+                                        <li><a href="#" class="counter">test2</a></li>
+                                        <li><a href="#" class="timeseries">ThisIsTest</a></li>
+                                        <li><a href="#" class="database">brickpile</a></li>
+                                        <li><a href="#" class="database">brics</a></li>
+                                        <li><a href="#" class="database">fs</a></li>
+                                        <li><a href="#" class="database">IdentityTests</a></li>
+                                        <li><a href="#" class="database">IdentityTryOuts</a></li>
+                                        <li><a href="#" class="filesystem">jspatchtest</a></li>
+                                        <li><a href="#" class="database">logs</a></li>
+                                        <li><a href="#" class="database">Media</a></li>
+                                        <li><a href="#" class="database">Northwind</a></li>
+                                        <li><a href="#" class="database">QuartzDemo</a></li>
+                                        <li><a href="#" class="database">r1</a></li>
+                                        <li><a href="#" class="database">rep1</a></li>
+                                        <li><a href="#" class="filesystem">rep2</a></li>
+                                        <li><a href="#" class="filesystem">sortings</a></li>
+                                        <li><a href="#" class="database">T1</a></li>
+                                        <li><a href="#" class="database">test</a></li>
+                                        <li><a href="#" class="counter">test2</a></li>
+                                        <li><a href="#" class="timeseries">ThisIsTest</a></li>
+                                    </ul>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+    
+                </div>
+            </div><!--/.nav-collapse -->
+        </div>
+    </nav>
+    <nav id="main-menu" class="main-menu">
+        <div class="level-0" data-level-name="Menu">
+            <ul>
+                <li class="arrow-right">
+                    <a href="#" title="Documents"><span class="icon-documents"></span>Documents</a>
+                    <div class="level level-1">
+                        <h2>Documents</h2>
+                        <a class="back" href="#" title="back">back</a>
+                        <ul>
+                            <li><a href="#" title="Documents"><span class="icon-plus"></span>Documents</a></li>
+                            <li><a href="#" title="Conflicts"><span class="icon-plus"></span>Conflicts</a></li>
+                            <li><a href="#" title="Patch"><span class="icon-plus"></span>Patch</a></li>
+                        </ul>
+                    </div>
+                </li>
+                <li class="arrow-right">
+                    <a href="#" title="Indexes"><span class="icon-indexes"></span>Indexes</a>
+                    <div class="level level-1" data-level-name="Indexes">
+                        <h2>Indexes</h2>
+                        <a class="back" href="#" title="back">back</a>
+                        <ul>
+                            <li><a href="#" title="Indexes-list"><span class="icon-list"></span>Indexes list</a></li>
+                            <li><a href="#" title="Merge sugestions"><span class="icon-merge"></span>Merge sugestions</a></li>
+                            <hr />
+                            <li><a href="#" title="new-index"><span class="icon-plus"></span>New index</a></li>
+                            <li><a href="#" title="Merge sugestions"><span class="icon-export"></span>Export indexes</a></li>
+                            <li><a href="#" title="Indexes-list"><span class="icon-import"></span>Import indexes</a></li>
+                        </ul>
+                    </div>
+                </li>
+                <li class="arrow-right">
+                    <a href="#" title="Query"><span class="icon-query"></span>Query</a>
+                    <div class="level level-1" data-level-name="Query">
+                        <h2>Query</h2>
+                        <a class="back" href="#" title="back">back</a>
+                        <ul>
+                            <li><a href="#" title="Query"><span class="icon-plus"></span>Query</a></li>
+                            <li><a href="#" title="Reporting"><span class="icon-plus"></span>Reporting</a></li>
+                            <li><a href="#" title="Data exploration"><span class="icon-plus"></span>Data exploration</a></li>
+                        </ul>
+                    </div>
+                </li>
+                <li class="arrow-right">
+                    <a href="#" title="New"><span class="icon-new"></span>New</a>
+                    <div class="level level-1" data-level-name="New">
+                        <h2>New</h2>
+                        <a class="back" href="#">back</a>
+                        <ul>
+                            <li><a href="#"><span class="icon-plus"></span>Document</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Index</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Transformer</a></li>
+                        </ul>
+                    </div>
+                </li>
+                <h3>MANAGE</h3>
+                <li class="arrow-right">
+                    <a href="#" title="Tasks"><span class="icon-tasks"></span>Tasks</a>
+                    <div class="level level-1" data-level-name="Tasks">
+                        <h2>Tasks</h2>
+                        <a class="back" href="#" title="back">back</a>
+                        <ul>
+                            <li><a href="#"><span class="icon-plus"></span>Import Database</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Export Database</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Toggle Indexing</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Subscriptions</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Create Sample Data</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>CSV Import</a></li>
+                        </ul>
+                    </div>
+                </li>
+                <li class="arrow-right">
+                    <a href="#" title="Settings"><span class="icon-settings"></span>Settings</a>
+                    <div class="level level-1" data-level-name="Settings">
+                        <h2>Settings</h2>
+                        <a class="back" href="#">back</a>
+                        <ul>
+                            <li><a href="#"><span class="icon-plus"></span>Database Settings</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Replication</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>ETL</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Custom Functions</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Studio Config</a></li>
+                        </ul>
+                    </div>
+                </li>
+    
+                <li class="arrow-right">
+                    <a href="#" title="Stats"><span class="icon-stats"></span>Stats</a>
+                    <div class="level level-1" data-level-name="Stats">
+                        <h2>Stats</h2>
+                        <a class="back" href="#" title="back">back</a>
+                        <ul>
+                            <li><a href="#"><span class="icon-plus"></span>Stats</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Indexing</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Request Tracking</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Logs</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Running Tasks</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Alerts</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Index Errors</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Replication Stats</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>User Info</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Map/Reduce Visualizer</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Debug</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Storage</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Gather Debug Info</a></li>
+                        </ul>
+                    </div>
+                </li>
+    
+                <li class="arrow-right">
+                    <a href="#" title="Manage server"><span class="icon-manage-server"></span>Manage server</a>
+                    <div class="level level-1" data-level-name="Manage server">
+                        <h2>Manage server</h2>
+                        <a class="back" href="#" title="back">back</a>
+                        <ul>
+                            <li><a href="#"><span class="icon-plus"></span>API Keys</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Windows Authentication</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Cluster</a></li>
+                            <li class="arrow-right">
+                                <a href="#"><span class="icon-plus"></span>Global Configuration</a>
+                                <div class="level level-2" data-level-name="Global Configuration">
+                                    <h2>Global Configuration</h2>
+                                    <a class="back" href="#">back</a>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-plus"></span>Periodic export</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>Cluster-wide database settings</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>Replication</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>SQL Replication</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>Quotas</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>Custom functions</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>Versioning</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li><a href="#"><span class="icon-plus"></span>Server Smuggling</a></li>
+                            <li class="arrow-right">
+                                <a href="#"><span class="icon-plus"></span>Backup</a>
+                                <div class="level level-2" data-level-name="Backup">
+                                    <h2>Backup</h2>
+                                    <a class="back" href="#">back</a>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-plus"></span>Database</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>File System</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="arrow-right">
+                                <a href="#"><span class="icon-plus"></span>Compact</a>
+                                <div class="level level-2" data-level-name="Compact">
+                                    <h2>Compact</h2>
+                                    <a class="back" href="#">back</a>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-plus"></span>Database</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>File System</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="arrow-right">
+                                <a href="#"><span class="icon-plus"></span>Restore</a>
+                                <div class="level level-2" data-level-name="Restore">
+                                    <h2>Restore</h2>
+                                    <a class="back" href="#">back</a>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-plus"></span>Database</a></li>
+                                        <li><a href="#"><span class="icon-plus"></span>File System</a></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li><a href="#"><span class="icon-plus"></span>Admin Logs</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Server Topology</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Traffic Watch</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>License Information</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Gather Debug Info</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>IO Test</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Disk IO Viewer</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Administrator JS Console</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>Studio Config</a></li>
+                            <li><a href="#"><span class="icon-plus"></span>To System Database</a></li>
+                        </ul>
+                    </div>
+                </li>
+                <li><a href="#" title="License"><span class="icon-license"></span>License</a></li>
+            </ul>
+        </div>
+    
+    </nav>
+    <div id="notification-center" >
+        <div class="panel panel-success">
+            <div class="panel-body">
+                <a href="#" class="icon-cancel dismiss-notification"></a>
+                <h3>Importing success</h3>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+                <div class="text-right">
+                    <a href="#" class="btn btn-sm">Details</a>
+                    <a href="#" class="btn btn-sm">
+                        <i class="icon-cancel"></i>
+                        <span>Dismiss</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    
+        <div class="panel panel-warning">
+            <div class="panel-body">
+                <a href="#" class="icon-cancel dismiss-notification"></a>
+                <h3>Importing failed</h3>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+                <p><span class="global-spinner spinner-xs"></span> restoring</p>
+            </div>
+        </div>
+    
+        <div class="panel panel-danger">
+            <div class="panel-body">
+                <a href="#" class="icon-cancel dismiss-notification"></a>
+                <h3><span class="icon-warning"></span> Database error</h3>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+                <div class="text-right">
+                    <a href="#" class="btn btn-sm">Details</a>
+                    <a href="#" class="btn btn-sm">
+                        <i class="icon-cancel"></i>
+                        <span>Dismiss</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    
+        <div class="panel">
+            <div class="panel-body">
+                <a href="#" class="icon-cancel dismiss-notification"></a>
+                <h3>Importing progress</h3>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. In auctor varius sem, id tempor ex. </p>
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="70"
+                    aria-valuemin="0" aria-valuemax="100" style="width:70%">
+                    <span class="sr-only">70% Complete</span>
+                </div>
+            </div>
+            <div class="text-right">
+                <a href="#" class="btn btn-sm btn-default">Details</a>
+                <a href="#" class="btn btn-sm btn-danger">
+                    <i class="icon-cancel"></i>
+                    <span>Cancel</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="panel">
+        <div class="panel-body">
+            <a href="#" class="icon-cancel dismiss-notification"></a>
+            <h3 class="text-warning"><span class="icon-database"></span> Your storage is full</h3>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. In auctor varius sem, id tempor ex. Nam hendrerit ultrices imperdiet. Ut metus nisl, posuere a mi et, lobortis commodo quam. Praesent a tortor a ante ultrices tempor. Nullam mattis nisl nisl, consectetur hendrerit tellus pellentesque id.</p>
+        </div>
+    </div>
+    </div>
+
+    <div class="container-fluid content-container">
+        <div class="content-container-margin">
+            <h1>Style quide and components</h1>
+            <hr />
+            <h2>Panels</h2>
+            <div class="row">
+                <div class="col-sm-4">
+                    <div class="panel">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">.panel</h3>
+                        </div>
+                        <div class="panel-body">
+                            Basic panel example
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-4">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Panel title</h3>
+                        </div>
+                        <div class="panel-body">
+                            .panel-default
+                        </div>
+                        <div class="panel-footer">Panel footer</div>
+                    </div>
+                </div>
+
+                <div class="col-sm-4">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Panel title</h3>
+                        </div>
+                        <div class="panel-body">
+                            .panel-default<br />
+                            <button class="btn btn-primary">btn</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-sm-3">
+                    <div class="panel panel-success">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">.panel</h3>
+                        </div>
+                        <div class="panel-body">
+                            .panel-success<br />
+                            <button class="btn btn-success">btn</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-3">
+                    <div class="panel panel-info">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Panel title</h3>
+                        </div>
+                        <div class="panel-body">
+                            .panel-info<br />
+                            <button class="btn btn-info">btn</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-3">
+                    <div class="panel panel-warning">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Panel title</h3>
+                        </div>
+                        <div class="panel-body">
+                            .panel-warning<br />
+                            <button class="btn btn-warning">btn</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-3">
+                    <div class="panel panel-danger">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Panel title</h3>
+                        </div>
+                        <div class="panel-body">
+                            .panel-danger<br />
+                            <button class="btn btn-danger">btn</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <hr />
+            <h2>Text styles</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <h1><i class="icon-arrow-filled-right"></i><span>Header 1</span></h1>
+                    <h2><i class="icon-arrow-filled-right"></i><span>Header 2</span></h2>
+                    <h3><i class="icon-arrow-filled-right"></i><span>Header 3</span></h3>
+                    <h4><i class="icon-arrow-filled-right"></i><span>Header 4</span></h4>
+                    <h5><i class="icon-arrow-filled-right"></i><span>Header 5</span></h5>
+                    <p class="lead"><i class="icon-arrow-filled-right"></i><span>Lead paragraph</span></p>
+                    <p><i class="icon-arrow-filled-right"></i><span>Paragraph</span></p>
+                </div>
+            </section>
+
+            <hr />
+            <h2>Icons</h2>
+            <section id="icons-list">
+                <div class="row">
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-filesystem"></div>
+                                <hr />
+                                <span>.icon-filesystem</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-swap"></div>
+                                <hr />
+                                <span>.icon-swap</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-force"></div>
+                                <hr />
+                                <span>.icon-force</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-unlock"></div>
+                                <hr />
+                                <span>.icon-unlock</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-lock"></div>
+                                <hr />
+                                <span>.icon-lock</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-lock-error"></div>
+                                <hr />
+                                <span>.icon-lock-error</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-lock-sidebyside"></div>
+                                <hr />
+                                <span>.icon-lock-sidebyside</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-revert"></div>
+                                <hr />
+                                <span>.icon-revert</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-reset"></div>
+                                <hr />
+                                <span>.icon-reset</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-play"></div>
+                                <hr />
+                                <span>.icon-play</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-pause"></div>
+                                <hr />
+                                <span>.icon-pause</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-stop"></div>
+                                <hr />
+                                <span>.icon-stop</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-merge"></div>
+                                <hr />
+                                <span>.icon-merge</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-import"></div>
+                                <hr />
+                                <span>.icon-import</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-export"></div>
+                                <hr />
+                                <span>.icon-export</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-index"></div>
+                                <hr />
+                                <span>.icon-index</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-menu"></div>
+                                <hr />
+                                <span>.icon-menu</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-newtab"></div>
+                                <hr />
+                                <span>.icon-newtab</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-up"></div>
+                                <hr />
+                                <span>.icon-arrow-up</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-right"></div>
+                                <hr />
+                                <span>.icon-arrow-right</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-down"></div>
+                                <hr />
+                                <span>.icon-arrow-down</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-left"></div>
+                                <hr />
+                                <span>.icon-arrow-left</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-filled-up"></div>
+                                <hr />
+                                <span>.icon-arrow-filled-up</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-filled-right"></div>
+                                <hr />
+                                <span>.icon-arrow-filled-right</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-filled-down"></div>
+                                <hr />
+                                <span>.icon-arrow-filled-down</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-filled-left"></div>
+                                <hr />
+                                <span>.icon-arrow-filled-left</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-cancel"></div>
+                                <hr />
+                                <span>.icon-cancel</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-collapse"></div>
+                                <hr />
+                                <span>.icon-collapse</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-checkbox"></div>
+                                <hr />
+                                <span>.icon-checkbox</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-code"></div>
+                                <hr />
+                                <span>.icon-code</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-database"></div>
+                                <hr />
+                                <span>.icon-database</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-document"></div>
+                                <hr />
+                                <span>.icon-document</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-document2"></div>
+                                <hr />
+                                <span>.icon-document2</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-document-group"></div>
+                                <hr />
+                                <span>.icon-document-group</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-help"></div>
+                                <hr />
+                                <span>.icon-help</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-info"></div>
+                                <hr />
+                                <span>.icon-info</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-list"></div>
+                                <hr />
+                                <span>.icon-list</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-menu-collapse"></div>
+                                <hr />
+                                <span>.icon-menu-collapse</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-menu-expand"></div>
+                                <hr />
+                                <span>.icon-menu-expand</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-notifications"></div>
+                                <hr />
+                                <span>.icon-notifications</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-plus"></div>
+                                <hr />
+                                <span>.icon-plus</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-save"></div>
+                                <hr />
+                                <span>.icon-save</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-search"></div>
+                                <hr />
+                                <span>.icon-search</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-settings"></div>
+                                <hr />
+                                <span>.icon-settings</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-trash"></div>
+                                <hr />
+                                <span>.icon-trash</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-warning"></div>
+                                <hr />
+                                <span>.icon-warning</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-danger"></div>
+                                <hr />
+                                <span>.icon-danger</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-star-filled"></div>
+                                <hr />
+                                <span>.icon-star-filled</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-star"></div>
+                                <hr />
+                                <span>.icon-star</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-recent"></div>
+                                <hr />
+                                <span>.icon-recent</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-newline"></div>
+                                <hr />
+                                <span>.icon-newline</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-link"></div>
+                                <hr />
+                                <span>.icon-indent</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-edit"></div>
+                                <hr />
+                                <span>.icon-edit</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-copy"></div>
+                                <hr />
+                                <span>.icon-copy</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-copy-to-clipboard"></div>
+                                <hr />
+                                <span>.icon-copy-to-clipboard</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-cut"></div>
+                                <hr />
+                                <span>.icon-cut</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-paste"></div>
+                                <hr />
+                                <span>.icon-paste</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-clone"></div>
+                                <hr />
+                                <span>.icon-clone</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-circle"></div>
+                                <hr />
+                                <span>.icon-circle</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-circle-filled"></div>
+                                <hr />
+                                <span>.icon-circle-filled</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-edited"></div>
+                                <hr />
+                                <span>.icon-edited</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-check"></div>
+                                <hr />
+                                <span>.icon-check</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <hr />
+            <h2>Elements</h2>
+            <section>
+                <div class="row">
+                    <div class="col-md-6 col-xl-4">
+                        <div class="panel">
+                            <div class="panel-body">
+                                <h3>Buttons</h3>
+                                <hr />
+                                <h5>colors:</h5>
+                                <div class="row text-center">
+                                    <div class="col-xs-6">
+                                        <p><button class="btn"><i class="icon-document"></i> <span>.btn</span></button></p>
+                                        <p><button class="btn btn-default"><i class="icon-document"></i><span>.btn-default</span></button></p>
+                                        <p><button class="btn btn-primary"><i class="icon-star"></i><span>.btn-primary</span></button></p>
+                                        <p><button class="btn btn-success"><i class="icon-save"></i><span>.btn.btn-success</span></button></p>
+                                    </div>
+                                    <div class="col-xs-6">
+                                        <p><button class="btn btn-info"><i class="icon-info"></i><span>.btn.btn-info</span></button></p>
+                                        <p><button class="btn btn-warning"><i class="icon-warning"></i><span>.btn.btn-warning</span></button></p>
+                                        <p><button class="btn btn-danger"><i class="icon-danger"></i><span>.btn.btn-danger</span></button></p>
+                                    </div>
+                                </div>
+                                <hr />
+                                <h5>sizes:</h5>
+                                <p class="text-center">
+                                    <button class="btn btn-xs btn-default">.btn-xs</button>
+                                    <button class="btn btn-sm btn-default">.btn-sm</button>
+                                    <button class="btn btn-default">default</button>
+                                    <button class="btn btn-lg btn-default">.btn-lg</button>
+                                </p>
+                                <h5>Addons:</h5>
+                                <p class="text-center">
+
+                                    <button class="btn btn-xs btn-default">
+                                        <i class="icon-info"></i>
+                                        <span>icon-info</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <button class="btn btn-sm btn-default">
+                                        <i class="icon-info"></i>
+                                        <span>icon-info</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <button class="btn btn-default">
+                                        <i class="icon-info"></i>
+                                        <span>icon-info</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                </p>
+                                <p class="text-center">
+                                    <button class="btn btn-lg btn-default">
+                                        <i class="icon-info"></i>
+                                        <span>icon-info</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <button class="btn btn-default btn-spinner">
+                                        .btn-spinner
+                                        <span class="caret"></span>
+                                    </button>
+                                </p>
+
+                                <hr />
+                                <h5>description:</h5>
+                                <p>Hilights interactive buttons and links</p>
+                                <hr />
+                                <h5>code:</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="panel">
+                            <div class="panel-body">
+                                <h3>Global spinner</h3>
+                                <hr />
+                                <h5>preview:</h5>
+                                <div class="global-spinner"></div>
+                                <hr />
+                                <h5>description:</h5>
+                                <p>Indicates background processess</p>
+                                <hr />
+                                <h5>code:</h5>
+                                <code>
+                                    <pre>
+<div class="global-spinner"></div>
+</pre>
+                                </code>
+                            </div>
+                        </div>
+                    </div>
+            </section>
+            <h2>forms</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-sm-3">
+                            <p>.form-control</p>
+                        </div>
+                        <div class="col-sm-9">
+                            <input class="form-control" placeholder="placeholder" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-3">
+                            <p>.input-group with .input-group-addon</p>
+                        </div>
+                        <div class="col-sm-9">
+                            <div class="form-group">
+                                <div class="input-group">
+                                    <div class="input-group-addon">addon</div>
+                                    <input class="form-control" placeholder="placeholder">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-3">
+                            <p>file-input</p>
+                        </div>
+                        <div class="col-sm-9">
+                            <div class="input-group file-input">
+                                <input required="" type="file" tabindex="-1" name="importFile" id="importFile" accept="">
+                                <span class="static-name form-control">Select file...</span>
+                                <span class="input-group-btn">
+                                    <label for="importFile" class="btn btn-default">
+                                        <i class="icon-document"></i>
+                                        <span>Browse</span>
+                                    </label>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+            </section>
+            <h2>Inline editor</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <p>
+                        <div class="editable-input-inline" id="editable-input-example">
+                            <span class="value-container">
+                                <span class="static-name padding padding-xs">234758972348</span>
+                                <input type="text" class="form-control edit-inline padding padding-xs" value="234758972348">
+                            </span>
+                            &nbsp;
+                            <button class="edit-button btn-toggle btn btn-sm" data-target="#editable-input-example" data-class="edit">
+                                <i class="icon-edit"></i>
+                                <span class="text"></span>
+                            </button>
+
+                        </div>
+                    </p>
+                    <small class="bg-info padding padding-sm">
+                        <span class="icon-info"></span> If you want to add padding to the text please rememer to add padding classes (eg. ".padding.padding-sm") to both .statnic-name and .edit-inline.
+                    </small>
+                </div>
+            </section>
+            <h2>Toggles</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <form role="form">
+                        <div class="row">
+                            <div class="col-md-4">
+
+                                <h3>
+                                    Basic
+                                </h3>
+                                <hr />
+                                <p>
+                                    Supports bootstrap brand colors: <code>.toggle-primary</code>, <code>.toggle-info</code> etc.
+                                </p>
+                                <div class="toggle">
+                                    <input id="toggle1" class="styled" type="checkbox">
+                                    <label for="toggle1">
+                                        Default
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-primary">
+                                    <input id="toggle2" class="styled" type="checkbox" checked>
+                                    <label for="toggle2">
+                                        Primary
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-success">
+                                    <input id="toggle3" class="styled" type="checkbox">
+                                    <label for="toggle3">
+                                        Success
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-info">
+                                    <input id="toggle4" class="styled" type="checkbox">
+                                    <label for="toggle4">
+                                        Info
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-warning">
+                                    <input id="toggle5" type="checkbox" class="styled" checked>
+                                    <label for="toggle5">
+                                        Warning
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-danger">
+                                    <input id="toggle6" type="checkbox" class="styled" checked>
+                                    <label for="toggle6">
+                                        Check me out
+                                    </label>
+                                </div>
+                                <p>Checkboxes without label text</p>
+                                <div class="toggle">
+                                    <input type="checkbox" class="styled" id="singletoggle1" value="option1" aria-label="Single toggle One">
+                                    <label></label>
+                                </div>
+                                <div class="toggle toggle-primary">
+                                    <input type="checkbox" class="styled styled-primary" id="singletoggle2" value="option2" checked aria-label="Single toggle Two">
+                                    <label></label>
+                                </div>
+                                <p>Checkboxes with indeterminate state</p>
+                                <div class="toggle toggle-primary">
+                                    <input id="indeterminatetoggle" class="styled" type="checkbox" onclick="changeState(this)">
+                                    <label></label>
+                                </div>
+                                <p>Inline togglees</p>
+                                <div class="toggle toggle-inline">
+                                    <input type="checkbox" class="styled" id="inlinetoggle1" value="option1">
+                                    <label for="inlinetoggle1"> Inline One </label>
+                                </div>
+                                <div class="toggle toggle-success toggle-inline">
+                                    <input type="checkbox" class="styled" id="inlinetoggle2" value="option1" checked>
+                                    <label for="inlinetoggle2"> Inline Two </label>
+                                </div>
+                                <div class="toggle toggle-inline">
+                                    <input type="checkbox" class="styled" id="inlinetoggle3" value="option1">
+                                    <label for="inlinetoggle3"> Inline Three </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <h3>
+                                    Disabled
+                                </h3>
+                                <hr />
+                                <p>
+                                    Disabled state also supported.
+                                </p>
+                                <div class="toggle">
+                                    <input class="styled" id="toggle9" type="checkbox" disabled>
+                                    <label for="toggle9">
+                                        Can't check this
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-success">
+                                    <input class="styled styled" id="toggle10" type="checkbox" disabled checked>
+                                    <label for="toggle10">
+                                        This too
+                                    </label>
+                                </div>
+                                <div class="toggle toggle-warning toggle-circle">
+                                    <input class="styled" id="toggle11" type="checkbox" disabled checked>
+                                    <label for="toggle11">
+                                        And this
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+            <h2>Checkboxes</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <form role="form">
+                        <div class="row">
+                            <div class="col-md-4">
+
+                                <h3>
+                                    Basic
+                                </h3>
+                                <hr />
+                                <p>
+                                    Supports bootstrap brand colors: <code>.checkbox-primary</code>, <code>.checkbox-info</code> etc.
+                                </p>
+                                <div class="checkbox">
+                                    <input id="checkbox1" class="styled" type="checkbox">
+                                    <label for="checkbox1">
+                                        Default
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-primary">
+                                    <input id="checkbox2" class="styled" type="checkbox" checked>
+                                    <label for="checkbox2">
+                                        Primary
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-success">
+                                    <input id="checkbox3" class="styled" type="checkbox">
+                                    <label for="checkbox3">
+                                        Success
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-info">
+                                    <input id="checkbox4" class="styled" type="checkbox">
+                                    <label for="checkbox4">
+                                        Info
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-warning">
+                                    <input id="checkbox5" type="checkbox" class="styled" checked>
+                                    <label for="checkbox5">
+                                        Warning
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-danger">
+                                    <input id="checkbox6" type="checkbox" class="styled" checked>
+                                    <label for="checkbox6">
+                                        Check me out
+                                    </label>
+                                </div>
+                                <p>Checkboxes without label text</p>
+                                <div class="checkbox">
+                                    <input type="checkbox" class="styled" id="singleCheckbox1" value="option1" aria-label="Single checkbox One">
+                                    <label></label>
+                                </div>
+                                <div class="checkbox checkbox-primary">
+                                    <input type="checkbox" class="styled styled-primary" id="singleCheckbox2" value="option2" checked aria-label="Single checkbox Two">
+                                    <label></label>
+                                </div>
+                                <p>Checkboxes with indeterminate state</p>
+                                <div class="checkbox checkbox-primary">
+                                    <input id="indeterminateCheckbox" class="styled" type="checkbox" onclick="changeState(this)">
+                                    <label></label>
+                                </div>
+                                <p>Inline checkboxes</p>
+                                <div class="checkbox checkbox-inline">
+                                    <input type="checkbox" class="styled" id="inlineCheckbox1" value="option1">
+                                    <label for="inlineCheckbox1"> Inline One </label>
+                                </div>
+                                <div class="checkbox checkbox-success checkbox-inline">
+                                    <input type="checkbox" class="styled" id="inlineCheckbox2" value="option1" checked>
+                                    <label for="inlineCheckbox2"> Inline Two </label>
+                                </div>
+                                <div class="checkbox checkbox-inline">
+                                    <input type="checkbox" class="styled" id="inlineCheckbox3" value="option1">
+                                    <label for="inlineCheckbox3"> Inline Three </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h3>
+                                    Circled
+                                </h3>
+                                <hr />
+                                <p>
+                                    <code>.checkbox-circle</code> for roundness.
+                                </p>
+                                <div class="checkbox checkbox-circle">
+                                    <input id="checkbox7" class="styled" type="checkbox">
+                                    <label for="checkbox7">
+                                        Simply Rounded
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-info checkbox-circle">
+                                    <input id="checkbox8" class="styled" type="checkbox" checked>
+                                    <label for="checkbox8">
+                                        Me too
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h3>
+                                    Disabled
+                                </h3>
+                                <hr />
+                                <p>
+                                    Disabled state also supported.
+                                </p>
+                                <div class="checkbox">
+                                    <input class="styled" id="checkbox9" type="checkbox" disabled>
+                                    <label for="checkbox9">
+                                        Can't check this
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-success">
+                                    <input class="styled styled" id="checkbox10" type="checkbox" disabled checked>
+                                    <label for="checkbox10">
+                                        This too
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-warning checkbox-circle">
+                                    <input class="styled" id="checkbox11" type="checkbox" disabled checked>
+                                    <label for="checkbox11">
+                                        And this
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+            <h2>Radios</h2>
+            <section class="panel">
+                <div class="panel-body">
+
+                    <form role="form">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <fieldset>
+                                    <h3>
+                                        Basic
+                                    </h3>
+                                    <hr />
+                                    <p>
+                                        Supports bootstrap brand colors: <code>.radio-primary</code>, <code>.radio-danger</code> etc.
+                                    </p>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <div class="radio">
+                                                <input type="radio" name="radio1" id="radio1" value="option1" checked>
+                                                <label for="radio1">
+                                                    Small
+                                                </label>
+                                            </div>
+                                            <div class="radio">
+                                                <input type="radio" name="radio1" id="radio2" value="option2">
+                                                <label for="radio2">
+                                                    Big
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="radio radio-danger">
+                                                <input type="radio" name="radio2" id="radio3" value="option1">
+                                                <label for="radio3">
+                                                    Next
+                                                </label>
+                                            </div>
+                                            <div class="radio radio-danger">
+                                                <input type="radio" name="radio2" id="radio4" value="option2" checked>
+                                                <label for="radio4">
+                                                    One
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p>Radios without label text</p>
+                                    <div class="radio">
+                                        <input type="radio" id="singleRadio1" value="option1" name="radioSingle1" aria-label="Single radio One">
+                                        <label></label>
+                                    </div>
+                                    <div class="radio radio-success">
+                                        <input type="radio" id="singleRadio2" value="option2" name="radioSingle1" checked aria-label="Single radio Two">
+                                        <label></label>
+                                    </div>
+                                    <p>Inline radios</p>
+                                    <div class="radio radio-info radio-inline">
+                                        <input type="radio" id="inlineRadio1" value="option1" name="radioInline" checked>
+                                        <label for="inlineRadio1"> Inline One </label>
+                                    </div>
+                                    <div class="radio radio-inline">
+                                        <input type="radio" id="inlineRadio2" value="option2" name="radioInline">
+                                        <label for="inlineRadio2"> Inline Two </label>
+                                    </div>
+                                </fieldset>
+                            </div>
+                            <div class="col-md-4">
+                                <h3>
+                                    Disabled
+                                </h3>
+                                <hr />
+                                <p>
+                                    Disabled state also supported.
+                                </p>
+                                <div class="radio radio-danger">
+                                    <input type="radio" name="radio3" id="radio5" value="option1" disabled>
+                                    <label for="radio5">
+                                        Next
+                                    </label>
+                                </div>
+                                <div class="radio">
+                                    <input type="radio" name="radio3" id="radio6" value="option2" checked disabled>
+                                    <label for="radio6">
+                                        One
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h3>
+                                    As Checkboxes
+                                </h3>
+                                <hr />
+                                <p>
+                                    Radios can be made to look like checkboxes.
+                                </p>
+                                <div class="checkbox checkbox">
+                                    <input type="radio" name="radio4" id="radio7" value="option1" checked>
+                                    <label for="radio7">
+                                        Default
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-success">
+                                    <input type="radio" name="radio4" id="radio8" value="option2">
+                                    <label for="radio8">
+                                        Success
+                                    </label>
+                                </div>
+                                <div class="checkbox checkbox-danger">
+                                    <input type="radio" name="radio4" id="radio9" value="option3">
+                                    <label for="radio9">
+                                        Danger
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <h2>Horizontal form</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <form class="form-horizontal">
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-2 control-label">Email</label>
+                            <div class="col-sm-4">
+                                <input type="email" class="form-control" id="inputEmail3" placeholder="Email">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-2 control-label">Password</label>
+                            <div class="col-sm-4">
+                                <input type="password" class="form-control" id="inputPassword3" placeholder="Password">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-4">
+                                <div class="checkbox">
+                                    <label>
+                                        <input type="checkbox"> Remember me
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <button type="submit" class="btn btn-primary">Sign in</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <h2>Helper classes</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <h3>Labels</h3>
+                    <span class="label label-default">Default</span>
+                    <span class="label label-primary">Primary</span>
+                    <span class="label label-success">Success</span>
+                    <span class="label label-info">Info</span>
+                    <span class="label label-warning">Warning</span>
+                    <span class="label label-danger">Danger</span>
+                    <h3>Contextual colors</h3>
+                    <p class="text-muted">.text-muted</p>
+                    <p class="text-primary">.text-primary</p>
+                    <p class="text-success">.text-success</p>
+                    <p class="text-info">.text-info</p>
+                    <p class="text-warning">.text-warning</p>
+                    <p class="text-danger">.text-danger</p>
+                    <hr />
+                    <h3>Contextual backgrounds and padding classes</h3>
+                    <p class="bg-primary padding padding-lg">.bg-primary & .padding.padding-lg</p>
+                    <p class="bg-success padding">.bg-success .padding</p>
+                    <p class="bg-info padding padding-sm">.bg-info & .padding.padding-sm</p>
+                    <p class="bg-warning padding padding-xs">.bg-warning & .padding.padding-xs</p>
+                    <p class="bg-danger">.bg-danger</p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        function changeState(el) {
+            if (el.readOnly) el.checked = el.readOnly = false;
+            else if (!el.checked) el.readOnly = el.indeterminate = true;
+        }
+    </script>
+
+    <script type="text/javascript" src="./js/setup.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.5/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script>
+        var editor = ace.edit("docEditor");
+        editor.setTheme("ace/theme/pastel_on_dark");
+        editor.getSession().setMode("ace/mode/json");
+    </script>
+</body>
+</html>

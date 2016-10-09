@@ -37,17 +37,22 @@ namespace Voron.Impl
             public MemoryMappedFile MappedFile;
             public byte* BaseAddress;
             public long Size;
+
+            public override string ToString()
+            {
+                return $"{nameof(BaseAddress)}: {new IntPtr(BaseAddress).ToString("x")} - {new IntPtr(BaseAddress + Size).ToString("x")} {nameof(Size)}: {Size}";
+            }
         }
 
 #if DEBUG_PAGER_STATE
-        public static ConcurrentDictionary<PagerState, StackTrace> Instances = new ConcurrentDictionary<PagerState, StackTrace>();
+        public static ConcurrentDictionary<PagerState, string> Instances = new ConcurrentDictionary<PagerState, string>();
 #endif
 
         public PagerState(AbstractPager pager)
         {
             _pager = pager;
 #if DEBUG_PAGER_STATE
-            Instances[this] = new StackTrace(true);
+            Instances[this] = Environment.StackTrace;
 #endif
         }
 
@@ -67,7 +72,7 @@ namespace Voron.Impl
                 return;
 
 #if DEBUG_PAGER_STATE
-            StackTrace value;
+            String value;
             Instances.TryRemove(this, out value);
 #endif
          
@@ -94,17 +99,17 @@ namespace Voron.Impl
         }
 
 #if DEBUG_PAGER_STATE
-        public ConcurrentQueue<StackTrace> AddedRefs = new ConcurrentQueue<StackTrace>();
+        public ConcurrentQueue<string> AddedRefs = new ConcurrentQueue<string>();
 #endif
 
         public void AddRef()
         {
             Interlocked.Increment(ref _refs);
 #if DEBUG_PAGER_STATE
-            AddedRefs.Enqueue(new StackTrace(true));
+            AddedRefs.Enqueue(Environment.StackTrace);
             while (AddedRefs.Count > 500)
             {
-                StackTrace trace;
+                String trace;
                 AddedRefs.TryDequeue(out trace);
             }
 #endif

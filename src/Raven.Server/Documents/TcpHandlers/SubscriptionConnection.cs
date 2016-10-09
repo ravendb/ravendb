@@ -286,8 +286,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     while (CancellationTokenSource.IsCancellationRequested == false)
                     {
-                        dbContext.Reset();
-                        TcpConnection.Context.Reset();
+                        dbContext.ResetAndRenew();
+                        TcpConnection.Context.ResetAndRenew();
 
                         bool anyDocumentsSentInCurrentIteration = false;
                         using (dbContext.OpenReadTransaction())

@@ -77,7 +77,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         Assert.Equal(2, queryResult.Results.Count);
 
-                        context.Reset();
+                        context.ResetAndRenew();
 
                         queryResult = await index.Query(new IndexQueryServerSide() { Query = "Name:John" }, context, OperationCancelToken.None);
 

@@ -23,6 +23,8 @@ namespace Voron
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
 
+        public abstract override string ToString();
+
         public void InvokeRecoveryError(object sender, string message, Exception e)
         {
             var handler = OnRecoveryError;
@@ -124,7 +126,7 @@ namespace Voron
 
             InitialLogFileSize = 64 * Constants.Size.Kilobyte;
 
-            MaxScratchBufferSize = 512 * Constants.Size.Megabyte;
+            MaxScratchBufferSize = 256 * Constants.Size.Megabyte;
 
             MaxNumberOfPagesInJournalBeforeFlush = 8192; // 32 MB when 4Kb             
 
@@ -158,15 +160,6 @@ namespace Voron
             }
             return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath);
         }
-
-        public IDisposable AllowManualFlushing()
-        {
-            var old = ManualFlushing;
-            ManualFlushing = true;
-
-            return new DisposableAction(() => ManualFlushing = old);
-        }
-
 
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
@@ -202,6 +195,11 @@ namespace Voron
             }
 
             public string FilePath { get; private set; }
+
+            public override string ToString()
+            {
+                return _basePath;
+            }
 
             public override AbstractPager DataPager
             {
@@ -306,7 +304,7 @@ namespace Voron
             }
 
 
-            public override AbstractPager CreateScratchPager(string name)
+            public override AbstractPager CreateScratchPager(string name, long initialSize)
             {
                 var scratchFile = Path.Combine(TempPath, name);
                 if (File.Exists(scratchFile))
@@ -314,12 +312,12 @@ namespace Voron
 
                 if (RunningOnPosix)
                 {
-                    return new PosixMemoryMapPager(this, scratchFile, InitialFileSize)
+                    return new PosixMemoryMapPager(this, scratchFile, initialSize)
                     {
                         DeleteOnClose = true
                     };
                 }
-                return new Win32MemoryMapPager(this, scratchFile, InitialFileSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
+                return new Win32MemoryMapPager(this, scratchFile, initialSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
             }
 
             public override AbstractPager OpenJournalPager(long journalNumber)
@@ -362,6 +360,11 @@ namespace Voron
                         return new PosixTempMemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize);
                     return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize, Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
                 }, true);
+            }
+
+            public override string ToString()
+            {
+                return "mem #" + _instanceId;
             }
 
             public override AbstractPager DataPager
@@ -443,15 +446,15 @@ namespace Voron
                 Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
             }
 
-            public override AbstractPager CreateScratchPager(string name)
+            public override AbstractPager CreateScratchPager(string name, long intialSize)
             {
                 var guid = Guid.NewGuid();
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{guid}";
 
                 if (RunningOnPosix)
-                    return new PosixTempMemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize);
+                    return new PosixTempMemoryMapPager(this, Path.Combine(TempPath, filename), intialSize);
 
-                return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize,
+                return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), intialSize,
                         Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
             }
 
@@ -495,7 +498,7 @@ namespace Voron
 
         public unsafe abstract void WriteHeader(string filename, FileHeader* header);
 
-        public abstract AbstractPager CreateScratchPager(string name);
+        public abstract AbstractPager CreateScratchPager(string name, long initialSize);
 
         public abstract AbstractPager OpenJournalPager(long journalNumber);
 

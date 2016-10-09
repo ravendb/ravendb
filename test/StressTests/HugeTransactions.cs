@@ -16,9 +16,9 @@ namespace StressTests
 {
     public class HugeTransactions : StorageTest
     {
-        public const long Gb = 1024L*1024*1024;
-        public const long HalfGb = 512L*1024*1024;
-        public const long Mb = 1024L*1024;
+        public const long Gb = 1024L * 1024 * 1024;
+        public const long HalfGb = 512L * 1024 * 1024;
+        public const long Mb = 1024L * 1024;
 
         const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ";
         public static Random Rand = new Random(123);
@@ -112,7 +112,7 @@ namespace StressTests
         }
 
         [Theory]
-        [InlineData(3L*1024*1024*1024)] // in = 3GB, out ~= 4MB
+        [InlineData(3L * 1024 * 1024 * 1024)] // in = 3GB, out ~= 4MB
         [InlineData(2)] // in = 3GB, out ~= 1.5GB
         [InlineData(1)] // in = 3GB, out > 3GB (rare case)
         [InlineData(0)] // special case : in = Exactly 1GB, out > 1GB
@@ -121,8 +121,8 @@ namespace StressTests
             var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, $"bigLz4-test-{devider}.data"));
             using (var env = new StorageEnvironment(options))
             {
-                long Gb = 1024*1024*1024;
-                long inputSize = 3L*Gb;
+                long Gb = 1024 * 1024 * 1024;
+                long inputSize = 3L * Gb;
                 byte* outputBuffer, inputBuffer, checkedBuffer;
                 var outputPager = CreateScratchFile($"output-{devider}", env, inputSize, out outputBuffer);
                 var inputPager = CreateScratchFile($"input-{devider}", env, inputSize, out inputBuffer);
@@ -132,9 +132,9 @@ namespace StressTests
 
                 if (devider != 0)
                 {
-                    for (long p = 0; p < inputSize/devider; p++)
+                    for (long p = 0; p < inputSize / devider; p++)
                     {
-                        (*(byte*) ((long) inputBuffer + p)) = Convert.ToByte(random.Next(0, 255));
+                        (*(byte*)((long)inputBuffer + p)) = Convert.ToByte(random.Next(0, 255));
                     }
                 }
                 else
@@ -153,7 +153,7 @@ namespace StressTests
                 byte testNum = 0;
                 for (long testPoints = 0; testPoints < inputSize; testPoints += Gb)
                 {
-                    var testPointer = (byte*) ((long) inputBuffer + testPoints);
+                    var testPointer = (byte*)((long)inputBuffer + testPoints);
                     *testPointer = ++testNum;
                 }
 
@@ -169,7 +169,7 @@ namespace StressTests
                 testNum = 0;
                 for (long testPoints = 0; testPoints < inputSize; testPoints += Gb)
                 {
-                    var testPointer = (byte*) ((long) checkedBuffer + testPoints);
+                    var testPointer = (byte*)((long)checkedBuffer + testPoints);
                     Assert.Equal(++testNum, *testPointer);
                 }
 
@@ -182,9 +182,9 @@ namespace StressTests
         private static unsafe AbstractPager CreateScratchFile(string scratchName, StorageEnvironment env, long inputSize, out byte* buffer)
         {
             var filename = $"{Path.GetTempPath()}{Path.DirectorySeparatorChar}TestBigCompression-{scratchName}";
-            var pager = env.Options.CreateScratchPager(filename);
             long bufferSize = LZ4.MaximumOutputLength(inputSize);
-            int bufferSizeInPages = checked((int) (bufferSize/env.Options.PageSize));
+            int bufferSizeInPages = checked((int)(bufferSize / env.Options.PageSize));
+            var pager = env.Options.CreateScratchPager(filename, bufferSizeInPages * env.Options.PageSize);
             pager.EnsureContinuous(0, bufferSizeInPages);
             buffer = pager.AcquirePagePointer(null, 0);
             return pager;

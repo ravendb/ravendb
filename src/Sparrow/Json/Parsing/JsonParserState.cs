@@ -76,5 +76,16 @@ namespace Sparrow.Json.Parsing
                 WriteVariableSizeInt(ref buffer, pos);
             }
         }
+
+        public void Reset()
+        {
+            StringBuffer = null;
+            StringSize = 0;
+            CompressedSize = null;
+            Long = 0;
+            CurrentTokenType = JsonParserToken.None;
+            Continuation = JsonParserTokenContinuation.None;
+
+        }
     }
 }

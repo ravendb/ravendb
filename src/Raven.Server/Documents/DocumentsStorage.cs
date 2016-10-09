@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Exceptions;
@@ -22,6 +23,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
 using Voron.Data.BTrees;
+using Voron.Util;
 
 namespace Raven.Server.Documents
 {
@@ -164,6 +166,8 @@ namespace Raven.Server.Documents
         public DocumentsContextPool ContextPool;
         private UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
+        private int _hasConflicts;
+
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {
             _documentDatabase = documentDatabase;
@@ -237,6 +241,8 @@ namespace Raven.Server.Documents
                     ConflictsSchema.Create(tx, "Conflicts");
                     CollectionsSchema.Create(tx, "Collections");
 
+                    _hasConflicts = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries > 0 ? 1 : 0;
+                    
                     _lastEtag = ReadLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
 
@@ -542,6 +548,7 @@ namespace Raven.Server.Documents
             var tvr = table.ReadByKey(loweredKey);
             if (tvr == null)
             {
+                if(_hasConflicts != 0)
                 ThrowDocumentConflictIfNeeded(context, loweredKey);
                 return null;
             }
@@ -858,6 +865,7 @@ namespace Raven.Server.Documents
                     throw new ConcurrencyException(
                         $"Document {loweredKey} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
 
+                if (_hasConflicts != 0)
                 ThrowDocumentConflictIfNeeded(context, loweredKey);
                 return false;
             }
@@ -953,7 +961,8 @@ namespace Raven.Server.Documents
             Slice loweredKey;
             using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
             {
-            ThrowDocumentConflictIfNeeded(context, loweredKey);
+                if(_hasConflicts != 0)
+                    ThrowDocumentConflictIfNeeded(context, loweredKey);
 
             var result = GetDocumentOrTombstone(context, loweredKey);
             if (result.Item2 != null) //already have a tombstone -> need to update the change vector
@@ -1140,8 +1149,16 @@ namespace Raven.Server.Documents
                     break;
                 }
                 if (deleted == false)
+                {
+                    // once this value has been set, we can't set it to false
+                    // an older transaction may be running and seeing it is false it
+                    // will not detect a conflict. It is an optimization only that
+                    // we have to do, so we'll handle it.
+
+                    // _hasConflicts = conflictsTable.NumberOfEntries > 0;
                     return list;
             }
+        }
         }
 
         public DocumentConflict GetConflictForChangeVector(
@@ -1197,6 +1214,9 @@ namespace Raven.Server.Documents
 
         public IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context, string key)
         {
+            if (_hasConflicts == 0)
+                return ImmutableAppendOnlyList<DocumentConflict>.Empty;
+
             byte* lowerKey;
             int lowerSize;
             byte* keyPtr;
@@ -1317,7 +1337,7 @@ namespace Raven.Server.Documents
                     {doc, docSize}
                 };
 
-
+                Interlocked.Increment(ref _hasConflicts);
                 conflictsTable.Set(tvb);
             }
         }
@@ -1347,6 +1367,7 @@ namespace Raven.Server.Documents
             int keySize;
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
+            if(_hasConflicts != 0)
             ThrowDocumentConflictIfNeeded(context, key);
 
             // delete a tombstone if it exists

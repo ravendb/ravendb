@@ -5,12 +5,10 @@
 // -----------------------------------------------------------------------
 
 using Sparrow;
-using Sparrow.Collections;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Voron.Impl.Paging;
-using Voron.Util;
 
 namespace Voron.Impl.Scratch
 {
@@ -75,16 +73,6 @@ namespace Voron.Impl.Scratch
             _lastUsedPage += sizeToAllocate;
 
             return result;
-        }
-
-        public bool HasDiscontinuousSpaceFor(long sizeInPages)
-        {
-            long available = _scratchPager.NumberOfAllocatedPages - _lastUsedPage;
-
-            foreach (var freePage in _freePagesBySizeAvailableImmediately)
-                available += freePage.Key*freePage.Value.Count;
-
-            return (available >= sizeInPages);
         }
 
         public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, long size, out PageFromScratchBuffer result)

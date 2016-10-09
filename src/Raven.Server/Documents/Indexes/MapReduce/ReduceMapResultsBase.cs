@@ -129,18 +129,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             try
             {
-                using (stats.For(IndexingOperation.Reduce.StoringNestedValues))
-                {
-                    modifiedStore.FlushNestedValues();
-                }
-                
                 var section = modifiedStore.GetNestedResultsSection();
 
-                foreach (var mapResult in section.GetResults())
-                {
-                    _aggregationBatch.Add(mapResult.Value);
-                    numberOfEntriesToReduce++;
-                }
+                if (section.IsModified == false)
+                    return;
+
+                numberOfEntriesToReduce += section.GetResults(indexContext, _aggregationBatch);
 
                 stats.RecordReduceAttempts(numberOfEntriesToReduce);
 

@@ -635,7 +635,7 @@ namespace Sparrow.Json.Parsing
 
         public void Dispose()
         {
-            _stringBuffer?.Dispose();
+            _stringBuffer.Dispose();
         }
 
         public int ReadBuffer(byte[] buffer, int offset, int count)

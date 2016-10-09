@@ -7,9 +7,10 @@ using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
-    public unsafe class UnmanagedWriteBuffer : IDisposable
+    public unsafe struct UnmanagedWriteBuffer : IDisposable
     {
         private readonly JsonOperationContext _context;
+        private int _sizeInBytes;
 
         private class Segment
         {
@@ -40,16 +41,15 @@ namespace Sparrow.Json
 
         private Segment _current;
 
-        private int _sizeInBytes;
-
         public int SizeInBytes => _sizeInBytes;
 
         internal UnmanagedWriteBuffer(JsonOperationContext context, AllocatedMemoryData allocatedMemoryData)
         {
             _context = context;
+            _sizeInBytes=0;
             _current = new Segment
             {
-                Address = (byte*)allocatedMemoryData.Address,
+                Address = allocatedMemoryData.Address,
                 Allocation = allocatedMemoryData,
                 Used = 0,
                 Previous = null

@@ -55,7 +55,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
 
                         Assert.Equal(2, queryResult.Results.Count);
 
-                        context.Reset();
+                        context.ResetAndRenew();
 
                         queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Location:Poland" }, context, OperationCancelToken.None);
 
@@ -109,7 +109,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
 
                         Assert.Equal(2, queryResult.Results.Count);
 
-                        context.Reset();
+                        context.ResetAndRenew();
 
                         queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Hobbies:music" }, context, OperationCancelToken.None);
 
@@ -171,7 +171,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
 
                         Assert.Equal(2, queryResult.Results.Count);
 
-                        context.Reset();
+                        context.ResetAndRenew();
 
                         queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Location:Poland" }, context, OperationCancelToken.None);
 
@@ -233,7 +233,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
 
                         Assert.Equal(2, queryResult.Results.Count);
 
-                        context.Reset();
+                        context.ResetAndRenew();
 
                         queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Hobbies:music" }, context, OperationCancelToken.None);
 

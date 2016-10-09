@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -132,8 +133,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 string queryString;
                 var request = context.Read(RequestBodyStream(), "QueryInPostBody");
-                if (request.TryGet("Query", out queryString))
-                    indexQuery.Query = queryString;
+                if (request.TryGet("Query", out queryString) == false)
+                    throw new InvalidDataException("Missing 'Query' property in the POST request body");
+                indexQuery.Query = queryString;
             }
             
             var existingResultEtag = GetLongFromHeaders("If-None-Match");

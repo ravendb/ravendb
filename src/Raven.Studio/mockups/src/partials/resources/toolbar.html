@@ -1,0 +1,61 @@
+<div class="resourcesToolbar clearfix">
+    <div class="form-inline">
+        <div class="checkbox checkbox-inline align-checkboxes">
+            <input type="checkbox" class="styled">
+            <label></label>
+        </div>
+        <div class="resourcesToolbar-typeSelector btn-group">
+            <button class="btn btn-default active" data-toggle="button" aria-pressed="true" >
+                <i class="icon-database"></i>
+                <span>
+                    Databases
+                </span>
+                <span class="badge">5</span>
+            </button>
+            <button class="btn btn-default" data-toggle="button">
+                <i class="icon-filesystem"></i>
+                <span>
+                    Filesystems
+                </span>
+                <span class="badge">2</span>
+            </button>
+        </div>
+        <input type="text" class="form-control" placeholder="Filter">
+        <div class="resourcesToolbar-actions">
+            <button class="btn btn-danger">
+                <i class="icon-trash"></i>
+                <span>Delete</span>
+            </button>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default">
+                    <i class="icon-lock"></i>
+                    <span>Disable</span>
+                </button>
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a href="#">
+                            <i class="icon-pause"></i>
+                            Disable indexing
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="icon-umbrella"></i> Reject clients mode
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="toggle toggle-primary resourcesToolbar-toggleCompactView pull-right">
+            <input id="compactViewInput" name="compactView" class="styled" type="checkbox"
+                onchange="$('.resources').toggleClass('resources_compact');" >
+            <label for="compactViewInput">
+                Compact View
+            </label>
+        </div>
+    </div>
+</div>

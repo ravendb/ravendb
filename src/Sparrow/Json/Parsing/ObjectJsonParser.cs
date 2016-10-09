@@ -123,11 +123,16 @@ namespace Sparrow.Json.Parsing
         private readonly Stack<object> _elements = new Stack<object>();
         private static readonly Encoding Utf8Encoding = Encoding.UTF8;
 
-        public ObjectJsonParser(JsonParserState state, object root, JsonOperationContext ctx)
+        public void Reset(object root)
+        {
+            _elements.Clear();
+            _elements.Push(root);
+        }
+
+        public ObjectJsonParser(JsonParserState state, JsonOperationContext ctx)
         {
             _state = state;
             _ctx = ctx;
-            _elements.Push(root);
         }
 
         public IReadOnlyCollection<object> Elements => _elements;

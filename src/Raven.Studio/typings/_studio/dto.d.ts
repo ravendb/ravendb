@@ -56,3 +56,16 @@ interface saveDocumentResponseItemDto {
     PatchResult: string;
     Deleted: boolean;
 }
+
+
+interface transformerParamInfo {
+    name: string;
+    hasDefault: boolean;
+}
+interface operationIdDto {
+    OperationId: number;
+}
+
+interface importDatabaseRequestDto {
+    batchSize: number,
+}

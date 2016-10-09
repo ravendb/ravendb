@@ -15,7 +15,7 @@ namespace Raven.Server.Indexing
     {
         private readonly StorageEnvironment _environment;
 
-        private ThreadLocal<Transaction> _currentTransaction = new ThreadLocal<Transaction>();
+        private readonly AsyncLocal<Transaction> _currentTransaction = new AsyncLocal<Transaction>();
 
         public LuceneVoronDirectory(StorageEnvironment environment)
         {
@@ -108,6 +108,7 @@ namespace Raven.Server.Indexing
 
         public IDisposable SetTransaction(Transaction tx)
         {
+            if (tx == null) throw new ArgumentNullException(nameof(tx));
             _currentTransaction.Value = tx;
 
             return new DisposableAction(() => _currentTransaction.Value = null);

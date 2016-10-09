@@ -61,14 +61,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return new IIndexingWork[]
             {
                 new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, _mapReduceWorkContext),
                 new ReduceMapResultsOfAutoIndex(this, Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext),
             };
         }
 
-        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
+        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            return new AutoIndexDocsEnumerator(documents);
+            return new AutoIndexDocsEnumerator(documents, stats);
         }
 
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 // explicitly adding this even if the value isn't there, as a null
                 mappedResult[groupByFieldName] = result;
 
-                _reduceKeyProcessor.Process(result);
+                _reduceKeyProcessor.Process(indexContext.Allocator,result);
             }
 
             var mappedresult = indexContext.ReadObject(mappedResult, key);

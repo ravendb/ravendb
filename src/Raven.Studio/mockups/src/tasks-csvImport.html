@@ -1,0 +1,93 @@
+﻿
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
+{{> head }}
+<body>
+    {{> spinner }}
+    {{> topbar }}
+    {{> menu }}
+    {{> notification-center }}
+
+<div class="container-fluid content-container">
+    <div class="content-container-margin csvImport">
+        <h1>CSV Import</h1>
+
+        <div class="panel panel-default">
+
+            <div class="panel-body">
+                <p class="bg-info padding padding-md">
+                    <i class="icon-info"></i>
+                    <span>Import documents from CSV file into a collection. Each column will be treated as a property.</span>
+                </p>
+
+                <form class="form-horizontal">
+                    <div class="form-group">
+                        <label for="csvImportFile" class="col-sm-2 control-label">
+                            Import file <i class="required"></i>
+                        </label>
+                        <div class="col-sm-10 col-lg-6">
+                            <div class="input-group file-input csvImport-importFileInput">
+                                <input required="" type="file" tabindex="-1" name="csvImportFile" id="csvImportFile" accept=".csv,text/csv">
+                                <span class="static-name form-control">Select file...</span>
+                                <span class="input-group-btn">
+                                    <label for="importFile" class="btn btn-default">
+                                        <i class="icon-document"></i>
+                                        <span>Browse</span>
+                                    </label>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="csvImportCollection" class="col-sm-2 control-label">
+                            Specific collection
+                            <br/>
+                        </label>
+                        <div class="col-sm-10 col-lg-6">
+                                <input list="collections" placeholder="Select collection" class="form-control" type="text" name="csvImportCollection" id="csvImportCollection" />
+                                <datalist id="collections">
+                                    <option value="Companies" />
+                                    <option value="Computers" />
+                                    <option value="Onions" />
+                                    <option value="Orders" />
+                                    <option value="Zombies" />
+                                </datalist>
+                            <small>
+                                <i class="icon-info"></i>
+                                <span>If not provided documents are going to be imported into a new collection.</span>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-offset-2 col-sm-10">
+                            <div class="checkbox checkbox-primary">
+                                <input id="useIdCol" name="useIdCol" class="styled" type="checkbox" checked />
+                                <label for="useIdCol">
+                                    Use IDs as provided in <strong>@id</strong> column <br/>
+                                    <small>
+                                        If not checked random GUID will be used for ID field.
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-offset-2 col-sm-10">
+                        <button type="button" class="btn btn-primary btn btn-toggle csvImport-importBtn"
+                            data-target=".csvImport-importBtn" data-class="btn-spinner">
+                            <i class="icon-document-group"></i>
+                            <span>Import</span>
+                        </button>
+                        </div>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{{> scripts }}
+</body>
+</html>

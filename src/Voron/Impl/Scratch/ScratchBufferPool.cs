@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Voron.Exceptions;
+using Voron.Impl.Paging;
 
 namespace Voron.Impl.Scratch
 {
@@ -24,7 +25,6 @@ namespace Voron.Impl.Scratch
     public unsafe class ScratchBufferPool : IDisposable
     {
         // Immutable state. 
-        private readonly long _sizeLimit;
         private readonly StorageEnvironmentOptions _options;
 
         // Local per scratch file potentially read delayed inconsistent (need guards). All must be modified atomically (but it wont necessarily require a memory barrier)
@@ -40,8 +40,7 @@ namespace Voron.Impl.Scratch
         public ScratchBufferPool(StorageEnvironment env)
         {
             _options = env.Options;
-            _sizeLimit = env.Options.MaxScratchBufferSize;
-            _current = NextFile();
+            _current = NextFile(_options.InitialLogFileSize, null);
         }
 
         public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
@@ -57,28 +56,30 @@ namespace Voron.Impl.Scratch
             return _scratchBuffers[scratchNumber].File.NumberOfAllocations;
         }
 
-        private ScratchBufferItem NextFile()
+        private ScratchBufferItem NextFile(long minSize, long? requestedSize)
         {
             _currentScratchNumber++;
-            var scratchPager =
-                _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber));
-            if (_current != null)
+            AbstractPager scratchPager;
+            if (requestedSize != null)
             {
                 try
                 {
-                    // if we need to create a new file, we'll start with one that has the same size
-                    // as the current one, to avoid additional allocations
-                    scratchPager.EnsureContinuous(0, (int) _current.File.NumberOfAllocatedPages);
+                    scratchPager =
+                        _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber),
+                            requestedSize.Value);
                 }
                 catch (Exception)
                 {
                     // this can fail because of disk space issue, let us just ignore it
                     // we'll allocate the minimum amount in a bit anway
+                    return NextFile(minSize, null);
                 }
             }
-
-            // if the previous large allocation has failed, this will allocate just enough to start with
-            scratchPager.EnsureContinuous(0, (int)(Math.Max(_options.InitialFileSize ?? 0, _options.InitialLogFileSize) / _options.PageSize));
+            else
+            {
+                scratchPager = _options.CreateScratchPager(StorageEnvironmentOptions.ScratchBufferName(_currentScratchNumber),
+                    Math.Max(_options.InitialLogFileSize, minSize));
+            }
 
             var scratchFile = new ScratchBufferFile(scratchPager, _currentScratchNumber);
             var item = new ScratchBufferItem(scratchFile.Number, scratchFile);
@@ -103,7 +104,7 @@ namespace Voron.Impl.Scratch
 
             var current = _current;
 
-       
+
             PageFromScratchBuffer result;
             if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
                 return result;
@@ -112,22 +113,13 @@ namespace Voron.Impl.Scratch
             if (current.File.LastUsedPage + size <= current.File.NumberOfAllocatedPages)
                 return current.File.Allocate(tx, numberOfPages, size);
 
-
-            // There are two reasons why we can't find enough space after the size gotten so big:
-
-            // we haven't flushed yet - so we'll increase the file size rather than
-            // use create a new one
-            if (current.File.HasDiscontinuousSpaceFor(size) == false)
-            {
+            if (current.File.Size < _options.MaxScratchBufferSize)
                 return current.File.Allocate(tx, numberOfPages, size);
-            }
 
-            // We have internal fragmentation - there is enough space in the file, but
-            // split into too small chunks that we can't use. Instead of trying to merge
-            // it all we'll just create a new file with the same size
-
+            var minSize = numberOfPages * _options.PageSize;
+            var requestedSize = Math.Max(minSize, Math.Min(_current.File.Size * 2, _options.MaxScratchBufferSize));
             // We need to ensure that _current stays constant through the codepath until return. 
-            current = NextFile();
+            current = NextFile(minSize, requestedSize);
 
             try
             {
@@ -147,12 +139,23 @@ namespace Voron.Impl.Scratch
         {
             var scratch = _scratchBuffers[scratchNumber];
             scratch.File.Free(page, asOfTxId);
-            if (scratch != _current && scratch.File.ActivelyUsedBytes == 0)
+            if (scratch.File.ActivelyUsedBytes != 0)
+                return;
+            if (scratch == _current)
             {
-                ScratchBufferItem _;
-                _scratchBuffers.TryRemove(scratchNumber, out _);
-                scratch.File.Dispose();
+                if (scratch.File.Size <= _options.MaxScratchBufferSize)
+                {
+                    return;
+                }
+                // this is the current one, but the size is too big, since no one is using the scratch 
+                // right now (and we hold the write transaction), let us trim it
+                var newCurrent = NextFile(_options.InitialLogFileSize, _options.MaxScratchBufferSize);
+                newCurrent.File.PagerState.AddRef();
+                _current = newCurrent;
             }
+            ScratchBufferItem _;
+            _scratchBuffers.TryRemove(scratchNumber, out _);
+            scratch.File.Dispose();
         }
 
         public void Dispose()

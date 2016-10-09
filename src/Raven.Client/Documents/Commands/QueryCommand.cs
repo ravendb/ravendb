@@ -18,18 +18,17 @@ namespace Raven.Client.Documents.Commands
 {
     public class QueryCommand : RavenCommand<QueryResult>
     {
-        public string index;
-        public IndexQuery indexQuery;
-        public DocumentConvention _convention;
-        public string[] includes;
+        public string Index;
+        public IndexQuery IndexQuery;
+        public DocumentConvention Convention;
+        public HashSet<string> Includes;
         public bool MetadataOnly;
         public bool IndexEntriesOnly;
-
         public JsonOperationContext Context;
-
+        
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            var method = (indexQuery.Query == null || indexQuery.Query.Length <= _convention.MaxLengthOfQueryUsingGetUrl)
+            var method = (IndexQuery.Query == null || IndexQuery.Query.Length <= Convention.MaxLengthOfQueryUsingGetUrl)
                 ? HttpMethod.Get : HttpMethod.Post;
 
             var request = new HttpRequestMessage
@@ -45,13 +44,13 @@ namespace Raven.Client.Documents.Commands
                     {
                         writer.WriteStartObject();
                         writer.WritePropertyName("Query");
-                        writer.WriteString(indexQuery.Query);
+                        writer.WriteString(IndexQuery.Query);
                         writer.WriteEndObject();
                     }
                 });
             }
 
-            var indexQueryUrl = indexQuery.GetIndexQueryUrl(index, "queries", includeQuery: method == HttpMethod.Get);
+            var indexQueryUrl = IndexQuery.GetIndexQueryUrl(Index, "queries", includeQuery: method == HttpMethod.Get);
 
             EnsureIsNotNullOrEmpty(indexQueryUrl, "index");
 
@@ -61,9 +60,9 @@ namespace Raven.Client.Documents.Commands
                 pathBuilder.Append("&metadata-only=true");
             if (IndexEntriesOnly)
                 pathBuilder.Append("&debug=entries");
-            if (includes != null && includes.Length > 0)
+            if (Includes != null && Includes.Count > 0)
             {
-                pathBuilder.Append("&").Append(string.Join("&", includes.Select(x => "include=" + x).ToArray()));
+                pathBuilder.Append("&").Append(string.Join("&", Includes.Select(x => "include=" + x).ToArray()));
             }
 
             url = pathBuilder.ToString();
@@ -77,7 +76,6 @@ namespace Raven.Client.Documents.Commands
                 Result = null;
                 return;
             }
-            
             Result = JsonDeserializationClient.QueryResult(response);
         }
     }

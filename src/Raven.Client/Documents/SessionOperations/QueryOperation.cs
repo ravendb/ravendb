@@ -17,50 +17,39 @@ namespace Raven.Client.Documents.SessionOperations
     public class QueryOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
-        private readonly string indexName;
-        private readonly IndexQuery indexQuery;
-        private readonly bool waitForNonStaleResults;
-        private bool disableEntitiesTracking;
-        private readonly TimeSpan? timeout;
-        private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults;
-        private readonly HashSet<string> includes;
-        private QueryResult currentQueryResults;
-        private readonly string[] projectionFields;
-        private bool firstRequest = true;
-
-
-        public QueryResult CurrentQueryResults
-        {
-            get { return currentQueryResults; }
-        }
-
-        public string IndexName
-        {
-            get { return indexName; }
-        }
-
-        public IndexQuery IndexQuery
-        {
-            get { return indexQuery; }
-        }
-
-        private Stopwatch sp;
+        private readonly string _indexName;
+        private readonly IndexQuery _indexQuery;
+        private readonly bool _waitForNonStaleResults;
+        private bool _disableEntitiesTracking;
+        private readonly bool _metadataOnly;
+        private readonly bool _indexEntriesOnly;
+        private readonly TimeSpan? _timeout;
+        private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> _transformResults;
+        private readonly HashSet<string> _includes;
+        private QueryResult _currentQueryResults;
+        private readonly string[] _projectionFields;
+        private bool _firstRequest = true;
+        private Stopwatch _sp;
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<QueryOperation>("Raven.Client");
+
+        public QueryResult CurrentQueryResults => _currentQueryResults;
 
         public QueryOperation(InMemoryDocumentSessionOperations session, string indexName, IndexQuery indexQuery,
                               string[] projectionFields, bool waitForNonStaleResults, TimeSpan? timeout,
                               Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults,
-                              HashSet<string> includes, bool disableEntitiesTracking)
+                              HashSet<string> includes, bool disableEntitiesTracking, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
-            this._session = session;
-            this.indexName = indexName;
-            this.indexQuery = indexQuery;
-            this.waitForNonStaleResults = waitForNonStaleResults;
-            this.timeout = timeout;
-            this.transformResults = transformResults;
-            this.includes = includes;
-            this.projectionFields = projectionFields;
-            this.disableEntitiesTracking = disableEntitiesTracking;
+            _session = session;
+            _indexName = indexName;
+            _indexQuery = indexQuery;
+            _waitForNonStaleResults = waitForNonStaleResults;
+            _timeout = timeout;
+            _transformResults = transformResults;
+            _includes = includes;
+            _projectionFields = projectionFields;
+            _disableEntitiesTracking = disableEntitiesTracking;
+            _metadataOnly = metadataOnly;
+            _indexEntriesOnly = indexEntriesOnly;
 
             AssertNotQueryById();
         }
@@ -68,16 +57,16 @@ namespace Raven.Client.Documents.SessionOperations
         public QueryCommand CreateRequest()
         {
             _session.IncrementRequestCount();
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Querying for the following expression:...");
+            LogQuery();
+
             return new QueryCommand
             {
-                _convention = _session.Conventions,
-                indexQuery = this.indexQuery,
-                index = indexName,
-                includes = new string[0],
-                MetadataOnly = false,
-                IndexEntriesOnly = false,
+                Index = _indexName,
+                IndexQuery = _indexQuery,
+                Convention = _session.Conventions,
+                Includes = _includes,
+                MetadataOnly = _metadataOnly,
+                IndexEntriesOnly = _indexEntriesOnly,
                 Context = _session.Context
             };
         }
@@ -158,11 +147,11 @@ namespace Raven.Client.Documents.SessionOperations
         private void AssertNotQueryById()
         {
             // this applies to dynamic indexes only
-            if (!indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(indexName, "dynamic", StringComparison.OrdinalIgnoreCase))
+            if (!_indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(_indexName, "dynamic", StringComparison.OrdinalIgnoreCase))
                 return;
 
-            var match = idOnly.Match(IndexQuery.Query);
+            var match = idOnly.Match(_indexQuery.Query);
             if (match.Success == false)
                 return;
 
@@ -176,24 +165,24 @@ namespace Raven.Client.Documents.SessionOperations
 
         private void StartTiming()
         {
-            sp = Stopwatch.StartNew();
+            _sp = Stopwatch.StartNew();
         }
 
         public void LogQuery()
         {
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Executing query '{indexQuery.Query}' on index '{indexName}' in '{_session.StoreIdentifier}'");
+                _logger.Info($"Executing query '{_indexQuery.Query}' on index '{_indexName}' in '{_session.StoreIdentifier}'");
         }
 
         public IDisposable EnterQueryContext()
         {
-            if (firstRequest)
+            if (_firstRequest)
             {
                 StartTiming();
-                firstRequest = false;
+                _firstRequest = false;
             }
 
-            if (waitForNonStaleResults == false)
+            if (_waitForNonStaleResults == false)
                 return null;
 
             return _session.DocumentStore.DisableAggressiveCaching();
@@ -201,7 +190,7 @@ namespace Raven.Client.Documents.SessionOperations
 
         public IList<T> Complete<T>()
         {
-            var queryResult = currentQueryResults.CreateSnapshot();
+            var queryResult = _currentQueryResults.CreateSnapshot();
             foreach (BlittableJsonReaderObject include in queryResult.Includes)
             {
                 BlittableJsonReaderObject metadata;
@@ -218,7 +207,7 @@ namespace Raven.Client.Documents.SessionOperations
                 //_session.TrackIncludedDocument(entity);
             }
 
-            var usedTransformer = string.IsNullOrEmpty(indexQuery.Transformer) == false;
+            var usedTransformer = string.IsNullOrEmpty(_indexQuery.Transformer) == false;
             var list = new List<T>();
             foreach (BlittableJsonReaderObject result in queryResult.Results)
             {
@@ -253,19 +242,19 @@ namespace Raven.Client.Documents.SessionOperations
                 list.Add((T)entity);
             }
 
-            if (disableEntitiesTracking == false)
+            if (_disableEntitiesTracking == false)
                 //_session.RegisterMissingIncludes(queryResult.Results.Where(x => x != null), indexQuery.Includes);
 
-            if (transformResults == null)
+            if (_transformResults == null)
                 return list;
 
-            return transformResults(indexQuery, list.Cast<object>()).Cast<T>().ToList();
+            return _transformResults(_indexQuery, list.Cast<object>()).Cast<T>().ToList();
         }
 
         public bool DisableEntitiesTracking
         {
-            get { return disableEntitiesTracking; }
-            set { disableEntitiesTracking = value; }
+            get { return _disableEntitiesTracking; }
+            set { _disableEntitiesTracking = value; }
         }
 
         public T Deserialize<T>(RavenJObject result)
@@ -350,12 +339,12 @@ namespace Raven.Client.Documents.SessionOperations
 
         private T DeserializedResult<T>(RavenJObject result)
         {
-            if (projectionFields != null && projectionFields.Length == 1) // we only select a single field
+            if (_projectionFields != null && _projectionFields.Length == 1) // we only select a single field
             {
                 var type = typeof(T);
                 if (type == typeof(string) || typeof(T).IsValueType() || typeof(T).IsEnum())
                 {
-                    return result.Value<T>(projectionFields[0]);
+                    return result.Value<T>(_projectionFields[0]);
                 }
             }
 
@@ -379,23 +368,23 @@ namespace Raven.Client.Documents.SessionOperations
 
         public void ForceResult(QueryResult result)
         {
-            currentQueryResults = result;
-            currentQueryResults.EnsureSnapshot();
+            _currentQueryResults = result;
+            _currentQueryResults.EnsureSnapshot();
         }
 
         public void EnsureIsAcceptable(QueryResult result)
         {
-            if (waitForNonStaleResults && result.IsStale)
+            if (_waitForNonStaleResults && result.IsStale)
             {
-                sp.Stop();
+                _sp.Stop();
 
                 throw new TimeoutException(
                     string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.",
-                        sp.ElapsedMilliseconds));
+                        _sp.ElapsedMilliseconds));
             }
 
-            currentQueryResults = result;
-            currentQueryResults.EnsureSnapshot();
+            _currentQueryResults = result;
+            _currentQueryResults.EnsureSnapshot();
 
             if (_logger.IsInfoEnabled)
             {

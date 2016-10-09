@@ -18,7 +18,7 @@ namespace Voron.Impl.Journal
         public LazyTransactionBuffer(StorageEnvironmentOptions options)
         {
             _options = options;
-            _lazyTransactionPager = _options.CreateScratchPager("lazy-transactions.buffer");
+            _lazyTransactionPager = _options.CreateScratchPager("lazy-transactions.buffer", options.InitialFileSize ?? options.InitialLogFileSize);
         }
 
         public void EnsureSize(int sizeInPages)

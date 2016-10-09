@@ -1,0 +1,190 @@
+﻿<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
+{{> head }}
+<body>
+    {{> spinner }}
+    {{> topbar }}
+    {{> menu }}
+    {{> notification-center }}
+
+<div class="container-fluid content-container">
+    <div class="content-container-margin">
+        <h1>Subscriptions</h1>
+
+        <div class="subscription panel panel-default" data-subscription-id="1" >
+            <div class="panel-heading">
+                <div class="row">
+                    <div class="col-sm-3">
+                        <strong>ID 157673</strong>
+                        &nbsp;&nbsp;
+                        <a class="subscription-showDetails nobr" data-toggle="collapse" href=".subscription[data-subscription-id=1] .subscription-details" >
+                            Show details
+                        </a>
+                    </div>
+                    <div class="col-sm-9">
+                        <span >Acknowledged ETag:</span>&nbsp;
+                        <div class="editable-input-inline subscription-etagInput" >
+                            <span class="value-container">
+                                <span class="static-name padding padding-xs">
+                                    234758972348
+                                </span>
+                                <input type="text" class="form-control edit-inline padding padding-xs" id="subscription1-etag" placeholder="E-Tag" value="234758972348" />
+                            </span>
+                            &nbsp;
+                            <button class="edit-button btn-toggle btn btn-sm"
+                                    data-target=".subscription[data-subscription-id=1] .subscription-etagInput" data-class="edit">
+                                <i class="icon-edit"></i>
+                                <span class="text"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-body subscription-details collapse">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="row">
+                            <div class="col-sm-3 col-xs-6 text-right">
+                                <label for="subscription1-lastBatchSentTime">Last batch sent time</label>
+                            </div>
+                            <div class="col-sm-4 col-xs-6">
+                                <span class="static-name">2016-09-23T06:11:22.4291379Z</span>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-6 col-sm-3 text-right">
+                                <label for="subscription1-lastClientActivityTime">Last client activity time</label>
+                            </div>
+                            <div class="col-xs-6 col-sm-4">
+                                <span class="static-name">2016-09-23T06:11:22.4291379Z</span>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-6 col-sm-3 text-right">
+                                <label for="subscription1-criteria">Criteria</label>
+                            </div>
+                            <div class="col-xs-6 col-sm-4">
+                                <ul class="criteria-list list-unstyled">
+                                    <li>Start ETag</li>
+                                    <li>Properties cannot match values:
+                                        <ul>
+                                            <li>Name: 'John'</li>
+                                            <li>Age: 30</li>
+                                        </ul>
+                                    </li>
+                                    <li>Properties must match values:
+                                        <ul>
+                                            <li>FavouriteColor: 'Red'</li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-6 col-sm-3 text-right">
+                                <label for="subscription1-criteria">Open</label>
+                            </div>
+                            <div class="col-xs-6 col-sm-4">
+                                <span class="static-name">Yes</span>
+                            </div>
+                        </div>
+
+                        <!-- is subscription connection is open -->
+                        <div class="col-sm-12">
+                            <div class="connection-options" >
+                                <div class="row">
+                                    <div class="col-xs-12 col-sm-3 text-primary text-right">
+                                        <h3>Connection options</h3>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-6 col-sm-3 text-right">
+                                        <label>Connection ID</label>
+                                    </div>
+                                    <div class="col-xs-6 col-sm-4">
+                                        <span class="static-name">9124509</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-6 col-sm-3 text-right">
+                                        <label>Client alive notification interval</label>
+                                    </div>
+                                    <div class="col-xs-6 col-sm-4">
+                                        <span class="static-name">5 s</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-6 col-sm-3 text-right">
+                                        <label>Time to wait before connection retry</label>
+                                    </div>
+                                    <div class="col-xs-6 col-sm-4">
+                                        <span class="static-name">43 s</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-6 col-sm-3 text-right">
+                                        <label>Opening strategy</label>
+                                    </div>
+                                    <div class="col-xs-6 col-sm-4">
+                                        <span class="static-name">OpenIfFree</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-6 col-sm-3 text-right">
+                                        <label>Pulling request timeout</label>
+                                    </div>
+                                    <div class="col-xs-6 col-sm-4">
+                                        <span class="static-name">123</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-6 col-sm-3 text-right">
+                                        <label>Ignore subscribers errors</label>
+                                    </div>
+                                    <div class="col-xs-6 col-sm-4">
+                                        <span class="static-name">Yes</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-6 col-sm-3 text-right text-primary">
+                                        <h4>Batch options</h4>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-6 col-sm-3 text-right">
+                                        <label>Acknowledgment timeout</label>
+                                    </div>
+                                    <div class="col-xs-6 col-sm-4">
+                                        <span class="static-name">436</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-6 col-sm-3 text-right">
+                                        <label>Max document count</label>
+                                    </div>
+                                    <div class="col-xs-6 col-sm-4">
+                                        <span class="static-name">50</span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-6 col-sm-3 text-right">
+                                        <label>Max batch size</label>
+                                    </div>
+                                    <div class="col-xs-6 col-sm-3">
+                                        <span class="static-name">2MB</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- //is subscription connection is open -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{> scripts }}
+</body>
+</html>

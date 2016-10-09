@@ -16,10 +16,7 @@ namespace Voron.Impl
 
         private readonly LowLevelTransaction _lowLevelTransaction;
 
-        public LowLevelTransaction LowLevelTransaction
-        {
-            get { return _lowLevelTransaction;  }
-        }
+        public LowLevelTransaction LowLevelTransaction => _lowLevelTransaction;
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
@@ -27,10 +24,10 @@ namespace Voron.Impl
 
         private readonly Dictionary<Slice, Tree> _trees = new Dictionary<Slice, Tree>(SliceComparer.Instance);
 
-        public IEnumerable<Tree> Trees
-        {
-            get { return _trees.Values; }
-        }
+        private readonly Dictionary<Slice, FixedSizeTree> _globalFixedSizeTree =
+            new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
+
+        public IEnumerable<Tree> Trees => _trees.Values;
 
         public Transaction(LowLevelTransaction lowLevelTransaction)
         {
@@ -51,7 +48,7 @@ namespace Voron.Impl
             if (_trees.TryGetValue(treeName, out tree))
                 return tree;
 
-            TreeRootHeader* header = (TreeRootHeader*) _lowLevelTransaction.RootObjects.DirectRead(treeName);
+            TreeRootHeader* header = (TreeRootHeader*)_lowLevelTransaction.RootObjects.DirectRead(treeName);
             if (header != null)
             {
                 if (header->RootObjectType != type)
@@ -251,9 +248,9 @@ namespace Voron.Impl
                 throw new ArgumentException("Tree " + fromName + " does not exists");
 
             _lowLevelTransaction.RootObjects.Delete(fromName);
-			
+
             var ptr = _lowLevelTransaction.RootObjects.DirectAdd(toName, sizeof(TreeRootHeader));
-            fromTree.State.CopyTo((TreeRootHeader*) ptr);
+            fromTree.State.CopyTo((TreeRootHeader*)ptr);
             fromTree.Name = toName;
             fromTree.State.IsModified = true;
 
@@ -285,7 +282,7 @@ namespace Voron.Impl
             tree.Name = name;
             tree.State.RootObjectType = type;
 
-            var space = (TreeRootHeader*) _lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader));
+            var space = (TreeRootHeader*)_lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader));
             tree.State.CopyTo(space);
 
             tree.State.IsModified = true;
@@ -313,11 +310,22 @@ namespace Voron.Impl
 
         public RootObjectType GetRootObjectType(Slice name)
         {
-            var val = (RootHeader*) _lowLevelTransaction.RootObjects.DirectRead(name);
+            var val = (RootHeader*)_lowLevelTransaction.RootObjects.DirectRead(name);
             if (val == null)
                 return RootObjectType.None;
 
             return val->RootObjectType;
+        }
+
+        public FixedSizeTree GetGlobalFixedSizeTree(Slice name, ushort valSize)
+        {
+            FixedSizeTree tree;
+            if (_globalFixedSizeTree.TryGetValue(name, out tree) == false)
+            {
+                tree = new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, name, valSize);
+                _globalFixedSizeTree[tree.Name] = tree;
+            }
+            return tree;
         }
     }
 }

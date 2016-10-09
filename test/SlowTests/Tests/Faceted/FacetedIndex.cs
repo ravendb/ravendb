@@ -284,7 +284,7 @@ namespace SlowTests.Tests.Faceted
 
             CreateCameraCostIndex(store);
 
-            InsertCameraData(store, _data, waitForIndexing: false);
+            InsertCameraData(store, _data);
         }
 
         private void PrintFacetResults(FacetedQueryResult facetResults)

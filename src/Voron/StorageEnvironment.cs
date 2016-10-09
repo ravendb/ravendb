@@ -140,6 +140,9 @@ namespace Voron
                 if (Disposed)
                     return;
 
+                if (Options.ManualFlushing)
+                    return;
+
                 try
                 {
                     await Task.Delay(Options.IdleFlushTimeout, cancellationToken);
@@ -183,6 +186,7 @@ namespace Voron
             using (var tx = NewLowLevelTransaction(TransactionFlags.ReadWrite))
             {
                 var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root);
+                root.Name = Constants.RootTreeNameSlice;
 
                 tx.UpdateRootsIfNeeded(root);
 
@@ -306,25 +310,35 @@ namespace Voron
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
-            Disposed = true;
             try
             {
-                // if there is a pending flush operation, we need to wait for it
                 if (_journal != null) // error during ctor
                 {
+                    // if there is a pending flush operation, we need to wait for it
                     bool lockTaken = false;
                     using (_journal.Applicator.TryTakeFlushingLock(ref lockTaken))
                     {
+                        // note that we have to set the dispose flag when under the lock 
+                        // (either with TryTake or Take), to avoid data race between the 
+                        // flusher & the dispose. The flusher will check the dispose status
+                        // only after it successfully took the lock.
+
                         if (lockTaken == false)
                         {
                             // if we are here, then we didn't get the flush lock, so it is currently being run
                             // we need to wait for it to complete (so we won't be shutting down the db while we 
-                            // are flushing and maybe access in valid memory.
+                            // are flushing and maybe access invalid memory.
                             using (_journal.Applicator.TakeFlushingLock())
                             {
                                 // when we are here, we know that we aren't flushing, and we can dispose, 
                                 // any future calls to flush will abort because we are marked as disposed
+
+                                Disposed = true;
                             }
+                        }
+                        else
+                        {
+                            Disposed = true;
                         }
                     }
                 }
@@ -584,7 +598,7 @@ namespace Voron
                     StorageEnvironment envToFlush;
                     while (_maybeNeedToFlush.TryDequeue(out envToFlush))
                     {
-                        if (envToFlush.Disposed)
+                        if (envToFlush.Disposed || envToFlush.Options.ManualFlushing)
                             continue;
 
                         var sizeOfUnflushedTransactionsInJournalFile = Volatile.Read(ref envToFlush._sizeOfUnflushedTransactionsInJournalFile);
@@ -599,7 +613,7 @@ namespace Voron
                             // we haven't reached the point where we have to flush, but we might want to, if we have enough 
                             // resources available, if we have more than half the flushing capacity, we can do it now, otherwise, we'll wait
                             // until it is actually required.
-                            if (_concurrentFlushes.CurrentCount > MaxConcurrentFlushes / 2)
+                            if (_concurrentFlushes.CurrentCount < MaxConcurrentFlushes / 2)
                                 continue;
                         }
 
@@ -610,11 +624,10 @@ namespace Voron
                         if (ThreadPool.QueueUserWorkItem(env =>
                         {
                             var storageEnvironment = ((StorageEnvironment)env);
-                            if (storageEnvironment.Disposed)
-                                return;
-
                             try
                             {
+                                if (storageEnvironment.Disposed)
+                                    return;
                                 storageEnvironment.BackgroundFlushWritesToDataFile();
                             }
                             catch (Exception e)
@@ -627,6 +640,7 @@ namespace Voron
                             }
                         }, envToFlush) == false)
                         {
+                            _concurrentFlushes.Release();
                             MaybeFlushEnvironment(envToFlush);// re-register if the thread pool is full
                             Thread.Sleep(0); // but let it give up the execution slice so we'll let the TP time to run
                         }
@@ -700,7 +714,7 @@ namespace Voron
             _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo);
         }
 
-        internal IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)
+        public IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)
         {
             if (tx.Flags != TransactionFlags.ReadWrite)
                 throw new ArgumentException("Temporary pages are only available for write transactions");
@@ -771,7 +785,7 @@ namespace Voron
                     tx.IsLazyTransaction = false;
                     // we only commit here, the rest of the of the options are without 
                     // commit and we use the tx lock
-                    tx.Commit(); 
+                    tx.Commit();
                 }
 
                 if (oldMode == TransactionsMode.Danger)
@@ -812,6 +826,11 @@ namespace Voron
         internal void ResetTheChanceForGettingTheTransactionLock()
         {
             Volatile.Write(ref _otherThreadsShouldWaitBeforeGettingWriteTxLock, -1);
+        }
+
+        public override string ToString()
+        {
+            return Options.ToString();
         }
     }
 }

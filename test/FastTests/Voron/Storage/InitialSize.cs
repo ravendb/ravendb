@@ -40,15 +40,15 @@ namespace FastTests.Voron.Storage
         public void WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordingly()
         {
             var options = StorageEnvironmentOptions.ForPath(DataDir);
-            options.InitialFileSize = GetExpectedInitialSize()* 2;
+            options.InitialFileSize = GetExpectedInitialSize() * 2;
 
             using (new StorageEnvironment(options))
             {
                 var dataFile = Path.Combine(DataDir, Constants.DatabaseFilename);
                 var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
 
-                Assert.Equal(GetExpectedInitialSize() * 2, new FileInfo(dataFile).Length);
-                Assert.Equal(GetExpectedInitialSize() * 2, new FileInfo(scratchFile).Length);
+                Assert.Equal(0, new FileInfo(dataFile).Length % GetExpectedInitialSize());
+                Assert.Equal(0, new FileInfo(scratchFile).Length % GetExpectedInitialSize());
             }
         }
 
@@ -66,14 +66,14 @@ namespace FastTests.Voron.Storage
                 if (StorageEnvironmentOptions.RunningOnPosix)
                 {
                     // on Linux, we use 4K as the allocation granularity
-                    Assert.Equal (GetExpectedInitialSize ()*2 + 4096, new FileInfo (dataFile).Length);
-                    Assert.Equal (GetExpectedInitialSize ()*2 + 4096, new FileInfo (scratchFile).Length);
+                    Assert.Equal(0, new FileInfo(dataFile).Length % 4096);
+                    Assert.Equal(0, new FileInfo(scratchFile).Length % 4096);
                 }
                 else
                 {
                     // on Windows, we use 64K as the allocation granularity
-                    Assert.Equal (GetExpectedInitialSize () * 3, new FileInfo (dataFile).Length);
-                    Assert.Equal (GetExpectedInitialSize () * 3, new FileInfo (scratchFile).Length);
+                    Assert.Equal(0, new FileInfo(dataFile).Length % GetExpectedInitialSize());
+                    Assert.Equal(0, new FileInfo(scratchFile).Length % GetExpectedInitialSize());
                 }
             }
         }

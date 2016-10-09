@@ -9,7 +9,7 @@ namespace Voron.Impl.Paging
     {
         private readonly StorageEnvironmentOptions _options;
         private readonly byte[] _tempPageBuffer;
-        private readonly GCHandle _tempPageHandle;
+        private GCHandle _tempPageHandle;
         private readonly IntPtr _tempPage;
 
         public TemporaryPage(StorageEnvironmentOptions options)
@@ -28,15 +28,9 @@ namespace Voron.Impl.Paging
             }
         }
 
-        public byte[] TempPageBuffer
-        {
-            get { return _tempPageBuffer; }
-        }
+        public byte[] TempPageBuffer => _tempPageBuffer;
 
-        public byte* TempPagePointer
-        {
-            get { return (byte*)_tempPage.ToPointer(); }
-        }
+        public byte* TempPagePointer => (byte*)_tempPage.ToPointer();
 
         public TreePage GetTempPage()
         {

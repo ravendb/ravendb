@@ -28,6 +28,8 @@ namespace Raven.Server.ServerWide.Context
         {
             return new RavenTransaction(_environment.WriteTransaction(context));
         }
+
+        public StorageEnvironment Environment => _environment;
     }
 
     public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext
@@ -98,8 +100,25 @@ namespace Raven.Server.ServerWide.Context
                 }
             }
         }
-        
-        public override void Reset()
+
+        public override void ResetAndRenew()
+        {
+            base.Reset();
+            CloseTransaction();
+
+            // we skip on creating / disposing the allocator
+
+            base.Renew(); 
+        }
+
+        protected override void Renew()
+        {
+            base.Renew();
+            if (Allocator == null)
+                Allocator = new ByteStringContext();
+        }
+
+        protected override void Reset()
         {
             base.Reset();
 

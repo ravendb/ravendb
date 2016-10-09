@@ -1,0 +1,154 @@
+﻿<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
+{{> head }}
+<body>
+    {{> spinner }}
+    {{> topbar }}
+    {{> menu }}
+    {{> notification-center }}
+
+    <div class="container-fluid content-container">
+        <div class="content-container-margin">
+            <h1>Import Database</h1>
+            <div class="panel">
+                <div class="panel-body">
+                    <p>Import data from a .ravendbdump file into the current database.</p>
+                    <p class="text-warning"><i class="icon-warning"></i> Note: Importing will overwrite any existing documents and indexes.</p>
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <div class="input-group file-input">
+                                <input required="" type="file" tabindex="-1" name="importFile" id="importFile" accept=".ravedbdump">
+                                <span class="static-name form-control">Select file...</span>
+                                <span class="input-group-btn">
+                                    <label for="importFile" class="btn btn-default">
+                                        <i class="icon-document"></i>
+                                        <span>Browse</span>
+                                    </label>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <br />
+                    <div class="row">
+                        <div class="col-lg-12">
+
+                            <div class="row">
+                                <div class="col-sm-6 col-lg-4">
+                                    <div class="toggle">
+                                        <input id="toggle1" type="checkbox">
+                                        <label for="toggle1">
+                                            Include Documents
+                                        </label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="toggle2" type="checkbox">
+                                        <label for="toggle2">
+                                            Include Indexes
+                                        </label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="toggle3" type="checkbox">
+                                        <label for="toggle3">
+                                            Include Attachments
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-lg-4">
+                                    <div class="toggle">
+                                        <input id="toggle4" type="checkbox">
+                                        <label for="toggle4">
+                                            Include Transformers
+                                        </label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="toggle5" type="checkbox">
+                                        <label for="toggle5">
+                                            Remove Analyzers
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+                    <br />
+
+
+                    <div class="collapse" id="collapseExample">
+                        <form role="form">
+
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <div class="input-group">
+                                            <div class="input-group-addon">Batch size</div>
+                                            <input class="form-control" type="number" min="0" data-bind="value: batchSize">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="toggle">
+                                <input id="expiredDocuments" type="checkbox">
+                                <label for="expiredDocuments">
+                                    Strip replication information from documents metadata
+                                </label>
+                            </div>
+                            <div class="toggle">
+                                <input id="expiredDocuments" type="checkbox">
+                                <label for="expiredDocuments">
+                                    Disable versioning bundle during import
+                                </label>
+                            </div>
+                            <div class="toggle">
+                                <input id="expiredDocuments" type="checkbox">
+                                <label for="expiredDocuments">
+
+                                    Include Expired documents
+                                </label>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="toggle">
+                                    <input id="useTransformScript" type="checkbox" data-collapse="#collapseTransformScript">
+                                    <label for="useTransformScript">
+                                        Use Transform script <a class="text-info" target="_blank" href="#">
+                                            <span class="icon-help"></span>
+                                        </a>
+                                    </label>
+                                </div>
+                                <div class="collapse" id="collapseTransformScript">
+                                    <pre style="height: 200px; font-size: 16px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript' }" class="ace_editor ui-resizable ace-xcode">
+<textarea class="ace_text-input" wrap="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="opacity: 0; height: 19px; width: 8.79688px; left: 46px; top: 0px;"></textarea>
+</pre>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">Command</label>
+                                <div class="input-group">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default btn-sm"><span class="icon-copy"></span> <span>Copy to clipboard</span></button>
+                                    </span>
+                                    <input onClick="this.select();" class="form-control input-sm" readonly value='Raven.Smuggler out http://live-test.ravendb.net raven.dump --operate-on-types=Documents,Indexes,Transformers --database="Media" --batch-size=1024 --excludeexpired'>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <hr />
+
+                    <div class="progress"> <div class="progress-bar progress-bar-primary progress-bar-striped" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width:60%"> <span class="sr-only">60% Complete (warning)</span> </div> </div>
+                    <button class="btn btn-info" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+                        Advanced
+                    </button>
+                    <button class="btn btn-primary btn-toggle importDatabase" data-target=".importDatabase" data-class="btn-spinner"><span class="icon-import"></span> <span>Import Database</span></button>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{> scripts }}
+</body>
+</html>

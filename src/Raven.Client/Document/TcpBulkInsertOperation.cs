@@ -130,7 +130,7 @@ namespace Raven.Client.Document
 
                 var needToThrottle = _throttlingEvent.Wait(0) == false;
 
-                _jsonOperationContext.Reset();
+                _jsonOperationContext.ResetAndRenew();
                 using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, debugTag))
                 using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag,
