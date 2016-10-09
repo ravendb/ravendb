@@ -125,7 +125,7 @@
     <span class="properties-label">Priority:</span>
     <div class="btn-group btn-group-xs">
         <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown"
-                data-bind="css: { 'btn-spinner': $root.localPriorityInProgress().contains(name) }, enable: !$root.localPriorityInProgress().contains(name)">
+                data-bind="css: { 'btn-spinner': $root.localPriorityInProgress().contains(name) }, enable: $root.indexingEnabled() && !$root.localPriorityInProgress().contains(name)">
             <span data-bind="visible: pausedUntilRestart()">
                 <i class="icon-cancel"></i>
                 <span>Disabled until restart</span>

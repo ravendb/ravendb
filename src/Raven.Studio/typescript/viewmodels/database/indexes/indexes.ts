@@ -348,6 +348,7 @@ class indexes extends viewModelBase {
             .done(can => {
                 if (can) {
                     let requestsCount = 0;
+                    //TODO: wait for RavenDB-5421 and issue single call to server
 
                     this.getSelectedIndexes().forEach(i => {
                         if (i.lockMode() !== lockModeString) {
@@ -411,17 +412,21 @@ class indexes extends viewModelBase {
     }
 
     resumeIndexing(idx: index) {
-        idx.pausedUntilRestart(false);
+        this.localPriorityInProgress.push(idx.name);
+
         new toggleIndexingCommand(true, this.activeDatabase(), { name: [idx.name] })
             .execute()
-            .fail(() => idx.pausedUntilRestart(true));
+            .done(() => idx.pausedUntilRestart(false))
+            .always(() => this.localPriorityInProgress.remove(idx.name));
     }
 
     disableUntilRestart(idx: index) {
-        idx.pausedUntilRestart(true);
+        this.localPriorityInProgress.push(idx.name);
+
         new toggleIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
             .execute()
-            .fail(() => idx.pausedUntilRestart(false));
+            .done(() => idx.pausedUntilRestart(true))
+            .always(() => this.localPriorityInProgress.remove(idx.name));
     }
 
     toggleSelectAll() {
