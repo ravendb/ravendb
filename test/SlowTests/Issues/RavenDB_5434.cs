@@ -55,7 +55,7 @@ namespace SlowTests.Issues
 
                     session.Store(new User
                     {
-                        Name = "John",
+                        Name = "13:21:59,854 ERROR HibernateUtil:42 - Error initializing database",
                         CreatedDate = now,
                         OtherDate = now.AddDays(1)
                     });
@@ -73,7 +73,7 @@ namespace SlowTests.Issues
                         .ToList();
 
                     Assert.Equal(1, results.Count);
-                    Assert.Equal("John", results[0].Name);
+                    Assert.Equal("13:21:59,854 ERROR HibernateUtil:42 - Error initializing database", results[0].Name);
                     Assert.Equal(new TimeSpan(1, 0, 0, 0), results[0].Time);
                 }
             }

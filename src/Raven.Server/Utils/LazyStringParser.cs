@@ -55,6 +55,20 @@ namespace Raven.Server.Utils
                 }
             }
 
+            if (indexOfMilliseconds == -1) // if we have ms then it will be validated below
+            {
+                if (indexOfDays == -1)
+                {
+                    if (len > 8)
+                        return false;
+                }
+                else
+                {
+                    if (len - indexOfDays - 1 - 8 > 0)
+                        return false;
+                }
+            }
+
             int days = 0, hours, minutes, seconds, ticks = 0;
 
             if (indexOfDays != -1)
@@ -78,7 +92,7 @@ namespace Raven.Server.Utils
 
             if (indexOfMilliseconds != -1)
             {
-                var remainingLen = len - indexOfMilliseconds -1;
+                var remainingLen = len - indexOfMilliseconds - 1;
                 if (remainingLen > 7)
                     return false;
                 if (TryParseNumber(buffer + 9, remainingLen, out ticks) == false)
@@ -166,7 +180,7 @@ namespace Raven.Server.Utils
                     kind = DateTimeKind.Utc;
                     goto case 27;
                 case 33://"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'+'dd':'dd"
-                    if (buffer[19] != '.' || buffer[30] != ':' || 
+                    if (buffer[19] != '.' || buffer[30] != ':' ||
                         (buffer[27] != '+' && buffer[27] != '-'))
                         return Result.Failed;
 
