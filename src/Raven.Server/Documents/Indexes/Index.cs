@@ -937,7 +937,10 @@ namespace Raven.Server.Documents.Indexes
                 if (string.Equals(indexPath, directory, StringComparison.OrdinalIgnoreCase) == false)
                     continue;
 
-                totalSize += mapping.Value;
+                foreach (var singleMapping in mapping.Value)
+                {
+                    totalSize += singleMapping.Value;
+                }
             }
 
             stats.DiskSize.SizeInBytes = totalSize;

@@ -20,18 +20,7 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
-            {
-                Console.WriteLine(i);
-                using (var a = new FastTests.Server.Documents.Indexing.Static.BasicStaticMapIndexing())
-                {
-                    a.The_easiest_static_index().Wait();
-                }
-            }
-
-            if (DateTime.Now.Ticks > 1)
-                return;
-
+           
             using (var store = new DocumentStore
             {
                 Url = "http://localhost:8080",

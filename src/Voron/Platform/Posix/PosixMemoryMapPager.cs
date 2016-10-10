@@ -140,7 +140,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err);
             }
 
-            NativeMemory.RegisterFileMapping(FileName, fileSize);
+            NativeMemory.RegisterFileMapping(FileName, startingBaseAddressPtr, fileSize);
 
             var allocationInfo = new PagerState.AllocationInfo
             {
@@ -191,13 +191,14 @@ namespace Voron.Platform.Posix
 
         public override void ReleaseAllocationInfo(byte* baseAddress, long size)
         {
-            var result = Syscall.munmap(new IntPtr(baseAddress), (ulong)size);
+            var ptr = new IntPtr(baseAddress);
+            var result = Syscall.munmap(ptr, (ulong)size);
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 PosixHelper.ThrowLastError(err);
             }
-            NativeMemory.UnregisterFileMapping(FileName, size);
+            NativeMemory.UnregisterFileMapping(FileName, ptr, size);
         }
 
         public override void Dispose()
