@@ -88,7 +88,7 @@ select new {
         [Fact]
         public void DoesNotOverReduce()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "512"))
+            using (var store = GetDocumentStore())
             {
                 Fill(store);
 

@@ -108,6 +108,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return false;
         }
 
+        public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
+        {
+            throw new NotSupportedException();
+        }
+
         private void WriteLastEtags(TransactionOperationContext indexContext)
         {
             foreach (var lastEtag in _mapReduceContext.ProcessedDocEtags)

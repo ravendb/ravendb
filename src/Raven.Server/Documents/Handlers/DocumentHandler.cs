@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Handlers
             IEnumerable<Document> documents;
             if (etag != null)
             {
-                documents = Database.DocumentsStorage.GetDocumentsAfter(context, etag.Value, GetStart(), GetPageSize());
+                documents = Database.DocumentsStorage.GetDocumentsFrom(context, etag.Value, GetStart(), GetPageSize());
             }
             else if (HttpContext.Request.Query.ContainsKey("startsWith"))
             {

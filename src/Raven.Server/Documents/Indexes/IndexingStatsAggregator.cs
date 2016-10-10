@@ -235,7 +235,6 @@ namespace Raven.Server.Documents.Indexes
             _stats.MapDetails.ProcessWorkingSet = currentProcessWorkingSet;
         }
 
-
         public void RecordMapAllocations(long allocations)
         {
             if (_stats.MapDetails == null)
@@ -243,6 +242,7 @@ namespace Raven.Server.Documents.Indexes
 
             _stats.MapDetails.CurrentlyAllocated = allocations;
         }
+
         public void RecordCommitStats(int numberOfModifiedPages, int numberOfPagesWrittenToDisk)
         {
             if (_stats.CommitDetails == null)

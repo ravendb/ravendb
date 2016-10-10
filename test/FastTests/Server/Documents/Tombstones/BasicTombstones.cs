@@ -52,7 +52,7 @@ namespace FastTests.Server.Documents.Tombstones
                     {
                         var tombstones = database
                             .DocumentsStorage
-                            .GetTombstonesAfter(context, "Users", 0, 0, int.MaxValue)
+                            .GetTombstonesFrom(context, "Users", 0, 0, int.MaxValue)
                             .ToList();
 
                         Assert.Equal(1, tombstones.Count);
@@ -133,7 +133,7 @@ namespace FastTests.Server.Documents.Tombstones
 
                         using (context.OpenReadTransaction())
                         {
-                            var count = database.DocumentsStorage.GetTombstonesAfter(context, "Users", 0, 0, 128).Count();
+                            var count = database.DocumentsStorage.GetTombstonesFrom(context, "Users", 0, 0, 128).Count();
                             Assert.Equal(0, count);
                         }
 
@@ -152,7 +152,7 @@ namespace FastTests.Server.Documents.Tombstones
 
                         using (context.OpenReadTransaction())
                         {
-                            var count = database.DocumentsStorage.GetTombstonesAfter(context, "Users", 0, 0, 128).Count();
+                            var count = database.DocumentsStorage.GetTombstonesFrom(context, "Users", 0, 0, 128).Count();
                             Assert.Equal(1, count);
                         }
 
@@ -160,7 +160,7 @@ namespace FastTests.Server.Documents.Tombstones
 
                         using (context.OpenReadTransaction())
                         {
-                            var count = database.DocumentsStorage.GetTombstonesAfter(context, "Users", 0, 0, 128).Count();
+                            var count = database.DocumentsStorage.GetTombstonesFrom(context, "Users", 0, 0, 128).Count();
                             Assert.Equal(1, count);
                         }
 
@@ -181,7 +181,7 @@ namespace FastTests.Server.Documents.Tombstones
 
                         using (context.OpenReadTransaction())
                         {
-                            var count = database.DocumentsStorage.GetTombstonesAfter(context, "Users", 0, 0, 128).Count();
+                            var count = database.DocumentsStorage.GetTombstonesFrom(context, "Users", 0, 0, 128).Count();
                             Assert.Equal(2, count);
                         }
 
@@ -189,7 +189,7 @@ namespace FastTests.Server.Documents.Tombstones
 
                         using (context.OpenReadTransaction())
                         {
-                            var list = database.DocumentsStorage.GetTombstonesAfter(context, "Users", 0, 0, 128).ToList();
+                            var list = database.DocumentsStorage.GetTombstonesFrom(context, "Users", 0, 0, 128).ToList();
                             Assert.Equal(1, list.Count);
                             Assert.Equal(5, list[0].Etag);
                         }
