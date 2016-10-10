@@ -76,6 +76,21 @@ class index {
         this.initializeObservables();
     }
 
+    private getTypeForUI() {
+        switch (this.type) {
+            case "Map":
+                return "Map";
+            case "MapReduce":
+                return "Map-Reduce";
+            case "AutoMap":
+                return "Auto Map";
+            case "AutoMapReduce":
+                return "Auto Map-Reduce";
+            default:
+                return this.type;
+        }
+    }
+
     private initializeObservables() {
         const urls = appUrl.forCurrentDatabase();
         this.queryUrl = urls.query(this.name);
