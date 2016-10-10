@@ -3589,15 +3589,6 @@ pre {
     border-left: 1px solid #3a4242;
   }
 }
-.indexes #toggleIndexing .enable-indexing {
-  display: none;
-}
-.indexes #toggleIndexing.disable .disable-indexing {
-  display: none;
-}
-.indexes #toggleIndexing.disable .enable-indexing {
-  display: inline-block;
-}
 .indexes .inline-block {
   display: inline-block;
 }
@@ -3684,23 +3675,29 @@ pre {
 .indexes .panel .state.state-faulty:before {
   content: 'FAULTY';
 }
-.indexes .panel .state.state-abandoned {
-  background-color: #2c5266;
-}
-.indexes .panel .state.state-abandoned:before {
-  content: 'ABANDONED';
-}
 .indexes .panel .state.state-normal {
   background-color: #295b33;
 }
 .indexes .panel .state.state-normal:before {
   content: 'NORMAL';
 }
+.indexes .panel .state.state-idle {
+  background-color: #b98525;
+}
+.indexes .panel .state.state-idle:before {
+  content: 'IDLE';
+}
 .indexes .panel .state.state-disabled {
   background-color: #b98525;
 }
 .indexes .panel .state.state-disabled:before {
   content: 'DISABLED';
+}
+.indexes .panel .state.state-paused {
+  background-color: #b98525;
+}
+.indexes .panel .state.state-paused:before {
+  content: 'PAUSED';
 }
 .indexes .panel .checkbox {
   position: relative;
@@ -3761,16 +3758,16 @@ pre {
                 order:2;
             }*/
   }
-  .indexes .properties-item:nth-of-type(1) {
+  .indexes .properties-item.staleness {
     order: 2;
   }
-  .indexes .properties-item:nth-of-type(2) {
+  .indexes .properties-item.entriesCount {
     order: 4;
   }
-  .indexes .properties-item:nth-of-type(3) {
+  .indexes .properties-item.priority {
     order: 1;
   }
-  .indexes .properties-item:nth-of-type(4) {
+  .indexes .properties-item.mode {
     order: 3;
   }
 }

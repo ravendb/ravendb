@@ -1,11 +1,23 @@
-﻿<!doctype html>
+<!doctype html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
 {{> head }}
+
 <body>
-    {{> spinner }}
-    {{> topbar }}
-    {{> menu }}
-    {{> notification-center }}
+    {{> spinner }} {{> topbar }} {{> menu }} {{> notification-center }}
+
+    <style>
+        #toggleIndexing .enable-indexing {
+            display: none;
+        }
+
+        #toggleIndexing.disable .disable-indexing {
+            display: none;
+        }
+
+        #toggleIndexing.disable .enable-indexing {
+            display: inline-block;
+        }
+    </style>
 
     <div class="container-fluid content-container">
         <div class="content-container-margin indexes">
@@ -182,8 +194,7 @@
                             </div>
                             <h3 class="index-name"><a href="#">Cars/ByProductionYear</a></h3>
                             <div class="index-type">
-                                AutoMap
-                                &nbsp; <span class="label label-warning">TEST INDEX</span>
+                                AutoMap &nbsp; <span class="label label-warning">TEST INDEX</span>
                             </div>
                         </div>
                         <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
@@ -670,4 +681,5 @@
 
     {{> scripts }}
 </body>
+
 </html>
