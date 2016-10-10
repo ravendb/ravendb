@@ -2179,7 +2179,7 @@ namespace Raven.Client.Connection.Async
 
                 var remainingContent = await streamReader.ReadToEndAsync().ConfigureAwait(false);
 
-                if (string.IsNullOrEmpty(remainingContent) == false)
+                if (string.IsNullOrWhiteSpace(remainingContent) == false)
                     throw new InvalidOperationException("Server error: " + remainingContent);
             }
 
@@ -2346,7 +2346,7 @@ namespace Raven.Client.Connection.Async
 
                 var remainingContent = streamReader.ReadToEnd();
 
-                if (string.IsNullOrEmpty(remainingContent) == false)
+                if (string.IsNullOrWhiteSpace(remainingContent) == false)
                     throw new InvalidOperationException("Server error: " + remainingContent);
             }
 
