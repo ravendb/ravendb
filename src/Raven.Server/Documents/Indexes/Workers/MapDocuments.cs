@@ -5,28 +5,28 @@ using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
-using Raven.Server.Config.Settings;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.LowMemoryNotification;
 using Sparrow.Logging;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
     public class MapDocuments : IIndexingWork
     {
-        protected Logger _logger;
+        private readonly Logger _logger;
         private readonly Index _index;
         private readonly MapReduceIndexingContext _mapReduceContext;
+        private readonly IndexingConfiguration _configuration;
         private readonly DocumentsStorage _documentsStorage;
         private readonly IndexStorage _indexStorage;
 
-        public MapDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, MapReduceIndexingContext mapReduceContext)
+        public MapDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, MapReduceIndexingContext mapReduceContext, IndexingConfiguration configuration)
         {
             _index = index;
             _mapReduceContext = mapReduceContext;
+            _configuration = configuration;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
             _logger = LoggingSource.Instance
@@ -38,6 +38,10 @@ namespace Raven.Server.Documents.Indexes.Workers
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
+            var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
+                            ? _configuration.MaxTimeForDocumentTransactionToRemainOpenInSec.AsTimeSpan
+                            : TimeSpan.FromMinutes(15);
+
             var moreWorkFound = false;
             foreach (var collection in _index.Collections)
             {
@@ -57,12 +61,13 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                     var sw = Stopwatch.StartNew();
                     IndexWriteOperation indexWriter = null;
-                    var maxTimeForReadTxToRemainOpen = TimeSpan.FromSeconds(15);
                     var keepRunning = true;
                     while (keepRunning)
                     {
                         using (databaseContext.OpenReadTransaction())
                         {
+
+
                             var documents = GetDocumentsEnumerator(databaseContext, collection, lastEtag);
 
                             using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))
@@ -118,7 +123,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         keepRunning = false;
                                         break;
                                     }
-                                    if (sw.Elapsed > maxTimeForReadTxToRemainOpen)
+                                    if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
                                         break;
                                 }
                             }
