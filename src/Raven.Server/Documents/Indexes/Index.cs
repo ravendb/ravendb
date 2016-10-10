@@ -421,9 +421,7 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var collection in Collections)
             {
-                var lastDocEtag = collection == Constants.Indexing.AllDocumentsCollection
-                    ? DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction)
-                    : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                var lastDocEtag = GetLastDocumentEtagInCollection(databaseContext, collection);
 
                 var lastProcessedDocEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
@@ -432,9 +430,7 @@ namespace Raven.Server.Documents.Indexes
                     if (lastDocEtag > lastProcessedDocEtag)
                         return true;
 
-                    var lastTombstoneEtag = collection == Constants.Indexing.AllDocumentsCollection
-                        ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
-                        : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
+                    var lastTombstoneEtag = GetLastTombstoneEtagInCollection(databaseContext, collection);
 
                     var lastProcessedTombstoneEtag =
                         _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
@@ -1505,6 +1501,20 @@ namespace Raven.Server.Documents.Indexes
                 return tryIncreasingMemoryUsageForIndex;
             }
             return true;
+        }
+
+        public long GetLastDocumentEtagInCollection(DocumentsOperationContext databaseContext, string collection)
+        {
+            return collection == Constants.Indexing.AllDocumentsCollection
+                ? DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction)
+                : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+        }
+
+        public long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, string collection)
+        {
+            return collection == Constants.Indexing.AllDocumentsCollection
+                ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
+                : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
         }
 
         private bool TryIncreasingMemoryUsageForIndex(Size currentlyAllocated, IndexingStatsScope stats)

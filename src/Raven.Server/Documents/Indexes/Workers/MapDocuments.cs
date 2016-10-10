@@ -62,11 +62,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var sw = Stopwatch.StartNew();
                     IndexWriteOperation indexWriter = null;
                     var keepRunning = true;
+                    var lastCollectionEtag = -1L;
                     while (keepRunning)
                     {
                         using (databaseContext.OpenReadTransaction())
                         {
-
+                            if (lastCollectionEtag == -1)
+                                lastCollectionEtag = _index.GetLastDocumentEtagInCollection(databaseContext, collection);
 
                             var documents = GetDocumentsEnumerator(databaseContext, collection, lastEtag);
 
@@ -118,7 +120,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             $"Failed to execute mapping function on {current.Key}. Exception: {e}");
                                     }
 
-                                    if (CanContinueBatch(collectionStats, lastEtag, long.MaxValue) == false)
+                                    if (CanContinueBatch(collectionStats, lastEtag, lastCollectionEtag) == false)
                                     {
                                         keepRunning = false;
                                         break;

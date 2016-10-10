@@ -65,12 +65,16 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var sw = Stopwatch.StartNew();
                     IndexWriteOperation indexWriter = null;
                     var keepRunning = true;
+                    var lastCollectionEtag = -1L;
                     while (keepRunning)
                     {
                         var batchCount = 0;
 
                         using (databaseContext.OpenReadTransaction())
                         {
+                            if (lastCollectionEtag == -1)
+                                lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection);
+
                             var tombstones = collection == Constants.Indexing.AllDocumentsCollection
                                 ? _documentsStorage.GetTombstonesFrom(databaseContext, lastEtag + 1, 0, pageSize)
                                 : _documentsStorage.GetTombstonesFrom(databaseContext, collection, lastEtag + 1, 0, pageSize);
@@ -94,7 +98,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
 
-                                if (CanContinueBatch(collectionStats, lastEtag, long.MaxValue) == false)
+                                if (CanContinueBatch(collectionStats, lastEtag, lastCollectionEtag) == false)
                                 {
                                     keepRunning = false;
                                     break;

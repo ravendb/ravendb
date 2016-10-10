@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
@@ -115,6 +116,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         IndexWriteOperation indexWriter = null;
 
                         var keepRunning = true;
+                        var lastCollectionEtag = -1L;
                         while (keepRunning)
                         {
                             var batchCount = 0;
@@ -125,6 +127,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 switch (actionType)
                                 {
                                     case ActionType.Document:
+                                        if (lastCollectionEtag == -1)
+                                            lastCollectionEtag = _index.GetLastDocumentEtagInCollection(databaseContext, collection);
+
                                         references = _documentsStorage
                                             .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
                                             .Select(document =>
@@ -136,6 +141,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             });
                                         break;
                                     case ActionType.Tombstone:
+                                        if (lastCollectionEtag == -1)
+                                            lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection);
+
                                         references = _documentsStorage
                                             .GetTombstonesFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
                                             .Select(tombstone =>
@@ -194,7 +202,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                     _logger.Info($"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.", e);
                                             }
 
-                                            if (CanContinueBatch(collectionStats, lastEtag, long.MaxValue) == false)
+                                            if (CanContinueBatch(collectionStats, lastEtag, lastCollectionEtag) == false)
                                             {
                                                 keepRunning = false;
                                                 break;

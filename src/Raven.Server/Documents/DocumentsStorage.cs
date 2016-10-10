@@ -1793,7 +1793,7 @@ namespace Raven.Server.Documents
         {
             CollectionName collectionName;
             if (_collectionsCache.TryGetValue(collection, out collectionName) == false && throwIfDoesNotExist)
-                throw new InvalidOperationException($"There is not collection for '{collection}'.");
+                throw new InvalidOperationException($"There is no collection for '{collection}'.");
 
             return collectionName;
         }
