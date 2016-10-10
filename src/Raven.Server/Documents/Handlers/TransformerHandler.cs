@@ -1,5 +1,7 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Json;
@@ -88,6 +90,29 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 writer.WriteEndArray();
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/transformers/set-lock", "POST")]
+        public Task SetLockMode()
+        {
+            
+            var names = GetStringValuesQueryString("name");
+            var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
+
+            TransformerLockMode mode;
+            if (Enum.TryParse(modeStr, out mode) == false)
+                throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + modeStr);
+
+            foreach (var name in names)
+            {
+                var transformer = Database.TransformerStore.GetTransformer(name);
+                if (transformer == null)
+                    throw new InvalidOperationException("There is not transformer with name: " + name);
+
+                transformer.SetLock(mode);
             }
 
             return Task.CompletedTask;

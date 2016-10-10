@@ -6,8 +6,6 @@ import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/database/indexes/resetIndexConfirm");
 import changeSubscription = require("common/changeSubscription");
 import changesContext = require("common/changesContext");
-import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
-import indexesAndTransformersClipboardDialog = require("viewmodels/database/indexes/indexesAndTransformersClipboardDialog");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
@@ -35,7 +33,7 @@ class indexes extends viewModelBase {
     indexesSelectionState: KnockoutComputed<checkbox>;
 
     globalStartStopInProgress = ko.observable<boolean>(false);
-    globalLockChangesInProgress = ko.observable<number>(0);
+    globalLockChangesInProgress = ko.observable<boolean>(false);
     localPriorityInProgress = ko.observableArray<string>([]);
     localLockChangesInProgress = ko.observableArray<string>([]);
 
@@ -176,14 +174,6 @@ class indexes extends viewModelBase {
         });
     }
 
-    copyIndex(i: index) {
-        app.showDialog(new copyIndexDialog(i.name, this.activeDatabase(), false));
-    }
-
-    copySelectedIndexes() {
-        alert("implement me!"); //TODO:
-    }
-
     resetIndex(indexToReset: index) {
         const resetIndexVm = new resetIndexConfirm(indexToReset.name, this.activeDatabase());
 
@@ -270,11 +260,10 @@ class indexes extends viewModelBase {
     }
 
     private updateIndexLockMode(i: index, newLockMode: Raven.Abstractions.Indexing.IndexLockMode) {
-        const originalLockMode = i.lockMode();
-        if (originalLockMode !== newLockMode) {
+        if (i.lockMode() !== newLockMode) {
             this.localLockChangesInProgress.push(i.name);
 
-            new saveIndexLockModeCommand(i, newLockMode, this.activeDatabase())
+            new saveIndexLockModeCommand([i], newLockMode, this.activeDatabase())
                 .execute()
                 .done(() => i.lockMode(newLockMode))
                 .always(() => this.localLockChangesInProgress.remove(i.name));
@@ -347,46 +336,20 @@ class indexes extends viewModelBase {
         this.confirmationMessage("Are you sure?", `Do you want to ${lockModeStrForTitle} selected indexes?`)
             .done(can => {
                 if (can) {
-                    let requestsCount = 0;
-                    //TODO: wait for RavenDB-5421 and issue single call to server
+                    this.globalLockChangesInProgress(true);
 
-                    this.getSelectedIndexes().forEach(i => {
-                        if (i.lockMode() !== lockModeString) {
-                            requestsCount++;
-                            this.localLockChangesInProgress.push(i.name);
-                            new saveIndexLockModeCommand(i, lockModeString, this.activeDatabase())
-                                .execute()
-                                .done(() => i.lockMode(lockModeString))
-                                .always(() => {
-                                    this.globalLockChangesInProgress(this.globalLockChangesInProgress() - 1);
-                                    this.localLockChangesInProgress.remove(i.name);
-                                });
-                        }
-                    });
+                    const indexes = this.getSelectedIndexes();
 
-                    this.globalLockChangesInProgress(requestsCount);
+                    new saveIndexLockModeCommand(indexes, lockModeString, this.activeDatabase())
+                        .execute()
+                        .done(() => indexes.forEach(i => i.lockMode(lockModeString)))
+                        .always(() => this.globalLockChangesInProgress(false));
                 }
             });
     }
 
     deleteSelectedIndexes() {
         this.promptDeleteIndexes(this.getSelectedIndexes());
-    }
-
-    pasteIndex() { //TODO: do we need this method in this class?
-        app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
-    }
-
-    copyIndexesAndTransformers() {//TODO: do we need this method in this class?
-        app.showDialog(new indexesAndTransformersClipboardDialog(this.activeDatabase(), false));
-    }
-
-    pasteIndexesAndTransformers() {//TODO: do we need this method in this class?
-        var dialog = new indexesAndTransformersClipboardDialog(this.activeDatabase(), true);
-        app.showDialog(dialog);
-        dialog.pasteDeferred.done((summary: string) => {
-            this.confirmationMessage("Indexes And Transformers Paste Summary", summary, ['Ok']);
-        });
     }
 
     startIndexing(): void {
