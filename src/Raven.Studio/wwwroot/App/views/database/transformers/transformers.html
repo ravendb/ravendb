@@ -1,14 +1,23 @@
 <div class="transformers">
-    <div class="clearfix">
+    <div data-bind="if: transformersGroups().length === 0">
+        <div class="row">
+            <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+                <i class="icon-xl icon-empty-set text-muted"></i>
+                <h2 class="text-center">No transformers have been created for this database.</h2>
+                <p class="lead text-center text-muted">Go ahead and <a href="#" data-bind="attr: { href: newTransformerUrl }">create one now</a>.</p>
+            </div>
+        </div>
+    </div>
+    <div class="clearfix" data-bind="if: transformersGroups().length">
         <div class="pull-left">
             <div class="form-inline">
                 <div class="checkbox checkbox-inline align-checkboxes" title="Select all or none">
-                    <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }" />
+                    <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }"/>
                     <label></label>
                 </div>
-                <input type="text" class="form-control" placeholder="Filter" title="Filter transformers (Alt+/)" data-bind="textInput: searchText" />
+                <input type="text" class="form-control" placeholder="Filter" title="Filter transformers (Alt+/)" data-bind="textInput: searchText"/>
                 <div class="btn-group">
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown"  title="Set lock mode to selected transformers" 
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Set lock mode to selected transformers"
                             data-bind="enable: selectedTransformersName().length && !globalLockChangesInProgress(), css: { 'btn-spinner': globalLockChangesInProgress() }">
                         <i class="icon-lock"></i>
                         <span>Lock</span>&nbsp;&nbsp;
@@ -36,8 +45,8 @@
             </div>
         </div>
     </div>
-    <hr />
-    
+    <hr data-bind="visible: transformersGroups().length"/>
+
     <div data-bind="foreach: transformersGroups">
         <h2 data-bind="text: entityName, visible: !groupHidden()"></h2>
         <div data-bind="foreach: transformers, visible: !groupHidden()">
