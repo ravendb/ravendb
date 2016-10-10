@@ -162,8 +162,8 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
             var maxValue = int.MaxValue;
             if (collection == Constants.Indexing.AllDocumentsCollection)
-                return _documentsStorage.GetDocumentsAfter(databaseContext, lastEtag + 1, 0, maxValue);
-            return _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, maxValue);
+                return _documentsStorage.GetDocumentsFrom(databaseContext, lastEtag + 1, 0, maxValue);
+            return _documentsStorage.GetDocumentsFrom(databaseContext, collection, lastEtag + 1, 0, maxValue);
         }
     }
 }

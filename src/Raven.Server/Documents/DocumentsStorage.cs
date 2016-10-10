@@ -432,15 +432,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, long etag, int start, int take)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, int start, int take)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag))
             {
-                if (result.Id == etag)
-                    continue;
-
                 if (start > 0)
                 {
                     start--;
@@ -455,16 +452,13 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, long etag)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag))
             {
-                if (result.Id == etag)
-                    continue;
-
                 yield return TableValueToDocument(context, result);
             }
         }
@@ -493,7 +487,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, string collection, long etag, int start, int take)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, string collection, long etag, int start, int take)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -504,9 +498,6 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], etag))
             {
-                if (result.Id == etag)
-                    continue;
-
                 if (start > 0)
                 {
                     start--;
@@ -588,7 +579,7 @@ namespace Raven.Server.Documents
             return doc;
         }
 
-        public IEnumerable<DocumentTombstone> GetTombstonesAfter(
+        public IEnumerable<DocumentTombstone> GetTombstonesFrom(
             DocumentsOperationContext context,
             long etag,
             int start,
@@ -599,9 +590,6 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag))
             {
-                if (result.Id == etag)
-                    continue;
-
                 if (start > 0)
                 {
                     start--;
@@ -615,7 +603,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<DocumentTombstone> GetTombstonesAfter(
+        public IEnumerable<DocumentTombstone> GetTombstonesFrom(
             DocumentsOperationContext context,
             string collection,
             long etag,
@@ -631,9 +619,6 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag))
             {
-                if (result.Id == etag)
-                    continue;
-
                 if (start > 0)
                 {
                     start--;

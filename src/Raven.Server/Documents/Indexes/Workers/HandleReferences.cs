@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 {
                                     case ActionType.Document:
                                         references = _documentsStorage
-                                            .GetDocumentsAfter(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
+                                            .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
                                             .Select(document =>
                                             {
                                                 _reference.Key = document.Key;
@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         break;
                                     case ActionType.Tombstone:
                                         references = _documentsStorage
-                                            .GetTombstonesAfter(databaseContext, referencedCollection.Name, lastEtag, 0, pageSize)
+                                            .GetTombstonesFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
                                             .Select(tombstone =>
                                             {
                                                 _reference.Key = tombstone.Key;

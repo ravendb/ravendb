@@ -72,8 +72,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                         using (databaseContext.OpenReadTransaction())
                         {
                             var tombstones = collection == Constants.Indexing.AllDocumentsCollection
-                                ? _documentsStorage.GetTombstonesAfter(databaseContext, lastEtag, 0, pageSize)
-                                : _documentsStorage.GetTombstonesAfter(databaseContext, collection, lastEtag, 0, pageSize);
+                                ? _documentsStorage.GetTombstonesFrom(databaseContext, lastEtag + 1, 0, pageSize)
+                                : _documentsStorage.GetTombstonesFrom(databaseContext, collection, lastEtag + 1, 0, pageSize);
 
                             foreach (var tombstone in tombstones)
                             {

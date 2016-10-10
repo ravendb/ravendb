@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.SqlReplication
         {
             var pageSize = int.MaxValue; // _database.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
-            var documents = _database.DocumentsStorage.GetTombstonesAfter(context, Configuration.Collection, Statistics.LastTombstonesEtag, 0, pageSize).ToList();
+            var documents = _database.DocumentsStorage.GetTombstonesFrom(context, Configuration.Collection, Statistics.LastTombstonesEtag + 1, 0, pageSize).ToList();
             if (documents.Count == 0)
                 return false;
 
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.SqlReplication
             countOfReplicatedItems = 0;
             var pageSize = int.MaxValue; // _database.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
 
-            var documents = _database.DocumentsStorage.GetDocumentsAfter(context, Configuration.Collection, Statistics.LastReplicatedEtag + 1, 0, pageSize).ToList();
+            var documents = _database.DocumentsStorage.GetDocumentsFrom(context, Configuration.Collection, Statistics.LastReplicatedEtag + 1, 0, pageSize).ToList();
             if (documents.Count == 0)
                 return false;
 
