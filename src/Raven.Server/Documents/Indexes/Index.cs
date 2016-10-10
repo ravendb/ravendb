@@ -1493,12 +1493,11 @@ namespace Raven.Server.Documents.Indexes
             stats.RecordMapAllocations(_threadAllocations.Allocations);
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
             {
-                var tryIncreasingMemoryUsageForIndex = TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), stats);
-                if (tryIncreasingMemoryUsageForIndex == false)
+                if (TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), stats) == false)
                 {
                     stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
+                    return false;
                 }
-                return tryIncreasingMemoryUsageForIndex;
             }
             return true;
         }
