@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         {
                             var documents = GetDocumentsEnumerator(databaseContext, collection, lastEtag);
 
-                            using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext,collectionStats))
+                            using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))
                             {
                                 while (true)
                                 {
@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             $"Failed to execute mapping function on {current.Key}. Exception: {e}");
                                     }
 
-                                    if (_index.CanContinueBatch(collectionStats) == false)
+                                    if (CanContinueBatch(collectionStats, lastEtag, long.MaxValue) == false)
                                     {
                                         keepRunning = false;
                                         break;
@@ -145,6 +145,17 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
 
             return moreWorkFound;
+        }
+
+        public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
+        {
+            if (currentEtag >= maxEtag)
+                return false;
+
+            if (_index.CanContinueBatch(stats) == false)
+                return false;
+
+            return true;
         }
 
         private IEnumerable<Document> GetDocumentsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag)

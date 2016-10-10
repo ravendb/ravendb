@@ -46,32 +46,11 @@ namespace Raven.Server.Config.Categories
             }
         }
 
-        [Description("Maximum number of documents to map by index during single indexing run")]
-        [DefaultValue(1024 * 1024)]
-        [MinValue(128)]
-        [ConfigurationEntry("Raven/Indexing/MaxNumberOfDocumentsToFetchForMap")]
-        [LegacyConfigurationEntry("Raven/MaxNumberOfItemsToPreFetch")]
-        [LegacyConfigurationEntry("Raven/MaxNumberOfItemsToPreFetchForIndexing")]
-        public int MaxNumberOfDocumentsToFetchForMap { get; set; }
-
-        [Description("Maximum number of tombstones to process by index during single indexing run")]
-        [DefaultValue(16 * 1024)]
-        [MinValue(128)]
-        [ConfigurationEntry("Raven/Indexing/MaxNumberOfTombstonesToFetch")]
-        public int MaxNumberOfTombstonesToFetch { get; set; }
-
-        [Description("Number of seconds after which index will stop reading documents from disk and writing documents to index")]
-        [DefaultValue(3)]
-        [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Raven/Indexing/DocumentProcessingTimeout")]
-        [LegacyConfigurationEntry("Raven/Prefetcher/FetchingDocumentsFromDiskTimeout")]
-        public TimeSetting DocumentProcessingTimeout { get; set; }
-
-        [Description("Number of seconds after which index will stop reading tombstones from disk and writing deletes to index")]
-        [DefaultValue(5)]
+        [Description("How long indexing will keep document transaction open when indexing. After this the transaction will be reopened.")]
+        [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Raven/Indexing/TombstoneProcessingTimeout")]
-        public TimeSetting TombstoneProcessingTimeout { get; set; }
+        [ConfigurationEntry("Raven/Indexing/MaxTimeForDocumentTransactionToRemainOpenInSec")]
+        public TimeSetting MaxTimeForDocumentTransactionToRemainOpenInSec { get; set; }
 
         [Description("How long the database should wait before marking an auto index with the idle flag")]
         [DefaultValue(30)]

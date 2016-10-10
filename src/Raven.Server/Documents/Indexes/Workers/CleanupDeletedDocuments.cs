@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 {
     public class CleanupDeletedDocuments : IIndexingWork
     {
-        protected Logger _logger;
+        private readonly Logger _logger;
 
         private readonly Index _index;
         private readonly IndexingConfiguration _configuration;
@@ -38,16 +38,16 @@ namespace Raven.Server.Documents.Indexes.Workers
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
-            var pageSize = _configuration.MaxNumberOfTombstonesToFetch;
-            var timeoutProcessing = Debugger.IsAttached == false
-                ? _configuration.DocumentProcessingTimeout.AsTimeSpan
+            var pageSize = int.MaxValue;
+            var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
+                ? _configuration.MaxTimeForDocumentTransactionToRemainOpenInSec.AsTimeSpan
                 : TimeSpan.FromMinutes(15);
 
             var moreWorkFound = false;
 
             foreach (var collection in _index.Collections)
             {
-                using (var collectionScope = stats.For("Collection_" + collection))
+                using (var collectionStats = stats.For("Collection_" + collection))
                 {
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Executing cleanup for '{_index.Name} ({_index.IndexId})'. Collection: {collection}.");
@@ -64,32 +64,47 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                     var sw = Stopwatch.StartNew();
                     IndexWriteOperation indexWriter = null;
-
-                    using (databaseContext.OpenReadTransaction())
+                    var keepRunning = true;
+                    while (keepRunning)
                     {
-                        var tombstones = collection == Constants.Indexing.AllDocumentsCollection
-                            ? _documentsStorage.GetTombstonesAfter(databaseContext, lastEtag, 0, pageSize)
-                            : _documentsStorage.GetTombstonesAfter(databaseContext, collection, lastEtag, 0, pageSize);
+                        var batchCount = 0;
 
-                        foreach (var tombstone in tombstones)
+                        using (databaseContext.OpenReadTransaction())
                         {
-                            token.ThrowIfCancellationRequested();
+                            var tombstones = collection == Constants.Indexing.AllDocumentsCollection
+                                ? _documentsStorage.GetTombstonesAfter(databaseContext, lastEtag, 0, pageSize)
+                                : _documentsStorage.GetTombstonesAfter(databaseContext, collection, lastEtag, 0, pageSize);
 
-                            if (indexWriter == null)
-                                indexWriter = writeOperation.Value;
+                            foreach (var tombstone in tombstones)
+                            {
+                                token.ThrowIfCancellationRequested();
 
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Processing tombstone {tombstone.Key} ({tombstone.Etag}).");
+                                if (indexWriter == null)
+                                    indexWriter = writeOperation.Value;
 
-                            count++;
-                            lastEtag = tombstone.Etag;
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Processing tombstone {tombstone.Key} ({tombstone.Etag}).");
 
-                            if (tombstone.DeletedEtag > lastMappedEtag)
-                                continue; // no-op, we have not yet indexed this document
+                                count++;
+                                batchCount++;
+                                lastEtag = tombstone.Etag;
 
-                            _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionScope);
+                                if (tombstone.DeletedEtag > lastMappedEtag)
+                                    continue; // no-op, we have not yet indexed this document
 
-                            if (sw.Elapsed > timeoutProcessing)
+                                _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
+
+                                if (CanContinueBatch(collectionStats, lastEtag, long.MaxValue) == false)
+                                {
+                                    keepRunning = false;
+                                    break;
+                                }
+
+                                if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
+                                    break;
+                            }
+
+                            if (batchCount == 0)
                                 break;
                         }
                     }
@@ -114,6 +129,17 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
 
             return moreWorkFound;
+        }
+
+        public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
+        {
+            if (currentEtag >= maxEtag)
+                return false;
+
+            if (_index.CanContinueBatch(stats) == false)
+                return false;
+
+            return true;
         }
     }
 }

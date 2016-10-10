@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.SqlReplication
 
         private bool ReplicateDeletionsToDestination(DocumentsOperationContext context)
         {
-            var pageSize = _database.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
+            var pageSize = int.MaxValue; // _database.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
             var documents = _database.DocumentsStorage.GetTombstonesAfter(context, Configuration.Collection, Statistics.LastTombstonesEtag, 0, pageSize).ToList();
             if (documents.Count == 0)
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.SqlReplication
         private bool ReplicateChangesToDestination(DocumentsOperationContext context, out int countOfReplicatedItems)
         {
             countOfReplicatedItems = 0;
-            var pageSize = _database.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
+            var pageSize = int.MaxValue; // _database.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
 
             var documents = _database.DocumentsStorage.GetDocumentsAfter(context, Configuration.Collection, Statistics.LastReplicatedEtag + 1, 0, pageSize).ToList();
             if (documents.Count == 0)

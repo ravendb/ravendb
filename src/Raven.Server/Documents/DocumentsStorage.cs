@@ -599,6 +599,9 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag))
             {
+                if (result.Id == etag)
+                    continue;
+
                 if (start > 0)
                 {
                     start--;
@@ -628,6 +631,9 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag))
             {
+                if (result.Id == etag)
+                    continue;
+
                 if (start > 0)
                 {
                     start--;

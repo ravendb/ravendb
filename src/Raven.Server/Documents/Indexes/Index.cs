@@ -117,7 +117,6 @@ namespace Raven.Server.Documents.Indexes
         private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
 
-
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
             if (indexId <= 0)
@@ -1493,28 +1492,27 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
-        public bool CanContinueBatch(IndexingStatsScope collectionStats)
+        public bool CanContinueBatch(IndexingStatsScope stats)
         {
-            collectionStats.RecordMapAllocations(_threadAllocations.Allocations);
+            stats.RecordMapAllocations(_threadAllocations.Allocations);
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
             {
-                var tryIncreasingMemoryUsageForIndex = TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), collectionStats);
+                var tryIncreasingMemoryUsageForIndex = TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), stats);
                 if (tryIncreasingMemoryUsageForIndex == false)
                 {
-                    collectionStats.RecordMapCompletedReason("Cannot budget additional memory for batch");
+                    stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
                 }
                 return tryIncreasingMemoryUsageForIndex;
             }
             return true;
         }
 
-        private bool TryIncreasingMemoryUsageForIndex(Size currentlyAllocated, IndexingStatsScope collectionStats)
+        private bool TryIncreasingMemoryUsageForIndex(Size currentlyAllocated, IndexingStatsScope stats)
         {
             //TODO: This has to be exposed via debug endpoint
 
             // we run out our memory quota, so we need to see if we can increase it or break
             var memoryInfoResult = MemoryInformation.GetMemoryInfo();
-
 
             using (var currentProcess = Process.GetCurrentProcess())
             {
@@ -1523,7 +1521,7 @@ namespace Raven.Server.Documents.Indexes
                 // so we try to calculate how much such memory we can use with this assumption 
                 var memoryMappedSize = new Size(currentProcess.WorkingSet64 - currentProcess.PrivateMemorySize64, SizeUnit.Bytes);
 
-                collectionStats.RecordMapMemoryStats(currentProcess.WorkingSet64, currentProcess.PrivateMemorySize64, _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
+                stats.RecordMapMemoryStats(currentProcess.WorkingSet64, currentProcess.PrivateMemorySize64, _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
 
                 if (memoryMappedSize < Size.Zero)
                 {
