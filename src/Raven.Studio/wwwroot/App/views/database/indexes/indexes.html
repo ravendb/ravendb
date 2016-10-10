@@ -9,7 +9,6 @@
                 <div class="input-group">
                     <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText" />
                 </div>
-                <button class="btn btn-default" data-bind="enable: selectedIndexesName().length, click: copySelectedIndexes"><i class="icon-copy"></i><span>Copy</span></button>
                 <div class="btn-group">
                     <button type="button" class="btn btn-default dropdown-toggle" title="Set lock mode for selected indexes" 
                             data-bind="enable: selectedIndexesName().length && !globalLockChangesInProgress(), css: { 'btn-spinner': globalLockChangesInProgress() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -45,7 +44,7 @@
                         </li>
                     </ul>
                 </div>
-                <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes"><i class="icon-trash"></i><span>Delete</span></button>
+                <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length"><i class="icon-trash"></i><span>Delete</span></button>
             </div>
         </div>
         <div class="pull-right" id="toggleIndexing">
@@ -104,7 +103,6 @@
                                         <a class="btn btn-info" data-bind="attr: { href: queryUrl() }"><i class="icon-search"></i><span>Query</span></a>
                                     </div>
                                     <div class="btn-group" role="group" data-bind="if: !isFaulty()">
-                                        <button class="btn btn-default" data-bind="click: $root.copyIndex.bind($root, $data)" title="Copy index"><i class="icon-copy"></i></button>
                                         <a class="btn btn-default" data-bind="attr: { href: editUrl() }" title="Edit index"><i class="icon-edit"></i></a>
                                         <button class="btn btn-warning" data-bind="click: $root.resetIndex.bind($root, $data)" title="Reset index"><i class="icon-reset"></i></button>
                                     </div>
