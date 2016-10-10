@@ -1196,9 +1196,9 @@ input[type="button"].btn-block {
   font-weight: normal;
   font-style: normal;
 }
-[class^="icon-"],
+.icon-style,
 [class*=" icon-"],
-.icon-style {
+[class^="icon-"] {
   /* use !important to prevent issues with browser extensions that change fonts */
   font-family: 'icomoon' !important;
   speak: none;
@@ -1214,10 +1214,23 @@ input[type="button"].btn-block {
   line-height: 100%;
   font-size: 120%;
 }
-[class^="icon-"] + span,
+.icon-style + span,
 [class*=" icon-"] + span,
-.icon-style + span {
+[class^="icon-"] + span {
   margin-left: 9px;
+}
+.icon-xl {
+  display: block;
+  text-align: center;
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+.icon-xl:before {
+  display: inline-block;
+  font-size: 48px;
+}
+.icon-empty-set:before {
+  content: "\e949";
 }
 .icon-backup:before {
   content: "\e944";
@@ -2175,12 +2188,18 @@ input[type=file] + .form-control {
 .vcenter {
   position: absolute;
   top: 50%;
-  left: 50%;
+  right: 50%;
   -moz-transform: translateX(-50%) translateY(-50%);
   -webkit-transform: translateX(-50%) translateY(-50%);
   -o-transform: translateX(-50%) translateY(-50%);
   -ms-transform: translateX(-50%) translateY(-50%);
   transform: translateX(-50%) translateY(-50%);
+}
+.vcenter-buttons {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  margin-top: -17px;
 }
 .margin-none {
   margin: 0;
@@ -3598,12 +3617,8 @@ pre {
   .indexes .panel .row .actions {
     position: absolute;
     top: 50%;
-    left: 50%;
-    -moz-transform: translateX(-50%) translateY(-50%);
-    -webkit-transform: translateX(-50%) translateY(-50%);
-    -o-transform: translateX(-50%) translateY(-50%);
-    -ms-transform: translateX(-50%) translateY(-50%);
-    transform: translateX(-50%) translateY(-50%);
+    right: 0;
+    margin-top: -17px;
     width: 100%;
     padding: 0 15px;
   }
@@ -3813,7 +3828,7 @@ pre {
   .transformers .transformer .row .actions {
     position: absolute;
     top: 50%;
-    left: 50%;
+    right: 50%;
     -moz-transform: translateX(-50%) translateY(-50%);
     -webkit-transform: translateX(-50%) translateY(-50%);
     -o-transform: translateX(-50%) translateY(-50%);
@@ -3969,12 +3984,8 @@ pre {
   .resources .resource .row .actions {
     position: absolute;
     top: 50%;
-    left: 50%;
-    -moz-transform: translateX(-50%) translateY(-50%);
-    -webkit-transform: translateX(-50%) translateY(-50%);
-    -o-transform: translateX(-50%) translateY(-50%);
-    -ms-transform: translateX(-50%) translateY(-50%);
-    transform: translateX(-50%) translateY(-50%);
+    right: 0;
+    margin-top: -17px;
     width: 100%;
     padding: 0 15px;
   }
