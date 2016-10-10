@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private const string TrueString = "true";
 
         private const string FalseString = "false";
-        
+
         private readonly Field _reduceValueField = new Field(Constants.Indexing.Fields.ReduceValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
         private static readonly FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
-        public  global::Lucene.Net.Documents.Document ConvertToCachedDocument(LazyStringValue key, object document, JsonOperationContext indexContext)
+        public global::Lucene.Net.Documents.Document ConvertToCachedDocument(LazyStringValue key, object document, JsonOperationContext indexContext)
         {
             _document.GetFields().Clear();
 
@@ -110,6 +110,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     break;
                 case ValueType.DateTime:
                 case ValueType.DateTimeOffset:
+                case ValueType.TimeSpan:
                 case ValueType.Boolean:
                 case ValueType.Double:
                 case ValueType.Null:
@@ -213,6 +214,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     dateAsString = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
 
                 yield return GetOrCreateField(path, dateAsString, null, null, storage, indexing, termVector);
+                yield break;
+            }
+
+            if (valueType == ValueType.TimeSpan)
+            {
+                var timeSpan = (TimeSpan)value;
+                yield return GetOrCreateField(path, timeSpan.ToString("c", CultureInfo.InvariantCulture), null, null, storage, indexing, termVector);
                 yield break;
             }
 
@@ -337,6 +345,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (value is DateTime) return ValueType.DateTime;
 
             if (value is DateTimeOffset) return ValueType.DateTimeOffset;
+
+            if (value is TimeSpan) return ValueType.TimeSpan;
 
             if (value is BoostedValue) return ValueType.BoostedValue;
 
@@ -585,6 +595,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             DateTime,
 
             DateTimeOffset,
+
+            TimeSpan,
 
             Enum,
 
