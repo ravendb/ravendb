@@ -1,77 +1,71 @@
-<div id="transformersContainer">
-    <div data-bind="visible: transformersGroups().length == 0" class="text-center">
-        <h4 class="page-header text-info">No transformers have been created for this database. <a href="#" data-bind="attr: { href: newTransformerUrl }">Create one now</a>.</h4>
-    </div>
-    
-    <div class="btn-toolbar" role="toolbar">
-        <div class="btn-group">
-            <div class="checkbox">
-                <input id="transformers_all" class="styled" type="checkbox" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }" title="Select all or none">
-                <label for="transformers_all">&nbsp;</label>
+<div class="transformers">
+    <div class="clearfix">
+        <div class="pull-left">
+            <div class="form-inline">
+                <div class="checkbox checkbox-inline align-checkboxes" title="Select all or none">
+                    <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }" />
+                    <label></label>
+                </div>
+                <input type="text" class="form-control" placeholder="Filter" title="Filter transformers (Alt+/)" data-bind="textInput: searchText" />
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown"  title="Set lock mode to selected transformers" 
+                            data-bind="enable: selectedTransformersName().length && !globalLockChangesInProgress(), css: { 'btn-spinner': globalLockChangesInProgress() }">
+                        <i class="icon-lock"></i>
+                        <span>Lock</span>&nbsp;&nbsp;
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li data-bind="click: setLockModeSelectedTransformers.bind($root, 'Unlock', 'Unlock')">
+                            <a href="#" title="Unlock selected indexes">
+                                <i class="icon-unlock"></i>
+                                <span>Unlock</span>
+                            </a>
+                        </li>
+                        <li data-bind="click: setLockModeSelectedTransformers.bind($root, 'LockedIgnore', 'Lock')">
+                            <a href="#" title="Lock selected indexes">
+                                <i class="icon-lock"></i>
+                                <span>Lock</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <button class="btn btn-danger" data-bind="click: deleteSelectedTransformers, enable: selectedTransformersName().length">
+                    <i class="icon-trash"></i><span>Delete</span>
+                </button>
             </div>
         </div>
-        <div class="btn-group">
-            <input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a transformer (Alt+/)">
-            <button data-bind="enable: selectedTransformersName().length, click: copySelectedTransformers" class="btn btn-default">Copy</button>
-        </div>
-        <div class="btn-group">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Set lock mode to selected transformers" data-bind="enable: selectedTransformersName().length">
-                <i class="fa fa-lock fa-fw"></i>
-                Lock mode
-                <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu" role="menu">
-                <li data-bind="click: setLockModeSelectedTransformers.bind($root, 'Unlock', 'Unlock')">
-                    <a href="#" title="Unlock selected transformers">Unlock selected</a>
-                </li>
-                <li data-bind="click: setLockModeSelectedTransformers.bind($root, 'LockedIgnore', 'Lock')">
-                    <a href="#" title="Lock selected transformers">Lock selected</a>
-                </li>
-            </ul>
-        </div>
-        <div class="btn-group">
-            <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedTransformers">
-                <i class="fa fa-trash-o"></i> Delete
-            </button>
-        </div>
     </div>
-
-    <br/>
-
-    <div >
-        <div class="transformers-container panel-group" id="transformersAccordion" data-bind="foreach: transformersGroups">
-            <div class="transformers-group panel panel-default" data-bind="visible: !groupHidden()">
-                <div class="panel-heading">
-                    <h4 class="panel-title">
-                        <a data-toggle="collapse" data-bind="attr: { href: '#transformerCollapse' + $index() }">
-                            <span data-bind="text: entityName"></span>
-                            <span class="text-muted" data-bind="text: '(' + transformers().length + ')'"></span>
-                        </a>
-                    </h4>
-                </div>
-                <div class="index-group-content panel-collapse in" data-bind="attr: { id: 'transformerCollapse' + $index() }">
-                    <div style="overflow: visible;">
-                        <div class="panel-body" data-bind="foreach: transformers">
-                            <div class="index panel panel-default" data-bind="visible: !filteredOut()">
-                                <div class="panel-body">
-                                    TODO: badge
-                                    <h4 class="pull-left">
-                                        <input type="checkbox" data-bind="checked: $root.selectedTransformersName, checkedValue: name"/>
-                                        <a data-bind="attr: { href: editUrl }"><span data-bind="text: name"></span></a>
-                                        <i class="fa" data-bind="css: { 'fa-lock': isLocked(), 'fa-unlock': !isLocked() }"></i>
-                                    </h4>
-                                    <div class="pull-right index-actions-container">
-                                        <a class="btn btn-default" title="Edit the transformer" data-bind="attr: { href: editUrl }">
-                                            <i class="fa fa-pencil"></i>
-                                        </a>
-                                        <a class="btn btn-default" title="Copy the transformer" data-bind="click: $root.copyTransformer.bind($root)">
-                                            <i class="fa fa-copy"></i>
-                                        </a>
-                                        <a class="btn btn-default" title="Lock/Un-Lock Transformer" data-bind="click: $root.updateTransformerLockMode.bind($root, $data)">
-                                            <i class="fa" data-bind="css: { 'fa-lock': isLocked(), 'fa-unlock': !isLocked() }"></i>
-                                        </a>
+    <hr />
+    
+    <div data-bind="foreach: transformersGroups">
+        <h2 data-bind="text: entityName, visible: !groupHidden()"></h2>
+        <div data-bind="foreach: transformers, visible: !groupHidden()">
+            <div class="panel transformer" data-bind="visible: !filteredOut()">
+                <div class="padding padding-sm">
+                    <div class="row">
+                        <div class="col-sm-6 col-xl-4 col-flex info-container">
+                            <div class="checkbox">
+                                <input type="checkbox" class="styled" data-bind="checked: $root.selectedTransformersName, checkedValue: name">
+                                <label></label>
+                            </div>
+                            <h3 class="transformer-name">
+                                <a href="#" data-bind="text: name, attr: { href: editUrl }"></a>
+                            </h3>
+                        </div>
+                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
+                            <div class="properties-item" data-bind="template: { name: 'lock-mode-template' }">
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                            <div class="actions">
+                                <div class="btn-toolbar pull-right-sm" role="toolbar">
+                                    <div class="btn-group" role="group">
+                                        <a class="btn btn-default" data-bind="attr: { href: editUrl }"><i class="icon-edit"></i></a>
+                                    </div>
+                                    <div class="btn-group" role="group">
                                         <button class="btn btn-danger" title="Delete the transformer" data-bind="click: $root.deleteTransformer.bind($root)">
-                                            <i class="fa fa-trash-o"></i>
+                                            <i class="icon-trash"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -83,3 +77,33 @@
         </div>
     </div>
 </div>
+
+<script type="text/html" id="lock-mode-template">
+    <span class="properties-label">Mode:</span>
+    <div class="btn-group btn-group-xs">
+        <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown" 
+                data-bind="enable: !$root.localLockChangesInProgress().contains(name()), css: { 'btn-spinner': $root.localLockChangesInProgress().contains(name()) }">
+            <span data-bind="visible: isLocked()">
+                <i class="icon-lock"></i><span>Locked</span>
+            </span>
+            <span data-bind="visible: !isLocked()">
+                <i class="icon-unlock"></i><span>Unlocked</span>
+            </span>
+            <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu">
+            <li data-bind="click: $root.unlockTransformer.bind($root)">
+                <a href="#">
+                    <i class="icon-unlock"></i>
+                    <span>Unlocked</span>
+                </a>
+            </li>
+            <li data-bind="click: $root.lockTransformer.bind($root)">
+                <a href="#">
+                    <i class="icon-lock"></i>
+                    <span>Locked</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</script>

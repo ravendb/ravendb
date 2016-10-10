@@ -6,9 +6,7 @@ import appUrl = require("common/appUrl");
 import deleteTransformerConfirm = require("viewmodels/database/transformers/deleteTransformerConfirm");
 import app = require("durandal/app");
 import changeSubscription = require("common/changeSubscription");
-import changesContext = require("common/changesContext");
 import database = require("models/resources/database");
-import copyTransformerDialog = require("viewmodels/database/transformers/copyTransformerDialog");
 
 type transformerGroup = {
     entityName: string;
@@ -24,6 +22,9 @@ class transformers extends viewModelBase {
     searchText = ko.observable<string>();
     lockModeCommon: KnockoutComputed<string>;
     selectionState: KnockoutComputed<checkbox>;
+
+    globalLockChangesInProgress = ko.observable<boolean>(false);
+    localLockChangesInProgress = ko.observableArray<string>([]);
 
     constructor() {
         super();
@@ -69,6 +70,7 @@ class transformers extends viewModelBase {
 
     private filterTransformers() {
         const filterLower = this.searchText().toLowerCase();
+        this.selectedTransformersName([]);
 
         this.transformersGroups()
             .forEach(transformerGroup => {
@@ -142,7 +144,6 @@ class transformers extends viewModelBase {
             if (!existingTrans) {
                 group.transformers.push(trans);
             }
-
         } else {
             this.transformersGroups.push({
                 entityName: groupName,
@@ -171,19 +172,6 @@ class transformers extends viewModelBase {
         this.promptDeleteTransformers([transformerToDelete]);
     }
 
-    pasteTransformer() { //TODO: move to different controller
-        app.showDialog(new copyTransformerDialog("", this.activeDatabase(), true));
-    }
-
-    copyTransformer(t: transformer) {
-        //TODO: move to different controller
-        app.showDialog(new copyTransformerDialog(t.name(), this.activeDatabase(), false));
-    }
-
-    copySelectedTransformers() {
-        alert("implement me!"); //TODO:
-    }
-
     private promptDeleteTransformers(transformers: Array<transformer>) {
         const db = this.activeDatabase();
         const deleteViewmodel = new deleteTransformerConfirm(transformers.map(i => i.name()), db);
@@ -202,10 +190,19 @@ class transformers extends viewModelBase {
         if (this.lockModeCommon() === lockModeString)
             return;
 
-        const lockModeTitle = `Do you want to ${localModeString} selected transformers?`;
+        this.confirmationMessage("Are you sure?", `Do you want to ${localModeString} selected transformers?`)
+            .done(can => {
+                if (can) {
+                    this.globalLockChangesInProgress(true);
 
-        //TODO: create dialog: const indexLockAllVm = new indexLockSelectedConfirm(lockModeString, this.activeDatabase(), this.getSelectedTransformers(), lockModeTitle);
-        //TODO: app.showDialog(indexLockAllVm);
+                    const transformers = this.getSelectedTransformers();
+
+                    new saveTransformerLockModeCommand(transformers, lockModeString, this.activeDatabase())
+                        .execute()
+                        .done(() => transformers.forEach(t => t.lockMode(lockModeString)))
+                        .always(() => this.globalLockChangesInProgress(false));
+                }
+            });
     }
 
     lockTransformer(t: transformer) {
@@ -217,13 +214,13 @@ class transformers extends viewModelBase {
     }
 
     private updateTransformerLockMode(t: transformer, lockMode: Raven.Abstractions.Indexing.TransformerLockMode) {
-        const originalLockMode = t.lockMode();
-        if (originalLockMode !== lockMode) {
-            t.lockMode(lockMode);
+        if (t.lockMode() !== lockMode) {
+            this.localLockChangesInProgress.push(t.name());
 
-            new saveTransformerLockModeCommand(t.name(), lockMode, this.activeDatabase())
+            new saveTransformerLockModeCommand([t], lockMode, this.activeDatabase())
                 .execute()
-                .fail(() => t.lockMode(originalLockMode));
+                .done(() => t.lockMode(lockMode))
+                .always(() => this.localLockChangesInProgress.remove(t.name()));
         }
     }
 
