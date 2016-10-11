@@ -34,29 +34,28 @@ class indexDefinition {
     stores: any;
     suggestionsOptions: any[];
     termVectors: any;
-    type: string;
+    type: Raven.Client.Data.Indexes.IndexType;
 
     constructor(dto: Raven.Client.Indexing.IndexDefinition) {
-        /* TODO:
-        this.analyzers = dto.Analyzers;
-        this.fields(dto.Fields);
-        this.indexes = dto.Indexes;
-        this.internalFieldsMapping = dto.InternalFieldsMapping;
+        //TODO: this.analyzers = dto.Analyzers;
+        //TODO: this.fields(dto.Fields);
+        //TODO: this.indexes = dto.Indexes;
+        //TODO: this.internalFieldsMapping = dto.InternalFieldsMapping;
         this.isTestIndex(dto.IsTestIndex);
         this.isSideBySideIndex(dto.IsSideBySideIndex);
-        this.isCompiled = dto.IsCompiled;
-        this.isMapReduce = dto.IsMapReduce;
+        //TODO: this.isCompiled = dto.IsCompiled;
+        //TODO: this.isMapReduce = dto.IsMapReduce;
         this.lockMode = dto.LockMode;
-        this.map(dto.Map);
+        //TODO: this.map(dto.Map);
         this.maps(dto.Maps.map(m => ko.observable(m)));
         this.name(dto.Name);
         this.reduce(dto.Reduce);
-        this.sortOptions = dto.SortOptions;
-        this.spatialIndexes = dto.SpatialIndexes;
-        this.stores = dto.Stores;
-        this.suggestionsOptions = dto.SuggestionsOptions;
-        this.termVectors = dto.TermVectors;
-        this.type = dto.Type;*/
+        //TODO: this.sortOptions = dto.SortOptions;
+        //TODO: this.spatialIndexes = dto.SpatialIndexes;
+        //TODO: this.stores = dto.Stores;
+        //TODO: this.suggestionsOptions = dto.SuggestionsOptions;
+        //TODO: this.termVectors = dto.TermVectors;
+        this.type = dto.Type;
 
         this.luceneFields(this.parseFields());
         this.spatialFields(this.parseSpatialFields());
@@ -90,55 +89,45 @@ class indexDefinition {
     }
 
     toDto(): Raven.Client.Indexing.IndexDefinition {
-        return null; /* TODO
         return {
-            Analyzers: this.makeFieldObject(f => f.indexing() === "Analyzed", f => f.analyzer()),
+            //Analyzers: this.makeFieldObject(f => f.indexing() === "Analyzed", f => f.analyzer()),
             Fields: {},//this.fields(),
-            Indexes: this.makeFieldObject(f => f.indexing() !== "Default", f => f.indexing()),
-            InternalFieldsMapping: this.internalFieldsMapping,
+            //Indexes: this.makeFieldObject(f => f.indexing() !== "Default", f => f.indexing()),
+            //InternalFieldsMapping: this.internalFieldsMapping,
             IsTestIndex: this.isTestIndex(),
             IsSideBySideIndex: this.isSideBySideIndex(),
-            IsCompiled: this.isCompiled,
-            IsMapReduce: this.isMapReduce,
-            LockMode: this.lockMode,
-            Map: this.maps()[0](),
+            //IsCompiled: this.isCompiled,
+            //IsMapReduce: this.isMapReduce,
+            LockMode: "Unlock", //TODO:
+            IndexId: null, 
+            //Map: this.maps()[0](),
             Maps: this.maps().map(m => m()).filter(m => m && m.length > 0),
             Name: this.name(),
             Reduce: this.reduce(),
-            SortOptions: this.makeFieldObject(f => f.sort() !== "None", f => f.sort()),
-            SpatialIndexes: this.makeSpatialIndexesObject(),
-            Stores: this.setStoreAllFieldsToObject(this.makeFieldObject(f => f.stores() === "Yes", f => f.stores())),
-            SuggestionsOptions: this.luceneFields().filter(x => x.suggestionEnabled()).map(x => x.name()),
-            TermVectors: this.makeFieldObject(f => f.termVector() !== "No", f => f.termVector()),
+            //SortOptions: this.makeFieldObject(f => f.sort() !== "None", f => f.sort()),
+            //SpatialIndexes: this.makeSpatialIndexesObject(),
+            //Stores: this.setStoreAllFieldsToObject(this.makeFieldObject(f => f.stores() === "Yes", f => f.stores())),
+            //SuggestionsOptions: this.luceneFields().filter(x => x.suggestionEnabled()).map(x => x.name()),
+            //TermVectors: this.makeFieldObject(f => f.termVector() !== "No", f => f.termVector()),
             Type: this.type,
             MaxIndexOutputsPerDocument: this.maxIndexOutputsPerDocument() ? this.maxIndexOutputsPerDocument() > 0 ? this.maxIndexOutputsPerDocument() : null : null
-        };*/
+        };
     }
 
     static empty(): indexDefinition {
-        return null; /* TODO
         return new indexDefinition({
-            Analyzers: {},
-            Fields: [],
-            Indexes: {},
-            InternalFieldsMapping: {},
-            IsTestIndex: false,
-            IsSideBySideIndex: false,
-            IsCompiled: false,
-            IsMapReduce: false,
-            LockMode: "Unlock",
-            Map: " ",
-            Maps: [" "],
+            Fields: {},
+            IndexId: null,
+            Maps: [""],
             Name: "",
-            Reduce: null,
-            SortOptions: {},
-            SpatialIndexes: {},
-            Stores: {},
-            SuggestionsOptions: [],
-            TermVectors: {},
-            Type: "Map",
-            MaxIndexOutputsPerDocument:null
-        });*/
+            LockMode: "Unlock",
+            Reduce: "",
+            IndexVersion: -1,
+            IsSideBySideIndex: false,
+            IsTestIndex: false,
+            MaxIndexOutputsPerDocument: null,
+            Type: "Map"
+        });
     }
 
     private makeSpatialIndexesObject(): any {

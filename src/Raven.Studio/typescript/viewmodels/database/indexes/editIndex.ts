@@ -92,10 +92,12 @@ class editIndex extends viewModelBase {
 
         this.editedIndex(this.createNewIndexDefinition());
         this.canSaveSideBySideIndex = ko.computed(() => {
-            var isEdit = this.isEditingExistingIndex();
+            if (!this.isEditingExistingIndex()) {
+                return false;
+            }
             var loadedIndex = this.loadedIndexName();
             var editedName = this.editedIndex().name();
-            return isEdit && (loadedIndex === editedName);
+            return loadedIndex === editedName;
         });
     }
 
