@@ -324,6 +324,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.MinThreadPoolWorkerThreads.Value, actual => actual.MinThreadPoolWorkerThreads);
             configurationComparer.Assert(expected => expected.MinThreadPoolCompletionThreads.Value, actual => actual.MinThreadPoolCompletionThreads);
 
+            configurationComparer.Assert(expected => expected.SqlReplication.CommandTimeoutInSec.Value, actual => actual.SqlReplication.CommandTimeoutInSec);
 
             configurationComparer.Assert(expected => expected.Cluster.HeartbeatTimeout.Value, actual => actual.Cluster.HeartbeatTimeout);
             configurationComparer.Assert(expected => expected.Cluster.ElectionTimeout.Value, actual => actual.Cluster.ElectionTimeout);
