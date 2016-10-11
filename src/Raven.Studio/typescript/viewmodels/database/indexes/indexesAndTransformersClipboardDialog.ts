@@ -14,7 +14,7 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
 
     json = ko.observable<string>("");
-    indexes = ko.observableArray < indexDefinitionListItemDto>([]); //TODO: use server side type?
+    indexes = ko.observableArray<Raven.Client.Indexing.IndexDefinition>([]);
     //TODO: transformers = ko.observableArray<transformerDto>([]);
     pasteDeferred = $.Deferred();
 
@@ -32,7 +32,7 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
             var getIndexDefinitionsPromise =
                 new getIndexesDefinitionsCommand(this.db)
                     .execute()
-                    .done((results: indexDefinitionListItemDto[]) => {
+                    .done((results) => {
                         this.indexes(results);
                     });
             var getTransformersPromise =

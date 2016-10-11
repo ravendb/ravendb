@@ -10,7 +10,7 @@ class indexMergeSuggestion {
     id = ko.observable<string>();
     mergedIndexUrl: KnockoutComputed<string>;
 
-    constructor(dto: suggestionDto) {
+    constructor(dto: any) { //TODO: use server side type
         this.canMerge = dto.CanMerge;
         this.collection = dto.Collection;
         this.mergedIndexDefinition = dto.MergedIndex ? new indexDefinition(dto.MergedIndex) : null;

@@ -106,9 +106,9 @@ class reporting extends viewModelBase {
     fetchIndexDefinition(indexName: string) {
         new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
-            .done((dto: indexDefinitionContainerDto) => {
-                this.sortOptions(dto.Index.SortOptions);
-                this.availableFields(dto.Index.Fields);
+            .done((dto) => {
+                /* TODO this.sortOptions(dto.Index.SortOptions);
+                this.availableFields(dto.Index.Fields);*/
             });
     }
 

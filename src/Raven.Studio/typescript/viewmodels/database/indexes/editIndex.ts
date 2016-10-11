@@ -211,10 +211,10 @@ class editIndex extends viewModelBase {
 
         new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
-            .done((results: indexDefinitionContainerDto) => {
-                this.editedIndex(new indexDefinition(results.Index));
+            .done(result => {
+                this.editedIndex(new indexDefinition(result));
                 this.originalIndexName = this.editedIndex().name();
-                this.editMaxIndexOutputsPerDocument(results.Index.MaxIndexOutputsPerDocument ? results.Index.MaxIndexOutputsPerDocument > 0 ? true : false : false);
+                this.editMaxIndexOutputsPerDocument(result.MaxIndexOutputsPerDocument ? result.MaxIndexOutputsPerDocument > 0 ? true : false : false);
                 deferred.resolve();
             })
             .fail(() => deferred.reject());
@@ -248,7 +248,7 @@ class editIndex extends viewModelBase {
                     .done(() => this.saveIndex(index));
 
                 dialog.getRenameTask()
-                    .done(() => this.renameIndex(this.loadedIndexName(), index.Name));
+                    .done(() => this.renameIndex(this.loadedIndexName(), index.Name as string));
 
                 app.showDialog(dialog);
             } else {
@@ -499,7 +499,7 @@ class editIndex extends viewModelBase {
             });
     }
 
-    private saveIndex(index: indexDefinitionDto): JQueryPromise<any> {
+    private saveIndex(index: any): JQueryPromise<any> { //TODO: use type
         var commands: Array<JQueryPromise<any>> = [];
 
         commands.push(new saveIndexDefinitionCommand(index, this.activeDatabase()).execute());
