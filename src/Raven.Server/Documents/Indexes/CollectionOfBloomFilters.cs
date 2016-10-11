@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         var reader = it.CreateReaderForCurrent();
 
-                        Debug.Assert(reader.Length == singleBloomFilterCapacity);
+                        Debug.Assert(reader.Length == BloomFilter.PtrSize);
 
                         collection.AddFilter(new BloomFilter(it.CurrentKey.Clone(indexContext.Allocator, ByteStringType.Immutable), reader.Base, tree, writeable: false));
                     } while (it.MoveNext());
