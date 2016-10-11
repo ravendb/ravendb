@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         var lastEtag = lastReferenceEtag;
                         var count = 0;
 
-                        var sw = Stopwatch.StartNew();
+                        var sw = new Stopwatch();
                         IndexWriteOperation indexWriter = null;
 
                         var keepRunning = true;
@@ -123,6 +123,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                             using (databaseContext.OpenReadTransaction())
                             {
+                                sw.Restart();
+
                                 IEnumerable<Reference> references;
                                 switch (actionType)
                                 {
@@ -214,15 +216,16 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     }
                                 }
 
-                                if (batchCount == 0)
+                                if (batchCount == 0 || batchCount >= pageSize)
                                     break;
                             }
                         }
+
                         if (count == 0)
                             continue;
 
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Executing handle references for '{_index} ({_index.Name})'. Processed {count} references in '{referencedCollection.Name}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                            _logger.Info($"Executing handle references for '{_index} ({_index.Name})'. Processed {count} references in '{referencedCollection.Name}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
 
                         switch (actionType)
                         {

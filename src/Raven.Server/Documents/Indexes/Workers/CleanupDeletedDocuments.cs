@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var lastEtag = lastTombstoneEtag;
                     var count = 0;
 
-                    var sw = Stopwatch.StartNew();
+                    var sw = new Stopwatch();
                     IndexWriteOperation indexWriter = null;
                     var keepRunning = true;
                     var lastCollectionEtag = -1L;
@@ -72,6 +72,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                         using (databaseContext.OpenReadTransaction())
                         {
+                            sw.Restart();
+
                             if (lastCollectionEtag == -1)
                                 lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection);
 
@@ -108,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     break;
                             }
 
-                            if (batchCount == 0)
+                            if (batchCount == 0 || batchCount >= pageSize)
                                 break;
                         }
                     }
@@ -117,7 +119,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         continue;
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Processed {count} tombstones in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                        _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Processed {count} tombstones in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
 
                     if (_index.Type.IsMap())
                     {

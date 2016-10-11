@@ -58,8 +58,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var lastEtag = lastMappedEtag;
                     var count = 0;
                     var resultsCount = 0;
+                    var pageSize = int.MaxValue;
 
-                    var sw = Stopwatch.StartNew();
+                    var sw = new Stopwatch();
                     IndexWriteOperation indexWriter = null;
                     var keepRunning = true;
                     var lastCollectionEtag = -1L;
@@ -67,10 +68,12 @@ namespace Raven.Server.Documents.Indexes.Workers
                     {
                         using (databaseContext.OpenReadTransaction())
                         {
+                            sw.Restart();
+
                             if (lastCollectionEtag == -1)
                                 lastCollectionEtag = _index.GetLastDocumentEtagInCollection(databaseContext, collection);
 
-                            var documents = GetDocumentsEnumerator(databaseContext, collection, lastEtag);
+                            var documents = GetDocumentsEnumerator(databaseContext, collection, lastEtag, pageSize);
 
                             using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))
                             {
@@ -125,6 +128,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         keepRunning = false;
                                         break;
                                     }
+
+                                    if (count >= pageSize)
+                                    {
+                                        keepRunning = false;
+                                        break;
+                                    }
+
                                     if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
                                         break;
                                 }
@@ -136,7 +146,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         continue;
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {count:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                        _logger.Info($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {count:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
 
                     if (_index.Type.IsMap())
                     {
@@ -165,12 +175,11 @@ namespace Raven.Server.Documents.Indexes.Workers
             return true;
         }
 
-        private IEnumerable<Document> GetDocumentsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag)
+        private IEnumerable<Document> GetDocumentsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
         {
-            var maxValue = int.MaxValue;
             if (collection == Constants.Indexing.AllDocumentsCollection)
-                return _documentsStorage.GetDocumentsFrom(databaseContext, lastEtag + 1, 0, maxValue);
-            return _documentsStorage.GetDocumentsFrom(databaseContext, collection, lastEtag + 1, 0, maxValue);
+                return _documentsStorage.GetDocumentsFrom(databaseContext, lastEtag + 1, 0, pageSize);
+            return _documentsStorage.GetDocumentsFrom(databaseContext, collection, lastEtag + 1, 0, pageSize);
         }
     }
 }

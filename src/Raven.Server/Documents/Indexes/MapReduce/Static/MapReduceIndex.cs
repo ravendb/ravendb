@@ -115,7 +115,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             wrapper.InitializeForEnumeration(mapResults, indexContext);
 
-            return PutMapResults(key, wrapper, indexContext);
+            using (stats.For(IndexingOperation.Reduce.PutMapResults))
+            {
+                return PutMapResults(key, wrapper, indexContext);
+            }
         }
 
         public override int? ActualMaxNumberOfIndexOutputs
