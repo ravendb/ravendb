@@ -83,6 +83,7 @@ class indexMergeSuggestions extends viewModelBase {
         var deferred = $.Deferred();
 
         var db = this.activeDatabase();
+        /* TODO
         new getIndexMergeSuggestionsCommand(db)
             .execute()
             .done((results: indexMergeSuggestionsDto) => {
@@ -96,7 +97,7 @@ class indexMergeSuggestions extends viewModelBase {
                 deferred.resolve();
             })
             .fail(() => deferred.reject());
-
+        */
         return deferred;
     }
 

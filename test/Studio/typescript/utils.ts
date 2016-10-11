@@ -97,7 +97,11 @@ class Utils {
 
     private static cleanup(activatorInstance: DurandalActivator<any>, $test: JQuery): void {
         activatorInstance(null);
-        ko.cleanNode($test[0].children[0]);
+        const child = $test[0].children[0];
+        if (child) {
+            ko.cleanNode(child);    
+        }
+        
         $test.html("");
     }
 
@@ -112,7 +116,11 @@ class Utils {
 
                     activatorInstance.activateItem(vm).then((result: boolean) => {
                         if (!result) {
-                            reject(new Error('unable to activate item'));
+                            const queue = commandBaseMock.errorQueue;
+                            commandBaseMock.errorQueue = [];
+                            const joinedErrors = queue.join(", ");
+
+                            reject(new Error('unable to activate item: ' + joinedErrors));
                             return;
                         }
                         if (opts.initViewmodel) {

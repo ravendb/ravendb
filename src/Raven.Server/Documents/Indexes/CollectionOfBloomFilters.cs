@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -47,7 +48,11 @@ namespace Raven.Server.Documents.Indexes
                 {
                     do
                     {
-                        collection.AddFilter(new BloomFilter(it.CurrentKey.Clone(indexContext.Allocator, ByteStringType.Immutable), it.CreateReaderForCurrent().Base, tree, writeable: false));
+                        var reader = it.CreateReaderForCurrent();
+
+                        Debug.Assert(reader.Length == singleBloomFilterCapacity);
+
+                        collection.AddFilter(new BloomFilter(it.CurrentKey.Clone(indexContext.Allocator, ByteStringType.Immutable), reader.Base, tree, writeable: false));
                     } while (it.MoveNext());
                 }
             }

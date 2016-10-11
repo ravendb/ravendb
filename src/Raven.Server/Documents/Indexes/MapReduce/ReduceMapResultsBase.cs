@@ -139,7 +139,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 if (section.IsModified == false)
                     return;
 
-                numberOfEntriesToReduce += section.GetResults(indexContext, _aggregationBatch);
+                using (stats.For(IndexingOperation.Reduce.NestedValuesRead))
+                {
+                    numberOfEntriesToReduce += section.GetResults(indexContext, _aggregationBatch);
+                }
 
                 stats.RecordReduceAttempts(numberOfEntriesToReduce);
 

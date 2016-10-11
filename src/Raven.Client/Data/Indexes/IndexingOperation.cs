@@ -42,6 +42,8 @@ namespace Raven.Client.Data.Indexes
             public const string StoringReduceResult = "Store/ReduceResults";
             public const string StoringNestedValues = "Store/Values";
             public const string NestedValuesAggregation = "Aggregation/Values";
+            public const string NestedValuesRead = "Store/Read";
+            public const string PutMapResults = "Map/PutResults";
         }
     }
 }

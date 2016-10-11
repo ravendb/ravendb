@@ -5,8 +5,13 @@ import resource = require("src/Raven.Studio/typescript/models/resources/resource
 
 
 class commandBaseMock extends commandBase {
+
+    static errorQueue = [] as Array<string>;
+
     protected ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
-        throw new Error("Command execution is not supported during tests at: " + (<any>this).__moduleId__);
+        const errorMsg = "Command execution is not supported during tests at: " + (<any>this).__moduleId__;
+        commandBaseMock.errorQueue.push(errorMsg);
+        throw new Error(errorMsg);
     }
 }
 
