@@ -26,6 +26,8 @@ namespace Raven.Database.Bundles.SqlReplication
 		public string ConnectionStringName { get; set; }
 		public string ConnectionStringSettingName { get; set; }
 
+        public int? CommandTimeout { get; set; }
+
 		public List<SqlReplicationTable> SqlReplicationTables { get; set; }
 	}
 
