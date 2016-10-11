@@ -21,6 +21,8 @@ namespace Raven.Database.Config
 
         public ReplicationConfiguration Replication { get; private set; }
 
+        public SqlReplicationConfiguration SqlReplication { get; private set; }
+
         public VoronConfiguration Voron { get; private set; }
 
         public EsentConfiguration Esent { get; private set; }
@@ -48,6 +50,7 @@ namespace Raven.Database.Config
         public StronglyTypedRavenSettings(NameValueCollection settings)
         {
             Replication = new ReplicationConfiguration();
+            SqlReplication = new SqlReplicationConfiguration();
             Voron = new VoronConfiguration();
             Esent = new EsentConfiguration();
             Prefetcher = new PrefetcherConfiguration();
@@ -284,6 +287,8 @@ namespace Raven.Database.Config
             Replication.ForceReplicationRequestBuffering = new BooleanSetting(settings["Raven/Replication/ForceReplicationRequestBuffering"], false);
             Replication.MaxNumberOfItemsToReceiveInSingleBatch = new NullableIntegerSettingWithMin(settings["Raven/Replication/MaxNumberOfItemsToReceiveInSingleBatch"], (int?)null, 512);
             Replication.ReplicationPropagationDelayInSeconds = new IntegerSetting(settings[Constants.ReplicationPropagationDelayInSeconds],15);
+
+            SqlReplication.CommandTimeoutInSec = new IntegerSetting(settings["Raven/SqlReplication/CommandTimeoutInSec"], -1);
 
             FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings[Constants.FileSystem.MaximumSynchronizationInterval], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
             FileSystem.IndexStoragePath = new StringSetting(settings[Constants.FileSystem.IndexStorageDirectory], string.Empty);
@@ -615,6 +620,11 @@ namespace Raven.Database.Config
 
             public IntegerSetting ReplicationPropagationDelayInSeconds { get; set; }
 
+        }
+
+        public class SqlReplicationConfiguration
+        {
+            public IntegerSetting CommandTimeoutInSec { get; set; }
         }
 
         public class StudioConfiguration
