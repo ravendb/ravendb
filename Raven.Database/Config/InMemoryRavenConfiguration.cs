@@ -247,6 +247,9 @@ namespace Raven.Database.Config
 
 			MaxConcurrentDatabaseLoads = ravenSettings.MaxConcurrentDatabaseLoads.Value;
 			ConcurrentDatabaseLoadTimeout = ravenSettings.ConcurrentDatabaseLoadTimeout.Value;
+
+		    SqlCommandTimeoutInSec = ravenSettings.SqlCommandTimeoutInSec.Value;
+
             PostInit();
 		}
 
@@ -907,7 +910,12 @@ namespace Raven.Database.Config
 		/// </summary>
 		public bool UseNullDocumentCacher { get; set; }
 
-		[Browsable(false)]
+        /// <summary>
+        /// Number of seconds after which SQL command will timeout. Default: -1 (use provider default). Can be overriden by setting CommandTimeout property value in SQL Replication configuration.
+        /// </summary>
+	    public int SqlCommandTimeoutInSec { get; set; }
+
+	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void SetSystemDatabase()
 		{

@@ -183,9 +183,8 @@ namespace Raven.Database.Config
 				TimeSpanArgumentType.FromParse);
 
 			UseNullDocumentCacher = new BooleanSetting(settings["Raven/UseNullDocumentCacher"],false);
+            SqlCommandTimeoutInSec = new IntegerSetting(settings["Raven/SqlReplication/CommandTimeoutInSec"], -1);
         }
-
-	    
 
 	    private string GetDefaultWebDir()
 		{
@@ -341,5 +340,6 @@ namespace Raven.Database.Config
 
 		public IntegerSetting FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
 		public BooleanSetting UseNullDocumentCacher { get; set; }
+	    public IntegerSetting SqlCommandTimeoutInSec { get; set; }
 	}
 }
