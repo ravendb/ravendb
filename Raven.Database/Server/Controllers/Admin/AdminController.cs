@@ -220,7 +220,6 @@ namespace Raven.Database.Server.Controllers.Admin
             var state = new ResourceBackupState();
 
             var task = Database.Maintenance.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument, state, cts.Token);
-            task.ContinueWith(_ => cts.Dispose());
 
             long id;
             DatabasesLandlord.SystemDatabase.Tasks.AddTask(task, state, new TaskActions.PendingTaskDescription
