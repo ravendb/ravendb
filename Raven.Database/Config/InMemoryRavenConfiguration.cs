@@ -1384,23 +1384,35 @@ namespace Raven.Database.Config
 
         public void CustomizeValuesForDatabaseTenant(string tenantId)
         {
-            if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
-                Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Databases", tenantId);
+            if (string.IsNullOrEmpty(Settings[Constants.RavenIndexPath]) == false)
+                Settings[Constants.RavenIndexPath] = Path.Combine(Settings[Constants.RavenIndexPath], "Databases", tenantId);
 
-            if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
-                Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Databases", tenantId);
+            if (string.IsNullOrEmpty(Settings[Constants.RavenEsentLogsPath]) == false)
+                Settings[Constants.RavenEsentLogsPath] = Path.Combine(Settings[Constants.RavenEsentLogsPath], "Databases", tenantId);
 
             if (string.IsNullOrEmpty(Settings[Constants.RavenTxJournalPath]) == false)
                 Settings[Constants.RavenTxJournalPath] = Path.Combine(Settings[Constants.RavenTxJournalPath], "Databases", tenantId);
 
-            if (string.IsNullOrEmpty(Settings["Raven/Voron/TempPath"]) == false)
-                Settings["Raven/Voron/TempPath"] = Path.Combine(Settings["Raven/Voron/TempPath"], "Databases", tenantId, "VoronTemp");
+            if (string.IsNullOrEmpty(Settings[Constants.Voron.TempPath]) == false)
+                Settings[Constants.Voron.TempPath] = Path.Combine(Settings[Constants.Voron.TempPath], "Databases", tenantId, "VoronTemp");
         }
 
         public void CustomizeValuesForFileSystemTenant(string tenantId)
         {
             if (string.IsNullOrEmpty(Settings[Constants.FileSystem.DataDirectory]) == false)
                 Settings[Constants.FileSystem.DataDirectory] = Path.Combine(Settings[Constants.FileSystem.DataDirectory], "FileSystems", tenantId);
+
+            if (string.IsNullOrEmpty(Settings[Constants.RavenIndexPath]) == false)
+                Settings[Constants.RavenIndexPath] = Path.Combine(Settings[Constants.RavenIndexPath], "FileSystems", tenantId);
+
+            if (string.IsNullOrEmpty(Settings[Constants.RavenEsentLogsPath]) == false)
+                Settings[Constants.RavenEsentLogsPath] = Path.Combine(Settings[Constants.RavenEsentLogsPath], "FileSystems", tenantId);
+
+            if (string.IsNullOrEmpty(Settings[Constants.RavenTxJournalPath]) == false)
+                Settings[Constants.RavenTxJournalPath] = Path.Combine(Settings[Constants.RavenTxJournalPath], "FileSystems", tenantId);
+
+            if (string.IsNullOrEmpty(Settings[Constants.Voron.TempPath]) == false)
+                Settings[Constants.Voron.TempPath] = Path.Combine(Settings[Constants.Voron.TempPath], "FileSystems", tenantId, "VoronTemp");
         }
 
         public void CustomizeValuesForCounterStorageTenant(string tenantId)

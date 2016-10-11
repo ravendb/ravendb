@@ -108,6 +108,9 @@ namespace Raven.Database.Server.Tenancy
             }
 
             config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
+            config.Settings[Constants.RavenEsentLogsPath] = config.Settings[Constants.RavenEsentLogsPath].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
+            config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
+
             config.FileSystemName = tenantId;
 
             config.Initialize();
