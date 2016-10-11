@@ -4,22 +4,22 @@ import luceneField = require("models/database/index/luceneField");
 import spatialIndexField = require("models/database/index/spatialIndexField");
 
 class indexDefinition {
-    name = ko.observable<string>().extend({ required: true });
-    map = ko.observable<string>().extend({ required: true });
-    maps = ko.observableArray<KnockoutObservable<string>>().extend({ required: true });
-    reduce = ko.observable<string>().extend({ required: true });
+    name = ko.observable<string>();
+    map = ko.observable<string>();
+    maps = ko.observableArray<KnockoutObservable<string>>();
+    reduce = ko.observable<string>();
     luceneFields = ko.observableArray<luceneField>();
     isTestIndex = ko.observable<boolean>(false);
     isSideBySideIndex = ko.observable<boolean>(false);
-    numOfLuceneFields = ko.computed(() => this.luceneFields().length).extend({ required: true });
+    numOfLuceneFields = ko.computed(() => this.luceneFields().length);
 
     // This is an amalgamation of several properties from the index (Fields, Stores, Indexes, SortOptions, Analyzers, Suggestions, TermVectors) 
     // Stored as multiple luceneFields for the sake of data binding.
     // Each luceneField corresponds to a Field box in the index editor UI.
     spatialFields = ko.observableArray<spatialIndexField>();
-    numOfSpatialFields = ko.computed(() => this.spatialFields().length).extend({ required: true });
+    numOfSpatialFields = ko.computed(() => this.spatialFields().length);
 
-    maxIndexOutputsPerDocument = ko.observable<number>(0).extend({ required: true });
+    maxIndexOutputsPerDocument = ko.observable<number>(0);
     storeAllFields = ko.observable<boolean>(false);
 
     analyzers: any;
@@ -36,7 +36,8 @@ class indexDefinition {
     termVectors: any;
     type: string;
 
-    constructor(dto: indexDefinitionDto) {
+    constructor(dto: Raven.Client.Indexing.IndexDefinition) {
+        /* TODO:
         this.analyzers = dto.Analyzers;
         this.fields(dto.Fields);
         this.indexes = dto.Indexes;
@@ -55,7 +56,7 @@ class indexDefinition {
         this.stores = dto.Stores;
         this.suggestionsOptions = dto.SuggestionsOptions;
         this.termVectors = dto.TermVectors;
-        this.type = dto.Type;
+        this.type = dto.Type;*/
 
         this.luceneFields(this.parseFields());
         this.spatialFields(this.parseSpatialFields());
@@ -88,7 +89,8 @@ class indexDefinition {
         return obj;
     }
 
-    toDto(): indexDefinitionDto {
+    toDto(): Raven.Client.Indexing.IndexDefinition {
+        return null; /* TODO
         return {
             Analyzers: this.makeFieldObject(f => f.indexing() === "Analyzed", f => f.analyzer()),
             Fields: {},//this.fields(),
@@ -110,10 +112,11 @@ class indexDefinition {
             TermVectors: this.makeFieldObject(f => f.termVector() !== "No", f => f.termVector()),
             Type: this.type,
             MaxIndexOutputsPerDocument: this.maxIndexOutputsPerDocument() ? this.maxIndexOutputsPerDocument() > 0 ? this.maxIndexOutputsPerDocument() : null : null
-        };
+        };*/
     }
 
     static empty(): indexDefinition {
+        return null; /* TODO
         return new indexDefinition({
             Analyzers: {},
             Fields: [],
@@ -135,7 +138,7 @@ class indexDefinition {
             TermVectors: {},
             Type: "Map",
             MaxIndexOutputsPerDocument:null
-        });
+        });*/
     }
 
     private makeSpatialIndexesObject(): any {

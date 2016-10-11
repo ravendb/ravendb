@@ -1,41 +1,24 @@
-<ul class="breadcrumb">
-    <li>
-        <h3>
-            <a href="#resources">
-                Databases
-            </a>
-        </h3>
-    </li>
-    <li data-bind="with: activeDatabase">
-        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
-    </li>
-    <li>
-        <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
-    </li>
-    <li class="active">
-        <a data-bind="text: indexName, attr: { href: appUrls.editIndex(indexName) }"></a>
-    </li>
-    <li class="active">
-        <span>Terms</span>
-    </li>
-</ul>
-
-<div class="panel-group panel-group-wo-margin" id="accordion" data-bind="foreach: fields, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+<div class="panel-group panel-group-wo-margin" id="accordion" data-bind="foreach: fields">
     <div class="panel panel-default">
         <div class="panel-heading">
             <h4 class="panel-title">
                 <a data-toggle="collapse" data-parent="#accordion" data-bind="text: name, attr: { href: '#termCollapse' + $index() }"></a>
-                <span class="text-warning padd-left-10" data-bind="visible: hasMoreTerms"><i class="fa fa-warning"></i> Displaying only first <span data-bind="text: $root.termsPageLimit - 1"></span> terms </span>
             </h4>
         </div>
         <div class="panel-collapse collapse" data-bind="attr: { id: 'termCollapse' + $index() }">
-            <div class="panel-body">
-                <ul class="list-group" data-bind="foreach: terms">
-                    <li class="list-group-item" data-bind="text: $data"></li>
-                </ul>
-                
+            <div class="panel=body">
+                <div data-bind="foreach: terms">
+                    <div class="col-md-3" data-bind="text: $data">
+                    </div>
+                </div>
                 <h4 class="text-center" data-bind="visible: !terms().length">No entries were found</h4>
+                
+                <button class="btn btn-default" 
+                        data-bind="visible: hasMoreTerms, click: $root.loadMore.bind($root, name), enable: !loadInProgress(), css: { 'btn-spinner': loadInProgress() }">Load more</button>
             </div>
         </div>
     </div>
+</div>
+<div data-bind="visible: fields().length === 0">
+    <h4>No fields were found.</h4>
 </div>

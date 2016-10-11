@@ -26,9 +26,9 @@ class copyIndexDialog extends dialogViewModelBase {
             var canActivateResult = $.Deferred();
             new getIndexDefinitionCommand(this.indexName, this.db)
                 .execute()
-                .done((results: indexDefinitionContainerDto) => {
+                .done(definitionDto => {
                     var prettifySpacing = 4;
-                    var jsonString = JSON.stringify(new indexDefinition(results.Index).toDto(), null, prettifySpacing);
+                    var jsonString = JSON.stringify(new indexDefinition(definitionDto).toDto(), null, prettifySpacing);
                     this.indexJSON(jsonString);
                     canActivateResult.resolve({ can: true });
                 })
@@ -54,7 +54,7 @@ class copyIndexDialog extends dialogViewModelBase {
         return true;
     }
    
-    saveIndex() {
+    saveIndex() {/* TODO:
         if (this.isPaste && this.indexJSON()) {
             var indexDto: indexDefinitionDto;
 
@@ -75,7 +75,7 @@ class copyIndexDialog extends dialogViewModelBase {
             }
         } else {
             this.close();
-        }
+        }*/
     }
 
     close() {

@@ -3,50 +3,85 @@ import getIndexTermsCommand = require("commands/database/index/getIndexTermsComm
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import appUrl = require("common/appUrl");
 
+type termsForField = {
+    name: string;
+    terms: KnockoutObservableArray<string>;
+    fromValue: string;
+    hasMoreTerms: KnockoutObservable<boolean>;
+    loadInProgress: KnockoutObservable<boolean>;
+}
+
 class indexTerms extends viewModelBase {
 
-    fields = ko.observableArray<{ name: string; terms: KnockoutObservableArray<string>; hasMoreTerms: KnockoutObservable<boolean>; }>();
-    appUrls: computedAppUrls;
+    fields = ko.observableArray<termsForField>();
     indexName: string;
 
-    termsPageLimit = 1024;
+    static readonly termsPageLimit = 100;
 
     constructor() {
         super();
         this.appUrls = appUrl.forCurrentDatabase();
     }
 
-    activate(indexName: any) {
+    activate(indexName: string): JQueryPromise<Raven.Client.Indexing.IndexDefinition> {
         super.activate(indexName);
 
         this.indexName = indexName;
-        this.fetchIndexDefinition(indexName);
+        return this.fetchIndexDefinition(indexName);
     }
 
     fetchIndexDefinition(indexName: string) {
-        new getIndexDefinitionCommand(indexName, this.activeDatabase())
+        return new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
-            .done((results: indexDefinitionContainerDto) => this.processIndex(results));
+            .done((indexDefinitionDto: Raven.Client.Indexing.IndexDefinition) => this.processIndex(indexDefinitionDto));
     }
 
-    processIndex(indexContainer: indexDefinitionContainerDto) {
-        var fields = indexContainer.Index.Fields.map((fieldName: string) => {
-            return { name: fieldName, terms: ko.observableArray<string>(), hasMoreTerms: ko.observable<boolean>(false) }
-        });
-        this.fields(fields);
+    static createTermsForField(fieldName: string): termsForField {
+        return {
+            fromValue: null,
+            name: fieldName,
+            hasMoreTerms: ko.observable<boolean>(true),
+            terms: ko.observableArray<string>(),
+            loadInProgress: ko.observable<boolean>(false)
+        }
+    }
+
+    private processIndex(indexDefinitionDto: Raven.Client.Indexing.IndexDefinition) {
+        const fieldsNames = Object.keys(indexDefinitionDto.Fields);
+
+        this.fields(fieldsNames.map(fieldName => indexTerms.createTermsForField(fieldName)));
 
         this.fields()
-            .forEach(field => {
-                new getIndexTermsCommand(indexContainer.Index.Name, field.name, this.activeDatabase())
-                    .execute()
-                    .done((terms: string[]) => {
-                        if (terms.length >= this.termsPageLimit) {
-                            field.hasMoreTerms(true);
-                            terms = terms.slice(0, this.termsPageLimit - 1);
-                        }
-                        field.terms(terms);
-                    });
+            .forEach(field => this.loadTerms(indexDefinitionDto.Name, field));
+    }
+
+    private loadTerms(indexName: string, termsForField: termsForField): JQueryPromise<string[]> {  // fetch one more to find out if we have more
+        return new getIndexTermsCommand(indexName, termsForField.name, this.activeDatabase(), indexTerms.termsPageLimit + 1, termsForField.fromValue)  
+            .execute()
+            .done((loadedTerms: string[]) => {
+                if (loadedTerms.length > indexTerms.termsPageLimit) {
+                    termsForField.hasMoreTerms(true);
+                    loadedTerms = loadedTerms.slice(0, indexTerms.termsPageLimit);
+                } else {
+                    termsForField.hasMoreTerms(false);
+                }
+                termsForField.terms.pushAll(loadedTerms);
+                if (loadedTerms.length > 0) {
+                    termsForField.fromValue = loadedTerms[loadedTerms.length - 1];
+                }
             });
+    }
+
+    loadMore(fieldName: string) {
+        const field = this.fields().find(x => x.name === fieldName);
+
+        if (!field || !field.hasMoreTerms()) {
+            return;
+        }
+        field.loadInProgress(true);
+
+        this.loadTerms(this.indexName, field)
+            .always(() => field.loadInProgress(false));
     }
 }
 
