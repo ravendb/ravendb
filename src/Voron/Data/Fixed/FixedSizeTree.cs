@@ -102,7 +102,7 @@ namespace Voron.Data.Fixed
             _tx = tx;
             _parent = parent;
             _valSize = valSize;
-            _pageLocator = new PageLocator(tx, _tx.Flags == TransactionFlags.Read ? 16 : 8);
+            _pageLocator = new PageLocator(tx, 32);
 
             _entrySize = sizeof(long) + _valSize;
             _maxEmbeddedEntries = 512 / _entrySize;

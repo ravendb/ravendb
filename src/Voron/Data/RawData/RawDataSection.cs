@@ -33,7 +33,7 @@ namespace Voron.Data.RawData
             PageNumber = pageNumber;
             _tx = tx;         
             _pageSize = _tx.DataPager.PageSize;
-            _pageLocator = new PageLocator(_tx, 8);
+            _pageLocator = new PageLocator(_tx, 32);
 
             MaxItemSize = (_pageSize - sizeof(RawDataSmallPageHeader)) / 2;
 
