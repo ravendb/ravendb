@@ -41,6 +41,8 @@ namespace Raven.Database.Config
 
         public ReplicationConfiguration Replication { get; private set; }
 
+        public SqlReplicationConfiguration SqlReplication { get; private set; }
+
         public PrefetcherConfiguration Prefetcher { get; private set; }
 
         public StorageConfiguration Storage { get; private set; }
@@ -58,6 +60,7 @@ namespace Raven.Database.Config
         public InMemoryRavenConfiguration()
         {
             Replication = new ReplicationConfiguration();
+            SqlReplication = new SqlReplicationConfiguration();
             Prefetcher = new PrefetcherConfiguration();
             Storage = new StorageConfiguration();
             FileSystem = new FileSystemConfiguration();
@@ -325,6 +328,8 @@ namespace Raven.Database.Config
             Replication.ForceReplicationRequestBuffering = ravenSettings.Replication.ForceReplicationRequestBuffering.Value;
             Replication.MaxNumberOfItemsToReceiveInSingleBatch = ravenSettings.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value;
 
+            SqlReplication.CommandTimeoutInSec = ravenSettings.SqlReplication.CommandTimeoutInSec.Value;
+
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
             FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
             FileSystem.IndexStoragePath = ravenSettings.FileSystem.IndexStoragePath.Value;
@@ -357,7 +362,7 @@ namespace Raven.Database.Config
             return this;
         }
 
-       
+
 
         private static string CalculateWorkingDirectory(string workingDirectory)
         {
@@ -1465,6 +1470,14 @@ namespace Raven.Database.Config
             /// Maximum number of items replication will receive in single batch. Min: 512. Default: null (let source server decide).
             /// </summary>
             public int? MaxNumberOfItemsToReceiveInSingleBatch { get; set; }
+        }
+
+        public class SqlReplicationConfiguration
+        {
+            /// <summary>
+            /// Number of seconds after which SQL command will timeout. Default: -1 (use provider default). Can be overriden by setting CommandTimeout property value in SQL Replication configuration.
+            /// </summary>
+            public int CommandTimeoutInSec { get; set; }
         }
 
         public class FileSystemConfiguration

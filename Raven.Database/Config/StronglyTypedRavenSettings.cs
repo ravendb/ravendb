@@ -20,6 +20,8 @@ namespace Raven.Database.Config
 
         public ReplicationConfiguration Replication { get; private set; }
 
+        public SqlReplicationConfiguration SqlReplication { get; private set; }
+
         public VoronConfiguration Voron { get; private set; }
 
         public EsentConfiguration Esent { get; private set; }
@@ -39,6 +41,7 @@ namespace Raven.Database.Config
         public StronglyTypedRavenSettings(NameValueCollection settings)
         {
             Replication = new ReplicationConfiguration();
+            SqlReplication = new SqlReplicationConfiguration();
             Voron = new VoronConfiguration();
             Esent = new EsentConfiguration();
             Prefetcher = new PrefetcherConfiguration();
@@ -52,11 +55,11 @@ namespace Raven.Database.Config
         }
 
         public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
-        { 
+        {
             const int defaultPrecomputedBatchSize = 32 * 1024;
             MaxPrecomputedBatchSizeForNewIndex = new IntegerSetting(settings["Raven/MaxPrecomputedBatchSizeForNewIndex"], defaultPrecomputedBatchSize);
 
-            const int defaultPrecomputedBatchTotalDocumentSizeInBytes = 1024*1024*250;  //250 mb
+            const int defaultPrecomputedBatchTotalDocumentSizeInBytes = 1024 * 1024 * 250;  //250 mb
             MaxPrecomputedBatchTotalDocumentSizeInBytes = new IntegerSetting(settings["Raven/MaxPrecomputedBatchTotalDocumentSizeInBytes"], defaultPrecomputedBatchTotalDocumentSizeInBytes);
 
             //1024 is Lucene.net default - so if the setting is not set it will be the same as not touching Lucene's settings at all
@@ -271,11 +274,14 @@ namespace Raven.Database.Config
             Replication.ForceReplicationRequestBuffering = new BooleanSetting(settings["Raven/Replication/ForceReplicationRequestBuffering"], false);
             Replication.MaxNumberOfItemsToReceiveInSingleBatch = new NullableIntegerSettingWithMin(settings["Raven/Replication/MaxNumberOfItemsToReceiveInSingleBatch"], (int?)null, 512);
 
+            SqlReplication.CommandTimeoutInSec = new IntegerSetting(settings["Raven/SqlReplication/CommandTimeoutInSec"], -1);
+
             FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings[Constants.FileSystem.MaximumSynchronizationInterval], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
             FileSystem.IndexStoragePath = new StringSetting(settings[Constants.FileSystem.IndexStorageDirectory], string.Empty);
             FileSystem.DataDir = new StringSetting(settings[Constants.FileSystem.DataDirectory], @"~\FileSystems");
             FileSystem.DefaultStorageTypeName = new StringSetting(settings[Constants.FileSystem.Storage], string.Empty);
             FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate], false);
+
             Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
             Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
             Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
@@ -556,6 +562,11 @@ namespace Raven.Database.Config
             public IntegerSetting ReplicationRequestTimeoutInMilliseconds { get; set; }
 
             public NullableIntegerSettingWithMin MaxNumberOfItemsToReceiveInSingleBatch { get; set; }
+        }
+
+        public class SqlReplicationConfiguration
+        {
+            public IntegerSetting CommandTimeoutInSec { get; set; }
         }
 
         public class FileSystemConfiguration
