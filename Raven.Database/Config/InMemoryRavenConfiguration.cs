@@ -42,6 +42,8 @@ namespace Raven.Database.Config
 
         public ReplicationConfiguration Replication { get; private set; }
 
+        public SqlReplicationConfiguration SqlReplication { get; private set; }
+
         public PrefetcherConfiguration Prefetcher { get; private set; }
 
         public StorageConfiguration Storage { get; private set; }
@@ -67,6 +69,7 @@ namespace Raven.Database.Config
         public InMemoryRavenConfiguration()
         {
             Replication = new ReplicationConfiguration();
+            SqlReplication = new SqlReplicationConfiguration();
             Prefetcher = new PrefetcherConfiguration();
             Storage = new StorageConfiguration();
             FileSystem = new FileSystemConfiguration();
@@ -342,6 +345,8 @@ namespace Raven.Database.Config
             Replication.ForceReplicationRequestBuffering = ravenSettings.Replication.ForceReplicationRequestBuffering.Value;
             Replication.MaxNumberOfItemsToReceiveInSingleBatch = ravenSettings.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value;
             Replication.ReplicationPropagationDelayInSeconds = ravenSettings.Replication.ReplicationPropagationDelayInSeconds.Value;
+
+            SqlReplication.CommandTimeoutInSec = ravenSettings.SqlReplication.CommandTimeoutInSec.Value;
 
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
             FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
@@ -1547,6 +1552,14 @@ namespace Raven.Database.Config
             /// Indicates how many seconds replication task will wait before propagating replication documents
             /// </summary>
             public int ReplicationPropagationDelayInSeconds { get; set; }
+        }
+
+        public class SqlReplicationConfiguration
+        {
+            /// <summary>
+            /// Number of seconds after which SQL command will timeout. Default: -1 (use provider default). Can be overriden by setting CommandTimeout property value in SQL Replication configuration.
+            /// </summary>
+            public int CommandTimeoutInSec { get; set; }
         }
 
         public class FileSystemConfiguration

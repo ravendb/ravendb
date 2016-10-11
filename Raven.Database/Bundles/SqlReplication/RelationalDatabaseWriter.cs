@@ -30,7 +30,7 @@ namespace Raven.Database.Bundles.SqlReplication
             "MySql.Data.MySqlClient",
             "System.Data.SqlServerCe.3.5"
         };
-    
+
         private readonly DocumentDatabase database;
         private readonly SqlReplicationConfig cfg;
         private readonly DbProviderFactory providerFactory;
@@ -57,7 +57,7 @@ namespace Raven.Database.Bundles.SqlReplication
             connection.Close();
         }
 
-        public RelationalDatabaseWriter( DocumentDatabase database, SqlReplicationConfig cfg, SqlReplicationStatistics replicationStatistics)
+        public RelationalDatabaseWriter(DocumentDatabase database, SqlReplicationConfig cfg, SqlReplicationStatistics replicationStatistics)
         {
             this.database = database;
             this.cfg = cfg;
@@ -72,7 +72,7 @@ namespace Raven.Database.Bundles.SqlReplication
             Debug.Assert(commandBuilder != null);
 
             connection.ConnectionString = cfg.ConnectionString;
-            
+
             if (SqlServerFactoryNames.Contains(cfg.FactoryName))
             {
                 IsSqlServerFactoryType = true;
@@ -106,7 +106,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
         public List<Func<DbParameter, string, bool>> GenerateStringParsers()
         {
-            return new List<Func<DbParameter, string, bool>> { 
+            return new List<Func<DbParameter, string, bool>> {
                 (colParam, value) => {
                     if( char.IsDigit( value[ 0 ] ) ) {
                             DateTime dateTime;
@@ -151,7 +151,7 @@ namespace Raven.Database.Bundles.SqlReplication
         {
             foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
             {
-                if(sqlReplicationTable.InsertOnlyMode)
+                if (sqlReplicationTable.InsertOnlyMode)
                     continue;
                 // first, delete all the rows that might already exist there
                 DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled,
@@ -175,27 +175,27 @@ namespace Raven.Database.Bundles.SqlReplication
         public class TableQuerySummary
         {
             public string TableName { get; set; }
-            public CommandData[] Commands { get; set; } 
+            public CommandData[] Commands { get; set; }
 
-            
+
             public class CommandData
             {
                 public string CommandText { get; set; }
-                public KeyValuePair<string,object>[]  Params { get; set; }
+                public KeyValuePair<string, object>[] Params { get; set; }
             }
 
             public static TableQuerySummary GenerateSummaryFromCommands(string tableName, IEnumerable<DbCommand> commands)
             {
                 var tableQuerySummary = new TableQuerySummary();
                 tableQuerySummary.TableName = tableName;
-                tableQuerySummary.Commands  =
+                tableQuerySummary.Commands =
                     commands
                         .Select(x => new CommandData()
                         {
                             CommandText = x.CommandText,
-                            Params = x.Parameters.Cast<DbParameter>().Select(y=> new KeyValuePair<string,object>(y.ParameterName,y.Value)).ToArray()
+                            Params = x.Parameters.Cast<DbParameter>().Select(y => new KeyValuePair<string, object>(y.ParameterName, y.Value)).ToArray()
                         }).ToArray();
-                
+
                 return tableQuerySummary;
             }
         }
@@ -210,7 +210,7 @@ namespace Raven.Database.Bundles.SqlReplication
                 var commands = new List<DbCommand>();
                 DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled,
                     identifiers, commands.Add);
-                yield return TableQuerySummary.GenerateSummaryFromCommands(sqlReplicationTable.TableName,commands);
+                yield return TableQuerySummary.GenerateSummaryFromCommands(sqlReplicationTable.TableName, commands);
 
             }
 
@@ -222,7 +222,7 @@ namespace Raven.Database.Bundles.SqlReplication
                 var commands = new List<DbCommand>();
                 InsertItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, dataForTable, commands.Add);
 
-                yield return TableQuerySummary.GenerateSummaryFromCommands(sqlReplicationTable.TableName,commands);
+                yield return TableQuerySummary.GenerateSummaryFromCommands(sqlReplicationTable.TableName, commands);
             }
 
             Rollback();
@@ -241,7 +241,7 @@ namespace Raven.Database.Bundles.SqlReplication
             return true;
         }
 
-        private void InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable, Action<DbCommand>commandCallback =null)
+        private void InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable, Action<DbCommand> commandCallback = null)
         {
             var sqlReplicationTableMetrics = sqlReplicationMetrics.GetTableMetrics(tableName);
             var replicationInsertActionsMetrics = sqlReplicationTableMetrics.SqlReplicationInsertActionsMeter;
@@ -255,6 +255,11 @@ namespace Raven.Database.Bundles.SqlReplication
                 using (var cmd = connection.CreateCommand())
                 {
                     cmd.Transaction = tx;
+
+                    if (cfg.CommandTimeout.HasValue)
+                        cmd.CommandTimeout = cfg.CommandTimeout.Value;
+                    else if (database.Configuration.SqlReplication.CommandTimeoutInSec >= 0)
+                        cmd.CommandTimeout = database.Configuration.SqlReplication.CommandTimeoutInSec;
 
                     database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 
@@ -270,9 +275,9 @@ namespace Raven.Database.Bundles.SqlReplication
                         sb.Append(commandBuilder.QuoteIdentifier(column.Key)).Append(", ");
                     }
                     sb.Length = sb.Length - 2;
-                    
+
                     var pkParam = cmd.CreateParameter();
-                    
+
                     pkParam.ParameterName = GetParameterName(providerFactory, commandBuilder, pkName);
                     pkParam.Value = itemToReplicate.DocumentId;
                     cmd.Parameters.Add(pkParam);
@@ -287,7 +292,7 @@ namespace Raven.Database.Bundles.SqlReplication
                             continue;
                         var colParam = cmd.CreateParameter();
                         colParam.ParameterName = column.Key;
-                        SetParamValue( colParam, column.Value, stringParserList );
+                        SetParamValue(colParam, column.Value, stringParserList);
                         cmd.Parameters.Add(colParam);
                         sb.Append(GetParameterName(providerFactory, commandBuilder, column.Key)).Append(", ");
                     }
@@ -302,7 +307,7 @@ namespace Raven.Database.Bundles.SqlReplication
                     var stmt = sb.ToString();
                     cmd.CommandText = stmt;
 
-                    if (commandCallback!= null)
+                    if (commandCallback != null)
                     {
                         commandCallback(cmd);
                     }
@@ -329,7 +334,7 @@ namespace Raven.Database.Bundles.SqlReplication
                             log.Debug(string.Format("Insert took: {0}ms, statement: {1}", elapsedMiliseconds, stmt));
                         }
 
-                        var elapsedMicroseconds = (long)(sp.ElapsedTicks*SystemTime.MicroSecPerTick);
+                        var elapsedMicroseconds = (long)(sp.ElapsedTicks * SystemTime.MicroSecPerTick);
                         replicationInsertDurationHistogram.Update(elapsedMicroseconds);
                         replicationInsertActionsMetrics.Mark(1);
                         replicationInsertActionsHistogram.Update(1);
@@ -350,12 +355,18 @@ namespace Raven.Database.Bundles.SqlReplication
             var replicationDeleteDurationHistogram = sqlReplicationTableMetrics.SqlReplicationDeleteActionsDurationHistogram;
             var replicationDeletesActionsMetrics = sqlReplicationTableMetrics.SqlReplicationDeleteActionsMeter;
             var replicationDeletesActionsHistogram = sqlReplicationTableMetrics.SqlReplicationDeleteActionsHistogram;
-            
+
             var sp = new Stopwatch();
             using (var cmd = connection.CreateCommand())
             {
                 sp.Restart();
                 cmd.Transaction = tx;
+
+                if (cfg.CommandTimeout.HasValue)
+                    cmd.CommandTimeout = cfg.CommandTimeout.Value;
+                else if (database.Configuration.SqlReplication.CommandTimeoutInSec >= 0)
+                    cmd.CommandTimeout = database.Configuration.SqlReplication.CommandTimeoutInSec;
+
                 database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
                 for (int i = 0; i < identifiers.Count; i += maxParams)
                 {
@@ -382,7 +393,7 @@ namespace Raven.Database.Bundles.SqlReplication
                         {
                             sb.Append("'").Append(SanitizeSqlValue(identifiers[j])).Append("'");
                         }
-                        
+
                     }
                     sb.Append(")");
 
@@ -508,13 +519,13 @@ namespace Raven.Database.Bundles.SqlReplication
                         return;
                     case JTokenType.Object:
                         var objectValue = val as RavenJObject;
-                        if (objectValue != null && objectValue.Keys.Count >= 2 && objectValue.ContainsKey("Type")  && objectValue.ContainsKey("Value"))
+                        if (objectValue != null && objectValue.Keys.Count >= 2 && objectValue.ContainsKey("Type") && objectValue.ContainsKey("Value"))
                         {
                             var dbType = objectValue["Type"].Value<string>();
                             var fieldValue = objectValue["Value"].Value<string>();
-                            
-                            colParam.DbType = (DbType)Enum.Parse(typeof(DbType), dbType,false);
-                            
+
+                            colParam.DbType = (DbType)Enum.Parse(typeof(DbType), dbType, false);
+
                             colParam.Value = fieldValue;
 
                             if (objectValue.ContainsKey("Size"))
@@ -537,7 +548,7 @@ namespace Raven.Database.Bundles.SqlReplication
                             object enumValue;
                             if (enumStringvalue.Contains("|"))
                             {
-                                var splitvalue = enumStringvalue.Split('|').Select(e => (int) Enum.Parse(enumType, e.Trim()));
+                                var splitvalue = enumStringvalue.Split('|').Select(e => (int)Enum.Parse(enumType, e.Trim()));
                                 enumValue = splitvalue.Aggregate((a, b) => a | b);
                             }
                             else
@@ -548,7 +559,7 @@ namespace Raven.Database.Bundles.SqlReplication
                             var property = colParam.GetType().GetProperty(objectValue["EnumProperty"].Value<string>());
                             if (property == null)
                             {
-                                throw new InvalidOperationException(string.Format("Missing property '{0}' on type '{1}' of parameter.", 
+                                throw new InvalidOperationException(string.Format("Missing property '{0}' on type '{1}' of parameter.",
                                     objectValue["EnumProperty"], colParam.GetType().FullName));
                             }
                             if (objectValue.ContainsKey("Value"))
@@ -576,9 +587,12 @@ namespace Raven.Database.Bundles.SqlReplication
 
                     case JTokenType.String:
                         var value = val.Value<string>();
-                        if( value.Length > 0 && stringParsers != null ) {
-                            foreach( var parser in stringParsers ) {
-                                if( parser( colParam, value ) ) {
+                        if (value.Length > 0 && stringParsers != null)
+                        {
+                            foreach (var parser in stringParsers)
+                            {
+                                if (parser(colParam, value))
+                                {
                                     return;
                                 }
                             }
