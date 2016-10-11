@@ -20,6 +20,8 @@ namespace Raven.Server.Config
 
         public CoreConfiguration Core { get; }
 
+        public SqlReplicationConfiguration SqlReplication { get; }
+
         public ReplicationConfiguration Replication { get; }
 
         public StorageConfiguration Storage { get; }
@@ -68,6 +70,7 @@ namespace Raven.Server.Config
             Core = new CoreConfiguration();
 
             Replication = new ReplicationConfiguration();
+            SqlReplication = new SqlReplicationConfiguration();
             Storage = new StorageConfiguration();
             Encryption = new EncryptionConfiguration();
             Indexing = new IndexingConfiguration(() => Core.RunInMemory, () => Core.DataDirectory);
@@ -95,6 +98,7 @@ namespace Raven.Server.Config
         {
             Core.Initialize(Settings);
             Replication.Initialize(Settings);
+            SqlReplication.Initialize(Settings);
             Queries.Initialize(Settings);
             Patching.Initialize(Settings);
             DebugLog.Initialize(Settings);
