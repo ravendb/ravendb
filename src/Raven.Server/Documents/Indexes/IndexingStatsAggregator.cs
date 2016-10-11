@@ -91,10 +91,12 @@ namespace Raven.Server.Documents.Indexes
 
         private Stopwatch _sw;
 
-        public IndexingStatsScope(IndexingRunStats stats)
+        public IndexingStatsScope(IndexingRunStats stats, bool start = true)
         {
             _stats = stats;
-            Start();
+
+            if (start)
+                Start();
         }
 
         public TimeSpan Duration => _sw.Elapsed;
@@ -106,8 +108,8 @@ namespace Raven.Server.Documents.Indexes
 
             IndexingStatsScope scope;
             if (_scopes.TryGetValue(name, out scope) == false)
-                _scopes[name] = scope = new IndexingStatsScope(_stats);
-
+                return _scopes[name] = new IndexingStatsScope(_stats, start);
+                
             if (start)
                 scope.Start();
 
