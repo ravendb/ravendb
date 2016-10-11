@@ -277,6 +277,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.MinThreadPoolWorkerThreads.Value, actual => actual.MinThreadPoolWorkerThreads);
             configurationComparer.Assert(expected => expected.MinThreadPoolCompletionThreads.Value, actual => actual.MinThreadPoolCompletionThreads);
 
+            configurationComparer.Assert(expected => expected.SqlReplication.CommandTimeoutInSec.Value, actual => actual.SqlReplication.CommandTimeoutInSec);
 
             configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
             configurationComparer.Ignore(x => x.Storage.Voron.JournalsStoragePath);
