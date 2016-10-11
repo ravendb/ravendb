@@ -300,14 +300,14 @@ namespace Raven.Client.Connection
             out QueryHeaderInformation queryHeaderInfo)
         {
             var reference = new Reference<QueryHeaderInformation>();
-            var streamQuery = asyncServerClient.StreamQueryAsyncWithSyncEnumerator(index, query, reference).Result;
+            var streamQuery = AsyncHelpers.RunSync(() => asyncServerClient.StreamQueryAsyncWithSyncEnumerator(index, query, reference));
             queryHeaderInfo = reference.Value;
             return streamQuery;
         }
 
         public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
-            return asyncServerClient.StreamDocsAsyncWithSyncEnumerator(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation, skipAfter, transformer, transformerParameters).Result;
+            return AsyncHelpers.RunSync(() => asyncServerClient.StreamDocsAsyncWithSyncEnumerator(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation, skipAfter, transformer, transformerParameters));
         }
 
         public void DeleteIndex(string name)
