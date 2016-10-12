@@ -1,5 +1,4 @@
 .indexes {
-
     .align-checkboxes {
         margin-left: 20px;
         position: relative;
@@ -11,7 +10,6 @@
         @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
             margin-left: 20px;
         }
-
         @media (min-width:@screen-xl) {
             &:before {
                 content: '';
@@ -19,7 +17,7 @@
                 position: absolute;
                 top: 0;
                 bottom: 0;
-                left:0;
+                left: 0;
                 border-left: 1px solid @gray-dark;
             }
         }
@@ -35,13 +33,12 @@
 
         &:hover {
             background-color: lighten(@gray-darker, 3%);
-            transition: background-color .15s ease;
+            transition: background-color 0.15s ease;
         }
 
         .row {
             display: flex;
             flex-wrap: wrap;
-
             @media (min-width:@screen-sm) {
                 .actions {
                     .vcenter-buttons;
@@ -49,7 +46,6 @@
                     padding: 0 15px;
                 }
             }
-
             @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
                 .info-container {
                     order: 1;
@@ -69,15 +65,20 @@
             }
         }
 
-        .index-name, .index-type {
+        .index-name,
+        .index-type {
             margin-left: 30px;
             margin-bottom: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         .index-name {
             margin-top: 2px;
+
+            a {
+                display: block;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
         }
 
         .index-type {
@@ -95,8 +96,7 @@
             &:before {
                 color: @gray-lighter;
                 font-size: 12px;
-                letter-spacing: .5pt;
-
+                letter-spacing: 0.5pt;
                 -moz-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
                 -webkit-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
                 -o-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
@@ -165,22 +165,10 @@
         }
     }
 
-    .properties-value, .properties-label {
-        text-align:left;
-        display: inline-block;
-        .btn-sm;
-        width: 140px;
-
-        &.value-only {
-            width: auto;
-        }
-
-        .caret {
-            margin-top: 8px;
-            float:right;
-        }
-
-        [class^="icon-"], [class*=" icon-"] {
+    .properties-label,
+    .properties-value {
+        [class*=" icon-"],
+        [class^="icon-"] {
             color: @brand-info;
 
             & + span {
@@ -190,31 +178,39 @@
         }
     }
 
+
     .properties-container {
-        display:flex;
-        flex-wrap:wrap;
+        .properties-item {
+            @media (min-width: @screen-xl) {
+                width: 49%;
+                max-width: none;
+                min-width: none;
+            }
+        }
     }
 
     .properties-item {
         @media (min-width:@screen-xl) {
-            width:50%;
-
             &.staleness {
-                order:2;
+                order: 2;
             }
+
             &.entriesCount {
-                order:4;
+                order: 4;
             }
+
             &.priority {
-                order:1;
+                order: 1;
             }
+
             &.mode {
-                order:3;
+                order: 3;
             }
         }
 
         &.text-success {
-            [class^="icon-"], [class*=" icon-"] {
+            [class*=" icon-"],
+            [class^="icon-"] {
                 color: inherit;
 
                 & + span {
