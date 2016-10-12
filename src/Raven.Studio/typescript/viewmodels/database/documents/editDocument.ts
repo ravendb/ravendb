@@ -44,9 +44,10 @@ class editDocument extends viewModelBase {
     isCreatingNewDocument = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
     provideCustomNameForNewDocument = ko.observable(false);
+    userIdHasFocus = ko.observable<boolean>(false);
     userSpecifiedId = ko.observable("");
     userSpecifiedIdCustomValidityError: KnockoutComputed<string>;
-    docEditor: AceAjax.Editor;
+    private docEditor: AceAjax.Editor;
     entityName = ko.observable<string>("");
 
     $documentName: JQuery;
@@ -59,10 +60,10 @@ class editDocument extends viewModelBase {
     isSaving = ko.observable<boolean>(false);
     displayDocumentChangeNotification = ko.observable<boolean>(false);
     
-    metaPropsToRestoreOnSave: any[] = [];
+    private metaPropsToRestoreOnSave: any[] = [];
 
-    changeNotification: changeSubscription;
-    databaseForEditedDoc: database;
+    private changeNotification: changeSubscription;
+    private databaseForEditedDoc: database;
 
     queryMode = {
         queryIndex: ko.observable<string>(),
@@ -75,6 +76,7 @@ class editDocument extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     documentSize: KnockoutComputed<string>;
     editedDocId: KnockoutComputed<string>;
+    displayLastModifiedDate: KnockoutComputed<boolean>;
     
     constructor() {
         super();
@@ -94,7 +96,7 @@ class editDocument extends viewModelBase {
         }
     }
 
-    activate(navigationArgs: { list: string, database:string, item: string, id: string, new: string }) {
+    activate(navigationArgs: { list: string, database: string, item: string, id: string, new: string }) {
         super.activate(navigationArgs);
         this.updateHelpLink('M72H1R');
 
@@ -146,7 +148,7 @@ class editDocument extends viewModelBase {
     }
 
     private activateById(id: string) {
-        var canActivateResult = $.Deferred<canActivateResultDto>();
+        const canActivateResult = $.Deferred<canActivateResultDto>();
         this.databaseForEditedDoc = appUrl.getDatabase();
         this.loadDocument(id)
             .done(() => {
@@ -162,9 +164,9 @@ class editDocument extends viewModelBase {
     }
 
     private activateByIndex(indexName: string, query: string, argSorts: string, argItem: any) {
-        var canActivateResult = $.Deferred<canActivateResultDto>();
+        const canActivateResult = $.Deferred<canActivateResultDto>();
         this.isInDocMode(false);
-        var sorts: querySort[];
+        let sorts: querySort[];
 
         if (argSorts) {
             sorts = argSorts.split(",").map((curSort: string) => querySort.fromQuerySortString(curSort.trim()));
@@ -172,13 +174,9 @@ class editDocument extends viewModelBase {
             sorts = [];
         }
 
-        const resultsFetcher = (skip: number, take: number) => {
-            var command = new queryIndexCommand(indexName, this.activeDatabase(), skip, take, query, sorts);
-            return command
-                .execute();
-        };
-        var list = new pagedList(resultsFetcher);
-        var item = !!argItem && !isNaN(argItem) ? argItem : 0;
+        const resultsFetcher = (skip: number, take: number) => new queryIndexCommand(indexName, this.activeDatabase(), skip, take, query, sorts).execute();
+        const list = new pagedList(resultsFetcher);
+        const item = !!argItem && !isNaN(argItem) ? argItem : 0;
 
         list.getNthItem(item)
             .done((doc: document) => {
@@ -196,9 +194,8 @@ class editDocument extends viewModelBase {
     }
 
     private initializeObservables(): void {
-
         this.userSpecifiedIdCustomValidityError = ko.computed(() => {
-            var documentId = this.userSpecifiedId();
+            const documentId = this.userSpecifiedId();
             return documentId.contains("\\") ? "Document name cannot contain '\\'" : "";
         });
 
@@ -207,7 +204,6 @@ class editDocument extends viewModelBase {
                 if (this.isConflictDocument()) {
                     this.resolveConflicts();
                 } else {
-
                     const docDto = doc.toDto(true);
                     const metaDto = docDto["@metadata"];
                     if (metaDto) {
@@ -216,7 +212,7 @@ class editDocument extends viewModelBase {
                         documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
                     }
 
-                    var docText = this.stringify(docDto);
+                    const docText = this.stringify(docDto);
                     this.documentText(docText);
                 }
             }
@@ -225,13 +221,13 @@ class editDocument extends viewModelBase {
         this.metadata = ko.pureComputed<documentMetadata>(() => this.document() ? this.document().__metadata : null);
 
         this.isConflictDocument = ko.computed(() => {
-            var metadata = this.metadata();
+            const metadata = this.metadata();
             return metadata && ("Raven-Replication-Conflict" in metadata) && !metadata.id.contains("/conflicts/");
         });
 
         this.documentSize = ko.pureComputed(() => {
             try {
-                var size: number = this.documentText().getSizeInBytesAsUTF8() / 1024;
+                const size: number = this.documentText().getSizeInBytesAsUTF8() / 1024;
                 return genUtils.formatAsCommaSeperatedString(size, 2);
             } catch (e) {
                 return "cannot compute";
@@ -239,20 +235,27 @@ class editDocument extends viewModelBase {
         });
 
         this.metadata.subscribe((meta: documentMetadata) => {
-            if (meta.id) {
+            if (meta && meta.id) {
                 this.userSpecifiedId(meta.id);
+                this.entityName(document.getEntityNameFromId(meta.id));
             }
-
-            this.entityName(document.getEntityNameFromId(meta.id));
         });
         this.editedDocId = ko.pureComputed(() => this.metadata() ? this.metadata().id : "");
         this.editedDocId.subscribe((docId: string) =>
             ko.postbox.publish("SetRawJSONUrl", docId ? appUrl.forDocumentRawData(this.activeDatabase(), docId) : "")
         );
+        this.displayLastModifiedDate = ko.pureComputed<boolean>(() => {
+            const hasMetadata = !!this.metadata();
+            const inEditMode = !this.isCreatingNewDocument();
+            const displayChangedNotification = this.displayDocumentChangeNotification();
+
+            return hasMetadata && inEditMode && !displayChangedNotification;
+        });
     }
 
     enableCustomNameProvider() {
         this.provideCustomNameForNewDocument(true);
+        this.userIdHasFocus(true);
     }
 
     createDocumentChangeNotification(docId: string): changeSubscription {
@@ -268,7 +271,7 @@ class editDocument extends viewModelBase {
     }
 
     updateNewlineLayoutInDocument(unescapeNewline: boolean) {
-        var dirtyFlagValue = this.dirtyFlag().isDirty();
+        const dirtyFlagValue = this.dirtyFlag().isDirty();
         if (unescapeNewline) {
             this.documentText(documentHelpers.unescapeNewlinesAndTabsInTextFields(this.documentText()));
             this.docEditor.getSession().setMode('ace/mode/json_newline_friendly');
@@ -298,20 +301,20 @@ class editDocument extends viewModelBase {
         this.isCreatingNewDocument(true);
         this.collectionForNewDocument(collectionForNewDocument);
         
-        var documentTask = $.Deferred<document>();
+        const documentTask = $.Deferred<document>();
 
         if (collectionForNewDocument) {
             this.userSpecifiedId(collectionForNewDocument + "/");
             new getDocumentsFromCollectionCommand(new collection(collectionForNewDocument, this.activeDatabase()), 0, 3)
                 .execute()
                 .done((documents: pagedResultSet<document>) => {
-                    var schemaDoc = documentHelpers.findSchema(documents.items);
+                    const schemaDoc = documentHelpers.findSchema(documents.items);
                     this.document(schemaDoc); 
                     documentTask.resolve(schemaDoc);
                 })
                 .fail(() => documentTask.reject());
         } else {
-            let doc = document.empty();
+            const doc = document.empty();
             this.document(doc);
             documentTask.resolve(doc);
         }
@@ -353,23 +356,23 @@ class editDocument extends viewModelBase {
     }
 
     saveAsNew() {
-        var docId = this.userSpecifiedId();
-        var slashPosition = docId.indexOf("/", 0);
+        let docId = this.userSpecifiedId();
+        const slashPosition = docId.indexOf("/", 0);
         if (slashPosition !== -1) {
             docId = docId.substr(0, slashPosition + 1);
         }
-        this.saveInternal(docId);
+        this.saveInternal(docId, true);
     }
 
     saveDocument() {
-        this.saveInternal(this.userSpecifiedId());
+        this.saveInternal(this.userSpecifiedId(), false);
     }
 
-    private saveInternal(documentId: string) {
+    private saveInternal(documentId: string, eraseEtag: boolean) {
         this.isInDocMode(true);
 
         let message = "";
-        var updatedDto: any;
+        let updatedDto: any;
 
         try {
             if (this.isNewLineFriendlyMode()) {
@@ -393,7 +396,7 @@ class editDocument extends viewModelBase {
             updatedDto["@metadata"] = {};
         }
 
-        let meta = updatedDto['@metadata'];
+        const meta = updatedDto['@metadata'];
 
         // Fix up the metadata: if we're a new doc, attach the expected reserved properties like ID, ETag, and RavenEntityName.
         // AFAICT, Raven requires these reserved meta properties in order for the doc to be seen as a member of a collection.
@@ -409,17 +412,21 @@ class editDocument extends viewModelBase {
             });
             // force document id to support save as new
             meta['@id'] = documentId;
+
+            if (eraseEtag) {
+                meta['@etag'] = 0;
+            }
         }
 
         // skip some not necessary meta in headers
-        var metaToSkipInHeaders = ['Raven-Replication-History'];
-        for (var i in metaToSkipInHeaders) {
-            var skippedHeader = metaToSkipInHeaders[i];
+        const metaToSkipInHeaders = ['Raven-Replication-History'];
+        for (let i in metaToSkipInHeaders) {
+            const skippedHeader = metaToSkipInHeaders[i];
             delete meta[skippedHeader];
         }
 
-        var newDoc = new document(updatedDto);
-        var saveCommand = new saveDocumentCommand(documentId, newDoc, this.activeDatabase());
+        const newDoc = new document(updatedDto);
+        const saveCommand = new saveDocumentCommand(documentId, newDoc, this.activeDatabase());
         this.isSaving(true);
         saveCommand
             .execute()
@@ -427,8 +434,8 @@ class editDocument extends viewModelBase {
     }
 
     private onDocumentSaved(saveResult: saveDocumentResponseDto) {
-        var savedDocumentDto: saveDocumentResponseItemDto = saveResult.Results[0];
-        var currentSelection = this.docEditor.getSelectionRange();
+        const savedDocumentDto: saveDocumentResponseItemDto = saveResult.Results[0];
+        const currentSelection = this.docEditor.getSelectionRange();
         this.loadDocument(savedDocumentDto.Key)
             .always(() => {
                 this.updateNewlineLayoutInDocument(this.isNewLineFriendlyMode());
@@ -452,7 +459,7 @@ class editDocument extends viewModelBase {
     }
 
     stringify(obj: any) {
-        var prettifySpacing = 4;
+        const prettifySpacing = 4;
         return JSON.stringify(obj, null, prettifySpacing);
     }
 
@@ -491,9 +498,9 @@ class editDocument extends viewModelBase {
     }
 
     deleteDocument() {
-        var doc = this.document();
+        const doc = this.document();
         if (doc) {
-            var viewModel = new deleteDocuments([doc]);
+            const viewModel = new deleteDocuments([doc]);
             viewModel.deletionTask.done(() => this.connectedDocuments.onDocumentDeleted());
             app.showDialog(viewModel, editDocument.editDocSelector);
         } 
@@ -501,9 +508,9 @@ class editDocument extends viewModelBase {
 
     formatDocument() {
         try {
-            var docEditorText = this.docEditor.getSession().getValue();
-            var tempDoc = JSON.parse(docEditorText);
-            var formatted = this.stringify(tempDoc);
+            const docEditorText = this.docEditor.getSession().getValue();
+            const tempDoc = JSON.parse(docEditorText);
+            const formatted = this.stringify(tempDoc);
             this.documentText(formatted);
         } catch (e) {
             messagePublisher.reportError("Could not format json", undefined, undefined, false);
@@ -521,19 +528,20 @@ class editDocument extends viewModelBase {
     }
 
     resolveConflicts() {
-        var task = new resolveMergeCommand(this.activeDatabase(), this.editedDocId()).execute();
-        task.done((response: mergeResult) => {
-            this.documentText(response.Document);
-            //TODO: handle metadata
-        });
+        new resolveMergeCommand(this.activeDatabase(), this.editedDocId())
+            .execute()
+            .done((response: mergeResult) => {
+                this.documentText(response.Document);
+                //TODO: handle metadata
+            });
     }
 
     generateCode() {
         const doc: document = this.document();
         const generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
         const deffered = generate.execute();
-        deffered.done((code: any) => {
-            app.showDialog(new showDataDialog("Generated Class", code["Code"]));
+        deffered.done((code: string) => {
+            app.showDialog(new showDataDialog("Generated Class", code));
         });
     }
 }
