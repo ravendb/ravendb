@@ -219,6 +219,10 @@ hr {
         margin: @grid-gutter-width/4 0;
     }
 }
+
+.inline-block {
+    display: inline-block;
+}
 /*  RESPONSIVE PULLS  */
 .pull-right-sm {
     @media (min-width: @screen-sm) {
@@ -1611,12 +1615,6 @@ pre {
     background-color: @gray-dark;
     color: @gray-light;
 }
-
-.panel {
-    .form-control {
-        //background-color:@gray-dark;
-    }
-}
 /* SCROLLBARS */
 ::-webkit-scrollbar-track {
     background-color: @gray;
@@ -1829,6 +1827,14 @@ pre {
     }
 }
 
+.actions-container {
+    display: flex;
+    align-items: center;
+    @media (min-width: @screen-sm) {
+        justify-content: flex-end;
+    }
+}
+
 .properties-container {
     @media (min-width: @screen-sm) {
         display: flex;
@@ -1838,13 +1844,12 @@ pre {
 
     .properties-item {
         margin-right: 1%;
-        margin-bottom: 4px;
+        margin-top: 2px;
+        margin-bottom: 2px;
         display: flex;
         height: 36px;
         flex-wrap: nowrap;
-
         width: 100%;
-
         @media (min-width: @screen-sm) {
             max-width: 300px;
             min-width: 100px;
@@ -1853,26 +1858,9 @@ pre {
         @media (min-width: @screen-lg) {
             width: 32%;
         }
-        flex-grow: 2;
 
-        &.value-only {
-            flex-grow: 1;
-        }
-
-        .properties-label,
-        .properties-value {
-            text-align: left;
-            /*
-
-            [class*=" icon-"],
-            [class^="icon-"] {
-                color: @brand-info;
-
-                & + span {
-                    margin-left: 9px;
-                    color: @brand-info;
-                }
-            }*/
+        .dropdown-menu {
+            width: 100%;
         }
 
         .properties-label {
@@ -1889,6 +1877,39 @@ pre {
 
             & > .set-size {
                 .btn-sm;
+                line-height: 26px;
+            }
+        }
+
+        .properties-label,
+        .properties-value {
+            text-align: left;
+            line-height: 26px;
+
+            [class*=" icon-"],
+            [class^="icon-"] {
+                color: @brand-info;
+
+                & + span {
+                    margin-left: 9px;
+                    color: @brand-info;
+                }
+            }
+
+            &.text-danger,
+            &.text-info,
+            &.text-primary,
+            &.text-success,
+            &.text-warning {
+                [class*=" icon-"],
+                [class^="icon-"] {
+                    color: inherit;
+
+                    & + span {
+                        margin-left: 9px;
+                        color: inherit;
+                    }
+                }
             }
         }
 
@@ -1907,7 +1928,7 @@ pre {
                     text-overflow: ellipsis;
 
                     .caret {
-                        margin-top: 8px;
+                        margin-top: 11px;
                         margin-left: 10px;
                         position: absolute;
                         right: 10px;
@@ -1915,18 +1936,56 @@ pre {
                 }
             }
         }
+    }
+}
 
-        &.text-success {
-            [class*=" icon-"],
-            [class^="icon-"] {
-                color: inherit;
+.panel-state {
+    position: relative;
+    padding-left: 30px;
+}
 
-                & + span {
-                    margin-left: 9px;
-                    color: inherit;
-                }
-            }
-        }
+.state {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 30px;
+    background-color: @gray;
+
+    &.state-primary {
+        background-color: @brand-primary-dark;
+    }
+
+    &.state-success {
+        background-color: @brand-success-dark;
+    }
+
+    &.state-info {
+        background-color: @brand-info-dark;
+    }
+
+    &.state-warning {
+        background-color: @brand-warning-dark;
+    }
+
+    &.state-danger {
+        background-color: @brand-danger-dark;
+    }
+
+    &:before {
+        color: @gray-lighter;
+        font-size: 12px;
+        -moz-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+        -webkit-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+        -o-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+        -ms-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+        transform: rotate(-90deg) translateX(-50%) translateY(-50%);
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform-origin: top left;
+        content: attr(data-state-text);
+        text-transform: uppercase;
     }
 }
 @import "pages/tasks-sampleData";

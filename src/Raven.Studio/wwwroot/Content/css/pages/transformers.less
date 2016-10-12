@@ -7,7 +7,7 @@
 
     .vertical-divider {
         position: relative;
-        @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
+        @media (min-width:@screen-sm) and (max-width:@screen-md-max) {
             margin-left: 20px;
         }
 
@@ -24,10 +24,6 @@
         }
     }
 
-    .inline-block {
-        display: inline-block;
-    }
-
     .transformer {
         padding-left: 10px;
         position: relative;
@@ -41,15 +37,7 @@
             display: flex;
             flex-wrap: wrap;
 
-            @media (min-width:@screen-sm) {
-                .actions {
-                    .vcenter;
-                    width: 100%;
-                    padding: 0 15px;
-                }
-            }
-
-            @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
+            @media (min-width:@screen-sm) and (max-width:@screen-md-max) {
                 .info-container {
                     order: 1;
                 }
@@ -62,18 +50,18 @@
                     order: 2;
                 }
             }
-
-            .col-flex {
-                padding: 0 15px;
-            }
         }
 
         .transformer-name {
             margin-top: 5px;
             margin-left: 30px;
             margin-bottom: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
+
+            a {
+                display: block;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
         }
 
         .checkbox {
@@ -84,55 +72,10 @@
         }
     }
 
-    .properties-value, .properties-label {
-        text-align:left;
-        display: inline-block;
-        .btn-sm;
-        width: 140px;
-
-        &.value-only {
-            width: auto;
-        }
-
-        .caret {
-            margin-top: 8px;
-            float:right;
-        }
-
-        [class^="icon-"], [class*=" icon-"] {
-            color: @brand-info;
-
-            & + span {
-                margin-left: 9px;
-                color: @brand-info;
-            }
-        }
-    }
-
     .properties-container {
-        display:flex;
-        flex-wrap:wrap;
-    }
-
-    .properties-item {
-        @media (min-width:@screen-xl) {
-            width:50%;
-
-        }
-
-        &.text-success {
-            [class^="icon-"], [class*=" icon-"] {
-                color: inherit;
-
-                & + span {
-                    margin-left: 9px;
-                    color: inherit;
-                }
-            }
+        .properties-item {
+            width: 100%;
         }
     }
 
-    .properties-label {
-        width: 70px;
-    }
 }
