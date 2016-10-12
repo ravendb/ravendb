@@ -53,7 +53,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
             context = new SynchronizationTaskContext();
             synchronizationQueue = new SynchronizationQueue();
-            synchronizationStrategy = new SynchronizationStrategy(storage, sigGenerator);	
+            synchronizationStrategy = new SynchronizationStrategy(storage, sigGenerator);
         }
 
         private string FileSystemUrl
@@ -127,7 +127,7 @@ namespace Raven.Database.FileSystem.Synchronization
             if (destination == null)
             {
                 Log.Debug("Could not synchronize to {0} because no destination was configured for that url", fileSystemDestination);
-                throw new ArgumentException("Destination files system does not exist", "fileSystemDestination"); 
+                throw new ArgumentException("Destination files system does not exist", "fileSystemDestination");
             }
 
             if (destination.Enabled == false)
@@ -359,7 +359,7 @@ namespace Raven.Database.FileSystem.Synchronization
                     repeat = false;
             }
             while (repeat);
-            
+
             return SynchronizePendingFilesAsync(destinationSyncClient, forceSyncingAll);
         }
 
@@ -426,7 +426,7 @@ namespace Raven.Database.FileSystem.Synchronization
                             destinationUrl), ex);
 
                     continue;
-                }                
+                }
 
                 NoSyncReason reason;
                 var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, FileSystemUrl, out reason);
@@ -757,10 +757,10 @@ namespace Raven.Database.FileSystem.Synchronization
         }
 
         private IEnumerable<SynchronizationDestination> GetSynchronizationDestinations()
-        {			
+        {
             var destinationsConfigExists = false;
             storage.Batch(accessor => destinationsConfigExists = accessor.ConfigExists(SynchronizationConstants.RavenSynchronizationDestinations));
-         
+
             if (!destinationsConfigExists)
             {
                 if (failedAttemptsToGetDestinationsConfig < 3 || failedAttemptsToGetDestinationsConfig % 10 == 0)
@@ -790,8 +790,8 @@ namespace Raven.Database.FileSystem.Synchronization
                 Log.Warn("Configuration " + SynchronizationConstants.RavenSynchronizationDestinations + " does not contain any destination");
                 yield break;
             }
-            
-            foreach ( var token in destinationsStrings )
+
+            foreach (var token in destinationsStrings)
             {
                 yield return token.JsonDeserialization<SynchronizationDestination>();
             }
@@ -823,7 +823,8 @@ namespace Raven.Database.FileSystem.Synchronization
 
             try
             {
-                task.Wait(TimeSpan.FromSeconds(5));
+                if (task != null)
+                    task.Wait(TimeSpan.FromSeconds(5));
             }
             catch (AggregateException aggregate)
             {
