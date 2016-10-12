@@ -374,6 +374,10 @@ task CopyServer -depends CreateOutpuDirectories {
         "$base_dir\Raven.Server\bin\$global:configuration\Raven.Server.???",
         "$base_dir\DefaultConfigs\NLog.Ignored.config")
     $server_files | ForEach-Object { Copy-Item "$_" $build_dir\Output\Server }
+
+    mkdir -Path $build_dir\Output\Server\Tools
+    echo "Tools have been moved from the main distribution package and are now available as a separate download. Download dedicated tools package from our http://ravendb.net/downloads page." > $build_dir\Output\Server\Tools\where_are_tools.txt
+
     Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
 
