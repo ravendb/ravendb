@@ -1,6 +1,6 @@
 .indexes {
     .align-checkboxes {
-        margin-left: 20px;
+        margin-left: 21px;
         position: relative;
         top: -2px;
     }
@@ -23,14 +23,7 @@
         }
     }
 
-    .inline-block {
-        display: inline-block;
-    }
-
     .panel {
-        padding-left: 30px;
-        position: relative;
-
         &:hover {
             background-color: lighten(@gray-darker, 3%);
             transition: background-color 0.15s ease;
@@ -39,13 +32,7 @@
         .row {
             display: flex;
             flex-wrap: wrap;
-            @media (min-width:@screen-sm) {
-                .actions {
-                    .vcenter-buttons;
-                    width: 100%;
-                    padding: 0 15px;
-                }
-            }
+
             @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
                 .info-container {
                     order: 1;
@@ -58,10 +45,6 @@
                 .actions-container {
                     order: 2;
                 }
-            }
-
-            .col-flex {
-                padding: 0 15px;
             }
         }
 
@@ -87,43 +70,6 @@
         }
 
         .state {
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            width: 30px;
-
-            &:before {
-                color: @gray-lighter;
-                font-size: 12px;
-                letter-spacing: 0.5pt;
-                -moz-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
-                -webkit-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
-                -o-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
-                -ms-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
-                transform: rotate(-90deg) translateX(-50%) translateY(-50%);
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform-origin: top left;
-            }
-
-            &.state-error {
-                background-color: @brand-danger-dark;
-
-                &:before {
-                    content: 'ERROR';
-                }
-            }
-
-            &.state-faulty {
-                background-color: @brand-danger-dark;
-
-                &:before {
-                    content: 'FAULTY';
-                }
-            }
-
             &.state-normal {
                 background-color: @brand-success-dark;
 
@@ -165,63 +111,29 @@
         }
     }
 
-    .properties-label,
-    .properties-value {
-        [class*=" icon-"],
-        [class^="icon-"] {
-            color: @brand-info;
-
-            & + span {
-                margin-left: 9px;
-                color: @brand-info;
-            }
-        }
-    }
-
-
     .properties-container {
         .properties-item {
             @media (min-width: @screen-xl) {
                 width: 49%;
                 max-width: none;
                 min-width: none;
-            }
-        }
-    }
 
-    .properties-item {
-        @media (min-width:@screen-xl) {
-            &.staleness {
-                order: 2;
-            }
+                &.staleness {
+                    order: 2;
+                }
 
-            &.entriesCount {
-                order: 4;
-            }
+                &.entriesCount {
+                    order: 4;
+                }
 
-            &.priority {
-                order: 1;
-            }
+                &.priority {
+                    order: 1;
+                }
 
-            &.mode {
-                order: 3;
-            }
-        }
-
-        &.text-success {
-            [class*=" icon-"],
-            [class^="icon-"] {
-                color: inherit;
-
-                & + span {
-                    margin-left: 9px;
-                    color: inherit;
+                &.mode {
+                    order: 3;
                 }
             }
         }
-    }
-
-    .properties-label {
-        width: 70px;
     }
 }
