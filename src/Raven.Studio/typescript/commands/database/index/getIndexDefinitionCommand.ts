@@ -3,23 +3,21 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class getIndexDefinitionCommand extends commandBase {
+
     constructor(private indexName: string, private db: database) {
         super();
     }
 
-    execute(): JQueryPromise<indexDefinitionContainerDto> {
-        var url = endpoints.databases.index.indexes;
-        var args = {
+    execute(): JQueryPromise<Raven.Client.Indexing.IndexDefinition> {
+        const args = {
             name: this.indexName
         }
-        return this.query(url, args, this.db, (results: any[]) => {
-            if (results && results.length) {
-                return {
-                    Index: results[0]
-                };
-            }
-            return null;
-        });
+        const url = endpoints.databases.index.indexes;
+
+        const extractor = (results: Array<Raven.Client.Indexing.IndexDefinition>) =>
+            results && results.length ? results[0] : null;
+        
+        return this.query(url, args, this.db, extractor);
     }
 }
 

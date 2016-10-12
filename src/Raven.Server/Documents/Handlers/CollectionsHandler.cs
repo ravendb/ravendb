@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Handlers
                             if (maxEtag == -1)
                                 maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
 
-                            foreach (var document in Database.DocumentsStorage.GetDocumentsAfter(context, collection, 0, 0, 16 * 1024))
+                            foreach (var document in Database.DocumentsStorage.GetDocumentsFrom(context, collection, 0, 0, 16 * 1024))
                             {
                                 if (document.Etag > maxEtag)
                                     break;

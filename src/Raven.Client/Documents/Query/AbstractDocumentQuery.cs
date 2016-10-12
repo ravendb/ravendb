@@ -22,7 +22,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Linq;
-using Raven.Client.Listeners;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
@@ -34,6 +33,7 @@ using Raven.Json.Linq;
 using Raven.Client.Documents.SessionOperations;
 using Raven.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.Client.Documents.Listeners;
 
 namespace Raven.Client.Documents
 {

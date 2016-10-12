@@ -77,10 +77,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
             using (var db = CreateDocumentDatabase())
             using (var index = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
             {
-                Assert.True(db.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap >= numberOfUsers); // ensure all docs will be indexed in a single run
-
-                db.Configuration.Indexing.DocumentProcessingTimeout = new TimeSetting(1, TimeUnit.Minutes);
-
                 CreateUsers(db, numberOfUsers, locations);
 
                 var batchStats = new IndexingRunStats();

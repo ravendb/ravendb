@@ -1,11 +1,23 @@
-﻿<!doctype html>
+<!doctype html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
 {{> head }}
+
 <body>
-    {{> spinner }}
-    {{> topbar }}
-    {{> menu }}
-    {{> notification-center }}
+    {{> spinner }} {{> topbar }} {{> menu }} {{> notification-center }}
+
+    <style>
+        #toggleIndexing .enable-indexing {
+            display: none;
+        }
+
+        #toggleIndexing.disable .disable-indexing {
+            display: none;
+        }
+
+        #toggleIndexing.disable .enable-indexing {
+            display: inline-block;
+        }
+    </style>
 
     <div class="container-fluid content-container">
         <div class="content-container-margin indexes">
@@ -89,13 +101,13 @@
                         </div>
                         <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
 
-                            <div class="properties-item">
+                            <div class="properties-item staleness">
                                 <div class="properties-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
                             </div>
-                            <div class="properties-item">
+                            <div class="properties-item entriesCount">
                                 <div class="properties-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
                             </div>
-                            <div class="properties-item">
+                            <div class="properties-item priority">
                                 <span class="properties-label">Priority:</span>
                                 <div class="btn-group btn-group-xs">
                                     <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown">
@@ -110,7 +122,7 @@
                             </div>
 
 
-                            <div class="properties-item">
+                            <div class="properties-item mode">
                                 <span class="properties-label">Mode:</span>
                                 <div class="btn-group btn-group-xs">
                                     <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
@@ -182,27 +194,26 @@
                             </div>
                             <h3 class="index-name"><a href="#">Cars/ByProductionYear</a></h3>
                             <div class="index-type">
-                                AutoMap
-                                &nbsp; <span class="label label-warning">TEST INDEX</span>
+                                AutoMap &nbsp; <span class="label label-warning">TEST INDEX</span>
                             </div>
                         </div>
                         <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
 
-                            <div class="properties-item text-success">
+                            <div class="properties-item text-success staleness">
                                 <div class="properties-value value-only">
                                     <i class="icon-check"></i><span>Up to date</span>
                                 </div>
                             </div>
 
-                            <div class="properties-item">
+                            <div class="properties-item entriesCount">
                                 <div class="properties-value value-only">
                                     <i class="icon-list"></i>
                                     <span>1024 entries</span>
                                 </div>
                             </div>
 
-                            <div class="properties-item">
-                                <span class="properties-label">Priority:</span>
+                            <div class="properties-item priority">
+                                <span class="properties-label ">Priority:</span>
                                 <div class="btn-group btn-group-xs">
                                     <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown">
                                         <i class="icon-coffee"></i>
@@ -232,7 +243,7 @@
                                 </div>
                             </div>
 
-                            <div class="properties-item">
+                            <div class="properties-item mode">
                                 <span class="properties-label">Mode:</span>
                                 <div class="btn-group btn-group-xs">
                                     <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
@@ -307,13 +318,13 @@
                         </div>
                         <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
 
-                            <div class="properties-item">
+                            <div class="properties-item staleness">
                                 <div class="properties-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
                             </div>
-                            <div class="properties-item">
+                            <div class="properties-item entriesCount">
                                 <div class="properties-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
                             </div>
-                            <div class="properties-item">
+                            <div class="properties-item priority">
                                 <span class="properties-label">Priority:</span>
                                 <div class="btn-group btn-group-xs">
                                     <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown">
@@ -327,7 +338,7 @@
                                 </div>
                             </div>
 
-                            <div class="properties-item">
+                            <div class="properties-item mode">
                                 <span class="properties-label">Mode:</span>
                                 <div class="btn-group btn-group-xs">
                                     <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
@@ -400,13 +411,13 @@
                         </div>
                         <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
 
-                            <div class="properties-item">
+                            <div class="properties-item staleness">
                                 <div class="properties-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
                             </div>
-                            <div class="properties-item">
+                            <div class="properties-item entriesCount">
                                 <div class="properties-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
                             </div>
-                            <div class="properties-item">
+                            <div class="properties-item priority">
                                 <span class="properties-label">Priority:</span>
                                 <div class="btn-group btn-group-xs">
                                     <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown">
@@ -420,7 +431,7 @@
                                 </div>
                             </div>
 
-                            <div class="properties-item">
+                            <div class="properties-item mode">
                                 <span class="properties-label">Mode:</span>
                                 <div class="btn-group btn-group-xs">
                                     <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
@@ -493,13 +504,13 @@
                         </div>
                         <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
 
-                            <div class="properties-item">
+                            <div class="properties-item staleness">
                                 <div class="properties-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
                             </div>
-                            <div class="properties-item">
+                            <div class="properties-item entriesCount">
                                 <div class="properties-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
                             </div>
-                            <div class="properties-item">
+                            <div class="properties-item priority">
                                 <span class="properties-label">Priority:</span>
                                 <div class="btn-group btn-group-xs">
                                     <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown">
@@ -513,7 +524,7 @@
                                 </div>
                             </div>
 
-                            <div class="properties-item">
+                            <div class="properties-item mode">
                                 <span class="properties-label">Mode:</span>
                                 <div class="btn-group btn-group-xs">
                                     <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
@@ -587,13 +598,13 @@
                         </div>
                         <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
 
-                            <div class="properties-item">
+                            <div class="properties-item staleness">
                                 <div class="properties-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
                             </div>
-                            <div class="properties-item">
+                            <div class="properties-item entriesCount">
                                 <div class="properties-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
                             </div>
-                            <div class="properties-item">
+                            <div class="properties-item priority">
                                 <span class="properties-label">Priority:</span>
                                 <div class="btn-group btn-group-xs">
                                     <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown">
@@ -607,7 +618,7 @@
                                 </div>
                             </div>
 
-                            <div class="properties-item">
+                            <div class="properties-item mode">
                                 <span class="properties-label">Mode:</span>
                                 <div class="btn-group btn-group-xs">
                                     <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
@@ -670,4 +681,5 @@
 
     {{> scripts }}
 </body>
+
 </html>

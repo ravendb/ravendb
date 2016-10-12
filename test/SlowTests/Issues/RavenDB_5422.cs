@@ -1,23 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using Raven.Client.Indexes;
 using Xunit;
 
-namespace FastTests.Client.querying
+namespace FastTests.Client.Querying
 {
-    public class CanSearchForLuceneTokensInQueries: RavenTestBase
+    public class RavenDB_5422 : RavenTestBase
     {
         [Fact]
         public void ShouldBeAbleToQueryLuceneTokens()
         {
-            using (var store = GetDocumentStore())            
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteIndex(new Users_ByName());
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User() { Name = "OR" });                    
+                    session.Store(new User() { Name = "OR" });
                     session.Store(new User() { Name = "AND" });
                     session.Store(new User() { Name = "NOT" });
                     session.Store(new User() { Name = "TO" });
@@ -32,11 +29,11 @@ namespace FastTests.Client.querying
                     session.Query<User, Users_ByName>().Search(user => user.Name, "TO").Single();
                     session.Query<User, Users_ByName>().Search(user => user.Name, "INTERSECT").Single();
                     session.Query<User, Users_ByName>().Search(user => user.Name, "NULL").Single();*/
-                                        
+
                 }
             }
         }
-        public class Users_ByName : AbstractIndexCreationTask<User>
+        private class Users_ByName : AbstractIndexCreationTask<User>
         {
             public Users_ByName()
             {
@@ -44,7 +41,7 @@ namespace FastTests.Client.querying
             }
         }
 
-        public class User
+        private class User
         {
             public string Name { get; set; }
         }

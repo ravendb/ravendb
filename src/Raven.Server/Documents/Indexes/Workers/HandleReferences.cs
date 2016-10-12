@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
@@ -15,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 {
     public class HandleReferences : IIndexingWork
     {
-        protected Logger _logger;
+        private readonly Logger _logger;
 
         private readonly Index _index;
         private readonly Dictionary<string, HashSet<CollectionName>> _referencedCollections;
@@ -41,16 +42,29 @@ namespace Raven.Server.Documents.Indexes.Workers
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
-            var pageSize = _configuration.MaxNumberOfDocumentsToFetchForMap;
-            var timeoutProcessing = Debugger.IsAttached == false ? _configuration.DocumentProcessingTimeout.AsTimeSpan : TimeSpan.FromMinutes(15);
+            var pageSize = int.MaxValue;
+            var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
+                            ? _configuration.MaxTimeForDocumentTransactionToRemainOpenInSec.AsTimeSpan
+                            : TimeSpan.FromMinutes(15);
 
-            var moreWorkFound = HandleDocuments(ActionType.Tombstone, databaseContext, indexContext, writeOperation, stats, pageSize, timeoutProcessing, token);
-            moreWorkFound |= HandleDocuments(ActionType.Document, databaseContext, indexContext, writeOperation, stats, pageSize, timeoutProcessing, token);
+            var moreWorkFound = HandleDocuments(ActionType.Tombstone, databaseContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
+            moreWorkFound |= HandleDocuments(ActionType.Document, databaseContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
 
             return moreWorkFound;
         }
 
-        private bool HandleDocuments(ActionType actionType, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, int pageSize, TimeSpan timeoutProcessing, CancellationToken token)
+        public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
+        {
+            if (currentEtag >= maxEtag)
+                return false;
+
+            if (_index.CanContinueBatch(stats) == false)
+                return false;
+
+            return true;
+        }
+
+        private bool HandleDocuments(ActionType actionType, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, int pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
         {
             var moreWorkFound = false;
             Dictionary<string, long> lastIndexedEtagsByCollection = null;
@@ -98,87 +112,112 @@ namespace Raven.Server.Documents.Indexes.Workers
                         var lastEtag = lastReferenceEtag;
                         var count = 0;
 
-                        var sw = Stopwatch.StartNew();
+                        var sw = new Stopwatch();
                         IndexWriteOperation indexWriter = null;
 
-                        using (databaseContext.OpenReadTransaction())
+                        var keepRunning = true;
+                        var lastCollectionEtag = -1L;
+                        while (keepRunning)
                         {
-                            IEnumerable<Reference> references;
-                            switch (actionType)
+                            var batchCount = 0;
+
+                            using (databaseContext.OpenReadTransaction())
                             {
-                                case ActionType.Document:
-                                    references = _documentsStorage
-                                        .GetDocumentsAfter(databaseContext, referencedCollection.Name, lastReferenceEtag + 1, 0, pageSize)
-                                        .Select(document =>
-                                        {
-                                            _reference.Key = document.Key;
-                                            _reference.Etag = document.Etag;
+                                sw.Restart();
 
-                                            return _reference;
-                                        });
-                                    break;
-                                case ActionType.Tombstone:
-                                    references = _documentsStorage
-                                        .GetTombstonesAfter(databaseContext, referencedCollection.Name, lastReferenceEtag , 0, pageSize)
-                                        .Select(tombstone =>
-                                        {
-                                            _reference.Key = tombstone.Key;
-                                            _reference.Etag = tombstone.Etag;
-
-                                            return _reference;
-                                        });
-                                    break;
-                                default:
-                                    throw new NotSupportedException();
-                            }
-
-                            foreach (var referencedDocument in references)
-                            {
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Processing reference: {referencedDocument.Key}.");
-
-                                lastEtag = referencedDocument.Etag;
-                                count++;
-
-                                var documents = new List<Document>();
-                                foreach (var key in _indexStorage
-                                    .GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
+                                IEnumerable<Reference> references;
+                                switch (actionType)
                                 {
-                                    var doc = _documentsStorage.Get(databaseContext, key);
-                                    if(doc != null && doc.Etag <= lastIndexedEtag)
-                                        documents.Add(doc);
+                                    case ActionType.Document:
+                                        if (lastCollectionEtag == -1)
+                                            lastCollectionEtag = _index.GetLastDocumentEtagInCollection(databaseContext, collection);
+
+                                        references = _documentsStorage
+                                            .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
+                                            .Select(document =>
+                                            {
+                                                _reference.Key = document.Key;
+                                                _reference.Etag = document.Etag;
+
+                                                return _reference;
+                                            });
+                                        break;
+                                    case ActionType.Tombstone:
+                                        if (lastCollectionEtag == -1)
+                                            lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection);
+
+                                        references = _documentsStorage
+                                            .GetTombstonesFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
+                                            .Select(tombstone =>
+                                            {
+                                                _reference.Key = tombstone.Key;
+                                                _reference.Etag = tombstone.Etag;
+
+                                                return _reference;
+                                            });
+                                        break;
+                                    default:
+                                        throw new NotSupportedException();
                                 }
 
-                                using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))
+                                foreach (var referencedDocument in references)
                                 {
-                                    IEnumerable mapResults;
+                                    if (_logger.IsInfoEnabled)
+                                        _logger.Info($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Processing reference: {referencedDocument.Key}.");
 
-                                    while (docsEnumerator.MoveNext(out mapResults))
+                                    lastEtag = referencedDocument.Etag;
+                                    count++;
+                                    batchCount++;
+
+                                    var documents = new List<Document>();
+                                    foreach (var key in _indexStorage
+                                        .GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
                                     {
-                                        token.ThrowIfCancellationRequested();
+                                        var doc = _documentsStorage.Get(databaseContext, key);
+                                        if (doc != null && doc.Etag <= lastIndexedEtag)
+                                            documents.Add(doc);
+                                    }
 
-                                        var current = docsEnumerator.Current;
+                                    using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))
+                                    {
+                                        IEnumerable mapResults;
 
-                                        if (indexWriter == null)
-                                            indexWriter = writeOperation.Value;
-
-                                        if (_logger.IsInfoEnabled)
-                                            _logger.Info($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Processing document: {current.Key}.");
-
-                                        try
+                                        while (docsEnumerator.MoveNext(out mapResults))
                                         {
-                                            _index.HandleMap(current.LoweredKey, mapResults, indexWriter, indexContext, collectionStats);
-                                        }
-                                        catch (Exception e)
-                                        {
+                                            token.ThrowIfCancellationRequested();
+
+                                            var current = docsEnumerator.Current;
+
+                                            if (indexWriter == null)
+                                                indexWriter = writeOperation.Value;
+
                                             if (_logger.IsInfoEnabled)
-                                                _logger.Info($"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.", e);
-                                        }
+                                                _logger.Info($"Executing handle references for '{_index.Name} ({_index.IndexId})'. Processing document: {current.Key}.");
 
-                                        if (sw.Elapsed > timeoutProcessing)
-                                            break;
+                                            try
+                                            {
+                                                _index.HandleMap(current.LoweredKey, mapResults, indexWriter, indexContext, collectionStats);
+                                            }
+                                            catch (Exception e)
+                                            {
+                                                if (_logger.IsInfoEnabled)
+                                                    _logger.Info($"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.", e);
+                                            }
+
+                                            if (CanContinueBatch(collectionStats, lastEtag, lastCollectionEtag) == false)
+                                            {
+                                                keepRunning = false;
+                                                break;
+                                            }
+
+                                            if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
+                                                break;
+                                        }
                                     }
                                 }
+
+                                if (batchCount == 0 || batchCount >= pageSize)
+                                    break;
                             }
                         }
 
@@ -186,7 +225,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                             continue;
 
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Executing handle references for '{_index} ({_index.Name})'. Processed {count} references in '{referencedCollection.Name}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                            _logger.Info($"Executing handle references for '{_index} ({_index.Name})'. Processed {count} references in '{referencedCollection.Name}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
 
                         switch (actionType)
                         {
@@ -213,7 +252,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             Slice tombstoneKeySlice;
             var tx = indexContext.Transaction.InnerTransaction;
             var loweredKey = tombstone.LoweredKey;
-            using (Slice.External(tx.Allocator, loweredKey.Buffer,loweredKey.Size,out tombstoneKeySlice))
+            using (Slice.External(tx.Allocator, loweredKey.Buffer, loweredKey.Size, out tombstoneKeySlice))
                 _indexStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
         }
 

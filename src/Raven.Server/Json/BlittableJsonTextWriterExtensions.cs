@@ -654,10 +654,6 @@ namespace Raven.Server.Json
             writer.WriteString((indexDefinition.Type.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.IsTestIndex)));
-            writer.WriteBool(indexDefinition.IsTestIndex);
-            writer.WriteComma();
-
             writer.WritePropertyName((nameof(indexDefinition.LockMode)));
             writer.WriteString((indexDefinition.LockMode.ToString()));
             writer.WriteComma();

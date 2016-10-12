@@ -671,9 +671,9 @@ class query extends viewModelBase {
             } else {
                 new getIndexDefinitionCommand(indexName, this.activeDatabase())
                     .execute()
-                    .done((result: indexDefinitionContainerDto) => {
-                        self.isTestIndex(false); //TODO: result.Index.IsTestIndex
-                        self.indexFields([]); //TODO: result.Index.Fields
+                    .done((result) => {
+                        self.isTestIndex(result.IsTestIndex);
+                        self.indexFields(Object.keys(result.Fields));
                     });
             }
         }

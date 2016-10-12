@@ -20,7 +20,7 @@ namespace SlowTests.Tests.Indexes
         [Fact]
         public void OneBigSave()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "128"))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -43,7 +43,7 @@ namespace SlowTests.Tests.Indexes
         [Fact]
         public void ShouldWork()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "128"))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

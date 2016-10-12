@@ -11,7 +11,7 @@ namespace Sparrow.Utils
         public static ThreadLocal<ThreadStats> ThreadAllocations = new ThreadLocal<ThreadStats>(
             () => new ThreadStats(), trackAllValues:true);
 
-        public static ConcurrentDictionary<string, long> FileMapping = new ConcurrentDictionary<string, long>();
+        public static ConcurrentDictionary<string, ConcurrentDictionary<IntPtr, long>> FileMapping = new ConcurrentDictionary<string, ConcurrentDictionary<IntPtr, long>>();
 
         public class ThreadStats
         {
@@ -72,20 +72,29 @@ namespace Sparrow.Utils
             }
         }
 
-        public static void RegisterFileMapping(string name, long size)
+        public static void RegisterFileMapping(string name, IntPtr start, long size)
         {
-            FileMapping.AddOrUpdate(name, size, (_, old) => old + size);
+            var mapping = FileMapping.GetOrAdd(name,_ => new ConcurrentDictionary<IntPtr, long>());
+            mapping.TryAdd(start, size);
         }
 
-        public static void UnregisterFileMapping(string name, long size)
+        public static void UnregisterFileMapping(string name, IntPtr start, long size)
         {
-            var result = FileMapping.AddOrUpdate(name, 0, (_, old) => old - size);
-            if (result == 0)
+            ConcurrentDictionary<IntPtr, long> mapping;
+            if (FileMapping.TryGetValue(name, out mapping) == false)
+                return;
+
+            long _;
+            mapping.TryRemove(start, out _);
+            if (mapping.Count == 0)
             {
-                // shouldn't really happen, but let us be on the safe side
-                if (FileMapping.TryRemove(name, out result) && result != 0)
+                ConcurrentDictionary<IntPtr, long> value;
+                if (FileMapping.TryRemove(name, out value))
                 {
-                    RegisterFileMapping(name, result);
+                    if (value.Count > 0) // this shouldn't happen, but let us be on the safe side...
+                    {
+                        FileMapping.TryAdd(name, value);
+                    }
                 }
             }
         }

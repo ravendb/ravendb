@@ -28,6 +28,8 @@ namespace Raven.Server.Documents.SqlReplication
 
         public string ConnectionStringName { get; set; }
 
+        public int? CommandTimeout { get; set; }
+
         public List<SqlReplicationTable> SqlReplicationTables { get; set; }
     }
 

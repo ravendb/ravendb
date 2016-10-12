@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -25,37 +26,41 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 //TODO: When https://github.com/dotnet/corefx/issues/10157 is done, add managed 
-                //TODO: allocations per threads to the stats as well
+                //TODO: allocations per thread to the stats as well
 
                 var currentProcess = Process.GetCurrentProcess();
                 var workingSet = currentProcess.WorkingSet64;
                 long totalUnmanagedAllocations = 0;
                 long totalMapping = 0;
-                var fileMappingByDir = new Dictionary<string, Dictionary<string,long>>();
+                var fileMappingByDir = new Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>>();
                 var fileMappingSizesByDir = new Dictionary<string, long>();
                 foreach (var mapping in NativeMemory.FileMapping)
                 {
-                    totalMapping += mapping.Value;
 
                     var dir = Path.GetDirectoryName(mapping.Key);
-                    Dictionary<string, long> value;
+                    Dictionary<string, ConcurrentDictionary<IntPtr, long>> value;
                     if (fileMappingByDir.TryGetValue(dir, out value) == false)
                     {
-                        value = new Dictionary<string, long>();
+                        value = new Dictionary<string, ConcurrentDictionary<IntPtr, long>>();
                         fileMappingByDir[dir] = value;
                     }
-                    long prevSize;
-                    fileMappingSizesByDir.TryGetValue(dir, out prevSize);
-                    fileMappingSizesByDir[dir] = prevSize + mapping.Value;
-                    value[Path.GetFileName(mapping.Key)] = mapping.Value;
+                    value[mapping.Key] = mapping.Value;
+                    foreach (var singleMapping in mapping.Value)
+                    {
+                        long prevSize;
+                        fileMappingSizesByDir.TryGetValue(dir, out prevSize);
+                        fileMappingSizesByDir[dir] = prevSize + singleMapping.Value;
+                        totalMapping += singleMapping.Value;
+
+                    }
                 }
 
                 var prefixLength = LongestCommonPrefixLen(new List<string>(fileMappingSizesByDir.Keys));
 
                 var fileMappings = new DynamicJsonArray();
-                foreach (var sizes in fileMappingSizesByDir.OrderByDescending(x=>x.Value))
+                foreach (var sizes in fileMappingSizesByDir.OrderByDescending(x => x.Value))
                 {
-                    Dictionary<string, long> value;
+                    Dictionary<string, ConcurrentDictionary<IntPtr, long>> value;
                     if (fileMappingByDir.TryGetValue(sizes.Key, out value))
                     {
                         var dir = new DynamicJsonValue
@@ -67,12 +72,25 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 ["HumaneMapped"] = FileHeader.Humane(sizes.Value)
                             }
                         };
-                        foreach (var file in value.OrderByDescending(x=>x.Value))
+                        foreach (var file in value.OrderBy(x => x.Key))
                         {
-                            dir[file.Key] = new DynamicJsonValue
+                            long totalMapped = 0;
+                            var dja = new DynamicJsonArray();
+                            foreach (var mapping in file.Value)
                             {
-                                ["Mapped"] = file.Value,
-                                ["HumaneMapped"] = FileHeader.Humane(file.Value)
+                                totalMapped += mapping.Value;
+                                dja.Add(new DynamicJsonValue
+                                {
+                                    ["Address"] = "0x" + mapping.Key.ToString("x"),
+                                    ["Size"] = mapping.Value
+                                });
+                            }
+                            dir[Path.GetFileName(file.Key)] = new DynamicJsonValue
+                            {
+                                ["FileSize"] = GetFileSize(file.Key),
+                                ["TotalMapped"] = totalMapped,
+                                ["HumaneTotalMapped"] = FileHeader.Humane(totalMapped),
+                                ["Mappings"] = dja
                             };
                         }
                         fileMappings.Add(dir);
@@ -134,6 +152,21 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     context.Write(write, djv);
                 }
                 return Task.CompletedTask;
+            }
+        }
+
+        private static long GetFileSize(string file)
+        {
+            var fileInfo = new FileInfo(file);
+            if (fileInfo.Exists == false)
+                return -1;
+            try
+            {
+                return fileInfo.Length;
+            }
+            catch (FileNotFoundException)
+            {
+                return -1;
             }
         }
 

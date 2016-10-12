@@ -1,17 +1,25 @@
 <div class="indexes">
-    <div class="clearfix">
+    <div data-bind="visible: sortedGroups().length === 0">
+        <div class="row">
+            <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+                <i class="icon-xl icon-empty-set text-muted"></i>
+                <h2 class="text-center">No indexes have been created for this database.</h2>
+                <p class="lead text-center text-muted">Go ahead and <a href="#" data-bind="attr: { href: newIndexUrl }">create one now</a>.</p>
+            </div>
+        </div>
+    </div>
+    <div class="clearfix" data-bind="if: sortedGroups().length">
         <div class="pull-left">
             <div class="form-inline">
                 <div class="checkbox checkbox-inline align-checkboxes" title="Select all or none">
-                    <input type="checkbox" class="styled" data-bind="checkboxTriple: indexesSelectionState, event: { change: toggleSelectAll }" />
+                    <input type="checkbox" class="styled" data-bind="checkboxTriple: indexesSelectionState, event: { change: toggleSelectAll }"/>
                     <label></label>
                 </div>
                 <div class="input-group">
-                    <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText" />
+                    <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText"/>
                 </div>
-                <button class="btn btn-default" data-bind="enable: selectedIndexesName().length, click: copySelectedIndexes"><i class="icon-copy"></i><span>Copy</span></button>
                 <div class="btn-group">
-                    <button type="button" class="btn btn-default dropdown-toggle" title="Set lock mode for selected indexes" 
+                    <button type="button" class="btn btn-default dropdown-toggle" title="Set lock mode for selected indexes"
                             data-bind="enable: selectedIndexesName().length && !globalLockChangesInProgress(), css: { 'btn-spinner': globalLockChangesInProgress() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="icon-lock"></i><span>Lock</span>
                         <span class="caret"></span>
@@ -45,23 +53,23 @@
                         </li>
                     </ul>
                 </div>
-                <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes"><i class="icon-trash"></i><span>Delete</span></button>
+                <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length"><i class="icon-trash"></i><span>Delete</span></button>
             </div>
         </div>
         <div class="pull-right" id="toggleIndexing">
-            <button class="btn btn-warning btn-toggle disable-indexing" 
+            <button class="btn btn-warning btn-toggle disable-indexing"
                     data-bind="click: stopIndexing, visible: indexingEnabled(), enable: !globalStartStopInProgress(), css: { 'btn-spinner': globalStartStopInProgress() }">
                 <i class="icon-pause"></i>
                 <span>Disable indexing until restart</span>
             </button>
-            <button class="btn btn-success btn-toggle enable-indexing" 
+            <button class="btn btn-success btn-toggle enable-indexing"
                     data-bind="click: startIndexing, visible: !indexingEnabled(), enable: !globalStartStopInProgress(), css: { 'btn-spinner': globalStartStopInProgress() }">
                 <i class="icon-play"></i>
                 <span>Enable indexing</span>
             </button>
         </div>
     </div>
-    <hr />
+    <hr data-bind="visible: sortedGroups().length"/>
     <div data-bind="foreach: sortedGroups">
         <h2 data-bind="text: entityName, visible: !groupHidden()"></h2>
         <div data-bind="foreach: indexes, visible: !groupHidden()">
@@ -74,9 +82,10 @@
                                 <input type="checkbox" class="styled" data-bind="checked: $root.selectedIndexesName, checkedValue: name">
                                 <label></label>
                             </div>
-                            <h3 class="index-name"><a href="#" data-bind="text: name, attr: { href: queryUrl(), title: name }"></a></h3>
+                            <h3 class="index-name"><a href="#" data-bind="text: name, attr: { href: queryUrl(), title: name }"></a>
+                            </h3>
                             <div class="index-type">
-                                <span data-bind="text: type"></span>
+                                <span data-bind="text: getTypeForUI()"></span>
                                 &nbsp; <span data-bind="visible: isTestIndex" class="label label-warning">TEST INDEX</span>    
                             </div>
                         </div>
@@ -94,7 +103,7 @@
                             </div>
                             <div class="properties-item priority" data-bind="template: { name: 'priority-template' }">
                             </div>
-                            <div class="properties-item status" data-bind="template: { name: 'lock-mode-template' }">
+                            <div class="properties-item mode" data-bind="template: { name: 'lock-mode-template' }">
                             </div>
                         </div>
                         <div class="col-sm-6 col-xl-3 col-flex actions-container">
@@ -104,7 +113,6 @@
                                         <a class="btn btn-info" data-bind="attr: { href: queryUrl() }"><i class="icon-search"></i><span>Query</span></a>
                                     </div>
                                     <div class="btn-group" role="group" data-bind="if: !isFaulty()">
-                                        <button class="btn btn-default" data-bind="click: $root.copyIndex.bind($root, $data)" title="Copy index"><i class="icon-copy"></i></button>
                                         <a class="btn btn-default" data-bind="attr: { href: editUrl() }" title="Edit index"><i class="icon-edit"></i></a>
                                         <button class="btn btn-warning" data-bind="click: $root.resetIndex.bind($root, $data)" title="Reset index"><i class="icon-reset"></i></button>
                                     </div>

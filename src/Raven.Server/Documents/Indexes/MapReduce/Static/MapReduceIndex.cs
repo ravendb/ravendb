@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
 
-            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, _mapReduceWorkContext));
+            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, _mapReduceWorkContext, DocumentDatabase.Configuration.Indexing));
             workers.Add(new ReduceMapResultsOfStaticIndex(this, _compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext));
 
             return workers.ToArray();
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats, StaticIndexDocsEnumerator.EnumerationType.Index);
+            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats.For(IndexingOperation.Reduce.PutMapResults, start: false), StaticIndexDocsEnumerator.EnumerationType.Index);
         }
 
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
@@ -110,12 +110,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             AnonymusObjectToBlittableMapResultsEnumerableWrapper wrapper;
             if (_enumerationWrappers.TryGetValue(CurrentIndexingScope.Current.SourceCollection, out wrapper) == false)
             {
-                _enumerationWrappers[CurrentIndexingScope.Current.SourceCollection] = wrapper = new AnonymusObjectToBlittableMapResultsEnumerableWrapper(this,indexContext);
+                _enumerationWrappers[CurrentIndexingScope.Current.SourceCollection] = wrapper = new AnonymusObjectToBlittableMapResultsEnumerableWrapper(this, indexContext);
             }
 
             wrapper.InitializeForEnumeration(mapResults, indexContext);
 
-            return PutMapResults(key, wrapper, indexContext);
+            using (stats.For(IndexingOperation.Reduce.PutMapResults))
+            {
+                return PutMapResults(key, wrapper, indexContext);
+            }
         }
 
         public override int? ActualMaxNumberOfIndexOutputs

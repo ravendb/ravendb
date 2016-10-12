@@ -77,6 +77,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexStats));
             scripter.AddType(typeof(IndexingStatus));
             scripter.AddType(typeof(IndexPerformanceStats));
+            scripter.AddType(typeof(IndexDefinition));
 
 
             // transformers

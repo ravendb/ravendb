@@ -1196,9 +1196,9 @@ input[type="button"].btn-block {
   font-weight: normal;
   font-style: normal;
 }
-[class^="icon-"],
+.icon-style,
 [class*=" icon-"],
-.icon-style {
+[class^="icon-"] {
   /* use !important to prevent issues with browser extensions that change fonts */
   font-family: 'icomoon' !important;
   speak: none;
@@ -1214,10 +1214,23 @@ input[type="button"].btn-block {
   line-height: 100%;
   font-size: 120%;
 }
-[class^="icon-"] + span,
+.icon-style + span,
 [class*=" icon-"] + span,
-.icon-style + span {
+[class^="icon-"] + span {
   margin-left: 9px;
+}
+.icon-xl {
+  display: block;
+  text-align: center;
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+.icon-xl:before {
+  display: inline-block;
+  font-size: 48px;
+}
+.icon-empty-set:before {
+  content: "\e949";
 }
 .icon-backup:before {
   content: "\e944";
@@ -2175,12 +2188,18 @@ input[type=file] + .form-control {
 .vcenter {
   position: absolute;
   top: 50%;
-  left: 50%;
+  right: 50%;
   -moz-transform: translateX(-50%) translateY(-50%);
   -webkit-transform: translateX(-50%) translateY(-50%);
   -o-transform: translateX(-50%) translateY(-50%);
   -ms-transform: translateX(-50%) translateY(-50%);
   transform: translateX(-50%) translateY(-50%);
+}
+.vcenter-buttons {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  margin-top: -17px;
 }
 .margin-none {
   margin: 0;
@@ -3570,15 +3589,6 @@ pre {
     border-left: 1px solid #3a4242;
   }
 }
-.indexes #toggleIndexing .enable-indexing {
-  display: none;
-}
-.indexes #toggleIndexing.disable .disable-indexing {
-  display: none;
-}
-.indexes #toggleIndexing.disable .enable-indexing {
-  display: inline-block;
-}
 .indexes .inline-block {
   display: inline-block;
 }
@@ -3598,12 +3608,8 @@ pre {
   .indexes .panel .row .actions {
     position: absolute;
     top: 50%;
-    left: 50%;
-    -moz-transform: translateX(-50%) translateY(-50%);
-    -webkit-transform: translateX(-50%) translateY(-50%);
-    -o-transform: translateX(-50%) translateY(-50%);
-    -ms-transform: translateX(-50%) translateY(-50%);
-    transform: translateX(-50%) translateY(-50%);
+    right: 0;
+    margin-top: -17px;
     width: 100%;
     padding: 0 15px;
   }
@@ -3669,23 +3675,29 @@ pre {
 .indexes .panel .state.state-faulty:before {
   content: 'FAULTY';
 }
-.indexes .panel .state.state-abandoned {
-  background-color: #2c5266;
-}
-.indexes .panel .state.state-abandoned:before {
-  content: 'ABANDONED';
-}
 .indexes .panel .state.state-normal {
   background-color: #295b33;
 }
 .indexes .panel .state.state-normal:before {
   content: 'NORMAL';
 }
+.indexes .panel .state.state-idle {
+  background-color: #b98525;
+}
+.indexes .panel .state.state-idle:before {
+  content: 'IDLE';
+}
 .indexes .panel .state.state-disabled {
   background-color: #b98525;
 }
 .indexes .panel .state.state-disabled:before {
   content: 'DISABLED';
+}
+.indexes .panel .state.state-paused {
+  background-color: #b98525;
+}
+.indexes .panel .state.state-paused:before {
+  content: 'PAUSED';
 }
 .indexes .panel .checkbox {
   position: relative;
@@ -3746,16 +3758,16 @@ pre {
                 order:2;
             }*/
   }
-  .indexes .properties-item:nth-of-type(1) {
+  .indexes .properties-item.staleness {
     order: 2;
   }
-  .indexes .properties-item:nth-of-type(2) {
+  .indexes .properties-item.entriesCount {
     order: 4;
   }
-  .indexes .properties-item:nth-of-type(3) {
+  .indexes .properties-item.priority {
     order: 1;
   }
-  .indexes .properties-item:nth-of-type(4) {
+  .indexes .properties-item.mode {
     order: 3;
   }
 }
@@ -3813,7 +3825,7 @@ pre {
   .transformers .transformer .row .actions {
     position: absolute;
     top: 50%;
-    left: 50%;
+    right: 50%;
     -moz-transform: translateX(-50%) translateY(-50%);
     -webkit-transform: translateX(-50%) translateY(-50%);
     -o-transform: translateX(-50%) translateY(-50%);
@@ -3969,12 +3981,8 @@ pre {
   .resources .resource .row .actions {
     position: absolute;
     top: 50%;
-    left: 50%;
-    -moz-transform: translateX(-50%) translateY(-50%);
-    -webkit-transform: translateX(-50%) translateY(-50%);
-    -o-transform: translateX(-50%) translateY(-50%);
-    -ms-transform: translateX(-50%) translateY(-50%);
-    transform: translateX(-50%) translateY(-50%);
+    right: 0;
+    margin-top: -17px;
     width: 100%;
     padding: 0 15px;
   }

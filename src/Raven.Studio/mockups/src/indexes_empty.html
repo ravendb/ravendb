@@ -1,0 +1,24 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
+{{> head }}
+
+<body>
+    {{> spinner }} {{> topbar }} {{> menu }} {{> notification-center }}
+
+    <div class="container-fluid content-container">
+        <div class="content-container-margin indexes">
+            <div class="row">
+                <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+                    <i class="icon-xl icon-empty-set text-muted"></i>
+                    <h2 class="text-center">No indexes have been created for this database.</h2>
+                    <p class="lead text-center text-muted">Go ahead and <a href="#">create an index</a>, <a href="#">paste single index</a> or <a href="#">paste a bulk</a> of indexes and transformers definitions from JSON.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {{> scripts }}
+</body>
+
+</html>

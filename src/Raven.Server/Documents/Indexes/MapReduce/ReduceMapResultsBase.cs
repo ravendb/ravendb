@@ -108,6 +108,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return false;
         }
 
+        public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
+        {
+            throw new NotSupportedException();
+        }
+
         private void WriteLastEtags(TransactionOperationContext indexContext)
         {
             foreach (var lastEtag in _mapReduceContext.ProcessedDocEtags)
@@ -134,7 +139,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 if (section.IsModified == false)
                     return;
 
-                numberOfEntriesToReduce += section.GetResults(indexContext, _aggregationBatch);
+                using (stats.For(IndexingOperation.Reduce.NestedValuesRead))
+                {
+                    numberOfEntriesToReduce += section.GetResults(indexContext, _aggregationBatch);
+                }
 
                 stats.RecordReduceAttempts(numberOfEntriesToReduce);
 

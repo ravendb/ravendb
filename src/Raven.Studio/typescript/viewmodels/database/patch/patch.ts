@@ -772,9 +772,9 @@ class patch extends viewModelBase {
             } else {
                 new getIndexDefinitionCommand(indexName, this.activeDatabase())
                     .execute()
-                    .done((result: indexDefinitionContainerDto) => {
-                        self.isTestIndex(result.Index.IsTestIndex);
-                        self.indexFields(result.Index.Fields);
+                    .done((result) => {
+                        self.isTestIndex(result.IsTestIndex);
+                        self.indexFields(Object.keys(result.Fields));
                     })
                     .fail(() => {
                         recentPatchesStorage.removeIndexFromRecentPatches(this.activeDatabase(), indexName);

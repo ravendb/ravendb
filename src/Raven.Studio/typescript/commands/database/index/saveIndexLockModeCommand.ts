@@ -5,14 +5,14 @@ import endpoints = require("endpoints");
 
 class saveIndexLockModeCommand extends commandBase {
 
-    constructor(private index: index, private lockMode: Raven.Abstractions.Indexing.IndexLockMode, private db: database) {
+    constructor(private indexes: Array<index>, private lockMode: Raven.Abstractions.Indexing.IndexLockMode, private db: database) {
         super();
     }
 
     execute(): JQueryPromise<void> {
         const args = {
             mode: this.lockMode,
-            name: this.index.name
+            name: this.indexes.map(x => x.name)
         };
 
         const url = endpoints.databases.index.indexesSetLock + this.urlEncodeArgs(args);

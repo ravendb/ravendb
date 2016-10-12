@@ -60,6 +60,10 @@ namespace Raven.Client.Documents
                         [Constants.Metadata.Key] = documentInfo.Metadata
                     };
                 }
+                else
+                {
+                    //TODO
+                }
 
                 return _session.Context.ReadObject(json, documentInfo.Id);
             }
