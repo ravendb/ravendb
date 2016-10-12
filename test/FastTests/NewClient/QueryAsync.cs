@@ -79,7 +79,9 @@ namespace FastTests.NewClient
                     await asyncSession.SaveChangesAsync();
 
                     WaitForIndexing(store);
-
+                }
+                using (var asyncSession = store.OpenNewAsyncSession())
+                {
                     var queryResult = await asyncSession.Query<DogsIndex.Result, DogsIndex>()
                         .Where(x => x.Age > 2 && x.IsVaccinated == false)
                         .NewToListAsync();

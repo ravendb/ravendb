@@ -77,39 +77,14 @@ namespace Raven.Client.Documents.SessionOperations
             if (_session.IsDeleted(id))
                 return default(T);
 
-            DocumentInfo documentInfo;
-            if (_session.DocumentsById.TryGetValue(id, out documentInfo) == false)
-            {
-                if (_session.includedDocumentsByKey.TryGetValue(id, out documentInfo))
-                {
-                    _session.includedDocumentsByKey.Remove(id);
-                    _session.DocumentsById[id] = documentInfo;
-                }
-                else
-                {
-                    return default(T);
-                }
-            }
+            DocumentInfo doc;
+            if (_session.DocumentsById.TryGetValue(id, out doc))
+                return _session.TrackEntity<T>(doc);
 
-            if (documentInfo.Entity != null)
-                return (T)documentInfo.Entity;
+            if (_session.includedDocumentsByKey.TryGetValue(id, out doc))
+                return _session.TrackEntity<T>(doc);
 
-            if (documentInfo.Document == null)
-                return default(T);
-
-            var entity = _session.ConvertToEntity(typeof(T), id, documentInfo.Document);
-            documentInfo.Entity = entity;
-            try
-            {
-                _session.DocumentsByEntity.Add(entity, documentInfo);
-            }
-            catch (Exception)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Tried to add an exisitg entity");
-            }
-            
-            return (T) entity;
+            return default(T);
         }
 
         public T[] GetDocuments<T>()
@@ -145,16 +120,16 @@ namespace Raven.Client.Documents.SessionOperations
                     long etag;
                     if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
                         throw new InvalidOperationException("Document must have an etag");
-                    var newMetadata = new DocumentInfo
+                    var newDocumentInfo = new DocumentInfo
                     {
-                        //TODO - Add all DocumentInfo properties ??
+                        Entity = null,
                         Id = id,
                         Document = document,
                         Metadata = metadata,
                         ETag = etag
                     };
 
-                    _session.includedDocumentsByKey[id] = newMetadata;
+                    _session.includedDocumentsByKey[id] = newDocumentInfo;
                 }
             }
 
@@ -176,16 +151,16 @@ namespace Raven.Client.Documents.SessionOperations
                 long etag;
                 if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
                     throw new InvalidOperationException("Document must have an etag");
-                var newMetadata = new DocumentInfo
+                var newDocumentInfo = new DocumentInfo
                 {
-                    //TODO - Add all DocumentInfo properties ??
+                    Entity = null,
                     Id = id,
                     Document = document,
                     Metadata = metadata,
                     ETag = etag
                 };
 
-                _session.DocumentsById[id] = newMetadata;
+                _session.DocumentsById[id] = newDocumentInfo;
             }
 
             if (_includes != null && _includes.Length > 0)

@@ -686,7 +686,6 @@ namespace Raven.Client.Documents
 
         protected virtual void ExecuteActualQuery()
         {
-            theSession.IncrementRequestCount();
             using (queryOperation.EnterQueryContext())
             {
                 queryOperation.LogQuery();
@@ -1836,7 +1835,6 @@ If you really want to do in memory filtering on the data returned from the query
 
         protected virtual async Task<QueryOperation> ExecuteActualQueryAsync()
         {
-            theSession.IncrementRequestCount();
             using (queryOperation.EnterQueryContext())
             {
                 queryOperation.LogQuery();

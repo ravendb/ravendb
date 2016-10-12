@@ -74,7 +74,9 @@ namespace FastTests.NewClient
                     newSession.Store(new Dog { Name = "Lassie", Breed = "Collie", Color = "Brown", Age = 6, IsVaccinated = true }, "dogs/8");
 
                     newSession.SaveChanges();
-
+                }
+                using (var newSession = store.OpenNewSession())
+                {
                     var queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()
                         .Customize(x => x.AlphaNumericOrdering<Dog>(d => d.Name))
                         .Customize(x => x.WaitForNonStaleResults())
@@ -129,7 +131,9 @@ namespace FastTests.NewClient
                     newSession.SaveChanges();
 
                     WaitForIndexing(store);
-
+                }
+                using (var newSession = store.OpenNewSession())
+                {
                     var queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()
                         .Where(x => x.Age > 2 && x.IsVaccinated == false)
                         .ToList();

@@ -292,6 +292,138 @@ advisable that you'll look into reducing the number of remote calls first, since
 more responsive application.
 ");
         }
+        
+        /// <summary>
+        /// Tracks the entity inside the unit of work
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="documentFound">The document found.</param>
+        /// <returns></returns>
+        public T TrackEntity<T>(DocumentInfo documentFound)
+        {
+            return (T)TrackEntity(typeof(T), documentFound);
+        }
+
+        /// <summary>
+        /// Tracks the entity.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="key">The key.</param>
+        /// <param name="document">The document.</param>
+        /// <param name="metadata">The metadata.</param>'
+        /// <param name="noTracking"></param>
+        /// <returns></returns>
+        public T TrackEntity<T>(string key, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, bool noTracking)
+        {
+            var entity = TrackEntity(typeof(T), key, document, metadata, noTracking);
+            try
+            {
+                return (T)entity;
+            }
+            catch (InvalidCastException e)
+            {
+                var actual = typeof(T).Name;
+                var expected = entity.GetType().Name;
+                var message = string.Format("The query results type is '{0}' but you expected to get results of type '{1}'. " +
+"If you want to return a projection, you should use .ProjectFromIndexFieldsInto<{1}>() (for Query) or .SelectFields<{1}>() (for DocumentQuery) before calling to .ToList().", expected, actual);
+                throw new InvalidOperationException(message, e);
+            }
+        }
+        
+        /// <summary>
+        /// Tracks the entity inside the unit of work
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <param name="documentFound">The document found.</param>
+        /// <returns></returns>
+        public object TrackEntity(Type entityType, DocumentInfo documentFound)
+        {
+            /*if (documentFound.NonAuthoritativeInformation.HasValue
+                && documentFound.NonAuthoritativeInformation.Value
+                && AllowNonAuthoritativeInformation == false)
+            {
+                throw new NonAuthoritativeInformationException("Document " + documentFound.Key +
+                " returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
+            }*/
+
+            bool documentDoesNotExists;
+            if (documentFound.Metadata.TryGet(Constants.Headers.RavenDocumentDoesNotExists, out documentDoesNotExists))
+            {
+                if (documentDoesNotExists)
+                    return GetDefaultValue(entityType);
+            }
+           
+
+            return TrackEntity(entityType, documentFound.Id, documentFound.Document, documentFound.Metadata, noTracking: false);
+        }
+
+        /// <summary>
+        /// Tracks the entity.
+        /// </summary>
+        /// <param name="entityType">The entity type.</param>
+        /// <param name="key">The key.</param>
+        /// <param name="document">The document.</param>
+        /// <param name="metadata">The metadata.</param>
+        /// <param name="noTracking">Entity tracking is enabled if true, disabled otherwise.</param>
+        /// <returns></returns>
+        object TrackEntity(Type entityType, string key, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, bool noTracking)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                // TODO, iftah, find out in which scenario the key would be empty and handle appropriately
+                //return JsonObjectToClrInstancesWithoutTracking(entityType, document);
+            }
+
+            DocumentInfo docInfo;
+            if (DocumentsById.TryGetValue(key, out docInfo))
+            {
+                // the local instance may have been changed, we adhere to the current Unit of Work
+                // instance, and return that, ignoring anything new.
+                if(docInfo.Entity != null)
+                    return docInfo.Entity;
+            }
+
+            if (includedDocumentsByKey.TryGetValue(key, out docInfo) && docInfo.Entity != null)
+            {
+                if (noTracking == false)
+                {
+                    includedDocumentsByKey.Remove(key);
+                    DocumentsById[key] = docInfo;
+                    DocumentsByEntity[docInfo.Entity] = docInfo;
+                }
+                return docInfo.Entity;
+            }
+
+            var entity = ConvertToEntity(entityType, key, document);
+
+            long etag;
+            if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
+                throw new InvalidOperationException("Document must have an ETag");
+
+            /*if (metadata.Value<bool>("Non-Authoritative-Information") &&
+                AllowNonAuthoritativeInformation == false)
+            {
+                throw new NonAuthoritativeInformationException("Document " + key +
+                    " returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
+            }*/
+
+            if (noTracking == false)
+            {
+                var newDocumentInfo = new DocumentInfo
+                {
+                    Id = key,
+                    Document = document,
+                    Metadata = metadata,
+                    Entity = entity,
+                    ETag = etag
+                };
+
+                DocumentsById[key] = newDocumentInfo;
+                DocumentsByEntity[entity] = newDocumentInfo;
+            }
+
+            return entity;
+        }
 
         /// <summary>
         /// Converts the json document to an entity.
