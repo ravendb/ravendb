@@ -350,22 +350,13 @@ more responsive application.
         /// <returns></returns>
         public object TrackEntity(Type entityType, DocumentInfo documentFound)
         {
-            /*if (documentFound.NonAuthoritativeInformation.HasValue
-                && documentFound.NonAuthoritativeInformation.Value
-                && AllowNonAuthoritativeInformation == false)
+            bool documentDoesNotExist;
+            if (documentFound.Metadata.TryGet(Constants.Headers.RavenDocumentDoesNotExists, out documentDoesNotExist))
             {
-                throw new NonAuthoritativeInformationException("Document " + documentFound.Key +
-                " returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
-            }*/
-
-            bool documentDoesNotExists;
-            if (documentFound.Metadata.TryGet(Constants.Headers.RavenDocumentDoesNotExists, out documentDoesNotExists))
-            {
-                if (documentDoesNotExists)
-                    return GetDefaultValue(entityType);
+                if (documentDoesNotExist)
+                    return null;
             }
            
-
             return TrackEntity(entityType, documentFound.Id, documentFound.Document, documentFound.Metadata, noTracking: false);
         }
 
@@ -411,13 +402,6 @@ more responsive application.
             long etag;
             if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
                 throw new InvalidOperationException("Document must have an ETag");
-
-            /*if (metadata.Value<bool>("Non-Authoritative-Information") &&
-                AllowNonAuthoritativeInformation == false)
-            {
-                throw new NonAuthoritativeInformationException("Document " + key +
-                    " returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
-            }*/
 
             if (noTracking == false)
             {
@@ -690,11 +674,6 @@ more responsive application.
             }
 
             StoreInternal(entity, etag, id, forceConcurrencyCheck);
-        }
-
-        public void TrackIncludedDocument(DocumentInfo docInfo)
-        {
-            includedDocumentsByKey[docInfo.Id] = docInfo;
         }
 
         protected abstract string GenerateKey(object entity);
@@ -1243,7 +1222,7 @@ more responsive application.
         }
 
         /// <summary>
-        /// Metadata held about an entity by the session
+        /// Information held about an entity by the session
         /// </summary>
         public class DocumentInfo
         {
@@ -1280,6 +1259,30 @@ more responsive application.
             public object Entity { get; set; }
 
             public bool IsNewDocument { get; set; }
+
+            public static DocumentInfo GetNewDocumentInfo(BlittableJsonReaderObject document)
+            {
+                BlittableJsonReaderObject metadata;
+                string id;
+                long etag;
+
+                if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
+                    throw new InvalidOperationException("Document must have a metadata");
+                if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
+                    throw new InvalidOperationException("Document must have an id");
+                if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
+                    throw new InvalidOperationException("Document must have an ETag");
+
+                var newDocumentInfo = new DocumentInfo
+                {
+                    Id = id,
+                    Document = document,
+                    Metadata = metadata,
+                    Entity = null,
+                    ETag = etag
+                };
+                return newDocumentInfo;
+            }
         }
 
         /// <summary>

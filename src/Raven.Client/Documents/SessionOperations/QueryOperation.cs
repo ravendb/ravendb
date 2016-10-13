@@ -29,7 +29,6 @@ namespace Raven.Client.Documents.SessionOperations
         private readonly HashSet<string> _includes;
         private QueryResult _currentQueryResults;
         private readonly string[] _projectionFields;
-        private bool _firstRequest = true;
         private Stopwatch _sp;
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<QueryOperation>("Raven.Client");
 
@@ -113,12 +112,8 @@ namespace Raven.Client.Documents.SessionOperations
 
         public IDisposable EnterQueryContext()
         {
-            if (_firstRequest)
-            {
-                StartTiming();
-                _firstRequest = false;
-            }
-
+            StartTiming();
+            
             if (_waitForNonStaleResults == false)
                 return null;
 
@@ -130,38 +125,14 @@ namespace Raven.Client.Documents.SessionOperations
             var queryResult = _currentQueryResults.CreateSnapshot();
             foreach (BlittableJsonReaderObject include in queryResult.Includes)
             {
-                BlittableJsonReaderObject metadata;
-                string id;
-                long etag;
-
-                if (include.TryGet(Constants.Metadata.Key, out metadata) == false)
-                    throw new InvalidOperationException("Document must have a metadata");
-                if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
-                    throw new InvalidOperationException("Document must have an id");
-                if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                    throw new InvalidOperationException("Document must have an ETag");
-
-                var newDocumentInfo = new DocumentInfo
-                {
-                    Id = id,
-                    Document = include,
-                    Metadata = metadata,
-                    Entity = null,
-                    ETag = etag
-                };
-                _session.TrackIncludedDocument(newDocumentInfo);
+                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
+                _session.includedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
             }
 
             var usedTransformer = string.IsNullOrEmpty(_indexQuery.Transformer) == false;
             var list = new List<T>();
-            foreach (BlittableJsonReaderObject result in queryResult.Results)
+            foreach (BlittableJsonReaderObject document in queryResult.Results)
             {
-                if (result == null)
-                {
-                    list.Add(default(T));
-                    continue;
-                }
-
                 /*if (usedTransformer)
                 {
                     var values = result.Value<RavenJArray>("$values");
@@ -173,12 +144,12 @@ namespace Raven.Client.Documents.SessionOperations
 
                 BlittableJsonReaderObject metadata;
                 string id;
-                if (result.TryGet(Constants.Metadata.Key, out metadata) == false)
+                if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
                     throw new InvalidOperationException("Document must have a metadata");
                 if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
                     throw new InvalidOperationException("Document must have an id");
 
-                list.Add(_session.TrackEntity<T>(id, result, metadata, _disableEntitiesTracking));
+                list.Add(_session.TrackEntity<T>(id, document, metadata, _disableEntitiesTracking));
             }
 
             if (_disableEntitiesTracking == false)
@@ -189,7 +160,7 @@ namespace Raven.Client.Documents.SessionOperations
 
             return _transformResults(_indexQuery, list.Cast<object>()).Cast<T>().ToList();
         }
-
+        
         public bool DisableEntitiesTracking
         {
             get { return _disableEntitiesTracking; }
@@ -200,11 +171,12 @@ namespace Raven.Client.Documents.SessionOperations
         {
             if (_waitForNonStaleResults && result.IsStale)
             {
-                _sp.Stop();
-
-                throw new TimeoutException(
-                    string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.",
-                        _sp.ElapsedMilliseconds));
+                if (_sp.Elapsed > _timeout)
+                {
+                    _sp.Stop();
+                    throw new TimeoutException(
+                        string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.", _sp.ElapsedMilliseconds));
+                }
             }
 
             _currentQueryResults = result;

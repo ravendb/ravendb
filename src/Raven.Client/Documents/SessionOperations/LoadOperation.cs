@@ -100,67 +100,19 @@ namespace Raven.Client.Documents.SessionOperations
 
         public void SetResult(GetDocumentResult result)
         {
-            if (result.Includes != null && result.Includes.Any())
+            if (result.Includes != null)
             {
-                foreach (BlittableJsonReaderObject document in result.Includes)
+                foreach (BlittableJsonReaderObject include in result.Includes)
                 {
-                    if (document == null)
-                    {
-                        // Not sure this is possible without changing the result class
-                        // TODO: _session.RegisterMissing(includeIds[i]);
-                        continue;
-                    }
-
-                    BlittableJsonReaderObject metadata;
-                    if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
-                        throw new InvalidOperationException("Document must have a metadata");
-                    string id;
-                    if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
-                        throw new InvalidOperationException("Document must have an id");
-                    long etag;
-                    if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                        throw new InvalidOperationException("Document must have an etag");
-                    var newDocumentInfo = new DocumentInfo
-                    {
-                        Entity = null,
-                        Id = id,
-                        Document = document,
-                        Metadata = metadata,
-                        ETag = etag
-                    };
-
-                    _session.includedDocumentsByKey[id] = newDocumentInfo;
+                    var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
+                    _session.includedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
                 }
             }
 
-            for (var i = 0; i < result.Results.Length; i++)
+            foreach (BlittableJsonReaderObject document in result.Results)
             {
-                var document = (BlittableJsonReaderObject)result.Results[i];
-                if (document == null)
-                {
-                    _session.RegisterMissing(_idsToCheckOnServer[i]);
-                    continue;
-                }
-
-                BlittableJsonReaderObject metadata;
-                if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
-                    throw new InvalidOperationException("Document must have a metadata");
-                string id;
-                if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
-                    throw new InvalidOperationException("Document must have an id");
-                long etag;
-                if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                    throw new InvalidOperationException("Document must have an etag");
-                var newDocumentInfo = new DocumentInfo
-                {
-                    Entity = null,
-                    Id = id,
-                    Document = document,
-                    Metadata = metadata,
-                    ETag = etag
-                };
-
-                _session.DocumentsById[id] = newDocumentInfo;
+                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
+                _session.DocumentsById[newDocumentInfo.Id] = newDocumentInfo;
             }
 
             if (_includes != null && _includes.Length > 0)
