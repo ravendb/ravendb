@@ -3,7 +3,7 @@ import resource = require("models/resources/resource");
 import license = require("models/auth/license");
 import counterStorageStatistics = require("models/counter/counterStorageStatistics");
 
-class counterStorage extends resource{
+class counterStorage extends resource {
     statistics = ko.observable<counterStorageStatistics>();
     static type = "counterstorage";
     iconName = "fa fa-fw fa-sort-numeric-desc";
@@ -39,6 +39,14 @@ class counterStorage extends resource{
         }
 
         this.statistics().fromDto(dto);
+    }
+
+    get qualifier() {
+        return "cs";
+    }
+
+    get urlPrefix() {
+        return "cs";
     }
 } 
 

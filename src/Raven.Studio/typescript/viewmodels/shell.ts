@@ -736,7 +736,7 @@ class shell extends viewModelBase {
 
     private createNewResource(resourceType: TenantType, resourceName: string, dto: databaseDocumentDto): resource {
         var newResource: resource = null;
-
+        //TODO: review parameters in here!
         if (resourceType === TenantType.Database) {
             newResource = new database(resourceName, true, dto.Disabled);
         }

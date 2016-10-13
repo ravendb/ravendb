@@ -1,6 +1,6 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
-class resource {
+abstract class resource {
     isAdminCurrentTenant = ko.observable<boolean>(false);
     isSelected = ko.observable<boolean>(false);
     isChecked = ko.observable<boolean>(false);
@@ -40,6 +40,14 @@ class resource {
 
     isTimeSeries() {
         return this.type === TenantType.TimeSeries;
+    }
+
+    abstract get qualifier(): string;
+
+    abstract get urlPrefix(): string;
+
+    get qualifiedName() {
+        return this.qualifier + "/" + this.name;
     }
 }
 

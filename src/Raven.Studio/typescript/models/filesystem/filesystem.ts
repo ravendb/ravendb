@@ -44,6 +44,14 @@ class filesystem extends resource {
         this.statistics().fromDto(dto);
     }
 
+    get qualifier() {
+        return "fs";
+    }
+
+    get urlPrefix() {
+        return "fs";
+    }
+
     static getNameFromUrl(url: string) {
         var index = url.indexOf("filesystems/");
         return (index > 0) ? url.substring(index + 10) : "";

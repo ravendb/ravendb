@@ -83,6 +83,14 @@ class database extends resource {
         }
         return false;
     }
+
+    get qualifier() {
+        return "db";
+    }
+
+    get urlPrefix() {
+        return "databases";
+    }
 }
 
 export = database;
