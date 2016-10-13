@@ -11,6 +11,7 @@ using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 using Sparrow.Json;
 using Sparrow.Logging;
+using DocumentInfo = Raven.Client.Documents.InMemoryDocumentSessionOperations.DocumentInfo;
 
 namespace Raven.Client.Documents.SessionOperations
 {
@@ -28,7 +29,6 @@ namespace Raven.Client.Documents.SessionOperations
         private readonly HashSet<string> _includes;
         private QueryResult _currentQueryResults;
         private readonly string[] _projectionFields;
-        private bool _firstRequest = true;
         private Stopwatch _sp;
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<QueryOperation>("Raven.Client");
 
@@ -73,71 +73,7 @@ namespace Raven.Client.Documents.SessionOperations
 
         public void SetResult(QueryResult queryResult)
         {
-            EnsureIsAcceptable(queryResult);
-
-            if (queryResult.Includes != null && queryResult.Includes.Any())
-            {
-                foreach (BlittableJsonReaderObject document in queryResult.Includes)
-                {
-                    if (document == null)
-                    {
-                        // _session.RegisterMissing(includeIds[i]);
-                        continue;
-                    }
-
-                    BlittableJsonReaderObject metadata;
-                    if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
-                        throw new InvalidOperationException("Document must have a metadata");
-                    string id;
-                    long? etag;
-                    if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
-                        throw new InvalidOperationException("Document must have an id");
-                    if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                        throw new InvalidOperationException("Document must have an ETag");
-                    var newDocumentInfo = new InMemoryDocumentSessionOperations.DocumentInfo
-                    {
-                        //TODO
-                        Id = id,
-                        Document = document,
-                        Metadata = metadata,
-                        Entity = null,
-                        ETag = etag
-                    };
-
-                    _session.DocumentsById[id] = newDocumentInfo;
-                }
-            }
-
-            for (var i = 0; i < queryResult.Results.Length; i++)
-            {
-                var document = (BlittableJsonReaderObject)queryResult.Results[i];
-                if (document == null)
-                {
-                    // _session.RegisterMissing();
-                    continue;
-                }
-
-                BlittableJsonReaderObject metadata;
-                if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
-                    throw new InvalidOperationException("Document must have a metadata");
-                string id;
-                long? etag;
-                if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
-                    throw new InvalidOperationException("Document must have an id");
-                if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                    throw new InvalidOperationException("Document must have an ETag");
-                var newDocumentInfo = new InMemoryDocumentSessionOperations.DocumentInfo
-                {
-                    //TODO
-                    Id = id,
-                    Document = document,
-                    Metadata = metadata,
-                    Entity = null,
-                    ETag = etag
-                };
-
-                _session.DocumentsById[id] = newDocumentInfo;
-            }
+            EnsureIsAcceptableAndSaveResult(queryResult);
         }
 
         private static readonly Regex idOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $",
@@ -176,12 +112,8 @@ namespace Raven.Client.Documents.SessionOperations
 
         public IDisposable EnterQueryContext()
         {
-            if (_firstRequest)
-            {
-                StartTiming();
-                _firstRequest = false;
-            }
-
+            StartTiming();
+            
             if (_waitForNonStaleResults == false)
                 return null;
 
@@ -193,30 +125,14 @@ namespace Raven.Client.Documents.SessionOperations
             var queryResult = _currentQueryResults.CreateSnapshot();
             foreach (BlittableJsonReaderObject include in queryResult.Includes)
             {
-                BlittableJsonReaderObject metadata;
-                if (include.TryGet(Constants.Metadata.Key, out metadata) == false)
-                    throw new InvalidOperationException("Document must have a metadata");
-                string id;
-                long? etag;
-                if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
-                    throw new InvalidOperationException("Document must have an id");
-                if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                    throw new InvalidOperationException("Document must have an ETag");
-
-                object entity = _session.ConvertToEntity(typeof(T), id, include);
-                //_session.TrackIncludedDocument(entity);
+                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
+                _session.includedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
             }
 
             var usedTransformer = string.IsNullOrEmpty(_indexQuery.Transformer) == false;
             var list = new List<T>();
-            foreach (BlittableJsonReaderObject result in queryResult.Results)
+            foreach (BlittableJsonReaderObject document in queryResult.Results)
             {
-                if (result == null)
-                {
-                    list.Add(default(T));
-                    continue;
-                }
-
                 /*if (usedTransformer)
                 {
                     var values = result.Value<RavenJArray>("$values");
@@ -227,160 +143,40 @@ namespace Raven.Client.Documents.SessionOperations
                 }*/
 
                 BlittableJsonReaderObject metadata;
-                if (result.TryGet(Constants.Metadata.Key, out metadata) == false)
-                    throw new InvalidOperationException("Document must have a metadata");
                 string id;
-                long? etag;
+                if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
+                    throw new InvalidOperationException("Document must have a metadata");
                 if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
                     throw new InvalidOperationException("Document must have an id");
-                if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                    throw new InvalidOperationException("Document must have an ETag");
 
-                object entity = _session.ConvertToEntity(typeof(T), id, result);
-
-                //list.Add(Deserialize<T>(result));
-                list.Add((T)entity);
+                list.Add(_session.TrackEntity<T>(id, document, metadata, _disableEntitiesTracking));
             }
 
             if (_disableEntitiesTracking == false)
-                //_session.RegisterMissingIncludes(queryResult.Results.Where(x => x != null), indexQuery.Includes);
+                _session.RegisterMissingIncludes(queryResult.Results, _includes);
 
             if (_transformResults == null)
                 return list;
 
             return _transformResults(_indexQuery, list.Cast<object>()).Cast<T>().ToList();
         }
-
+        
         public bool DisableEntitiesTracking
         {
             get { return _disableEntitiesTracking; }
             set { _disableEntitiesTracking = value; }
         }
 
-        public T Deserialize<T>(RavenJObject result)
-        {
-            /*var metadata = result.Value<RavenJObject>("@metadata");
-            if ((projectionFields == null || projectionFields.Length <= 0) &&
-                (metadata != null && string.IsNullOrEmpty(metadata.Value<string>("@id")) == false))
-            {
-                return _session.TrackEntity<T>(metadata.Value<string>("@id"),
-                                                        result,
-                                                        metadata, disableEntitiesTracking);
-            }
-
-            if (typeof(T) == typeof(RavenJObject))
-                return (T)(object)result;
-
-            if (typeof(T) == typeof(object) && string.IsNullOrEmpty(result.Value<string>("$type")))
-            {
-                return (T)(object)new DynamicJsonObject(result);
-            }
-
-            var documentId = result.Value<string>(Constants.Indexing.Fields.DocumentIdFieldName); //check if the result contain the reserved name
-
-            if (!string.IsNullOrEmpty(documentId) && typeof(T) == typeof(string) && // __document_id is present, and result type is a string
-                                                                                    // We are projecting one field only (although that could be derived from the
-                                                                                    // previous check, one could never be too careful
-                projectionFields != null && projectionFields.Length == 1 &&
-                HasSingleValidProperty(result, metadata) // there are no more props in the result object
-                )
-            {
-                return (T)(object)documentId;
-            }
-
-            _session.HandleInternalMetadata(result);
-
-            var deserializedResult = DeserializedResult<T>(result);
-
-            if (string.IsNullOrEmpty(documentId) == false)
-            {
-                // we need to make an additional check, since it is possible that a value was explicitly stated
-                // for the identity property, in which case we don't want to override it.
-                var identityProperty = _session.Conventions.GetIdentityProperty(typeof(T));
-                if (identityProperty != null &&
-                    (result[identityProperty.Name] == null ||
-                     result[identityProperty.Name].Type == JTokenType.Null))
-                {
-                    _session.GenerateEntityIdOnTheClient.TrySetIdentity(deserializedResult, documentId);
-                }
-            }
-
-            return deserializedResult;*/
-            return (T)new object();
-        }
-
-        private bool HasSingleValidProperty(RavenJObject result, RavenJObject metadata)
-        {
-            if (metadata == null && result.Count == 1)
-                return true;// { Foo: val }
-
-            if ((metadata != null && result.Count == 2))
-                return true; // { @metadata: {}, Foo: val }
-
-            if ((metadata != null && result.Count == 3))
-            {
-                var entityName = metadata.Value<string>(Constants.Headers.RavenEntityName);
-
-                var idPropName = _session.Conventions.FindIdentityPropertyNameFromEntityName(entityName);
-
-                if (result.ContainsKey(idPropName))
-                {
-                    // when we try to project the id by name
-                    var token = result.Value<RavenJToken>(idPropName);
-
-                    if (token == null || token.Type == JTokenType.Null)
-                        return true; // { @metadata: {}, Foo: val, Id: null }
-                }
-            }
-
-            return false;
-        }
-
-
-        private T DeserializedResult<T>(RavenJObject result)
-        {
-            if (_projectionFields != null && _projectionFields.Length == 1) // we only select a single field
-            {
-                var type = typeof(T);
-                if (type == typeof(string) || typeof(T).IsValueType() || typeof(T).IsEnum())
-                {
-                    return result.Value<T>(_projectionFields[0]);
-                }
-            }
-
-            var jsonSerializer = _session.Conventions.CreateSerializer();
-            var ravenJTokenReader = new RavenJTokenReader(result);
-
-            var resultTypeString = result.Value<string>("$type");
-            if (string.IsNullOrEmpty(resultTypeString))
-            {
-                return (T)jsonSerializer.Deserialize(ravenJTokenReader, typeof(T));
-            }
-
-            var resultType = Type.GetType(resultTypeString, false);
-            if (resultType == null) // couldn't find the type, let us give it our best shot
-            {
-                return (T)jsonSerializer.Deserialize(ravenJTokenReader, typeof(T));
-            }
-
-            return (T)jsonSerializer.Deserialize(ravenJTokenReader, resultType);
-        }
-
-        public void ForceResult(QueryResult result)
-        {
-            _currentQueryResults = result;
-            _currentQueryResults.EnsureSnapshot();
-        }
-
-        public void EnsureIsAcceptable(QueryResult result)
+        public void EnsureIsAcceptableAndSaveResult(QueryResult result)
         {
             if (_waitForNonStaleResults && result.IsStale)
             {
-                _sp.Stop();
-
-                throw new TimeoutException(
-                    string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.",
-                        _sp.ElapsedMilliseconds));
+                if (_sp.Elapsed > _timeout)
+                {
+                    _sp.Stop();
+                    throw new TimeoutException(
+                        string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.", _sp.ElapsedMilliseconds));
+                }
             }
 
             _currentQueryResults = result;

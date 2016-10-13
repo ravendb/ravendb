@@ -46,11 +46,5 @@ namespace Raven.Client.Documents
         /// The timestamp of the last time the index was queried
         /// </summary>
         public DateTime LastQueryTime { get; set; }
-
-        protected QueryResultBase()
-        {
-            /*Results = new List<T>();
-            Includes = new List<T>();*/
-        }
     }
 }
