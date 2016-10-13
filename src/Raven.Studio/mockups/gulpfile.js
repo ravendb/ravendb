@@ -6,6 +6,7 @@ var gulp = require('gulp'),
     rimraf = require('rimraf'),
     gulpHandlebars = require('gulp-compile-handlebars'),
     handlebars = require('handlebars'),
+    faker = require('faker'),
     browserSync = require('browser-sync').create();
 
 var TEMPLATE_OPTIONS = {
@@ -19,6 +20,17 @@ handlebars.registerHelper('ifEq', function(v1, v2, options) {
     return options.fn(this);
   }
   return options.inverse(this);
+});
+
+handlebars.registerHelper('times', function(n, block) {
+    var accum = '';
+    for(var i = 0; i < n; ++i)
+        accum += block.fn(i);
+    return accum;
+});
+
+handlebars.registerHelper('random', function (tmpl) {
+    return faker.fake(tmpl);
 });
 
 gulp.task('clean', function () {
