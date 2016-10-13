@@ -24,7 +24,6 @@ namespace Raven.Server.Json
         /// Initialize the stream. Assumes the websocket is initialized and connected
         /// </summary>
         /// <remarks>This is not a thread-safe implementation</remarks>
-        /// <param name="webSocket"></param>
         public WebsocketStream(WebSocket webSocket, CancellationToken cancellationToken)
         {
             _isDisposed = false;

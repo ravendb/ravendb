@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
                 return previousTokenStream;
             }
             // we failed so we generate a new token stream
-            return TokenStream(fieldName, reader); ;
+            return TokenStream(fieldName, reader);
         }
 
         private readonly Version matchVersion;
