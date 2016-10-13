@@ -1361,7 +1361,7 @@ input[type="button"].btn-block {
 .icon-checkbox:before {
   content: "\e921";
 }
-.icon-checkbox-on-28:before {
+.icon-checkbox-on:before {
   content: "\e922";
 }
 .icon-code:before {
@@ -1807,10 +1807,6 @@ h3 [class^="icon-"] {
   top: 4px;
 }
 h1 {
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 3.5pt;
-  word-spacing: 3pt;
   margin-bottom: 30px;
 }
 h6 {
