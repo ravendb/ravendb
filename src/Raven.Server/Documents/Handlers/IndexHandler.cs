@@ -640,15 +640,15 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName((nameof(stat.IndexName)));
+                    writer.WritePropertyName(nameof(stat.IndexName));
                     writer.WriteString((stat.IndexName));
                     writer.WriteComma();
 
-                    writer.WritePropertyName((nameof(stat.IndexId)));
+                    writer.WritePropertyName(nameof(stat.IndexId));
                     writer.WriteInteger(stat.IndexId);
                     writer.WriteComma();
 
-                    writer.WritePropertyName((nameof(stat.Performance)));
+                    writer.WritePropertyName(nameof(stat.Performance));
                     writer.WriteStartArray();
                     var isFirstInternal = true;
                     foreach (var performance in stat.Performance)

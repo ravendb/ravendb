@@ -511,6 +511,9 @@ namespace Raven.Server.Documents.Indexes
 
                         var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId());
                         _lastIndexingTime = stats.StartTime;
+
+                        AddIndexingPerformance(stats);
+
                         using (var scope = stats.CreateScope())
                         {
                             try
@@ -565,7 +568,7 @@ namespace Raven.Server.Documents.Indexes
                             }
                         }
 
-                        AddIndexingPerformance(stats);
+                        stats.Complete();
 
                         try
                         {
@@ -1468,9 +1471,11 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexingPerformanceStats[] GetIndexingPerformance(int fromId)
         {
+            var lastStats = _lastStats;
+
             return _lastIndexingStats
                 .Where(x => x.Id >= fromId)
-                .Select(x => x.ToIndexingPerformanceStats())
+                .Select(x => x == lastStats ? x.ToIndexingPerformanceLiveStatsWithDetails() : x.ToIndexingPerformanceStats())
                 .ToArray();
         }
 

@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.Indexes
         private IndexingStatsScope _scope;
 
         private volatile IndexingPerformanceStats _performanceStats;
+        private bool _completed;
 
         public IndexingStatsAggregator(int id)
         {
@@ -59,6 +60,20 @@ namespace Raven.Server.Documents.Indexes
             };
         }
 
+        public IndexingPerformanceStats ToIndexingPerformanceLiveStatsWithDetails()
+        {
+            if (_performanceStats != null)
+                return _performanceStats;
+
+            if (_scope == null || _stats == null)
+                return null;
+
+            if (_completed)
+                return ToIndexingPerformanceStats();
+
+            return CreateIndexingPerformanceStats(completed: false);
+        }
+
         public IndexingPerformanceStats ToIndexingPerformanceStats()
         {
             if (_performanceStats != null)
@@ -69,17 +84,27 @@ namespace Raven.Server.Documents.Indexes
                 if (_performanceStats != null)
                     return _performanceStats;
 
-                return _performanceStats = new IndexingPerformanceStats(_scope.Duration)
-                {
-                    Started = StartTime,
-                    Completed = StartTime.AddMilliseconds(_scope.Duration.TotalMilliseconds),
-                    Details = _scope.ToIndexingPerformanceOperation("Indexing"),
-                    InputCount = _stats.MapAttempts,
-                    SuccessCount = _stats.MapSuccesses,
-                    FailedCount = _stats.MapErrors,
-                    OutputCount = _stats.IndexingOutputs
-                };
+                return _performanceStats = CreateIndexingPerformanceStats(completed: true);
             }
+        }
+
+        public void Complete()
+        {
+            _completed = true;
+        }
+
+        private IndexingPerformanceStats CreateIndexingPerformanceStats(bool completed)
+        {
+            return new IndexingPerformanceStats(_scope.Duration)
+            {
+                Started = StartTime,
+                Completed = completed ? StartTime.AddMilliseconds(_scope.Duration.TotalMilliseconds) : (DateTime?)null,
+                Details = _scope.ToIndexingPerformanceOperation("Indexing"),
+                InputCount = _stats.MapAttempts,
+                SuccessCount = _stats.MapSuccesses,
+                FailedCount = _stats.MapErrors,
+                OutputCount = _stats.IndexingOutputs
+            };
         }
     }
 
@@ -89,11 +114,12 @@ namespace Raven.Server.Documents.Indexes
 
         private Dictionary<string, IndexingStatsScope> _scopes;
 
-        private Stopwatch _sw;
+        private readonly Stopwatch _sw;
 
         public IndexingStatsScope(IndexingRunStats stats, bool start = true)
         {
             _stats = stats;
+            _sw = new Stopwatch();
 
             if (start)
                 Start();
@@ -109,7 +135,7 @@ namespace Raven.Server.Documents.Indexes
             IndexingStatsScope scope;
             if (_scopes.TryGetValue(name, out scope) == false)
                 return _scopes[name] = new IndexingStatsScope(_stats, start);
-                
+
             if (start)
                 scope.Start();
 
@@ -118,9 +144,6 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexingStatsScope Start()
         {
-            if (_sw == null)
-                _sw = new Stopwatch();
-
             _sw.Start();
             return this;
         }

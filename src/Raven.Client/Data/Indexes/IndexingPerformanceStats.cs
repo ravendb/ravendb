@@ -9,7 +9,7 @@ namespace Raven.Client.Data.Indexes
         {
         }
 
-        public DateTime Completed { get; set; }
+        public DateTime? Completed { get; set; }
 
         public IndexingPerformanceOperation Details { get; set; }
     }
