@@ -144,6 +144,7 @@ namespace Voron.Impl.Paging
 
 
         public bool Disposed { get; private set; }
+
         public uint UniquePhysicalDriveId;
 
         public virtual void Dispose()

@@ -376,7 +376,6 @@ namespace Voron.Impl.Journal
             internal long LastFlushedJournal;
             internal JournalFile LastFlushedJournalObject;
             private bool _ignoreLockAlreadyTaken;
-            private readonly object _syncLocker = new object();
             internal readonly object LastFlushedLocker = new object();
             internal long LastSyncedJournal;
             public long OldestActiveTransactionWhenFlushed { get; set; }
@@ -560,22 +559,22 @@ namespace Voron.Impl.Journal
                 }
             }
 
+            private readonly object _syncLock = new object();
+
             internal bool SyncDataFile(long oldestActiveTransaction, ConcurrentDictionary<long, JournalFile> journalsToDelete, JournalFile lastFlushedJournalObject)
             {
                 bool lockTaken = false;
                 try
                 {
-                    Monitor.TryEnter(_syncLocker, ref lockTaken);
+                    Monitor.TryEnter(_syncLock, ref lockTaken);
                     if (lockTaken == false)
                         return false;
 
                     _waj._dataPager.Sync();
 
-                    if (lastFlushedJournalObject == null)
+                    if (lastFlushedJournalObject == null || lastFlushedJournalObject.JournalWriter == null)
                     {
                         // we haven't flush yet a single journal - no updates and no journal deletions yet
-                        Debug.Assert(journalsToDelete.Count == 0);
-                        Debug.Assert(oldestActiveTransaction == 0);
                         return true;
                     }
                     UpdateFileHeaderAfterDataFileSync(lastFlushedJournalObject, oldestActiveTransaction);
@@ -594,7 +593,7 @@ namespace Voron.Impl.Journal
                 finally 
                 {
                     if (lockTaken)
-                        Monitor.Exit(_syncLocker);
+                        Monitor.Exit(_syncLock);
                 }
                 return true;
             }
