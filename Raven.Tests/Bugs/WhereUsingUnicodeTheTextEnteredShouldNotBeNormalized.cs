@@ -1,5 +1,8 @@
-﻿using System.Linq;
+﻿using System.Diagnostics;
+using System.Linq;
+
 using Raven.Tests.Common;
+
 using Xunit;
 using Xunit.Extensions;
 
@@ -7,9 +10,13 @@ namespace Raven.Tests.Bugs
 {
     public class WhereUsingUnicodeTheTextEnteredShouldNotBeNormalized : RavenTest
     {
+
         [Theory]
-        [InlineData("לְשֵׁם יִחוּד קֻדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּהּ")]
+        /*
+         * If we fail on 'Оптиматика' we need to make sure that the generated scanner code NextState() method was not overwritten by regenerating the parser.
+         */
         [InlineData("Оптиматика")]
+        [InlineData("לְשֵׁם יִחוּד קֻדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּהּ")]
         public void WhenUsingEmbedded(string content)
         {
             using (var documentStore = NewDocumentStore())
