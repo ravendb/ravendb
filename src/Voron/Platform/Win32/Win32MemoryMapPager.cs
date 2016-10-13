@@ -329,14 +329,7 @@ namespace Voron.Platform.Win32
             if (Disposed)
                 ThrowAlreadyDisposedException();
 
-            Console.WriteLine("ADIADI :: Syncing " + this.FileName);
-
-            long totalSize = 0;
-            foreach (var allocationInfo in PagerState.AllocationInfos)
-            {
-                totalSize += allocationInfo.Size;
-            }
-            using (Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.Sync, totalSize))
+            using (Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.DataSync, 0))
             {
                 foreach (var allocationInfo in PagerState.AllocationInfos)
                 {

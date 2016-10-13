@@ -568,7 +568,6 @@ namespace Voron.Impl.Journal
                     Monitor.TryEnter(_syncLocker, ref lockTaken);
                     if (lockTaken == false)
                         return false;
-                    // ADIADI TODO: Metrics!
 
                     _waj._dataPager.Sync();
 
@@ -638,7 +637,7 @@ namespace Voron.Impl.Journal
                     EnsureDataPagerSpacing(transaction, last, numberOfPagesInLastPage, alreadyInWriteTx);
 
                     long written = 0;
-                    using (_waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.WriteUsingMem,
+                    using (_waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.DataFlush,
                             totalPages * _waj._dataPager.PageSize))
                     {
                         foreach (var page in sortedPages)
