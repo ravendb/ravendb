@@ -1,8 +1,18 @@
 import commandBase = require("commands/commandBase");
 import resource = require("models/resources/resource");
+import endpoints = require("endpoints");
+
+type deletionResult = {
+    name: string;
+    deleted: boolean;
+    reason: string;
+}
 
 class deleteDatabaseCommand extends commandBase {
-    private oneDatabasePath = "/admin/databases/";
+    
+    private oneDatabasePath = endpoints.global.adminDatabases.adminDatabases;
+
+    //TODO: use endpoints!
     private multipleDatabasesPath = "/admin/databases/batch-delete";
     private oneFileSystemPath = "/admin/fs/";
     private multipleFileSystemsPath = "/admin/fs/batch-delete";
@@ -15,38 +25,46 @@ class deleteDatabaseCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {
-
-        var deleteTask: JQueryPromise<any>;
+    execute(): JQueryPromise<Array<resource>> {
         if (this.resources.length === 1) {
-            deleteTask = this.deleteOneResource();
-        } else {
-            deleteTask = this.deleteMultipleResources();
-        }
 
-        return deleteTask;
+            const task = $.Deferred<Array<resource>>();
+            this.deleteOneResource()
+                .done(result => {
+                    if (result[0].deleted) {
+                        task.resolve(this.resources);
+                    } else {
+                        task.reject(result[0].reason);
+                    }
+                })
+                .fail(reason => task.reject(reason));
+            return task;
+        } else {
+            throw new Error("not supported yet!");
+        }
     }
 
-    private deleteOneResource(): JQueryPromise<any> {
-        var resource = this.resources[0];
+    private deleteOneResource(): JQueryPromise<Array<deletionResult>> {
+        const resource = this.resources[0];
         this.reportInfo("Deleting " + resource.name + "...");
 
-        var args = {
+        const args = {
+            name: resource.name,
             "hard-delete": this.isHardDelete
         };
 
-        var disableOneResourcePath = (resource.type === TenantType.Database) ? this.oneDatabasePath :
+        const disableOneResourcePath = (resource.type === TenantType.Database) ? this.oneDatabasePath :
             resource.type === TenantType.FileSystem ? this.oneFileSystemPath :
             resource.type === TenantType.CounterStorage ? this.oneCounterStoragePath : this.oneTimeSeriesPath;
-        var url = disableOneResourcePath + encodeURIComponent(resource.name) + this.urlEncodeArgs(args);
-        var deleteTask = this.del(url, null, null, { dataType: undefined });
-
-        deleteTask.done(() => this.reportSuccess("Successfully deleted " + resource.name));
-        deleteTask.fail((response: JQueryXHR) => this.reportError("Failed to delete " + resource.name, response.responseText, response.statusText));
-        return deleteTask;
+        const url = disableOneResourcePath + this.urlEncodeArgs(args);
+        return this.del(url, null)
+            .done(() => this.reportSuccess("Successfully deleted " + resource.name))
+            .fail((response: JQueryXHR) => this.reportError("Failed to delete " + resource.name, response.responseText, response.statusText));
     }
 
     private deleteMultipleResources(): JQueryPromise<any> {
+        throw new Error("not supported for now!");
+        /* TODO:
         var _arguments = arguments;
 
         this.reportInfo("Deleting " + this.resources.length + " resources...");
@@ -87,9 +105,10 @@ class deleteDatabaseCommand extends commandBase {
             this.reportError("Failed to delete resources", response.responseText, response.statusText);
             mergedPromise.reject(response);
         });
-        return mergedPromise;
+        return mergedPromise;*/
     }
 
+    /* TODO:
     private deleteTask(resources: Array<resource>, deletePath: string) {
         var _arguments = arguments;
 
@@ -107,7 +126,7 @@ class deleteDatabaseCommand extends commandBase {
             })
             .fail(() => task.reject(_arguments));
         return task;
-    }
+    }*/
 
 } 
 

@@ -40,6 +40,14 @@ class timeSeries extends resource {
         this.statistics().fromDto(dto);
     }
 
+    get qualifier() {
+        return "ts";
+    }
+
+    get urlPrefix() {
+        return "ts";
+    }
+
     static getNameFromUrl(url: string) {
         var index = url.indexOf("timeseries/");
         return (index > 0) ? url.substring(index + 10) : "";

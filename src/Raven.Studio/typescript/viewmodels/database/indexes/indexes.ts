@@ -84,7 +84,7 @@ class indexes extends viewModelBase {
             return firstLockMode;
         });
         this.indexesSelectionState = ko.pureComputed<checkbox>(() => {
-            var selectedCount = this.selectedIndexesName().length;
+            const selectedCount = this.selectedIndexesName().length;
             if (selectedCount === this.getAllIndexes().length)
                 return checkbox.Checked;
             if (selectedCount > 0)
