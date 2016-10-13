@@ -1398,8 +1398,10 @@
 
                         </div>
                     </p>
-                    <small class="bg-info padding padding-sm">
-                        <span class="icon-info"></span> If you want to add padding to the text please rememer to add padding classes (eg. ".padding.padding-sm") to both .statnic-name and .edit-inline.
+                    <div class="bg-info padding padding-sm">
+                        <small>
+                            <span class="icon-info"></span> If you want to add padding to the text please rememer to add padding classes (eg. ".padding.padding-sm") to both .statnic-name and .edit-inline.
+                        </small>
                     </small>
                 </div>
             </section>
@@ -1819,6 +1821,8 @@
                     <p class="bg-info padding padding-sm">.bg-info & .padding.padding-sm</p>
                     <p class="bg-warning padding padding-xs">.bg-warning & .padding.padding-xs</p>
                     <p class="bg-danger">.bg-danger</p>
+                    <hr>
+                    <span class="bg-info padding padding-sm">use on span for inline</span>
                 </div>
             </section>
             <h2>Global properties-item</h2>
@@ -1909,8 +1913,27 @@
                     </div>
                 </div>
             </section>
+
+            <h2>badges</h2>
+            <section div class="panel">
+                <div class="panel-body">
+                    <a href="#">Inbox <span class="badge">42</span></a>
+
+<button class="btn btn-primary" type="button">
+  Messages <span class="badge">4</span>
+</button>
+<span class="badge badge-primary">badge-primary</span>
+<span class="badge badge-success">badge-success</span>
+<span class="badge badge-info">badge-info</span>
+<span class="badge badge-warning">badge-warning</span>
+<span class="badge badge-danger">badge-danger</span>
+                </div>
+            </section>
+
+
             </div>
         </div>
+
 
         <script type="text/javascript">
             function changeState(el) {

@@ -3720,6 +3720,10 @@ pre {
   content: attr(data-state-text);
   text-transform: uppercase;
 }
+.input-group-btn > .btn {
+  border-color: #3a4242;
+  border-left-color: #3a4242;
+}
 .sampleData .sampleData-classes {
   color: inherit;
   background-color: inherit;
