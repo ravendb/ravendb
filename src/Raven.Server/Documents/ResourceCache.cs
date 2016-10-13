@@ -13,7 +13,8 @@ namespace Raven.Server.Documents
     {
         readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseInsensitive = 
                     new ConcurrentDictionary<StringSegment, Task<TResource>>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
-        readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseSensitive = new ConcurrentDictionary<StringSegment, Task<TResource>>();
+        readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseSensitive 
+            = new ConcurrentDictionary<StringSegment, Task<TResource>>(StringSegmentEqualityComparer.Instance);
 
         private readonly ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>> _mappings =
             new ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
@@ -30,6 +31,13 @@ namespace Raven.Server.Documents
         {
             if (_caseSensitive.TryGetValue(resourceName, out resourceTask))
                 return true;
+            
+            return UnlikelyTryGet(resourceName, out resourceTask);
+                
+        }
+
+        private bool UnlikelyTryGet(StringSegment resourceName, out Task<TResource> resourceTask)
+        {
             if (_caseInsensitive.TryGetValue(resourceName, out resourceTask) == false)
                 return false;
 

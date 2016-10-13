@@ -40,19 +40,24 @@ namespace Sparrow
         public static StringSegmentEqualityComparer Instance = new StringSegmentEqualityComparer();
 
 
-        public bool Equals(StringSegment x, StringSegment y)
+        public unsafe bool Equals(StringSegment x, StringSegment y)
         {
             if (x.Length != y.Length)
                 return false;
-            var compare = string.Compare(x.String, x.Start, y.String, y.Start, x.Length, StringComparison.Ordinal);
-            return compare == 0;
+            
+            fixed(char* pX = x.String)
+            fixed (char* pY = y.String)
+            {
+                return Memory.Compare((byte*) pX + x.Start * sizeof(char), (byte*) pY + y.Start * sizeof(char), x.Length + sizeof(char)) == 0;
+            }
+
         }
 
         public unsafe int GetHashCode(StringSegment str)
         {
             fixed (char* p = str.String)
             {
-                return (int)Hashing.XXHash32.CalculateInline((byte*)(p+str.Start), str.Length * sizeof(char));
+                return (int)Hashing.XXHash32.CalculateInline((byte*)(p+str.Start * sizeof(char)), str.Length * sizeof(char));
             }
         }
     }
@@ -153,9 +158,16 @@ namespace Sparrow
             }
         }
 
-        public bool Equals(string other)
+        public unsafe bool Equals(string other)
         {
-           return Equals(other, StringComparison.Ordinal);
+            if (Length != other.Length)
+                return false;
+
+            fixed (char* pSelf = String)
+            fixed (char* pOther = other)
+            {
+                return Memory.Compare((byte*)pSelf + Start * sizeof(char), (byte*)pOther, Length * sizeof(char)) == 0;
+            }
         }
 
 
@@ -166,9 +178,16 @@ namespace Sparrow
             return string.Compare(String, Start, other, 0, Length, stringComparison) == 0;
         }
 
-        public bool Equals(StringSegment other)
+        public unsafe bool Equals(StringSegment other)
         {
-            return Equals(other, StringComparison.Ordinal);
+            if (Length != other.Length)
+                return false;
+
+            fixed (char* pSelf = String)
+            fixed (char* pOther = other.String)
+            {
+                return Memory.Compare((byte*) pSelf + Start * sizeof(char), (byte*) pOther + other.Start * sizeof(char), Length*sizeof(char)) == 0;
+            }
         }
 
         public bool Equals(StringSegment other, StringComparison stringComparison)
