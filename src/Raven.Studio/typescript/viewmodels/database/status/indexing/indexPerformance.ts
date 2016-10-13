@@ -7,7 +7,6 @@ import fileDownloader = require("common/fileDownloader");
 class metrics extends viewModelBase { 
 
     data: Raven.Client.Data.Indexes.IndexPerformanceStats[] = [];
-    currentBatches = new Map<string, Raven.Client.Data.Indexes.IndexingPerformanceStats>();
 
     private isoParser = d3.time.format.iso;
 
@@ -34,7 +33,7 @@ class metrics extends viewModelBase {
         super.activate(args);
         return new getIndexesPerformance(this.activeDatabase())
             .execute()
-            .done(result => this.divideByCompletion(result));
+            .done(result => this.data = result);
     }
 
     attached() {
@@ -46,19 +45,6 @@ class metrics extends viewModelBase {
         super.compositionComplete();
 
         this.draw();
-    }
-
-    private divideByCompletion(result: Array<Raven.Client.Data.Indexes.IndexPerformanceStats>) {
-        result.forEach(perfStats => {
-            const inProgress = perfStats.Performance.filter(x => !x.Completed);
-
-            inProgress.forEach(runningPerf => {
-                this.currentBatches.set(perfStats.IndexName, runningPerf);
-                perfStats.Performance.remove(runningPerf);
-            });
-        });
-
-        this.data = result;
     }
 
     private draw() {
@@ -127,33 +113,6 @@ class metrics extends viewModelBase {
         this.data.forEach(perfStat => {
             this.graphForIndex(perfStat, graphData);
         });
-
-        this.currentBatches.forEach((stats, index) => {
-            this.graphCurrentStats(stats, index, graphData);
-        });
-    }
-
-    private graphCurrentStats(stats: Raven.Client.Data.Indexes.IndexingPerformanceBasicStats,
-        indexName: string,
-        container: d3.Selection<any>) {
-
-        const self = this;
-        const startTime = self.isoParser.parse(stats.Started);
-        const endTime = new Date(startTime.getTime() + stats.DurationInMilliseconds);
-
-        const inProgressPerfGroup = container.append("g")
-            .attr('class', 'in_progress_group_item')
-            .attr("transform", "translate(" + self.xScale(startTime) + "," + (self.yScale(indexName) + metrics.verticalPadding / 2) + ")");
-
-        const rect = inProgressPerfGroup.append("rect")
-            .attr("class", 'perf_group_bg')
-            .attr('x', 0)
-            .attr('y', 0)
-            .attr('height', metrics.singleIndexGroupHeight)
-            .attr('width', metrics.extent(endTime.getTime() - startTime.getTime()))
-            .on("click", (stat: Raven.Client.Data.Indexes.IndexingPerformanceBasicStats) => self.showDetails(stat));
-
-        rect.datum(stats);
     }
 
     private findTimeRanges(): [Date, Date] {
@@ -166,7 +125,7 @@ class metrics extends viewModelBase {
                     minDateStr = perfStat.Started;
                 }
 
-                if (!maxDateStr || perfStat.Completed > maxDateStr) {
+                if (perfStat.Completed && (!maxDateStr || perfStat.Completed > maxDateStr)) {
                     maxDateStr = perfStat.Completed;
                 }
             });
@@ -175,18 +134,18 @@ class metrics extends viewModelBase {
         let minDate: Date = minDateStr ? this.isoParser.parse(minDateStr) : null;
         let maxDate: Date = maxDateStr ? this.isoParser.parse(maxDateStr) : null;
 
-        this.currentBatches.forEach(stats => {
-            const statsStartedAsDate = this.isoParser.parse(stats.Started);
-            if (!minDate || statsStartedAsDate.getTime() < minDate.getTime()) {
-                minDate = statsStartedAsDate;
-            }
+        // now scan in progress actions
 
-            const statsEndDate = statsStartedAsDate.getTime() + stats.DurationInMilliseconds;
-            const currentMaxDate = maxDate ? maxDate.getTime() : null;
-
-            if (!currentMaxDate || statsEndDate > currentMaxDate) {
-                maxDate = new Date(statsEndDate);
-            }
+        this.data.forEach(indexStats => {
+            indexStats.Performance.forEach(perfStat => {
+                if (!perfStat.Completed) {
+                    const endDate = new Date(this.isoParser.parse(perfStat.Started).getTime() +
+                        perfStat.DurationInMilliseconds);
+                    if (!maxDate || endDate > maxDate) {
+                        maxDate = endDate;
+                    }
+                }
+            });
         });
 
         return [minDate, maxDate];
@@ -202,12 +161,6 @@ class metrics extends viewModelBase {
             }
         });
 
-        this.currentBatches.forEach((stats, indexName) => {
-            if (!names.contains(indexName)) {
-                names.push(indexName);
-            }
-        });
-        
         return names;
     }
 
@@ -226,7 +179,7 @@ class metrics extends viewModelBase {
         const self = this;
 
         const startTime = self.isoParser.parse(data.Started);
-        const endTime = self.isoParser.parse(data.Completed);
+        const endTime = new Date(startTime.getTime() + data.DurationInMilliseconds);
 
         const perfGroup = container.append("g")
             .attr('class', 'perf_group_item')
@@ -299,17 +252,10 @@ class metrics extends viewModelBase {
 
     private dataImported(result: string) {
         const json = JSON.parse(result) as {
-            data: Raven.Client.Data.Indexes.IndexPerformanceStats[],
-            currentBatches: { [key: string]: Raven.Client.Data.Indexes.IndexingPerformanceStats }
+            data: Raven.Client.Data.Indexes.IndexPerformanceStats[]
         };
 
         this.data = json.data;
-        this.currentBatches.clear();
-        const currentBatchesKeys = Object.keys(json.currentBatches);
-
-        currentBatchesKeys.forEach(key => {
-            this.currentBatches.set(key, json.currentBatches[key]);
-        });
 
         this.colorScale = d3.scale.category20();
 
@@ -318,14 +264,8 @@ class metrics extends viewModelBase {
     }
 
     exportAsJson() {
-        const batches: any = {};
-        this.currentBatches.forEach((v, k) => {
-            batches[k] = v;
-        });
-
         fileDownloader.downloadAsJson({
-            data: this.data,
-            currentBatches: batches
+            data: this.data
         }, "perf.json", "perf");
     }
 }
