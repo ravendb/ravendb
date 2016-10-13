@@ -1,26 +1,23 @@
-﻿using System.Diagnostics;
-using System.Linq;
-
+﻿using System.Linq;
 using Raven.Tests.Common;
-
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
     public class WhereUsingUnicodeTheTextEnteredShouldNotBeNormalized : RavenTest
     {
-        private const string Content = "לְשֵׁם יִחוּד קֻדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּהּ";
-
-
-        [Fact]
-        public void WhenUsingEmbedded()
+        [Theory]
+        [InlineData("לְשֵׁם יִחוּד קֻדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּהּ")]
+        [InlineData("Оптиматика")]
+        public void WhenUsingEmbedded(string content)
         {
             using (var documentStore = NewDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
-                    session.Store(new UnicodeItem { Content = Content, Id = "item/1" });
-                    session.Store(new UnicodeItem { Content = Content, Id = "item/2" });
+                    session.Store(new UnicodeItem { Content = content, Id = "item/1" });
+                    session.Store(new UnicodeItem { Content = content, Id = "item/2" });
                     session.SaveChanges();
                 }
 
@@ -29,22 +26,24 @@ namespace Raven.Tests.Bugs
 
                     var result = session.Query<UnicodeItem>()
                         .Customize(customization => customization.WaitForNonStaleResultsAsOfLastWrite())
-                        .Count(item => item.Content == Content);
+                        .Count(item => item.Content == content);
 
                     Assert.Equal(2, result);
                 }
             }
         }
 
-        [Fact]
-        public void WhenUsingHttp()
+        [Theory]
+        [InlineData("לְשֵׁם יִחוּד קֻדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּהּ")]
+        [InlineData("Оптиматика")]
+        public void WhenUsingHttp(string content)
         {
             using (var store = NewRemoteDocumentStore(fiddler:true))
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new UnicodeItem { Content = Content, Id = "item/1" });
-                    session.Store(new UnicodeItem { Content = Content, Id = "item/2" });
+                    session.Store(new UnicodeItem { Content = content, Id = "item/1" });
+                    session.Store(new UnicodeItem { Content = content, Id = "item/2" });
                     session.SaveChanges();
                 }
 
@@ -52,7 +51,7 @@ namespace Raven.Tests.Bugs
                 {
                     var result = session.Query<UnicodeItem>()
                         .Customize(customization => customization.WaitForNonStaleResultsAsOfLastWrite())
-                        .Count(item => item.Content == Content);
+                        .Count(item => item.Content == content);
                     WaitForUserToContinueTheTest(url:store.Url);
                     Assert.Equal(2, result);
                 }
