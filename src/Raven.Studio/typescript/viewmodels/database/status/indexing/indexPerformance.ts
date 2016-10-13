@@ -2,13 +2,12 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import app = require("durandal/app");
 import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 import getIndexesPerformance = require("commands/database/debug/getIndexesPerformance");
-import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import fileDownloader = require("common/fileDownloader");
 
 class metrics extends viewModelBase { 
 
     data: Raven.Client.Data.Indexes.IndexPerformanceStats[] = [];
-    currentBatches = new Map<string, Raven.Client.Data.Indexes.IndexingPerformanceBasicStats>();
+    currentBatches = new Map<string, Raven.Client.Data.Indexes.IndexingPerformanceStats>();
 
     private isoParser = d3.time.format.iso;
 
@@ -33,17 +32,9 @@ class metrics extends viewModelBase {
 
     activate(args: any): JQueryPromise<any> {
         super.activate(args);
-        const perfTask = new getIndexesPerformance(this.activeDatabase())
+        return new getIndexesPerformance(this.activeDatabase())
             .execute()
-            .done(result => this.data = result);
-
-        return perfTask.then(() => {
-            return new getIndexesStatsCommand(this.activeDatabase())
-                .execute()
-                .done(result => {
-                    this.extractCurrentlyRunning(result);
-                });
-        });
+            .done(result => this.divideByCompletion(result));
     }
 
     attached() {
@@ -57,37 +48,17 @@ class metrics extends viewModelBase {
         this.draw();
     }
 
-    private extractCurrentlyRunning(indexStats: Array<Raven.Client.Data.Indexes.IndexStats>) {
-        indexStats.forEach(stat => {
-            const indexName = stat.Name;
-            if (stat.LastBatchStats) {
-                const lastBatchStats = stat.LastBatchStats;
-                const startTime = lastBatchStats.Started;
+    private divideByCompletion(result: Array<Raven.Client.Data.Indexes.IndexPerformanceStats>) {
+        result.forEach(perfStats => {
+            const inProgress = perfStats.Performance.filter(x => !x.Completed);
 
-                // try to find duplicate in performance
-                let duplicateFound = false;
-
-                for (let i = 0; i < this.data.length; i++) {
-                    const currentPerf = this.data[i];
-                    if (currentPerf.IndexName === indexName) {
-                        for (let j = 0; j < currentPerf.Performance.length; j++) {
-                            if (currentPerf.Performance[j].Started === startTime) {
-                                duplicateFound = true;
-                                break;
-                            }
-                        }
-
-                        break;
-                    }
-                }
-
-                if (duplicateFound) {
-                    return;
-                }
-
-                this.currentBatches.set(indexName, lastBatchStats);
-            }
+            inProgress.forEach(runningPerf => {
+                this.currentBatches.set(perfStats.IndexName, runningPerf);
+                perfStats.Performance.remove(runningPerf);
+            });
         });
+
+        this.data = result;
     }
 
     private draw() {
@@ -329,7 +300,7 @@ class metrics extends viewModelBase {
     private dataImported(result: string) {
         const json = JSON.parse(result) as {
             data: Raven.Client.Data.Indexes.IndexPerformanceStats[],
-            currentBatches: { [key: string]: Raven.Client.Data.Indexes.IndexingPerformanceBasicStats }
+            currentBatches: { [key: string]: Raven.Client.Data.Indexes.IndexingPerformanceStats }
         };
 
         this.data = json.data;
