@@ -32,7 +32,6 @@
         .row {
             display: flex;
             flex-wrap: wrap;
-
             @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
                 .info-container {
                     order: 1;
@@ -113,6 +112,17 @@
 
     .properties-container {
         .properties-item {
+            .properties-label,
+            .properties-value {
+                [class*=" icon-"],
+                [class^="icon-"] {
+                    color: @brand-info;
+
+                    & + span {
+                        color: @brand-info;
+                    }
+                }
+            }
             @media (min-width: @screen-xl) {
                 width: 49%;
                 max-width: none;
