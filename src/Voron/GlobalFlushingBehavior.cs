@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading;
+using Voron.Impl.Journal;
 
 namespace Voron
 {
@@ -103,12 +105,35 @@ namespace Voron
             if (env.Disposed)
                 return;
 
-            var synced = env.Journal.Applicator.SyncDataFile(env.OldestTransaction);
+            var applicator = env.Journal.Applicator;
+
+            long lastFlushedJournalCopy;
+            ConcurrentDictionary<long, JournalFile> journalsToDeleteCopy; // TODO : change to non-cuncurrent dictionary ? (not cuncurrently used however needed for use with SyncDataFile signature)
+            JournalFile lastFlushedJournalObjectCopy;
+            long oldestActiveTransactionCopy;
+            try
+            {
+                Monitor.Enter(applicator.LastFlushedLocker);
+
+                lastFlushedJournalCopy = applicator.LastFlushedJournal;
+                journalsToDeleteCopy = new ConcurrentDictionary<long, JournalFile>(applicator.JournalsToDelete);
+                lastFlushedJournalObjectCopy = applicator.LastFlushedJournalObject;
+                oldestActiveTransactionCopy = applicator.OldestActiveTransactionWhenFlushed;
+            }
+            finally
+            {
+                Monitor.Exit(applicator.LastFlushedLocker);
+            }
+
+            var synced = applicator.SyncDataFile(oldestActiveTransactionCopy, journalsToDeleteCopy, lastFlushedJournalObjectCopy);
             if (synced == false)
             {
                 // already syncing this environment. enque for later sync
                 _maybeNeedToSync.Enqueue(env);
+                return;
             }
+
+            applicator.LastSyncedJournal = lastFlushedJournalCopy;
         }
 
         private void SyncAllEnvironmentsInMountPoint(object mt)
@@ -118,15 +143,7 @@ namespace Voron
             StorageEnvironment env;
             while (mountPointInfo.StorageEnvironments.TryDequeue(out env))
             {
-                if (env.Disposed)
-                    continue;
-
-                env.IsDataFileEnqueuedToSync = false;
-
-                if (env.Journal.Applicator.SyncDataFile(env.OldestTransaction) == false)
-                {
-                    _maybeNeedToSync.Enqueue(env);
-                }
+                SyncEnvironment(env);
             }
             mountPointInfo.LastSyncTimeInMountPoint = DateTime.UtcNow;
         }

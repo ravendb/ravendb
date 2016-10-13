@@ -329,6 +329,8 @@ namespace Voron.Platform.Win32
             if (Disposed)
                 ThrowAlreadyDisposedException();
 
+            Console.WriteLine("ADIADI :: Syncing " + this.FileName);
+
             long totalSize = 0;
             foreach (var allocationInfo in PagerState.AllocationInfos)
             {

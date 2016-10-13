@@ -7,6 +7,7 @@
 using Sparrow;
 using Sparrow.Binary;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -367,16 +368,18 @@ namespace Voron.Impl.Journal
 
         public class JournalApplicator : IDisposable
         {
-            private readonly Dictionary<long, JournalFile> _journalsToDelete = new Dictionary<long, JournalFile>();
+            internal readonly ConcurrentDictionary<long, JournalFile> JournalsToDelete = new ConcurrentDictionary<long, JournalFile>();
             private readonly object _flushingLock = new object();
             private readonly WriteAheadJournal _waj;
 
-            private long _lastSyncedTransactionId;
-            private long _lastSyncedJournal;
-            private DateTime _lastDataFileSyncTime;
-            private JournalFile _lastFlushedJournal;
+            private long _lastFlushedTransactionId;
+            internal long LastFlushedJournal;
+            internal JournalFile LastFlushedJournalObject;
             private bool _ignoreLockAlreadyTaken;
             private readonly object _syncLocker = new object();
+            internal readonly object LastFlushedLocker = new object();
+            internal long LastSyncedJournal;
+            public long OldestActiveTransactionWhenFlushed { get; set; }
 
             public JournalApplicator(WriteAheadJournal waj)
             {
@@ -393,6 +396,7 @@ namespace Voron.Impl.Journal
                     throw new InvalidJournalFlushRequestException("Applying journals to the data file has been already requested on the same thread");
 
                 bool lockTaken = false;
+                bool lastFlushLockerTaken = false;
                 try
                 {
                     Monitor.TryEnter(_flushingLock, timeToWait, ref lockTaken);
@@ -417,7 +421,7 @@ namespace Voron.Impl.Journal
                     if (jrnls.Count == 0)
                         return; // nothing to do
 
-                    Debug.Assert(jrnls.First().Number >= _lastSyncedJournal);
+                    Debug.Assert(jrnls.First().Number >= LastFlushedJournal);
 
                     var pagesToWrite = new Dictionary<long, PagePosition>();
 
@@ -428,7 +432,7 @@ namespace Voron.Impl.Journal
 
                     foreach (var journalFile in jrnls)
                     {
-                        if (journalFile.Number < _lastSyncedJournal)
+                        if (journalFile.Number < LastFlushedJournal)
                             continue;
                         var currentJournalMaxTransactionId = -1L;
 
@@ -436,7 +440,7 @@ namespace Voron.Impl.Journal
                         if (oldestActiveTransaction != 0)
                             maxTransactionId = Math.Min(oldestActiveTransaction - 1, maxTransactionId);
 
-                        foreach (var pagePosition in journalFile.PageTranslationTable.Iterate(_lastSyncedTransactionId, maxTransactionId))
+                        foreach (var pagePosition in journalFile.PageTranslationTable.Iterate(_lastFlushedTransactionId, maxTransactionId))
                         {
                             if (pagePosition.Value.IsFreedPageMarker)
                             {
@@ -445,7 +449,7 @@ namespace Voron.Impl.Journal
                                 continue;
                             }
 
-                            if (journalFile.Number == _lastSyncedJournal && pagePosition.Value.TransactionId <= _lastSyncedTransactionId)
+                            if (journalFile.Number == LastFlushedJournal && pagePosition.Value.TransactionId <= _lastFlushedTransactionId)
                                 continue;
 
                             currentJournalMaxTransactionId = Math.Max(currentJournalMaxTransactionId, pagePosition.Value.TransactionId);
@@ -487,9 +491,14 @@ namespace Voron.Impl.Journal
 
                     var unusedJournals = GetUnusedJournalFiles(jrnls, lastProcessedJournal, lastFlushedTransactionId);
 
-                    foreach (var unused in unusedJournals.Where(unused => !_journalsToDelete.ContainsKey(unused.Number)))
+                    lastFlushLockerTaken = true;
+                    Monitor.Enter(LastFlushedLocker);
+
+                    OldestActiveTransactionWhenFlushed = oldestActiveTransaction;
+
+                    foreach (var unused in unusedJournals.Where(unused => !JournalsToDelete.ContainsKey(unused.Number)))
                     {
-                        _journalsToDelete.Add(unused.Number, unused);
+                        JournalsToDelete.TryAdd(unused.Number, unused);
                     }
 
                     var timeout = TimeSpan.FromSeconds(3);
@@ -501,10 +510,10 @@ namespace Voron.Impl.Journal
                         _waj._env.IncreaseTheChanceForGettingTheTransactionLock();
                         using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(TransactionFlags.ReadWrite).JournalApplicatorTransaction())
                         {
-                            _lastSyncedJournal = lastProcessedJournal;
-                            _lastSyncedTransactionId = lastFlushedTransactionId;
+                            LastFlushedJournal = lastProcessedJournal;
+                            _lastFlushedTransactionId = lastFlushedTransactionId;
                             
-                            _lastFlushedJournal = _waj._files.First(x => x.Number == _lastSyncedJournal);
+                            LastFlushedJournalObject = _waj._files.First(x => x.Number == LastFlushedJournal);
 
                             if (unusedJournals.Count > 0)
                             {
@@ -543,12 +552,15 @@ namespace Voron.Impl.Journal
                 }
                 finally
                 {
+                    if (lastFlushLockerTaken)
+                        Monitor.Exit(LastFlushedLocker);
+
                     if (lockTaken)
                         Monitor.Exit(_flushingLock);
                 }
             }
 
-            internal bool SyncDataFile(long oldestActiveTransaction)
+            internal bool SyncDataFile(long oldestActiveTransaction, ConcurrentDictionary<long, JournalFile> journalsToDelete, JournalFile lastFlushedJournalObject)
             {
                 bool lockTaken = false;
                 try
@@ -560,18 +572,25 @@ namespace Voron.Impl.Journal
 
                     _waj._dataPager.Sync();
 
-                    UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, oldestActiveTransaction);
+                    if (lastFlushedJournalObject == null)
+                    {
+                        // we haven't flush yet a single journal - no updates and no journal deletions yet
+                        Debug.Assert(journalsToDelete.Count == 0);
+                        Debug.Assert(oldestActiveTransaction == 0);
+                        return true;
+                    }
+                    UpdateFileHeaderAfterDataFileSync(lastFlushedJournalObject, oldestActiveTransaction);
 
-                    foreach (var toDelete in _journalsToDelete.Values)
+                    foreach (var toDelete in journalsToDelete)
                     {
                         if (_waj._env.Options.IncrementalBackupEnabled == false)
-                            toDelete.DeleteOnClose = true;
+                            toDelete.Value.DeleteOnClose = true;
 
-                        toDelete.Release();
+                        toDelete.Value.Release();
+
+                        JournalFile _;
+                        JournalsToDelete.TryRemove(toDelete.Key, out _);
                     }
-
-                    _journalsToDelete.Clear();
-                    _lastDataFileSyncTime = DateTime.UtcNow;
                 }
                 finally 
                 {
@@ -667,12 +686,12 @@ namespace Voron.Impl.Journal
                 // to read the most updated version)
                 foreach (var journalFile in unusedJournalFiles.OrderBy(x => x.Number))
                 {
-                    journalFile.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
+                    journalFile.FreeScratchPagesOlderThan(txw, _lastFlushedTransactionId);
                 }
 
                 foreach (var jrnl in _waj._files.OrderBy(x => x.Number))
                 {
-                    jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
+                    jrnl.FreeScratchPagesOlderThan(txw, _lastFlushedTransactionId);
                 }
             }
 
@@ -722,16 +741,16 @@ namespace Voron.Impl.Journal
                     txPos += totalPages;
                 }
 
-                Debug.Assert(_lastSyncedJournal != -1);
-                Debug.Assert(_lastSyncedTransactionId != -1);
+                Debug.Assert(LastFlushedJournal != -1);
+                Debug.Assert(_lastFlushedTransactionId != -1);
 
                 _waj._headerAccessor.Modify(header =>
                 {
                     header->TransactionId = lastReadTxHeader.TransactionId;
                     header->LastPageNumber = lastReadTxHeader.LastPageNumber;
 
-                    header->Journal.LastSyncedJournal = _lastSyncedJournal;
-                    header->Journal.LastSyncedTransactionId = _lastSyncedTransactionId;
+                    header->Journal.LastSyncedJournal = LastFlushedJournal;
+                    header->Journal.LastSyncedTransactionId = _lastFlushedTransactionId;
 
                     header->Root = lastReadTxHeader.Root;
 
@@ -741,7 +760,7 @@ namespace Voron.Impl.Journal
 
             public void Dispose()
             {
-                foreach (var journalFile in _journalsToDelete)
+                foreach (var journalFile in JournalsToDelete)
                 {
                     // we need to release all unused journals 
                     // however here we don't force them to DeleteOnClose
@@ -806,11 +825,11 @@ namespace Voron.Impl.Journal
 
                 var current = _waj._files.First();
 
-                if (current.Number != _lastSyncedJournal)
-                    throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile?.Number ?? -1, _lastSyncedJournal));
+                if (current.Number != LastFlushedJournal)
+                    throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile?.Number ?? -1, LastFlushedJournal));
 
 
-                if (_waj._env.NextWriteTransactionId - 1 != _lastSyncedTransactionId)
+                if (_waj._env.NextWriteTransactionId - 1 != _lastFlushedTransactionId)
                     throw new InvalidOperationException("Cannot delete current journal because it hasn't synced everything up to the last write transaction");
 
                 _waj._files = _waj._files.RemoveFront(1);
