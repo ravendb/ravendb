@@ -1,0 +1,2577 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="theme-color" content="#FFF">
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <title>Resources</title>
+
+    <!--  <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+      <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+      <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+      <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+      <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+      <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+      <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+      <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+      <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+      <link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png">
+      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+      <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+      <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+      <link rel="manifest" href="/manifest.json">
+      <meta name="msapplication-TileColor" content="#ffffff">
+      <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+      <meta name="theme-color" content="#ffffff">
+      <link rel="shortcut icon" href="favicon.ico">
+      <link rel="icon" href="favicon.ico">-->
+
+    <link href='https://fonts.googleapis.com/css?family=Lato:400,300,700,900,400italic,700italic' rel='stylesheet' type='text/css'>
+
+    <link rel="stylesheet" type="text/css" href="./content/css/bootstrap/bootstrap.css" />
+    <link rel="stylesheet" type="text/css" href="./content/css/styles.css">
+
+    <!--[if IE 8]>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+</head>
+<body>
+    <div class="processing-spinner"></div>
+ <nav id="topbar" class="navbar navbar-inverse navbar-fixed-top" >
+    <div class="container-fluid">
+        <div class="navbar-header">
+
+            <a class="navbar-brand hidden-xs" href="#">RavenDB</a>
+        </div>
+        <div id="navbar">
+            <ul class="nav navbar-nav navbar-right">
+
+                <li class="pull-left"><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" id="menu-toggle" data-target="#main-menu" data-class="show-menu"></a></li>
+                <li class="btn-toggle" data-target="#notification-toggle" data-class="active"><a href="#" id="notification-toggle" class="btn-toggle" data-target="#notification-center" data-class="show-notifications"><span class="icon-notifications"></span><span class="notification-counter show" data-count="2">2</span></a></li>
+                <li><a href="#" class="icon-help btn-toggle" data-target="body" data-class="processing"></a></li>
+                <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
+            </ul>
+            <div class="inputs-container hidden-xs">
+                <div class="search-container active">
+                    <input type="search" class="form-control omnisearch" placeholder="search" />
+                    <div class="icon-search"></div>
+                    <div class="autocomplete-list box-container">
+                        <div class="scroller">
+                            <section>
+                                <h4>Menu</h4>
+                                <ul>
+                                    <li><a href="#"><span class="icon-documents"></span>Compact</a></li>
+                                </ul>
+                            </section>
+                            <section>
+                                <h4>Documents</h4>
+                                <ul>
+                                    <li>
+                                        <a href="#"><span class="icon-document-group" style="color:#93278f;"></span>Companies</a>
+                                        <ul>
+                                            <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/1</a></li>
+                                            <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/2</a></li>
+                                            <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/3</a></li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        <a href="#"><span class="icon-document-group" style="color:#ff0351;"></span>Computers</a>
+                                        <ul>
+                                            <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Computers/1</a></li>
+                                            <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/2</a></li>
+                                            <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/3</a></li>
+                                        </ul>
+                                    </li>
+                                    <li><a href="#" class="more">MORE</a></li>
+                                </ul>
+                            </section>
+                            <section>
+                                <h4>Indexes</h4>
+                                <ul>
+                                    <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/ByCompany</a></li>
+                                </ul>
+                            </section>
+                            <section>
+                                <h4>Transformers</h4>
+                                <ul>
+                                    <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/Company</a></li>
+                                </ul>
+                            </section>
+                            <section class="text-center">
+                                <div class="global-spinner"></div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+                <div class="resource-switcher-container active">
+                    <div class="form-control btn-toggle resource-switcher">
+                        <span class="database">db/IdentityTryOuts</span>
+                    </div>
+                    <div class="box-container">
+                        <div class="resource-filter-container">
+                            <input type="search" class="resource-filter form-control" placeholder="filter" />
+                        </div>
+                        <div class="scroller">
+                            <section>
+                                <ul class="database-list">
+                                    <li><a href="#" class="database">brickpile</a></li>
+                                    <li><a href="#" class="database">brics</a></li>
+                                    <li><a href="#" class="database">fs</a></li>
+                                    <li><a href="#" class="database">IdentityTests</a></li>
+                                    <li><a href="#" class="database">IdentityTryOuts</a></li>
+                                    <li><a href="#" class="filesystem">jspatchtest</a></li>
+                                    <li><a href="#" class="database">logs</a></li>
+                                    <li><a href="#" class="database">Media</a></li>
+                                    <li><a href="#" class="database">Northwind</a></li>
+                                    <li><a href="#" class="database">QuartzDemo</a></li>
+                                    <li><a href="#" class="database">r1</a></li>
+                                    <li><a href="#" class="database">rep1</a></li>
+                                    <li><a href="#" class="filesystem">rep2</a></li>
+                                    <li><a href="#" class="filesystem">sortings</a></li>
+                                    <li><a href="#" class="database">T1</a></li>
+                                    <li><a href="#" class="database">test</a></li>
+                                    <li><a href="#" class="counter">test2</a></li>
+                                    <li><a href="#" class="timeseries">ThisIsTest</a></li>
+                                    <li><a href="#" class="database">brickpile</a></li>
+                                    <li><a href="#" class="database">brics</a></li>
+                                    <li><a href="#" class="database">fs</a></li>
+                                    <li><a href="#" class="database">IdentityTests</a></li>
+                                    <li><a href="#" class="database">IdentityTryOuts</a></li>
+                                    <li><a href="#" class="filesystem">jspatchtest</a></li>
+                                    <li><a href="#" class="database">logs</a></li>
+                                    <li><a href="#" class="database">Media</a></li>
+                                    <li><a href="#" class="database">Northwind</a></li>
+                                    <li><a href="#" class="database">QuartzDemo</a></li>
+                                    <li><a href="#" class="database">r1</a></li>
+                                    <li><a href="#" class="database">rep1</a></li>
+                                    <li><a href="#" class="filesystem">rep2</a></li>
+                                    <li><a href="#" class="filesystem">sortings</a></li>
+                                    <li><a href="#" class="database">T1</a></li>
+                                    <li><a href="#" class="database">test</a></li>
+                                    <li><a href="#" class="counter">test2</a></li>
+                                    <li><a href="#" class="timeseries">ThisIsTest</a></li>
+                                </ul>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div><!--/.nav-collapse -->
+    </div>
+</nav>
+ <nav id="main-menu" class="main-menu">
+    <div class="level-0" data-level-name="Menu">
+        <ul>
+            <li class="arrow-right">
+                <a href="#" title="Documents"><span class="icon-documents"></span>Documents</a>
+                <div class="level level-1">
+                    <h2>Documents</h2>
+                    <a class="back" href="#" title="back">back</a>
+                    <ul>
+                        <li><a href="#" title="Documents"><span class="icon-plus"></span>Documents</a></li>
+                        <li><a href="#" title="Conflicts"><span class="icon-plus"></span>Conflicts</a></li>
+                        <li><a href="#" title="Patch"><span class="icon-plus"></span>Patch</a></li>
+                    </ul>
+                </div>
+            </li>
+            <li class="arrow-right">
+                <a href="#" title="Indexes"><span class="icon-indexes"></span>Indexes</a>
+                <div class="level level-1" data-level-name="Indexes">
+                    <h2>Indexes</h2>
+                    <a class="back" href="#" title="back">back</a>
+                    <ul>
+                        <li><a href="#" title="Indexes-list"><span class="icon-list"></span>Indexes list</a></li>
+                        <li><a href="#" title="Merge sugestions"><span class="icon-merge"></span>Merge sugestions</a></li>
+                        <hr />
+                        <li><a href="#" title="new-index"><span class="icon-plus"></span>New index</a></li>
+                        <li><a href="#" title="Merge sugestions"><span class="icon-export"></span>Export indexes</a></li>
+                        <li><a href="#" title="Indexes-list"><span class="icon-import"></span>Import indexes</a></li>
+                    </ul>
+                </div>
+            </li>
+            <li class="arrow-right">
+                <a href="#" title="Query"><span class="icon-query"></span>Query</a>
+                <div class="level level-1" data-level-name="Query">
+                    <h2>Query</h2>
+                    <a class="back" href="#" title="back">back</a>
+                    <ul>
+                        <li><a href="#" title="Query"><span class="icon-plus"></span>Query</a></li>
+                        <li><a href="#" title="Reporting"><span class="icon-plus"></span>Reporting</a></li>
+                        <li><a href="#" title="Data exploration"><span class="icon-plus"></span>Data exploration</a></li>
+                    </ul>
+                </div>
+            </li>
+            <li class="arrow-right">
+                <a href="#" title="New"><span class="icon-new"></span>New</a>
+                <div class="level level-1" data-level-name="New">
+                    <h2>New</h2>
+                    <a class="back" href="#">back</a>
+                    <ul>
+                        <li><a href="#"><span class="icon-plus"></span>Document</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Index</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Transformer</a></li>
+                    </ul>
+                </div>
+            </li>
+            <h3>MANAGE</h3>
+            <li class="arrow-right">
+                <a href="#" title="Tasks"><span class="icon-tasks"></span>Tasks</a>
+                <div class="level level-1" data-level-name="Tasks">
+                    <h2>Tasks</h2>
+                    <a class="back" href="#" title="back">back</a>
+                    <ul>
+                        <li><a href="#"><span class="icon-plus"></span>Import Database</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Export Database</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Toggle Indexing</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Subscriptions</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Create Sample Data</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>CSV Import</a></li>
+                    </ul>
+                </div>
+            </li>
+            <li class="arrow-right">
+                <a href="#" title="Settings"><span class="icon-settings"></span>Settings</a>
+                <div class="level level-1" data-level-name="Settings">
+                    <h2>Settings</h2>
+                    <a class="back" href="#">back</a>
+                    <ul>
+                        <li><a href="#"><span class="icon-plus"></span>Database Settings</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Replication</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>ETL</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Custom Functions</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Studio Config</a></li>
+                    </ul>
+                </div>
+            </li>
+
+            <li class="arrow-right">
+                <a href="#" title="Stats"><span class="icon-stats"></span>Stats</a>
+                <div class="level level-1" data-level-name="Stats">
+                    <h2>Stats</h2>
+                    <a class="back" href="#" title="back">back</a>
+                    <ul>
+                        <li><a href="#"><span class="icon-plus"></span>Stats</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Indexing</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Request Tracking</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Logs</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Running Tasks</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Alerts</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Index Errors</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Replication Stats</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>User Info</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Map/Reduce Visualizer</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Debug</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Storage</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Gather Debug Info</a></li>
+                    </ul>
+                </div>
+            </li>
+
+            <li class="arrow-right">
+                <a href="#" title="Manage server"><span class="icon-manage-server"></span>Manage server</a>
+                <div class="level level-1" data-level-name="Manage server">
+                    <h2>Manage server</h2>
+                    <a class="back" href="#" title="back">back</a>
+                    <ul>
+                        <li><a href="#"><span class="icon-plus"></span>API Keys</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Windows Authentication</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Cluster</a></li>
+                        <li class="arrow-right">
+                            <a href="#"><span class="icon-plus"></span>Global Configuration</a>
+                            <div class="level level-2" data-level-name="Global Configuration">
+                                <h2>Global Configuration</h2>
+                                <a class="back" href="#">back</a>
+                                <ul>
+                                    <li><a href="#"><span class="icon-plus"></span>Periodic export</a></li>
+                                    <li><a href="#"><span class="icon-plus"></span>Cluster-wide database settings</a></li>
+                                    <li><a href="#"><span class="icon-plus"></span>Replication</a></li>
+                                    <li><a href="#"><span class="icon-plus"></span>SQL Replication</a></li>
+                                    <li><a href="#"><span class="icon-plus"></span>Quotas</a></li>
+                                    <li><a href="#"><span class="icon-plus"></span>Custom functions</a></li>
+                                    <li><a href="#"><span class="icon-plus"></span>Versioning</a></li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li><a href="#"><span class="icon-plus"></span>Server Smuggling</a></li>
+                        <li class="arrow-right">
+                            <a href="#"><span class="icon-plus"></span>Backup</a>
+                            <div class="level level-2" data-level-name="Backup">
+                                <h2>Backup</h2>
+                                <a class="back" href="#">back</a>
+                                <ul>
+                                    <li><a href="#"><span class="icon-plus"></span>Database</a></li>
+                                    <li><a href="#"><span class="icon-plus"></span>File System</a></li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li class="arrow-right">
+                            <a href="#"><span class="icon-plus"></span>Compact</a>
+                            <div class="level level-2" data-level-name="Compact">
+                                <h2>Compact</h2>
+                                <a class="back" href="#">back</a>
+                                <ul>
+                                    <li><a href="#"><span class="icon-plus"></span>Database</a></li>
+                                    <li><a href="#"><span class="icon-plus"></span>File System</a></li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li class="arrow-right">
+                            <a href="#"><span class="icon-plus"></span>Restore</a>
+                            <div class="level level-2" data-level-name="Restore">
+                                <h2>Restore</h2>
+                                <a class="back" href="#">back</a>
+                                <ul>
+                                    <li><a href="#"><span class="icon-plus"></span>Database</a></li>
+                                    <li><a href="#"><span class="icon-plus"></span>File System</a></li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li><a href="#"><span class="icon-plus"></span>Admin Logs</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Server Topology</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Traffic Watch</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>License Information</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Gather Debug Info</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>IO Test</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Disk IO Viewer</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Administrator JS Console</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Studio Config</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>To System Database</a></li>
+                    </ul>
+                </div>
+            </li>
+            <li><a href="#" title="License"><span class="icon-license"></span>License</a></li>
+        </ul>
+    </div>
+
+</nav>
+ <div id="notification-center" >
+    <div class="panel panel-success">
+        <div class="panel-body">
+            <a href="#" class="icon-cancel dismiss-notification"></a>
+            <h3>Importing success</h3>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+            <div class="text-right">
+                <a href="#" class="btn btn-sm">Details</a>
+                <a href="#" class="btn btn-sm">
+                    <i class="icon-cancel"></i>
+                    <span>Dismiss</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel panel-warning">
+        <div class="panel-body">
+            <a href="#" class="icon-cancel dismiss-notification"></a>
+            <h3>Importing failed</h3>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+            <p><span class="global-spinner spinner-xs"></span> restoring</p>
+        </div>
+    </div>
+
+    <div class="panel panel-danger">
+        <div class="panel-body">
+            <a href="#" class="icon-cancel dismiss-notification"></a>
+            <h3><span class="icon-warning"></span> Database error</h3>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+            <div class="text-right">
+                <a href="#" class="btn btn-sm">Details</a>
+                <a href="#" class="btn btn-sm">
+                    <i class="icon-cancel"></i>
+                    <span>Dismiss</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-body">
+            <a href="#" class="icon-cancel dismiss-notification"></a>
+            <h3>Importing progress</h3>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. In auctor varius sem, id tempor ex. </p>
+            <div class="progress">
+                <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="70"
+                aria-valuemin="0" aria-valuemax="100" style="width:70%">
+                <span class="sr-only">70% Complete</span>
+            </div>
+        </div>
+        <div class="text-right">
+            <a href="#" class="btn btn-sm btn-default">Details</a>
+            <a href="#" class="btn btn-sm btn-danger">
+                <i class="icon-cancel"></i>
+                <span>Cancel</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="panel-body">
+        <a href="#" class="icon-cancel dismiss-notification"></a>
+        <h3 class="text-warning"><span class="icon-database"></span> Your storage is full</h3>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. In auctor varius sem, id tempor ex. Nam hendrerit ultrices imperdiet. Ut metus nisl, posuere a mi et, lobortis commodo quam. Praesent a tortor a ante ultrices tempor. Nullam mattis nisl nisl, consectetur hendrerit tellus pellentesque id.</p>
+    </div>
+</div>
+</div>
+
+
+    <div class="container-fluid content-container">
+        <div class="content-container-margin">
+            <div class="indexesTerms">
+                <h2>Index terms for
+                    <span class="indexName text-primary">Persons/StuffByColorAndAge</span>
+                </h2>
+
+                <div class="panel field" >
+                    <div class="panel-header bar padding padding-sm" >
+                        <i class="icon-arrow-right"></i>
+                        <h3 class="text-primary">
+                            Color
+                
+                        </h3>
+                        <span class="badge pull-right">
+                            13 loaded
+                        </span>
+                    </div>
+                
+                    <div class="collapsible collapse">
+                        <div class="field-terms panel-body" >
+                            <ul class="list-unstyled row">
+                                <li class="col-sm-3">
+                                    <span>
+                                        orange
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        olive
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        ivory
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        blue
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        red
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        indigo
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        indigo
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        maroon
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        green
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        lime
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        purple
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        turquoise
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        plum
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        maroon
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        blue
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        silver
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        cyan
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        purple
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        sky blue
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        ivory
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        violet
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        salmon
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        white
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        magenta
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        white
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        mint green
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        magenta
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        mint green
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        violet
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        yellow
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        silver
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        black
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        magenta
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        lime
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        red
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        black
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        plum
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        blue
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        ivory
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        green
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        gold
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        olive
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        plum
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        lime
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        tan
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        gold
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        turquoise
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        plum
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        violet
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        lavender
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        white
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        tan
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        silver
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        black
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        black
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        tan
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        silver
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        cyan
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        magenta
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        magenta
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        yellow
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        red
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        orchid
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        salmon
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        cyan
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        salmon
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        white
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        pink
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        silver
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        magenta
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        magenta
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        purple
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        silver
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        ivory
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        violet
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        azure
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        tan
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        olive
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        gold
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        purple
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        teal
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        fuchsia
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        green
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        salmon
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        ivory
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        salmon
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        plum
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        mint green
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        mint green
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        silver
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        violet
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        cyan
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        teal
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        green
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        azure
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        black
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        mint green
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        gold
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        salmon
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        pink
+                                    </span>
+                                </li>
+                            </ul>
+                            <div class="loadMore">
+                                <div class="row ">
+                                    <div class="col-sm-12 text-center">
+                                        <button class="btn btn-primary btn-block">
+                                            <i class="icon-arrow-filled-down"></i>
+                                            <span></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel field" >
+                    <div class="panel-header bar padding padding-sm" >
+                        <i class="icon-arrow-right"></i>
+                        <h3 class="text-primary">
+                            Name
+                
+                        </h3>
+                        <span class="badge pull-right">
+                            99 loaded
+                        </span>
+                    </div>
+                
+                    <div class="collapsible collapse">
+                        <div class="field-terms panel-body" >
+                            <ul class="list-unstyled row">
+                                <li class="col-sm-3">
+                                    <span>
+                                        Austyn Hamill
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Chelsey Lebsack
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Lucius O&#x27;Hara
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Luz Ryan
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Roel Ziemann
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Elody Nolan
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Eldred Hackett
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Alek Stiedemann
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Mary Funk
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Lexi Gutkowski
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Grady Rath
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Wade Homenick
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Enrique Kuvalis
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Brett Zboncak
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Bernie Nienow
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Fae Gibson
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Titus Gutmann
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Freida Wilkinson
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Ervin Miller
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Neva Heidenreich
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Elena Dach
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Domenick Hickle
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Katlynn Schamberger
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Joshuah Sporer
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Laurie Morar
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Alexandrea Beer
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Fabian Schmitt
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Raquel Grant
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Karine Upton
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Brad Farrell
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        General Morar
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Rex Friesen
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Wilhelmine Medhurst
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Lauryn Brown
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Gunner Bernhard
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Isabella Gutkowski
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Dangelo Pagac
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Dena Okuneva
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Shayne Lynch
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Stanley Buckridge
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Jimmy Maggio
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Janick Fritsch
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Zora McLaughlin
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Eliane Farrell
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Amparo Kovacek
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Vanessa Balistreri
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Hilda Lynch
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Cullen Heaney
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Maxie Runolfsdottir
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Carolina Ratke
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Marjorie Stracke
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Jeramie Herzog
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Ellen Murphy
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Bessie Jast
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Richmond Kuhn
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Monserrat Reichel
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Stanley Stamm
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Keon Murray
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Bennie Lemke
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Cara Schumm
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Kendra Barrows
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Forrest Crist
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Deion Windler
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Herta Lakin
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Wilton Hansen
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Maxime Bernhard
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Adalberto Gerlach
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Lavonne Rosenbaum
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Cortez Haag
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Emerson Kuvalis
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Jeramie Paucek
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Laurie Rolfson
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Eva Schaden
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Lydia Cruickshank
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Deshaun Witting
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Eliseo Bednar
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Angie Kihn
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Lela Jones
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Maddison Kling
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Serenity Jenkins
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Percy Hodkiewicz
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Felicia Parisian
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Jazmyn Hartmann
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Berenice Keeling
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Telly Wuckert
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Serena Walker
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Katlyn Prosacco
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Efren Treutel
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Alvis Brown
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Jordy Denesik
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Fredy Olson
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Hayden Emmerich
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Colt Jacobi
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Naomi Steuber
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Ashlynn Gutmann
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Joanny McKenzie
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Josiane Nitzsche
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Albertha Hansen
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Orville Hagenes
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        Justus Rippin
+                                    </span>
+                                </li>
+                            </ul>
+                            <div class="loadMore">
+                                <div class="row ">
+                                    <div class="col-sm-12 text-center">
+                                        <button class="btn btn-primary btn-block">
+                                            <i class="icon-arrow-filled-down"></i>
+                                            <span></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel field" >
+                    <div class="panel-header bar padding padding-sm" >
+                        <i class="icon-arrow-right"></i>
+                        <h3 class="text-primary">
+                            __documentID
+                
+                        </h3>
+                        <span class="badge pull-right">
+                            10 loaded
+                        </span>
+                    </div>
+                
+                    <div class="collapsible collapse">
+                        <div class="field-terms panel-body" >
+                            <ul class="list-unstyled row">
+                                <li class="col-sm-3">
+                                    <span>
+                                        46112
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        10335
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        46360
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        30334
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        65177
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        37285
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        8787
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        57264
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        8860
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        83007
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        61555
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        47057
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        92764
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        1457
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        6940
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        7580
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        83071
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        32315
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        79216
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        55844
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        62875
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        15487
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        59924
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        57497
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        52619
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        97537
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        99357
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        53713
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        8869
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        40684
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        73034
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        26079
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        31637
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        47789
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        41401
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        54089
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        67862
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        64289
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        6717
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        76792
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        2547
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        86744
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        37597
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        78788
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        95598
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        33091
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        30825
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        75613
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        62016
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        70953
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        39399
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        12071
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        76750
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        54872
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        90800
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        1361
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        39370
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        63055
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        29716
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        25300
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        64169
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        31484
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        82205
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        3694
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        6405
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        52716
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        2532
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        81915
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        9108
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        41771
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        65483
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        29311
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        55570
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        38457
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        47055
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        47864
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        36486
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        95653
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        94690
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        5514
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        65978
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        52086
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        29343
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        36088
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        32573
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        14782
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        74289
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        70575
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        21403
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        37344
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        54283
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        68698
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        84732
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        63657
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        13797
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        94275
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        20698
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        6482
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        93937
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        98382
+                                    </span>
+                                </li>
+                            </ul>
+                            <div class="loadMore">
+                                <div class="row ">
+                                    <div class="col-sm-12 text-center">
+                                        <button class="btn btn-primary btn-block">
+                                            <i class="icon-arrow-filled-down"></i>
+                                            <span></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel field" >
+                    <div class="panel-header bar padding padding-sm" >
+                        <i class="icon-arrow-right"></i>
+                        <h3 class="text-primary">
+                            Age
+                
+                        </h3>
+                        <span class="badge pull-right">
+                            120 loaded
+                        </span>
+                    </div>
+                
+                    <div class="collapsible collapse">
+                        <div class="field-terms panel-body" >
+                            <ul class="list-unstyled row">
+                                <li class="col-sm-3">
+                                    <span>
+                                        61987
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        78633
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        82085
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        16491
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        30202
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        27962
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        15476
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        40927
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        11651
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        11601
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        26256
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        52678
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        85532
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        56818
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        93642
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        59502
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        69720
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        99401
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        93077
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        72874
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        11154
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        70455
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        25276
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        27900
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        83118
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        87944
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        73557
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        39714
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        76196
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        17954
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        50645
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        26497
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        23965
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        24154
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        48235
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        20916
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        82888
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        11731
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        30835
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        2731
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        26685
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        83816
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        96712
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        40047
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        24123
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        52712
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        10610
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        2694
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        52290
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        54402
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        40135
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        94117
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        92389
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        84918
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        66538
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        97740
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        40804
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        33082
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        11615
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        74847
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        13769
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        5989
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        24883
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        38153
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        72404
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        24092
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        45573
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        38145
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        6925
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        2790
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        53215
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        55536
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        83247
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        70865
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        91366
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        16493
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        67336
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        5924
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        95419
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        25805
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        67104
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        54719
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        47716
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        80659
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        27476
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        34409
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        74977
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        95763
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        79858
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        82764
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        73828
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        98854
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        37900
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        74928
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        8212
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        88549
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        4140
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        84375
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        23487
+                                    </span>
+                                </li>
+                                <li class="col-sm-3">
+                                    <span>
+                                        58854
+                                    </span>
+                                </li>
+                            </ul>
+                            <div class="loadMore">
+                                <div class="row ">
+                                    <div class="col-sm-12 text-center">
+                                        <button class="btn btn-primary btn-block">
+                                            <i class="icon-arrow-filled-down"></i>
+                                            <span></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="./js/setup.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Faker/3.1.0/faker.min.js" ></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.5/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script>
+        var editor = ace.edit("docEditor");
+        editor.setTheme("ace/theme/pastel_on_dark");
+        editor.getSession().setMode("ace/mode/json");
+    
+    </script>
+
+    <script>
+    $('.field .bar').on('click', function open(evnt) {
+            $(this).parent()
+            .toggleClass('open')
+            .find('.collapsible')
+            .collapse('toggle');
+    });
+
+    $('.loadMore .btn').click('click', function () {
+        $(this).toggleClass('btn-spinner');
+    });
+    </script>
+</body>
+
+</html>
