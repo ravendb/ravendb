@@ -1323,7 +1323,7 @@ mark,
   text-transform: capitalize;
 }
 .text-muted {
-  color: #a9adad;
+  color: #686f6f;
 }
 .text-primary {
   color: #ff5500;
@@ -2430,7 +2430,7 @@ table {
 caption {
   padding-top: 8px;
   padding-bottom: 8px;
-  color: #a9adad;
+  color: #686f6f;
   text-align: left;
 }
 th {

@@ -1,28 +1,23 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import transformer = require("models/database/index/transformer");
+import endpoints = require("endpoints");
 
 class saveTransformerLockModeCommand extends commandBase {
 
-    /*
-     * @param lockMode Should be either "Unlock", "LockedIngore", or "LockedError".
-    */
-    constructor(private transformerName: string, private lockMode: string, private db: database) {
+    constructor(private transformers: Array<transformer>, private lockMode: Raven.Abstractions.Indexing.TransformerLockMode, private db: database) {
         super();
     }
 
-    execute(): JQueryPromise<any> {
-        this.reportInfo("Saving " + this.transformerName + "...");
-        var args = {
-            op: "lockModeChange",
-            mode: this.lockMode
+    execute(): JQueryPromise<void> {
+        const args = {
+            mode: this.lockMode,
+            name: this.transformers.map(x => x.name())
         };
         
-        var url = "/transformers/" + this.transformerName + this.urlEncodeArgs(args);//TODO: use endpoints
-        var saveTask = this.post(url, JSON.stringify(args), this.db, { dataType: 'text' });
-        saveTask.done(() => this.reportSuccess("Saved " + this.transformerName));
-        saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save this " + this.transformerName, response.responseText));
-
-        return saveTask;
+        const url = endpoints.databases.transformer.transformersSetLock + this.urlEncodeArgs(args);
+        return this.post(url, JSON.stringify(args), this.db, { dataType: 'text' })
+            .fail((response: JQueryXHR) => this.reportError("Failed to set transformer lock mode", response.responseText));
     }
 }
 

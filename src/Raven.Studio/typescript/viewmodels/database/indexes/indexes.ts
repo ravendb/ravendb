@@ -6,16 +6,14 @@ import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/database/indexes/resetIndexConfirm");
 import changeSubscription = require("common/changeSubscription");
 import changesContext = require("common/changesContext");
-import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
-import indexesAndTransformersClipboardDialog = require("viewmodels/database/indexes/indexesAndTransformersClipboardDialog");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 import forceIndexReplace = require("commands/database/index/forceIndexReplace");
 import saveIndexPriorityCommand = require("commands/database/index/saveIndexPriorityCommand");
-import indexLockSelectedConfirm = require("viewmodels/database/indexes/indexLockSelectedConfirm");
-import getIndexStatsCommand = require("commands/database/index/getIndexStatsCommand");
+import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
+import getIndexesStatusCommand = require("commands/database/index/getIndexesStatusCommand");
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 
 type indexGroup = {
@@ -34,7 +32,12 @@ class indexes extends viewModelBase {
     selectedIndexesName = ko.observableArray<string>();
     indexesSelectionState: KnockoutComputed<checkbox>;
 
-    indexingEnabled = ko.observable<boolean>(true); //TODO: populate this value from server
+    globalStartStopInProgress = ko.observable<boolean>(false);
+    globalLockChangesInProgress = ko.observable<boolean>(false);
+    localPriorityInProgress = ko.observableArray<string>([]);
+    localLockChangesInProgress = ko.observableArray<string>([]);
+
+    indexingEnabled = ko.observable<boolean>(true);
 
     resetsInProgress = new Set<string>();
 
@@ -103,21 +106,33 @@ class indexes extends viewModelBase {
     }
 
     private fetchIndexes(): JQueryPromise<void> {
-        const statsTask = new getIndexStatsCommand(this.activeDatabase())
+        const statsTask = new getIndexesStatsCommand(this.activeDatabase())
+            .execute();
+
+        const statusTask = new getIndexesStatusCommand(this.activeDatabase())
             .execute();
 
         const replacementTask = new getPendingIndexReplacementsCommand(this.activeDatabase()).execute(); //TODO: this is not working yet!
 
-        return $.when<any>(statsTask, replacementTask)
-            .done(([stats]: [Array<Raven.Client.Data.Indexes.IndexStats>], [replacements]: [indexReplaceDocument[]]) => this.processData(stats, replacements));
+        return $.when<any>(statsTask, replacementTask, statusTask)
+            .done(([stats]: [Array<Raven.Client.Data.Indexes.IndexStats>], [replacements]: [indexReplaceDocument[]], [statuses]: [Raven.Client.Data.Indexes.IndexingStatus]) => this.processData(stats, replacements, statuses));
     }
 
-    processData(stats: Array<Raven.Client.Data.Indexes.IndexStats>, replacements: indexReplaceDocument[]) {
+    processData(stats: Array<Raven.Client.Data.Indexes.IndexStats>, replacements: indexReplaceDocument[], statuses: Raven.Client.Data.Indexes.IndexingStatus) {
         //TODO: handle replacements
+
+        const pausedStatus = "Paused" as Raven.Client.Data.Indexes.IndexRunningStatus;
+
+        this.indexingEnabled(statuses.Status !== pausedStatus);
 
         stats
             .map(i => new index(i))
-            .forEach(i => this.putIndexIntoGroups(i));
+            .forEach(i => {
+                const paused = !!statuses.Indexes.find(x => x.Name === i.name && x.Status === pausedStatus);
+                i.pausedUntilRestart(paused);
+                this.putIndexIntoGroups(i);
+            });
+                 
     }
 
     private putIndexIntoGroups(i: index): void {
@@ -144,6 +159,7 @@ class indexes extends viewModelBase {
 
     private filterIndexes() {
         const filterLower = this.searchText().toLowerCase();
+        this.selectedIndexesName([]);
         this.indexGroups().forEach(indexGroup => {
             var hasAnyInGroup = false;
             indexGroup.indexes().forEach(index => {
@@ -156,14 +172,6 @@ class indexes extends viewModelBase {
 
             indexGroup.groupHidden(!hasAnyInGroup);
         });
-    }
-
-    copyIndex(i: index) {
-        app.showDialog(new copyIndexDialog(i.name, this.activeDatabase(), false));
-    }
-
-    copySelectedIndexes() {
-        alert("implement me!"); //TODO:
     }
 
     resetIndex(indexToReset: index) {
@@ -252,13 +260,13 @@ class indexes extends viewModelBase {
     }
 
     private updateIndexLockMode(i: index, newLockMode: Raven.Abstractions.Indexing.IndexLockMode) {
-        const originalLockMode = i.lockMode();
-        if (originalLockMode !== newLockMode) {
-            i.lockMode(newLockMode);
+        if (i.lockMode() !== newLockMode) {
+            this.localLockChangesInProgress.push(i.name);
 
-            new saveIndexLockModeCommand(i, newLockMode, this.activeDatabase())
+            new saveIndexLockModeCommand([i], newLockMode, this.activeDatabase())
                 .execute()
-                .fail(() => i.lockMode(originalLockMode));
+                .done(() => i.lockMode(newLockMode))
+                .always(() => this.localLockChangesInProgress.remove(i.name));
         }
     }
 
@@ -281,11 +289,12 @@ class indexes extends viewModelBase {
     private setIndexPriority(idx: index, newPriority: Raven.Client.Data.Indexes.IndexingPriority) {
         const originalPriority = idx.priority();
         if (originalPriority !== newPriority) {
-            idx.priority(newPriority);
+            this.localPriorityInProgress.push(idx.name);
 
             new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
                 .execute()
-                .fail(() => idx.priority(originalPriority));
+                .done(() => idx.priority(newPriority))
+                .always(() => this.localPriorityInProgress.remove(idx.name));
         }
     }
 
@@ -324,60 +333,64 @@ class indexes extends viewModelBase {
         if (this.lockModeCommon() === lockModeString)
             return;
 
-        const lockModeTitle = `Do you want to ${lockModeStrForTitle} selected indexes?`;
+        this.confirmationMessage("Are you sure?", `Do you want to ${lockModeStrForTitle} selected indexes?`)
+            .done(can => {
+                if (can) {
+                    this.globalLockChangesInProgress(true);
 
-        const indexLockAllVm = new indexLockSelectedConfirm(lockModeString, this.activeDatabase(), this.getSelectedIndexes(), lockModeTitle);
-        app.showDialog(indexLockAllVm);
+                    const indexes = this.getSelectedIndexes();
+
+                    new saveIndexLockModeCommand(indexes, lockModeString, this.activeDatabase())
+                        .execute()
+                        .done(() => indexes.forEach(i => i.lockMode(lockModeString)))
+                        .always(() => this.globalLockChangesInProgress(false));
+                }
+            });
     }
 
     deleteSelectedIndexes() {
         this.promptDeleteIndexes(this.getSelectedIndexes());
     }
 
-    pasteIndex() { //TODO: do we need this method in this class?
-        app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
-    }
-
-    copyIndexesAndTransformers() {//TODO: do we need this method in this class?
-        app.showDialog(new indexesAndTransformersClipboardDialog(this.activeDatabase(), false));
-    }
-
-    pasteIndexesAndTransformers() {//TODO: do we need this method in this class?
-        var dialog = new indexesAndTransformersClipboardDialog(this.activeDatabase(), true);
-        app.showDialog(dialog);
-        dialog.pasteDeferred.done((summary: string) => {
-            this.confirmationMessage("Indexes And Transformers Paste Summary", summary, ['Ok']);
-        });
-    }
-
     startIndexing(): void {
-        this.indexingEnabled(true);
+        this.globalStartStopInProgress(true);
         new toggleIndexingCommand(true, this.activeDatabase())
             .execute()
-            .fail(() => this.indexingEnabled(false));
+            .done(() => this.indexingEnabled(true))
+            .always(() => {
+                this.globalStartStopInProgress(false);
+                this.fetchIndexes();
+            });
     }
 
     stopIndexing() {
-        this.indexingEnabled(false);
+        this.globalStartStopInProgress(true);
         new toggleIndexingCommand(false, this.activeDatabase())
             .execute()
-            .fail(() => this.indexingEnabled(true));
+            .done(() => this.indexingEnabled(false))
+            .always(() => {
+                this.globalStartStopInProgress(false);
+                this.fetchIndexes();
+            });
     }
 
     resumeIndexing(idx: index) {
-        idx.pausedUntilRestart(false);
+        this.localPriorityInProgress.push(idx.name);
+
         new toggleIndexingCommand(true, this.activeDatabase(), { name: [idx.name] })
             .execute()
-            .fail(() => idx.pausedUntilRestart(true));
+            .done(() => idx.pausedUntilRestart(false))
+            .always(() => this.localPriorityInProgress.remove(idx.name));
     }
 
     disableUntilRestart(idx: index) {
-        idx.pausedUntilRestart(true);
+        this.localPriorityInProgress.push(idx.name);
+
         new toggleIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
             .execute()
-            .fail(() => idx.pausedUntilRestart(false));
+            .done(() => idx.pausedUntilRestart(true))
+            .always(() => this.localPriorityInProgress.remove(idx.name));
     }
-
 
     toggleSelectAll() {
         const selectedIndexesCount = this.selectedIndexesName().length;
@@ -385,8 +398,18 @@ class indexes extends viewModelBase {
         if (selectedIndexesCount > 0) {
             this.selectedIndexesName([]);
         } else {
-            const allIndexNames = this.getAllIndexes().map(idx => idx.name);
-            this.selectedIndexesName(allIndexNames);
+            const namesToSelect = [] as Array<string>;
+
+            this.indexGroups().forEach(indexGroup => {
+                if (!indexGroup.groupHidden()) {
+                    indexGroup.indexes().forEach(index => {
+                        if (!index.filteredOut() && !namesToSelect.contains(index.name)) {
+                            namesToSelect.push(index.name);
+                        }
+                    });
+                }
+            });
+            this.selectedIndexesName(namesToSelect);
         }
     }
 }

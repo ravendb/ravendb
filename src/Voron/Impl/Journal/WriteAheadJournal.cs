@@ -80,6 +80,8 @@ namespace Voron.Impl.Journal
 
         private JournalFile NextFile(int numberOfPages = 1)
         {
+            _env.ForceSyncDataFile();
+
             _journalIndex++;
 
             var now = DateTime.UtcNow;
@@ -536,6 +538,8 @@ namespace Voron.Impl.Journal
                         if (tryEnterReadLock)
                             _waj._env.FlushInProgressLock.ExitWriteLock();
                     }
+
+                    _waj._env.QueueForSyncDataFile();
                 }
                 finally
                 {

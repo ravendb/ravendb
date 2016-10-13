@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes
             return new IIndexingWork[]
             {
                 new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, null),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, null, DocumentDatabase.Configuration.Indexing)
             };
         }
 
@@ -46,11 +46,14 @@ namespace Raven.Server.Documents.Indexes
         {
             EnsureValidStats(stats);
 
+            bool mustDelete;
             using (_bloomStats?.Start() ?? (_bloomStats = stats.For(IndexingOperation.Map.Bloom)))
             {
-                if (_filter.Add(key) == false)
-                    writer.Delete(key, _bloomStats);
+                mustDelete = _filter.Add(key) == false;
             }
+
+            if (mustDelete)
+                writer.Delete(key, stats);
 
             var numberOfOutputs = 0;
             foreach (var mapResult in mapResults)

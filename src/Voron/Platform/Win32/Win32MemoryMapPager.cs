@@ -250,7 +250,7 @@ namespace Voron.Platform.Win32
                 return null;
             }
 
-            NativeMemory.RegisterFileMapping(_fileInfo.FullName, allocationSize);
+            NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(newMappingBaseAddress), allocationSize);
 
             return new PagerState.AllocationInfo
             {
@@ -297,7 +297,7 @@ namespace Voron.Platform.Win32
                 throw new OutOfMemoryException(errorMessage, innerException);
             }
 
-            NativeMemory.RegisterFileMapping(_fileInfo.FullName, _fileStream.Length);
+            NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(startingBaseAddressPtr), _fileStream.Length);
 
             var allocationInfo = new PagerState.AllocationInfo
             {
@@ -373,7 +373,7 @@ namespace Voron.Platform.Win32
         {
             if (Win32MemoryMapNativeMethods.UnmapViewOfFile(baseAddress) == false)
                 throw new Win32Exception();
-            NativeMemory.UnregisterFileMapping(_fileInfo.FullName, size);
+            NativeMemory.UnregisterFileMapping(_fileInfo.FullName, new IntPtr(baseAddress), size);
         }
 
         public override void MaybePrefetchMemory(List<long> pagesToPrefetch)

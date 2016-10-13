@@ -37,12 +37,14 @@ class index {
     type: Raven.Client.Data.Indexes.IndexType;
 
     filteredOut = ko.observable<boolean>(false); //UI only property
+    badgeClass: KnockoutComputed<string>;
     editUrl: KnockoutComputed<string>;
     queryUrl: KnockoutComputed<string>;
 
     isNormalPriority: KnockoutComputed<boolean>;
     isDisabled: KnockoutComputed<boolean>;
     isIdle: KnockoutComputed<boolean>;
+    isFaulty: KnockoutComputed<boolean>;
     pausedUntilRestart = ko.observable<boolean>();
     canBePaused: KnockoutComputed<boolean>;
     canBeResumed: KnockoutComputed<boolean>;
@@ -70,9 +72,23 @@ class index {
         this.reduceErrors = dto.ReduceErrors;
         this.reduceSuccesses = dto.ReduceSuccesses;
         this.type = dto.Type;
-        //TODO: this.pausedUntilRestart =  is paused
 
         this.initializeObservables();
+    }
+
+    private getTypeForUI() {
+        switch (this.type) {
+            case "Map":
+                return "Map";
+            case "MapReduce":
+                return "Map-Reduce";
+            case "AutoMap":
+                return "Auto Map";
+            case "AutoMapReduce":
+                return "Auto Map-Reduce";
+            default:
+                return this.type;
+        }
     }
 
     private initializeObservables() {
@@ -92,6 +108,37 @@ class index {
             const disabled = this.isDisabled();
             const paused = this.pausedUntilRestart();
             return !disabled && paused;
+        });
+
+        this.isFaulty = ko.pureComputed(() => {
+            const faultyType = "Faulty" as Raven.Client.Data.Indexes.IndexType;
+            return this.type === faultyType;
+        });
+
+        this.badgeClass = ko.pureComputed(() => {
+            const priority = this.priority();
+
+            if (this.isFaulty()) {
+                return "state-faulty";
+            }
+
+            if (this.pausedUntilRestart()) {
+                return "state-paused";
+            }
+            
+            if (priority.contains("Disabled")) {
+                return "state-disabled";
+            }
+
+            if (priority.contains("Idle")) {
+                return "state-idle";
+            }
+
+            if (priority.contains("Error")) {
+                return "state-error";
+            }
+
+            return "state-normal";
         });
     }
 
@@ -115,21 +162,6 @@ class index {
         }
     }
 
-    /**
-     * describes index priority/type
-     */
-    getIndexBadgeName(): string {
-        const faultyType = "Faulty" as Raven.Client.Data.Indexes.IndexType;
-        if (this.type === faultyType) {
-            return faultyType;
-        }
-
-        if (this.pausedUntilRestart()) {
-            return "Paused";
-        }
-
-        return this.priority();
-    }
 }
 
 export = index; 

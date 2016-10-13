@@ -55,8 +55,8 @@ namespace Raven.Server.Smuggler.Documents
                     writer.WriteComma();
                     writer.WritePropertyName(("Docs"));
                     var documents = DocumentsLimit.HasValue
-                        ? _database.DocumentsStorage.GetDocumentsAfter(context, StartDocsEtag ?? 0, 0, DocumentsLimit.Value)
-                        : _database.DocumentsStorage.GetDocumentsAfter(context, StartDocsEtag ?? 0);
+                        ? _database.DocumentsStorage.GetDocumentsFrom(context, StartDocsEtag ?? 0, 0, DocumentsLimit.Value)
+                        : _database.DocumentsStorage.GetDocumentsFrom(context, StartDocsEtag ?? 0);
                     writer.WriteStartArray();
                     bool first = true;
                     foreach (var document in documents)

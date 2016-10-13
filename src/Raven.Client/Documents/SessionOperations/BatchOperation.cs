@@ -88,11 +88,11 @@ namespace Raven.Client.Documents.SessionOperations
                 documentMetadata.OriginalValue = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
 
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, batchResult.Key);
-
-                foreach (var documentStoreListener in theListeners.StoreListeners)
+                */
+                foreach (var documentStoreListener in _session.Listeners.StoreListeners)
                 {
-                    documentStoreListener.AfterStore(batchResult.Key, entity, batchResult.Metadata);
-                }#1#*/
+                    documentStoreListener.AfterStore(key, entity, metadata);
+                }
             }
         }
     }

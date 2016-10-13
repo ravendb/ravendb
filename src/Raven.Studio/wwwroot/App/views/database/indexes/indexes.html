@@ -1,119 +1,124 @@
-<div id="indexesContainer">
-    <div class="btn-toolbar" role="toolbar" data-bind="visible: sortedGroups().length > 0">
-
-        <div class="btn-group">
-            <div class="checkbox">
-                <input id="indexes_all" class="styled" type="checkbox" data-bind="checkboxTriple: indexesSelectionState, event: { change: toggleSelectAll }" title="Select all or none">
-                <label for="indexes_all">&nbsp;</label>
+<div class="indexes">
+    <div data-bind="visible: sortedGroups().length === 0">
+        <div class="row">
+            <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+                <i class="icon-xl icon-empty-set text-muted"></i>
+                <h2 class="text-center">No indexes have been created for this database.</h2>
+                <p class="lead text-center text-muted">Go ahead and <a href="#" data-bind="attr: { href: newIndexUrl }">create one now</a>.</p>
             </div>
         </div>
-        <div class="btn-group">
-            <input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown', visible: indexGroups().length > 0" title="Search for an index (Alt+/)">
-            <button data-bind="enable: selectedIndexesName().length, click: copySelectedIndexes" class="btn btn-default">Copy</button>
-        </div>
-        <div class="btn-group">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Set lock mode to selected indexes" data-bind="enable: selectedIndexesName().length">
-                <i class="fa fa-lock fa-fw"></i>
-                Lock mode
-                <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu" role="menu">
-                <li data-bind="click: setLockModeSelectedIndexes.bind($root, 'Unlock', 'Unlock'), visible: lockModeCommon() !== 'Unlock'">
-                    <a href="#" title="Unlock selected indexes">Unlock selected</a>
-                </li>
-                <li class="divider" data-bind="visible: lockModeCommon() !== 'Unlock'"></li>
-                <li data-bind="click: setLockModeSelectedIndexes.bind($root, 'SideBySide', 'Lock Side By Side'), visible: lockModeCommon() !== 'SideBySide'">
-                    <a href="#" title="Lock (Side By Side) selected indexes">Lock (Side By Side) selected</a>
-                </li>
-                <li data-bind="click: setLockModeSelectedIndexes.bind($root, 'LockedIgnore', 'Lock'), visible: lockModeCommon() !== 'LockedIgnore'">
-                    <a href="#" title="Lock selected indexes">Lock selected</a>
-                </li>
-                <li data-bind="click: setLockModeSelectedIndexes.bind($root, 'LockedError', 'Locked Error'), visible: lockModeCommon() !== 'LockedError'">
-                    <a href="#" title="Lock (Error) selected indexes">Lock (Error) selected</a>
-                </li>
-            </ul>
-        </div>
-        <div class="btn-group">
-            <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedIndexes">
-                <i class="fa fa-trash-o"></i> Delete
-            </button>
-        </div>
-        
-        <div class="btn-group">
-            <button type="button" class="btn btn-default" data-bind="click: stopIndexing, visible: indexingEnabled()">
-                Disable indexing until restart
-            </button>
-            <button type="button" class="btn btn-default" data-bind="click: startIndexing, visible: !indexingEnabled()">
-                Resume indexing
-            </button>
-        </div>
-
     </div>
-
-    <div class="text-center" data-bind="visible: sortedGroups().length == 0">
-        <h3 class="page-header text-info">
-            <div>No indexes have been created for this database.</div>
-            <div>
-                <small>
-                    Go ahead and <a href="#" data-bind="attr: { href: newIndexUrl }">create an index</a>
-                    , <a href="#" data-bind="click: pasteIndex">paste single index</a> or <a href="#" data-bind="click: pasteIndexesAndTransformers">paste a bulk</a> of indexes and transformers definitions from JSON.
-                </small>
-            </div>
-        </h3>
-    </div>
-
-    <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="overflow: auto">
-        <div class="indexes-container panel-group index-panel" id="indexesAccordion" data-bind="foreach: sortedGroups">
-            <div class="index-group panel panel-default index-panel" data-bind="visible: !groupHidden()">
-                <div class="panel-heading">
-                    <h4 class="panel-title">
-                        <a data-toggle="collapse" data-bind="attr: { href: '#indexCollapse' + $index() }">
-                            <span data-bind="text: entityName"></span>
-                        </a>
-                    </h4>
+    <div class="clearfix" data-bind="if: sortedGroups().length">
+        <div class="pull-left">
+            <div class="form-inline">
+                <div class="checkbox checkbox-inline align-checkboxes" title="Select all or none">
+                    <input type="checkbox" class="styled" data-bind="checkboxTriple: indexesSelectionState, event: { change: toggleSelectAll }"/>
+                    <label></label>
                 </div>
-                <div class="index-group-content panel-collapse in index-panel" data-bind="attr: { id: 'indexCollapse' + $index() }">
-                    <div class="panel-body index-panel" data-bind="foreach: indexes" style="overflow: visible;">
-                        <div class="index-panel panel panel-default" data-bind="visible: !filteredOut()">
-                            <div class="panel-body">
-                                <h4 class="pull-left">
-
-                                    Badge: <span data-bind="text: getIndexBadgeName()"></span>
-
-                                    <input type="checkbox" data-bind="checked: $root.selectedIndexesName, checkedValue: name" />
-
-                                    <span data-bind="text: name"></span>
-                                    
-                                    <span data-bind="visible: isStale()">Stale</span>
-
-                                    <span data-bind="text: type"></span>
-                                    <span data-bind="text: entriesCount"></span> entires
-                                </h4>
-
-                                <div class="pull-left">
-                                    <div data-bind="template: { name: 'priority-template' }"></div>
-                                    <div data-bind="template: { name: 'lock-mode-template' }"></div>
+                <div class="input-group">
+                    <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText"/>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default dropdown-toggle" title="Set lock mode for selected indexes"
+                            data-bind="enable: selectedIndexesName().length && !globalLockChangesInProgress(), css: { 'btn-spinner': globalLockChangesInProgress() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="icon-lock"></i><span>Lock</span>
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li data-bind="click: setLockModeSelectedIndexes.bind($root, 'Unlock', 'Unlock')">
+                            <a href="#" title="Unlock selected indexes">
+                                <i class="icon-unlock"></i>
+                                <span>Unlock</span>
+                            </a>
+                        </li>
+                        <li class="divider"></li>
+                        <li data-bind="click: setLockModeSelectedIndexes.bind($root, 'LockedIgnore', 'Lock')">
+                            <a href="#" title="Lock selected indexes">
+                                <i class="icon-lock"></i>
+                                <span>Lock</span>
+                            </a>
+                        </li>
+                        <li data-bind="click: setLockModeSelectedIndexes.bind($root, 'SideBySide', 'Lock Side By Side')">
+                            <a href="#" title="Lock (Side by Side) selected indexes">
+                                <i class="icon-lock-sidebyside"></i>
+                                <span>Lock (Side by Side)</span>
+                            </a>
+                        </li>
+                        <li data-bind="click: setLockModeSelectedIndexes.bind($root, 'LockedError', 'Locked Error')">
+                            <a href="#" title="Lock (Error) selected indexes">
+                                <i class="icon-lock-error"></i>
+                                <span>Lock (Error)</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length"><i class="icon-trash"></i><span>Delete</span></button>
+            </div>
+        </div>
+        <div class="pull-right" id="toggleIndexing">
+            <button class="btn btn-warning btn-toggle disable-indexing"
+                    data-bind="click: stopIndexing, visible: indexingEnabled(), enable: !globalStartStopInProgress(), css: { 'btn-spinner': globalStartStopInProgress() }">
+                <i class="icon-pause"></i>
+                <span>Disable indexing until restart</span>
+            </button>
+            <button class="btn btn-success btn-toggle enable-indexing"
+                    data-bind="click: startIndexing, visible: !indexingEnabled(), enable: !globalStartStopInProgress(), css: { 'btn-spinner': globalStartStopInProgress() }">
+                <i class="icon-play"></i>
+                <span>Enable indexing</span>
+            </button>
+        </div>
+    </div>
+    <hr data-bind="visible: sortedGroups().length"/>
+    <div data-bind="foreach: sortedGroups">
+        <h2 data-bind="text: entityName, visible: !groupHidden()"></h2>
+        <div data-bind="foreach: indexes, visible: !groupHidden()">
+            <div class="panel" data-bind="visible: !filteredOut()">
+                <div class="padding padding-sm">
+                    <div data-bind="attr: { class: 'state ' + badgeClass() }"></div>
+                    <div class="row">
+                        <div class="col-sm-6 col-xl-4 col-flex info-container">
+                            <div class="checkbox">
+                                <input type="checkbox" class="styled" data-bind="checked: $root.selectedIndexesName, checkedValue: name">
+                                <label></label>
+                            </div>
+                            <h3 class="index-name"><a href="#" data-bind="text: name, attr: { href: queryUrl(), title: name }"></a>
+                            </h3>
+                            <div class="index-type">
+                                <span data-bind="text: getTypeForUI()"></span>
+                                &nbsp; <span data-bind="visible: isTestIndex" class="label label-warning">TEST INDEX</span>    
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container" data-bind="if: !isFaulty()">
+                            <div class="properties-item staleness" data-bind="visible: isStale()">
+                                <div class="properties-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
+                            </div>
+                            <div class="properties-item text-success staleness" data-bind="visible: !isStale()">
+                                <div class="properties-value value-only">
+                                    <i class="icon-check"></i><span>Up to date</span>
                                 </div>
-
-                                <div class="pull-right">
-                                    <a class="btn btn-default" title="Query this index" data-bind="attr: { href: queryUrl() }">
-                                        Query
-                                    </a>
-                                    <button class="btn btn-default" data-bind="click: $root.copyIndex.bind($root, $data)" title="Copy index">
-                                        <i class="fa fa-copy fa-fw"></i>
-                                    </button>
-
-                                    <a class="btn btn-default indexes-controls" data-placement="bottom" data-bind="attr: { href: editUrl() }">
-                                        <i class="fa fa-pencil"></i>
-                                    </a>
-
-                                    <button class="btn btn-default" data-bind="click: $root.resetIndex.bind($root, $data)" title="Reset the index">
-                                        <i class="fa fa-undo fa-fw"></i>
-                                    </button>
-
-                                    <button class="btn btn-danger" title="Delete the index" data-bind="click: $root.deleteIndex.bind($root)">
-                                        <i class="fa fa-trash-o fa-fw text-danger"></i>
-                                    </button>
+                            </div>
+                            <div class="properties-item entriesCount">
+                                <div class="properties-value value-only"><i class="icon-list"></i><span data-bind="text: $root.pluralize(entriesCount, 'entry', 'entries')"></span></div>
+                            </div>
+                            <div class="properties-item priority" data-bind="template: { name: 'priority-template' }">
+                            </div>
+                            <div class="properties-item mode" data-bind="template: { name: 'lock-mode-template' }">
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                            <div class="actions">
+                                <div class="btn-toolbar pull-right-sm" role="toolbar">
+                                    <div class="btn-group" role="group" data-bind="if: !isFaulty()">
+                                        <a class="btn btn-info" data-bind="attr: { href: queryUrl() }"><i class="icon-search"></i><span>Query</span></a>
+                                    </div>
+                                    <div class="btn-group" role="group" data-bind="if: !isFaulty()">
+                                        <a class="btn btn-default" data-bind="attr: { href: editUrl() }" title="Edit index"><i class="icon-edit"></i></a>
+                                        <button class="btn btn-warning" data-bind="click: $root.resetIndex.bind($root, $data)" title="Reset index"><i class="icon-reset"></i></button>
+                                    </div>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-danger" data-bind="click: $root.deleteIndex.bind($root)" title="Delete the index"><i class="icon-trash"></i></button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -121,118 +126,105 @@
                 </div>
             </div>
         </div>
-
-
     </div>
 </div>
 
 <script type="text/html" id="priority-template">
-    Priority:
-
-
-    <div class="dropdown">
-        <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+    <span class="properties-label">Priority:</span>
+    <div class="btn-group btn-group-xs">
+        <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown"
+                data-bind="css: { 'btn-spinner': $root.localPriorityInProgress().contains(name) }, enable: $root.indexingEnabled() && !$root.localPriorityInProgress().contains(name)">
             <span data-bind="visible: pausedUntilRestart()">
-                <i class="fa fa-ban fa-fw"></i>
-                Disabled until restart
+                <i class="icon-cancel"></i>
+                <span>Disabled until restart</span>
             </span>
             <span data-bind="visible: !pausedUntilRestart() && isNormalPriority()">
-                <i class="fa fa-check fa-fw"></i>
-                Normal
+                <i class="icon-check"></i>
+                <span>Normal</span>
             </span>
             <span data-bind="visible: !pausedUntilRestart() && isIdle()">
-                <i class="fa fa-arrow-down fa-fw"></i>
-                Idle
+                <i class="icon-coffee"></i>
+                <span>Idle</span>
             </span>
             <span data-bind="visible: !pausedUntilRestart() && isDisabled()">
-                <i class="fa fa-ban fa-fw"></i>
-                Disabled
+                <i class="icon-cancel"></i>
+                <span>Disabled</span>
             </span>
             <span class="caret"></span>
         </button>
         <ul class="dropdown-menu">
-            <li role="presentation">
-                <a href="#" data-bind="click: $root.normalPriority.bind($root, $data), css: { active: priority() === 'Normal' }" title="Normal">
-                    <i class="fa fa-check fa-fw"></i>
-                    Normal
+            <li>
+                <a href="#" data-bind="click: $root.normalPriority.bind($root, $data)" title="Normal">
+                    <i class="icon-check"></i><span>Normal</span>
                 </a>
             </li>
-            <li role="presentation">
-                <a href="#" data-bind="click: $root.idlePriority.bind($root, $data), css: { active: isIdle() }" title="Idle">
-                    <i class="fa fa-arrow-down fa-fw"></i>
-                    Idle
+            <li>
+                <a href="#" data-bind="click: $root.idlePriority.bind($root, $data)" title="Idle">
+                    <i class="icon-coffee"></i><span>Idle</span>
                 </a>
             </li>
-            <li role="presentation">
-                <a href="#" data-bind="click: $root.disabledPriority.bind($root, $data), css: { active: isDisabled() }" title="Disabled">
-                    <i class="fa fa-ban fa-fw"></i>
-                    Disabled
+            <li>
+                <a href="#" data-bind="click: $root.disabledPriority.bind($root, $data)" title="Disabled">
+                    <i class="icon-cancel"></i><span>Disabled</span>
                 </a>
             </li>
-            <li role="presentation" data-bind="visible: canBePaused()">
-                <a href="#" data-bind="click: $root.disableUntilRestart.bind($root, $data)" title="Disable until server restart">
-                    <i class="fa fa-ban fa-fw"></i>
-                    Disable until restart
+            <li data-bind="visible: canBePaused()">
+                <a href="#" data-bind="click: $root.disableUntilRestart.bind($root, $data)" title="Disable until restart">
+                    <i class="icon-cancel"></i><span>Disable until restart</span>
                 </a>
             </li>
-            
-            <li role="presentation" data-bind="visible: canBeResumed()">
+            <li data-bind="visible: canBeResumed()">
                 <a href="#" data-bind="click: $root.resumeIndexing.bind($root, $data)" title="Resume indexing">
-                    <i class="fa fa-check fa-fw"></i>
-                    Resume indexing
+                    <i class="icon-check"></i><span>Resume indexing</span>
                 </a>
             </li>
         </ul>
     </div>
-
 </script>
 
 <script type="text/html" id="lock-mode-template">
-    Status:
-
-    <div class="dropdown">
-        <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+    <span class="properties-label">Mode:</span>
+    <div class="btn-group btn-group-xs">
+        <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown" 
+                data-bind="css: { 'btn-spinner': $root.localLockChangesInProgress().contains(name) }, enable: !$root.localLockChangesInProgress().contains(name)">
             <span data-bind="visible: lockMode() === 'Unlock'">
-                <i class="fa fa-unlock fa-fw"></i>
-                Unlocked
+                <i class="icon-unlock"></i><span>Unlock</span>
             </span>
             <span data-bind="visible: lockMode() === 'SideBySide'">
-                <i class="fa fa-lock fa-fw"></i>
-                Locked (side-by-side)
+                <i class="icon-lock-sidebyside"></i><span>Locked (side-by-side)</span>
             </span>
             <span data-bind="visible: lockMode() === 'LockedIgnore'">
-                <i class="fa fa-lock fa-fw"></i>
-                Locked
+                <i class="icon-lock"></i><span>Locked</span>
             </span>
             <span data-bind="visible: lockMode() === 'LockedError'">
-                <i class="fa fa-lock text-danger fa-fw"></i>
-                Locked (Error)
+                <i class="icon-lock-error"></i><span>Locked (Error)</span>
             </span>
             <span class="caret"></span>
         </button>
         <ul class="dropdown-menu">
-            <li role="presentation">
-                <a href="#" data-bind="click: $root.unlockIndex.bind($root, $data), css: { active: lockMode() === 'Unlock' }" title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
-                    <i class="fa fa-unlock fa-fw"></i>
-                    Unlocked
+            <li>
+                <a href="#" data-bind="click: $root.unlockIndex.bind($root, $data)" title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
+                    <i class="icon-unlock"></i>
+                    <span>Unlock</span>
                 </a>
             </li>
-            <li role="presentation">
-                <a href="#" data-bind="click: $root.lockSideBySide.bind($root, $data), css: { active: lockMode() === 'SideBySide' }" title="Side-by-side: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored. Index be can only updated via side-by-side index.">
-                    <i class="fa fa-lock fa-fw"></i>
-                    Locked (side-by-side)
+            <li class="divider"></li>
+            <li>
+                <a href="#" data-bind="click: $root.lockIndex.bind($root, $data)" title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored.">
+                    <i class="icon-lock"></i>
+                    <span>Lock</span>
                 </a>
             </li>
-            <li role="presentation">
-                <a href="#" data-bind="click: $root.lockIndex.bind($root, $data), css: { active: lockMode() === 'LockedIgnore' }" title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored.">
-                    <i class="fa fa-lock fa-fw"></i>
-                    Locked
+            <li>
+                <a href="#" data-bind="click: $root.lockSideBySide.bind($root, $data)" title="Side-by-side: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored. Index be can only updated via side-by-side index.">
+                    <i class="icon-lock-sidebyside"></i>
+                    <span>Lock (Side by Side)</span>
                 </a>
             </li>
-            <li role="presentation">
-                <a href="#" data-bind="click: $root.lockErrorIndex.bind($root, $data), css: { active: lockMode() === 'LockedError' }" title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it.">
-                    <i class="fa fa-lock text-danger fa-fw"></i>
-                    Locked (Error)
+            <li>
+                <a href="#" data-bind="click: $root.lockErrorIndex.bind($root, $data)" title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it.">
+                    <i class="icon-lock-error"></i>
+                    <span>Lock (Error)</span>
                 </a>
             </li>
         </ul>

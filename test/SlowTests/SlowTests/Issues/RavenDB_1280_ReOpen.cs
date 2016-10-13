@@ -22,7 +22,7 @@ namespace SlowTests.SlowTests.Issues
         {
             const int iterations = 8000;
             var sp = Stopwatch.StartNew();
-            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfDocumentsToFetchForMap)] = "50"))
+            using (var store = GetDocumentStore())
             {
                 new EmailIndex().Execute(store);
 

@@ -51,6 +51,13 @@
     }
 </style>
 
+<button class="btn btn-default" data-bind="click: exportAsJson">Export</button>
+
+<span style="margin-left: 30px">
+    Import: <input style="display: inline" id="importFilePicker" type="file" data-bind="event: { change: fileSelected }" />
+</span>
+
+
 <section id="indexingPerformance" style="position: relative">
     <section id="metricsContainer" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
         <svg id="indexPerformanceGraph" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>

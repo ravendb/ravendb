@@ -42,6 +42,16 @@ namespace Voron
             return flusher;
         });
 
+        public void QueueForSyncDataFile()
+        {
+            GlobalFlusher.Value.MaybeSyncEnvironment(this);
+        }
+
+        public void ForceSyncDataFile()
+        {
+            GlobalFlusher.Value.ForceFlushAndSyncEnvironment(this);
+        }
+
         /// <summary>
         /// This is the shared storage where we are going to store all the static constants for names. 
         /// WARNING: This context will never be released, so only static constants should be added here.
@@ -406,6 +416,7 @@ namespace Voron
                             _cancellationTokenSource = new CancellationTokenSource();
                             Task.Run(IdleFlushTimer);
                             GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                            ForceSyncDataFile();
                         }
                     }
                 }

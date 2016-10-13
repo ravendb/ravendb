@@ -25,22 +25,6 @@
         }
     }
 
-    #toggleIndexing {
-        .enable-indexing {
-            display: none;
-        }
-
-        &.disable {
-            .disable-indexing {
-                display: none;
-            }
-
-            .enable-indexing {
-                display: inline-block;
-            }
-        }
-    }
-
     .inline-block {
         display: inline-block;
     }
@@ -60,7 +44,7 @@
 
             @media (min-width:@screen-sm) {
                 .actions {
-                    .vcenter;
+                    .vcenter-buttons;
                     width: 100%;
                     padding: 0 15px;
                 }
@@ -140,14 +124,6 @@
                 }
             }
 
-            &.state-abandoned {
-                background-color: @brand-info-dark;
-
-                &:before {
-                    content: 'ABANDONED';
-                }
-            }
-
             &.state-normal {
                 background-color: @brand-success-dark;
 
@@ -156,11 +132,27 @@
                 }
             }
 
+            &.state-idle {
+                background-color: @brand-warning-dark;
+
+                &:before {
+                    content: 'IDLE';
+                }
+            }
+
             &.state-disabled {
                 background-color: @brand-warning-dark;
 
                 &:before {
                     content: 'DISABLED';
+                }
+            }
+
+            &.state-paused {
+                background-color: @brand-warning-dark;
+
+                &:before {
+                    content: 'PAUSED';
                 }
             }
         }
@@ -207,34 +199,18 @@
         @media (min-width:@screen-xl) {
             width:50%;
 
-            /*
-            &:nth-of-type(1) {
-                order:1;
-            }
-            &:nth-of-type(2) {
-                order:3;
-            }
-            &:nth-of-type(3) {
-                order:4;
-            }
-            &:nth-of-type(4) {
-                order:2;
-            }*/
-
-            
-            &:nth-of-type(1) {
+            &.staleness {
                 order:2;
             }
-            &:nth-of-type(2) {
+            &.entriesCount {
                 order:4;
             }
-            &:nth-of-type(3) {
+            &.priority {
                 order:1;
             }
-            &:nth-of-type(4) {
+            &.mode {
                 order:3;
             }
-            
         }
 
         &.text-success {

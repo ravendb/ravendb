@@ -2,7 +2,8 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import app = require("durandal/app");
 import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 import getIndexesPerformance = require("commands/database/debug/getIndexesPerformance");
-import getIndexStatsCommand = require("commands/database/index/getIndexStatsCommand");
+import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
+import fileDownloader = require("common/fileDownloader");
 
 class metrics extends viewModelBase { 
 
@@ -37,7 +38,7 @@ class metrics extends viewModelBase {
             .done(result => this.data = result);
 
         return perfTask.then(() => {
-            return new getIndexStatsCommand(this.activeDatabase())
+            return new getIndexesStatsCommand(this.activeDatabase())
                 .execute()
                 .done(result => {
                     this.extractCurrentlyRunning(result);
@@ -306,6 +307,57 @@ class metrics extends viewModelBase {
         app.showDialog(dialog);
     }
 
+    fileSelected() {
+        const fileInput = <HTMLInputElement>document.querySelector("#importFilePicker");
+        const self = this;
+        if (fileInput.files.length === 0) {
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function() {
+// ReSharper disable once SuspiciousThisUsage
+            self.dataImported(this.result);
+        };
+        reader.onerror = function(error: any) {
+            alert(error);
+        };
+        reader.readAsText(file);
+    }
+
+    private dataImported(result: string) {
+        const json = JSON.parse(result) as {
+            data: Raven.Client.Data.Indexes.IndexPerformanceStats[],
+            currentBatches: { [key: string]: Raven.Client.Data.Indexes.IndexingPerformanceBasicStats }
+        };
+
+        this.data = json.data;
+        this.currentBatches.clear();
+        const currentBatchesKeys = Object.keys(json.currentBatches);
+
+        currentBatchesKeys.forEach(key => {
+            this.currentBatches.set(key, json.currentBatches[key]);
+        });
+
+        this.colorScale = d3.scale.category20();
+
+        $("#indexPerformanceGraph").empty();
+        this.draw();
+    }
+
+    exportAsJson() {
+        const batches: any = {};
+        this.currentBatches.forEach((v, k) => {
+            batches[k] = v;
+        });
+
+        fileDownloader.downloadAsJson({
+            data: this.data,
+            currentBatches: batches
+        }, "perf.json", "perf");
+    }
 }
 
 export = metrics; 
+ 

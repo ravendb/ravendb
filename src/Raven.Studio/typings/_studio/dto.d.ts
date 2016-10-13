@@ -15,6 +15,10 @@ interface canActivateResultDto {
     can?: boolean;   
 }
 
+interface confirmDialogResult {
+    can: boolean;
+}
+
 type menuItemType = "separator" | "intermediate" | "leaf";
 
 interface menuItem {

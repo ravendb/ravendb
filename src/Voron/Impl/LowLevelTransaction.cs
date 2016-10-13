@@ -113,7 +113,7 @@ namespace Voron.Impl
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null )
         {
             _dataPager = env.Options.DataPager;            
-            _pageSize = this.DataPager.PageSize;
+            _pageSize = _dataPager.PageSize;
             _env = env;
             _journal = env.Journal;
             _id = id;

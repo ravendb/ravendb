@@ -408,18 +408,21 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/set-lock", "POST")]
         public Task SetLockMode()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var names = GetStringValuesQueryString("name");
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
 
             IndexLockMode mode;
             if (Enum.TryParse(modeStr, out mode) == false)
                 throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + modeStr);
 
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                throw new InvalidOperationException("There is not index with name: " + name);
+            foreach (var name in names)
+            {
+                var index = Database.IndexStore.GetIndex(name);
+                if (index == null)
+                    throw new InvalidOperationException("There is not index with name: " + name);
 
-            index.SetLock(mode);
+                index.SetLock(mode);
+            }
 
             return Task.CompletedTask;
         }
@@ -427,18 +430,21 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/set-priority", "POST")]
         public Task SetPriority()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var names = GetStringValuesQueryString("name");
             var priorityStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("priority");
 
             IndexingPriority priority;
             if (Enum.TryParse(priorityStr, out priority) == false)
                 throw new InvalidOperationException("Query string value 'priority' is not a valid priority: " + priorityStr);
 
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                throw new InvalidOperationException("There is not index with name: " + name);
+            foreach (var name in names)
+            {
+                var index = Database.IndexStore.GetIndex(name);
+                if (index == null)
+                    throw new InvalidOperationException("There is not index with name: " + name);
 
-            index.SetPriority(priority);
+                index.SetPriority(priority);
+            }
 
             return Task.CompletedTask;
         }

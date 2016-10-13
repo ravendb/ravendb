@@ -282,9 +282,9 @@ namespace Raven.Server.Documents.Replication
 
                         _parent._cts.Token.ThrowIfCancellationRequested();
 
-                        var docs = _parent._database.DocumentsStorage.GetDocumentsAfter(_context, _lastEtag + 1, 0, 1024)
+                        var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(_context, _lastEtag + 1, 0, 1024)
                             .ToList();
-                        var tombstones = _parent._database.DocumentsStorage.GetTombstonesAfter(_context, _lastEtag + 1, 0, 1024)
+                        var tombstones = _parent._database.DocumentsStorage.GetTombstonesFrom(_context, _lastEtag + 1, 0, 1024)
                             .ToList();
                         
                         long maxEtag;

@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.SqlReplication
 
         bool hadErrors;
 
-        public RelationalDatabaseWriter(DocumentDatabase database, DocumentsOperationContext context, PredefinedSqlConnection predefinedSqlConnection, SqlReplication sqlReplication) 
+        public RelationalDatabaseWriter(DocumentDatabase database, DocumentsOperationContext context, PredefinedSqlConnection predefinedSqlConnection, SqlReplication sqlReplication)
             : base(predefinedSqlConnection)
         {
             _database = database;
@@ -139,10 +139,8 @@ namespace Raven.Server.Documents.SqlReplication
             foreach (var itemToReplicate in dataForTable)
             {
                 sp.Restart();
-                using (var cmd = _connection.CreateCommand())
+                using (var cmd = CreateCommand())
                 {
-                    cmd.Transaction = _tx;
-
                     _sqlReplication.CancellationToken.ThrowIfCancellationRequested();
 
                     var sb = new StringBuilder("INSERT INTO ")
@@ -200,8 +198,9 @@ namespace Raven.Server.Documents.SqlReplication
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info("Failure to replicate changes to relational database for: " + _sqlReplication.Configuration.Name + " (doc: " + itemToReplicate.DocumentKey + " ), will continue trying." +
-                            Environment.NewLine + cmd.CommandText, e);
+                            _logger.Info(
+                                "Failure to replicate changes to relational database for: " + _sqlReplication.Configuration.Name + " (doc: " + itemToReplicate.DocumentKey + " ), will continue trying." +
+                                Environment.NewLine + cmd.CommandText, e);
                         _sqlReplication.Statistics.RecordWriteError(e, _database);
                         hadErrors = true;
                     }
@@ -226,15 +225,36 @@ namespace Raven.Server.Documents.SqlReplication
             }
         }
 
+        private DbCommand CreateCommand()
+        {
+            var cmd = _connection.CreateCommand();
+
+            try
+            {
+                cmd.Transaction = _tx;
+
+                if (_sqlReplication.Configuration.CommandTimeout.HasValue)
+                    cmd.CommandTimeout = _sqlReplication.Configuration.CommandTimeout.Value;
+                else if (_database.Configuration.SqlReplication.CommandTimeout.HasValue)
+                    cmd.CommandTimeout = (int)_database.Configuration.SqlReplication.CommandTimeout.Value.AsTimeSpan.TotalSeconds;
+
+                return cmd;
+            }
+            catch (Exception)
+            {
+                cmd.Dispose();
+                throw;
+            }
+        }
+
         public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> documentKeys, Action<DbCommand> commandCallback = null)
         {
             const int maxParams = 1000;
 
             var sp = new Stopwatch();
-            using (var cmd = _connection.CreateCommand())
+            using (var cmd = CreateCommand())
             {
                 sp.Start();
-                cmd.Transaction = _tx;
                 _sqlReplication.CancellationToken.ThrowIfCancellationRequested();
                 for (int i = 0; i < documentKeys.Count; i += maxParams)
                 {
@@ -287,7 +307,7 @@ namespace Raven.Server.Documents.SqlReplication
                         _sqlReplication.Statistics.RecordWriteError(e, _database);
                         hadErrors = true;
                     }
-                    finally     
+                    finally
                     {
                         sp.Stop();
 
@@ -455,26 +475,26 @@ namespace Raven.Server.Documents.SqlReplication
                         break;
 
                     case BlittableJsonToken.String:
-                        SetParamStringValue(colParam, ((LazyStringValue) column.Value).ToString(), stringParsers);
+                        SetParamStringValue(colParam, ((LazyStringValue)column.Value).ToString(), stringParsers);
                         break;
                     case BlittableJsonToken.CompressedString:
-                        SetParamStringValue(colParam, ((LazyCompressedStringValue) column.Value).ToString(), stringParsers);
+                        SetParamStringValue(colParam, ((LazyCompressedStringValue)column.Value).ToString(), stringParsers);
                         break;
 
                     case BlittableJsonToken.StartObject:
-                        var objectValue = (BlittableJsonReaderObject) column.Value;
+                        var objectValue = (BlittableJsonReaderObject)column.Value;
                         if (objectValue.Count >= 2)
                         {
                             object dbType, fieldValue;
                             if (objectValue.TryGetMember("Type", out dbType) && objectValue.TryGetMember("Value", out fieldValue))
                             {
-                                colParam.DbType = (DbType) Enum.Parse(typeof (DbType), dbType.ToString(), false);
+                                colParam.DbType = (DbType)Enum.Parse(typeof(DbType), dbType.ToString(), false);
                                 colParam.Value = fieldValue.ToString();
 
                                 object size;
                                 if (objectValue.TryGetMember("Size", out size))
                                 {
-                                    colParam.Size = (int) size;
+                                    colParam.Size = (int)size;
                                 }
                                 break;
                             }

@@ -16,9 +16,9 @@ using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Document.Async;
 using Raven.Client.Document.Batches;
-using Raven.Client.Listeners;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
+using Raven.Client.Documents.Listeners;
 
 namespace Raven.Client.Documents
 {
