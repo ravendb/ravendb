@@ -106,6 +106,22 @@
         }
     }
 
+    .properties-container {
+        flex-direction: column;
+        height: 80px;
+        align-content: flex-start;
+        overflow: hidden;
+
+        .properties-item {
+
+            .set-size {
+                padding: 0px 10px;
+            }
+
+            height: 22px;
+        }
+    }
+
     &.resources_compact {
         .panel {
             margin-bottom: 10px;
@@ -119,6 +135,7 @@
             .resource-name {
                 top: 0;
                 font-size: 85%;
+                line-height: 120%;
             }
 
             .state::before {
@@ -131,10 +148,15 @@
                 display: inline;
 
                 .properties-item {
-                    float:left;
-                    font-size: 90%;
                     width: auto;
+                    float: left;
+                    font-size: 90%;
                     text-overflow: ellipsis;
+
+                    .set-size {
+                        position: static;
+                        padding-right: 10px;
+                    }
                 }
             }
 

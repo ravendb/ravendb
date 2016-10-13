@@ -75,6 +75,19 @@
     .properties-container {
         .properties-item {
             width: 100%;
+
+            .properties-label,
+            .properties-value {
+
+                [class*=" icon-"],
+                [class^="icon-"] {
+                    color: @brand-info;
+
+                    & + span {
+                        color: @brand-info;
+                    }
+                }
+            }
         }
     }
 
