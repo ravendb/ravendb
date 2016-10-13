@@ -835,7 +835,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
             try
             {
-                task.Wait(TimeSpan.FromSeconds(5));
+                task?.Wait(TimeSpan.FromSeconds(5));
             }
             catch (AggregateException aggregate)
             {
