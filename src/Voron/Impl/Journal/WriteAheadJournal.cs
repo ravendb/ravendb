@@ -49,7 +49,8 @@ namespace Voron.Impl.Journal
 
         private LazyTransactionBuffer _lazyTransactionBuffer;
         private readonly DiffPages _diffPage = new DiffPages();
-        private Logger _logger;
+        private readonly Logger _logger;
+        private List<JournalSnapshot> _snapshotCache;
         public bool HasDataInLazyTxBuffer() => _lazyTransactionBuffer?.HasDataInBuffer() ?? false;
 
         public WriteAheadJournal(StorageEnvironment env)
@@ -333,9 +334,14 @@ namespace Voron.Impl.Journal
             return _headerAccessor.Get(ptr => ptr->Journal);
         }
 
-        public void GetSnapshots(List<JournalSnapshot> items)
+        public List<JournalSnapshot> GetSnapshots()
         {
-            items.Capacity = _files.Count;
+            return _snapshotCache;
+        }
+
+        public void UpdateCacheForJournalSnapshots()
+        {
+            var items = new List<JournalSnapshot>(_files.Count);
             foreach (var journalFile in _files)
             {
                 items.Add(journalFile.GetSnapshot());
@@ -343,16 +349,17 @@ namespace Voron.Impl.Journal
 #if DEBUG
             for (int i = 0; i < items.Count; i++)
             {
-                for (int j = i+1; j < items.Count; j++)
+                for (int j = i + 1; j < items.Count; j++)
                 {
                     if (items[i].Number == items[j].Number)
                     {
                         throw new InvalidOperationException("Cannot add a snapshot of log file with number " + items[i].Number +
-                                     " to the transaction, because it already exists in a snapshot collection");
+                                                            " to the transaction, because it already exists in a snapshot collection");
                     }
                 }
             }
 #endif
+            _snapshotCache = items;
         }
 
         public void Clear(LowLevelTransaction tx)

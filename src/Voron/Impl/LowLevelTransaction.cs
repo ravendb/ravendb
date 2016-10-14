@@ -11,6 +11,7 @@ using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Global;
 using Voron.Debugging;
+using Voron.Util;
 
 namespace Voron.Impl
 {
@@ -48,7 +49,7 @@ namespace Voron.Impl
 
         private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable;
 
-        private readonly List<PagerState> _pagerStates = new List<PagerState>(1);
+        private readonly List<PagerState> _pagerStates = new List<PagerState>(4);
         internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
         private readonly StorageEnvironmentState _state;
@@ -119,7 +120,7 @@ namespace Voron.Impl
 
                 InitializeRoots();
 
-                _journal.GetSnapshots(JournalSnapshots);
+                JournalSnapshots = _journal.GetSnapshots();
                
 
                 return;
@@ -426,10 +427,7 @@ namespace Voron.Impl
         }
 
 
-        public bool IsDisposed
-        {
-            get { return _disposed; }
-        }
+        public bool IsDisposed => _disposed;
 
         public void Dispose()
         {
@@ -438,6 +436,7 @@ namespace Voron.Impl
 
             if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
                 Rollback();
+
 
             _disposed = true;
 
@@ -555,6 +554,9 @@ namespace Voron.Impl
             // release scratch file page allocated for the transaction header
             _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);
 
+            _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
+            _env.Journal.UpdateCacheForJournalSnapshots();
+
             Committed = true;
             _env.TransactionAfterCommit(this);
         }
@@ -584,6 +586,9 @@ namespace Voron.Impl
             // release scratch file page allocated for the transaction header
             _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);
 
+            _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
+            _env.Journal.UpdateCacheForJournalSnapshots();
+
             RolledBack = true;
         }
         public void RetrieveCommitStats(out CommitStats stats)
@@ -600,6 +605,8 @@ namespace Voron.Impl
 
         private PagerState _lastState;
         private bool _isLazyTransaction;
+
+        internal ActiveTransactions.Node ActiveTransactionNode;
 
         internal void EnsurePagerStateReference(PagerState state)
         {
