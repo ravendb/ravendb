@@ -357,13 +357,6 @@ namespace Raven.Database.Prefetching
                         if (log.IsDebugEnabled)
                             log.Debug("Didn't load any documents from previous batches. Loading documents directly from disk.");
 
-                        if (firstEtagInQueue == null || firstEtagInQueue.CompareTo(etag) <= 0)
-                        {
-                            //if the first etag in queue is smaller than the already requested one,
-                            //we can look for the next etag in the future batches
-                            firstEtagInQueue = GetMinimumEtagFromFutureBatches(Abstractions.Util.EtagUtil.Increment(etag, 1));
-                        }
-
                         //if there has been no results, AND no future batch that we can wait for, then we just load directly from disk
                         docsLoaded = LoadDocumentsFromDisk(etag, firstEtagInQueue, result, take, entityNames); // here we _intentionally_ use the current etag, not the next one
                     }
@@ -427,7 +420,7 @@ namespace Raven.Database.Prefetching
                 entityNames: entityNames, relevantDocsCount: relevantDocsCount);
             if (log.IsDebugEnabled)
             {
-                log.Debug("Loaded {0} documents ({3:#,#;;0} kb) from disk, starting from etag {1}, took {2}ms", jsonDocs.Count, etag, sp.ElapsedMilliseconds,
+                log.Debug("Loaded {0} documents ({4:#,#;;0} kb) from disk, starting from etag {1} (until {2}), took {3}ms", jsonDocs.Count, etag, untilEtag, sp.ElapsedMilliseconds,
                     jsonDocs.Sum(x => x.SerializedSizeOnDisk) / 1024);
             }
 
@@ -1097,30 +1090,6 @@ namespace Raven.Database.Prefetching
                     nextEtag = accessor.Documents.GetBestNextDocumentEtag(lastEtagInBatch);
                 }
             });
-        }
-
-        /// <summary>
-        /// Gets the minimum etag from the future batches that is bigger than the startEtag
-        /// </summary>
-        /// <param name="startEtag">The minimum etag we start to look from</param>
-        /// <returns></returns>
-        private Etag GetMinimumEtagFromFutureBatches(Etag startEtag)
-        {
-            Etag minEtag = null;
-
-            foreach (var futureIndexBatch in futureIndexBatches.Values)
-            {
-                if (startEtag.CompareTo(futureIndexBatch.StartingEtag) < 0 &&
-                    (minEtag == null || futureIndexBatch.StartingEtag.CompareTo(minEtag) < 0))
-                {
-                    minEtag = futureIndexBatch.StartingEtag;
-                }
-            }
-
-            if (minEtag != null && minEtag != Etag.Empty)
-                minEtag = Abstractions.Util.EtagUtil.Increment(minEtag, -1);
-
-            return minEtag;
         }
 
         private FutureIndexBatch GetCompletedFutureBatchWithMaxStartingEtag()
