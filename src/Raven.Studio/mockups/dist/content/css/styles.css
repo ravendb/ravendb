@@ -1232,8 +1232,11 @@ input[type="button"].btn-block {
   display: inline-block;
   font-size: 48px;
 }
-.icon-empty-set:before {
+.icon-magic-wand:before {
   content: "\e949";
+}
+.icon-empty-set:before {
+  content: "\e94a";
 }
 .icon-backup:before {
   content: "\e944";
@@ -8710,7 +8713,7 @@ a.label:focus {
   vertical-align: middle;
   white-space: nowrap;
   text-align: center;
-  background-color: #a9adad;
+  background-color: #686f6f;
   border-radius: 10px;
 }
 .badge:empty {
