@@ -10,7 +10,6 @@ namespace Raven.Database.Storage
 {
 	public interface IStorageActionsAccessor : IDisposable
 	{
-		ITransactionStorageActions Transactions { get; }
 		IDocumentStorageActions Documents { get; }
 		IQueueStorageActions Queue { get; }
 		IListsStorageActions Lists { get; }

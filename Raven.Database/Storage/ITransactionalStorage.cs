@@ -19,6 +19,9 @@ namespace Raven.Database.Storage
 		/// </summary>
 		Guid Id { get; }
 		void Batch(Action<IStorageActionsAccessor> action);
+
+		IMultipleCallsBatch CreateMultipleCallsBatch();
+
 		void ExecuteImmediatelyOrRegisterForSynchronization(Action action);
 		bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);
 		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase);

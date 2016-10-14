@@ -26,19 +26,16 @@ namespace Raven.Storage.Managed
 	public class DocumentsStorageActions : IDocumentStorageActions
 	{
 		private readonly TableStorage storage;
-		private readonly ITransactionStorageActions transactionStorageActions;
 		private readonly IUuidGenerator generator;
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 		private readonly IDocumentCacher documentCacher;
 
 		public DocumentsStorageActions(TableStorage storage,
-			ITransactionStorageActions transactionStorageActions,
 			IUuidGenerator generator,
 			OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
 			IDocumentCacher documentCacher)
 		{
 			this.storage = storage;
-			this.transactionStorageActions = transactionStorageActions;
 			this.generator = generator;
 			this.documentCodecs = documentCodecs;
 			this.documentCacher = documentCacher;
@@ -369,7 +366,6 @@ namespace Raven.Storage.Managed
 
 			if (readResult != null)
 			{
-				StorageHelper.AssertNotModifiedByAnotherTransaction(storage, transactionStorageActions, key, readResult, transactionInformation);
 				var existingEtag = new Guid(readResult.Key.Value<byte[]>("etag"));
 
 				if (etag != null)
@@ -405,7 +401,6 @@ namespace Raven.Storage.Managed
 				};
 
 			readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
-			StorageHelper.AssertNotModifiedByAnotherTransaction(storage, transactionStorageActions, key, readResult, transactionInformation);
 
 			if (readResult == null)
 				return null;

@@ -39,17 +39,6 @@ namespace Raven.Storage.Esent.StorageActions
 			get { return directories ?? (directories = new Table(session, dbid, "directories", OpenTableGrbit.None)); }
 		}
 
-		private Table documentsModifiedByTransactions;
-		protected Table DocumentsModifiedByTransactions
-		{
-			get
-			{
-				return documentsModifiedByTransactions ??
-					(documentsModifiedByTransactions =
-						new Table(session, dbid, "documents_modified_by_transaction", OpenTableGrbit.None));
-			}
-		}
-
 		private Table files;
 		protected Table Files
 		{

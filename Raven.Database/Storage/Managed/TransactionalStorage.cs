@@ -119,6 +119,61 @@ namespace Raven.Storage.Managed
 			onCommit(); // call user code after we exit the lock
 		}
 
+		public IMultipleCallsBatch CreateMultipleCallsBatch()
+		{
+			var storageActionsAccessor = new StorageActionsAccessor(tableStorage, uuidGenerator, DocumentCodecs, documentCacher);
+			return new MuninMultipleCallsBatch(this, storageActionsAccessor);
+		}
+
+		public class MuninMultipleCallsBatch : IMultipleCallsBatch
+		{
+			private readonly TransactionalStorage storage;
+			private readonly StorageActionsAccessor accessor;
+
+			public MuninMultipleCallsBatch(TransactionalStorage storage, StorageActionsAccessor accessor)
+			{
+				this.storage = storage;
+				this.accessor = accessor;
+			}
+
+			public void Batch(Action<IStorageActionsAccessor> action)
+			{
+				if (storage.disposerLock.IsReadLockHeld) // we are currently in a nested Batch call
+				{
+					if (storage.current.Value != null) // check again, just to be sure
+					{
+						action(storage.current.Value);
+						return;
+					}
+				}
+				storage.disposerLock.EnterReadLock();
+				try
+				{
+					if (storage.disposed)
+					{
+						Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
+						return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+					}
+					storage.current.Value = accessor;
+					action(storage.current.Value);
+				}
+				finally
+				{
+					storage.disposerLock.ExitReadLock();
+					if (storage.disposed == false)
+						storage.current.Value = null;
+				}
+			}
+
+			public void Commit()
+			{
+				accessor.SaveAllTasks();
+				storage.tableStorage.Commit();
+				accessor.InvokeOnCommit();
+				storage.onCommit();
+			}
+		}
+
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		private StorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
 		{

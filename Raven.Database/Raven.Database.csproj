@@ -179,6 +179,7 @@
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriter.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcher.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
+    <Compile Include="Impl\TransactionalState.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\BaseFragmentsBuilder.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FastVectorHighlighter.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FieldFragList.cs" />
@@ -667,7 +668,6 @@
     <Compile Include="Server\Responders\SuggestionResponder.cs" />
     <Compile Include="Server\Responders\Terms.cs" />
     <Compile Include="Server\Responders\TransactionCommit.cs" />
-    <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Server\Responders\TransactionStatus.cs" />
     <Compile Include="Server\Connections\TransportState.cs" />
@@ -714,6 +714,7 @@
     <Compile Include="Storage\IIndexingStorageActions.cs" />
     <Compile Include="Storage\IListsStorageActions.cs" />
     <Compile Include="Storage\IMappedResultsStorageAction.cs" />
+    <Compile Include="Storage\IMultipleCallsBatch.cs" />
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\IndexDefinitionStorage.cs" />
     <Compile Include="Storage\IQueueStorageActions.cs" />
@@ -721,7 +722,6 @@
     <Compile Include="Storage\IStorageActionsAccessor.cs" />
     <Compile Include="Storage\ITasksStorageActions.cs" />
     <Compile Include="Storage\ITransactionalStorage.cs" />
-    <Compile Include="Storage\ITransactionStorageActions.cs" />
     <Compile Include="Queries\SuggestionQueryRunner.cs" />
     <Compile Include="Storage\Managed\AttachmentsStorageActions.cs" />
     <Compile Include="Storage\Managed\Backup\BackupOperation.cs" />
@@ -759,10 +759,8 @@
     <Compile Include="Storage\Managed\QueueStorageActions.cs" />
     <Compile Include="Storage\Managed\StalenessStorageActions.cs" />
     <Compile Include="Storage\Managed\StorageActionsAccessor.cs" />
-    <Compile Include="Storage\Managed\StorageHelper.cs" />
     <Compile Include="Storage\Managed\TasksStorageActions.cs" />
     <Compile Include="Storage\Managed\TransactionalStorage.cs" />
-    <Compile Include="Storage\Managed\TransactionStorageActions.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />

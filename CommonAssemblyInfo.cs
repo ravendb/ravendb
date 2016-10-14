@@ -11,7 +11,7 @@ using System.Runtime.InteropServices;
 
 [assembly: AssemblyVersion("2.0.3")]
 [assembly: AssemblyFileVersion("2.0.3.13")]
-[assembly: AssemblyInformationalVersion("2.0.3 / {commit}")]
+[assembly: AssemblyInformationalVersion("2.0.3 / baee5a1")]
 [assembly: AssemblyProduct("RavenDB")]
 [assembly: AssemblyDescription("A second generation LINQ enabled document database for .NET")]
 

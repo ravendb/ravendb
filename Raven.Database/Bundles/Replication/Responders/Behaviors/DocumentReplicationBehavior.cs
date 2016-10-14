@@ -40,16 +40,16 @@ namespace Raven.Bundles.Replication.Responders
 			var etag = existingMetadata.Value<bool>(Constants.RavenDeleteMarker) ? Guid.Empty : existingItem.Etag;
 			Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
 			Actions.Documents.AddDocument(id, etag,
-			                                              new RavenJObject
-			                                              {
+			                              new RavenJObject
+			                              {
 			                              	{"Conflicts", new RavenJArray(existingDocumentConflictId, newDocumentConflictId)}
-			                                              },
-			                                              new RavenJObject
-			                                              {
-				                                              {Constants.RavenReplicationConflict, true},
-				                                              {"@Http-Status-Code", 409},
-				                                              {"@Http-Status-Description", "Conflict"}
-			                                              });
+			                              },
+			                              new RavenJObject
+			                              {
+			                              	{Constants.RavenReplicationConflict, true},
+			                              	{"@Http-Status-Code", 409},
+			                              	{"@Http-Status-Description", "Conflict"}
+			                              });
 		}
 
 		protected override void AppendToCurrentItemConflicts(string id, string newConflictId, RavenJObject existingMetadata, JsonDocument existingItem)

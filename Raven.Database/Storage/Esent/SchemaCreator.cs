@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "4.5";
+		public const string SchemaVersion = "4.6";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -31,8 +31,6 @@ namespace Raven.Storage.Esent
 				{
 					CreateDetailsTable(dbid);
 					CreateDocumentsTable(dbid);
-					CreateDocumentsBeingModifiedByTransactionsTable(dbid);
-					CreateTransactionsTable(dbid);
 					CreateTasksTable(dbid);
 					CreateScheduledReductionsTable(dbid);
 					CreateMapResultsTable(dbid);
@@ -231,34 +229,6 @@ namespace Raven.Storage.Esent
 			});
 		}
 
-		private void CreateTransactionsTable(JET_DBID dbid)
-		{
-			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "transactions", 1, 80, out tableid);
-			JET_COLUMNID columnid;
-
-			Api.JetAddColumn(session, tableid, "tx_id", new JET_COLUMNDEF
-			{
-				cbMax = 16,
-				coltyp = JET_coltyp.Binary,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
-			}, null, 0, out columnid);
-
-			Api.JetAddColumn(session, tableid, "timeout", new JET_COLUMNDEF
-			{
-				cbMax = 8, // 64 bits
-				coltyp = JET_coltyp.Binary,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
-			}, null, 0, out columnid);
-
-			CreateIndexes(tableid, new JET_INDEXCREATE
-			{
-				szIndexName = "by_tx_id",
-				szKey = "+tx_id\0\0",
-				grbit = CreateIndexGrbit.IndexPrimary
-			});
-		}
-
 		private void CreateDocumentsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
@@ -353,88 +323,6 @@ namespace Raven.Storage.Esent
 					throw new InvalidOperationException("Could not create index: " + index.szIndexName, e);
 				}
 			}
-		}
-
-		private void CreateDocumentsBeingModifiedByTransactionsTable(JET_DBID dbid)
-		{
-			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "documents_modified_by_transaction", 1, 80, out tableid);
-			JET_COLUMNID columnid;
-
-			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.Long,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
-			}, null, 0, out columnid);
-
-			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
-			{
-				cbMax = 2048,
-				coltyp = JET_coltyp.LongText,
-				cp = JET_CP.Unicode,
-				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
-			}, null, 0, out columnid);
-
-			Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
-			{
-				cbMax = 16,
-				coltyp = JET_coltyp.Binary,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
-			}, null, 0, out columnid);
-
-			Api.JetAddColumn(session, tableid, "last_modified", new JET_COLUMNDEF
-			{
-				cbMax = 8, // 64 bits 
-				coltyp = JET_coltyp.Binary,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
-			}, null, 0, out columnid);
-
-			Api.JetAddColumn(session, tableid, "locked_by_transaction", new JET_COLUMNDEF
-			{
-				cbMax = 16,
-				coltyp = JET_coltyp.Binary,
-				grbit = ColumndefGrbit.ColumnFixed,
-			}, null, 0, out columnid);
-
-			Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.LongBinary,
-				grbit = ColumndefGrbit.ColumnTagged
-			}, null, 0, out columnid);
-
-			Api.JetAddColumn(session, tableid, "metadata", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.LongBinary,
-				grbit = ColumndefGrbit.ColumnTagged
-			}, null, 0, out columnid);
-
-			Api.JetAddColumn(session, tableid, "delete_document", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.Bit,
-				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
-			}, null, 0, out columnid);
-
-			CreateIndexes(tableid,
-				new JET_INDEXCREATE
-				{
-					szIndexName = "by_id",
-					szKey = "+id\0\0",
-					grbit = CreateIndexGrbit.IndexPrimary
-				},
-				new JET_INDEXCREATE
-				{
-					szIndexName = "by_key",
-					szKey = "+key\0\0",
-					grbit = CreateIndexGrbit.IndexDisallowNull
-				},
-				new JET_INDEXCREATE
-				{
-					cbKeyMost = SystemParameters.KeyMost,
-					grbit = CreateIndexGrbit.IndexDisallowNull,
-					szIndexName = "by_tx",
-					szKey = "+locked_by_transaction\0\0",
-					ulDensity = 80,
-				});
 		}
 
 		private void CreateScheduledReductionsTable(JET_DBID dbid)

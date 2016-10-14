@@ -32,11 +32,6 @@ namespace Raven.Storage.Esent
 			this.inner = inner;
 		}
 
-		public ITransactionStorageActions Transactions
-		{
-			get { return inner; }
-		}
-
 		public IDocumentStorageActions Documents
 		{
 			get { return inner; }

@@ -95,6 +95,8 @@ namespace Raven.Database
 		[ImportMany]
 		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
+		private readonly TransactionalState transactionalState = new TransactionalState();
+
 		private readonly List<IDisposable> toDispose = new List<IDisposable>();
 
 		private long pendingTaskCounter;
@@ -118,8 +120,6 @@ namespace Raven.Database
 		{
 			get { return indexingExecuter; }
 		}
-
-		private readonly ConcurrentDictionary<Guid, CommittableTransaction> promotedTransactions = new ConcurrentDictionary<Guid, CommittableTransaction>();
 
 		/// <summary>
 		/// This is required to ensure serial generation of etags during puts
@@ -704,7 +704,7 @@ namespace Raven.Database
 			RemoveMetadataReservedProperties(metadata);
 			Guid newEtag = Guid.Empty;
 
-			lock (putSerialLock)
+			using(transactionalState.SerializeTransactionFor(transactionInformation))
 			{
 				TransactionalStorage.Batch(actions =>
 				{
@@ -713,17 +713,22 @@ namespace Raven.Database
 						key += GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions, transactionInformation);
 					}
 					AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
-					if (transactionInformation == null)
-					{
 						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
 
 						var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
 						newEtag = addDocumentResult.Etag;
 
+					if (transactionInformation != null)
+					{
+						transactionalState.DocumentModifiedByTransation(key, transactionInformation.Id);
+					}
+
 						CheckReferenceBecauseOfDocumentUpdate(key, actions);
 						metadata[Constants.LastModified] = addDocumentResult.SavedAt;
-						metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
-						document.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+					metadata.EnsureSnapshot(
+						"Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+					document.EnsureSnapshot(
+						"Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
@@ -748,12 +753,6 @@ namespace Raven.Database
 									Etag = newEtag,
 								}, metadata);
 							});
-					}
-					else
-					{
-						newEtag = actions.Transactions.AddDocumentInTransaction(key, etag,
-																				document, metadata, transactionInformation);
-					}
 					workContext.ShouldNotifyAboutWork(() => "PUT " + key);
 				});
 			}
@@ -913,7 +912,7 @@ namespace Raven.Database
 				throw new ArgumentNullException("key");
 			key = key.Trim();
 
-			lock (putSerialLock)
+			using(transactionalState.SerializeTransactionFor(transactionInformation))
 			{
 				var deleted = false;
 				log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
@@ -921,8 +920,10 @@ namespace Raven.Database
 				TransactionalStorage.Batch(actions =>
 				{
 					AssertDeleteOperationNotVetoed(key, transactionInformation);
-					if (transactionInformation == null)
+					if (transactionInformation != null)
 					{
+						transactionalState.DocumentModifiedByTransation(key, transactionInformation.Id);
+					}
 						DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
 
 						Guid? deletedETag;
@@ -971,12 +972,6 @@ namespace Raven.Database
 									Type = DocumentChangeTypes.Delete,
 								}, metadataVar);
 							});
-
-					}
-					else
-					{
-						deleted = actions.Transactions.DeleteDocumentInTransaction(transactionInformation, key, etag);
-					}
 					workContext.ShouldNotifyAboutWork(() => "DEL " + key);
 				});
 
@@ -987,11 +982,7 @@ namespace Raven.Database
 
 		public bool HasTransaction(Guid txId)
 		{
-			bool exists = false;
-			TransactionalStorage.Batch(accessor =>
-			{
-				exists = accessor.Transactions.TransactionExists(txId);
-			});
+			bool exists = transactionalState.HasTransaction(txId);
 			return exists;
 		}
 
@@ -999,8 +990,6 @@ namespace Raven.Database
 		{
 			try
 			{
-				lock (putSerialLock)
-				{
 					TransactionalStorage.Batch(actions =>
 					{
 						actions.Transactions.CompleteTransaction(txId, doc =>
@@ -1018,66 +1007,18 @@ namespace Raven.Database
 						workContext.ShouldNotifyAboutWork(() => "COMMIT " + txId);
 					});
 				}
-				TryCompletePromotedTransaction(txId);
-			}
 			catch (Exception e)
 			{
 				if (TransactionalStorage.HandleException(e))
 					return;
 				throw;
 			}
-		}
-
-		private void TryCompletePromotedTransaction(Guid txId)
-		{
-			CommittableTransaction transaction;
-			if (!promotedTransactions.TryRemove(txId, out transaction))
-				return;
-			System.Threading.Tasks.Task.Factory.FromAsync(transaction.BeginCommit, transaction.EndCommit, null)
-				.ContinueWith(task =>
-				{
-					if (task.Exception != null)
-						log.WarnException("Could not commit dtc transaction", task.Exception);
-					try
-					{
-						transaction.Dispose();
-					}
-					catch (Exception e)
-					{
-						log.WarnException("Could not dispose of dtc transaction", e);
-					}
-				});
-		}
-
-		private void TryUndoPromotedTransaction(Guid txId)
-		{
-			CommittableTransaction transaction;
-			if (!promotedTransactions.TryRemove(txId, out transaction))
-				return;
-			transaction.Rollback();
-			transaction.Dispose();
 		}
 
 		public void Rollback(Guid txId)
 		{
-			try
-			{
-				TransactionalStorage.Batch(actions =>
-				{
-					actions.Transactions.RollbackTransaction(txId);
-					actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
-					workContext.ShouldNotifyAboutWork(() => "ROLLBACK " + txId);
-				});
-				TryUndoPromotedTransaction(txId);
+			transactionalState.DeleteTransaction(txId);
 			}
-			catch (Exception e)
-			{
-				if (TransactionalStorage.HandleException(e))
-					return;
-
-				throw;
-			}
-		}
 
 		// only one index can be created at any given time
 		// the method already handle attempts to create the same index, so we don't have to 
@@ -1731,13 +1672,8 @@ namespace Raven.Database
 
 			var commandDatas = commands.ToArray();
 			int retries = 128;
-			var shouldLock = commandDatas.Any(x => (x is PutCommandData || x is PatchCommandData || x is ScriptedPatchCommandData || x is DeleteCommandData));
 			var shouldRetryIfGotConcurrencyError = commandDatas.All(x => (x is PatchCommandData || x is ScriptedPatchCommandData));
 			bool shouldRetry = false;
-			if (shouldLock)
-				Monitor.Enter(putSerialLock);
-			try
-			{
 				var sp = Stopwatch.StartNew();
 				do
 				{
@@ -1771,12 +1707,6 @@ namespace Raven.Database
 					}
 				} while (shouldRetry);
 				log.Debug("Successfully executed {0} commands in {1}", results.Count, sp.Elapsed);
-			}
-			finally
-			{
-				if (shouldLock)
-					Monitor.Exit(putSerialLock);
-			}
 			return results.ToArray();
 		}
 
@@ -1847,18 +1777,6 @@ namespace Raven.Database
 
 				transactionalStorage.Restore(backupLocation, databaseLocation, output, defrag);
 			}
-		}
-
-		public byte[] PromoteTransaction(Guid fromTxId)
-		{
-			var committableTransaction = new CommittableTransaction();
-			var transmitterPropagationToken = TransactionInterop.GetTransmitterPropagationToken(committableTransaction);
-			TransactionalStorage.Batch(
-				actions =>
-					actions.Transactions.ModifyTransactionId(fromTxId, committableTransaction.TransactionInformation.DistributedIdentifier,
-												TransactionManager.DefaultTimeout));
-			promotedTransactions.TryAdd(committableTransaction.TransactionInformation.DistributedIdentifier, committableTransaction);
-			return transmitterPropagationToken;
 		}
 
 		public void ResetIndex(string index)
@@ -2070,35 +1988,6 @@ namespace Raven.Database
 			}
 		}
 
-		public void AddAlert(Alert alert)
-		{
-			lock (putSerialLock)
-			{
-				AlertsDocument alertsDocument;
-				var alertsDoc = Get(Constants.RavenAlerts, null);
-				RavenJObject metadata;
-				if (alertsDoc == null)
-				{
-					alertsDocument = new AlertsDocument();
-					metadata = new RavenJObject();
-				}
-				else
-				{
-					alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>() ?? new AlertsDocument();
-					metadata = alertsDoc.Metadata;
-				}
-
-				var withSameUniqe = alertsDocument.Alerts.FirstOrDefault(alert1 => alert1.UniqueKey == alert.UniqueKey);
-				if (withSameUniqe != null)
-					alertsDocument.Alerts.Remove(withSameUniqe);
-
-				alertsDocument.Alerts.Add(alert);
-				var document = RavenJObject.FromObject(alertsDocument);
-				document.Remove("Id");
-				Put(Constants.RavenAlerts, null, document, metadata, null);
-			}
-		}
-
 		public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches)
 		{
 			var documents = 0;
@@ -2111,8 +2000,6 @@ namespace Raven.Database
 				foreach (var docs in docBatches)
 				{
 					WorkContext.CancellationToken.ThrowIfCancellationRequested();
-					lock (putSerialLock)
-					{
                         var inserts = 0;
 					    var batch = 0;
 						var keys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
@@ -2134,8 +2021,10 @@ namespace Raven.Database
 							if (result.Updated == false)
 								inserts++;
 
-							doc.Metadata.EnsureSnapshot("Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
-							doc.DataAsJson.EnsureSnapshot("Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+						doc.Metadata.EnsureSnapshot(
+							"Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+						doc.DataAsJson.EnsureSnapshot(
+							"Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 
 							foreach (var trigger in PutTriggers)
 							{
@@ -2154,7 +2043,6 @@ namespace Raven.Database
                         workContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
                         workContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
 					}
-				}
 				RaiseNotifications(new DocumentChangeNotification
 				{
 					Type = DocumentChangeTypes.BulkInsertEnded
