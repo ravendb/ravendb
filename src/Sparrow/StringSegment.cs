@@ -39,25 +39,23 @@ namespace Sparrow
     {
         public static StringSegmentEqualityComparer Instance = new StringSegmentEqualityComparer();
 
-
         public unsafe bool Equals(StringSegment x, StringSegment y)
         {
             if (x.Length != y.Length)
                 return false;
-            
-            fixed(char* pX = x.String)
-            fixed (char* pY = y.String)
-            {
-                return Memory.Compare((byte*) pX + x.Start * sizeof(char), (byte*) pY + y.Start * sizeof(char), x.Length + sizeof(char)) == 0;
-            }
 
+            fixed (char* pSelf = x.String)
+            fixed (char* pOther = y.String)
+            {
+                return Memory.Compare((byte*)pSelf + x.Start * sizeof(char), (byte*)pOther + y.Start * sizeof(char), x.Length * sizeof(char)) == 0;
+            }
         }
 
         public unsafe int GetHashCode(StringSegment str)
         {
             fixed (char* p = str.String)
             {
-                return (int)Hashing.XXHash32.CalculateInline((byte*)(p+str.Start * sizeof(char)), str.Length * sizeof(char));
+                return (int)Hashing.XXHash32.CalculateInline((byte*)p + (str.Start * sizeof(char)), str.Length * sizeof(char));
             }
         }
     }
@@ -202,7 +200,6 @@ namespace Sparrow
         {
             return Value;
         }
-
 
         public bool IsNullOrWhiteSpace()
         {
