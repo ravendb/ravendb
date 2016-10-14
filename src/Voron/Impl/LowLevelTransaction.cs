@@ -142,8 +142,8 @@ namespace Voron.Impl
 
                 InitializeRoots();
 
-                foreach (var snapshot in _journal.GetSnapshots())
-                    AddJournalSnapshot(snapshot);
+                _journal.GetSnapshots(JournalSnapshots);
+               
 
                 return;
             }
@@ -197,15 +197,6 @@ namespace Voron.Impl
             _overflowPagesInTransaction = 0;
 
             _scratchPagesTable.Clear();
-        }
-
-        private void AddJournalSnapshot(JournalSnapshot snapshot)
-        {
-            if (JournalSnapshots.Any(x => x.Number == snapshot.Number))
-                throw new InvalidOperationException("Cannot add a snapshot of log file with number " + snapshot.Number +
-                                                    " to the transaction, because it already exists in a snapshot collection");
-
-            JournalSnapshots.Add(snapshot);
         }
 
         internal PageFromScratchBuffer GetTransactionHeaderPage()

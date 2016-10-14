@@ -45,9 +45,14 @@ namespace Voron.Impl.Scratch
 
         public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
         {
-            // This is not risky anymore, but the caller must understand this is a monotonically incrementing snapshot. 
-            return _scratchBuffers.ToDictionary(x => x.Key, y => y.Value.File.PagerState,
-                NumericEqualityComparer.Instance);
+            // This is not risky anymore, but the caller must understand 
+            // this is a monotonically incrementing snapshot. 
+            var dic = new Dictionary<int, PagerState>(NumericEqualityComparer.Instance);
+            foreach (var scratchBufferItem in _scratchBuffers)
+            {
+                dic[scratchBufferItem.Key] = scratchBufferItem.Value.File.PagerState;
+            }
+            return dic;
         }
 
         internal long GetNumberOfAllocations(int scratchNumber)

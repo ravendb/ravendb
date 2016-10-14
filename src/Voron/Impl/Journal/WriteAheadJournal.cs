@@ -333,9 +333,26 @@ namespace Voron.Impl.Journal
             return _headerAccessor.Get(ptr => ptr->Journal);
         }
 
-        public List<JournalSnapshot> GetSnapshots()
+        public void GetSnapshots(List<JournalSnapshot> items)
         {
-            return _files.Select(x => x.GetSnapshot()).ToList();
+            items.Capacity = _files.Count;
+            foreach (var journalFile in _files)
+            {
+                items.Add(journalFile.GetSnapshot());
+            }
+#if DEBUG
+            for (int i = 0; i < items.Count; i++)
+            {
+                for (int j = i+1; j < items.Count; j++)
+                {
+                    if (items[i].Number == items[j].Number)
+                    {
+                        throw new InvalidOperationException("Cannot add a snapshot of log file with number " + snapshot.Number +
+                                     " to the transaction, because it already exists in a snapshot collection");
+                    }
+                }
+            }
+#endif
         }
 
         public void Clear(LowLevelTransaction tx)
