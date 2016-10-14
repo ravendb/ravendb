@@ -5,10 +5,11 @@ using Bits = Sparrow.Binary.Bits;
 
 namespace Sparrow
 {
-    public class CaseInsensitiveStringSegmentEqualityComparer: IEqualityComparer<StringSegment>
+    public class CaseInsensitiveStringSegmentEqualityComparer : IEqualityComparer<StringSegment>
     {
         public static CaseInsensitiveStringSegmentEqualityComparer Instance = new CaseInsensitiveStringSegmentEqualityComparer();
-        [ThreadStatic] private static char[] _buffer;
+        [ThreadStatic]
+        private static char[] _buffer;
 
 
         public bool Equals(StringSegment x, StringSegment y)
@@ -30,7 +31,7 @@ namespace Sparrow
             }
             fixed (char* p = _buffer)
             {
-                return (int)Hashing.XXHash32.CalculateInline((byte*) p, str.Length*sizeof (char));
+                return (int)Hashing.XXHash32.CalculateInline((byte*)p, str.Length * sizeof(char));
             }
         }
     }
@@ -44,11 +45,11 @@ namespace Sparrow
         {
             if (x.Length != y.Length)
                 return false;
-            
-            fixed(char* pX = x.String)
+
+            fixed (char* pX = x.String)
             fixed (char* pY = y.String)
             {
-                return Memory.Compare((byte*) pX + x.Start * sizeof(char), (byte*) pY + y.Start * sizeof(char), x.Length + sizeof(char)) == 0;
+                return Memory.Compare((byte*)pX + x.Start * sizeof(char), (byte*)pY + y.Start * sizeof(char), x.Length + sizeof(char)) == 0;
             }
 
         }
@@ -57,7 +58,7 @@ namespace Sparrow
         {
             fixed (char* p = str.String)
             {
-                return (int)Hashing.XXHash32.CalculateInline((byte*)(p+str.Start * sizeof(char)), str.Length * sizeof(char));
+                return (int)Hashing.XXHash32.CalculateInline(((byte*)p + str.Start * sizeof(char)), str.Length * sizeof(char));
             }
         }
     }
@@ -76,7 +77,7 @@ namespace Sparrow
             String = s;
             Start = start;
             Length = count == -1 ? String.Length - start : count;
-            _valueString = start == 0 && Length == s.Length ? s : null;			
+            _valueString = start == 0 && Length == s.Length ? s : null;
 
             if (Start + Length > String.Length)
                 throw new IndexOutOfRangeException();
@@ -90,7 +91,7 @@ namespace Sparrow
             else if (start + length > String.Length)
                 throw new ArgumentOutOfRangeException(nameof(length));
 
-            return new StringSegment(String,Start + start,length);
+            return new StringSegment(String, Start + start, length);
         }
 
         public char this[int index]
@@ -107,7 +108,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator StringSegment(string str)
         {
-            return new StringSegment(str,0);
+            return new StringSegment(str, 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -127,7 +128,7 @@ namespace Sparrow
                 return -1;
 
             //zero based index since we are in a segment
-            var indexOfAny = String.IndexOfAny(charArray, Start + startIndex,remainingSegmentLength);
+            var indexOfAny = String.IndexOfAny(charArray, Start + startIndex, remainingSegmentLength);
             if (indexOfAny == -1)
                 return -1;
 
@@ -154,7 +155,7 @@ namespace Sparrow
         {
             fixed (char* p = String)
             {
-                return (int)Hashing.XXHash32.CalculateInline((byte*) p + (Start*sizeof (char)), Length * sizeof (char));
+                return (int)Hashing.XXHash32.CalculateInline((byte*)p + Start * sizeof(char), Length * sizeof(char));
             }
         }
 
@@ -186,7 +187,7 @@ namespace Sparrow
             fixed (char* pSelf = String)
             fixed (char* pOther = other.String)
             {
-                return Memory.Compare((byte*) pSelf + Start * sizeof(char), (byte*) pOther + other.Start * sizeof(char), Length*sizeof(char)) == 0;
+                return Memory.Compare((byte*)pSelf + Start * sizeof(char), (byte*)pOther + other.Start * sizeof(char), Length * sizeof(char)) == 0;
             }
         }
 
