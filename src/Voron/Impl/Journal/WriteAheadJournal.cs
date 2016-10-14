@@ -347,7 +347,7 @@ namespace Voron.Impl.Journal
                 {
                     if (items[i].Number == items[j].Number)
                     {
-                        throw new InvalidOperationException("Cannot add a snapshot of log file with number " + snapshot.Number +
+                        throw new InvalidOperationException("Cannot add a snapshot of log file with number " + items[i].Number +
                                      " to the transaction, because it already exists in a snapshot collection");
                     }
                 }

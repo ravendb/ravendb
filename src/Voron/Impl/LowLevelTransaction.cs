@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Exceptions;
@@ -10,9 +9,7 @@ using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
-using Voron.Data;
 using Voron.Global;
-using System.Runtime.InteropServices;
 using Voron.Debugging;
 
 namespace Voron.Impl
@@ -20,8 +17,7 @@ namespace Voron.Impl
     public unsafe class LowLevelTransaction : IDisposable
     {
         private const int PagesTakenByHeader = 1;
-        private readonly AbstractPager _dataPager;
-        private readonly long _pageSize;
+        public readonly AbstractPager DataPager;
         private readonly StorageEnvironment _env;
         private readonly long _id;
         private readonly ByteStringContext _allocator;
@@ -29,16 +25,15 @@ namespace Voron.Impl
         private readonly PageCache _pageCache;
         private Tree _root;
 
-        public bool FlushedToJournal { get; private set; }
+        public bool FlushedToJournal;
         public Tree RootObjects => _root;
 
         private readonly WriteAheadJournal _journal;
 
-        private readonly HashSet<long> _dirtyPages = new HashSet<long>(NumericEqualityComparer.Instance);
-        private readonly Dictionary<long, long> _dirtyOverflowPages = new Dictionary<long, long>(NumericEqualityComparer.Instance);
-        private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>(PagerState.Comparer.Instance);
+        private readonly HashSet<long> _dirtyPages;
+        private readonly Dictionary<long, long> _dirtyOverflowPages;
 
-        readonly Stack<long> _pagesToFreeOnCommit = new Stack<long>();
+        readonly Stack<long> _pagesToFreeOnCommit;
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
 
@@ -47,11 +42,13 @@ namespace Voron.Impl
         private TransactionHeader* _txHeader;
 
         private PageFromScratchBuffer _transactionHeaderPage;
-        private readonly HashSet<PageFromScratchBuffer> _transactionPages = new HashSet<PageFromScratchBuffer>();
-        private readonly HashSet<long> _freedPages = new HashSet<long>();
-        private readonly List<PageFromScratchBuffer> _unusedScratchPages = new List<PageFromScratchBuffer>();
+        private readonly HashSet<PageFromScratchBuffer> _transactionPages;
+        private readonly HashSet<long> _freedPages;
+        private readonly List<PageFromScratchBuffer> _unusedScratchPages;
 
-        private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
+        private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable;
+
+        private readonly List<PagerState> _pagerStates = new List<PagerState>(1);
         internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
         private readonly StorageEnvironmentState _state;
@@ -74,20 +71,9 @@ namespace Voron.Impl
 
         internal bool CreatedByJournalApplicator;
 
-        internal StorageEnvironment Environment
-        {
-            get { return _env; }
-        }
+        internal StorageEnvironment Environment => _env;
 
-        public AbstractPager DataPager
-        {
-            get { return _dataPager; }
-        }
-
-        public long Id
-        {
-            get { return _id; }
-        }
+        public long Id => _id;
 
         public readonly int PageSize;
 
@@ -95,25 +81,15 @@ namespace Voron.Impl
 
         public bool RolledBack { get; private set; }
 
-        public StorageEnvironmentState State
-        {
-            get { return _state; }
-        }
+        public StorageEnvironmentState State => _state;
 
-        public ByteStringContext Allocator
-        {
-            get { return _allocator; }
-        }
+        public ByteStringContext Allocator => _allocator;
 
-        public ulong Hash
-        {
-            get { return _txHeader->Hash; }
-        }
+        public ulong Hash => _txHeader->Hash;
 
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null )
         {
-            _dataPager = env.Options.DataPager;            
-            _pageSize = _dataPager.PageSize;
+            DataPager = env.Options.DataPager;            
             _env = env;
             _journal = env.Journal;
             _id = id;
@@ -123,7 +99,8 @@ namespace Voron.Impl
             _pageCache = new PageCache(8);
 
             Flags = flags;
-            PageSize = _dataPager.PageSize;
+         
+            PageSize = DataPager.PageSize;
 
             var scratchPagerStates = env.ScratchBufferPool.GetPagerStatesOfAllScratches();
             foreach (var scratchPagerState in scratchPagerStates.Values)
@@ -147,6 +124,14 @@ namespace Voron.Impl
 
                 return;
             }
+
+            _dirtyOverflowPages = new Dictionary<long, long>(NumericEqualityComparer.Instance);
+            _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
+            _dirtyPages = new HashSet<long>(NumericEqualityComparer.Instance);
+            _freedPages = new HashSet<long>();
+            _unusedScratchPages = new List<PageFromScratchBuffer>();
+            _transactionPages = new HashSet<PageFromScratchBuffer>();
+            _pagesToFreeOnCommit = new Stack<long>();
 
             _state = env.State.Clone();
             InitializeRoots();
@@ -243,7 +228,7 @@ namespace Voron.Impl
             {
                 newPage = AllocateOverflowRawPage(currentPage.OverflowSize, num, currentPage);
                 pageSize = Environment.Options.PageSize*
-                           _dataPager.GetNumberOfOverflowPages(currentPage.OverflowSize);
+                           DataPager.GetNumberOfOverflowPages(currentPage.OverflowSize);
             }
             else
             {
@@ -273,7 +258,7 @@ namespace Voron.Impl
                 return p; 
 
             PageFromScratchBuffer value;
-            if (_scratchPagesTable.TryGetValue(pageNumber, out value))
+            if (_scratchPagesTable != null && _scratchPagesTable.TryGetValue(pageNumber, out value) )
             {
                 PagerState state = null;
                 if (_scratchPagerStates != null)
@@ -295,7 +280,7 @@ namespace Voron.Impl
             }
             else
             {
-                p = _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? _dataPager.ReadPage(this, pageNumber);
+                p = _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? DataPager.ReadPage(this, pageNumber);
                 Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
             }
             
@@ -327,7 +312,7 @@ namespace Voron.Impl
 
             Debug.Assert(overflowSize >= 0);
 
-            long numberOfPages = (overflowSize / _pageSize) + (overflowSize % _pageSize == 0 ? 0 : 1);
+            long numberOfPages = (overflowSize / PageSize) + (overflowSize % PageSize == 0 ? 0 : 1);
 
             var overflowPage = AllocatePage((int)numberOfPages, pageNumber, previousPage);
             overflowPage.Flags = PageFlags.Overflow;
@@ -621,11 +606,9 @@ namespace Voron.Impl
             if (state == _lastState || state == null)
                 return;
 
-            if (_pagerStates.Add(state))
-            {
-                state.AddRef();
-                _lastState = state;
-            }
+            _pagerStates.Add(state);
+            state.AddRef();
+            _lastState = state;
         }
 
 
