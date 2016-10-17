@@ -36,6 +36,13 @@ class changesContext {
         });
     }
 
+    connectGlobalChangesApi(): JQueryPromise<void> {
+        const globalChanges = new changesApi(null);
+        this.globalChangesApi(globalChanges);
+
+        return globalChanges.connectToChangesApiTask;
+    }
+
     updateChangesApi(rs: resource, subscriptions: (changes: changesApi) => changeSubscription[]) {
         const currentChanges = this.currentResourceChangesApi();
         if (currentChanges && currentChanges.getResource().qualifiedName === rs.qualifiedName) {

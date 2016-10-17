@@ -18,6 +18,8 @@ import uploadItem = require("models/filesystem/uploadItem");
 import license = require("models/auth/license");
 import topology = require("models/database/replication/topology");
 import environmentColor = require("models/resources/environmentColor");
+import changesContext = require("common/changesContext");
+import changesApi = require("common/changesApi");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
@@ -89,8 +91,12 @@ class shell extends viewModelBase {
         });
         oauthContext.enterApiKeyTask = this.setupApiKey();
         oauthContext.enterApiKeyTask.done(() => {
-            /* TODO  this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
-             this.notifications = this.createNotifications();*/
+            /* TODO
+            changesContext.default
+                .connectGlobalChangesApi()
+                .done(() => {
+                    this.resourcesManager.createGlobalNotifications();
+                });*/
         });
 
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
