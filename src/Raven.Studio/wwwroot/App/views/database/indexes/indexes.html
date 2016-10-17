@@ -73,11 +73,11 @@
     <div data-bind="foreach: sortedGroups">
         <h2 data-bind="text: entityName, visible: !groupHidden()"></h2>
         <div data-bind="foreach: indexes, visible: !groupHidden()">
-            <div class="panel" data-bind="visible: !filteredOut()">
+            <div class="panel panel-state index" data-bind="visible: !filteredOut()">
                 <div class="padding padding-sm">
-                    <div data-bind="attr: { class: 'state ' + badgeClass() }"></div>
+                    <div data-bind="attr: { class: 'state ' + badgeClass(), 'data-state-text' : badgeText() }"></div>
                     <div class="row">
-                        <div class="col-sm-6 col-xl-4 col-flex info-container">
+                        <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
                             <div class="checkbox">
                                 <input type="checkbox" class="styled" data-bind="checked: $root.selectedIndexesName, checkedValue: name">
                                 <label></label>
@@ -89,24 +89,34 @@
                                 &nbsp; <span data-bind="visible: isTestIndex" class="label label-warning">TEST INDEX</span>    
                             </div>
                         </div>
-                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container" data-bind="if: !isFaulty()">
+                        <div class="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container" data-bind="if: !isFaulty()">
                             <div class="properties-item staleness" data-bind="visible: isStale()">
-                                <div class="properties-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
+                                <div class="properties-value value-only">
+                                    <div class="set-size">
+                                        <i class="icon-reset"></i><span>Stale</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="properties-item text-success staleness" data-bind="visible: !isStale()">
                                 <div class="properties-value value-only">
-                                    <i class="icon-check"></i><span>Up to date</span>
+                                    <div class="set-size">
+                                        <i class="icon-check"></i><span>Up to date</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="properties-item entriesCount">
-                                <div class="properties-value value-only"><i class="icon-list"></i><span data-bind="text: $root.pluralize(entriesCount, 'entry', 'entries')"></span></div>
+                                <div class="properties-value value-only">
+                                    <div class="set-size">
+                                        <i class="icon-list"></i><span data-bind="text: $root.pluralize(entriesCount, 'entry', 'entries')"></span>    
+                                    </div>
+                                </div>
                             </div>
                             <div class="properties-item priority" data-bind="template: { name: 'priority-template' }">
                             </div>
                             <div class="properties-item mode" data-bind="template: { name: 'lock-mode-template' }">
                             </div>
                         </div>
-                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                        <div class="col-xs-12 col-sm-6 col-xl-3 actions-container">
                             <div class="actions">
                                 <div class="btn-toolbar pull-right-sm" role="toolbar">
                                     <div class="btn-group" role="group" data-bind="if: !isFaulty()">
@@ -131,8 +141,8 @@
 
 <script type="text/html" id="priority-template">
     <span class="properties-label">Priority:</span>
-    <div class="btn-group btn-group-xs">
-        <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown"
+    <div class="btn-group properties-value">
+        <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
                 data-bind="css: { 'btn-spinner': $root.localPriorityInProgress().contains(name) }, enable: $root.indexingEnabled() && !$root.localPriorityInProgress().contains(name)">
             <span data-bind="visible: pausedUntilRestart()">
                 <i class="icon-cancel"></i>
@@ -184,8 +194,8 @@
 
 <script type="text/html" id="lock-mode-template">
     <span class="properties-label">Mode:</span>
-    <div class="btn-group btn-group-xs">
-        <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown" 
+    <div class="btn-group properties-value">
+        <button type="button" class="btn btn-block set-size dropdown-toggle" data-toggle="dropdown" 
                 data-bind="css: { 'btn-spinner': $root.localLockChangesInProgress().contains(name) }, enable: !$root.localLockChangesInProgress().contains(name)">
             <span data-bind="visible: lockMode() === 'Unlock'">
                 <i class="icon-unlock"></i><span>Unlock</span>
