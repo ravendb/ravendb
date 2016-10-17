@@ -63,6 +63,10 @@ namespace Raven.Database.Indexing
         private const long OutOfMemoryErrorsLimit = 10;
         private long indexingOutOfMemoryErrors;
         private long reducingOutOfMemoryErrors;
+        public long OutOfMemoryErrorsCount => Interlocked.Read(ref indexingOutOfMemoryErrors) + Interlocked.Read(ref reducingOutOfMemoryErrors);
+
+        private const long ErrorsLimit = 20;
+        private long errors;
 
         private readonly List<Document> currentlyIndexDocuments = new List<Document>();
         protected Directory directory;
@@ -280,9 +284,9 @@ namespace Raven.Database.Indexing
 
                 try
                 {
-                    EnsureIndexWriter();
+                    EnsureIndexWriter(useWriteLock: false, isDisposing: true);
                     ForceWriteToDisk();
-                    WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
+                    WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats(), useWriteLock: false, isDisposing: true);
                 }
                 catch (Exception e)
                 {
@@ -328,21 +332,40 @@ namespace Raven.Database.Indexing
             }
         }
 
-        public void EnsureIndexWriter()
+        public void EnsureIndexWriter(bool useWriteLock, bool isDisposing = false)
         {
+            if (indexWriter != null)
+                return;
+
+            var lockTaken = false;
             try
             {
-                if (indexWriter == null)
-                    CreateIndexWriter();
+                if (useWriteLock)
+                {
+                    Monitor.Enter(writeLock, ref lockTaken);
+                }
+
+                if (indexWriter != null)
+                    return;
+
+                if (isDisposing == false && disposed)
+                    throw new ObjectDisposedException("Index " + PublicName + " has been disposed");
+
+                CreateIndexWriter(isDisposing: isDisposing);
             }
             catch (IOException e)
             {
                 var msg = string.Format("Error when trying to create the index writer for index '{0}'.", this.PublicName);
                 throw new IOException(msg, e);
             }
+            finally
+            {
+                if (lockTaken)
+                    Monitor.Exit(writeLock);
+            }
         }
 
-        public void Flush(Etag highestETag)
+        public void Flush(Etag highestETag, bool considerLastCommitedTime = false)
         {
             try
             {
@@ -360,7 +383,7 @@ namespace Raven.Database.Indexing
                     {
                         try
                         {
-                            indexWriter.Commit(highestETag);
+                            indexWriter.Commit(highestETag, considerLastCommitedTime);
                         }
                         catch (Exception e)
                         {
@@ -387,13 +410,16 @@ namespace Raven.Database.Indexing
         {
             lock (writeLock)
             {
+                if (disposed)
+                    return;
+
                 waitReason = "Merge / Optimize";
                 try
                 {
                     logIndexing.Info("Starting merge of {0}", PublicName);
                     var sp = Stopwatch.StartNew();
 
-                    EnsureIndexWriter();
+                    EnsureIndexWriter(useWriteLock: false);
 
                     try
                     {
@@ -560,7 +586,7 @@ namespace Raven.Database.Indexing
                         throw;
                     }
 
-                    EnsureIndexWriter();
+                    EnsureIndexWriter(useWriteLock: false);
 
                     var locker = directory.MakeLock("writing-to-index.lock");
                     try
@@ -594,17 +620,25 @@ namespace Raven.Database.Indexing
                         }
                         catch (OperationCanceledException)
                         {
-                            //do not add error if this exception happens,
-                            //since this exception can happen during normal code-flow
+                            // do not add error if this exception happens,
+                            // since this exception can happen during normal code-flow
                             throw;
                         }
                         catch (Exception e)
                         {
+                            Exception _;
+                            if (TransactionalStorageHelper.IsOutOfMemoryException(e) ||
+                                TransactionalStorageHelper.IsWriteConflict(e, out _))
+                            {
+                                // we are handling this
+                                throw;
+                            }
+
                             var invalidSpatialShapeException = e as InvalidSpatialShapException;
-                            var invalidDocId = (invalidSpatialShapeException == null) ?
-                                null :
-                                invalidSpatialShapeException.InvalidDocumentId;
-                            context.AddError(indexId, indexDefinition.Name, invalidDocId, e, "Write");
+                            var invalidDocId = invalidSpatialShapeException?.InvalidDocumentId;
+                            if (invalidDocId != null)
+                                AddIndexingError(e, "Invalid Spatial Exception", invalidDocId);
+
                             throw;
                         }
 
@@ -612,7 +646,7 @@ namespace Raven.Database.Indexing
                         {
                             using (StopwatchScope.For(flushToDiskDuration))
                             {
-                                WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
+                                WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag, useWriteLock: false);
 
                                 if (indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
                                 {
@@ -628,6 +662,10 @@ namespace Raven.Database.Indexing
                     {
                         locker.Release();
                     }
+                }
+                catch (ObjectDisposedException)
+                {
+                    throw;
                 }
                 catch (OperationCanceledException)
                 {
@@ -757,8 +795,11 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private void CreateIndexWriter()
+        private void CreateIndexWriter(bool isDisposing)
         {
+            if (isDisposing == false && disposed)
+                throw new OperationCanceledException();
+
             try
             {
                 snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
@@ -774,7 +815,7 @@ namespace Raven.Database.Indexing
             }
         }
 
-        internal void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag)
+        internal void WriteInMemoryIndexToDiskIfNecessary(Etag highestETag, bool useWriteLock, bool isDisposing = false)
         {
             if (context.Configuration.RunInMemory ||
                 context.IndexDefinitionStorage == null) // may happen during index startup
@@ -782,7 +823,16 @@ namespace Raven.Database.Indexing
 
             var dir = indexWriter.Directory as RAMDirectory;
             if (dir == null)
+            {
+                if (isDisposing)
+                {
+                    // if we are disposing, we need to flush the highest etag 
+                    // to prevent resetting the index etag to the last commited one on restart 
+                    indexWriter.Commit(highestETag, forceCommit: true);
+                }
+                    
                 return;
+            }
 
             var stale = IsUpToDateEnoughToWriteToDisk(highestETag) == false;
             var toobig = dir.SizeInBytes() >= context.Configuration.NewIndexInMemoryMaxBytes;
@@ -791,17 +841,37 @@ namespace Raven.Database.Indexing
 
             if (forceWriteToDisk || toobig || !stale || tooOld)
             {
-                indexWriter.Commit(highestETag);
-                var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition);
-                IndexStorage.WriteIndexVersion(fsDir, indexDefinition);
-                directory = fsDir;
+                // fix a race condition when trying to write the in memory index to disk concurrently
+                var lockTaken = false;
+                try
+                {
+                    if (useWriteLock)
+                    {
+                        Monitor.Enter(writeLock, ref lockTaken);
+                    }
 
-                indexWriter.Dispose(true);
-                dir.Dispose();
+                    dir = indexWriter.Directory as RAMDirectory;
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                    if (dir == null)
+                        return;
 
-                CreateIndexWriter();
+                    indexWriter.Commit(highestETag, forceCommit: true);
+                    var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition);
+                    IndexStorage.WriteIndexVersion(fsDir, indexDefinition);
+                    directory = fsDir;
 
-                ResetWriteErrors();
+                    indexWriter.Dispose(true);
+                    dir.Dispose();
+
+                    CreateIndexWriter(isDisposing: isDisposing);
+
+                    ResetWriteErrors();
+                }
+                finally
+                {
+                    if (lockTaken)
+                        Monitor.Exit(writeLock);
+                }
             }
         }
 
@@ -1742,11 +1812,19 @@ namespace Raven.Database.Indexing
             if (directory is RAMDirectory)
             {
                 //if the index is memory-only, force writing index data to disk
-                Write((writer, analyzer, stats) =>
+                try
                 {
-                    ForceWriteToDisk();
-                    return new IndexedItemsInfo(GetLastEtagFromStats()) { ChangedDocs = 1 };
-                });
+                    Write((writer, analyzer, stats) =>
+                    {
+                        ForceWriteToDisk();
+                        return new IndexedItemsInfo(GetLastEtagFromStats()) { ChangedDocs = 1 };
+                    });
+                }
+                catch (ObjectDisposedException e)
+                {
+                    logIndexing.Warn($"Couldn't backup index {PublicName} because it was disposed", e);
+                    return;
+                }
             }
 
             bool hasSnapshot = false;
@@ -1782,7 +1860,7 @@ namespace Raven.Database.Indexing
                         {
                             // however, we copy the current segments.gen & index.version to make 
                             // sure that we get the _at the time_ of the write. 
-                            foreach (var fileName in new[] { "segments.gen", IndexStorage.IndexVersionFileName(indexDefinition) })
+                            foreach (var fileName in new[] {"segments.gen", IndexStorage.IndexVersionFileName(indexDefinition)})
                             {
                                 token.ThrowIfCancellationRequested();
                                 var fullPath = Path.Combine(path, indexId.ToString(), fileName);
@@ -1792,6 +1870,13 @@ namespace Raven.Database.Indexing
                             }
                             return new IndexedItemsInfo(null);
                         });
+                    }
+                    catch (ObjectDisposedException e)
+                    {
+                        logIndexing.Warn($"Couldn't backup index {PublicName} because it was disposed", e);
+                        neededFilesWriter.Dispose();
+                        TryDelete(neededFilePath);
+                        return;
                     }
                     catch (CorruptIndexException e)
                     {
@@ -2014,6 +2099,28 @@ namespace Raven.Database.Indexing
             return false;
         }
 
+        public void AddIndexingError(Exception e, string message, string documentId = null)
+        {
+            if (disposed)
+                return;
+
+            logIndexing.WarnException(message, e);
+            context.AddError(IndexId, PublicName, null, e, message);
+
+            if (Interlocked.Increment(ref errors) < ErrorsLimit)
+                return;
+
+            if ((Priority & IndexingPriority.Error) == IndexingPriority.Error ||
+                (Priority & IndexingPriority.Disabled) == IndexingPriority.Disabled)
+                return;
+
+            var title = $"Index '{PublicName}' marked as disabled due to exceeding the error limit {(ErrorsLimit)}";
+            var errorMessage = $"Index '{PublicName}' exceeded the error limit. " +
+                               "The index priority was set to disabled.";
+
+            AddIndexError(e, errorMessage, title, IndexingPriority.Disabled, IndexChangeTypes.IndexDemotedToDisabled);
+        }
+
         public void TryDisable(Exception e, long outOfMemoryErrorCount, int failedToProcessCount)
         {
             if (disposed)
@@ -2029,7 +2136,7 @@ namespace Raven.Database.Indexing
             var title = $"Index '{PublicName}' marked as disabled due to out of memory exception";
             var errorMessage = $"Index '{PublicName}' got out of memory exception " +
                                $"(failed to process {failedToProcessCount} entries). " +
-                               $"The index priority was set to disabled.";
+                               "The index priority was set to disabled.";
 
             AddIndexError(e, errorMessage, title, IndexingPriority.Disabled, IndexChangeTypes.IndexDemotedToDisabled);
         }
@@ -2078,7 +2185,7 @@ namespace Raven.Database.Indexing
             }
 
             logIndexing.Warn("Out of memory exception occured in storage during indexing process. " +
-                             $"Try increasing '{configurationKey}' value in configuration");
+                             $"Consider increasing '{configurationKey}' value in configuration");
 
             context.Database.AddAlert(new Alert
             {
@@ -2087,7 +2194,7 @@ namespace Raven.Database.Indexing
                 Title = $"{context.Database.TransactionalStorage.FriendlyName} out of memory exception for index '{PublicName}', id: {IndexId}",
                 UniqueKey = $"{context.Database.TransactionalStorage.FriendlyName} out of memory exception",
                 Message = $"Out of memory exception occured in storage during indexing process for index '{PublicName}'. " +
-                          $"Will try to reduce batch size. Try increasing '{configurationKey}' value in configuration. Error: {e.Message}"
+                          $"Will try to reduce batch size. Consider increasing '{configurationKey}' value in configuration. Error: {e.Message}"
             });
         }
 
@@ -2214,7 +2321,7 @@ namespace Raven.Database.Indexing
                     if (indexWriter != null)
                     {
                         ForceWriteToDisk();
-                        WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats());
+                        WriteInMemoryIndexToDiskIfNecessary(GetLastEtagFromStats(), useWriteLock: true);
                     }
                 }
                 catch (Exception e)

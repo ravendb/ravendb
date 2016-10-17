@@ -384,10 +384,11 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             catch (Exception e)
             {
                 var ae = e as AggregateException;
+                var singleInnerException = ae.ExtractSingleInnerException();
                 ErrorResponseException errorResponseException;
                 if (ae != null)
                 {
-                    errorResponseException = ae.ExtractSingleInnerException() as ErrorResponseException;
+                    errorResponseException = singleInnerException as ErrorResponseException;
                 }
                 else
                 {
@@ -406,7 +407,13 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                 if (shouldTryAgain == false)
                 {
                     if (avoidThrowing == false)
+                    {
+                        var timeoutException = singleInnerException as TimeoutException;
+                        if (timeoutException != null)
+                            throw timeoutException;
+
                         throw;
+                    }
 
                     bool wasTimeout;
                     var isServerDown = HttpConnectionHelper.IsServerDown(e, out wasTimeout);
@@ -430,6 +437,10 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                             Error = e
                         };
                     }
+
+                    if (errorResponseException != null)
+                        throw errorResponseException;
+
                     throw;
                 }
             }

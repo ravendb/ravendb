@@ -1,5 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getReducedDatabaseStatsCommand = require("commands/resources/getReducedDatabaseStatsCommand");
 import router = require("plugins/router");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
@@ -33,10 +33,10 @@ class upgrade extends viewModelBase {
         clearTimeout(this.timeoutHandle);
     }
 
-    fetchStats(): JQueryPromise<databaseStatisticsDto> {
+    fetchStats(): JQueryPromise<reducedDatabaseStatisticsDto> {
         var db = this.activeDatabase();
         if (db) {
-            return new getDatabaseStatsCommand(db)
+            return new getReducedDatabaseStatsCommand(db)
                 .execute();
         }
 

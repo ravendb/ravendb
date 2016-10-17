@@ -18,6 +18,8 @@ import changeSubscription = require("common/changeSubscription");
 import license = require("models/auth/license");
 import topology = require("models/database/replication/topology");
 import environmentColor = require("models/resources/environmentColor");
+import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
+import liveTestDetector = require("common/liveTestDetector");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
@@ -58,6 +60,7 @@ import getClusterTopologyCommand = require("commands/database/cluster/getCluster
 import getStudioConfig = require("commands/getStudioConfig");
 
 import viewModelBase = require("viewmodels/viewModelBase");
+import eventsCollector = require("common/eventsCollector");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 import recentErrors = require("viewmodels/common/recentErrors");
 import enterApiKey = require("viewmodels/common/enterApiKey");
@@ -154,24 +157,26 @@ class shell extends viewModelBase {
     isInCluster = ko.computed(() => shell.clusterMode());
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
     static serverMainVersion = ko.observable<number>(3);
+    static serverMinorVersion = ko.observable<number>(5);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
    
     windowHeightObservable: KnockoutObservable<number>;
     recordedErrors = ko.observableArray<alertArgs>();
-    newIndexUrl = appUrl.forCurrentDatabase().newIndex;
-    newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
     hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
     showSplash = viewModelBase.showSplash;
 
+    displayUsageStatsInfo = ko.observable<boolean>(false);
+    trackingTask = $.Deferred();
+
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
 
     static has40Features = ko.computed(() => shell.serverMainVersion() >= 4);
 
-    private globalChangesApi: changesApi;
+    public static globalChangesApi: changesApi;
     private static changeSubscriptionArray: changeSubscription[];
 
     constructor() {
@@ -187,7 +192,7 @@ class shell extends viewModelBase {
         });
         oauthContext.enterApiKeyTask = this.setupApiKey();
         oauthContext.enterApiKeyTask.done(() => {
-            this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+            shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
             this.notifications = this.createNotifications();
         });
 
@@ -295,7 +300,7 @@ class shell extends viewModelBase {
                     self.destroyChangesApi();
                 } else {
                     // enable changes api
-                    this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+                    shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
                     this.notifications = this.createNotifications();
                 }
             } else if (e.originalEvent.key === apiKeyLocalStorage.localStorageName) {
@@ -343,7 +348,7 @@ class shell extends viewModelBase {
 
     private destroyChangesApi() {
         this.cleanupNotifications();
-        this.globalChangesApi.dispose();
+        shell.globalChangesApi.dispose();
         shell.disconnectFromResourceChangesApi();
     }
 
@@ -389,45 +394,80 @@ class shell extends viewModelBase {
     }
 
     static fetchStudioConfig() {
-        var hotSpareTask = new getHotSpareInformation().execute();
         var configTask = new getDocumentWithMetadataCommand(shell.studioConfigDocumentId, appUrl.getSystemDatabase(), true).execute();
 
-        $.when(hotSpareTask, configTask).done((hotSpareResult, doc: documentClass) => {
-            var hotSpare = <HotSpareDto>hotSpareResult[0];
+        if (license.isHotSpare()) {
+            //override environment colors with hot spare
+            new getHotSpareInformation().execute()
+                .done((hotSpare: HotSpareDto) => {
+                    this.activateHotSpareEnvironment(hotSpare);
+                    shell.saveStudioConfig(configTask, true);
+                });
 
-            appUrl.warnWhenUsingSystemDatabase = doc && doc["WarnWhenUsingSystemDatabase"];
+            return;
+        }
 
-            if (license.licenseStatus().Attributes.hotSpare === "true") {
-                // override environment colors with hot spare
-                this.activateHotSpareEnvironment(hotSpare);
-            } else {
-                var envColor = doc && doc["EnvironmentColor"];
-                if (envColor != null) {
-                    var color = new environmentColor(envColor.Name, envColor.BackgroundColor);
-                    shell.selectedEnvironmentColorStatic(color);
-                    shell.originalEnvironmentColor(color);
+        shell.saveStudioConfig(configTask, false);
+        return configTask;
+    }
+
+    private static saveStudioConfig(configTask: JQueryPromise<documentClass>, isHotSpare: boolean) {
+        configTask
+            .done((doc: documentClass) => {
+                var hasDoc = !!doc;
+                if (hasDoc) {
+                    appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
                 }
-            }
-        });
+
+                if (isHotSpare) {
+                    return; 
+                }
+
+                if (hasDoc === false) {
+                    shell.setDefaultColors();
+                    return;
+                }
+
+                var envColor = doc && doc["EnvironmentColor"];
+                if (!envColor) {
+                    return;
+                }
+
+                var color = new environmentColor(envColor.Name, envColor.BackgroundColor, envColor.TextColor);
+                shell.selectedEnvironmentColorStatic(color);
+                shell.originalEnvironmentColor(color);
+            })
+            .fail(() => shell.setDefaultColors());
+    }
+
+    private static setDefaultColors() {
+        var defaultColor = new environmentColor("Default", "#f8f8f8");
+        shell.selectedEnvironmentColorStatic(defaultColor);
+        shell.originalEnvironmentColor(defaultColor);
     }
 
     private fecthStudioConfigForDatabase(db: database) {
-        var hotSpareTask = new getHotSpareInformation().execute();
-        var configTask = new getStudioConfig(db).execute();
+        if (!license.licenseStatus()) {
+            //wait for license to be fetched
+            setTimeout(() => this.fecthStudioConfigForDatabase(db), 500);
+            return;
+        }
 
-        $.when(hotSpareTask, configTask).done((hotSpareResult, docResult) => {
-            var hotSpare = hotSpareResult[0];
-            var doc = <documentClass>docResult[0];
-            if (hotSpare.ActivationMode === "Activated") {
-                // override environment colors with hot spare
-                shell.activateHotSpareEnvironment(hotSpare);
-            } else {
-                var envColor = doc["EnvironmentColor"];
-                if (envColor != null) {
-                    shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
-                }
-            }
-        }).fail(() => shell.selectedEnvironmentColorStatic(shell.originalEnvironmentColor()));
+        if (license.isHotSpare()) {
+            //don't apply any custom environment details
+            return;
+        }
+
+        var configTask = new getStudioConfig(db).execute();
+        configTask
+            .done((doc: documentClass) => {
+                var envColor = doc && doc["EnvironmentColor"];
+                if (!envColor)
+                    return;
+
+                shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor, envColor.TextColor));
+            })
+            .fail(() => shell.selectedEnvironmentColorStatic(shell.originalEnvironmentColor()));
     }
 
     private activateDatabase(db: database) {
@@ -441,7 +481,8 @@ class shell extends viewModelBase {
         var changeSubscriptionArray = () => [
             changesContext.currentResourceChangesApi().watchAllDocs(() => this.fetchDbStats(db)),
             changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchDbStats(db)),
-            changesContext.currentResourceChangesApi().watchBulks(() => this.fetchDbStats(db))
+            changesContext.currentResourceChangesApi().watchBulks(() => this.fetchDbStats(db)),
+            changesContext.currentResourceChangesApi().watchDocument("Raven/Alerts", () => this.fetchDbStats(db))
         ];
         var isNotADatabase = this.currentConnectedResource instanceof database === false;
         this.updateChangesApi(db, isNotADatabase, () => this.fetchDbStats(db), changeSubscriptionArray);
@@ -637,10 +678,9 @@ class shell extends viewModelBase {
 
     private reloadDataAfterReconnection(rs: resource) {
         if (rs.name === "<system>") {
-            shell.fetchStudioConfig();
             this.fetchServerBuildVersion();
             this.fetchClientBuildVersion();
-            shell.fetchLicenseStatus();
+            shell.fetchLicenseStatus().always(() => shell.fetchStudioConfig());
             this.fetchSupportCoverage();
             this.loadServerConfig();
 
@@ -691,12 +731,12 @@ class shell extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            this.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase, TenantType.Database)),
-            this.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem, TenantType.FileSystem)),
-            this.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage, TenantType.CounterStorage)),
-            this.globalChangesApi.watchDocsStartingWith("Raven/TimeSeries/", (e) => this.changesApiFiredForResource(e, shell.timeSeries, this.activeTimeSeries, TenantType.TimeSeries)),
-            this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),
-            this.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts())
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.changesApiFiredForResource(e, shell.databases, this.activeDatabase, TenantType.Database)),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem, TenantType.FileSystem)),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage, TenantType.CounterStorage)),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/TimeSeries/", (e) => this.changesApiFiredForResource(e, shell.timeSeries, this.activeTimeSeries, TenantType.TimeSeries)),
+            shell.globalChangesApi.watchDocument(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts())
         ];
     }
 
@@ -809,18 +849,77 @@ class shell extends viewModelBase {
             .fail(result => this.handleRavenConnectionFailure(result))
             .done((results: database[]) => {
                 this.databasesLoaded(results);
-                shell.fetchStudioConfig();
+                var configTask = shell.fetchStudioConfig();
                 this.fetchClusterTopology();
-                this.fetchServerBuildVersion();
+                var studioVersionTask = this.fetchServerBuildVersion();
                 this.fetchClientBuildVersion();
-                shell.fetchLicenseStatus();
+                shell.fetchLicenseStatus().always(() => shell.fetchStudioConfig());
                 this.fetchSupportCoverage();
                 this.fetchSystemDatabaseAlerts();
                 router.activate();
+
+                $.when(configTask, studioVersionTask).then((configResult: any, buildVersionResult: any) => {
+                    this.initAnalytics(configResult, buildVersionResult);
+                });
             })
             .always(() => deferred.resolve());
 
         return deferred;
+    }
+
+    private initAnalytics(config: any, buildVersionResult: [serverBuildVersionDto]) {
+        if (eventsCollector.gaDefined()) {
+            if (liveTestDetector.isLiveTest()) {
+                // force tracking on live test
+                this.configureAnalytics(true, buildVersionResult);
+            } else if (config == null || !("SendUsageStats" in config)) {
+                // ask user about GA
+                this.displayUsageStatsInfo(true);
+
+                this.trackingTask.done((accepted: boolean) => {
+                    this.displayUsageStatsInfo(false);
+
+                    if (accepted) {
+                        this.configureAnalytics(true, buildVersionResult);
+                    }
+                    this.saveTrackingSetting(config, accepted);
+                });
+            } else {
+                this.configureAnalytics(config.SendUsageStats, buildVersionResult);
+            }
+        } else {
+            // user has uBlock etc?
+            this.configureAnalytics(false, buildVersionResult);
+        }
+    }
+
+    private saveTrackingSetting(config: any, track: boolean) {
+        if (config == null) {
+            config = documentClass.empty();
+        }
+
+        config.SendUsageStats = track;
+
+        new saveDocumentCommand(shell.studioConfigDocumentId, config, this.systemDatabase, false)
+            .execute();
+    }
+
+    collectUsageData() {
+        this.trackingTask.resolve(true);
+    }
+
+    doNotCollectUsageData() {
+        this.trackingTask.resolve(false);
+    }
+
+    private configureAnalytics(track: boolean, buildVersionResult: [serverBuildVersionDto]) {
+        var currentBuildVersion = buildVersionResult[0].BuildVersion;
+        if (currentBuildVersion !== 13) {
+            shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
+        }
+
+        var env = license.licenseStatus() && license.licenseStatus().IsCommercial ? "prod" : "dev";
+        eventsCollector.default.initialize(shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, track);
     }
 
     private loadFileSystems(): JQueryPromise<any> {
@@ -925,7 +1024,19 @@ class shell extends viewModelBase {
     }
 
     private static activateHotSpareEnvironment(hotSpare: HotSpareDto) {
-        var color = new environmentColor(hotSpare.ActivationMode === "Activated" ? "Active Hot Spare": "Hot Spare", "#FF8585");
+        var title: string;
+        switch (hotSpare.ActivationMode) {
+            case "Activated":
+                title = "Active Hot Spare";
+                break;
+            case "Testing":
+                title = "Test Hot Spare";
+                break;
+            default:
+                title = "Hot Spare";
+        }
+
+        var color = new environmentColor(title, "#FF8585");
         license.hotSpare(hotSpare);
         shell.selectedEnvironmentColorStatic(color);
         shell.originalEnvironmentColor(color);
@@ -1013,7 +1124,18 @@ class shell extends viewModelBase {
     }
 
     newDocument() {
+        eventsCollector.default.reportEvent("document", "create-from-shell");
         this.launchDocEditor(null);
+    }
+
+    newIndex() {
+        eventsCollector.default.reportEvent("index", "create-from-shell");
+        router.navigate(appUrl.forNewIndex(this.activeDatabase()));
+    }
+
+    newTransformer() {
+        eventsCollector.default.reportEvent("transformer", "create-from-shell");
+        router.navigate(appUrl.forNewTransformer(this.activeDatabase()));
     }
 
     private activateDatabaseWithName(databaseName: string) {
@@ -1039,23 +1161,8 @@ class shell extends viewModelBase {
         }
     }
 
-    getCurrentActiveFeatureName() {
-        if (this.appUrls.isAreaActive("admin")()) {
-            return "Manage Your Server";
-        } else {
-            return "Resources";
-        }
-    }
-
-    getCurrentActiveFeatureHref() {
-        if (this.appUrls.isAreaActive("admin")()) {
-            return this.appUrls.adminSettings();
-        } else {
-            return this.appUrls.resources();
-        }
-    }
-
     goToDoc(doc: documentMetadataDto) {
+        eventsCollector.default.reportEvent("document", "go-to-from-shell");
         this.goToDocumentSearch("");
         this.navigate(appUrl.forEditDoc(doc["@metadata"]["@id"], null, null, this.activeDatabase()));
     }
@@ -1065,7 +1172,7 @@ class shell extends viewModelBase {
     }
 
     fetchServerBuildVersion() {
-        new getServerBuildVersionCommand()
+        return new getServerBuildVersionCommand()
             .execute()
             .done((serverBuildResult: serverBuildVersionDto) => {
                 this.serverBuildVersion(serverBuildResult);
@@ -1103,14 +1210,19 @@ class shell extends viewModelBase {
     }
 
     static fetchLicenseStatus(): JQueryPromise<licenseStatusDto> {
-        return new getLicenseStatusCommand()
+        var deferred = $.Deferred();
+
+        new getLicenseStatusCommand()
             .execute()
             .done((result: licenseStatusDto) => {
                 if (result.Status.contains("AGPL")) {
                     result.Status = "Development Only";
                 }
                 license.licenseStatus(result);
+                deferred.resolve();
             });
+
+        return deferred;
     }
 
     fetchSupportCoverage() {
@@ -1141,6 +1253,7 @@ class shell extends viewModelBase {
     }
 
     showErrorsDialog() {
+        eventsCollector.default.reportEvent("errors-dialog", "show");
         var errorDetails: recentErrors = new recentErrors(this.recordedErrors);
         app.showDialog(errorDetails);
     }
@@ -1152,6 +1265,7 @@ class shell extends viewModelBase {
     }
 
     showLicenseStatusDialog() {
+        eventsCollector.default.reportEvent("license-status", "show");
         var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage(), license.hotSpare());
         app.showDialog(dialog);
     }

@@ -13,7 +13,6 @@ using System.Text;
 using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -27,6 +26,11 @@ namespace Raven.Database.Storage.Esent.StorageActions
 {
     public partial class DocumentStorageActions : IDocumentStorageActions
     {
+        [ThreadStatic]
+        private static byte[] readBuffer;
+
+        private static readonly RavenJObject EmptyDocument = new RavenJObject();
+
         public long GetDocumentsCount()
         {
             if (Api.TryMoveFirst(session, Details))
@@ -34,14 +38,20 @@ namespace Raven.Database.Storage.Esent.StorageActions
             return 0;
         }
 
-        public JsonDocument DocumentByKey(string key)
+        public JsonDocument DocumentByKey(string key, bool useDifferentTable = false)
         {
-            return DocumentByKeyInternal(key, (metadata, metadataSize, createDocument) =>
+            var table = useDifferentTable == false ? Documents : DuplicatedDocuments;
+
+            return DocumentByKeyInternal(table, key, (metadata, metadataSize, createDocument) =>
             {
                 System.Diagnostics.Debug.Assert(metadata.Etag != null);
 
                 var docSize = new Reference<int>();
-                var doc = createDocument(metadata.Key, metadata.Etag, metadata.Metadata, docSize);
+                var doc = createDocument(table, metadata.Key, metadata.Etag, metadata.Metadata, docSize);
+
+                var serializedSizeOnDisk = metadataSize + docSize.Value;
+                cacher.SetCachedDocument(key, metadata.Etag, doc, metadata.Metadata, serializedSizeOnDisk);
+
                 return new JsonDocument
                 {
                     DataAsJson = doc,
@@ -49,7 +59,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     Key = metadata.Key,
                     LastModified = metadata.LastModified,
                     Metadata = metadata.Metadata,
-                    SerializedSizeOnDisk = metadataSize + docSize.Value,
+                    SerializedSizeOnDisk = serializedSizeOnDisk,
                     NonAuthoritativeInformation = metadata.NonAuthoritativeInformation
                 };
             });
@@ -71,56 +81,53 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
         public JsonDocumentMetadata DocumentMetadataByKey(string key)
         {
-            return DocumentByKeyInternal(key, (metadata, metadataSize, func) => metadata);
+            return DocumentByKeyInternal(Documents, key, (metadata, metadataSize, func) => metadata);
         }
 
-        private T DocumentByKeyInternal<T>(string key, Func<JsonDocumentMetadata, int, Func<string, Etag, RavenJObject, Reference<int>, RavenJObject>, T> createResult)
+        private T DocumentByKeyInternal<T>(Table table, string key, Func<JsonDocumentMetadata, int, 
+            Func<Table, string, Etag, RavenJObject, Reference<int>, RavenJObject>, T> createResult)
             where T : class
         {
-
-            Api.JetSetCurrentIndex(session, Documents, "by_key");
-            Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
+            Api.JetSetCurrentIndex(session, table, "by_key");
+            Api.MakeKey(session, table, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, table, SeekGrbit.SeekEQ) == false)
             {
                 if (logger.IsDebugEnabled)
                     logger.Debug("Document with key '{0}' was not found", key);
                 return null;
             }
 
-            var existingEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+            var existingEtag = Etag.Parse(Api.RetrieveColumn(session, table, tableColumnsCache.DocumentsColumns["etag"]));
             if (logger.IsDebugEnabled)
                 logger.Debug("Document with key '{0}' was found, etag: {1}", key, existingEtag);
 
-            var lastModifiedInt64 = Api.RetrieveColumnAsInt64(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value;
+            var lastModifiedInt64 = Api.RetrieveColumnAsInt64(session, table, tableColumnsCache.DocumentsColumns["last_modified"]).Value;
 
             int metadataSize;
-            var metadata = ReadDocumentMetadata(key, existingEtag, out metadataSize);
+            var metadata = ReadDocumentMetadata(table, key, existingEtag, out metadataSize);
             return createResult(new JsonDocumentMetadata
             {
                 Etag = existingEtag,
                 LastModified = DateTime.FromBinary(lastModifiedInt64),
-                Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
+                Key = Api.RetrieveColumnAsString(session, table, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
                 Metadata = metadata
             }, metadataSize, ReadDocumentData);
         }
 
-        private RavenJObject ReadDocumentMetadata(string key, Etag existingEtag, out int size)
+        private RavenJObject ReadDocumentMetadata(Table table, string key, Etag existingEtag, out int size)
         {
             try
             {
-                var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
+                var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag, metadataOnly: true);
                 if (existingCachedDocument != null)
                 {
-                    using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"])))
-                    {
-                        size = (int)stream.Length;
-                    }
+                    size = Api.RetrieveColumnSize(session, table, tableColumnsCache.DocumentsColumns["metadata"]) ?? 0;
                     return existingCachedDocument.Metadata;
                 }
 
-                var metadataBuffer = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]);
-                size = metadataBuffer.Length;
-                return metadataBuffer.ToJObject();
+                RavenJObject metadata;
+                size = GetMetadataFromStorage(table, out metadata);
+                return metadata;
             }
             catch (Exception e)
             {
@@ -128,35 +135,27 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
         }
 
-        private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata, Reference<int> size)
+        private RavenJObject ReadDocumentData(Table table, string key, Etag existingEtag, RavenJObject metadata, Reference<int> docSize)
         {
             try
             {
-                using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+                var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
+                if (existingCachedDocument != null)
                 {
-                    var documentSize = (int)stream.Length;
-                    size.Value = documentSize;
-
-                    var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
-                    if (existingCachedDocument != null)
-                        return existingCachedDocument.Document;
-
-                    using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
-                    {
-                        var data = columnStream.ToJObject();
-
-                        cacher.SetCachedDocument(key, existingEtag, data, metadata, documentSize);
-
-                        return data;
-                    }
+                    docSize.Value = existingCachedDocument.Size;
+                    return existingCachedDocument.Document;
                 }
+
+                RavenJObject document;
+                docSize.Value = GetDocumentFromStorage(table, key, metadata, existingEtag, out document);
+                return document;
             }
             catch (Exception e)
             {
                 InvalidDataException invalidDataException = null;
                 try
                 {
-                    using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+                    using (Stream stream = new BufferedStream(new ColumnStream(session, table, tableColumnsCache.DocumentsColumns["data"])))
                     using (var reader = new BinaryReader(stream))
                     {
                         if (reader.ReadUInt32() == DocumentCompression.CompressFileMagic)
@@ -177,12 +176,15 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
+        public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take, HashSet<string> entityNames = null)
         {
             Api.JetSetCurrentIndex(session, Documents, "by_etag");
             Api.MoveAfterLast(session, Documents);
             if (TryMoveTableRecords(Documents, start, backward: true))
                 return Enumerable.Empty<JsonDocument>();
+
+            var hasEntityNames = entityNames != null && entityNames.Count > 0;
+
             if (take < 1024 * 4)
             {
                 var optimizer = new OptimizedIndexReader();
@@ -191,17 +193,29 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     optimizer.Add(Session, Documents);
                 }
 
-                return optimizer.Select(Session, Documents, ReadCurrentDocument);
+                return optimizer.Select(Session, Documents, ReadDocument(hasEntityNames, entityNames));
             }
-            return GetDocumentsWithoutBuffering(take);
+
+            return GetDocumentsWithoutBuffering(take, hasEntityNames, entityNames);
         }
 
-        private IEnumerable<JsonDocument> GetDocumentsWithoutBuffering(int take)
+        private Func<JsonDocument> ReadDocument(bool hasEntityNames, HashSet<string> entityNames)
+        {
+            return () =>
+            {
+                var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
+                var docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+                return GetJsonDocument(hasEntityNames, key, docEtag, entityNames);
+            };
+        }
+
+        private IEnumerable<JsonDocument> GetDocumentsWithoutBuffering(
+            int take, bool hasEntityNames, HashSet<string> entityNames)
         {
             while (Api.TryMovePrevious(session, Documents) && take >= 0)
             {
                 take--;
-                yield return ReadCurrentDocument();
+                yield return ReadDocument(hasEntityNames, entityNames)();
             }
         }
 
@@ -228,9 +242,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
             return false;
         }
 
-        private JsonDocument ReadCurrentDocument(string key)
+        private JsonDocument ReadCurrentDocument(string key, Etag existingEtag)
         {
-            var existingEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
             var lastModified = Api.RetrieveColumnAsInt64(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value;
 
             var existingCachedDocument = cacher.GetCachedDocument(key, existingEtag);
@@ -248,31 +261,15 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 };
             }
 
-            int docSize;
-
-            var metadataBuffer = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]);
-            var metadata = metadataBuffer.ToJObject();
+            RavenJObject metadata;
+            var metadataSize = GetMetadataFromStorage(Documents, out metadata);
 
             RavenJObject dataAsJson;
-            using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-            {
-                using (var aggregateStream = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
-                {
-                    var streamInUse = aggregateStream;
-                    if (streamInUse != stream)
-                        streamInUse = new CountingStream(aggregateStream);
-
-                    dataAsJson = streamInUse.ToJObject();
-                    docSize = (int)Math.Max(streamInUse.Position, stream.Position);
-                }
-            }
-
-            var serializedSizeOnDisk = metadataBuffer.Length + docSize;
-            cacher.SetCachedDocument(key, existingEtag, dataAsJson, metadata, serializedSizeOnDisk);
+            var docSize = GetDocumentFromStorage(Documents, key, metadata, existingEtag, out dataAsJson);
 
             return new JsonDocument
             {
-                SerializedSizeOnDisk = serializedSizeOnDisk,
+                SerializedSizeOnDisk = metadataSize + docSize,
                 Key = key,
                 DataAsJson = dataAsJson,
                 NonAuthoritativeInformation = false,
@@ -282,14 +279,64 @@ namespace Raven.Database.Storage.Esent.StorageActions
             };
         }
 
+        private int GetDocumentFromStorage(Table table, string key, RavenJObject metadata, Etag existingEtag, out RavenJObject dataAsJson)
+        {
+            var colSize = Api.RetrieveColumnSize(session, table, tableColumnsCache.DocumentsColumns["data"]) ?? 0;
+            EnsureBuffer(colSize);
+
+            Api.JetRetrieveColumn(session, table, tableColumnsCache.DocumentsColumns["data"],
+                readBuffer, colSize,
+                0, out colSize, RetrieveColumnGrbit.None, null);
+
+            int docSize;
+            using (Stream stream = new MemoryStream(readBuffer, 0, colSize, writable: false))
+            {
+                docSize = (int) stream.Length;
+
+                using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
+                {
+                    dataAsJson = columnStream.ToJObject();
+                }
+            }
+
+            return docSize;
+        }
+
+        private int GetMetadataFromStorage(Table table, out RavenJObject metadata)
+        {
+            var colSize = Api.RetrieveColumnSize(session, table, tableColumnsCache.DocumentsColumns["metadata"]) ?? 0;
+            EnsureBuffer(colSize);
+
+            Api.JetRetrieveColumn(session, table, tableColumnsCache.DocumentsColumns["metadata"],
+                readBuffer, colSize,
+                0, out colSize, RetrieveColumnGrbit.None, null);
+
+            int metadataSize;
+            using (Stream stream = new MemoryStream(readBuffer, 0, colSize, writable: false))
+            {
+                metadata = stream.ToJObject();
+                metadataSize = (int) stream.Length;
+            }
+            return metadataSize;
+        }
+
+        private static void EnsureBuffer(int colSize)
+        {
+            if (readBuffer == null || readBuffer.Length < colSize)
+                readBuffer = new byte[colSize];
+        }
+
         private JsonDocument ReadCurrentDocument()
         {
             var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
-            return ReadCurrentDocument(key);
+            var existingEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
+            return ReadCurrentDocument(key, existingEtag);
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null,
-            Reference<bool> earlyExit = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, 
+            CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, 
+            Action<Etag> lastProcessedDocument = null, Reference<bool> earlyExit = null,
+            HashSet<string> entityNames = null, Action <List<DocumentFetchError>> failedToGetHandler = null)
         {
             if (earlyExit != null)
                 earlyExit.Value = false;
@@ -307,6 +354,10 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
             Etag lastDocEtag = null;
             Etag docEtag = etag;
+
+            var errors = new List<DocumentFetchError>();
+            var skipDocumentGetErrors = failedToGetHandler != null;
+            var hasEntityNames = entityNames != null && entityNames.Count > 0;
 
             do
             {
@@ -343,12 +394,30 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     }                        
                 }
 
-                var readCurrentDocument = ReadCurrentDocument(key);
+                JsonDocument document;
+                try
+                {
+                    document = GetJsonDocument(hasEntityNames, key, docEtag, entityNames);
+                }
+                catch (Exception e)
+                {
+                    if (skipDocumentGetErrors)
+                    {
+                        errors.Add(new DocumentFetchError
+                        {
+                            Key = key,
+                            Exception = e
+                        });
+                        continue;
+                    }
 
-                totalSize += readCurrentDocument.SerializedSizeOnDisk;
+                    throw;
+                }
+
+                totalSize += document.SerializedSizeOnDisk;
                 fetchedDocumentCount++;
 
-                yield return readCurrentDocument;
+                yield return document;
                 lastDocEtag = docEtag;  
 
                 if (maxSize != null && totalSize > maxSize.Value)
@@ -360,16 +429,73 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
                 if (fetchedDocumentCount >= take)
                 {
-                    if (untilEtag !=null && earlyExit != null)
+                    if (untilEtag != null && earlyExit != null)
                         earlyExit.Value = true;
                     break;
                 }
             } 
             while (Api.TryMoveNext(session, Documents));
 
+            if (skipDocumentGetErrors && errors.Count > 0)
+            {
+                failedToGetHandler(errors);
+            }
+
             // We notify the last that we considered.
             if (lastProcessedDocument != null)
                 lastProcessedDocument(lastDocEtag);
+        }
+
+        private JsonDocument GetJsonDocument(bool hasEntityNames, 
+            string key, Etag docEtag, HashSet<string> entityNames)
+        {
+            if (hasEntityNames == false)
+            {
+                return ReadCurrentDocument(key, docEtag);
+            }
+
+            System.Diagnostics.Debug.Assert(entityNames.Comparer.Equals(EqualityComparer<string>.Default) == false);
+            int metadataSize;
+            var metadataRavenJObject = ReadDocumentMetadata(Documents, key, docEtag, out metadataSize);
+            var lastModifiedInt64 = Api.RetrieveColumnAsInt64(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value;
+            var metadata = new JsonDocumentMetadata
+            {
+                Etag = docEtag,
+                LastModified = DateTime.FromBinary(lastModifiedInt64),
+                Key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode),
+                Metadata = metadataRavenJObject
+            };
+
+            var entityName = metadata.Metadata.Value<string>(Constants.RavenEntityName);
+            if (string.IsNullOrEmpty(entityName) == false && entityNames.Contains(entityName))
+            {
+                RavenJObject dataAsJson;
+                var docSize = GetDocumentFromStorage(Documents, key, metadata.Metadata, docEtag, out dataAsJson);
+                return new JsonDocument
+                {
+                    SerializedSizeOnDisk = metadataSize + docSize,
+                    Key = key,
+                    DataAsJson = dataAsJson,
+                    NonAuthoritativeInformation = false,
+                    LastModified = metadata.LastModified,
+                    Etag = docEtag,
+                    Metadata = metadata.Metadata
+                };
+            }
+
+            // this document will be filtered anyway
+            // there is no point in getting the document data
+            return new JsonDocument
+            {
+                SerializedSizeOnDisk = metadataSize,
+                Key = key,
+                DataAsJson = EmptyDocument,
+                NonAuthoritativeInformation = false,
+                LastModified = metadata.LastModified,
+                Etag = metadata.Etag,
+                Metadata = metadata.Metadata,
+                IsIrrelevantForIndexing = true
+            };
         }
 
         public IEnumerable<string> GetDocumentIdsAfterEtag(Etag etag, int maxTake,
@@ -396,8 +522,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
 
                 var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
-                var metadataBuffer = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]);
-                var metadata = metadataBuffer.ToJObject();
+
+                RavenJObject metadata;
+                GetMetadataFromStorage(Documents, out metadata);
 
                 Func<JsonDocument> getDocument = () => DocumentByKey(key);
                 if (filterDocument(key, metadata, getDocument) == false)
@@ -408,9 +535,13 @@ namespace Raven.Database.Storage.Esent.StorageActions
             } while (Api.TryMoveNext(session, Documents));
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take,
+            CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, 
+            Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null, 
+            HashSet<string> entityNames = null, Action<List<DocumentFetchError>> failedToGetHandler = null)
         {
-            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit);
+            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, 
+                timeout, lastProcessedOnFailure, earlyExit, entityNames, failedToGetHandler);
         }
 
         public Etag GetBestNextDocumentEtag(Etag etag)
@@ -445,27 +576,29 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
                 var key = Api.RetrieveColumnAsString(Session, Documents, tableColumnsCache.DocumentsColumns["key"],
                                                      Encoding.Unicode);
-               
-                var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
-                var size = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? -1;
-                stat.TotalSize += size;
+
+                RavenJObject metadata;
+                var metadateSize = GetMetadataFromStorage(Documents, out metadata);
+                var docSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? -1;
+                var totalSize = docSize + metadateSize;
+                stat.TotalSize += totalSize;
+
                 if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
                 {
-                    stat.System.Update(size, key);
+                    stat.System.Update(totalSize, key);
                 }
-
 
                 var entityName = metadata.Value<string>(Constants.RavenEntityName);
                 if (string.IsNullOrEmpty(entityName))
                 {
-                    stat.NoCollection.Update(size, key);
+                    stat.NoCollection.Update(totalSize, key);
                 }
                 else
                 {
-                    stat.IncrementCollection(entityName, size, key);
+                    stat.IncrementCollection(entityName, totalSize, key);
                 }
 
-                if (metadata.ContainsKey("Raven-Delete-Marker"))
+                if (metadata.ContainsKey(Constants.RavenDeleteMarker))
                     stat.Tombstones++;
 
                 processedDocuments++;
@@ -830,7 +963,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
             var existingEtag = EnsureDocumentEtagMatch(key, etag, "DELETE");
 
-            metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+            int _;
+            metadata = ReadDocumentMetadata(Documents, key, existingEtag, out _);
             deletedETag = existingEtag;
 
             Api.JetDelete(session, Documents);

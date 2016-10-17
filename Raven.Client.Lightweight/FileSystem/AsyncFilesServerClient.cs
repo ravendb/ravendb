@@ -633,7 +633,7 @@ namespace Raven.Client.FileSystem
             if (source.CanRead == false)
                 throw new Exception("Stream does not support reading");
 
-            bool streamConsumed = false;
+            var streamConsumed = false;
             long start = -1;
 
             long? size = null;
@@ -643,20 +643,26 @@ namespace Raven.Client.FileSystem
                 start = source.Position;
             }
 
-            return UploadAsync(filename, source.CopyTo, () =>
-            {
-                if (streamConsumed)
-                {
-                    // If the content needs to be written to a target stream a 2nd time, then the stream must support
-                    // seeking, otherwise the stream can't be copied a second time to a target stream (e.g. a NetworkStream).
-                    if (source.CanSeek)
-                        source.Position = start;
-                    else
-                        throw new InvalidOperationException("We need to resend the request body while the stream was already consumed. It cannot be read again because it's not seekable");
-                }
+            if (metadata == null)
+                metadata = new RavenJObject();
 
-                streamConsumed = true;
-            }, size, metadata, etag);
+            return ExecuteWithReplication(HttpMethods.Put, async (operation, requestTimeMetric) =>
+            {
+                await UploadAsyncImpl(operation, filename, source.CopyToAsync, () =>
+                {
+                    if (streamConsumed)
+                    {
+                        // If the content needs to be written to a target stream a 2nd time, then the stream must support
+                        // seeking, otherwise the stream can't be copied a second time to a target stream (e.g. a NetworkStream).
+                        if (source.CanSeek)
+                            source.Position = start;
+                        else
+                            throw new InvalidOperationException("We need to resend the request body while the stream was already consumed. It cannot be read again because it's not seekable");
+                    }
+
+                    streamConsumed = true;
+                }, metadata, false, size, etag).ConfigureAwait(false);
+            });
         }
 
         public Task UploadAsync(string filename, Action<Stream> source, Action prepareStream, long? size, RavenJObject metadata = null, Etag etag = null)
@@ -666,17 +672,21 @@ namespace Raven.Client.FileSystem
 
             return ExecuteWithReplication(HttpMethods.Put, async (operation, requestTimeMetric) =>
             {
-                await UploadAsyncImpl(operation, filename, source, prepareStream, metadata, false, size, etag).ConfigureAwait(false);
+                await UploadAsyncImpl(operation, filename, stream =>
+                {
+                    source(stream);
+                    return new CompletedTask();
+                }, prepareStream, metadata, false, size, etag).ConfigureAwait(false);
             });
         }
 
         public Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long? size, Etag etag = null)
         {
-            var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
-            return UploadAsyncImpl(operationMetadata, filename, source.CopyTo, () => { }, metadata, true, size, etag);
+            var operationMetadata = new OperationMetadata(BaseUrl, CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
+            return UploadAsyncImpl(operationMetadata, filename, source.CopyToAsync, () => { }, metadata, true, size, etag);
         }
 
-        private async Task UploadAsyncImpl(OperationMetadata operation, string filename, Action<Stream> source, Action prepareStream, RavenJObject metadata, bool preserveTimestamps, long? size, Etag etag)
+        private async Task UploadAsyncImpl(OperationMetadata operation, string filename, Func<Stream, Task> source, Action prepareStream, RavenJObject metadata, bool preserveTimestamps, long? size, Etag etag)
         {
             var operationUrl = operation.Url + "/files?name=" + Uri.EscapeDataString(filename);
             if (preserveTimestamps)
@@ -696,14 +706,13 @@ namespace Raven.Client.FileSystem
                 AddHeaders(metadata, request);
                 AsyncFilesServerClientExtension.AddEtagHeader(request, etag);
 
-                var response = await request.ExecuteRawRequestAsync((netStream, t) =>
+                var response = await request.ExecuteRawRequestAsync(async(netStream, t) =>
                 {
                     try
                     {
-                        if (prepareStream != null)
-                            prepareStream();
+                        prepareStream?.Invoke();
 
-                        source(netStream);
+                        await source(netStream).ConfigureAwait(false);
                         netStream.Flush();
 
                         t.TrySetResult(null);

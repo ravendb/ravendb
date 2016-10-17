@@ -7,6 +7,7 @@ import license = require("models/auth/license");
 import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
 import getSupportCoverageCommand = require("commands/auth/getSupportCoverageCommand");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import eventsCollector = require("common/eventsCollector");
 
 class licenseInformation extends viewModelBase {
 
@@ -48,6 +49,7 @@ class licenseInformation extends viewModelBase {
 
 
     forceUpdate() {
+        eventsCollector.default.reportEvent("license-information", "force-update");
         this.forceInProgress(true);
         new forceLicenseUpdate().execute()
             .always(() => {

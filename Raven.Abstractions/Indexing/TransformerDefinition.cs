@@ -22,7 +22,12 @@ namespace Raven.Abstractions.Indexing
         /// </summary>
         public string Name { get; set; }
 
-        public TransformerLockMode LockMode { get; set; } 
+        public TransformerLockMode LockMode { get; set; }
+
+        /// <summary>
+        /// Transformer version, used in transformer replication in order to identify if two transformers are indeed the same.
+        /// </summary>
+        public int? TransformerVersion { get; set; }
 
         public bool Equals(TransformerDefinition other)
         {

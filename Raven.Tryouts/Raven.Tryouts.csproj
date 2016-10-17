@@ -106,9 +106,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
-    <Reference Include="metrics, Version=1.0.0.0, Culture=neutral, PublicKeyToken=ca6c6ef570198eba, processorArchitecture=MSIL">
+    <Reference Include="raven.metrics">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\metrics.dll</HintPath>
+      <HintPath>..\SharedLibs\raven.metrics.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Jint">

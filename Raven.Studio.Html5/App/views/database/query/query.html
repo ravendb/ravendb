@@ -22,7 +22,7 @@
                 </button>
                 <ul class="dropdown-menu" role="menu" style="max-height: 300px; overflow-x: hidden;">
                     <!-- ko foreach: indexesExceptCurrent -->
-                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
+                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data.Name)"><a href="#" data-bind="text: $data.Name"></a></li>
                     <!-- /ko -->
                     <li class="divider" data-bind="visible: collectionNamesExceptCurrent().length"></li>
                     <!-- ko foreach: collectionNamesExceptCurrent -->
@@ -307,7 +307,7 @@
                             <div class="suggestion-box" data-bind="visible: $root.showSuggestions, foreach: $root.indexSuggestions">
                                 <div>Did you mean <a data-bind="text: Suggestion, click: $root.applySuggestion.bind($root, $data)" href="#"></a> for the field <i data-bind="text: FieldName"></i>?</div>
                             </div>
-                            <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', isIndexMapReduce: isIndexMapReduce, collections: collections, contextMenuOptions: ['copyitems', 'CopyIDs' , 'Delete', 'EditItem' ], noResultsMessage: 'No results were found. For NotAnalyzed fields you may wish to search with [[term]].'}"></div>
+                            <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', isIndexMapReduce: isIndexMapReduce, collections: collections, contextMenuOptions: ['CopyItems', 'CopyIDs' , 'Delete', 'EditItem' ], noResultsMessage: 'No results were found. For NotAnalyzed fields you may wish to search with [[term]].'}"></div>
                         </div>
                     </div>
                 </div>

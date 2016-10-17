@@ -15,9 +15,9 @@ namespace Raven.Client.Document.SessionOperations
 
         protected readonly InMemoryDocumentSessionOperations sessionOperations;
         private readonly Func<IDisposable> disableAllCaching;
-        private readonly string id;
+        protected readonly string id;
         private bool firstRequest = true;
-        private JsonDocument documentFound;
+        protected JsonDocument documentFound;
 
         private Stopwatch sp;
 

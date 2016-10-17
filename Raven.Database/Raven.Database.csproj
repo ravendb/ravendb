@@ -101,6 +101,10 @@
     <LuceneQuery-Raven-Database-IndexingParser>$(ProjectDir)Indexing\LuceneQuery</LuceneQuery-Raven-Database-IndexingParser>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="CsvHelper, Version=2.0.0.0, Culture=neutral, PublicKeyToken=8c4959082be5c823, processorArchitecture=MSIL">
+      <HintPath>..\packages\CsvHelper.2.16.1.0\lib\net45\CsvHelper.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Esent.Interop">
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
@@ -126,8 +130,8 @@
     <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
-    <Reference Include="metrics">
-      <HintPath>..\SharedLibs\metrics.dll</HintPath>
+    <Reference Include="raven.metrics">
+      <HintPath>..\SharedLibs\raven.metrics.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Owin, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -201,22 +205,6 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Net.Http.WebRequest" />
-    <Reference Include="System.Reactive.Core, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rx-Core.2.2.5\lib\net45\System.Reactive.Core.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Reactive.Interfaces, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rx-Interfaces.2.2.5\lib\net45\System.Reactive.Interfaces.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Reactive.Linq, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rx-Linq.2.2.5\lib\net45\System.Reactive.Linq.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Reactive.PlatformServices, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Rx-PlatformServices.2.2.5\lib\net45\System.Reactive.PlatformServices.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Security" />
     <Reference Include="System.ServiceModel" />
@@ -304,6 +292,7 @@
     <Compile Include="Indexing\LuceneAST.cs" />
     <Compile Include="JsConsole\AdminJsConsole.cs" />
     <Compile Include="JsConsole\AdminJsScript.cs" />
+    <Compile Include="Plugins\Builtins\CheckPageFileOnHDD.cs" />
     <Compile Include="Plugins\Builtins\HotSpareReplicationBehavior.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseScalarObjectBase.cs" />
     <Compile Include="Plugins\Builtins\Monitoring\Snmp\Objects\DatabaseBundleScalarObjectBase.cs" />
@@ -625,6 +614,7 @@
     <Compile Include="Util\ResourceTimerManager.cs" />
     <Compile Include="Util\SortFieldHelper.cs" />
     <Compile Include="Util\StopwatchScope.cs" />
+    <Compile Include="Util\Streams\ExcelOutputWriter.cs" />
     <Compile Include="Util\TimedEnumerable.cs" />
     <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />

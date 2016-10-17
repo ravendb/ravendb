@@ -5,6 +5,7 @@ import resolveConflict = require("viewmodels/filesystem/synchronization/resolveC
 import customColumns = require("models/database/documents/customColumns");
 import customColumnParams = require('models/database/documents/customColumnParams');
 import virtualTable = require("widgets/virtualTable/viewModel");
+import eventsCollector = require("common/eventsCollector");
 
 import filesystem = require("models/filesystem/filesystem");
 import changeSubscription = require("common/changeSubscription");
@@ -125,6 +126,7 @@ class synchronizationConflicts extends viewModelBase {
     }
 
     resolveWithLocalVersion() {
+        eventsCollector.default.reportEvent("fs-conflict", "resolve", "local");
         var message: string;
         if (this.hasAllConflictsSelected()) {
             message = "Are you sure you want to resolve all conflicts by choosing the local version?";
@@ -162,6 +164,7 @@ class synchronizationConflicts extends viewModelBase {
     }
 
     resolveWithRemoteVersion() {
+        eventsCollector.default.reportEvent("fs-conflict", "resolve", "remote");
         var message: string;
         if (this.hasAllConflictsSelected()) {
             message = 'Are you sure you want to resolve all conflicts by choosing the remote version?';

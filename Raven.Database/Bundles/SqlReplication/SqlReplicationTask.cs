@@ -7,28 +7,23 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
-using metrics;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Database.Config.Retriever;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Storage;
-using Raven.Database.Util;
+using Raven.Imports.metrics;
 using Raven.Json.Linq;
 using Sparrow.Collections;
 
@@ -69,12 +64,17 @@ namespace Raven.Database.Bundles.SqlReplication
             get { return statistics; }
         }
 
+        public ConcurrentDictionary<string, bool> ResetRequested
+        {
+            get { return resetRequested; }
+        }
         public readonly ConcurrentDictionary<string, SqlReplicationMetricsCountersManager> SqlReplicationMetricsCounters =
             new ConcurrentDictionary<string, SqlReplicationMetricsCountersManager>();
 
         private readonly ConcurrentSet<PrefetchingBehavior> prefetchingBehaviors = new ConcurrentSet<PrefetchingBehavior>();
 
         private PrefetchingBehavior defaultPrefetchingBehavior;
+        private ConcurrentDictionary<string, bool> resetRequested = new ConcurrentDictionary<string, bool>();
 
         public void Execute(DocumentDatabase database)
         {
@@ -247,7 +247,8 @@ namespace Raven.Database.Bundles.SqlReplication
                         var configsToWorkOn = sqlConfigGroup.ConfigsToWorkOn;
 
                         List<JsonDocument> documents;
-                        using (prefetchingBehavior.DocumentBatchFrom(sqlConfigGroup.LastReplicatedEtag, out documents))
+                        var entityNamesToIndex = new HashSet<string>(configsToWorkOn.Select(x => x.RavenEntityName), StringComparer.OrdinalIgnoreCase);
+                        using (prefetchingBehavior.DocumentBatchFrom(sqlConfigGroup.LastReplicatedEtag, out documents, entityNamesToIndex))
                         {
                             Etag latestEtag = null, lastBatchEtag = null;
                             if (documents.Count != 0)
@@ -405,6 +406,12 @@ namespace Raven.Database.Bundles.SqlReplication
                     {
                         var cfg = t.Item1;
                         var currentLatestEtag = t.Item2;
+                        //If a reset was requested we don't want to update the last replicated etag.
+                        //If we do register the success the reset will become a noop.
+                        bool isReset;
+                        if (ResetRequested.TryGetValue(t.Item1.Name, out isReset) && isReset)
+                            continue;
+
                         var destEtag = localReplicationStatus.LastReplicatedEtags.FirstOrDefault(x => string.Equals(x.Name, cfg.Name, StringComparison.InvariantCultureIgnoreCase));
                         if (destEtag == null)
                         {
@@ -423,7 +430,8 @@ namespace Raven.Database.Bundles.SqlReplication
                             destEtag.LastDocEtag = lastDocEtag;
                         }
                     }
-
+                    //We are done recording success for this batch so we can clear the reset dictionary
+                    ResetRequested.Clear();
                     SaveNewReplicationStatus(localReplicationStatus);
                 }
                 finally
@@ -458,7 +466,8 @@ namespace Raven.Database.Bundles.SqlReplication
 
         private void SetPrefetcherForIndexingGroup(SqlConfigGroup sqlConfig, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
         {
-            sqlConfig.PrefetchingBehavior = TryGetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers) ??
+            var entityNames = new HashSet<string>(sqlConfig.ConfigsToWorkOn.Select(x => x.RavenEntityName), StringComparer.OrdinalIgnoreCase);
+            sqlConfig.PrefetchingBehavior = TryGetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers, entityNames) ??
                                       TryGetDefaultPrefetcher(sqlConfig.LastReplicatedEtag, usedPrefetchers) ??
                                       GetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers);
 
@@ -469,11 +478,12 @@ namespace Raven.Database.Bundles.SqlReplication
                 sqlConfig.LastReplicatedEtag);
         }
 
-        private PrefetchingBehavior TryGetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        private PrefetchingBehavior TryGetPrefetcherFor(Etag fromEtag, 
+            ConcurrentSet<PrefetchingBehavior> usedPrefetchers, HashSet<string> entityNames)
         {
             foreach (var prefetchingBehavior in prefetchingBehaviors)
             {
-                if (prefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag) &&
+                if (prefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag, entityNames) &&
                     usedPrefetchers.TryAdd(prefetchingBehavior))
                 {
                     return prefetchingBehavior;

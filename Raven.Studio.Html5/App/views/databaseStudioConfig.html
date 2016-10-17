@@ -7,8 +7,12 @@
         <div class="form-group" style="margin-top: 10px">
             <label class="col-md-4 control-label">Environment</label>
             <div class="col-md-2">
-                <div id="select-color" >
-                    <select class="form-control" data-bind="options: environmentColors, value: selectedColor, optionsText: 'name'"></select>
+                <div id="select-color">
+                    <select class="form-control" data-bind="options: environmentColors, value: selectedColor, optionsText: 'name', disable: isHotSpare"></select>
+                </div>
+
+                <div data-bind="visible: isHotSpare">
+                    <br />*You cannot change the environment when running with a Hot Spare license
                 </div>
             </div>
         </div>

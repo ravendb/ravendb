@@ -4,6 +4,7 @@ import appUrl = require("common/appUrl");
 import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");
 import getEffectiveVersioningsCommand = require("commands/database/globalConfig/getEffectiveVersioningsCommand");
 import configurationDocument = require("models/database/globalConfig/configurationDocument");
+import eventsCollector = require("common/eventsCollector");
 
 class versioning extends viewModelBase {
     versionings = ko.observableArray<configurationDocument<versioningEntry>>().extend({ required: true });
@@ -47,6 +48,7 @@ class versioning extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("versioning", "save");
         var db = this.activeDatabase();
         if (db) {
             var saveTask = new saveVersioningCommand(
@@ -61,6 +63,7 @@ class versioning extends viewModelBase {
     }
 
     createNewVersioning() {
+        eventsCollector.default.reportEvent("versioning", "create");
         this.versionings.push(new configurationDocument({
             GlobalExists: false,
             GlobalDocument: null,
@@ -72,6 +75,7 @@ class versioning extends viewModelBase {
     }
 
     removeVersioning(entry: configurationDocument<versioningEntry>) {
+        eventsCollector.default.reportEvent("versioning", "remove");
         if (entry.mergedDocument().fromDatabase()) {
             // If this entry is in database schedule the removal
             this.toRemove.push(entry);
@@ -113,10 +117,12 @@ class versioning extends viewModelBase {
     }
 
     useLocal() {
+        eventsCollector.default.reportEvent("versioning", "use-local");
         this.usingGlobal(false);
     }
 
     useGlobal() {
+        eventsCollector.default.reportEvent("versioning", "use-global");
         this.usingGlobal(true);
         this.toRemove.pushAll(this.versionings().filter(c => c.localExists()));
         var newVersionsings = this.versionings().filter(c => c.globalExists());

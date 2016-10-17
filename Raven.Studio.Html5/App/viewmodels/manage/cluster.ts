@@ -7,31 +7,37 @@ import topology = require("models/database/replication/topology");
 import nodeConnectionInfo = require("models/database/cluster/nodeConnectionInfo");
 import editNodeConnectionInfoDialog = require("viewmodels/manage/editNodeConnectionInfoDialog");
 import app = require("durandal/app");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getReducedDatabaseStatsCommand = require("commands/resources/getReducedDatabaseStatsCommand");
 import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
 import extendRaftClusterCommand = require("commands/database/cluster/extendRaftClusterCommand");
 import initializeNewClusterCommand = require("commands/database/cluster/initializeNewClusterCommand");
 import leaveRaftClusterCommand = require("commands/database/cluster/leaveRaftClusterCommand");
 import removeClusteringCommand = require("commands/database/cluster/removeClusteringCommand");
 import saveClusterConfigurationCommand = require("commands/database/cluster/saveClusterConfigurationCommand");
+import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import updateRaftClusterCommand = require("commands/database/cluster/updateRaftClusterCommand");
 import getClusterNodesStatusCommand = require("commands/database/cluster/getClusterNodesStatusCommand");
 import shell = require("viewmodels/shell");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 import license = require("models/auth/license");
+import ClusterConfiguration = require("models/database/cluster/clusterConfiguration");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import changeNodeVotingModeCommand = require("commands/database/cluster/changeNodeVotingModeCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class cluster extends viewModelBase {
 
     topology = ko.observable<topology>();
     systemDatabaseId = ko.observable<string>();
     serverUrl = ko.observable<string>(); 
-
+    isLeavingCluster = ko.observable<boolean>(); 
+    isReplicationChecksEnabled = ko.observable<boolean>();
+    
     canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
     developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
     clusterMode: KnockoutComputed<boolean>;
     settingsAccess = new settingsAccessAuthorizer();
+    clusterConfiguration: clusterConfigurationDto;
 
     constructor() {
         super();
@@ -39,6 +45,7 @@ class cluster extends viewModelBase {
         this.clusterMode = ko.computed(() => {
             return this.topology() && this.topology().clusterMode();
         });
+        shell.globalChangesApi.watchDocsStartingWith("Raven/Cluster/Configuration",(e)=>{this.updateClusterConfiguration(e)});
     }
 
     canActivate(args: any): JQueryPromise<any> {
@@ -48,7 +55,7 @@ class cluster extends viewModelBase {
             deferred.resolve({ can: true });
         } else {
             var db = appUrl.getSystemDatabase();
-            $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db))
+            $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db), this.fetchClusterConfiguration(db))
                 .done(() => {
                     deferred.resolve({ can: true });
                     if (this.clusterMode()) {
@@ -68,8 +75,23 @@ class cluster extends viewModelBase {
     }
 
     refresh() {
+        eventsCollector.default.reportEvent("cluster", "refresh");
         return this.fetchClusterTopology(appUrl.getSystemDatabase())
             .done(() => this.fetchStatus(appUrl.getSystemDatabase()));
+    }
+
+    toggleReplicationChecks() {
+        var self = this;
+        this.clusterConfiguration = {
+            EnableReplication: this.clusterConfiguration.EnableReplication,
+            DisableReplicationStateChecks: !this.clusterConfiguration.DisableReplicationStateChecks,
+            DatabaseSettings: this.clusterConfiguration.DatabaseSettings
+        };
+        new saveClusterConfigurationCommand(this.clusterConfiguration,
+                appUrl.getSystemDatabase())
+            .execute()
+            .done(() => { self.isReplicationChecksEnabled(!self.isReplicationChecksEnabled()); })
+            .fail(() => messagePublisher.reportError("Unable to toggle replication checks."));
     }
 
     fetchClusterTopology(db: database): JQueryPromise<any> {
@@ -82,9 +104,9 @@ class cluster extends viewModelBase {
     }
 
     fetchDatabaseId(db: database): JQueryPromise<any> {
-        return new getDatabaseStatsCommand(db)
+        return new getReducedDatabaseStatsCommand(db)
             .execute()
-            .done((stats: databaseStatisticsDto) => {
+            .done((stats: reducedDatabaseStatisticsDto) => {
                 this.systemDatabaseId(stats.DatabaseId);
             });
     }
@@ -111,6 +133,7 @@ class cluster extends viewModelBase {
     }
 
     addAnotherServerToCluster(forcedAdd: boolean) {
+        eventsCollector.default.reportEvent("cluster", "add-server");
         var newNode = nodeConnectionInfo.empty();
         var dialog = new editNodeConnectionInfoDialog(newNode, false);
         dialog
@@ -124,6 +147,7 @@ class cluster extends viewModelBase {
     }
 
     removeClustering() {
+        eventsCollector.default.reportEvent("cluster", "cleanup");
         this.confirmationMessage("Are you sure?", "You are about to clear cluster information on this server.")
             .done(() => {
                 new removeClusteringCommand(appUrl.getSystemDatabase())
@@ -136,6 +160,7 @@ class cluster extends viewModelBase {
     }
 
     createCluster() {
+        eventsCollector.default.reportEvent("cluster", "create");
         var newNode = nodeConnectionInfo.empty();
         newNode.name(this.systemDatabaseId());
         newNode.uri(this.serverUrl());
@@ -148,7 +173,7 @@ class cluster extends viewModelBase {
                 .done(() => {
                     shell.clusterMode(true);
                     setTimeout(() => this.refresh(), 500);
-                    new saveClusterConfigurationCommand({ EnableReplication: true }, appUrl.getSystemDatabase())
+                    new saveClusterConfigurationCommand({ EnableReplication: true,DisableReplicationStateChecks:false }, appUrl.getSystemDatabase())
                         .execute();
                 });
 
@@ -157,6 +182,7 @@ class cluster extends viewModelBase {
     }
 
     initializeNewCluster() {
+        eventsCollector.default.reportEvent("cluster", "secede");
         this.confirmationMessage("Are you sure?", "You are about to initialize new cluster on this server.")
             .done(() => {
                 new initializeNewClusterCommand(appUrl.getSystemDatabase())
@@ -166,6 +192,7 @@ class cluster extends viewModelBase {
     }
 
     editNode(node: nodeConnectionInfo) {
+        eventsCollector.default.reportEvent("cluster", "edit");
         var dialog = new editNodeConnectionInfoDialog(node, true);
         dialog.onExit()
             .done((nci: nodeConnectionInfo) => {
@@ -178,23 +205,49 @@ class cluster extends viewModelBase {
     }
 
     leaveCluster(node: nodeConnectionInfo) {
+        eventsCollector.default.reportEvent("cluster", "leave");
         this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster.")
             .done(() => {
+                this.isLeavingCluster(true);
+                node.isLeavingCluster(true);
                 new leaveRaftClusterCommand(appUrl.getSystemDatabase(), node.toDto())
                     .execute()
-                    .done(() => setTimeout(() => this.refresh(), 500));
-        });
+                    .done(() => setTimeout(() => this.refresh(), 500))
+                    .always(() => {
+                        this.isLeavingCluster(false);
+                        node.isLeavingCluster(false);
+                    });
+            });
     }
 
     promoteNodeToVoter(node: nodeConnectionInfo) {
+        eventsCollector.default.reportEvent("cluster", "promote");
         var nodeAsDto = node.toDto();
         nodeAsDto.IsNoneVoter = false;
-        this.confirmationMessage("Are you sure?", "You are promoting node " + node.uri() + " to voter.")
+        this.confirmationMessage("Are you sure?", "You are promoting node " + node.uri() + " to voter")
             .done(() => {
                 new changeNodeVotingModeCommand(appUrl.getSystemDatabase(), nodeAsDto)
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
         });
+    }
+
+    private fetchClusterConfiguration(db): JQueryPromise<clusterConfigurationDto> {
+
+        var currentConfiguration: JQueryPromise<clusterConfigurationDto> = new
+            getDocumentWithMetadataCommand("Raven/Cluster/Configuration", appUrl.getSystemDatabase(), true)
+            .execute()
+            .done((result: clusterConfigurationDto) => {
+                var notNullResult = result === null ? ClusterConfiguration.empty().toDto() : result;
+                this.clusterConfiguration = notNullResult;
+                this.isReplicationChecksEnabled(!notNullResult.DisableReplicationStateChecks);
+            });
+
+        return currentConfiguration;
+    }
+
+    updateClusterConfiguration(documentChangeNotificationDto: documentChangeNotificationDto) {
+        this.fetchClusterConfiguration(appUrl.getSystemDatabase());
     }
 }
 

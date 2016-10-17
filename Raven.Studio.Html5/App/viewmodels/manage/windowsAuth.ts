@@ -4,6 +4,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getWindowsAuthCommand = require("commands/auth/getWindowsAuthCommand");
 import saveWindowsAuthCommand = require("commands/auth/saveWindowsAuthCommand");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import eventsCollector = require("common/eventsCollector");
 
 class windowsAuth extends viewModelBase {
 
@@ -50,28 +51,33 @@ class windowsAuth extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("windows-auth", "save");
         new saveWindowsAuthCommand(this.setup().toDto())
             .execute()
             .done(() => this.dirtyFlag().reset());
     }
 
     addUserSettings() {
+        eventsCollector.default.reportEvent("windows-auth", "add-user-settings");
         var newAuthData = windowsAuthData.empty();
         windowsAuthSetup.subscribeToObservableName(newAuthData, this.setup().requiredUsers, windowsAuthSetup.ModeUser);
         this.setup().requiredUsers.push(newAuthData);
     }
 
     removeUserSettings(data: windowsAuthData) {
+        eventsCollector.default.reportEvent("windows-auth", "remove-user-settings");
         this.setup().requiredUsers.remove(data);
     }
 
     addGroupSettings() {
+        eventsCollector.default.reportEvent("windows-auth", "add-group-settings");
         var newAuthData = windowsAuthData.empty();
         windowsAuthSetup.subscribeToObservableName(newAuthData, this.setup().requiredGroups, windowsAuthSetup.ModeGroup);
         this.setup().requiredGroups.push(newAuthData);
     }
 
     removeGroupSettings(data: windowsAuthData) {
+        eventsCollector.default.reportEvent("windows-auth", "remove-group-settings");
         this.setup().requiredGroups.remove(data);
     }
 }

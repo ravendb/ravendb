@@ -1,7 +1,8 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
+import eventsCollector = require("common/eventsCollector");
 import facet = require("models/database/query/facet");
 import queryFacetsCommand = require("commands/database/query/queryFacetsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
@@ -34,6 +35,7 @@ class reporting extends viewModelBase {
     }
 
     exportCsv() {
+        eventsCollector.default.reportEvent("reporting", "export-csv");
         if (this.isExportEnabled() === false)
             return false;
 
@@ -98,9 +100,9 @@ class reporting extends viewModelBase {
     }
 
     fetchIndexes(): JQueryPromise<any> {
-        return new getDatabaseStatsCommand(this.activeDatabase())
+        return new getIndexNamesCommand(this.activeDatabase())
             .execute()
-            .done((results: databaseStatisticsDto) => this.indexNames(results.Indexes.map(i => i.Name)));
+            .done((results: string[]) => this.indexNames(results));
     }
 
     fetchIndexDefinition(indexName: string) {
@@ -163,6 +165,7 @@ class reporting extends viewModelBase {
     }
 
     addValue(fieldName: string) {
+        eventsCollector.default.reportEvent("reporting", "add-value");
         var sortOps = this.sortOptions();
         var sortOption = (fieldName in sortOps) ? sortOps[fieldName] : "String";
         var val = facet.fromNameAndAggregation(this.selectedField(), fieldName, this.mapSortToType(sortOption));
@@ -170,10 +173,12 @@ class reporting extends viewModelBase {
     }
 
     removeValue(val: facet) {
+        eventsCollector.default.reportEvent("reporting", "remove-value");
         this.addedValues.remove(val);
     }
 
     runReport() {
+        eventsCollector.default.reportEvent("reporting", "run");
         var selectedIndex = this.selectedIndexName();
         var filterQuery = this.hasFilter() ? this.filter() : null;
         var facets = this.addedValues().map(v => v.toDto());
@@ -197,7 +202,13 @@ class reporting extends viewModelBase {
         this.reportResults(new pagedList(resultsFetcher));
     }
 
+    addFilter() {
+        eventsCollector.default.reportEvent("reporting", "add-filter");
+        this.hasFilter(true);
+    }
+
     toggleCacheEnable() {
+        eventsCollector.default.reportEvent("reporting", "toggle-cache");
         this.isCacheDisable(!this.isCacheDisable());
     }
 

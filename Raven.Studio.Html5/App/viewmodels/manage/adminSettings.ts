@@ -112,6 +112,10 @@ class adminSettings extends viewModelBase {
             this.navigate(url);
         });
     }
+
+    protected shouldReportUsage(): boolean {
+        return false;
+    }
 }
 
 export = adminSettings;

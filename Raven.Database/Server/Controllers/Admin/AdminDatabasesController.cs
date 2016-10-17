@@ -312,12 +312,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     Content = new MultiGetSafeStringContent("Can't test Hot Spare server, no valid license found")
                 };
             }
-            var info = RequestManager.HotSpareValidator.GetOrCreateLicenseDocument(id);
-            if (info == null)
-                return new HttpResponseMessage(HttpStatusCode.NotFound)
-                {
-                    Content = new MultiGetSafeStringContent("No hot spare license found for current license")
-                };
+            var info = RequestManager.HotSpareValidator.GetOrCreateLicenseDocument(id, checkIfTesting: true);
             return GetMessageWithObject(info);
         }
 

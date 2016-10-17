@@ -1062,11 +1062,19 @@ namespace Raven.Database.Indexing
         }, (s, index) => index);
 
             //prevent corrupted index when creating a map-reduce index
-            //need to do this for every map reduce index, even when indexing is enabled,
+            //need to do this for every map reduce index, even when indexing is disabled
             if (addedIndex.IsMapReduce)
             {
-                addedIndex.EnsureIndexWriter();
-                addedIndex.Flush(Etag.Empty);
+                try
+                {
+                    addedIndex.EnsureIndexWriter(useWriteLock: true);
+                    addedIndex.Flush(Etag.Empty);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // index was disposed during database shutdown
+                    // we still need to proceed with its creation
+                }
             }
 
             UpdateIndexMappingFile();
@@ -1701,7 +1709,7 @@ namespace Raven.Database.Indexing
         {
             var index = GetIndexByName(indexName);
             index.ForceWriteToDisk();
-            index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
+            index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty, useWriteLock: true);
         }
 
         internal bool TryReplaceIndex(string indexName, string indexToReplaceName)

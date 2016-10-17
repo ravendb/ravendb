@@ -3,6 +3,7 @@ import app = require("durandal/app");
 import createSampleDataCommand = require("commands/database/studio/createSampleDataCommand");
 import createSampleDataClassCommand = require("commands/database/studio/createSampleDataClassCommand");
 import showDataDialog = require("viewmodels/common/showDataDialog");
+import eventsCollector = require("common/eventsCollector");
 
 class createSampleData extends viewModelBase{
 
@@ -12,6 +13,7 @@ class createSampleData extends viewModelBase{
     classData = ko.observable<string>();
 
     generateSampleData() {
+        eventsCollector.default.reportEvent("sample-data", "create");
         this.isBusy(true);
         
         new createSampleDataCommand(this.activeDatabase())
@@ -25,6 +27,7 @@ class createSampleData extends viewModelBase{
     }
 
     showSampleDataClass() {
+        eventsCollector.default.reportEvent("sample-data-classes", "show");
         new createSampleDataClassCommand(this.activeDatabase())
             .execute()
             .done((results: string) => {

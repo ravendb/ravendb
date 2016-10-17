@@ -5,6 +5,7 @@ import document = require("models/database/documents/document");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 import logEntry = require("models/database/debug/logEntry");
 import tableNavigationTrait = require("common/tableNavigationTrait");
+import eventsCollector = require("common/eventsCollector");
 
 class logs extends viewModelBase {
 
@@ -191,12 +192,14 @@ class logs extends viewModelBase {
     }
 
     hideLogType(log: logEntry) {
+        eventsCollector.default.reportEvent("logs", "toggle-type", "hide");
         if (!this.filteredLoggers.contains(log.loggerName())) {
             this.filteredLoggers.push(log.loggerName());
         }
     }
 
     unHidelogType(loggerName: string) {
+        eventsCollector.default.reportEvent("logs", "toggle-type", "show");
         if (this.filteredLoggers.contains(loggerName)) {
             this.filteredLoggers.remove(loggerName);
         }

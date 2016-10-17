@@ -39,6 +39,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         private readonly Index metadataIndex;
 
+        private static readonly RavenJObject EmptyDocument = new RavenJObject();
+
         public DocumentsStorageActions(IUuidGenerator uuidGenerator,
             OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
             IDocumentCacher documentCacher,
@@ -46,7 +48,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             Reference<SnapshotReader> snapshot,
             TableStorage tableStorage,
             IBufferPool bufferPool,
-            bool SkipConsistencyCheck = false)
+            bool skipConsistencyCheck = false)
             : base(snapshot, bufferPool)
         {
             this.uuidGenerator = uuidGenerator;
@@ -54,13 +56,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
             this.documentCacher = documentCacher;
             this.writeBatch = writeBatch;
             this.tableStorage = tableStorage;
-            this.SkipConsistencyCheck = SkipConsistencyCheck;
+            this.SkipConsistencyCheck = skipConsistencyCheck;
             metadataIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.Metadata);
         }
 
         public bool SkipConsistencyCheck { get; set; }
 
-        public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
+        public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take, HashSet<string> entityNames = null)
         {
             if (start < 0)
                 throw new ArgumentException("must have zero or positive value", "start");
@@ -77,6 +79,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                 if (!iterator.Skip(-start))
                     yield break;
+
+                var hasEntityNames = entityNames != null && entityNames.Count > 0;
+
                 do
                 {
                     if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
@@ -84,10 +89,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                     var key = GetKeyFromCurrent(iterator);
 
-                    var document = DocumentByKey(key);
+                    var document = GetJsonDocument(hasEntityNames, key, entityNames);
                     if (document == null) //precaution - should never be true
                     {
-                        if (SkipConsistencyCheck) continue;
+                        if (SkipConsistencyCheck)
+                            continue;
+
                         throw new InvalidDataException(string.Format("Possible data corruption - the key = '{0}' was found in the documents index, but matching document was not found.", key));
                     }
 
@@ -152,8 +159,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null,
-            Reference<bool> earlyExit = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, 
+            CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, 
+            Action<Etag> lastProcessedDocument = null, Reference<bool> earlyExit = null,
+            HashSet<string> entityNames = null, Action <List<DocumentFetchError>> failedToGetHandler = null)
         {
             if (earlyExit != null)
                 earlyExit.Value = false;
@@ -169,7 +178,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
             Stopwatch duration = null;
             if (timeout != null)
                 duration = Stopwatch.StartNew();
-
 
             Etag lastDocEtag = null;
             using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
@@ -189,6 +197,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 int fetchedDocumentCount = 0;
 
                 Etag docEtag = etag;
+
+                var errors = new List<DocumentFetchError>();
+                var skipDocumentGetErrors = failedToGetHandler != null;
+                var hasEntityNames = entityNames != null && entityNames.Count > 0;
 
                 do
                 {
@@ -225,10 +237,31 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         }
                     }
 
-                    var document = DocumentByKey(key);
+                    JsonDocument document;
+                    try
+                    {
+                        document = GetJsonDocument(hasEntityNames, key, entityNames); 
+                    }
+                    catch (Exception e)
+                    {
+                        if (skipDocumentGetErrors)
+                        {
+                            errors.Add(new DocumentFetchError
+                            {
+                                Key = key,
+                                Exception = e
+                            });
+                            continue;
+                        }
+
+                        throw;
+                    }
+
                     if (document == null) //precaution - should never be true
                     {
-                        if (SkipConsistencyCheck) continue;
+                        if (SkipConsistencyCheck)
+                            continue;
+
                         throw new InvalidDataException(string.Format("Data corruption - the key = '{0}' was found in the documents index, but matching document was not found", key));
                     }
 
@@ -258,11 +291,59 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         break;
                     }
                 } while (iterator.MoveNext());
+
+                if (skipDocumentGetErrors && errors.Count > 0)
+                {
+                    failedToGetHandler(errors);
+                }
             }
 
             // We notify the last that we considered.
             if (lastProcessedDocument != null)
                 lastProcessedDocument(lastDocEtag);
+        }
+
+        private JsonDocument GetJsonDocument(bool hasEntityNames, string key, HashSet<string> entityNames)
+        {
+            if (hasEntityNames == false)
+            {
+                return DocumentByKey(key);
+            }
+
+            Debug.Assert(entityNames.Comparer.Equals(EqualityComparer<string>.Default) == false);
+
+            int metadataSize;
+            var sliceKey = (Slice)key;
+            var metadata = ReadDocumentMetadata(key, sliceKey, out metadataSize);
+            var entityName = metadata.Metadata.Value<string>(Constants.RavenEntityName);
+
+            if (string.IsNullOrEmpty(entityName) == false && entityNames.Contains(entityName))
+            {
+                int sizeOnDisk;
+                var documentData = ReadDocumentData(key, sliceKey, metadata.Etag, metadata.Metadata, out sizeOnDisk);
+                return new JsonDocument
+                {
+                    DataAsJson = documentData,
+                    Etag = metadata.Etag,
+                    Key = metadata.Key, //original key - with user specified casing, etc.
+                    Metadata = metadata.Metadata,
+                    SerializedSizeOnDisk = metadataSize,
+                    LastModified = metadata.LastModified
+                };
+            }
+
+            // this document will be filtered anyway
+            // there is no point in getting the document data
+            return new JsonDocument
+            {
+                DataAsJson = EmptyDocument,
+                Etag = metadata.Etag,
+                Key = metadata.Key, //original key - with user specified casing, etc.
+                Metadata = metadata.Metadata,
+                SerializedSizeOnDisk = metadataSize,
+                LastModified = metadata.LastModified,
+                IsIrrelevantForIndexing = true
+            };
         }
 
         public IEnumerable<string> GetDocumentIdsAfterEtag(Etag etag, int maxTake,
@@ -316,9 +397,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null)
+        public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, 
+            CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, 
+            Action<Etag> lastProcessedOnFailure = null, Reference<bool> earlyExit = null, 
+            HashSet<string> entityNames = null, Action<List<DocumentFetchError>> failedToGetHandler = null)
         {
-            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit);
+            return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, 
+                maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit, entityNames, failedToGetHandler);
         }
 
         private static string GetKeyFromCurrent(global::Voron.Trees.IIterator iterator)
@@ -406,7 +491,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             return documentReadResult.Reader.AsStream();
         }
 
-        public JsonDocument DocumentByKey(string key)
+        public JsonDocument DocumentByKey(string key, bool useDifferentTable = false)
         {
             if (string.IsNullOrEmpty(key))
             {
@@ -716,7 +801,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     var originalKey = stream.ReadString();
                     var lastModifiedDateTimeBinary = stream.ReadInt64();
 
-                    var existingCachedDocument = documentCacher.GetCachedDocument(normalizedKey, etag);
+                    var existingCachedDocument = documentCacher.GetCachedDocument(normalizedKey, etag, metadataOnly: true);
                     size = (int)stream.Length;
                     var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
                     var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
@@ -860,7 +945,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var documentsByEtag = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
             using (var iterator = documentsByEtag.Iterate(Snapshot, writeBatch.Value))
             {
-                if (!iterator.Seek(Slice.BeforeAllKeys))
+                if (iterator.Seek(Slice.BeforeAllKeys) == false)
                 {
                     stat.TimeToGenerate = sp.Elapsed;
                     return stat;
@@ -874,30 +959,38 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         progress($"Scanned {$"{processedDocuments:#,#;;0}"} documents");
                     }
 
-                    
                     var key = GetKeyFromCurrent(iterator);
-                    var doc = DocumentByKey(key);
+                    var normalizedKey = CreateKey(key);
+                    var sliceKey = (Slice)normalizedKey;
+
+                    var documentReadResult = tableStorage.Documents.Read(Snapshot, sliceKey, writeBatch.Value);
+                    var docSize = documentReadResult.Reader.Length;
+                    int metadataSize;
+                    var metadata = ReadDocumentMetadata(normalizedKey, sliceKey, out metadataSize);
+                    var totalSize = docSize + metadataSize;
+
                     if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
                     {
-                        stat.System.Update(doc.SerializedSizeOnDisk, doc.Key);
+                        stat.System.Update(totalSize, key);
                     }
 
-                    var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);
+                    var entityName = metadata.Metadata.Value<string>(Constants.RavenEntityName);
                     if (string.IsNullOrEmpty(entityName))
                     {
-                        stat.NoCollection.Update(doc.SerializedSizeOnDisk, doc.Key);
+                        stat.NoCollection.Update(totalSize, key);
                     }
                     else
                     {
-                        stat.IncrementCollection(entityName, doc.SerializedSizeOnDisk, doc.Key);
+                        stat.IncrementCollection(entityName, totalSize, key);
                     }
 
-                    if (doc.Metadata.ContainsKey(Constants.RavenDeleteMarker))
+                    if (metadata.Metadata.ContainsKey(Constants.RavenDeleteMarker))
                         stat.Tombstones++;
 
                     processedDocuments++;
                 }
                 while (iterator.MoveNext());
+
                 stat.TimeToGenerate = sp.Elapsed;
                 return stat;
             }

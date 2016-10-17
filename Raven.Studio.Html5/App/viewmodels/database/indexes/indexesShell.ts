@@ -19,6 +19,10 @@ class indexesShell extends viewModelBase {
 
         appUrl.mapUnknownRoutes(this.router);
     }
+
+    protected shouldReportUsage(): boolean {
+        return false;
+    }
 }
 
 export = indexesShell;

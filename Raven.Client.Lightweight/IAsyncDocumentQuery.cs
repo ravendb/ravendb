@@ -32,7 +32,17 @@ namespace Raven.Client
         ///     Get the facets as per the specified facets with the given start and pageSize
         /// </summary>
         Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default (CancellationToken));
+        
+        /// <summary>
+        ///     Get the facets lazily as per the specified doc with the given start and pageSize
+        /// </summary>
+        Lazy<Task<FacetResults>> GetFacetsLazyAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken));
 
+        /// <summary>
+        ///     Get the facets lazily as per the specified doc with the given start and pageSize
+        /// </summary>
+        Lazy<Task<FacetResults>> GetFacetsLazyAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken));
+        
         /// <summary>
         ///     Create the index query object for this query
         /// </summary>
@@ -43,7 +53,7 @@ namespace Raven.Client
         ///     instance that will evaluate the query only when needed.
         /// Also provide a function to execute when the value is evaluated
         /// </summary>
-        Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval);
+        Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval = null);
 
         /// <summary>
         ///     Gets the query result. Executing this method for the first time will execute the query.
@@ -84,7 +94,7 @@ namespace Raven.Client
         /// <summary>
         ///     Transformer parameters that will be passed to transformer if one is specified.
         /// </summary>
-        void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
+        IAsyncDocumentQuery<T> SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
 
         /// <summary>
         ///     Ability to use one factory to determine spatial shape that will be used in query.

@@ -20,6 +20,10 @@ class createFilesystem extends createResourceBase {
         this.fetchAllowVoron();
     }
 
+    protected shouldReportUsage(): boolean {
+        return false;
+    }
+
     fetchAllowVoron() {
         $.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
             new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()

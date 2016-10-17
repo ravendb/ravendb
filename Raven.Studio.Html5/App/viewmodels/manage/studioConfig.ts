@@ -9,12 +9,15 @@ import saveDocumentCommand = require("commands/database/documents/saveDocumentCo
 import environmentColor = require("models/resources/environmentColor");
 import shell = require("viewmodels/shell");
 import numberFormattingStorage = require("common/numberFormattingStorage");
+import license = require("models/auth/license");
+import eventsCollector = require("common/eventsCollector");
 
 class studioConfig extends viewModelBase {
 
     systemDatabase: database;
     configDocument = ko.observable<documentClass>();
     warnWhenUsingSystemDatabase = ko.observable<boolean>(true);
+    sendUsageStats = ko.observable<boolean>(false);
     disableEventSource = ko.observable<boolean>(false);
     timeUntilRemindToUpgrade = ko.observable<string>();
     mute: KnockoutComputed<boolean>;
@@ -22,10 +25,11 @@ class studioConfig extends viewModelBase {
     isReadOnly: KnockoutComputed<boolean>;
     browserFormatExample = 5050.99.toLocaleString();
     rawFormat = ko.observable<boolean>();
+    isHotSpare: KnockoutComputed<boolean>;
 
     environmentColors: environmentColor[] = [
         new environmentColor("Default", "#f8f8f8"),
-        new environmentColor("Development", "#80FF80"),
+        new environmentColor("Development", "#80FF80", "#3D773D"),
         new environmentColor("Staging", "#F5824D"),
         new environmentColor("Production", "#FF8585")
     ];
@@ -66,17 +70,22 @@ class studioConfig extends viewModelBase {
         this.isReadOnly = ko.computed(() => shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings());
 
         this.rawFormat(numberFormattingStorage.shouldUseRaw());
+
+        this.isHotSpare = ko.computed(() => license.isHotSpare());
     }
 
     canActivate(args): any {
         var deferred = $.Deferred();
 
-        if (this.isForbidden() === false) {
+        if (this.isForbidden() === false) { 
             new getDocumentWithMetadataCommand(this.documentId, this.systemDatabase)
                 .execute()
                 .done((doc: documentClass) => {
                     this.configDocument(doc);
-                    this.warnWhenUsingSystemDatabase(doc["WarnWhenUsingSystemDatabase"]);
+                    if ("WarnWhenUsingSystemDatabase" in doc) {
+                        this.warnWhenUsingSystemDatabase(doc["WarnWhenUsingSystemDatabase"]);
+                    }
+                    this.sendUsageStats(doc["SendUsageStats"]);
                 })
                 .fail(() => this.configDocument(documentClass.empty()))
                 .always(() => deferred.resolve({ can: true }));
@@ -111,6 +120,7 @@ class studioConfig extends viewModelBase {
     }
 
     setEnvironmentColor(envColor: environmentColor) {
+        eventsCollector.default.reportEvent("studio-config", "env-color");
         var newDocument = this.configDocument();
         newDocument["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);
@@ -121,6 +131,7 @@ class studioConfig extends viewModelBase {
     }
 
     setSystemDatabaseWarning(warnSetting: boolean) {
+        eventsCollector.default.reportEvent("studio-config", "sys-db-warning");
         if (this.warnWhenUsingSystemDatabase() !== warnSetting) {
             var newDocument = this.configDocument();
             this.warnWhenUsingSystemDatabase(warnSetting);
@@ -130,20 +141,34 @@ class studioConfig extends viewModelBase {
         }
     }
 
+    setSendUsageStats(setting: boolean) {
+        eventsCollector.default.reportEvent("studio-config", "usage-stats");
+        if (this.sendUsageStats() !== setting) {
+            var newDocument = this.configDocument();
+            this.sendUsageStats(setting);
+            newDocument["SendUsageStats"] = setting;
+            var saveTask = this.saveStudioConfig(newDocument);
+            saveTask.fail(() => this.warnWhenUsingSystemDatabase(!setting));
+        }
+    }
+
     private pickColor() {
         $("#select-color button").css("backgroundColor", this.selectedColor().backgroundColor);
     }
 
     setEventSourceDisabled(setting: boolean) {
+        eventsCollector.default.reportEvent("studio-config", "event-source");
         this.disableEventSource(setting);
         eventSourceSettingStorage.setValue(setting);
     }
 
     setUpgradeReminder(upgradeSetting: boolean) {
+        eventsCollector.default.reportEvent("studio-config", "upgrade-reminder");
         serverBuildReminder.mute(upgradeSetting);
     }
 
     setNumberFormat(raw: boolean) {
+        eventsCollector.default.reportEvent("studio-config", "number-format");
         this.rawFormat(raw);
         numberFormattingStorage.save(raw);
     }

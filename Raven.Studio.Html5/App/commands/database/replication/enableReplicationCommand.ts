@@ -16,7 +16,7 @@ class enableReplicationCommand extends commandBase {
             .execute()
             .done((dbSettings) => {
                 var activeBundles = dbSettings.Settings["Raven/ActiveBundles"];
-                if (activeBundles.indexOf("Replication") > -1) {
+                if (activeBundles && activeBundles.indexOf("Replication") > -1) {
                     // looks like we already have replication enabled - nothing to do
                     task.resolve(activeBundles.split(","));
                     this.reportSuccess("Replication was already enabled for this database");

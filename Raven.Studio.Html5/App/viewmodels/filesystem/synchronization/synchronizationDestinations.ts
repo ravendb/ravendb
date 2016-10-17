@@ -9,6 +9,7 @@ import changesContext = require("common/changesContext");
 import getDestinationsCommand = require("commands/filesystem/getDestinationsCommand");
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import saveDestinationCommand = require("commands/filesystem/saveDestinationCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class synchronizationDestinations extends viewModelBase {
 
@@ -65,6 +66,7 @@ class synchronizationDestinations extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("fs-destinations", "save");
         if (this.replicationsSetup().source()) {
             this.saveReplicationSetup();
         } else {
@@ -97,11 +99,13 @@ class synchronizationDestinations extends viewModelBase {
     }
 
     createNewDestination() {
+        eventsCollector.default.reportEvent("fs-destinations", "create");
         var fs = this.activeFilesystem();
         this.replicationsSetup().destinations.unshift(synchronizationDestination.empty(fs.name));
     }
 
     removeDestination(repl: synchronizationDestination) {
+        eventsCollector.default.reportEvent("fs-destinations", "remove");
         this.replicationsSetup().destinations.remove(repl);
     }
 

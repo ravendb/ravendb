@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-
+using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 
 using Raven.Abstractions;
@@ -159,10 +159,8 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                         {
                             var defaultValue = column.DefaultValue == null ? null : column.DefaultValue.ToArray();
                             var defaultValueLength = defaultValue == null ? 0 : defaultValue.Length;
-                            {
-                                Api.JetAddColumn(session, newTableId, column.Name, columnDef, defaultValue,
-                                    defaultValueLength, out newColumndId);
-                            }
+                            Api.JetAddColumn(session, newTableId, column.Name, columnDef, defaultValue,
+                                defaultValueLength, out newColumndId);
                         }
                     }
 
@@ -183,7 +181,6 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                     {
                         Api.MoveBeforeFirst(session, sr);
                         Api.MoveBeforeFirst(session, destTable);
-
                         while (Api.TryMoveNext(session, sr))
                         {
                             using (var insert = new Update(session, destTable, JET_prep.Insert))
@@ -215,7 +212,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                                     insert.Save();
                             }
 
-                            if (rows++ % 10000 == 0)
+                            if (rows++%10000 == 0)
                             {
                                 output("Processed " + (rows) + " rows in " + item.table);
                                 Api.JetCommitTransaction(session, CommitTransactionGrbit.LazyFlush);
@@ -223,7 +220,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                             }
                         }
                     }
-                    output("Processed " + (rows - 1) + " rows in " + item.table + ", and done with this table");
+                    output("Processed " + (rows - 1) + " rows in " + item.table + ", and done with this table");					
                 }
                 Api.JetCommitTransaction(session, CommitTransactionGrbit.None);
                 Api.JetDeleteTable(session, dbid, item.table);

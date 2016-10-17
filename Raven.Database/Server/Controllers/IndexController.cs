@@ -36,10 +36,14 @@ namespace Raven.Database.Server.Controllers
         public HttpResponseMessage IndexesGet()
         {
             var namesOnlyString = GetQueryStringValue("namesOnly");
-            bool namesOnly;
+            var namesWithTypeOnlyString = GetQueryStringValue("namesWithTypeOnly");
+
+            bool result;
             RavenJArray indexes;
-            if (bool.TryParse(namesOnlyString, out namesOnly) && namesOnly)
+            if (bool.TryParse(namesOnlyString, out result) && result)
                 indexes = Database.Indexes.GetIndexNames(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
+            else if (bool.TryParse(namesWithTypeOnlyString, out result) && result)
+                indexes = Database.Indexes.GetIndexNamesWithType(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
             else
                 indexes = Database.Indexes.GetIndexes(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
 
@@ -85,10 +89,14 @@ namespace Raven.Database.Server.Controllers
                     return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
             }
 
+            var replicationQueryString = GetQueryStringValue(Constants.IsReplicatedUrlParamName);
+            var isReplication = !string.IsNullOrWhiteSpace(replicationQueryString) &&
+                replicationQueryString.Equals("true", StringComparison.InvariantCultureIgnoreCase);
+
             string[] createdIndexes;
             try
             {
-                createdIndexes = Database.Indexes.PutIndexes(indexesToAdd);
+                createdIndexes = Database.Indexes.PutIndexes(indexesToAdd, isReplication);
             }
             catch (Exception ex)
             {
@@ -144,10 +152,13 @@ namespace Raven.Database.Server.Controllers
                     return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
             }
 
+            var replicationQueryString = GetQueryStringValue(Constants.IsReplicatedUrlParamName);
+            var isReplication = !string.IsNullOrWhiteSpace(replicationQueryString) && 
+                replicationQueryString.Equals("true", StringComparison.InvariantCultureIgnoreCase);
             List<IndexActions.IndexInfo> createdIndexes;
             try
             {
-                createdIndexes = Database.Indexes.PutSideBySideIndexes(sideBySideIndexes);
+                createdIndexes = Database.Indexes.PutSideBySideIndexes(sideBySideIndexes, isReplication);
             }
             catch (Exception ex)
             {
@@ -440,6 +451,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/indexes/try-recover-corrupted")]
         public HttpResponseMessage TryRecoverCorruptedIndexes()
         {
+            var count = 0;
             foreach (var indexId in Database.IndexStorage.Indexes)
             {
                 var index = Database.IndexStorage.GetIndexInstance(indexId);
@@ -448,6 +460,7 @@ namespace Raven.Database.Server.Controllers
                     continue;
 
                 long taskId;
+                var state = new OperationStateBase();
                 var task = Task.Run(() =>
                 {
                     // try to recover by reopening the index - it will reset it if necessary
@@ -458,24 +471,30 @@ namespace Raven.Database.Server.Controllers
                         Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(index.IndexId, IndexingPriority.Normal));
                         index.Priority = IndexingPriority.Normal;
 
-                        Database.WorkContext.ShouldNotifyAboutWork(() => string.Format("Index {0} has been recovered.", index.PublicName));
+                        var message = $"Index {index.PublicName} has been recovered";
+                        Database.WorkContext.ShouldNotifyAboutWork(() => message);
                         Database.WorkContext.NotifyAboutWork();
+                        state.MarkCompleted(message);
                     }
                     catch (Exception e)
                     {
-                        Log.WarnException("Failed to recover the corrupted index '{0}' by reopening it.", e);
+                        var message = $"Failed to recover the corrupted index '{index.PublicName}' by reopening it";
+                        Log.WarnException(message, e);
+                        state.MarkFaulted(message);
                     }
                 });
 
-                Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+                Database.Tasks.AddTask(task, state, new TaskActions.PendingTaskDescription
                 {
                     StartTime = SystemTime.UtcNow,
                     TaskType = TaskActions.PendingTaskType.RecoverCorruptedIndexOperation,
                     Description = index.PublicName
                 }, out taskId);
+
+                count++;
             }
 
-            return GetEmptyMessage(HttpStatusCode.Accepted);
+            return GetMessageWithObject(count);
         }
 
         [HttpGet]
@@ -809,6 +828,7 @@ namespace Raven.Database.Server.Controllers
                 return GetMessageWithString("Cannot find index : " + index, HttpStatusCode.NotFound);
             
             indexDefinition.LockMode = indexLockMode;
+            indexDefinition.IndexVersion = (indexDefinition.IndexVersion ?? 0) + 1;
             Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(indexDefinition);
 
             return GetEmptyMessage();

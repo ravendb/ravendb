@@ -10,7 +10,7 @@
         </p>
         <div data-bind="with: activeFilesystem">
             <span class="btn btn-primary btn-file" data-bind="attr: { 'disabled': isImporting() ? 'disabled' : null }">
-                Choose file <input id="importFilesystemFilePicker" type="file" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }"/>
+                Choose file <input id="importFilesystemFilePicker" type="file" accept=".ravendump, .ravenfsdump" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }"/>
             </span>
             <button class="btn btn-primary" data-bind="click: $root.importFs.bind($root), disable: !$root.hasFileSelected() || isImporting()">
                 <i class="fa fa-upload"></i>

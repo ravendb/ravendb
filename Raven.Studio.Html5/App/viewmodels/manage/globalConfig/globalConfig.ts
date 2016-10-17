@@ -34,6 +34,10 @@ class globalConfig extends viewModelBase {
             return activeRoute != null ? activeRoute.title : "";
         });
     }
+
+    protected shouldReportUsage(): boolean {
+        return false;
+    }
 }
 
 export = globalConfig;    

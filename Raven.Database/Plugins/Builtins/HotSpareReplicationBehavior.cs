@@ -100,23 +100,26 @@ namespace Raven.Database.Plugins.Builtins
                 RaiseAlert(noIdMessage,NoIdTitle,AlertLevel.Warning);
                 return;
             }
+
             var doc = GetOrCreateLicenseDocument(id);
             if (IsActivationExpired(doc))
             {
                 log.Warn(multipleActivationMessage);
                 RaiseAlert(multipleActivationMessage, multipleActivationTitle,AlertLevel.Warning);
-                ReportLicensingUsage(id,ReportHotSpareUssage.ActivationMode.MultipleActivation);
+                ReportLicensingUsage(id, ReportHotSpareUsage.ActivationMode.MultipleActivation);
                 //allowing to reactivate hot spare so not to hurt the user
                 doc.ActivationTime = now;
             }
             else if (doc.ActivationMode == HotSpareLicenseDocument.HotSpareLicenseActivationMode.NotActivated)
             {
-                ReportLicensingUsage(id, ReportHotSpareUssage.ActivationMode.FirstActivation);
+                ReportLicensingUsage(id, ReportHotSpareUsage.ActivationMode.FirstActivation);
                 doc.ActivationTime = now;
                 doc.ActivationMode = HotSpareLicenseDocument.HotSpareLicenseActivationMode.Activated;
             }
+
             await ChangeHotSpareModeWithinCluster(false).ConfigureAwait(false);
-            PutLicenseDocument(id,doc);			
+
+            PutLicenseDocument(id, doc);
             DeactivateTimer();                        
             requestManger.IsInHotSpareMode = false;
             // next check time should be positive because we handle expired licensing already
@@ -148,6 +151,7 @@ namespace Raven.Database.Plugins.Builtins
             return doc.ActivationMode == HotSpareLicenseDocument.HotSpareLicenseActivationMode.Activated && doc.ActivationTime.HasValue
                    && SystemTime.UtcNow - doc.ActivationTime.Value > ActivationTime;
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool IsActivationExpired(HotSpareLicenseDocument doc)
         {
@@ -164,9 +168,16 @@ namespace Raven.Database.Plugins.Builtins
             if (string.IsNullOrEmpty(id))
             {
                 log.Warn(noIdMessage);
-                RaiseAlert(noIdMessage,NoIdTitle, AlertLevel.Warning);
+                RaiseAlert(noIdMessage, NoIdTitle, AlertLevel.Warning);
                 return;
             }
+
+            if (requestManger.IsInHotSpareMode == false)
+            {
+                //we are already in not hot spare mode, nothing to do
+                return;
+            }
+
             var doc = GetOrCreateLicenseDocument(id);
             //If we are already running on an expired license block testing.
             if (IsActivationExpired(doc) || IsTestAllowanceOut(doc))
@@ -175,6 +186,7 @@ namespace Raven.Database.Plugins.Builtins
                 RaiseAlert(RanOutOfTestAllowanceMessage,RanOutOfTestAllowanceTitle, AlertLevel.Warning);
                 return;
             }
+
             await ChangeHotSpareModeWithinCluster(false).ConfigureAwait(false);
             doc.RemainingTestActivations--;
             PutLicenseDocument(id, doc);	
@@ -228,16 +240,19 @@ namespace Raven.Database.Plugins.Builtins
         public void CheckHotSpareLicenseStats(object state = null)
         {
             var id = GetLicenseId();
-            // Non-comercial license with hot spare history
+            // Non-commercial license with hot spare history
             if (id == null && CheckForHotSpareFootprintAndReport())
             {
-                if(!ChangeHotSpareModeWithinClusterForCheckHotSpareLicenseStats(true)) 
+                if(ChangeHotSpareModeWithinClusterForCheckHotSpareLicenseStats(true) == false) 
                     return;
                 requestManger.IsInHotSpareMode = true;
                 return;
             }
-            //Non-comercial with no hot spare usage.
-            if (id == null) return;
+
+            //Non-commercial with no hot spare usage.
+            if (id == null)
+                return;
+
             if (IsHotSpareLicense())
             {
                 var doc = GetOrCreateLicenseDocument(id);
@@ -245,22 +260,24 @@ namespace Raven.Database.Plugins.Builtins
                 {
                     log.Warn(ExpiredHotSpareLicensingUssageMessage);
                     RaiseAlert(ExpiredHotSpareLicensingUssageMessage,ExpiredHotSpareLicenseTitle, AlertLevel.Warning);
-                    ReportLicensingUsage(id, ReportHotSpareUssage.ActivationMode.ExpiredActivation);
-                    if (!ChangeHotSpareModeWithinClusterForCheckHotSpareLicenseStats(true))
+                    ReportLicensingUsage(id, ReportHotSpareUsage.ActivationMode.ExpiredActivation);
+                    if (ChangeHotSpareModeWithinClusterForCheckHotSpareLicenseStats(true) == false)
                         return;
+
                     requestManger.IsInHotSpareMode = true;
                     return;
                 }
                 //Activated but not expired (would happen if server was down.
                 if (doc.ActivationMode == HotSpareLicenseDocument.HotSpareLicenseActivationMode.Activated && doc.ActivationTime.HasValue)
                 {
-                    var exparationTime = ActivationTime - (SystemTime.UtcNow - doc.ActivationTime.Value);					
-                    exparationTime = (exparationTime > TimeSpan.Zero) ? exparationTime : TimeSpan.Zero;
+                    var expirationTime = ActivationTime - (SystemTime.UtcNow - doc.ActivationTime.Value);					
+                    expirationTime = (expirationTime > TimeSpan.Zero) ? expirationTime : TimeSpan.Zero;
                     DeactivateTimer();
-                    if (!ChangeHotSpareModeWithinClusterForCheckHotSpareLicenseStats(false))
+                    if (ChangeHotSpareModeWithinClusterForCheckHotSpareLicenseStats(false) == false)
                         return;
+
                     requestManger.IsInHotSpareMode = false;
-                    licensingTimer = landlord.SystemDatabase.TimerManager.NewTimer(ActivationTimeoutCallback, exparationTime, NonRecurringTimeSpan);
+                    licensingTimer = landlord.SystemDatabase.TimerManager.NewTimer(ActivationTimeoutCallback, expirationTime, NonRecurringTimeSpan);
                     return;
                 }
                 if (!ChangeHotSpareModeWithinClusterForCheckHotSpareLicenseStats(true))
@@ -269,36 +286,37 @@ namespace Raven.Database.Plugins.Builtins
                 requestManger.IsInHotSpareMode = true;
                 return;
             }
+
             //We are running on a comercial license need to clear hot spare footprint
             if (licensingStatus.IsCommercial)
             {
                 ClearHotSpareData();
                 requestManger.IsInHotSpareMode = false;
-                return;
             }
-
         }
         
-        private void ReportLicensingUsage(string id, ReportHotSpareUssage.ActivationMode mode )
+        private void ReportLicensingUsage(string id, ReportHotSpareUsage.ActivationMode mode)
         {
-            try
+            Task.Run(async() =>
             {
-                var requestParam = new CreateHttpJsonRequestParams(null, "http://licensing.ravendb.net/hot-spare/activation", HttpMethod.Post, null, null, conventions);
-                using (var request = requestFactory.CreateHttpJsonRequest(requestParam))
+                try
                 {
-                    request.WriteAsync(
-                      RavenJObject.FromObject(new ReportHotSpareUssage()
-                      {
-                          LicenseId = id,
-                          Mode = mode
-                      }));
+                    var requestParam = new CreateHttpJsonRequestParams(null, "http://licensing.ravendb.net/hot-spare/activation", HttpMethod.Post, null, null, conventions);
+                    using (var request = requestFactory.CreateHttpJsonRequest(requestParam))
+                    {
+                        await request.WriteAsync(
+                            RavenJObject.FromObject(new ReportHotSpareUsage
+                            {
+                                LicenseId = id,
+                                Mode = mode
+                            })).ConfigureAwait(false);
+                    }
                 }
-            }
-            catch (Exception e)
-            {
-                log.WarnException("Failed to notify about hot sapre licensing usage.",e);
-            }
-            
+                catch (Exception e)
+                {
+                    log.WarnException("Failed to notify about hot sapre licensing usage.", e);
+                }
+            });
         }
 
         private readonly DocumentConvention conventions = new DocumentConvention();
@@ -308,31 +326,45 @@ namespace Raven.Database.Plugins.Builtins
             licensingStatus.Attributes.TryGetValue("UserId", out id);
             return id;
         }
+        
+        public HotSpareLicenseDocument GetOrCreateLicenseDocument(string id, bool checkIfTesting = false)
+        {
+            var doc = GetLicenseDocument(id) ?? CreateDefaultHotSpareLicenseDocument(id);
+            if (checkIfTesting == false)
+                return doc;
 
-        public HotSpareLicenseDocument GetOrCreateLicenseDocument(string id)
+            if (requestManger.IsInHotSpareMode == false &&
+                doc.ActivationMode == HotSpareLicenseDocument.HotSpareLicenseActivationMode.NotActivated)
+            {
+                //we are not in hot spare mode and in not activated activation mode
+                doc.ActivationMode = HotSpareLicenseDocument.HotSpareLicenseActivationMode.Testing;
+            }
+
+            return doc;
+        }
+
+        private HotSpareLicenseDocument GetLicenseDocument(string id)
         {
             var docKey = GenerateHotSpareDocKey(id);
-            HotSpareLicenseDocument doc;
-            ListItem listItem = null; 
+
+            ListItem listItem = null;
             landlord.SystemDatabase.TransactionalStorage.Batch(action =>
             {
                 listItem = action.Lists.Read(HotSpareList, docKey);
             });
+
             if (listItem == null)
-            {
-                CreateDefaultHotSpareLicenseDocument(out doc,id);
-                return doc;
-            }
+                return null;
+
             try
             {
-                doc = listItem.Data.JsonDeserialization<HotSpareLicenseDocument>();
+                return listItem.Data.JsonDeserialization<HotSpareLicenseDocument>();
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                log.Warn(failedToDeserialize);
-                CreateDefaultHotSpareLicenseDocument(out doc, id);
+                log.WarnException(failedToDeserialize, e);
+                return null;
             }
-            return doc;
         }
 
         private void PutLicenseDocument(string id, HotSpareLicenseDocument doc)
@@ -357,9 +389,9 @@ namespace Raven.Database.Plugins.Builtins
 
             });
         }
-        private string GenerateHotSpareDocKey(string id)
+        private static string GenerateHotSpareDocKey(string id)
         {
-            return string.Format("{0}/{1}", HotSpareKeyPrefix, id);
+            return $"{HotSpareKeyPrefix}/{id}";
         }
 
         public bool IsHotSpareLicense()
@@ -378,7 +410,7 @@ namespace Raven.Database.Plugins.Builtins
             landlord.SystemDatabase.TransactionalStorage.Batch(action =>
             {
                 int start = 0;
-                int taken;				
+                int taken;
                 do
                 {
                     var licenses = action.Lists.Read(HotSpareList, start, 10).ToArray();
@@ -398,7 +430,7 @@ namespace Raven.Database.Plugins.Builtins
                         }
                         //Nothing to report if i got no id...
                         if (string.IsNullOrEmpty(data.Id)) continue;
-                        id = data.Id;						
+                        id = data.Id;
                         isHotSpareFootPrintFound = true;
                         break;
                     }
@@ -407,13 +439,13 @@ namespace Raven.Database.Plugins.Builtins
                     
                 });
             if(isHotSpareFootPrintFound)
-                ReportUsageOfExpiredHotSpareLicense(ReportHotSpareUssage.ActivationMode.WasHotSpareButNoHaveNoLicense,id);
+                ReportUsageOfExpiredHotSpareLicense(ReportHotSpareUsage.ActivationMode.WasHotSpareButNoHaveNoLicense,id);
             return isHotSpareFootPrintFound;
         }
 
         private const string FailureToDeserializeHotSpareDocument = "Failed to deserialzed hot spare document.";
 
-        private void ReportUsageOfExpiredHotSpareLicense(ReportHotSpareUssage.ActivationMode mode, string licenseId)
+        private void ReportUsageOfExpiredHotSpareLicense(ReportHotSpareUsage.ActivationMode mode, string licenseId)
         {
             RaiseAlert(ExpiredHotSpareLicensingUssageMessage, ExpiredHotSpareLicenseTitle,AlertLevel.Warning);
             log.Warn(ExpiredHotSpareLicensingUssageMessage);
@@ -440,7 +472,7 @@ namespace Raven.Database.Plugins.Builtins
                     return;
                 }
                 requestManger.IsInHotSpareMode = true;
-                ReportUsageOfExpiredHotSpareLicense(ReportHotSpareUssage.ActivationMode.ExpiredActivation, licensingStatus.Attributes["UserId"]);				
+                ReportUsageOfExpiredHotSpareLicense(ReportHotSpareUsage.ActivationMode.ExpiredActivation, licensingStatus.Attributes["UserId"]);				
                 return;
             }
             licensingStatus = newLicense;
@@ -461,14 +493,15 @@ namespace Raven.Database.Plugins.Builtins
                 licensingTimer = landlord.SystemDatabase.TimerManager.NewTimer(TestTimeoutCallback, TimeSpan.FromMinutes(1), NonRecurringTimeSpan);
                 return;
             }
+
             requestManger.IsInHotSpareMode = true;
             CheckHotSpareLicenseStats();
         }
 
-        private static void CreateDefaultHotSpareLicenseDocument(out HotSpareLicenseDocument data, string id)
+        private static HotSpareLicenseDocument CreateDefaultHotSpareLicenseDocument(string id)
         {
-            data =
-                new HotSpareLicenseDocument()
+            return
+                new HotSpareLicenseDocument
                 {
                     Id = id,
                     ActivationMode = HotSpareLicenseDocument.HotSpareLicenseActivationMode.NotActivated,
@@ -485,20 +518,27 @@ namespace Raven.Database.Plugins.Builtins
         public class HotSpareLicenseDocument
         {
             public string Id { get; set; }
+
             public HotSpareLicenseActivationMode ActivationMode { get; set; }
+
             public DateTime? ActivationTime { get; set; }
+
             public int RemainingTestActivations { get; set; }
+
             public enum HotSpareLicenseActivationMode
             {
                 NotActivated,
                 Activated,
+                Testing
             }
         }
 
-        private class ReportHotSpareUssage
+        private class ReportHotSpareUsage
         {
             public string LicenseId { get; set; }
+
             public ActivationMode Mode { get; set; }
+
             public enum ActivationMode
             {
                 FirstActivation,
@@ -508,7 +548,7 @@ namespace Raven.Database.Plugins.Builtins
             }
         }
 
-        private bool LicenseEqual(LicensingStatus license1, LicensingStatus license2)
+        private static bool LicenseEqual(LicensingStatus license1, LicensingStatus license2)
         {
             string id1;
             string id2;

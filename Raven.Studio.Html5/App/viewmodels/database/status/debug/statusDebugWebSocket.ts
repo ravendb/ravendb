@@ -1,6 +1,7 @@
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class statusDebugWebSocket extends viewModelBase {
 
@@ -12,6 +13,8 @@ class statusDebugWebSocket extends viewModelBase {
     }
 
     test() {
+        eventsCollector.default.reportEvent("web-socket", "test");
+        
         if ("WebSocket" in window) {
             var getTokenTask = new getSingleAuthTokenCommand(this.activeDatabase()).execute();
 

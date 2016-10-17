@@ -10,7 +10,7 @@ namespace Raven.StorageExporter
         public string OutputDumpPath { get; set; }
         public string TableName { get; set; }
         public int BatchSize { get; set; }
-        public static int DefualtBatchSize = 1024;
+        public static int DefaultBatchSize = 1024;
         public bool HasCompression { get; set; }
         public EncryptionConfiguration Encryption { get; set; }
 
@@ -28,7 +28,7 @@ namespace Raven.StorageExporter
             }
             else
             {
-                int batchSize = BatchSize == 0 ? DefualtBatchSize : BatchSize;
+                int batchSize = BatchSize == 0 ? DefaultBatchSize : BatchSize;
                 var storageExporter = new StorageExporter(DatabaseDataDir, OutputDumpPath, batchSize, DocumentsStartEtag, HasCompression, Encryption);
                 storageExporter.ExportDatabase();
             }

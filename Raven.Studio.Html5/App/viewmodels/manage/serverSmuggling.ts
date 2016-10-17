@@ -7,6 +7,7 @@ import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import serverSmugglingLocalStorage = require("common/serverSmugglingLocalStorage");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import eventsCollector = require("common/eventsCollector");
 
 class serverSmuggling extends viewModelBase {
     resources = ko.observableArray<serverSmugglingItem>([]);
@@ -221,6 +222,7 @@ class serverSmuggling extends viewModelBase {
     }
 
     performMigration() {
+        eventsCollector.default.reportEvent("server-smuggling", "execute");
         var request = this.getJson();
         this.messages([]);
         this.inProgress(true);
@@ -245,10 +247,12 @@ class serverSmuggling extends viewModelBase {
     }
 
     toggleJson() {
+        eventsCollector.default.reportEvent("server-smuggling", "toggle-json");
         this.showJsonRequest(!this.showJsonRequest());
     }
 
     toggleCurl() {
+        eventsCollector.default.reportEvent("server-smuggling", "toggle-curl");
         this.showCurlRequest(!this.showCurlRequest());
     }
 

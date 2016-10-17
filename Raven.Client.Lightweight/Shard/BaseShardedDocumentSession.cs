@@ -156,14 +156,14 @@ namespace Raven.Client.Shard
             }
         }
 
-        protected override void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, bool forceConcurrencyCheck)
+        protected override void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, ConcurrencyCheckMode concurrencyCheckMode)
         {
             string modifyDocumentId = null;
             if (id != null)
             {
                 modifyDocumentId = ModifyObjectId(id, entity, metadata);
             }
-            base.StoreEntityInUnitOfWork(modifyDocumentId, entity, etag, metadata, forceConcurrencyCheck);
+            base.StoreEntityInUnitOfWork(modifyDocumentId, entity, etag, metadata, concurrencyCheckMode);
         }
 
         protected string ModifyObjectId(string id, object entity, RavenJObject metadata)

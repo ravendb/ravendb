@@ -192,9 +192,12 @@ namespace Rachis
                     var timeout = behavior.Timeout - lastHeartBeat;
                     var hasMessage = Transport.TryReceiveMessage(timeout, _eventLoopCancellationTokenSource.Token, out message);
                     var messageBase = message?.Message as BaseMessage;
-                    if (messageBase != null)
+                    //Append entries is a very common messgae (it is the heartbeat)
+                    //We don't want to keep empty append entries in the log so we filter them.
+                    AppendEntriesRequestWithEntries appendEntriesRequest;
+                    if (messageBase != null && ShouldNotFilterMessage(messageBase,out appendEntriesRequest))
                         EngineStatistics.Messages.LimitedSizeEnqueue(
-                            new MessageWithTimingInformation {Message = messageBase, MessageReceiveTime = DateTime.UtcNow},
+                            new MessageWithTimingInformation {Message = appendEntriesRequest??messageBase, MessageReceiveTime = DateTime.UtcNow},
                             RaftEngineStatistics.NumberOfMessagesToTrack);
                     if (_eventLoopCancellationTokenSource.IsCancellationRequested)
                     {
@@ -229,6 +232,18 @@ namespace Rachis
                     break;
                 }
             }
+        }
+
+        private bool ShouldNotFilterMessage(BaseMessage message,out AppendEntriesRequestWithEntries appendEntriesRequest)
+        {            
+            var appendMessage = message as AppendEntriesRequest;
+            appendEntriesRequest = null;
+            if (appendMessage == null)
+                return true;
+            if (appendMessage.EntriesCount == 0)
+                return false;
+            appendEntriesRequest = AppendEntriesRequestWithEntries.FromAppendEntriesRequest(appendMessage);
+            return true;
         }
 
         internal void UpdateCurrentTerm(long term, string leader)

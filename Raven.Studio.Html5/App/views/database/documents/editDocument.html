@@ -27,7 +27,10 @@
             <!-- We duplicate following sections to fix issues with missing rounded borders when creating new document -->
             <div data-bind="if: loadedDocumentName">
                 <div class="btn-group">
-                    <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save (Alt+S)"><i class="fa fa-save"></i></button>
+                    <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save (Alt+S)">
+                        <i class="fa fa-spinner fa-spin fa-fw fa-1" data-bind="visible: isSaving"></i>
+                        <i class="fa fa-save" data-bind="visible: !isSaving()"></i>
+                    </button>
                     <a class="btn btn-default" data-bind="click: refreshDocument" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></a>
                     <button type="button" class="btn btn-default" data-bind="enable:!isNewLineFriendlyMode() || $root.isEditingMetadata(), click: formatDocument" title="Format document (Alt+[)" accesskey="["><i class="fa fa-align-justify"></i></button>
                     <button class="btn btn-default" title="Toggle newline mode (Alt+N)" data-toggle="button" accesskey="N" data-bind="enable: !$root.isEditingMetadata(), click: toggleNewlineMode">

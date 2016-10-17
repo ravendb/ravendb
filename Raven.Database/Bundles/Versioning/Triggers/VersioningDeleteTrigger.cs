@@ -7,16 +7,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Diagnostics;
-using System.Threading;
 // using Microsoft.VisualBasic.Logging;
 using Raven.Abstractions.Data;
-using Raven.Bundles.Versioning.Data;
+using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
-using System.Linq;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Threading;
 
 namespace Raven.Bundles.Versioning.Triggers
 {
@@ -64,22 +59,23 @@ namespace Raven.Bundles.Versioning.Triggers
             {
                 Database.TransactionalStorage.Batch(accessor =>
                 {
-                    foreach (var jsonDocument in  accessor.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", 0, int.MaxValue, null))
+                    using (DocumentCacher.SkipSetDocumentsInDocumentCache())
                     {
-                        if(jsonDocument == null)
-                            continue;
-                        if (versioningConfig != null && versioningConfig.PurgeOnDelete)
+                        foreach (var jsonDocument in accessor.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", 0, int.MaxValue, null))
                         {
-                            Database.Documents.Delete(jsonDocument.Key, null, transactionInformation);
-                        }
-                        else
-                        {
-                            jsonDocument.Metadata.Remove(Constants.RavenReadOnly);
-                            accessor.Documents.AddDocument(jsonDocument.Key, jsonDocument.Etag, jsonDocument.DataAsJson, jsonDocument.Metadata);
+                            if (jsonDocument == null)
+                                continue;
+                            if (versioningConfig != null && versioningConfig.PurgeOnDelete)
+                            {
+                                Database.Documents.Delete(jsonDocument.Key, null, transactionInformation);
+                            }
+                            else
+                            {
+                                jsonDocument.Metadata.Remove(Constants.RavenReadOnly);
+                                accessor.Documents.AddDocument(jsonDocument.Key, jsonDocument.Etag, jsonDocument.DataAsJson, jsonDocument.Metadata);
+                            }
                         }
                     }
-
-                
                 });
             }
         }

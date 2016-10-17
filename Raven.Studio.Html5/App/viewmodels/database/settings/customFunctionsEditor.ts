@@ -6,6 +6,7 @@ import getEffectiveCustomFunctionsCommand = require("commands/database/globalCon
 import customFunctions = require("models/database/documents/customFunctions");
 import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
+import eventsCollector = require("common/eventsCollector");
 
 class customFunctionsEditor extends viewModelBase {
 
@@ -78,6 +79,7 @@ class customFunctionsEditor extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("custom-functions", "save");
         var annotations = this.docEditor.getSession().getAnnotations();
         var hasErrors = false;
         for (var i = 0; i < annotations.length; i++) {

@@ -18,6 +18,7 @@ using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
@@ -37,13 +38,15 @@ namespace Raven.Client.Connection.Request
 
         private Task refreshReplicationInformationTask;
 
-        private OperationMetadata leaderNode;
+        private volatile OperationMetadata leaderNode;
 
         private DateTime lastUpdate = DateTime.MinValue;
 
         private bool firstTime = true;
 
         private int readStripingBase;
+
+        private static readonly ILog Log = LogManager.GetLogger(typeof(ClusterAwareRequestExecuter));
 
         public OperationMetadata LeaderNode
         {
@@ -52,18 +55,80 @@ namespace Raven.Client.Connection.Request
                 return leaderNode;
             }
 
-            set
-            {
-                if (value == null)
-                {
-                    leaderNodeSelected.Reset();
-                    leaderNode = null;
-                    return;
-                }
+        }
 
-                leaderNode = value;
-                leaderNodeSelected.Set();
+        /// <summary>
+        /// Sets the leader node to a known leader that is not null and sets the leader selected event
+        /// </summary>
+        /// <param name="newLeader"></param>
+        public void SetLeaderNodeToKnownLeader(OperationMetadata newLeader )
+        {
+            if (newLeader == null)
+            {
+                if (Log.IsDebugEnabled)
+                {
+                    Log.Debug($"An attempt to change the leader node to null from SetLeaderNodeToKnownLeader was detected.{Environment.NewLine}" +
+                              $"{Environment.StackTrace}");
+                }
+                return;
             }
+            if (Log.IsDebugEnabled)
+            {
+                var oldLeader = leaderNode == null ? "null" : leaderNode.ToString();
+                Log.Debug($"Leader node is changing from {oldLeader} to {newLeader}");
+            }
+            leaderNode = newLeader;
+            leaderNodeSelected.Set();
+        }
+
+        /// <summary>
+        /// Sets the value of leader node to null and reset the leader node selected event
+        /// </summary>
+        /// <param name="prevValue">The condition value upon we decide if we make the set to null or not</param>
+        /// <returns>true - if leader was set to null or was null already, otherwise returns false</returns>
+        public bool SetLeaderNodeToNullIfPrevIsTheSame(OperationMetadata prevValue)
+        {
+            var realPrevValue = Interlocked.CompareExchange(ref leaderNode, null, prevValue);
+            var res = realPrevValue == null || realPrevValue.Equals(prevValue) ;
+            if (res && realPrevValue != null)
+            {
+                if (Log.IsDebugEnabled)
+                {
+                    Log.Debug($"Leader node is changing from null to null.");
+                }
+                leaderNodeSelected.Reset();
+            }
+            return res;
+        }
+
+        /// <summary>
+        /// This will change the leader node to the given node and raise the leader changed event if the
+        /// new leader was set to a value not equal to null.
+        /// </summary>
+        /// <param name="newLeader">The new leader to be set.</param>
+        /// <param name="isRealLeader">An indication if this is a real leader or just the primary, this will affect if we raise the leader selected event.</param>
+        /// <returns>true if the leader node was changed from null to the given value, otherwise returns false</returns>
+        private bool SetLeaderNodeIfLeaderIsNull(OperationMetadata newLeader ,bool isRealLeader = true)
+        {
+            var changed = (Interlocked.CompareExchange(ref leaderNode, newLeader, null) == null);
+            if (changed && isRealLeader && newLeader != null)
+                leaderNodeSelected.Set();
+            if (Log.IsDebugEnabled && changed)
+            {
+                Log.Debug($"Leader node is changing from null to {newLeader}, isRealLeader={isRealLeader}.");
+            }
+            return changed;
+        }
+
+        /// <summary>
+        /// This method sets the leader node to null and reset the leader selected event.
+        /// You should not use this method unless you're sure nobody can set the leader node 
+        /// to some other value.
+        /// </summary>
+        public void SetLeaderNodeToNull()
+        {
+            leaderNode = null;
+            leaderNodeSelected.Reset();
         }
 
         public List<OperationMetadata> NodeUrls
@@ -100,10 +165,18 @@ namespace Raven.Client.Connection.Request
 
         public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient, bool force = false)
         {
-            if (force == false && lastUpdate.AddMinutes(5) > SystemTime.UtcNow && LeaderNode != null)
+            var localLeaderNode = LeaderNode;
+            var updateRecently = lastUpdate.AddMinutes(5) > SystemTime.UtcNow;
+            if (force == false && updateRecently && localLeaderNode != null)
+            {
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Will not update replication information because we have a leader:{localLeaderNode} and we recently updated the topology.");                
                 return new CompletedTask();
+            }
+            //This will prevent setting leader node to null if it was updated already.
+            if (SetLeaderNodeToNullIfPrevIsTheSame(localLeaderNode) == false)
+                return new CompletedTask(); 
 
-            LeaderNode = null;
             return UpdateReplicationInformationForCluster(serverClient, new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata =>
             {
                 return serverClient.DirectGetReplicationDestinationsAsync(operationMetadata, null, timeout: ReplicationDestinationsTopologyTimeout).ContinueWith(t =>
@@ -147,11 +220,17 @@ namespace Raven.Client.Connection.Request
                 {
                     case FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers:
                     case FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers:
-                        leaderNodeSelected.Wait(WaitForLeaderTimeout);
+                        var waitResult = leaderNodeSelected.Wait(WaitForLeaderTimeout);
+                        if(Log.IsDebugEnabled && waitResult == false)
+                            Log.Debug($"Failover behavior is {serverClient.convention.FailoverBehavior}, waited for {WaitForLeaderTimeout.TotalSeconds} seconds and no leader was selected.");
                         break;
                     default:
                         if (leaderNodeSelected.Wait(WaitForLeaderTimeout) == false)
+                        {
+                            if (Log.IsDebugEnabled)
+                                Log.Debug($"Failover behavior is {serverClient.convention.FailoverBehavior}, waited for {WaitForLeaderTimeout.TotalSeconds} seconds and no leader was selected.");
                             throw new InvalidOperationException($"Cluster is not in a stable state. No leader was selected, but we require one for making a request using {serverClient.convention.FailoverBehavior}.");
+                        }
                         break;
                 }
 
@@ -188,10 +267,15 @@ namespace Raven.Client.Connection.Request
             {
                 return operationResult.Result;
             }
-            
+            if(Log.IsDebugEnabled)
+                Log.Debug($"Faield executing operation on node {node.Url} number of remaining retries: {numberOfRetries}.");
 
-            LeaderNode = null;
+            //the value of the leader was changed since we took a snapshot of it and it is not null so we will try to run again without 
+            // considering this a failure
+            if(SetLeaderNodeToNullIfPrevIsTheSame(node) == false)
+                return await ExecuteWithinClusterInternalAsync(serverClient, method, operation, token, numberOfRetries, withClusterFailoverHeader).ConfigureAwait(false);
             FailureCounters.IncrementFailureCount(node.Url);
+
             if (serverClient.convention.FailoverBehavior == FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers
                 || serverClient.convention.FailoverBehavior == FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers)
             {
@@ -243,7 +327,8 @@ namespace Raven.Client.Connection.Request
                 var result = await TryClusterOperationAsync(n, operation, hasMoreNodes, token).ConfigureAwait(false);
                 if (result.Success)
                     return result.Result;
-
+                if(Log.IsDebugEnabled)
+                    Log.Debug($"Tried executing operation on failover server {n.Url} with no success.");
                 FailureCounters.IncrementFailureCount(n.Url);
             }
  
@@ -279,6 +364,8 @@ namespace Raven.Client.Connection.Request
                 {
                     shouldRetry = true;
                     operationResult.WasTimeout = wasTimeout;
+                    if(Log.IsDebugEnabled)
+                        Log.Debug($"Operation failed because server {node.Url} is down.");
                 }
                 else
                 {
@@ -300,13 +387,19 @@ namespace Raven.Client.Connection.Request
                                 throw new InvalidOperationException("Got 302 Redirect, but without Raven-Leader-Redirect: true header, maybe there is a proxy in the middle", e);
                             }
                             var redirectUrl = errorResponseException.Response.Headers.Location.ToString();
-                            node = new OperationMetadata(redirectUrl, node.Credentials, node.ClusterInformation);
-                            LeaderNode = node;
-                            return await TryClusterOperationAsync(node, operation, avoidThrowing, token).ConfigureAwait(false);
+                            var newLeaderNode = Nodes.FirstOrDefault(n => n.Url.Equals(redirectUrl))?? new OperationMetadata(redirectUrl, node.Credentials, node.ClusterInformation);
+                            SetLeaderNodeToKnownLeader(newLeaderNode);
+                            if(Log.IsDebugEnabled)
+                                Log.Debug($"Redirecting to {redirectUrl} because {node.Url} responded with 302-redirect.");
+                            return await TryClusterOperationAsync(newLeaderNode, operation, avoidThrowing, token).ConfigureAwait(false);
                         }
 
                         if (errorResponseException.StatusCode == HttpStatusCode.ExpectationFailed)
+                        {
+                            if (Log.IsDebugEnabled)
+                                Log.Debug($"Operation failed with status code {HttpStatusCode.ExpectationFailed}, will retry.");
                             shouldRetry = true;
+                        }
                     }
                 }
 
@@ -341,10 +434,21 @@ namespace Raven.Client.Connection.Request
                     if (nodes != null)
                     {
                         Nodes = nodes;
-                        LeaderNode = GetLeaderNode(Nodes);
-
-                        if (LeaderNode != null)
+                        var newLeaderNode = GetLeaderNode(Nodes);
+                        if (newLeaderNode != null)
+                        {
+                            if (Log.IsDebugEnabled)
+                            {
+                                Log.Debug($"Fetched topology from cache, Leader is {LeaderNode}\n Nodes:" + string.Join(",", Nodes.Select(n => n.Url)));
+                            }
+                            SetLeaderNodeToKnownLeader(newLeaderNode);
                             return new CompletedTask();
+                        }
+                        if (Log.IsDebugEnabled)
+                        {
+                            Log.Debug($"Fetched topology from cache, no leader found.\n Nodes:" + string.Join(",", Nodes.Select(n => n.Url)));
+                        } 
+                        SetLeaderNodeToNull();
                     }
                 }
 
@@ -354,6 +458,8 @@ namespace Raven.Client.Connection.Request
                     var triedFailoverServers = FailoverServers == null || FailoverServers.Length == 0;
                     for (;;)
                     {
+                        //taking a snapshot so we could tell if the value changed while we fetch the topology
+                        var prevLeader = LeaderNode;
                         var nodes = NodeUrls.ToHashSet();
 
                         if (tryFailoverServers == false)
@@ -387,8 +493,11 @@ namespace Raven.Client.Connection.Request
                             .Select(x => (Task)x.Task)
                             .ToArray();
 
-                        Task.WaitAll(tasks, ReplicationDestinationsTopologyTimeout);
-
+                        var tasksCompleted = Task.WaitAll(tasks, ReplicationDestinationsTopologyTimeout);
+                        if (Log.IsDebugEnabled && tasksCompleted == false)
+                        {
+                            Log.Debug($"During fetch topology {tasks.Count(t=>t.IsCompleted)} servers have responded out of {tasks.Length}");
+                        }
                         replicationDocuments.ForEach(x =>
                         {
                             if (x.Task.IsCompleted && x.Task.Result != null)
@@ -411,8 +520,16 @@ namespace Raven.Client.Connection.Request
 
                         if (newestTopology == null && triedFailoverServers)
                         {
-                            LeaderNode = primaryNode;
-                            //yes this happens
+                            if (Log.IsDebugEnabled)
+                                Log.Debug($"Fetching topology resulted with no topology, tried failoever servers, setting leader node to primary node ({primaryNode}).");
+                            //if the leader Node is not null this means that somebody updated it, we don't want to overwrite it with the primary.
+                            // i'm rasing the leader changed event although we don't have a real leader because some tests don't wait for leader but actually any node
+                            //Todo: change back to: if (SetLeaderNodeIfLeaderIsNull(primaryNode, false) == false)
+                            if (SetLeaderNodeIfLeaderIsNull(primaryNode) == false)
+                            {
+                                return;
+                            }
+                            
                             if(Nodes.Count == 0)
                                 Nodes = new List<OperationMetadata>
                                 {
@@ -424,7 +541,7 @@ namespace Raven.Client.Connection.Request
                         if (newestTopology != null)
                         {
                             Nodes = GetNodes(newestTopology.Node, newestTopology.Task.Result);
-                            LeaderNode = newestTopology.Task.Result.ClusterInformation.IsLeader ?
+                            var newLeader = newestTopology.Task.Result.ClusterInformation.IsLeader ?
                                 Nodes.FirstOrDefault(n => n.Url == newestTopology.Node.Url) : null;
 
                             ReplicationInformerLocalCache.TrySavingClusterNodesToLocalCache(serverHash, Nodes);
@@ -432,11 +549,25 @@ namespace Raven.Client.Connection.Request
                             if (newestTopology.Task.Result.ClientConfiguration != null)
                             {
                                 if (newestTopology.Task.Result.ClientConfiguration.FailoverBehavior == null)
+                                {
+                                    if(Log.IsDebugEnabled)
+                                        Log.Debug($"Server side failoever configuration is set to let client decide, client decided on {serverClient.convention.FailoverBehavior}. ");
                                     newestTopology.Task.Result.ClientConfiguration.FailoverBehavior = serverClient.convention.FailoverBehavior;
+                                }
+                                else if (Log.IsDebugEnabled)
+                                {
+                                    Log.Debug($"Server enforced failoever behavior {newestTopology.Task.Result.ClientConfiguration.FailoverBehavior}. ");
+                                }
                                 serverClient.convention.UpdateFrom(newestTopology.Task.Result.ClientConfiguration);
+                            }                            
+                            if (newLeader != null)
+                            {
+                                SetLeaderNodeToKnownLeader(newLeader);
+                                return;
                             }
-
-                            if (LeaderNode != null)
+                            //here we try to set leader node to null but we might fail since it was changed.
+                            //We just need to make sure that the leader node is not null and we can stop searching.
+                            if(SetLeaderNodeToNullIfPrevIsTheSame(prevLeader) == false && LeaderNode != null)
                                 return;
                         }
 

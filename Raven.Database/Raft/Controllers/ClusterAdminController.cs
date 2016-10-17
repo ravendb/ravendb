@@ -20,6 +20,7 @@ using Raven.Database.Raft.Util;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Raft.Controllers
 {
@@ -32,9 +33,45 @@ namespace Raven.Database.Raft.Controllers
             var configuration = await ReadJsonObjectAsync<ClusterConfiguration>().ConfigureAwait(false);
             if (configuration == null)
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
-
-            await ClusterManager.Client.SendClusterConfigurationAsync(configuration).ConfigureAwait(false);
+            //Changing the replication check state is something that the admin will do when he has no leader.
+            //But if we have no leader we can't run this command through raft because it will fail...
+            //for this case i'll check that all but the replication state check are the same and if so
+            //i'll apply the change localy to this server, allowing it to become leader.
+            try
+            {
+                await ClusterManager.Client.SendClusterConfigurationAsync(configuration).ConfigureAwait(false);
+            }
+            catch
+            {
+                var configurationJson = SystemDatabase.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey, null);
+                var localConfiguration = configurationJson?.DataAsJson.JsonDeserialization<ClusterConfiguration>();
+                //This should not be the case but i don't want NRE hiding the real problem.
+                if (localConfiguration == null)
+                    throw;
+                if (!ConfigurationsAreEqualExceptReplicationCheck(configuration, localConfiguration)) throw;
+                SystemDatabase.Documents.Put(Constants.Cluster.ClusterConfigurationDocumentKey, null, RavenJObject.FromObject(configuration), new RavenJObject(), null);
+                return GetEmptyMessage();
+            }
             return GetEmptyMessage();
+        }
+
+        private bool ConfigurationsAreEqualExceptReplicationCheck(ClusterConfiguration configuration, ClusterConfiguration localConfiguration)
+        {
+            if(configuration.EnableReplication != localConfiguration.EnableReplication)
+                return false;
+            if (configuration.DatabaseSettings == null && localConfiguration.DatabaseSettings == null)
+                return true;
+            if (configuration.DatabaseSettings == null || localConfiguration.DatabaseSettings == null)
+                return false;
+            if (configuration.DatabaseSettings.Keys.Count != localConfiguration.DatabaseSettings.Keys.Count)
+                return false;
+            foreach (var keyValue in configuration.DatabaseSettings)
+            {
+                string val;
+                if (!localConfiguration.DatabaseSettings.TryGetValue(keyValue.Key, out val) || keyValue.Value != val)
+                    return false;
+            }
+            return true;
         }
 
         [HttpPut]

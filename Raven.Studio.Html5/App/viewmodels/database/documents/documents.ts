@@ -11,6 +11,7 @@ import deleteCollection = require("viewmodels/database/documents/deleteCollectio
 import selectColumns = require("viewmodels/common/selectColumns");
 import selectCsvColumnsDialog = require("viewmodels/common/selectCsvColumns");
 import showDataDialog = require("viewmodels/common/showDataDialog");
+import eventsCollector = require("common/eventsCollector");
 
 import collection = require("models/database/documents/collection");
 import database = require("models/resources/database");
@@ -167,7 +168,7 @@ class documents extends viewModelBase {
         var docsPageSelector = ".documents-page";
         this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
         this.createKeyboardShortcut("Ctrl+C, D", () => this.copySelectedDocs(), docsPageSelector);
-        this.createKeyboardShortcut("Ctrl+C, I",() => this.copySelectedDocIds(), docsPageSelector);
+        this.createKeyboardShortcut("Ctrl+C, I", () => this.copySelectedDocIds(), docsPageSelector);
         this.registerCollectionsResize();
     }
 
@@ -239,6 +240,7 @@ class documents extends viewModelBase {
     }
 
     exportCsv() {
+        eventsCollector.default.reportEvent("documents", "export-csv");
         this.exportCsvInternal();
     }
 
@@ -442,6 +444,7 @@ class documents extends viewModelBase {
     }
 
     selectCsvColumns() {
+        eventsCollector.default.reportEvent("documents", "export-csv-custom-columns");
         var dialog = new selectCsvColumnsDialog(this.getDocumentsGrid().getColumnsNames());
         app.showDialog(dialog);
 
@@ -451,6 +454,7 @@ class documents extends viewModelBase {
     }
 
     selectColumns() {
+        eventsCollector.default.reportEvent("documents", "select-columns");
         // Fetch column widths from virtual table
         var virtualTable = this.getDocumentsGrid();
         var columnsNames = virtualTable.getColumnsNames();
@@ -476,10 +480,12 @@ class documents extends viewModelBase {
     }
 
     newDocument() {
+        eventsCollector.default.reportEvent("document", "new");
         router.navigate(appUrl.forNewDoc(this.activeDatabase()));
     }
 
     refresh() {
+        eventsCollector.default.reportEvent("documents", "refresh");
         this.getDocumentsGrid().refreshCollectionData();
         var selectedCollection = this.selectedCollection();
         selectedCollection.invalidateCache();
@@ -519,6 +525,7 @@ class documents extends viewModelBase {
     }
 
     editSelectedDoc() {
+        eventsCollector.default.reportEvent("document", "edit");
         var grid = this.getDocumentsGrid();
         if (grid) {
             grid.editLastSelectedItem();
@@ -527,8 +534,10 @@ class documents extends viewModelBase {
 
     deleteSelectedDocs() {
         if (this.selectedCollection().isSystemDocuments === false && this.hasAllDocumentsSelected()) {
+            eventsCollector.default.reportEvent("collection", "delete");
             this.deleteCollection(this.selectedCollection());
         } else {
+            eventsCollector.default.reportEvent("documents", "delete");
             var grid = this.getDocumentsGrid();
             if (grid) {
                 grid.deleteSelectedItems();
@@ -537,6 +546,7 @@ class documents extends viewModelBase {
     }
 
     copySelectedDocs() {
+        eventsCollector.default.reportEvent("documents", "copy");
         var grid = this.getDocumentsGrid();
         if (grid) {
             grid.copySelectedDocs();
@@ -544,6 +554,7 @@ class documents extends viewModelBase {
     }
 
     copySelectedDocIds() {
+        eventsCollector.default.reportEvent("documents", "copy-ids");
         var grid = this.getDocumentsGrid();
         if (grid) {
             grid.copySelectedDocIds();
@@ -551,6 +562,7 @@ class documents extends viewModelBase {
     }
 
     generateDocCode() {
+        eventsCollector.default.reportEvent("document", "generate-csharp-code");
         var grid = this.getDocumentsGrid();
         if (grid) {
             var selectedItem = <Document>grid.getSelectedItems(1).first();

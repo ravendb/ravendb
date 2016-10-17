@@ -84,7 +84,7 @@
             </button>
             <ul class="dropdown-menu" role="menu">
                 <!-- ko foreach: indexes -->
-                <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
+                <li data-bind="click: $root.setSelectedIndex.bind($root, $data.Name)"><a href="#" data-bind="text: $data.Name"></a></li>
                 <!-- /ko -->
                 <!-- ko if: indexes().length === 0 -->
                 <li data-bind="click: function() { }"><a href="#">No indexes available</a></li>

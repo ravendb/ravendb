@@ -42,6 +42,8 @@ namespace Raven.Database.Config
 
         public ReplicationConfiguration Replication { get; private set; }
 
+        public SqlReplicationConfiguration SqlReplication { get; private set; }
+
         public PrefetcherConfiguration Prefetcher { get; private set; }
 
         public StorageConfiguration Storage { get; private set; }
@@ -62,9 +64,12 @@ namespace Raven.Database.Config
 
         public WebSocketsConfiguration WebSockets { get; private set; }
 
+        public StudioConfiguration Studio { get; private set; }
+
         public InMemoryRavenConfiguration()
         {
             Replication = new ReplicationConfiguration();
+            SqlReplication = new SqlReplicationConfiguration();
             Prefetcher = new PrefetcherConfiguration();
             Storage = new StorageConfiguration();
             FileSystem = new FileSystemConfiguration();
@@ -75,6 +80,7 @@ namespace Raven.Database.Config
             WebSockets = new WebSocketsConfiguration();
             Cluster = new ClusterConfiguration();
             Monitoring = new MonitoringConfiguration();
+            Studio = new StudioConfiguration();
 
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -122,6 +128,7 @@ namespace Raven.Database.Config
             FileSystem.InitializeFrom(this);
             Counter.InitializeFrom(this);
             TimeSeries.InitializeFrom(this);
+            Studio.InitializeFrom(this);
 
             MaxPrecomputedBatchSizeForNewIndex = ravenSettings.MaxPrecomputedBatchSizeForNewIndex.Value;
 
@@ -153,6 +160,9 @@ namespace Raven.Database.Config
             PrefetchingDurationLimit = ravenSettings.PrefetchingDurationLimit.Value;
 
             // Core settings
+
+            MinThreadPoolCompletionThreads = ravenSettings.MinThreadPoolCompletionThreads.Value;
+            MinThreadPoolWorkerThreads = ravenSettings.MinThreadPoolWorkerThreads.Value;
             MaxPageSize = ravenSettings.MaxPageSize.Value;
 
             MemoryCacheLimitMegabytes = ravenSettings.MemoryCacheLimitMegabytes.Value;
@@ -336,11 +346,15 @@ namespace Raven.Database.Config
             Replication.MaxNumberOfItemsToReceiveInSingleBatch = ravenSettings.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value;
             Replication.ReplicationPropagationDelayInSeconds = ravenSettings.Replication.ReplicationPropagationDelayInSeconds.Value;
 
+            SqlReplication.CommandTimeoutInSec = ravenSettings.SqlReplication.CommandTimeoutInSec.Value;
+
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
             FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
             FileSystem.IndexStoragePath = ravenSettings.FileSystem.IndexStoragePath.Value;
             if (string.IsNullOrEmpty(FileSystem.DefaultStorageTypeName))
                 FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
+
+            Studio.AllowNonAdminUsersToSetupPeriodicExport = ravenSettings.Studio.AllowNonAdminUsersToSetupPeriodicExport.Value;
 
             Counter.DataDirectory = ravenSettings.Counter.DataDir.Value;
             Counter.TombstoneRetentionTime = ravenSettings.Counter.TombstoneRetentionTime.Value;
@@ -636,6 +650,21 @@ namespace Raven.Database.Config
         /// Checking the index may take some time on large databases
         /// </summary>
         public bool ResetIndexOnUncleanShutdown { get; set; }
+
+        /// <summary>
+        /// Minimum threads for .net thread pool worker threads
+        /// Default: system default
+        /// Min: 2
+        /// </summary>
+        public int MinThreadPoolWorkerThreads { get; set; }
+
+        /// <summary>
+        /// Minimum threads for .net thread pool async io completion threads
+        /// Default: system default
+        /// Min: 2
+        /// </summary>
+        public int MinThreadPoolCompletionThreads { get; set; }
+
 
         /// <summary>
         /// The maximum allowed page size for queries. 
@@ -1355,23 +1384,35 @@ namespace Raven.Database.Config
 
         public void CustomizeValuesForDatabaseTenant(string tenantId)
         {
-            if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
-                Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Databases", tenantId);
+            if (string.IsNullOrEmpty(Settings[Constants.RavenIndexPath]) == false)
+                Settings[Constants.RavenIndexPath] = Path.Combine(Settings[Constants.RavenIndexPath], "Databases", tenantId);
 
-            if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
-                Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Databases", tenantId);
+            if (string.IsNullOrEmpty(Settings[Constants.RavenEsentLogsPath]) == false)
+                Settings[Constants.RavenEsentLogsPath] = Path.Combine(Settings[Constants.RavenEsentLogsPath], "Databases", tenantId);
 
             if (string.IsNullOrEmpty(Settings[Constants.RavenTxJournalPath]) == false)
                 Settings[Constants.RavenTxJournalPath] = Path.Combine(Settings[Constants.RavenTxJournalPath], "Databases", tenantId);
 
-            if (string.IsNullOrEmpty(Settings["Raven/Voron/TempPath"]) == false)
-                Settings["Raven/Voron/TempPath"] = Path.Combine(Settings["Raven/Voron/TempPath"], "Databases", tenantId, "VoronTemp");
+            if (string.IsNullOrEmpty(Settings[Constants.Voron.TempPath]) == false)
+                Settings[Constants.Voron.TempPath] = Path.Combine(Settings[Constants.Voron.TempPath], "Databases", tenantId, "VoronTemp");
         }
 
         public void CustomizeValuesForFileSystemTenant(string tenantId)
         {
             if (string.IsNullOrEmpty(Settings[Constants.FileSystem.DataDirectory]) == false)
                 Settings[Constants.FileSystem.DataDirectory] = Path.Combine(Settings[Constants.FileSystem.DataDirectory], "FileSystems", tenantId);
+
+            if (string.IsNullOrEmpty(Settings[Constants.RavenIndexPath]) == false)
+                Settings[Constants.RavenIndexPath] = Path.Combine(Settings[Constants.RavenIndexPath], "FileSystems", tenantId);
+
+            if (string.IsNullOrEmpty(Settings[Constants.RavenEsentLogsPath]) == false)
+                Settings[Constants.RavenEsentLogsPath] = Path.Combine(Settings[Constants.RavenEsentLogsPath], "FileSystems", tenantId);
+
+            if (string.IsNullOrEmpty(Settings[Constants.RavenTxJournalPath]) == false)
+                Settings[Constants.RavenTxJournalPath] = Path.Combine(Settings[Constants.RavenTxJournalPath], "FileSystems", tenantId);
+
+            if (string.IsNullOrEmpty(Settings[Constants.Voron.TempPath]) == false)
+                Settings[Constants.Voron.TempPath] = Path.Combine(Settings[Constants.Voron.TempPath], "FileSystems", tenantId, "VoronTemp");
         }
 
         public void CustomizeValuesForCounterStorageTenant(string tenantId)
@@ -1525,6 +1566,14 @@ namespace Raven.Database.Config
             public int ReplicationPropagationDelayInSeconds { get; set; }
         }
 
+        public class SqlReplicationConfiguration
+        {
+            /// <summary>
+            /// Number of seconds after which SQL command will timeout. Default: -1 (use provider default). Can be overriden by setting CommandTimeout property value in SQL Replication configuration.
+            /// </summary>
+            public int CommandTimeoutInSec { get; set; }
+        }
+
         public class FileSystemConfiguration
         {
             public void InitializeFrom(InMemoryRavenConfiguration configuration)
@@ -1607,6 +1656,16 @@ namespace Raven.Database.Config
 
                 return EsentTypeName; // We choose esent by default
             }
+        }
+
+        public class StudioConfiguration
+        {
+            public void InitializeFrom(InMemoryRavenConfiguration configuration)
+            {
+                AllowNonAdminUsersToSetupPeriodicExport = configuration.Studio.AllowNonAdminUsersToSetupPeriodicExport;
+            }
+
+            public bool AllowNonAdminUsersToSetupPeriodicExport { get; set; }
         }
 
         public class CounterConfiguration

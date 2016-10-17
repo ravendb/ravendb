@@ -296,7 +296,14 @@ namespace Raven.Json.Linq
             switch (_valueType)
             {
                 case JTokenType.Integer:
-                    writer.WriteValue(Convert.ToInt64(_value, CultureInfo.InvariantCulture));
+                    try
+                    {
+                        writer.WriteValue(Convert.ToInt64(_value, CultureInfo.InvariantCulture));
+                    }
+                    catch (OverflowException)
+                    {
+                        writer.WriteValue(Convert.ToDecimal(_value, CultureInfo.InvariantCulture));
+                    }
                     return;
                 case JTokenType.Float:
                     if (_value is decimal)

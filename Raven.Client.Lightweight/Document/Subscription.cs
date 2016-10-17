@@ -132,7 +132,7 @@ namespace Raven.Client.Document
                             {
                                 cts.Token.ThrowIfCancellationRequested();
 
-                                using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, customizedEndResult: reader =>
+                                using (var streamedDocs = new AsyncServerClient.YieldStreamResultsAsync(subscriptionRequest, responseStream, customizedEndResult: reader =>
                                 {
                                     if (Equals("LastProcessedEtag", reader.Value) == false)
                                         return false;

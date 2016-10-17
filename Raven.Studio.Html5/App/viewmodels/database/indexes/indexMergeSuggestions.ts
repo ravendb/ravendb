@@ -9,6 +9,7 @@ import changeSubscription = require('common/changeSubscription');
 import moment = require("moment");
 import dialog = require("plugins/dialog");
 import changesContext = require("common/changesContext");
+import eventsCollector = require("common/eventsCollector");
 import optional = require("common/optional");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 
@@ -112,6 +113,7 @@ class indexMergeSuggestions extends viewModelBase {
     }
 
     saveMergedIndex(id: string, suggestion: indexMergeSuggestion) {
+        eventsCollector.default.reportEvent("index-merge-suggestions", "save-merged");
         var db: database = this.activeDatabase();
         mergedIndexesStorage.saveMergedIndex(db, id, suggestion);
 
@@ -119,6 +121,7 @@ class indexMergeSuggestions extends viewModelBase {
     }
 
     deleteIndexes(index: number) {
+        eventsCollector.default.reportEvent("index-merge-suggestions", "delete-indexes");
         var mergeSuggestion = this.suggestions()[index];
         var indexesToDelete = mergeSuggestion.canDelete;
         var db = this.activeDatabase();
@@ -129,13 +132,15 @@ class indexMergeSuggestions extends viewModelBase {
 
 
     deleteIndex(name: string) {
+        eventsCollector.default.reportEvent("index-merge-suggestions", "delete-index");
         var db = this.activeDatabase();
         var deleteViewModel = new deleteIndexesConfirm([name], db);
         deleteViewModel.deleteTask.always(() => this.reload());
         dialog.show(deleteViewModel);
     }
 
-    deleteAllIdleOrAbandoned () {
+    deleteAllIdleOrAbandoned() {
+        eventsCollector.default.reportEvent("index-merge-suggestions", "delete-all-idle-or-abandoned");
         var db = this.activeDatabase();
         var deleteViewModel = new deleteIndexesConfirm(this.idleOrAbandonedIndexes().map(index => index.Name), db, "Delete all idle or abandoned indexes?");
         deleteViewModel.deleteTask.always(() => this.reload());
@@ -143,6 +148,7 @@ class indexMergeSuggestions extends viewModelBase {
     }
 
     deleteAllNotUsedForWeek() {
+        eventsCollector.default.reportEvent("index-merge-suggestions", "delete-all-not-used-for-week");
         var db = this.activeDatabase();
         var deleteViewModel = new deleteIndexesConfirm(this.notUsedForLastWeek().map(index => index.Name), db, "Delete all indexes not used within last week?");
         deleteViewModel.deleteTask.always(() => this.reload());

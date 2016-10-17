@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -43,20 +44,42 @@ namespace Raven.Database.FileSystem.Controllers
                             bundles = activeBundles.Split(';');
                         }
                     }
+
                     var fsName = fileSystem.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(Constants.FileSystem.Prefix, string.Empty);
+                    var isFileSystemLoaded = FileSystemsLandlord.IsFileSystemLoaded(fsName);
+                    FileSystemStats stats = null;
+                    if (isFileSystemLoaded)
+                    {
+                        try
+                        {
+                            var fs = FileSystemsLandlord.GetResourceInternal(fsName).Result;
+                            if (fs != null)
+                            {
+                                stats = fs.GetFileSystemStats();
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            //the file system is shutting down or locked
+                            //we can ignore this
+                        }
+                    }
+
                     return new FileSystemData
                     {
                         Name = fsName,
                         Disabled = fileSystem.Value<bool>("Disabled"),
                         Bundles = bundles,
                         IsAdminCurrentTenant = true,
-                        IsLoaded = FileSystemsLandlord.IsFileSystemLoaded(fsName)
+                        IsLoaded = isFileSystemLoaded,
+                        Stats = stats
                     };
                 }).ToList();
         }
 
         private class FileSystemData : TenantData
         {
+            public FileSystemStats Stats { get; set; }
         }
 
         [HttpGet]

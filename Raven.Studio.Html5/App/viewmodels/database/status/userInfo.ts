@@ -1,5 +1,6 @@
 import getUserInfoCommand = require("commands/database/debug/getUserInfoCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
+import eventsCollector = require("common/eventsCollector");
 
 class userInfo extends viewModelBase {
 
@@ -14,6 +15,7 @@ class userInfo extends viewModelBase {
     }
 
     fetchUserInfo(): JQueryPromise<userInfoDto> {
+        eventsCollector.default.reportEvent("user-info", "fetch");
         var db = this.activeDatabase();
         if (db) {
             return new getUserInfoCommand(db)

@@ -55,6 +55,11 @@ namespace Raven.Database.Server.Controllers
             if (Database == null)
                 return GetEmptyMessage(HttpStatusCode.NotFound);
 
+            if (CanExposeConfigOverTheWire() == false && Database.Configuration.Studio.AllowNonAdminUsersToSetupPeriodicExport == false)
+            {
+                return GetEmptyMessage(HttpStatusCode.Forbidden);
+            }
+
             var configurationSettings = Database.ConfigurationRetriever.GetConfigurationSettings(GetQueryStringValues("key"));
             if (configurationSettings == null)
                 return GetEmptyMessage(HttpStatusCode.NotFound);
@@ -76,6 +81,61 @@ namespace Raven.Database.Server.Controllers
             var putResult = Database.Documents.Put(Constants.Global.GlobalSettingsDocumentKey, etag, json, metadata, null);
 
             return GetMessageWithObject(putResult);
+        }
+
+        [HttpPut]
+        [RavenRoute("configuration/periodicExportSettings")]
+        [RavenRoute("databases/{databaseName}/configuration/periodicExportSettings")]
+        public async Task<HttpResponseMessage> PeriodicExportSettingsPut()
+        {
+            if (Database == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
+
+            if (Database.Configuration.Studio.AllowNonAdminUsersToSetupPeriodicExport == false)
+            {
+                return GetMessageWithString("You can set periodic export settings using this endpoint only if AllowNonAdminUsersToSetupPeriodicExport config is enabled", HttpStatusCode.Unauthorized);
+            }
+
+            var docKey = Constants.Database.Prefix + DatabaseName;
+            var databaseDocument = SystemDatabase.Documents.Get(docKey, null);
+
+
+            var dbDoc = databaseDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
+            DatabasesLandlord.Unprotect(dbDoc);
+
+            dbDoc.SecuredSettings.Remove(Constants.PeriodicExport.AwsSecretKey);
+            dbDoc.SecuredSettings.Remove(Constants.PeriodicExport.AzureStorageKey);
+
+            dbDoc.Settings.Remove(Constants.PeriodicExport.AwsAccessKey);
+            dbDoc.Settings.Remove(Constants.PeriodicExport.AzureStorageAccount);
+
+            var newConfiguration = await ReadJsonAsync().ConfigureAwait(false);
+
+            var awsAccessKey = newConfiguration.Value<string>(Constants.PeriodicExport.AwsAccessKey);
+            var awsSecretKey = newConfiguration.Value<string>(Constants.PeriodicExport.AwsSecretKey);
+            var azureStorageAccount = newConfiguration.Value<string>(Constants.PeriodicExport.AzureStorageAccount);
+            var azureStorageKey = newConfiguration.Value<string>(Constants.PeriodicExport.AzureStorageKey);
+
+            if (awsAccessKey != null)
+                dbDoc.Settings[Constants.PeriodicExport.AwsAccessKey] = awsAccessKey;
+
+            if (awsSecretKey != null)
+                dbDoc.SecuredSettings[Constants.PeriodicExport.AwsSecretKey] = awsSecretKey;
+
+            if (azureStorageAccount != null)
+                dbDoc.Settings[Constants.PeriodicExport.AzureStorageAccount] = azureStorageAccount;
+
+            if (azureStorageKey != null)
+                dbDoc.Settings[Constants.PeriodicExport.AzureStorageKey] = azureStorageKey;
+
+            DatabasesLandlord.Protect(dbDoc);
+
+            var json = RavenJObject.FromObject(dbDoc);
+            json.Remove("Id");
+
+            SystemDatabase.Documents.Put(docKey, databaseDocument.Etag, json, new RavenJObject(), null);
+
+            return GetEmptyMessage();
         }
 
         [HttpGet]

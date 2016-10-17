@@ -619,6 +619,39 @@ namespace Raven.Tests.Bundles.MoreLikeThis
             }
         }
 
+        [Fact]
+        public void CanMakeDynamicDocumentQueriesWithComplexProperties()
+        {
+            new ComplexDataIndex().Execute(store);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new ComplexData
+                {
+                    Property = new ComplexProperty
+                    {
+                        Body = "test"
+                    }
+                });
+                session.SaveChanges();
+            }
+
+            WaitForIndexing(store);
+
+            using (var session = store.OpenSession())
+            {
+                var list = session.Advanced.MoreLikeThis<ComplexData, ComplexDataIndex>(
+                    new MoreLikeThisQuery
+                    {
+                        Document = "{ \"Property\": { \"Body\": \"test\" } }",
+                        MinimumTermFrequency = 1,
+                        MinimumDocumentFrequency = 1
+                    });
+
+                Assert.Equal(1, list.Count());
+            }
+        }
+
         private void AssetMoreLikeThisHasMatchesFor<T, TIndex>(string documentKey) where TIndex : AbstractIndexCreationTask, new()
         {
             using (var session = store.OpenSession())
@@ -673,7 +706,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
                 session.SaveChanges();
 
                 //Ensure non stale index
-                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == list[0].Id).SingleOrDefault();
+                var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).SingleOrDefault(x => x.Id == list[0].Id);
             }
         }
 
@@ -687,6 +720,17 @@ namespace Raven.Tests.Bundles.MoreLikeThis
         public class DataWithIntegerId
         {
             public long Id;
+            public string Body { get; set; }
+        }
+
+        public class ComplexData
+        {
+            public string Id { get; set; }
+            public ComplexProperty Property { get; set; }
+        }
+
+        public class ComplexProperty
+        {
             public string Body { get; set; }
         }
 
@@ -765,6 +809,21 @@ namespace Raven.Tests.Bundles.MoreLikeThis
                     }
                 };
 
+            }
+        }
+
+        public class ComplexDataIndex : AbstractIndexCreationTask<ComplexData>
+        {
+            public ComplexDataIndex()
+            {
+                Map = docs => from doc in docs
+                              select new
+                              {
+                                  doc.Property,
+                                  doc.Property.Body
+                              };
+
+                Index(x => x.Property.Body, FieldIndexing.Analyzed);
             }
         }
     }

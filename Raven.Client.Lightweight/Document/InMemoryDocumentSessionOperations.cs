@@ -693,7 +693,7 @@ more responsive application.
         {
             string id;
             var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
-            StoreInternal(entity, null, null, forceConcurrencyCheck: hasId == false);
+            StoreInternal(entity, null, null, hasId == false ? ConcurrencyCheckMode.Forced :  ConcurrencyCheckMode.Auto);
         }
 
         /// <summary>
@@ -701,7 +701,7 @@ more responsive application.
         /// </summary>
         public void Store(object entity, Etag etag)
         {
-            StoreInternal(entity, etag, null, forceConcurrencyCheck: true);
+            StoreInternal(entity, etag, null, etag == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced);
         }
 
         /// <summary>
@@ -709,7 +709,7 @@ more responsive application.
         /// </summary>
         public void Store(object entity, string id)
         {
-            StoreInternal(entity, null, id, forceConcurrencyCheck: false);
+            StoreInternal(entity, null, id, ConcurrencyCheckMode.Auto);
         }
 
         /// <summary>
@@ -717,10 +717,10 @@ more responsive application.
         /// </summary>
         public void Store(object entity, Etag etag, string id)
         {
-            StoreInternal(entity, etag, id, forceConcurrencyCheck: true);
+            StoreInternal(entity, etag, id, etag == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced);
         }
 
-        private void StoreInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck)
+        private void StoreInternal(object entity, Etag etag, string id, ConcurrencyCheckMode concurrencyCheckMode)
         {
             if (null == entity)
                 throw new ArgumentNullException("entity");
@@ -729,7 +729,7 @@ more responsive application.
             if (entitiesAndMetadata.TryGetValue(entity, out value))
             {
                 value.ETag = etag ?? value.ETag;
-                value.ForceConcurrencyCheck = forceConcurrencyCheck;
+                value.ConcurrencyCheckMode = concurrencyCheckMode;
                 return;
             }
 
@@ -767,7 +767,7 @@ more responsive application.
                 metadata.Add(Constants.RavenEntityName, tag);
             if (id != null)
                 knownMissingIds.Remove(id);
-            StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
+            StoreEntityInUnitOfWork(id, entity, etag, metadata, concurrencyCheckMode);
         }
 
         public Task StoreAsync(object entity, CancellationToken token = default(CancellationToken))
@@ -775,25 +775,25 @@ more responsive application.
             string id;
             var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
 
-            return StoreAsyncInternal(entity, null, null, forceConcurrencyCheck: hasId == false, token: token);
+            return StoreAsyncInternal(entity, null, null, hasId == false ? ConcurrencyCheckMode.Forced : ConcurrencyCheckMode.Auto, token: token);
         }
 
         public Task StoreAsync(object entity, Etag etag, CancellationToken token = default(CancellationToken))
         {
-            return StoreAsyncInternal(entity, etag, null, forceConcurrencyCheck: true, token: token);
+            return StoreAsyncInternal(entity, etag, null, etag == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced, token: token);
         }
 
         public Task StoreAsync(object entity, Etag etag, string id, CancellationToken token = default(CancellationToken))
         {
-            return StoreAsyncInternal(entity, etag, id, forceConcurrencyCheck: true, token: token);
+            return StoreAsyncInternal(entity, etag, id, etag == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced, token: token);
         }
 
         public Task StoreAsync(object entity, string id, CancellationToken token = default(CancellationToken))
         {
-            return StoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false, token: token);
+            return StoreAsyncInternal(entity, null, id, ConcurrencyCheckMode.Auto, token: token);
         }
 
-        private async Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck, CancellationToken token = default(CancellationToken))
+        private async Task StoreAsyncInternal(object entity, Etag etag, string id, ConcurrencyCheckMode concurrencyCheckMode, CancellationToken token = default(CancellationToken))
         {
             if (null == entity)
                 throw new ArgumentNullException("entity");
@@ -803,7 +803,7 @@ more responsive application.
                 id = await GenerateDocumentKeyForStorageAsync(entity).WithCancellation(token).ConfigureAwait(false);
             }
 
-            StoreInternal(entity, etag, id, forceConcurrencyCheck);
+            StoreInternal(entity, etag, id, concurrencyCheckMode);
         }
 
         protected abstract string GenerateKey(object entity);
@@ -835,7 +835,7 @@ more responsive application.
 
         protected abstract Task<string> GenerateKeyAsync(object entity);
 
-        protected virtual void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, bool forceConcurrencyCheck)
+        protected virtual void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, ConcurrencyCheckMode concurrencyCheckMode)
         {
             deletedEntities.Remove(entity);
             if (id != null)
@@ -848,7 +848,7 @@ more responsive application.
                 OriginalMetadata = new RavenJObject(),
                 ETag = etag,
                 OriginalValue = new RavenJObject(),
-                ForceConcurrencyCheck = forceConcurrencyCheck
+                ConcurrencyCheckMode = concurrencyCheckMode,
             });
             if (id != null)
                 entitiesByKey[id] = entity;
@@ -902,7 +902,7 @@ more responsive application.
 
             var json = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
 
-            var etag = UseOptimisticConcurrency || documentMetadata.ForceConcurrencyCheck
+            var etag = (UseOptimisticConcurrency && documentMetadata.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled) || documentMetadata.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced
                            ? (documentMetadata.ETag ?? Etag.Empty)
                            : null;
 
@@ -997,12 +997,13 @@ more responsive application.
             }
         }
 
-        public void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, int replicas = 1)
+        public void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, int replicas = 1, bool majority = false)
         {
-            var realTimeout = timeout ?? TimeSpan.FromSeconds(1);
+            var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
             if (saveChangesOptions == null)
                 saveChangesOptions = new BatchOptions();
             saveChangesOptions.WaitForReplicas = true;
+            saveChangesOptions.Majority = majority;
             saveChangesOptions.NumberOfReplicasToWaitFor = replicas;
             saveChangesOptions.WaitForReplicasTimout = realTimeout;
             saveChangesOptions.ThrowOnTimeoutInWaitForReplicas = throwOnTimeout;
@@ -1010,7 +1011,7 @@ more responsive application.
 
         public void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false, string[] indexes = null)
         {
-            var realTimeout = timeout ?? TimeSpan.FromSeconds(1);
+            var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
             if (saveChangesOptions == null)
                 saveChangesOptions = new BatchOptions();
             saveChangesOptions.WaitForIndexes = true;
@@ -1305,6 +1306,24 @@ more responsive application.
         }
 #endif
 
+        public enum ConcurrencyCheckMode
+        {
+            /// <summary>
+            /// Automatic optimistic concurrency check depending on UseOptimisticConcurrency setting or provided ETag
+            /// </summary>
+            Auto,
+
+            /// <summary>
+            /// Force optimistic concurrency check even if UseOptimisticConcurrency is not set
+            /// </summary>
+            Forced,
+
+            /// <summary>
+            /// Disable optimistic concurrency check even if UseOptimisticConcurrency is set
+            /// </summary>
+            Disabled
+        }
+
         /// <summary>
         /// Metadata held about an entity by the session
         /// </summary>
@@ -1337,11 +1356,11 @@ more responsive application.
             public RavenJObject OriginalMetadata { get; set; }
 
             /// <summary>
-            /// A concurrency check will be forced on this entity 
-            /// even if UseOptimisticConcurrency is set to false
+            /// A concurrency check will be either forced, disabled or happen
+            /// depending in the UseOptimisticConcurrency setting or the provided ETag
             /// </summary>
-            public bool ForceConcurrencyCheck { get; set; }
-
+            public ConcurrencyCheckMode ConcurrencyCheckMode { get; set; }
+            
             /// <summary>
             /// If set to true, the session will ignore this document
             /// when SaveChanges() is called, and won't perform and change tracking

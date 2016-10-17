@@ -24,13 +24,13 @@
   },
 
   "frameworks": {
-    "netstandard1.6": {
-      "imports": [ "dnxcore50" ],
+    "netstandard1.3": {
       "buildOptions": {
         "define": [ "DNXCORE50", "PORTABLE", "DOTNET" ]
       },
       "dependencies": {
-        "System.Reflection.Extensions": "4.0.1"
+        "System.Reflection.Extensions": "4.0.1",
+        "System.Reflection.TypeExtensions": "4.1.0"
       }
     }
   }

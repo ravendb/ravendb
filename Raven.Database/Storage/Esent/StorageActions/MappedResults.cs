@@ -1223,11 +1223,14 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
         public void IncrementReduceKeyCounter(int indexId, string reduceKey, int val)
         {
+            var isUpdate = false;
             try
             {
                 ExecuteOnReduceKey(indexId, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
                 () =>
                 {
+                    isUpdate = true;
+
                     var numberOfMappedItemsPerReduceKey = Api.RetrieveColumnAsInt32(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"]).Value;
                     if (numberOfMappedItemsPerReduceKey + val == 0)
                     {
@@ -1243,11 +1246,13 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 // we should NOT be getting this error, we still got it, and while I think I fixed the reason for that...
                 // if we do, it is okay to ignore it in this specific instance, since it will just skew the number for reduce counts a bit
                 // and it will all fix itself one way or the other
-                if (e.Error != JET_err.WriteConflict)
+                if (TransactionalStorageHelper.IsEsentWriteConflict(e) == false)
                     throw;
+
                 logger.WarnException(
-                    "Could not update the reduce key counter for index " + indexId + ", key: " + reduceKey +
-                    ". Ignoring this, multi step reduce promotion may be delayed for this value.", e);
+                    $"Could not {(isUpdate ? "update" : "add")} the reduce key counter for index: {indexId}, " +
+                    $"key: {reduceKey}, change value: {val}. " +
+                    "Ignoring this, multi step reduce promotion may be delayed for this value.", e);
             }
         }
 

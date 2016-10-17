@@ -226,13 +226,13 @@ namespace Raven.Database.Actions
         // the method already handle attempts to create the same index, so we don't have to 
         // worry about this.
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public string PutIndex(string name, IndexDefinition definition)
+        public string PutIndex(string name, IndexDefinition definition, bool isReplication = false)
         {
-            return PutIndexInternal(name, definition);
+            return PutIndexInternal(name, definition, isReplication: isReplication);
         }
 
         private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, 
-            bool isUpdateBySideSide = false, IndexCreationOptions? creationOptions = null)
+            bool isUpdateBySideSide = false, IndexCreationOptions? creationOptions = null, bool isReplication = false)
         {
             if (name == null)
                 throw new ArgumentNullException(nameof(name));
@@ -243,25 +243,31 @@ namespace Raven.Database.Actions
             var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
             if (existingIndex != null)
             {
-                switch (existingIndex.LockMode)
+                var newIndexVersion = definition.IndexVersion;
+                var currentIndexVersion = existingIndex.IndexVersion;
+
+                // whether we update the index definition or not,
+                // we need to update the index version
+                existingIndex.IndexVersion = definition.IndexVersion =
+                    Math.Max(currentIndexVersion ?? 0, newIndexVersion ?? 0);
+
+                switch (isReplication)
                 {
-                    case IndexLockMode.SideBySide:
-                        if (isUpdateBySideSide == false)
+                    case true:
+                        if (newIndexVersion != null && currentIndexVersion != null &&
+                            newIndexVersion <= currentIndexVersion)
                         {
-                            Log.Info("Index {0} not saved because it might be only updated by side-by-side index");
-                            throw new InvalidOperationException("Can not overwrite locked index: " + name + ". This index can be only updated by side-by-side index.");
+                            //this new index is an older version of the current one
+                            return null;
                         }
 
-                        //keep the SideBySide lock mode from the replaced index
-                        definition.LockMode = IndexLockMode.SideBySide;
-                            
+                        // we need to update the lock mode only if it was updated by another server
+                        existingIndex.LockMode = definition.LockMode;
                         break;
-                    case IndexLockMode.LockedIgnore:
-                        Log.Info("Index {0} not saved because it was lock (with ignore)", name);
-                        return null;
-
-                    case IndexLockMode.LockedError:
-                        throw new InvalidOperationException("Can not overwrite locked index: " + name);
+                    default:
+                        if (CanUpdateIndex(name, definition, isUpdateBySideSide, existingIndex) == false)
+                            return null;
+                        break;
                 }
             }
 
@@ -275,11 +281,27 @@ namespace Raven.Database.Actions
                     // ensure that the code can compile
                     new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
                     IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
+                    if (isReplication == false)
+                        definition.IndexVersion = (definition.IndexVersion ?? 0) + 1;
                     return null;
                 case IndexCreationOptions.Update:
                     // ensure that the code can compile
                     new DynamicViewCompiler(definition.Name, definition, Database.Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Database.Configuration).GenerateInstance();
                     DeleteIndex(name);
+                    if (isReplication == false)
+                        definition.IndexVersion = (definition.IndexVersion ?? 0) + 1;
+                    break;
+                case IndexCreationOptions.Create:
+                    if (isReplication == false)
+                    {
+                        // we create a new index,
+                        // we need to restore its previous IndexVersion (if it was deleted before)
+                        var deletedIndexVersion = IndexDefinitionStorage.GetDeletedIndexVersion(definition);
+                        var replacingIndexVersion = GetOriginalIndexVersion(definition.Name);
+                        definition.IndexVersion = Math.Max(deletedIndexVersion, replacingIndexVersion);
+                        definition.IndexVersion++;
+                    }
+                        
                     break;
             }
 
@@ -297,8 +319,45 @@ namespace Raven.Database.Actions
             return name;
         }
 
+        private bool CanUpdateIndex(string name, IndexDefinition definition, bool isUpdateBySideSide, IndexDefinition existingIndex)
+        {
+            switch (existingIndex.LockMode)
+            {
+                case IndexLockMode.SideBySide:
+                    if (isUpdateBySideSide == false)
+                    {
+                        Log.Info("Index {0} not saved because it might be only updated by side-by-side index");
+                        throw new InvalidOperationException("Can not overwrite locked index: " + name + ". This index can be only updated by side-by-side index.");
+                    }
+
+                    //keep the SideBySide lock mode from the replaced index
+                    definition.LockMode = IndexLockMode.SideBySide;
+                    break;
+                case IndexLockMode.LockedIgnore:
+                    Log.Info("Index {0} not saved because it was lock (with ignore)", name);
+                    return false;
+                case IndexLockMode.LockedError:
+                    throw new InvalidOperationException("Can not overwrite locked index: " + name);
+            }
+
+            return true;
+        }
+
+        private int GetOriginalIndexVersion(string name)
+        {
+            if (name.StartsWith(Constants.SideBySideIndexNamePrefix) == false)
+                return 0;
+
+            var originalName = name.Substring(Constants.SideBySideIndexNamePrefix.Length);
+            var existingIndex = IndexDefinitionStorage.GetIndexDefinition(originalName);
+            if (existingIndex == null)
+                return 0;
+
+            return existingIndex.IndexVersion ?? 0;
+        }
+
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public string[] PutIndexes(IndexToAdd[] indexesToAdd)
+        public string[] PutIndexes(IndexToAdd[] indexesToAdd, bool isReplication)
         {
             var createdIndexes = new List<string>();
             var prioritiesList = new List<IndexingPriority>();
@@ -306,7 +365,7 @@ namespace Raven.Database.Actions
             {
                 foreach (var indexToAdd in indexesToAdd)
                 {
-                    var nameToAdd = PutIndexInternal(indexToAdd.Name, indexToAdd.Definition, disableIndexBeforePut: true);
+                    var nameToAdd = PutIndexInternal(indexToAdd.Name, indexToAdd.Definition, disableIndexBeforePut: true, isReplication: isReplication);
                     if (nameToAdd == null)
                         continue;
 
@@ -319,10 +378,16 @@ namespace Raven.Database.Actions
 
                 for (var i = 0; i < createdIndexes.Count; i++)
                 {
-                    var index = createdIndexes[i];
+                    var indexName = createdIndexes[i];
                     var priority = prioritiesList[i];
 
-                    var instance = Database.IndexStorage.GetIndexInstance(index);
+                    var instance = Database.IndexStorage.GetIndexInstance(indexName);
+                    if (instance == null)
+                    {
+                        Log.Warn("Couldn't set index priority because index named: '{0}' doesn't exist", indexName);
+                        continue;
+                    }
+
                     instance.Priority = priority;
                 }
 
@@ -340,7 +405,7 @@ namespace Raven.Database.Actions
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public List<IndexInfo> PutSideBySideIndexes(SideBySideIndexes sideBySideIndexes)
+        public List<IndexInfo> PutSideBySideIndexes(SideBySideIndexes sideBySideIndexes, bool isReplication)
         {
             var createdIndexes = new List<IndexInfo>();
             var prioritiesList = new List<IndexingPriority>();
@@ -375,10 +440,8 @@ namespace Raven.Database.Actions
                         //keep the SideBySide lock mode from the replaced index
                         indexToAdd.Definition.LockMode = GetCurrentLockMode(originalIndexName) ?? indexToAdd.Definition.LockMode;
                     }
-
-                    long _;
                     var nameToAdd = PutIndexInternal(indexName, indexToAdd.Definition,
-                        disableIndexBeforePut: true, isUpdateBySideSide: true, creationOptions: creationOptions);
+                        disableIndexBeforePut: true, isUpdateBySideSide: true, creationOptions: creationOptions, isReplication: isReplication);
 
                     if (nameToAdd == null)
                         continue;
@@ -387,7 +450,9 @@ namespace Raven.Database.Actions
                     {
                         Name = indexName,
                         OriginalName = originalIndexName,
-                        IsSideBySide = isSideBySide
+                        IsSideBySide = isSideBySide,
+                        MinimumEtagBeforeReplace = indexToAdd.MinimumEtagBeforeReplace ?? sideBySideIndexes.MinimumEtagBeforeReplace,
+                        ReplaceTimeUtc = indexToAdd.ReplaceTimeUtc ?? sideBySideIndexes.ReplaceTimeUtc
                     });
 
                     prioritiesList.Add(indexToAdd.Priority);
@@ -411,7 +476,7 @@ namespace Raven.Database.Actions
                     instance.Priority = priority;
                 }
 
-                CreateIndexReplacementDocuments(sideBySideIndexes, createdIndexes);
+                CreateIndexReplacementDocuments(createdIndexes);
 
                 return createdIndexes;
             }
@@ -428,7 +493,7 @@ namespace Raven.Database.Actions
             }
         }
 
-        private void CreateIndexReplacementDocuments(SideBySideIndexes sideBySideIndexes, List<IndexInfo> createdIndexes)
+        private void CreateIndexReplacementDocuments(List<IndexInfo> createdIndexes)
         {
             Database.TransactionalStorage.Batch(accessor =>
             {
@@ -443,8 +508,8 @@ namespace Raven.Database.Actions
                         RavenJObject.FromObject(new IndexReplaceDocument
                         {
                             IndexToReplace = createdIndex.OriginalName,
-                            MinimumEtagBeforeReplace = sideBySideIndexes.MinimumEtagBeforeReplace,
-                            ReplaceTimeUtc = sideBySideIndexes.ReplaceTimeUtc
+                            MinimumEtagBeforeReplace = createdIndex.MinimumEtagBeforeReplace,
+                            ReplaceTimeUtc = createdIndex.ReplaceTimeUtc
                         }),
                         new RavenJObject(),
                         null);
@@ -465,6 +530,10 @@ namespace Raven.Database.Actions
             public string OriginalName { get; set; }
 
             public bool IsSideBySide { get; set; }
+
+            public Etag MinimumEtagBeforeReplace { get; set; }
+
+            public DateTime? ReplaceTimeUtc { get; set; }
         }
 
         private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
@@ -818,6 +887,18 @@ namespace Raven.Database.Actions
                 );
         }
 
+        public RavenJArray GetIndexNamesWithType(int start, int pageSize)
+        {
+            return new RavenJArray(
+                from indexName in IndexDefinitionStorage.IndexNames.Skip(start).Take(pageSize)
+                let indexDefinition = IndexDefinitionStorage.GetIndexDefinition(indexName)
+                select new RavenJObject
+                {
+                    {"Name", new RavenJValue(indexName)},
+                    {"IsMapReduce", indexDefinition?.IsMapReduce ?? false},
+                });
+        }
+
         public RavenJArray GetIndexes(int start, int pageSize)
         {
             return new RavenJArray(
@@ -841,7 +922,12 @@ namespace Raven.Database.Actions
             var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
             if (indexDefinition == null)
                 throw new InvalidOperationException("There is no index named: " + index);
+
             DeleteIndex(index);
+
+            //treat it like an update to the current index
+            indexDefinition.IndexVersion = (indexDefinition.IndexVersion ?? 0) + 1;
+
             PutIndex(index, indexDefinition);
         }
 
@@ -880,7 +966,9 @@ namespace Raven.Database.Actions
                 if (clearErrors)
                     WorkContext.ClearErrorsFor(instance.Name);
 
-                if (removeIndexReplaceDocument && instance.IsSideBySideIndex)
+                var isSideBySide = instance.IsSideBySideIndex ||
+                                   instance.Name.StartsWith(Constants.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase);
+                if (removeIndexReplaceDocument && isSideBySide)
                 {
                     Database.Documents.Delete(Constants.IndexReplacePrefix + instance.Name, null, null);
                 }
@@ -895,8 +983,8 @@ namespace Raven.Database.Actions
                 // We raise the notification now because as far as we're concerned it is done *now*
                 TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
                     Database.Notifications.RaiseNotifications(new IndexChangeNotification
-                {
-                    Name = instance.Name,
+                    {
+                        Name = instance.Name,
                         Type = indexChangeType,
                         Version = instance.IndexVersion
                     })

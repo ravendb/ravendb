@@ -2,10 +2,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using metrics.Core;
 using Raven.Abstractions.Data;
+using Raven.Imports.metrics.Core;
 
 namespace Raven.Database.Extensions
 {

@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -7,6 +6,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
@@ -40,6 +40,8 @@ namespace Raven.Tests.Replication
 
         public class UserWithoutExtraInfoTransformer : AbstractTransformerCreationTask<UserWithExtraInfo>
         {
+            public override string TransformerName { get { return "UserWithoutExtraInfoTransformer"; } }
+
             public UserWithoutExtraInfoTransformer()
             {
                 TransformResults = usersWithExtraInfo => from u in usersWithExtraInfo
@@ -47,6 +49,22 @@ namespace Raven.Tests.Replication
                                                          {
                                                              u.Id,
                                                              u.Name
+                                                         };
+            }
+        }
+
+        public class UserWithoutExtraInfoTransformer_Extended : AbstractTransformerCreationTask<UserWithExtraInfo>
+        {
+            public override string TransformerName { get { return "UserWithoutExtraInfoTransformer"; } }
+
+            public UserWithoutExtraInfoTransformer_Extended()
+            {
+                TransformResults = usersWithExtraInfo => from u in usersWithExtraInfo
+                                                         select new
+                                                         {
+                                                             u.Id,
+                                                             u.Name,
+                                                             u.Address
                                                          };
             }
         }
@@ -76,8 +94,6 @@ namespace Raven.Tests.Replication
                                                          };
             }
         }
-
-
 
         [Fact]
         public void Should_replicate_transformers_by_default()
@@ -499,6 +515,127 @@ namespace Raven.Tests.Replication
                 Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination1.Select(x => x.Name).ToArray()));
                 Assert.Equal(0, transformerNamesAtDestination2.Count());
                 Assert.True(expectedTransformerNames.SetEquals(transformerNamesAtDestination3.Select(x => x.Name).ToArray()));
+            }
+        }
+
+        [Fact]
+        public void should_replicate_only_updated_transformer()
+        {
+            var requestFactory = new HttpRavenRequestFactory();
+            using (var sourceServer = GetNewServer(8077))
+            using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer, fiddler: true))
+            using (var destinationServer = GetNewServer(8078))
+            using (var destination = NewRemoteDocumentStore(ravenDbServer: destinationServer, fiddler: true))
+            {
+                CreateDatabaseWithReplication(source, "testDB");
+                CreateDatabaseWithReplication(destination, "testDB");
+
+                source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+                destination.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+
+                SetupReplication(source, "testDB", store => false, destination);
+                SetupReplication(destination, "testDB", store => false, source);
+
+                for (var i = 0; i < 30; i++)
+                {
+                    //just for starting the initial index and transformer replication
+                    source.DatabaseCommands.ForDatabase("testDB").Put("test" + i, Etag.Empty, new RavenJObject(), new RavenJObject());
+                    destination.DatabaseCommands.ForDatabase("testDB").Put("test" + (i + 50), Etag.Empty, new RavenJObject(), new RavenJObject());
+                }
+
+                WaitForDocument(destination.DatabaseCommands.ForDatabase("testDB"), "test29");
+                WaitForDocument(source.DatabaseCommands.ForDatabase("testDB"), "test79");
+
+                var userTransformer = new UserWithoutExtraInfoTransformer();
+                source.DatabaseCommands.ForDatabase("testDB").PutTransformer(userTransformer.TransformerName, userTransformer.CreateTransformerDefinition());
+
+                //replicating transformer from the source
+                var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-transformers?op=replicate-all", source.Url);
+                var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
+                {
+                    Url = source.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                var updatedUserTransformer = new UserWithoutExtraInfoTransformer_Extended();
+                source.DatabaseCommands.ForDatabase("testDB").PutTransformer(userTransformer.TransformerName, updatedUserTransformer.CreateTransformerDefinition());
+
+                var transformer = source.DatabaseCommands.ForDatabase("testDB").GetTransformer(userTransformer.TransformerName);
+                Assert.True(updatedUserTransformer.CreateTransformerDefinition().TransformResults.Equals(transformer.TransformResults));
+
+                //replicating transformer from the destination
+                replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-transformers?op=replicate-all", destination.Url);
+                replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
+                {
+                    Url = destination.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                //the new transformer shouldn't be overwritten
+                transformer = source.DatabaseCommands.ForDatabase("testDB").GetTransformer(userTransformer.TransformerName);
+                Assert.True(updatedUserTransformer.CreateTransformerDefinition().TransformResults.Equals(transformer.TransformResults));
+            }
+        }
+
+        [Fact]
+        public void can_update_transformer_lock_mode()
+        {
+            var requestFactory = new HttpRavenRequestFactory();
+            using (var sourceServer = GetNewServer(8077))
+            using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer, fiddler: true))
+            using (var destinationServer = GetNewServer(8078))
+            using (var destination = NewRemoteDocumentStore(ravenDbServer: destinationServer, fiddler: true))
+            {
+                CreateDatabaseWithReplication(source, "testDB");
+                CreateDatabaseWithReplication(destination, "testDB");
+
+                source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+                destination.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+
+                SetupReplication(source, "testDB", store => false, destination);
+                SetupReplication(destination, "testDB", store => false, source);
+
+                for (var i = 0; i < 30; i++)
+                {
+                    //just for starting the initial index and transformer replication
+                    source.DatabaseCommands.ForDatabase("testDB").Put("test" + i, Etag.Empty, new RavenJObject(), new RavenJObject());
+                    destination.DatabaseCommands.ForDatabase("testDB").Put("test" + (i + 50), Etag.Empty, new RavenJObject(), new RavenJObject());
+                }
+
+                WaitForDocument(destination.DatabaseCommands.ForDatabase("testDB"), "test29");
+                WaitForDocument(source.DatabaseCommands.ForDatabase("testDB"), "test79");
+
+                var userTransformer = new UserWithoutExtraInfoTransformer();
+                source.DatabaseCommands.ForDatabase("testDB").PutTransformer(userTransformer.TransformerName, userTransformer.CreateTransformerDefinition());
+                source.DatabaseCommands.ForDatabase("testDB").SetTransformerLock(userTransformer.TransformerName, TransformerLockMode.LockedIgnore);
+
+                //replicating transformer from the source
+                var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-transformers?op=replicate-all", source.Url);
+                var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
+                {
+                    Url = source.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                var updatedUserTransformer = new UserWithoutExtraInfoTransformer_Extended();
+                source.DatabaseCommands.ForDatabase("testDB").SetTransformerLock(updatedUserTransformer.TransformerName, TransformerLockMode.Unlock);
+                source.DatabaseCommands.ForDatabase("testDB").PutTransformer(userTransformer.TransformerName, updatedUserTransformer.CreateTransformerDefinition());
+
+                var transformer = source.DatabaseCommands.ForDatabase("testDB").GetTransformer(userTransformer.TransformerName);
+                Assert.True(updatedUserTransformer.CreateTransformerDefinition().TransformResults.Equals(transformer.TransformResults));
+
+                //replicating transformer from the source
+                replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-transformers?op=replicate-all", source.Url);
+                replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
+                {
+                    Url = source.Url
+                });
+                replicationRequest.ExecuteRequest();
+
+                //the transformer lock mode should change
+                transformer = destination.DatabaseCommands.ForDatabase("testDB").GetTransformer(userTransformer.TransformerName);
+                Assert.Equal(transformer.LockMode, TransformerLockMode.Unlock);
+                Assert.True(updatedUserTransformer.CreateTransformerDefinition().TransformResults.Equals(transformer.TransformResults));
             }
         }
 

@@ -118,7 +118,10 @@ namespace Raven.Database.Indexing
                     var parallelOperations = new ConcurrentQueue<ParallelBatchStats>();
 
                     var parallelProcessingStart = SystemTime.UtcNow;
-                    context.Database.MappingThreadPool.ExecuteBatch(documentsWrapped, (IEnumerator<dynamic> partition) =>
+                    if (context.Database.ThreadPool== null||context.RunIndexing == false)
+                        throw new OperationCanceledException();
+
+                    context.Database.ThreadPool.ExecuteBatch(documentsWrapped, (IEnumerator<dynamic> partition) =>
                     {
                         token.ThrowIfCancellationRequested();
                         var parallelStats = new ParallelBatchStats
@@ -230,7 +233,7 @@ namespace Raven.Database.Indexing
 
                             parallelOperations.Enqueue(parallelStats);
                         }
-                    }, description: $"Mapping index {PublicName} from etag {GetLastEtagFromStats()} to etag {batch.HighestEtagBeforeFiltering}");
+                    }, description: $"Mapping index {PublicName} from etag {GetLastEtagFromStats()} to etag {batch.HighestEtagBeforeFiltering}", database:context.Database);
 
                     performanceStats.Add(new ParallelPerformanceStats
                     {

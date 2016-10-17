@@ -352,7 +352,7 @@ namespace Raven.Client.Counters.Operations
             changesQueue.CompleteAdding();
 
             batchOperationTcs.Task.Wait();
-            if (batchOperationTask.Status != TaskStatus.RanToCompletion ||
+            if (batchOperationTask.Status != TaskStatus.RanToCompletion &&
                 batchOperationTask.Status != TaskStatus.Canceled)
                 cts.Cancel();
 

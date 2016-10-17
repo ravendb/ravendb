@@ -8,14 +8,23 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import copyToClipboard = require("common/copyToClipboard");
 
 class copyTransformerDialog extends dialogViewModelBase {
 
     transformerJSON = ko.observable("");
+    formattedOnce = false;
 
     constructor(private transformerName: string, private db: database, private isPaste: boolean = false, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
         aceEditorBindingHandler.install();
+
+        this.transformerJSON.subscribe(() => {
+            if (this.isPaste === false || this.formattedOnce)
+                return;
+
+            this.format();
+        });
     }
 
     canActivate(args: any): any {
@@ -53,6 +62,24 @@ class copyTransformerDialog extends dialogViewModelBase {
         }
 
         return true;
+    }
+
+    format() {
+        var newValue = this.transformerJSON();
+
+        try {
+            var tempIndex = JSON.parse(newValue);
+            var formatted = this.stringify(tempIndex);
+            this.transformerJSON(formatted);
+            this.formattedOnce = true;
+        } catch (e) {
+            //ignore this
+        }
+    }
+
+    stringify(obj: any) {
+        var prettifySpacing = 4;
+        return JSON.stringify(obj, null, prettifySpacing);
     }
 
     saveTransformer() {
@@ -99,6 +126,11 @@ class copyTransformerDialog extends dialogViewModelBase {
         } else {
             this.close();
         }
+    }
+
+    copyTransformer() {
+        copyToClipboard.copy(this.transformerJSON(), "Copied transformer to clipboard!");
+        this.close();
     }
 
     close() {

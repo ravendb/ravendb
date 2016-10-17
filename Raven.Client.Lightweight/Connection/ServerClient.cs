@@ -147,8 +147,7 @@ namespace Raven.Client.Connection
         [Obsolete("Use RavenFS instead.")]
         public IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize)
         {
-            return new AsyncEnumerableWrapper<Attachment>(asyncServerClient.GetAttachmentHeadersStartingWithAsync(idPrefix,
-                start, pageSize).Result);
+            return asyncServerClient.GetSyncAttachmentHeadersStartingWithAsyncSyncEnumerable(idPrefix, start, pageSize).Result;
 
         }
 
@@ -301,15 +300,14 @@ namespace Raven.Client.Connection
             out QueryHeaderInformation queryHeaderInfo)
         {
             var reference = new Reference<QueryHeaderInformation>();
-            var streamQueryAsync = AsyncHelpers.RunSync(() => asyncServerClient.StreamQueryAsync(index, query, reference));
+            var streamQuery = AsyncHelpers.RunSync(() => asyncServerClient.StreamQueryAsyncWithSyncEnumerator(index, query, reference));
             queryHeaderInfo = reference.Value;
-            return new AsyncEnumerableWrapper<RavenJObject>(streamQueryAsync);
+            return streamQuery;
         }
 
         public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
-            var streamDocsAsync = AsyncHelpers.RunSync(() => asyncServerClient.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation, skipAfter, transformer, transformerParameters));
-            return new AsyncEnumerableWrapper<RavenJObject>(streamDocsAsync);
+            return AsyncHelpers.RunSync(() => asyncServerClient.StreamDocsAsyncWithSyncEnumerator(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation, skipAfter, transformer, transformerParameters));
         }
 
         public void DeleteIndex(string name)
@@ -586,51 +584,5 @@ namespace Raven.Client.Connection
         {
             get { return new AdminServerClient(asyncServerClient, new AsyncAdminServerClient(asyncServerClient)); }
         }
-
-        private class AsyncEnumerableWrapper<T> : IEnumerator<T>, IEnumerable<T>
-        {
-            private readonly IAsyncEnumerator<T> asyncEnumerator;
-
-            public AsyncEnumerableWrapper(IAsyncEnumerator<T> asyncEnumerator)
-            {
-                this.asyncEnumerator = asyncEnumerator;
-            }
-
-            public void Dispose()
-            {
-                asyncEnumerator.Dispose();
-            }
-
-            public bool MoveNext()
-            {
-                return AsyncHelpers.RunSync(() => asyncEnumerator.MoveNextAsync());
-            }
-
-            public void Reset()
-            {
-                throw new NotSupportedException();
-            }
-
-            public T Current
-            {
-                get { return asyncEnumerator.Current; }
-            }
-
-            object IEnumerator.Current
-            {
-                get { return Current; }
-            }
-
-            public IEnumerator<T> GetEnumerator()
-            {
-                return this;
-            }
-
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                return GetEnumerator();
-            }
-        }
-
     }
 }

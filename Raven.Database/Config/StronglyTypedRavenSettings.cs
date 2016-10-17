@@ -8,6 +8,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Runtime.Caching;
+using System.Threading;
 using Rachis;
 using Raven.Abstractions.Data;
 using Raven.Database.Config.Settings;
@@ -19,6 +20,8 @@ namespace Raven.Database.Config
         private readonly NameValueCollection settings;
 
         public ReplicationConfiguration Replication { get; private set; }
+
+        public SqlReplicationConfiguration SqlReplication { get; private set; }
 
         public VoronConfiguration Voron { get; private set; }
 
@@ -42,9 +45,12 @@ namespace Raven.Database.Config
 
         public MonitoringConfiguration Monitoring { get; private set; }
 
+        public StudioConfiguration Studio { get; private set; }
+
         public StronglyTypedRavenSettings(NameValueCollection settings)
         {
             Replication = new ReplicationConfiguration();
+            SqlReplication = new SqlReplicationConfiguration();
             Voron = new VoronConfiguration();
             Esent = new EsentConfiguration();
             Prefetcher = new PrefetcherConfiguration();
@@ -56,6 +62,7 @@ namespace Raven.Database.Config
             WebSockets = new WebSocketsConfiguration();
             Cluster = new ClusterConfiguration();
             Monitoring = new MonitoringConfiguration();
+            Studio = new StudioConfiguration();
 
             this.settings = settings;
         }
@@ -90,6 +97,14 @@ namespace Raven.Database.Config
             MemoryLimitForProcessing = new IntegerSetting(settings[Constants.MemoryLimitForProcessing] ?? settings[Constants.MemoryLimitForProcessing_BackwardCompatibility],
                 // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
                 Math.Min(1024, (int)(MemoryStatistics.AvailableMemoryInMb * 0.75)));
+
+            int workerThreads;
+            int completionThreads;
+            ThreadPool.GetMinThreads(out workerThreads, out completionThreads);
+            MinThreadPoolWorkerThreads =
+                new IntegerSettingWithMin(settings["Raven/MinThreadPoolWorkerThreads"], workerThreads, 2);
+            MinThreadPoolCompletionThreads =
+                new IntegerSettingWithMin(settings["Raven/MinThreadPoolCompletionThreads"], completionThreads, 2);
 
             LowMemoryLimitForLinuxDetectionInMB =
                 new IntegerSetting(settings[Constants.LowMemoryLimitForLinuxDetectionInMB],
@@ -273,11 +288,15 @@ namespace Raven.Database.Config
             Replication.MaxNumberOfItemsToReceiveInSingleBatch = new NullableIntegerSettingWithMin(settings["Raven/Replication/MaxNumberOfItemsToReceiveInSingleBatch"], (int?)null, 512);
             Replication.ReplicationPropagationDelayInSeconds = new IntegerSetting(settings[Constants.ReplicationPropagationDelayInSeconds],15);
 
+            SqlReplication.CommandTimeoutInSec = new IntegerSetting(settings["Raven/SqlReplication/CommandTimeoutInSec"], -1);
+
             FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings[Constants.FileSystem.MaximumSynchronizationInterval], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
             FileSystem.IndexStoragePath = new StringSetting(settings[Constants.FileSystem.IndexStorageDirectory], string.Empty);
             FileSystem.DataDir = new StringSetting(settings[Constants.FileSystem.DataDirectory], @"~\FileSystems");
             FileSystem.DefaultStorageTypeName = new StringSetting(settings[Constants.FileSystem.Storage], string.Empty);
             FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate], false);
+
+            Studio.AllowNonAdminUsersToSetupPeriodicExport = new BooleanSetting(settings[Constants.AllowNonAdminUsersToSetupPeriodicExport], false);
 
             Counter.DataDir = new StringSetting(settings[Constants.Counter.DataDirectory], @"~\Counters");
             Counter.TombstoneRetentionTime = new TimeSpanSetting(settings[Constants.Counter.TombstoneRetentionTime], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
@@ -376,6 +395,10 @@ namespace Raven.Database.Config
         public IntegerSetting IndexAndTransformerReplicationLatencyInSec { get; private set; }
 
         public IntegerSetting MemoryLimitForProcessing { get; private set; }
+
+        public IntegerSettingWithMin MinThreadPoolWorkerThreads { get; private set; }
+
+        public IntegerSettingWithMin MinThreadPoolCompletionThreads { get; private set; }
 
         public IntegerSetting LowMemoryLimitForLinuxDetectionInMB { get; private set; }
         public IntegerSetting MaxConcurrentServerRequests { get; private set; }
@@ -597,6 +620,16 @@ namespace Raven.Database.Config
 
             public IntegerSetting ReplicationPropagationDelayInSeconds { get; set; }
 
+        }
+
+        public class SqlReplicationConfiguration
+        {
+            public IntegerSetting CommandTimeoutInSec { get; set; }
+        }
+
+        public class StudioConfiguration
+        {
+            public BooleanSetting AllowNonAdminUsersToSetupPeriodicExport { get; set; }
         }
 
         public class FileSystemConfiguration

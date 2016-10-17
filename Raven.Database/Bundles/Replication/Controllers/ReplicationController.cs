@@ -349,7 +349,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 {
                     //indicates to the replication task that this thread is going to insert documents.
                     ReplicationTask.IsThreadProcessingReplication.Value = true;
-                    ReplicationTask.HandleHeartbeat(src);
+                    ReplicationTask.HandleHeartbeat(src, wake: false);
                 }
 
                 using (Database.DisableAllTriggersForCurrentThread())
@@ -549,7 +549,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
         [HttpGet]
         [RavenRoute("replication/writeAssurance")]
         [RavenRoute("databases/{databaseName}/replication/writeAssurance")]
-        public async Task<HttpResponseMessage> ReplicationWriteAssurance(string etag, int replicas, TimeSpan timeout)
+        public async Task<HttpResponseMessage> ReplicationWriteAssurance(string etag, int replicas, bool majority, TimeSpan timeout)
         {
             if (etag == null)
             {
@@ -568,7 +568,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 replicas = Math.Min(destinations.Length, replicas);
             }
             Etag innerEtag = Etag.Parse(etag);
-            await ReplicationTask.WaitForReplicationAsync(innerEtag, timeout, replicas, true).ConfigureAwait(false);
+            await ReplicationTask.WaitForReplicationAsync(innerEtag, timeout, replicas, majority, true).ConfigureAwait(false);
 
             return GetEmptyMessage();
         }
@@ -759,6 +759,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 sourceReplicationInformation.ServerInstanceId = serverInstanceId;
                 sourceReplicationInformation.Source = src;
                 sourceReplicationInformation.LastModified = SystemTime.UtcNow;
+                sourceReplicationInformation.SourceCollections = collections;
 
                 var etag = document == null ? Etag.Empty : document.Etag;
                 var metadata = document == null ? new RavenJObject() : document.Metadata;
@@ -791,7 +792,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 }, HttpStatusCode.NotFound);
             }
 
-            replicationTask.HandleHeartbeat(src);
+            replicationTask.HandleHeartbeat(src, wake: true);
 
             return GetEmptyMessage();
         }
@@ -824,7 +825,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
                 return InternalPutIndex(sideBySideReplicationInfo.Index.Name,
                     sideBySideReplicationInfo.SideBySideIndex,
-                    string.Format("Index with the name {0} wasn't found, so we created it with side-by-side index definition. (Perhaps it was deleted?)", sideBySideReplicationInfo.Index.Name));
+                    $"Index with the name {sideBySideReplicationInfo.Index.Name} wasn't found, so we created it with side-by-side index definition. (Perhaps it was deleted?)");
             }
 
             if (index.Equals(sideBySideReplicationInfo.SideBySideIndex, false))
@@ -893,7 +894,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
         {
             try
             {
-                Database.Indexes.PutIndex(indexName, indexToUpdate);
+                Database.Indexes.PutIndex(indexName, indexToUpdate, isReplication: true);
                 return GetMessageWithObject(new
                 {
                     Index = indexToUpdate.Name,

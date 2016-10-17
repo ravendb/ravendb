@@ -839,11 +839,11 @@ namespace Raven.Client.Document
             SetTransformerParameters(queryInputs);
         }
 
-        public void SetTransformerParameters(Dictionary<string, RavenJToken> parameters)
+        public IAsyncDocumentQuery<T> SetTransformerParameters(Dictionary<string, RavenJToken> parameters)
         {
             transformerParameters = parameters;
+            return this;
         }
-
 
         /// <summary>
         /// Register the query as a lazy-count query in the session and return a lazy
@@ -1134,6 +1134,20 @@ namespace Raven.Client.Document
             return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facets, facetStart, facetPageSize, token);
         }
 
+        public virtual Lazy<Task<FacetResults>> GetFacetsLazyAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
+        {
+            var q = GetIndexQuery(true);
+            var lazyFacetsOperation = new LazyFacetsOperation(AsyncIndexQueried, facetSetupDoc, q, facetStart, facetPageSize);
+            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetResults>)null, token);
+        }
+
+        public virtual Lazy<Task<FacetResults>> GetFacetsLazyAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
+        {
+            var q = GetIndexQuery(true);
+            var lazyFacetsOperation = new LazyFacetsOperation(AsyncIndexQueried, facets, q, facetStart, facetPageSize);
+            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetResults>)null, token);
+        }
+
         /// <summary>
         /// Returns a list of results for a query asynchronously. 
         /// </summary>
@@ -1143,7 +1157,6 @@ namespace Raven.Client.Document
             var tuple = await ProcessEnumerator(currentQueryOperation).WithCancellation(token).ConfigureAwait(false);
             return tuple.Item2;
         }
-
         
         public async Task<T> FirstAsync()
         {
@@ -1182,7 +1195,7 @@ namespace Raven.Client.Document
         /// Register the query as a lazy query in the session and return a lazy
         /// instance that will evaluate the query only when needed
         /// </summary>
-        public virtual Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval)
+        public virtual Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval = null)
         {
             if (queryOperation == null)
             {

@@ -2,6 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import index = require("models/database/index/index");
 import persistIndexCommand = require("commands/database/index/persistIndexCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class statusDebugPersistAutoIndex extends viewModelBase {
 
@@ -15,6 +16,7 @@ class statusDebugPersistAutoIndex extends viewModelBase {
     });
 
     persistIndex() {
+        eventsCollector.default.reportEvent("auto-index", "persist");
         var indexName = this.indexName();
         new persistIndexCommand(indexName, this.activeDatabase())
             .execute()

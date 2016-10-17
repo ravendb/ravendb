@@ -2,7 +2,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import replicationsSetup = require("models/database/replication/replicationsSetup");
 import replicationDestination = require("models/database/replication/replicationDestination");
 import collection = require("models/database/documents/collection");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getReplicationsCommand = require("commands/database/replication/getReplicationsCommand");
 import saveReplicationDocumentCommand = require("commands/database/replication/saveReplicationDocumentCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
@@ -12,6 +11,7 @@ import getCollectionsCommand = require("commands/database/documents/getCollectio
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class etl extends viewModelBase {
 
@@ -142,6 +142,7 @@ class etl extends viewModelBase {
     }
 
     createNewDestination() {
+        eventsCollector.default.reportEvent("etl", "create");
         var db = this.activeDatabase();
         var newDestination = replicationDestination.empty(db.name);
         newDestination.enableReplicateOnlyFromCollections(true);
@@ -153,22 +154,18 @@ class etl extends viewModelBase {
     }
 
     removeDestination(repl: replicationDestination) {
+        eventsCollector.default.reportEvent("etl", "remove");
         this.replicationsSetup().destinations.remove(repl);
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("etl", "save");
         if (this.isSetupSaveEnabled()) {
             if (this.replicationsSetup().source()) {
                 this.saveReplicationSetup();
             } else {
-                var db = this.activeDatabase();
-                if (db) {
-                    new getDatabaseStatsCommand(db)
-                        .execute()
-                        .done(result=> {
-                            this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                        });
-                }
+                var db: database = this.activeDatabase();
+                this.prepareAndSaveReplicationSetup(db.statistics().databaseId());
             }
         }
     }
@@ -204,6 +201,7 @@ class etl extends viewModelBase {
     }
 
     sendReplicateCommand(destination: replicationDestination, parentClass: etl) {
+        eventsCollector.default.reportEvent("etl", "send-replicate");
         var db = parentClass.activeDatabase();
         if (db) {
             new replicateIndexesCommand(db, destination).execute();
@@ -214,6 +212,7 @@ class etl extends viewModelBase {
     }
 
     enableReplication() {
+        eventsCollector.default.reportEvent("etl", "enable-replication");
         new enableReplicationCommand(this.activeDatabase())
             .execute()
             .done((bundles) => {

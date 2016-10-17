@@ -106,6 +106,7 @@ interface reducedDatabaseStatisticsDto {
     CountOfErrors: number;
     CountOfIndexes: number;
     CountOfStaleIndexes: number;
+    CountOfAlerts: number;
     ApproximateTaskCount: number;
     CountOfAttachments: number;
 }
@@ -432,6 +433,11 @@ interface indexDefinitionContainerDto {
     Index: indexDefinitionDto;
 }
 
+interface indexDataDto {
+    Name: string;
+    IsMapReduce: boolean;
+}
+
 interface indexDefinitionDto {
     Name: string;
     LockMode: string;
@@ -576,6 +582,7 @@ interface replicationClientConfigurationDto {
 interface environmentColorDto {
     Name: string;
     BackgroundColor: string;
+    TextColor: string;
 }
 
 interface replicationConfigDto {
@@ -663,11 +670,6 @@ interface storedQueryDto {
 
 interface storedPatchDto extends patchDto {
     Hash: number;
-}
-
-interface indexDataDto {
-    name: string;
-    hasReduce: boolean;
 }
 
 interface bulkDocumentDto {
@@ -867,7 +869,7 @@ interface smugglerOptionsDto {
     ShouldExcludeExpired: boolean;
     Filters: filterSettingDto[];
     TransformScript: string;
-    NoneDefualtFileName: string;
+    NoneDefaultFileName: string;
 }
 
 interface customColumnParamsDto {
@@ -988,6 +990,10 @@ interface statusDebugMetricsDto {
     RequestsPerSecond: number;
     Requests: meterDataDto;
     RequestsDuration: histogramDataDto;
+    JsonDeserializationsPerSecond: meterDataDto;
+    JsonDeserializedBytesPerSecond: meterDataDto;
+    JsonSerializationsPerSecond: meterDataDto;
+    JsonSerializedBytesPerSecond: meterDataDto;
     StaleIndexMaps: histogramDataDto;
     StaleIndexReduces: histogramDataDto;
     Gauges: any;
@@ -1174,6 +1180,7 @@ interface databaseDto extends tenantDto {
     IndexingDisabled: boolean;
     RejectClientsEnabled: boolean;
     ClusterWide: boolean;
+    Stats: reducedDatabaseStatisticsDto;
 }
 
 interface tenantDto {
@@ -1185,6 +1192,7 @@ interface tenantDto {
 }
 
 interface fileSystemDto extends tenantDto {
+    Stats: filesystemStatisticsDto;
 }
 
 interface counterStorageDto extends tenantDto {
@@ -1530,6 +1538,7 @@ interface nodeConnectionInfoDto {
 
 interface clusterConfigurationDto {
     EnableReplication: boolean;
+    DisableReplicationStateChecks: boolean;
     DatabaseSettings?: dictionary<string>;
 }
 

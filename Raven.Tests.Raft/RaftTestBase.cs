@@ -79,8 +79,11 @@ namespace Raven.Tests.Raft
                 throw new Exception("WaitFor failed");
         }
 
+        private Action<DocumentStore> defaultConfigureStore = store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader;
         public List<DocumentStore> CreateRaftCluster(int numberOfNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true, bool fiddler = false)
         {
+            if (configureStore == null)
+                configureStore = defaultConfigureStore;
             var nodes = Enumerable.Range(0, numberOfNodes)
                 .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory, 
                 configureConfig: configuration =>
@@ -149,11 +152,18 @@ namespace Raven.Tests.Raft
 
         public List<DocumentStore> ExtendRaftCluster(int numberOfExtraNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true)
         {
+            if (configureStore == null)
+                configureStore = defaultConfigureStore;
             var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
             Assert.NotNull(leader);
 
             var nodes = Enumerable.Range(0, numberOfExtraNodes)
-                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory))
+                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory,
+                configureConfig: configuration =>
+                {
+                    configuration.Cluster.ElectionTimeout *= 10;
+                    configuration.Cluster.HeartbeatTimeout *= 10;
+                }))
                 .ToList();
 
             var allNodesFinishedJoining = new ManualResetEventSlim();
@@ -235,7 +245,7 @@ namespace Raven.Tests.Raft
             {
                 var topology = server.Options.ClusterManager.Value.Engine.CurrentTopology;
                 return topology.AllVotingNodes.Count() == numberOfNodes;
-            }, TimeSpan.FromSeconds(15)),$"Node didn't become unstale in time, {server}"));
+            }, TimeSpan.FromSeconds(5*numberOfNodes)), $"Node didn't become unstale in time, {server}"));
         }
 
         protected void SetupClusterConfiguration(List<DocumentStore> clusterStores, bool enableReplication = true, Dictionary<string, string> databaseSettings = null)

@@ -10,14 +10,13 @@ properties {
     $sln_file = "$base_dir\$sln_file_name"
     $tools_dir = "$base_dir\Tools"
     $release_dir = "$base_dir\Release"
-    $liveTest_dir = "C:\Sites\RavenDB 3\Web"
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
     $msbuild = "C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
     $nowarn = "1591,1573"
     
     $dotnet = "dotnet"
-    $dotnetLib = "netstandard1.6"
+    $dotnetLib = "netstandard1.3"
     $dotnetApp = "netcoreapp1.0"
 
     $nuget = "$base_dir\.nuget\NuGet.exe"
@@ -25,9 +24,20 @@ properties {
     $global:is_pull_request = $FALSE
     $global:buildlabel = Get-BuildLabel
     $global:uploadCategory = "RavenDB-Unstable"
+    
+    $global:validate = $FALSE
+    $global:validatePages = $FALSE
 }
 
 task default -depends Test, DoReleasePart1
+
+task Validate {
+    $global:validate = $TRUE
+}
+
+task ValidatePages {
+    $global:validatePages = $TRUE
+}
 
 task Verify40 {
     if( (ls "$env:windir\Microsoft.NET\Framework\v4.0*") -eq $null ) {
@@ -76,10 +86,17 @@ task Compile -depends Init, CompileHtml5 {
 
     $commit = Get-Git-Commit-Full
 
-    Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
+    $constants = "NET_4_0;TRACE"
+    if ($global:validate -eq $TRUE) {
+        $constants += ";VALIDATE"
+    }
+    if ($global:validatePages -eq $TRUE) {
+        $constants += ";VALIDATE_PAGES"
+    }
     
-    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
+    Write-Host "Compiling with '$global:configuration' configuration and '$constants' constants" -ForegroundColor Yellow
     
+    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" "/p:DefineConstants=`"$constants`"" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
 
     Write-Host "msbuild exit code: $LastExitCode"
 
@@ -88,7 +105,7 @@ task Compile -depends Init, CompileHtml5 {
     }
 
     if ($commit -ne "0000000000000000000000000000000000000000") {
-        exec { &"$tools_dir\GitLink.Custom.exe" "$base_dir" /u https://github.com/ayende/ravendb /c $global:configuration /b master /s "$commit" /f "$sln_file_name" }
+        exec { &"$tools_dir\GitLink.Custom.exe" "$base_dir" /u https://github.com/ravendb/ravendb /c $global:configuration /b master /s "$commit" /f "$sln_file_name" }
     }
 
     exec { &"$tools_dir\Assembly.Validator.exe" "$lib_dir" "$lib_dir\Sources" }
@@ -100,20 +117,13 @@ task CompileHtml5 {
 
     Write-Host "Compiling HTML5" -ForegroundColor Yellow
 
-    &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
-
-    
-    Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
-    Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null
-
     Set-Location $base_dir\Raven.Studio.Html5
     exec { & $tools_dir\Pvc\pvc.exe optimized-build }
-
-    Copy-Item $base_dir\Raven.Studio.Html5\optimized-build $build_dir\Html5 -Recurse
-    Copy-Item $base_dir\Raven.Studio.Html5\favicon.ico $build_dir\Html5
-    Copy-Item $base_dir\Raven.Studio.Html5\fonts $build_dir\Html5 -Recurse -Force
-    Copy-Item $base_dir\Raven.Studio.Html5\Content $build_dir\Html5 -Recurse -Force
-
+    
+    Set-Location $base_dir
+    
+    &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
+    
     Set-Location $build_dir\Html5
     exec { & $tools_dir\zip.exe -9 -A -r $build_dir\Raven.Studio.Html5.zip *.* }
     Set-Location $base_dir
@@ -274,9 +284,9 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
     New-Item $build_dir\Output\Web -Type directory | Out-Null
     New-Item $build_dir\Output\Web\bin -Type directory | Out-Null
     New-Item $build_dir\Output\Client -Type directory | Out-Null
-    New-Item $build_dir\Output\Client\netstandard1.6 -Type directory | Out-Null
+    New-Item $build_dir\Output\Client\$dotnetLib -Type directory | Out-Null
     New-Item $build_dir\Output\Bundles -Type directory | Out-Null
-    New-Item $build_dir\Output\Bundles\netstandard1.6 -Type directory | Out-Null
+    New-Item $build_dir\Output\Bundles\$dotnetLib -Type directory | Out-Null
 
     New-Item $build_dir\OutputTools -Type directory -ErrorAction SilentlyContinue | Out-Null
 }
@@ -329,7 +339,7 @@ task CopyStorageExporter {
 task CopyClient {
     @( "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Abstractions.???", "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Client.Lightweight.???") | ForEach-Object { Copy-Item "$_" $build_dir\Output\Client }
 
-    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\$_" $build_dir\Output\Client\netstandard1.6 }
+    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\$_" $build_dir\Output\Client\$dotnetLib }
 }
 
 task CopyWeb {
@@ -352,8 +362,8 @@ task CopyBundles {
     Copy-Item $base_dir\Bundles\Raven.Client.Authorization\bin\$global:configuration\Raven.Client.Authorization.??? $build_dir\Output\Bundles
     Copy-Item $base_dir\Bundles\Raven.Client.UniqueConstraints\bin\$global:configuration\Raven.Client.UniqueConstraints.??? $build_dir\Output\Bundles
 
-    @("Raven.Client.Authorization.???", "Raven.Client.Authorization.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.Authorization\$_" $build_dir\Output\Bundles\netstandard1.6 }
-    @("Raven.Client.UniqueConstraints.???", "Raven.Client.UniqueConstraints.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.UniqueConstraints\$_" $build_dir\Output\Bundles\netstandard1.6 }
+    @("Raven.Client.Authorization.???", "Raven.Client.Authorization.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.Authorization\$_" $build_dir\Output\Bundles\$dotnetLib }
+    @("Raven.Client.UniqueConstraints.???", "Raven.Client.UniqueConstraints.deps.json") |% { Copy-Item "$build_dir\DotNet\Bundles\Raven.Client.UniqueConstraints\$_" $build_dir\Output\Bundles\$dotnetLib }
 }
 
 task CopyServer -depends CreateOutpuDirectories {
@@ -363,6 +373,10 @@ task CopyServer -depends CreateOutpuDirectories {
         "$base_dir\Raven.Server\bin\$global:configuration\Raven.Server.???",
         "$base_dir\DefaultConfigs\NLog.Ignored.config")
     $server_files | ForEach-Object { Copy-Item "$_" $build_dir\Output\Server }
+
+    mkdir -Path $build_dir\Output\Tools
+    echo "Tools have been moved from the main distribution package and are now available as a separate download. Download dedicated tools package from our http://ravendb.net/downloads page." > $build_dir\Output\Tools\where_are_tools.txt
+
     Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
 
@@ -531,84 +545,11 @@ task DoRelease -depends DoReleasePart1, `
     Write-Host "Done building RavenDB"
 }
 
-task UploadStable -depends Stable, DoRelease, Upload, UploadNuget, UpdateLiveTest
+task UploadStable -depends Stable, DoRelease, Upload, UploadNuget
 
 task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 
 task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
-
-task UpdateLiveTest {
-    $appPoolName = "RavenDB 3"
-    $appPoolState = (Get-WebAppPoolState $appPoolName).Value
-    Write-Host "App pool state is: $appPoolState"
-
-    if($appPoolState -ne "Stopped") {
-        Stop-WebAppPool $appPoolName -ErrorAction SilentlyContinue # The error is probably because it was already stopped
-
-        # Wait for the apppool to shut down.
-        do
-        {
-            Write-Host "Wait for '$appPoolState' to be stopped"
-            Start-Sleep -Seconds 1
-            $appPoolState = (Get-WebAppPoolState $appPoolName).Value
-        }
-        until ($appPoolState -eq "Stopped")
-    }
-
-    if(Test-Path "$liveTest_dir\Plugins") {
-        Remove-Item "$liveTest_dir\Plugins\*" -Force -Recurse -ErrorAction SilentlyContinue
-    } else {
-        mkdir "$liveTest_dir\Plugins" -ErrorAction SilentlyContinue
-    }
-    Copy-Item "$base_dir\Bundles\Raven.Bundles.LiveTest\bin\Release\Raven.Bundles.LiveTest.dll" "$liveTest_dir\Plugins\Raven.Bundles.LiveTest.dll" -ErrorAction SilentlyContinue
-
-    Remove-Item "\bin" -Force -Recurse -ErrorAction SilentlyContinue
-    mkdir "$liveTest_dir\bin" -ErrorAction SilentlyContinue
-    Copy-Item "$build_dir\Output\Web\bin" "$liveTest_dir\" -Recurse -ErrorAction SilentlyContinue
-
-    $appPoolState = (Get-WebAppPoolState $appPoolName).Value
-    Write-Host "App pool state is: $appPoolState"
-
-    if ($appPoolState -eq "Stopped") {
-        Write-Output "Starting IIS app pool $appPoolName"
-        Start-WebAppPool $appPoolName
-    } else {
-        Write-Output "Restarting IIS app pool $appPoolName"
-        Restart-WebAppPool $appPoolName
-    }
-    # Wait for the apppool to start.
-    do
-    {
-        Write-Host "Wait for '$appPoolState' to be started"
-        Start-Sleep -Seconds 1
-        $appPoolState = (Get-WebAppPoolState $appPoolName).Value
-    }
-    until ($appPoolState -eq "Started")
-
-    Write-Output "Done updating $appPoolName"
-}
-
-task MonitorLiveTestRunning {
-    $appPoolName = "RavenDB 3"
-    $appPoolState = (Get-WebAppPoolState $appPoolName).Value
-    Write-Host "App pool state is: $appPoolState"
-
-    if ($appPoolState -eq "Stopped") {
-        Write-Output "Starting IIS app pool $appPoolName"
-        Start-WebAppPool $appPoolName
-
-        # Wait for the apppool to start.
-        do
-        {
-            Write-Host "Wait for '$appPoolState' to be started"
-            Start-Sleep -Seconds 1
-            $appPoolState = (Get-WebAppPoolState $appPoolName).Value
-        }
-        until ($appPoolState -eq "Started")
-    }
-
-    Write-Output "Done monitoring $appPoolName"
-}
 
 task Upload {
     Write-Host "Starting upload"
@@ -715,24 +656,24 @@ task CreateNugetPackages -depends Compile, CompileDotNet, CompileHtml5, InitNuge
 
     [xml] $xmlNuspec = Get-Content("$nuget_dir\RavenDB.Client\RavenDB.Client.nuspec")
 
-    New-Item $nuget_dir\RavenDB.Client\lib\netstandard1.6 -Type directory | Out-Null
-    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\$_" $nuget_dir\RavenDB.Client\lib\netstandard1.6 }
+    New-Item $nuget_dir\RavenDB.Client\lib\$dotnetLib -Type directory | Out-Null
+    @("Raven.Client.Lightweight.???", "Raven.Client.Lightweight.deps.json", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DotNet\Raven.Client.Lightweight\$_" $nuget_dir\RavenDB.Client\lib\$dotnetLib }
 
     $projects = "$base_dir\Raven.Sparrow\Sparrow", "$base_dir\Raven.Client.Lightweight", "$base_dir\Raven.Abstractions"
-    AddDependenciesToNuspec $projects "$nuspecPath" "netstandard1.6"
+    AddDependenciesToNuspec $projects "$nuspecPath" "$dotnetLib"
 
     New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib\net45 -Type directory | Out-Null
     Copy-Item $base_dir\NuGet\RavenDB.Client.MvcIntegration.nuspec $nuget_dir\RavenDB.Client.MvcIntegration\RavenDB.Client.MvcIntegration.nuspec
     @("Raven.Client.MvcIntegration.???") |% { Copy-Item "$base_dir\Raven.Client.MvcIntegration\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client.MvcIntegration\lib\net45 }
 
     New-Item $nuget_dir\RavenDB.Database\lib\net45 -Type directory | Out-Null
-    New-Item $nuget_dir\RavenDB.Database\content -Type directory | Out-Null
     New-Item $nuget_dir\RavenDB.Database\tools -Type directory | Out-Null
     Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
     Copy-Item $base_dir\NuGet\RavenDB.Database.install.ps1 $nuget_dir\RavenDB.Database\tools\install.ps1
+    Copy-Item $base_dir\NuGet\RavenDB.Database.uninstall.ps1 $nuget_dir\RavenDB.Database\tools\uninstall.ps1
     @("Raven.Database.???", "Raven.Abstractions.???") `
          |% { Copy-Item "$base_dir\Raven.Database\bin\$global:configuration\$_" $nuget_dir\RavenDB.Database\lib\net45 }
-    Copy-Item "$build_dir\Raven.Studio.Html5.zip" $nuget_dir\RavenDB.Database\content
+    Copy-Item "$build_dir\Raven.Studio.Html5.zip" $nuget_dir\RavenDB.Database\tools
     Copy-Item $base_dir\NuGet\readme.txt $nuget_dir\RavenDB.Database\ -Recurse
 
     New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
@@ -756,11 +697,11 @@ task CreateNugetPackages -depends Compile, CompileDotNet, CompileHtml5, InitNuge
         $nuspecPath = "$nuget_dir\RavenDB.Client.$name\RavenDB.Client.$name.nuspec"
         Copy-Item $base_dir\NuGet\RavenDB.Client.$name.nuspec "$nuspecPath"
 
-        New-Item $nuget_dir\RavenDB.Client.$name\lib\netstandard1.6 -Type directory | Out-Null
-        @("$build_dir\DotNet\Bundles\Raven.Client.$name\Raven.Client.$_.???", "$build_dir\DotNet\Bundles\Raven.Client.$name\Raven.Client.$_.deps.json" ) |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\netstandard1.6 }
+        New-Item $nuget_dir\RavenDB.Client.$name\lib\$dotnetLib -Type directory | Out-Null
+        @("$build_dir\DotNet\Bundles\Raven.Client.$name\Raven.Client.$_.???", "$build_dir\DotNet\Bundles\Raven.Client.$name\Raven.Client.$_.deps.json" ) |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\$dotnetLib }
 
         $projects = "$base_dir\Bundles\Raven.Client.$name"
-        AddDependenciesToNuspec $projects "$nuspecPath" "netstandard1.6"
+        AddDependenciesToNuspec $projects "$nuspecPath" "$dotnetLib"
     }
 
     New-Item $nuget_dir\RavenDB.Bundles.Authorization\lib\net45 -Type directory | Out-Null
@@ -986,7 +927,7 @@ task BumpVersion {
     }
 
     # point the repo in which to bump version
-    $repoOwner = "ayende"
+    $repoOwner = "ravendb"
     $repo = "ravendb"
     $branch = "v3.5"
     $commitMessage = "Bump version to $global:newVersion"

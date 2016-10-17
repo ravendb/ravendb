@@ -47,11 +47,12 @@ namespace Raven.Database.Storage
             return exception is VoronConcurrencyException;
         }
 
-        private static bool IsEsentWriteConflict(Exception exception)
+        public static bool IsEsentWriteConflict(Exception exception)
         {
             var esentErrorException = exception as EsentErrorException;
             if (esentErrorException == null)
                 return false;
+
             switch (esentErrorException.Error)
             {
                 case JET_err.WriteConflict:

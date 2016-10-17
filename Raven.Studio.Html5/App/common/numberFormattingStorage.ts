@@ -19,7 +19,6 @@ class numberFormattingStorage {
         event.initStorageEvent('storage', false, false, numberFormattingStorage.localStorageName, useRawFormat, !useRawFormat, null, window.sessionStorage);
         window.dispatchEvent(event);
     }
-
 }
 
 export = numberFormattingStorage;

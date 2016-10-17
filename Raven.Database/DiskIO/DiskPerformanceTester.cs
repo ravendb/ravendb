@@ -12,15 +12,14 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Voron.Platform.Win32;
-using metrics.Core;
 using Raven.Database.Extensions;
 using Raven.Database.Util;
+using Raven.Imports.metrics.Core;
 
 namespace Raven.Database.DiskIO
 {

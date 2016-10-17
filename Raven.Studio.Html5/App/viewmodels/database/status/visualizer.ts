@@ -8,21 +8,22 @@ import generalUtils = require("common/generalUtils");
 import svgDownloader = require("common/svgDownloader");
 import fileDownloader = require("common/fileDownloader");
 import messagePublisher = require("common/messagePublisher");
-
 import chunkFetcher = require("common/chunkFetcher");
 
 import router = require("plugins/router");
 import visualizerKeys = require("viewmodels/database/status/visualizerKeys");
 import visualizerImport = require("viewmodels/database/status/visualizerImport");
 import viewModelBase = require("viewmodels/viewModelBase");
+import database = require("models/resources/database");
 
 import queryIndexDebugDocsCommand = require("commands/database/debug/queryIndexDebugDocsCommand");
 import queryIndexDebugMapCommand = require("commands/database/debug/queryIndexDebugMapCommand");
 import queryIndexDebugReduceCommand = require("commands/database/debug/queryIndexDebugReduceCommand");
 import queryIndexDebugAfterReduceCommand = require("commands/database/debug/queryIndexDebugAfterReduceCommand");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
+import eventsCollector = require("common/eventsCollector");
 
 import d3 = require('d3/d3');
 import nv = require('nvd3');
@@ -96,12 +97,13 @@ class visualizer extends viewModelBase {
 
         this.updateHelpLink('RNXYCB');
 
+        var db = this.activeDatabase();
         this.editIndexUrl = ko.computed(() => {
-            return appUrl.forEditIndex(this.indexName(), this.activeDatabase());
+            return appUrl.forEditIndex(this.indexName(), db);
         });
 
         this.runQueryUrl = ko.computed(() => {
-            return appUrl.forQuery(this.activeDatabase(), this.indexName());
+            return appUrl.forQuery(db, this.indexName());
         });
 
         this.hasFocusDocKey.subscribe(value => {
@@ -130,7 +132,7 @@ class visualizer extends viewModelBase {
             }
         });
 
-        return this.fetchAllIndexes();
+        return this.fetchAllIndexes(db);
     }
 
     attached() {
@@ -238,6 +240,7 @@ class visualizer extends viewModelBase {
     }
 
     addDocKey(key: string) {
+        eventsCollector.default.reportEvent("document-key", "add");
         if (!key || this.docKeys.contains(key))
             return;
 
@@ -267,6 +270,7 @@ class visualizer extends viewModelBase {
     }
 
     addReduceKey(key: string, needToChangeLoadingIndicator = true): JQueryPromise<any[]> {
+        eventsCollector.default.reportEvent("reduce-key", "add");
         var deferred = $.Deferred();
         if (!key || this.reduceKeys().contains(key))
             return deferred.resolve();
@@ -328,15 +332,10 @@ class visualizer extends viewModelBase {
         this.updateGraph();
     }
 
-    fetchAllIndexes(): JQueryPromise<any> {
-        return new getDatabaseStatsCommand(this.activeDatabase())
+    fetchAllIndexes(db: database): JQueryPromise<any> {
+        return new getIndexNamesCommand(this.activeDatabase(), true)
             .execute()
-            .done((results: databaseStatisticsDto) => this.indexes(results.Indexes.map(i=> {
-                return {
-                    name: i.Name,
-                    hasReduce: !!i.LastReducedTimestamp
-                };
-            }).filter(i => i.hasReduce)));
+            .done((results: indexDataDto[]) => this.indexes(results.filter(i => i.IsMapReduce)));
     }
 
     static makeLinkId(link: graphLinkDto) {
@@ -773,14 +772,17 @@ class visualizer extends viewModelBase {
     }
 
     saveAsSvg() {
+        eventsCollector.default.reportEvent("visualizer", "save", "svg");
         svgDownloader.downloadSvg(d3.select('#visualizer').node(), 'visualization.svg', (e) => visualizer.visualizationCss);
     }
 
     saveAsPng() {
+        eventsCollector.default.reportEvent("visualizer", "save", "png");
         svgDownloader.downloadPng(d3.select('#visualizer').node(), 'visualization.png', (e) => visualizer.visualizationCss);
     }
 
     saveAsJson() {
+        eventsCollector.default.reportEvent("visualizer", "save", "json");
         var model: visualizerExportDto = {
             indexName: this.indexName(),
             docKeys: this.docKeys(),
@@ -792,6 +794,7 @@ class visualizer extends viewModelBase {
     }
 
     chooseImportFile() {
+        eventsCollector.default.reportEvent("visualizer", "import");
         var dialog = new visualizerImport();
         dialog.task().
             done((importedData: visualizerExportDto) => {
@@ -812,7 +815,7 @@ class visualizer extends viewModelBase {
         app.showDialog(dialog);
     }
 
-
+     
     static visualizationCss = 'svg { background-color: white; }\n' +
         '* { box-sizing: border-box; }\n' +
     '.hidden { display: none !important; visibility: hidden !important; }\n' +

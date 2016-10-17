@@ -27,6 +27,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
+using Raven.Abstractions.Util.MiniMetrics;
 using Raven.Database.Actions;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
@@ -91,14 +92,17 @@ namespace Raven.Database
         private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
         public readonly FixedSizeConcurrentQueue<AutoTunerDecisionDescription> AutoTuningTrace = new FixedSizeConcurrentQueue<AutoTunerDecisionDescription>(100);
 
-        private readonly CancellationTokenSource _tpCts = new CancellationTokenSource();
-
         public class IndexFailDetails
         {
             public string IndexName;
             public string Reason;
             public Exception Ex;
         }
+
+
+        public RavenThreadPool ThreadPool { get; set; }
+
+
 
         public DocumentDatabase(InMemoryRavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null)
         {
@@ -108,8 +112,27 @@ namespace Raven.Database
             Name = configuration.DatabaseName;
             ResourceName = Name;
             Configuration = configuration;
+
+            // initialize thread pool
+            if (systemDatabase == null)
+            {
+                ThreadPool = new RavenThreadPool(configuration.MaxNumberOfParallelProcessingTasks * 2);
+                ThreadPool.Start();
+                toDispose.Add(ThreadPool);
+                ThreadPool.ReportToAutoTuner = this.AutoTuningTrace.Enqueue;
+                ThreadPool.ReportAlert = this.AddAlert;
+            }
+            else
+            {
+                ThreadPool = systemDatabase.ThreadPool;
+            }
+
+
             transportState = recievedTransportState ?? new TransportState();
             ExtensionsState = new AtomicDictionary<object>();
+
+
+
 
             using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
             {
@@ -207,7 +230,6 @@ namespace Raven.Database
 
                     IndexReplacer = new IndexReplacer(this);
                     indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
-                    InitializeTriggersExceptIndexCodecs();
 
                     EnsureAllIndexDefinitionsHaveIndexes();
 
@@ -573,17 +595,7 @@ namespace Raven.Database
                         return index == null ? null : index.PublicName;
                     }).ToArray();
 
-                    result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-                    {
-                        Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-                        if (indexInstance == null)
-                            return null;
-                        x.Name = indexInstance.PublicName;
-                        x.SetLastDocumentEtag(result.LastDocEtag);
-                        return x;
-                    })
-                        .Where(x => x != null)
-                        .ToArray();
+                    result.Indexes = GetIndexesStats(actions, result.LastDocEtag);
 
                     result.CountOfIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx => !idx.Priority.HasFlag(IndexingPriority.Disabled) && !idx.Priority.HasFlag(IndexingPriority.Abandoned));
                     result.CountOfStaleIndexesExcludingDisabledAndAbandoned = result.Indexes.Count(idx =>
@@ -592,31 +604,7 @@ namespace Raven.Database
                         && !idx.Priority.HasFlag(IndexingPriority.Abandoned));
                 });
 
-                if (result.Indexes != null)
-                {
-                    foreach (IndexStats index in result.Indexes)
-                    {
-                        try
-                        {
-                            IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
-                            index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
-                            index.IsTestIndex = indexDefinition.IsTestIndex;
-                            index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
-                            index.LockMode = indexDefinition.LockMode;
-                            index.IsMapReduce = indexDefinition.IsMapReduce;
-
-                            index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
-                            IndexSearcher searcher;
-                            using (IndexStorage.GetCurrentIndexSearcher(index.Id, out searcher))
-                                index.DocsCount = searcher.IndexReader.NumDocs();
-                        }
-                        catch (Exception)
-                        {
-                            // might happen if the index was deleted mid operation
-                            // we don't really care for that, so we ignore this
-                        }
-                    }
-                }
+                GetMoreIndexesStats(result.Indexes);
 
                 return result;
             }
@@ -631,7 +619,8 @@ namespace Raven.Database
                     DatabaseId = TransactionalStorage.Id,
                     CountOfErrors = WorkContext.Errors.Length,
                     CountOfIndexes = IndexStorage.Indexes.Length,
-                    CountOfStaleIndexes = IndexStorage.Indexes.Count(indexId => IndexStorage.IsIndexStale(indexId, LastCollectionEtags))
+                    CountOfStaleIndexes = IndexStorage.Indexes.Count(indexId => IndexStorage.IsIndexStale(indexId, LastCollectionEtags)),
+                    CountOfAlerts = GetNumberOfAlerts()
                 };
 
                 TransactionalStorage.Batch(actions =>
@@ -639,19 +628,7 @@ namespace Raven.Database
                     result.CountOfDocuments = actions.Documents.GetDocumentsCount();
 
                     var lastDocEtag = actions.Staleness.GetMostRecentDocumentEtag();
-                    var indexes = actions.Indexing.GetIndexesStats()
-                        .Where(x => x != null).Select(x =>
-                        {
-                            var indexInstance = IndexStorage.GetIndexInstance(x.Id);
-                            if (indexInstance == null)
-                                return null;
-                            x.Name = indexInstance.PublicName;
-                            x.SetLastDocumentEtag(lastDocEtag);
-                            return x;
-                        })
-                        .Where(x => x != null)
-                        .ToList();
-
+                    var indexes = GetIndexesStats(actions, lastDocEtag);
 
                     result.CountOfIndexesExcludingDisabledAndAbandoned = indexes.Count(idx => !idx.Priority.HasFlag(IndexingPriority.Disabled) && !idx.Priority.HasFlag(IndexingPriority.Abandoned));
                     result.CountOfStaleIndexesExcludingDisabledAndAbandoned = IndexStorage.Indexes
@@ -670,6 +647,86 @@ namespace Raven.Database
             }
         }
 
+        public IndexStats[] IndexesStatistics
+        {
+            get
+            {
+                IndexStats[] indexes = null;
+
+                TransactionalStorage.Batch(actions =>
+                {
+                    var lastDocEtag = actions.Staleness.GetMostRecentDocumentEtag();
+                    indexes = GetIndexesStats(actions, lastDocEtag);
+                });
+
+                GetMoreIndexesStats(indexes);
+
+                return indexes;
+            }
+        }
+
+        private void GetMoreIndexesStats(IndexStats[] indexes)
+        {
+            if (indexes == null)
+                return;
+
+            foreach (IndexStats index in indexes)
+            {
+                try
+                {
+                    IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
+                    index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
+                    index.IsTestIndex = indexDefinition.IsTestIndex;
+                    index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
+                    index.LockMode = indexDefinition.LockMode;
+                    index.IsMapReduce = indexDefinition.IsMapReduce;
+
+                    index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
+                    IndexSearcher searcher;
+                    using (IndexStorage.GetCurrentIndexSearcher(index.Id, out searcher))
+                        index.DocsCount = searcher.IndexReader.NumDocs();
+                }
+                catch (Exception)
+                {
+                    // might happen if the index was deleted mid operation
+                    // we don't really care for that, so we ignore this
+                }
+            }
+        }
+
+        private IndexStats[] GetIndexesStats(IStorageActionsAccessor actions, Etag lastDocEtag)
+        {
+            return actions.Indexing.GetIndexesStats()
+                .Where(x => x != null).Select(x =>
+                {
+                    Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
+                    if (indexInstance == null)
+                        return null;
+                    x.Name = indexInstance.PublicName;
+                    x.SetLastDocumentEtag(lastDocEtag);
+                    return x;
+                })
+                .Where(x => x != null)
+                .ToArray();
+        }
+
+        private int GetNumberOfAlerts()
+        {
+            var alertsDoc = Documents.Get(Constants.RavenAlerts, null);
+            if (alertsDoc == null)
+                return 0;
+
+            try
+            {
+                var alertsDocument = alertsDoc.DataAsJson.JsonDeserialization<AlertsDocument>();
+                return alertsDocument.Alerts.Count;
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
+        }
+
         public class ReducedDatabaseStatistics
         {
             public Guid DatabaseId { get; set; }
@@ -685,6 +742,8 @@ namespace Raven.Database
             public int CountOfIndexes { get; set; }
 
             public int CountOfStaleIndexes { get; set; }
+
+            public int CountOfAlerts { get; set; }
 
             public long ApproximateTaskCount { get; set; }
 
@@ -809,6 +868,10 @@ namespace Raven.Database
                 RequestsDuration = metrics.RequestDurationMetric.CreateHistogramData(),
                 RequestDurationLastMinute = metrics.RequestDurationLastMinute.GetData(),
                 Requests = metrics.ConcurrentRequests.CreateMeterData(),
+                JsonDeserializationsPerSecond = JsonExtensions.JsonStreamDeserializationsPerSecond == null ? (MeterValue?)null : JsonExtensions.JsonStreamDeserializationsPerSecond.GetValue(),
+                JsonDeserializedBytesPerSecond = JsonExtensions.JsonStreamDeserializedBytesPerSecond == null ? (MeterValue?)null : JsonExtensions.JsonStreamDeserializedBytesPerSecond.GetValue(),
+                JsonSerializationsPerSecond = JsonExtensions.JsonStreamSerializationsPerSecond == null ? (MeterValue?)null : JsonExtensions.JsonStreamSerializationsPerSecond.GetValue(),
+                JsonSerializedBytesPerSecond = JsonExtensions.JsonStreamSerializedBytesPerSecond == null ? (MeterValue?)null : JsonExtensions.JsonStreamSerializedBytesPerSecond.GetValue(),
                 Gauges = metrics.Gauges,
                 StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
                 StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
@@ -868,7 +931,7 @@ namespace Raven.Database
                 MemoryStatistics.StopPosixLowMemThread();
 
             EventHandler onDisposing = Disposing;
-            _tpCts.Cancel();
+
             if (onDisposing != null)
             {
                 try
@@ -925,15 +988,6 @@ namespace Raven.Database
             {
                 if (Tasks != null)
                     Tasks.Dispose(exceptionAggregator);
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                StopMappingThreadPool();
-            });
-            exceptionAggregator.Execute(() =>
-            {
-                StopReducingThreadPool();
             });
 
             exceptionAggregator.Execute(() =>
@@ -1080,9 +1134,6 @@ namespace Raven.Database
             }
         }
 
-        public RavenThreadPool MappingThreadPool;
-        public RavenThreadPool ReducingThreadPool;
-
         public void SpinBackgroundWorkers(bool manualStart = false)
         {
             if (manualStart == false && indexingWorkersStoppedManually)
@@ -1102,31 +1153,9 @@ namespace Raven.Database
             RaiseIndexingWiringComplete();
         }
 
-        private void StopMappingThreadPool()
-        {
-            if (MappingThreadPool != null)
-            {
-                MappingThreadPool.DrainThePendingTasks();
-                MappingThreadPool.Dispose();
-                MappingThreadPool = null;
-            }
-        }
-
-        private void StopReducingThreadPool()
-        {
-            if (ReducingThreadPool != null)
-            {
-                ReducingThreadPool.DrainThePendingTasks();
-                ReducingThreadPool.Dispose();
-                ReducingThreadPool = null;
-            }
-        }
-
         public void StopBackgroundWorkers()
         {
             workContext.StopWork();
-            StopMappingThreadPool();
-            StopReducingThreadPool();
         }
 
         public void StopIndexingWorkers(bool manualStop)
@@ -1135,24 +1164,6 @@ namespace Raven.Database
                 return;
 
             workContext.StopIndexing();
-            try
-            {
-                StopMappingThreadPool();
-            }
-            catch (Exception e)
-            {
-                Log.WarnException("Error while trying to stop background indexing", e);
-            }
-
-            try
-            {
-                StopReducingThreadPool();
-            }
-            catch (Exception e)
-            {
-                Log.WarnException("Error while trying to stop background reducing", e);
-            }
-
             indexingWorkersStoppedManually = manualStop;
         }
 
@@ -1513,6 +1524,9 @@ namespace Raven.Database
             if (onOnBackupComplete != null) onOnBackupComplete(this);
         }
 
+        public Task MappingTask { get; private set; }
+        public Task ReducingTask { get; private set; }
+
         private void SpinMappingWorker()
         {
             if (IsIndexingDisabled())
@@ -1520,15 +1534,40 @@ namespace Raven.Database
 
             workContext.StartMapping();
 
-            if (MappingThreadPool != null)
+            if (MappingTask != null)
                 return;
+            
+            MappingTask = new Task(RunMapIndexes, TaskCreationOptions.LongRunning);
+            MappingTask.Start();
+        }
 
-            MappingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token,this, "Map Thread Pool", new[]
+        private void RunMapIndexes()
+        {
+            try
             {
-                new Action(() => indexingExecuter.Execute())
-            });
-
-            MappingThreadPool.Start();
+                indexingExecuter.Execute();
+            }
+            catch (Exception e)
+            {
+                if (disposed == false && workContext.RunIndexing)
+                {
+                    var errorMessage = $"Error from mapping task in database {Name}, task terminated, this is very bad";
+                    Log.FatalException(errorMessage, e);
+                    this.AddAlert(new Alert
+                    {
+                        AlertLevel = AlertLevel.Error,
+                        CreatedAt = DateTime.UtcNow,
+                        Title = errorMessage,
+                        UniqueKey = errorMessage,
+                        Message = e.ToString(),
+                        Exception = e.Message
+                    });
+                }
+            }
+            finally
+            {
+                MappingTask = null;
+            }
         }
 
         public void SpinReduceWorker()
@@ -1538,29 +1577,45 @@ namespace Raven.Database
 
             workContext.StartReducing();
 
-            if (ReducingThreadPool != null)
+            if (ReducingTask != null)
                 return;
+            
+            ReducingTask = new Task(RunReduceIndexes, TaskCreationOptions.LongRunning);
+            ReducingTask.Start();
+        }
 
-            ReducingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token,this, "Reduce Thread Pool", new[]
+        private void RunReduceIndexes()
+        {
+            try
             {
-                new Action(() => ReducingExecuter.Execute())
-            });
-
-            ReducingThreadPool.Start();
+                ReducingExecuter.Execute();
+            }
+            catch (Exception ex)
+            {
+                if (disposed == false && workContext.RunReducing)
+                {
+                    var errorMessage = $"Error from reducing task in database {Name}, task terminated, this is very bad";
+                    Log.FatalException(errorMessage, ex);
+                    this.AddAlert(new Alert
+                    {
+                        AlertLevel = AlertLevel.Error,
+                        CreatedAt = DateTime.UtcNow,
+                        Title = errorMessage,
+                        UniqueKey = errorMessage,
+                        Message = ex.ToString(),
+                        Exception = ex.Message
+                    });
+                }
+            }
+            finally
+            {
+                ReducingTask = null;
+            }
         }
 
         public void StopReduceWorkers()
         {
             workContext.StopReducing();
-
-            try
-            {
-                StopReducingThreadPool();
-            }
-            catch (Exception e)
-            {
-                Log.WarnException("Error while trying to stop background reducing", e);
-            }
         }
 
         public bool IsIndexingDisabled()

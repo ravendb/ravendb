@@ -9,10 +9,10 @@ using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using metrics.Core;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
+using Raven.Imports.metrics.Core;
 
 namespace Raven.Database.Storage
 {
@@ -20,7 +20,7 @@ namespace Raven.Database.Storage
 
     public interface IDocumentStorageActions 
     {
-        IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take);
+        IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take, HashSet<string> entityNames = null);
         IEnumerable<JsonDocument> GetDocumentsAfter(
             Etag etag, int take, 
             CancellationToken cancellationToken, 
@@ -28,9 +28,19 @@ namespace Raven.Database.Storage
             Etag untilEtag = null, 
             TimeSpan? timeout = null, 
             Action<Etag> lastProcessedDocument = null,
-            Reference<bool> earlyExit = null);
-        IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null,
-            Reference<bool> earlyExit = null);
+            Reference<bool> earlyExit = null,
+            HashSet<string> entityNames = null,
+            Action<List<DocumentFetchError>> failedToGetHandler = null);
+        IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(
+            Etag etag, string idPrefix, int take, 
+            CancellationToken cancellationToken, 
+            long? maxSize = null, 
+            Etag untilEtag = null, 
+            TimeSpan? timeout = null, 
+            Action<Etag> lastProcessedDocument = null, 
+            Reference<bool> earlyExit = null,
+            HashSet<string> entityNames = null,
+            Action<List<DocumentFetchError>> failedToGetHandler = null);
         IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter);
         Etag GetEtagAfterSkip(Etag etag, int skip, CancellationToken cancellationToken, out int skipped);
         IEnumerable<string> GetDocumentIdsAfterEtag(Etag etag, int maxTake,
@@ -41,7 +51,7 @@ namespace Raven.Database.Storage
 
         long GetDocumentsCount();
 
-        JsonDocument DocumentByKey(string key);
+        JsonDocument DocumentByKey(string key, bool useDifferentTable = false);
 
         Stream RawDocumentByKey(string key);
 
@@ -56,6 +66,13 @@ namespace Raven.Database.Storage
         void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag);
         Etag GetBestNextDocumentEtag(Etag etag);
         DebugDocumentStats GetDocumentStatsVerySlowly(Action<string> progress, CancellationToken token);
+    }
+
+    public class DocumentFetchError
+    {
+        public string Key { get; set; }
+
+        public Exception Exception { get; set; }
     }
 
     public class CollectionDetails

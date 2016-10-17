@@ -2,7 +2,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import replicationsSetup = require("models/database/replication/replicationsSetup");
 import replicationConfig = require("models/database/replication/replicationConfig")
 import replicationDestination = require("models/database/replication/replicationDestination");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getReplicationsCommand = require("commands/database/replication/getReplicationsCommand");
 import updateServerPrefixHiLoCommand = require("commands/database/documents/updateServerPrefixHiLoCommand");
 import saveReplicationDocumentCommand = require("commands/database/replication/saveReplicationDocumentCommand");
@@ -18,6 +17,9 @@ import getEffectiveConflictResolutionCommand = require("commands/database/global
 import appUrl = require("common/appUrl");
 import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
 import resolveAllConflictsCommand = require("commands/database/replication/resolveAllConflictsCommand");
+import database = require("models/resources/database");
+import eventsCollector = require("common/eventsCollector");
+import shell = require("viewmodels/shell");
 
 class replications extends viewModelBase {
 
@@ -42,6 +44,7 @@ class replications extends viewModelBase {
     skipIndexReplicationForAll = ko.observable<boolean>();
 
     showRequestTimeoutRow: KnockoutComputed<boolean>;
+    isInCluster = shell.clusterMode;
 
     private skipIndexReplicationForAllSubscription: KnockoutSubscription;
 
@@ -50,7 +53,7 @@ class replications extends viewModelBase {
             this.skipIndexReplicationForAllSubscription.dispose();
 
         var newStatus = this.getIndexReplicationStatusForAllDestinations();
-        this.skipIndexReplicationForAll(newStatus === 'all');
+        this.skipIndexReplicationForAll(newStatus === "all");
 
         this.skipIndexReplicationForAllSubscription = this.skipIndexReplicationForAll.subscribe(newValue => this.toggleIndexReplication(newValue));
     }
@@ -228,6 +231,7 @@ class replications extends viewModelBase {
     }
 
     createNewDestination() {
+        eventsCollector.default.reportEvent("replications", "create");
         var db = this.activeDatabase();
         this.replicationsSetup().destinations.unshift(replicationDestination.empty(db.name));
         this.refereshSkipIndexReplicationForAllDestinations();
@@ -235,10 +239,12 @@ class replications extends viewModelBase {
     }
 
     removeDestination(repl: replicationDestination) {
+        eventsCollector.default.reportEvent("replications", "remove");
         this.replicationsSetup().destinations.remove(repl);
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("replications", "save");
         if (this.usingGlobal()) {
             new deleteLocalReplicationsSetupCommand(this.activeDatabase())
                 .execute();
@@ -249,14 +255,8 @@ class replications extends viewModelBase {
                 if (this.replicationsSetup().source()) {
                     this.saveReplicationSetup();
                 } else {
-                    var db = this.activeDatabase();
-                    if (db) {
-                        new getDatabaseStatsCommand(db)
-                            .execute()
-                            .done(result=> {
-                                this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                            });
-                    }
+                    var db: database = this.activeDatabase();
+                    this.prepareAndSaveReplicationSetup(db.statistics().databaseId());
                 }
             }
         }
@@ -289,6 +289,7 @@ class replications extends viewModelBase {
     }
 
     sendReplicateCommand(destination: replicationDestination, parentClass: replications) {
+        eventsCollector.default.reportEvent("replications", "send-replicate");
         var db = parentClass.activeDatabase();
         if (db) {
             new replicateIndexesCommand(db, destination).execute();
@@ -299,6 +300,7 @@ class replications extends viewModelBase {
     }
 
     sendReplicateAllCommand() {
+        eventsCollector.default.reportEvent("replications", "send-replicate-all");
         var db = this.activeDatabase();
         if (db) {
             new replicateAllIndexesCommand(db).execute();
@@ -310,6 +312,7 @@ class replications extends viewModelBase {
     }
 
     sendResolveAllConflictsCommand() {
+        eventsCollector.default.reportEvent("replications", "resolve-all");
         var db = this.activeDatabase();
         if (db) {
             new resolveAllConflictsCommand(db).execute();
@@ -319,6 +322,7 @@ class replications extends viewModelBase {
     }
 
     saveServerPrefixForHiLo() {
+        eventsCollector.default.reportEvent("replications", "save-hilo-prefix");
         var db = this.activeDatabase();
         if (db) {
             new updateServerPrefixHiLoCommand(this.prefixForHilo(), db)
@@ -331,6 +335,7 @@ class replications extends viewModelBase {
     }
 
     saveAutomaticConflictResolutionSettings() {
+        eventsCollector.default.reportEvent("replications", "save-auto-conflict-resolution");
         var db = this.activeDatabase();
         if (db) {
             new saveAutomaticConflictResolutionDocument(this.replicationConfig().toDto(), db)
@@ -350,10 +355,12 @@ class replications extends viewModelBase {
     }
 
     useLocal() {
+        eventsCollector.default.reportEvent("replications", "use-local");
         this.usingGlobal(false);
     }
 
     useGlobal() {
+        eventsCollector.default.reportEvent("replications", "use-global");
         // using global configuration will discard all ETL configurations, if you find any warning user about this. 
         if (this.replicationsSetup().destinations().filter(x => x.enableReplicateOnlyFromCollections()).length) {
             this.confirmationMessage("Are you sure?",
@@ -375,6 +382,7 @@ class replications extends viewModelBase {
     }
 
     enableReplication() {
+        eventsCollector.default.reportEvent("replications", "enable-replication");
         new enableReplicationCommand(this.activeDatabase())
             .execute()
             .done((bundles) => {

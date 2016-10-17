@@ -124,8 +124,11 @@ namespace Raven.Database.Bundles.Replication.Tasks
 
         public void Dispose()
         {
+            if (disposed)
+                return;
+
             disposed = true;
-            saveDocumentTimer.Dispose();
+            saveDocumentTimer?.Dispose();
         }
     }
 }

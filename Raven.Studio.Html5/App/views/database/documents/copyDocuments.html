@@ -4,7 +4,6 @@
         <h4 class="modal-title">Copy documents</h4>
     </div>
     <div class="modal-body" data-bind="style: { height: bodyHeight() + 'px' }">
-        <h4><strong>CTRL+C, Enter</strong><span> to copy</span></h4>
         <ul class="nav nav-tabs">
             <li data-bind="click: activateDocs, css: { active: isCopyingDocs}"><a style="cursor: pointer;">Docs</a></li>
             <li data-bind="click: activateIds, css: { active: isCopyingDocs() === false }"><a style="cursor: pointer;">Ids</a></li>
@@ -12,6 +11,7 @@
         <textarea id="documentsText" rows="10" style="width: 100%; resize: none" class="form-control" autofocus="autofocus" data-bind="style : { height: (bodyHeight() - 110) + 'px' }, value: documentsOrIdsText, event: { focus: function () { $(this).select(); } }" />
     </div>
     <div class="modal-footer">
+        <button type="button" class="btn" data-bind="click: copyToClipboard">Copy</button>
         <button type="button" class="btn btn-primary" data-bind="click: close">Close</button>
         <span class="dialogResizer"></span>
     </div>

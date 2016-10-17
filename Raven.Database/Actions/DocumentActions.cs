@@ -94,11 +94,14 @@ namespace Raven.Database.Actions
             string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null,
             string skipAfter = null)
         {
-            var list = new RavenJArray();
-            GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart,
-                doc => { if (doc != null) list.Add(doc.ToJson()); }, transformer, transformerParameters, skipAfter);
+            using (DocumentCacher.SkipSetDocumentsInDocumentCache())
+            {
+                var list = new RavenJArray();
+                GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart,
+                    doc => { if (doc != null) list.Add(doc.ToJson()); }, transformer, transformerParameters, skipAfter);
 
-            return list;
+                return list;
+            }  
         }
 
         public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize,
@@ -123,7 +126,8 @@ namespace Raven.Database.Actions
                     int docCount;
 
                     AbstractTransformer storedTransformer = null;
-                    if (transformer != null)
+                    var hasTransformer = transformer != null;
+                    if (hasTransformer)
                     {
                         storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
                         if (storedTransformer == null)
@@ -136,7 +140,7 @@ namespace Raven.Database.Actions
 
                         docCount = 0;
                         var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize, string.IsNullOrEmpty(skipAfter) ? null : skipAfter);
-                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
+                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters, hasTransformer: hasTransformer);
 
                         foreach (var doc in docs)
                         {
@@ -418,94 +422,100 @@ namespace Raven.Database.Actions
             return info;
         }
 
-        public RavenJArray GetDocumentsAsJson(int start, int pageSize, Etag etag, CancellationToken token)
+        public RavenJArray GetDocumentsAsJson(int start, int pageSize, Etag etag,
+            CancellationToken token, long? maxSize = null, TimeSpan? timeout = null)
         {
             var list = new RavenJArray();
             GetDocuments(start, pageSize, etag, token, doc =>
             {
                 if (doc != null) list.Add(doc.ToJson());
                 return true;
-            });
+            }, maxSize: maxSize, timeout: timeout);
             return list;
         }
 
-        public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Func<JsonDocument, bool> addDocument, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
+        public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Func<JsonDocument, bool> addDocument, 
+            string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, 
+            long? maxSize = null, TimeSpan? timeout = null, HashSet<string> collections = null)
         {
             Etag lastDocumentReadEtag = null;
 
-            TransactionalStorage.Batch(actions =>
-            {
-                AbstractTransformer storedTransformer = null;
-                if (transformer != null)
+            using (DocumentCacher.SkipSetDocumentsInDocumentCache())
+                TransactionalStorage.Batch(actions =>
                 {
-                    storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
-                    if (storedTransformer == null)
-                        throw new InvalidOperationException("No transformer with the name: " + transformer);
-                }
-
-                var returnedDocs = false;
-                while (true)
-                {
-                    var documents = etag == null
-                        ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
-                        : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
-
-                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
-                    var docCount = 0;
-                    var docCountOnLastAdd = 0;
-                    foreach (var doc in documents)
+                    AbstractTransformer storedTransformer = null;
+                    var hasTransformer = transformer != null;
+                    if (hasTransformer)
                     {
-                        docCount++;
-
-                        token.ThrowIfCancellationRequested();
-
-                        if (docCount - docCountOnLastAdd > 1000)
-                        {
-                            addDocument(null); // heartbeat
-                        }
-
-                        if (etag != null)
-                            etag = doc.Etag;
-
-                        JsonDocument.EnsureIdInMetadata(doc);
-
-                        var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
-                        var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
-
-                        document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
-                        if (document == null)
-                            continue;
-
-                        returnedDocs = true;
-                        Database.WorkContext.UpdateFoundWork();
-
-                        document = TransformDocumentIfNeeded(document, storedTransformer, documentRetriever);
-
-                        var canContinue = addDocument(document);
-                        if (!canContinue)
-                            break;
-
-                        lastDocumentReadEtag = etag;
-
-                        docCountOnLastAdd = docCount;
+                        storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
+                        if (storedTransformer == null)
+                            throw new InvalidOperationException("No transformer with the name: " + transformer);
                     }
 
-                    if (returnedDocs || docCount == 0)
-                        break;
+                    var returnedDocs = false;
+                    while (true)
+                    {
+                        var documents = etag == null
+                            ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize, entityNames: collections)
+                            : actions.Documents.GetDocumentsAfter(etag, pageSize, token, maxSize: maxSize, timeout: timeout, entityNames: collections);
 
-                    // No document was found that matches the requested criteria
-                    // If we had a failure happen, we update the etag as we don't need to process those documents again (no matches there anyways).
-                    if (lastDocumentReadEtag != null)
-                        etag = lastDocumentReadEtag;
+                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters, hasTransformer: hasTransformer);
+                        var docCount = 0;
+                        var docCountOnLastAdd = 0;
+                        foreach (var doc in documents)
+                        {
+                            docCount++;
 
-                    start += docCount;
-                }
-            });
+                            token.ThrowIfCancellationRequested();
+
+                            if (docCount - docCountOnLastAdd > 1000)
+                            {
+                                addDocument(null); // heartbeat
+                            }
+
+                            if (etag != null)
+                                etag = doc.Etag;
+
+                            JsonDocument.EnsureIdInMetadata(doc);
+
+                            var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+                            var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
+
+                            document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
+                            if (document == null)
+                                continue;
+
+                            returnedDocs = true;
+                            Database.WorkContext.UpdateFoundWork();
+
+                            document = TransformDocumentIfNeeded(document, storedTransformer, documentRetriever);
+
+                            var canContinue = addDocument(document);
+                            if (!canContinue)
+                                break;
+
+                            lastDocumentReadEtag = etag;
+
+                            docCountOnLastAdd = docCount;
+                        }
+
+                        if (returnedDocs || docCount == 0)
+                            break;
+
+                        // No document was found that matches the requested criteria
+                        // If we had a failure happen, we update the etag as we don't need to process those documents again (no matches there anyways).
+                        if (lastDocumentReadEtag != null)
+                            etag = lastDocumentReadEtag;
+
+                        start += docCount;
+                    }
+                });
 
             return lastDocumentReadEtag;
         }
 
-        public Etag GetDocumentsWithIdStartingWith(string idPrefix, int pageSize, Etag etag, CancellationToken token, Func<JsonDocument, bool> addDocument)
+        public Etag GetDocumentsWithIdStartingWith(string idPrefix, int pageSize, Etag etag, 
+            CancellationToken token, Func<JsonDocument, bool> addDocument, HashSet<string> collections)
         {
             Etag lastDocumentReadEtag = null;
 
@@ -514,7 +524,9 @@ namespace Raven.Database.Actions
                 var returnedDocs = false;
                 while (true)
                 {
-                    var documents = actions.Documents.GetDocumentsAfterWithIdStartingWith(etag, idPrefix, pageSize, token, timeout: TimeSpan.FromSeconds(2), lastProcessedDocument: x => lastDocumentReadEtag = x);
+                    var documents = actions.Documents.GetDocumentsAfterWithIdStartingWith(etag, idPrefix, pageSize, token, 
+                        timeout: TimeSpan.FromSeconds(2), lastProcessedDocument: x => lastDocumentReadEtag = x, entityNames: collections);
+
                     var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers);
 
                     var docCount = 0;

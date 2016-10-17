@@ -1,4 +1,4 @@
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import index = require("models/database/index/index");
 import appUrl = require("common/appUrl");
@@ -12,9 +12,10 @@ import recentQueriesStorage = require("common/recentQueriesStorage");
 import changesContext = require("common/changesContext");
 import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
 import indexesAndTransformersClipboardDialog = require("viewmodels/database/indexes/indexesAndTransformersClipboardDialog");
+import eventsCollector = require("common/eventsCollector");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
-import d3 = require('d3/d3');
+import d3 = require("d3/d3");
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 import forceIndexReplace = require("commands/database/index/forceIndexReplace");
@@ -31,6 +32,7 @@ class indexes extends viewModelBase {
         entityName: string; 
         indexes: KnockoutObservableArray<index>; 
         groupHidden: KnockoutObservable<boolean>;
+        summary: KnockoutComputed<string>;
     }>();
     queryUrl = ko.observable<string>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
@@ -45,6 +47,12 @@ class indexes extends viewModelBase {
     lockModeCommon: KnockoutComputed<string>;
     searchText = ko.observable<string>();
     summary: KnockoutComputed<string>;
+    isRecoverringCorruptedIndexes = ko.observable<boolean>();
+    canDeleteIdleIndexes: KnockoutComputed<boolean>;
+    canDeleteDisabledIndexes: KnockoutComputed<boolean>;
+    canDeleteAbandonedIndexes: KnockoutComputed<boolean>;
+    canDeleteAllIndexes: KnockoutComputed<boolean>;
+    isDeletingIndexes = ko.observable<boolean>(false);
 
     constructor() {
         super();
@@ -116,6 +124,26 @@ class indexes extends viewModelBase {
 
             return summary;
         });
+
+        this.canDeleteIdleIndexes = ko.computed(() => {
+            var indexes = this.getIndexes("Idle");
+            return indexes.length > 0;
+        });
+
+        this.canDeleteDisabledIndexes = ko.computed(() => {
+            var indexes = this.getIndexes("Disabled");
+            return indexes.length > 0;
+        });
+
+        this.canDeleteAbandonedIndexes = ko.computed(() => {
+            var indexes = this.getIndexes("Abandoned");
+            return indexes.length > 0;
+        });
+
+        this.canDeleteAllIndexes = ko.computed(() => {
+            var indexes = this.getAllIndexes().filter(i => i.name !== "Raven/DocumentsByEntityName");
+            return indexes.length > 0;
+        });
     }
 
     canActivate(args) {
@@ -152,18 +180,22 @@ class indexes extends viewModelBase {
     }
 
     idlePriority(idx: index) {
+        eventsCollector.default.reportEvent("index", "priority", "idle");
         this.setIndexPriority(idx, indexPriority.idleForced);
     }
 
     disabledPriority(idx: index) {
+        eventsCollector.default.reportEvent("index", "priority", "disabled");
         this.setIndexPriority(idx, indexPriority.disabledForced);
     }
 
     abandonedPriority(idx: index) {
+        eventsCollector.default.reportEvent("index", "priority", "abandoned");
         this.setIndexPriority(idx, indexPriority.abandonedForced);
     }
 
     normalPriority(idx: index) {
+        eventsCollector.default.reportEvent("index", "priority", "normal");
         this.setIndexPriority(idx, indexPriority.normal);
     }
 
@@ -177,16 +209,15 @@ class indexes extends viewModelBase {
 
     private fetchIndexes() {
         var deferred = $.Deferred();
+        var db = this.activeDatabase();
 
-        var statsTask = new getDatabaseStatsCommand(this.activeDatabase())
-            .execute();
-
-        var replacementTask = new getPendingIndexReplacementsCommand(this.activeDatabase()).execute();
+        var statsTask = new getIndexesStatsCommand(db).execute();
+        var replacementTask = new getPendingIndexReplacementsCommand(db).execute();
 
         $.when(statsTask, replacementTask)
             .done((statsTaskResult, replacements: indexReplaceDocument[]) => {
 
-                var stats: databaseStatisticsDto = statsTaskResult[0];
+                var stats = statsTaskResult[0];
                 this.processData(stats, replacements);
 
                 deferred.resolve(stats);
@@ -242,7 +273,7 @@ class indexes extends viewModelBase {
         return "";
     }
 
-    processData(stats: databaseStatisticsDto, replacements: indexReplaceDocument[]) {
+    processData(stats: indexStatisticsDto[], replacements: indexReplaceDocument[]) {
         var willReplaceMap = d3.map([]);
         var willBeReplacedMap = d3.map([]);
         replacements.forEach(r => {
@@ -250,8 +281,7 @@ class indexes extends viewModelBase {
             willReplaceMap.set(r.extractReplaceWithIndexName(), r.indexToReplace);
         });
 
-        stats.Indexes
-            .map(i => {
+        stats.map(i => {
                 var idx = new index(i);
                 if (willBeReplacedMap.has(idx.name)) {
                     idx.willBeReplacedByIndex(willBeReplacedMap.get(idx.name));
@@ -287,10 +317,28 @@ class indexes extends viewModelBase {
                 group.indexes.push(i);
             }
         } else {
+            var indexesObservable = ko.observableArray([i]);
             this.indexGroups.push({ 
                 entityName: groupName, 
-                indexes: ko.observableArray([i]), 
-                groupHidden: ko.observable<boolean>(false) });
+                indexes: indexesObservable, 
+                groupHidden: ko.observable<boolean>(false),
+                summary: ko.computed(() => {
+                    var summary = "(";
+                    var indexesCount = indexesObservable().length;
+                    summary += indexesCount + " index";
+                    if (indexesCount > 1) {
+                        summary += "es";
+                    }
+                    
+                    var mapReduceIndexes = indexesObservable().filter(x => x.isMapReduce()).length;
+                    if (mapReduceIndexes > 0) {
+                        summary += ", " + mapReduceIndexes + " MapReduce";
+                    }
+
+                    summary += ")";
+                    return summary;
+                })
+            });
         }
     }
 
@@ -339,25 +387,31 @@ class indexes extends viewModelBase {
     }
 
     copyIndex(i: index) {
+        eventsCollector.default.reportEvent("index", "copy");
         app.showDialog(new copyIndexDialog(i.name, this.activeDatabase(), false));
     }
 
     pasteIndex() {
+        eventsCollector.default.reportEvent("index", "paste");
         app.showDialog(new copyIndexDialog('', this.activeDatabase(), true));
     }
 
     copyIndexesAndTransformers() {
+        eventsCollector.default.reportEvent("index-and-transformer", "copy");
         app.showDialog(new indexesAndTransformersClipboardDialog(this.activeDatabase(), false));
     }
 
     pasteIndexesAndTransformers() {
+        eventsCollector.default.reportEvent("index-and-transformer", "paste");
         var dialog = new indexesAndTransformersClipboardDialog(this.activeDatabase(), true);
         app.showDialog(dialog);
         dialog.pasteDeferred.done((summary: string) => {
             this.confirmationMessage("Indexes And Transformers Paste Summary", summary, ['Ok']);
         });
     }
+
     toggleExpandAll() {
+        eventsCollector.default.reportEvent("indexes", "expand-all");
         if (this.btnState()) {
             $(".index-group-content").collapse('show');
         } else {
@@ -367,35 +421,47 @@ class indexes extends viewModelBase {
         this.btnState.toggle();
     }
 
+    private getIndexes(type: string): index[] {
+        var indexes = this.getAllIndexes();
+        return indexes.filter(i => !!i.priority && i.priority.indexOf(type) !== -1);
+    }
+
     deleteIdleIndexes() {
-        var idleIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Idle") !== -1);
+        eventsCollector.default.reportEvent("indexes", "delete", "idle");
+        var idleIndexes = this.getIndexes("Idle");
         this.promptDeleteIndexes(idleIndexes);
     }
 
     deleteDisabledIndexes() {
-        var abandonedIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Disabled") !== -1);
+        eventsCollector.default.reportEvent("indexes", "delete", "disabled");
+        var abandonedIndexes = this.getIndexes("Disabled");
         this.promptDeleteIndexes(abandonedIndexes);
     }
 
     deleteAbandonedIndexes() {
-        var abandonedIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Abandoned") !== -1);
+        eventsCollector.default.reportEvent("indexes", "delete", "abandoned");
+        var abandonedIndexes = this.getIndexes("Abandoned");
         this.promptDeleteIndexes(abandonedIndexes);
     }
 
     deleteAllIndexes() {
+        eventsCollector.default.reportEvent("indexes", "delete", "all");
         this.promptDeleteIndexes(this.getAllIndexes().filter(i => i.name !== "Raven/DocumentsByEntityName"));
     }
 
     deleteIndex(i: index) {
+        eventsCollector.default.reportEvent("index", "delete");
         this.promptDeleteIndexes([i]);
         this.resetsInProgress.remove(i.name);
     }
 
     deleteIndexGroup(i: { entityName: string; indexes: KnockoutObservableArray<index> }) {
+        eventsCollector.default.reportEvent("indexes", "delete-group");
         this.promptDeleteIndexes(i.indexes());
     }
 
     cancelIndex(i: index) {
+        eventsCollector.default.reportEvent("index", "cancel");
         var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([i.name], this.activeDatabase());
         app.showDialog(cancelSideBySideIndexViewModel);
         cancelSideBySideIndexViewModel.cancelTask
@@ -412,7 +478,7 @@ class indexes extends viewModelBase {
 
     promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
-            var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
+            var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase(), null, this.isDeletingIndexes);
             app.showDialog(deleteIndexesVm);
             deleteIndexesVm.deleteTask
                 .done((closedWithoutDeletion: boolean) => {
@@ -429,6 +495,7 @@ class indexes extends viewModelBase {
 
 
     resetIndex(indexToReset: index) {
+        eventsCollector.default.reportEvent("index", "reset");
         var resetIndexVm = new resetIndexConfirm(indexToReset.name, this.activeDatabase());
 
         // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
@@ -454,18 +521,22 @@ class indexes extends viewModelBase {
     }
 
     unlockIndex(i: index) {
+        eventsCollector.default.reportEvent("index", "lock", "unlock");
         this.updateIndexLockMode(i, "Unlock");
     }
 
     lockIndex(i: index) { 
+        eventsCollector.default.reportEvent("index", "lock", "locked-ignore");
         this.updateIndexLockMode(i, "LockedIgnore");
     }
 
     lockErrorIndex(i: index) {
+        eventsCollector.default.reportEvent("index", "lock", "locked-error");
         this.updateIndexLockMode(i, "LockedError");
     }
 
     lockSideBySide(i: index) {
+        eventsCollector.default.reportEvent("index", "lock", "side-by-side");
         this.updateIndexLockMode(i, 'SideBySide');
     }
 
@@ -490,18 +561,24 @@ class indexes extends viewModelBase {
     }
 
     makeIndexPersistent(index: index) {
+        eventsCollector.default.reportEvent("index", "make-persistent");
         new saveIndexAsPersistentCommand(index, this.activeDatabase()).execute();
     }
 
     forceSideBySide(idx: index) {
+        eventsCollector.default.reportEvent("index", "force-side-by-side");
         new forceIndexReplace(idx.name, this.activeDatabase()).execute();
     }
 
     tryRecoverCorruptedIndexes() {
-        new tryRecoverCorruptedIndexes(this.activeDatabase()).execute();
+        eventsCollector.default.reportEvent("index", "try-recover-corrupted");
+        this.isRecoverringCorruptedIndexes(true);
+        var action = new tryRecoverCorruptedIndexes(this.activeDatabase()).execute();
+        action.always(() => this.isRecoverringCorruptedIndexes(false));
     }
 
     setLockModeAllIndexes(lockModeString: string, lockModeStrForTitle: string) {
+        eventsCollector.default.reportEvent("indexes", "set-lock-mode");
         if (this.lockModeCommon() === lockModeString)
             return;
 

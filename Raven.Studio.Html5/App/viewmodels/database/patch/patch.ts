@@ -22,6 +22,7 @@ import getDocumentsByEntityNameCommand = require("commands/database/documents/ge
 import pagedResultSet = require("common/pagedResultSet");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import queryUtil = require("common/queryUtil");
+import eventsCollector = require("common/eventsCollector");
 import recentPatchesStorage = require("common/recentPatchesStorage");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 import killRunningTaskCommand = require('commands/operations/killRunningTaskCommand');
@@ -427,6 +428,7 @@ class patch extends viewModelBase {
     }
 
     savePatch() {
+        eventsCollector.default.reportEvent("patch", "save");
         var savePatchViewModel: savePatch = new savePatch();
         app.showDialog(savePatchViewModel);
         savePatchViewModel.onExit().done((patchName) => {
@@ -462,6 +464,7 @@ class patch extends viewModelBase {
     }
 
     testPatch() {
+        eventsCollector.default.reportEvent("patch", "test");
         var values = {};
         this.patchDocument().parameters().map(param => {
             var dto = param.toDto();
@@ -533,6 +536,7 @@ class patch extends viewModelBase {
     }
 
     useRecentPatch(patchToUse: storedPatchDto) {
+        eventsCollector.default.reportEvent("patch", "use-recent");
         var patchDoc = new patchDocument(patchToUse);
         this.usePatch(patchDoc);
     }
@@ -543,16 +547,19 @@ class patch extends viewModelBase {
     }
 
     executePatchOnSingle() {
+        eventsCollector.default.reportEvent("patch", "run", "single");
         var keys = [];
         keys.push(this.patchDocument().selectedItem());
         this.confirmAndExecutePatch(keys);
     }
 
     executePatchOnSelected() {
+        eventsCollector.default.reportEvent("patch", "run", "selected");
         this.confirmAndExecutePatch(this.getDocumentsGrid().getSelectedItems().map(doc => doc.__metadata.id));
     }
 
     executePatchOnAll() {
+        eventsCollector.default.reportEvent("patch", "run", "all");
         var confirmExec = new executePatchConfirm();
         confirmExec.viewTask.done(() => this.executePatchByIndex());
         app.showDialog(confirmExec);
@@ -733,6 +740,7 @@ class patch extends viewModelBase {
     }
 
     killPatch() {
+        eventsCollector.default.reportEvent("patch", "kill");
         var operationToKill = this.patchOperationId();
         if (operationToKill) {
             this.confirmationMessage("Are you sure?", "You are stopping patch execution.")

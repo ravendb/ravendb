@@ -6,12 +6,14 @@
 
 using System;
 using System.Net;
+using Newtonsoft.Json;
 using Raven.Abstractions.Connection;
 
 namespace Rachis.Transport
 {
     public class NodeConnectionInfo
     {
+
         public Uri Uri { get; set; }
 
         public string Name { get; set; }
@@ -82,6 +84,11 @@ namespace Rachis.Transport
         public bool HasCredentials()
         {
             return !string.IsNullOrEmpty(ApiKey) || Username != null;
+        }
+
+        public string GetAbsoluteUri()
+        {
+            return Uri.AbsoluteUri.EndsWith("/") ? Uri.AbsoluteUri : Uri.AbsoluteUri + '/';
         }
     }
 }

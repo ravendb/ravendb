@@ -10,6 +10,7 @@ import fileMetadata = require("models/filesystem/fileMetadata");
 import deleteItems = require("viewmodels/common/deleteItems");
 import fileRenameDialog = require("viewmodels/filesystem/files/fileRenameDialog");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import eventsCollector = require("common/eventsCollector");
 
 class filesystemEditFile extends viewModelBase {
 
@@ -88,6 +89,7 @@ class filesystemEditFile extends viewModelBase {
     }
 
     saveFileMetadata() {
+        eventsCollector.default.reportEvent("fs-file", "save");
         //the name of the document was changed and we have to save it as a new one
         var meta = JSON.parse(this.fileMetadataText());
 
@@ -101,6 +103,7 @@ class filesystemEditFile extends viewModelBase {
     }
 
     downloadFile() {
+        eventsCollector.default.reportEvent("fs-file", "download");
         var fs = this.activeFilesystem();
         var fileName = this.fileName();
 
@@ -109,10 +112,12 @@ class filesystemEditFile extends viewModelBase {
     }
 
     refreshFile() {
+        eventsCollector.default.reportEvent("fs-file", "refresh");
         this.loadFile(this.fileName());
     }
 
     deleteFile() {
+        eventsCollector.default.reportEvent("fs-file", "delete");
         var file = this.file();
         if (file) {
             var viewModel = new deleteItems([file]);
@@ -127,6 +132,7 @@ class filesystemEditFile extends viewModelBase {
     }
 
     renameFile() {
+        eventsCollector.default.reportEvent("fs-file", "rename");
         var currentFileName = this.fileName();
         var dialog = new fileRenameDialog(currentFileName, this.activeFilesystem());
         dialog.onExit().done((newName: string) => {

@@ -5,6 +5,7 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import statusDebugQueriesGroup = require("models/database/debug/statusDebugQueriesGroup");
 import statusDebugQueriesQuery = require("models/database/debug/statusDebugQueriesQuery");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
+import eventsCollector = require("common/eventsCollector");
 
 
 class statusDebugQueries extends viewModelBase {
@@ -82,6 +83,7 @@ class statusDebugQueries extends viewModelBase {
     } 
 
     killQuery(queryId: number) {
+        eventsCollector.default.reportEvent("query", "kill");
         new getKillQueryCommand(this.activeDatabase(), queryId)
             .execute()
             .done(() => {

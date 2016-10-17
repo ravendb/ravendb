@@ -41,6 +41,7 @@ namespace Raven.Server
         public RavenDbServer(InMemoryRavenConfiguration configuration)
         {
             this.configuration = configuration;
+            
             documentStore = new DocumentStore
             {
                 Conventions =
@@ -57,6 +58,7 @@ namespace Raven.Server
             };
 
             metricsTicker = MetricsTicker.Instance;
+            
         }
 
         public InMemoryRavenConfiguration Configuration

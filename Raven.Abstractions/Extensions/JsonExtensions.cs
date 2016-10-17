@@ -9,7 +9,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Linq;
 using Raven.Imports.Newtonsoft.Json;
@@ -17,6 +16,9 @@ using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Json.Linq;
 using System.Collections.Generic;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.MiniMetrics;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -25,13 +27,27 @@ namespace Raven.Abstractions.Extensions
     /// </summary>
     public static class JsonExtensions
     {
+        public static MeterMetric JsonStreamDeserializationsPerSecond;
+        public static MeterMetric JsonStreamDeserializedBytesPerSecond;
+
+        public static MeterMetric JsonStreamSerializationsPerSecond;
+        public static MeterMetric JsonStreamSerializedBytesPerSecond;
+
+        static JsonExtensions()
+        {
+            JsonStreamDeserializationsPerSecond = new MeterMetric(MetricsScheduler.Instance);
+            JsonStreamDeserializedBytesPerSecond = new MeterMetric(MetricsScheduler.Instance);
+            JsonStreamSerializationsPerSecond = new MeterMetric(MetricsScheduler.Instance);
+            JsonStreamSerializedBytesPerSecond = new MeterMetric(MetricsScheduler.Instance);
+        }
+
         public static RavenJObject ToJObject(object result)
         {
             var dynamicJsonObject = result as Linq.IDynamicJsonObject;
             if (dynamicJsonObject != null)
                 return dynamicJsonObject.Inner;
             if (result is string || result is ValueType)
-                return new RavenJObject { { "Value", new RavenJValue(result) } };
+                return new RavenJObject {{"Value", new RavenJValue(result)}};
             if (result is DynamicNullObject)
                 return null;
             return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
@@ -57,17 +73,39 @@ namespace Raven.Abstractions.Extensions
         public static RavenJObject ToJObject(this Stream self)
         {
             var streamWithCachedHeader = new StreamWithCachedHeader(self, 5);
-            if (IsJson(streamWithCachedHeader))
+            using (var counting = new CountingStream(streamWithCachedHeader))
             {
-                // note that we intentionally don't close it here
-                var jsonReader = new JsonTextReader(new StreamReader(streamWithCachedHeader));
-                return RavenJObject.Load(jsonReader);
-            }
+                if (IsJson(streamWithCachedHeader))
+                {
+                    // note that we intentionally don't close it here
+                    var jsonReader = new JsonTextReader(new StreamReader(counting));
+                    
+                    var ravenJObject = RavenJObject.Load(jsonReader);
+                    RegisterJsonStreamDeserializationMetrics((int)counting.NumberOfReadBytes);
+                    return ravenJObject;
+                }
 
-            return RavenJObject.Load(new BsonReader(streamWithCachedHeader)
-            {
-                DateTimeKindHandling = DateTimeKind.Utc,
-            });
+                RegisterJsonStreamDeserializationMetrics((int)counting.NumberOfReadBytes);
+                var deserializedObject = RavenJObject.Load(new BsonReader(counting)
+                {
+                    DateTimeKindHandling = DateTimeKind.Utc,
+                });
+                return deserializedObject;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void RegisterJsonStreamDeserializationMetrics(int numberOfReadBytes)
+        {
+            JsonStreamDeserializationsPerSecond.Mark();
+            JsonStreamDeserializedBytesPerSecond.Mark(numberOfReadBytes);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void RegisterJsonStreamSerializationMetrics(int size)
+        {
+            JsonStreamSerializationsPerSecond.Mark();
+            JsonStreamSerializedBytesPerSecond.Mark(size);
         }
 
         /// <summary>
@@ -75,14 +113,18 @@ namespace Raven.Abstractions.Extensions
         /// </summary>
         public static void WriteTo(this RavenJToken self, Stream stream)
         {
-            using (var streamWriter = new StreamWriter(stream, Encoding.UTF8, 1024, true))
-            using (var jsonWriter = new JsonTextWriter(streamWriter))
+            using (var counting = new CountingStream(stream))
             {
-                jsonWriter.Formatting = Formatting.None;
-                jsonWriter.DateFormatHandling = DateFormatHandling.IsoDateFormat;
-                jsonWriter.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
-                jsonWriter.DateFormatString = Default.DateTimeFormatsToWrite;
-                self.WriteTo(jsonWriter, Default.Converters);
+                using (var streamWriter = new StreamWriter(counting, Encoding.UTF8, 1024, true))
+                using (var jsonWriter = new JsonTextWriter(streamWriter))
+                {
+                    jsonWriter.Formatting = Formatting.None;
+                    jsonWriter.DateFormatHandling = DateFormatHandling.IsoDateFormat;
+                    jsonWriter.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
+                    jsonWriter.DateFormatString = Default.DateTimeFormatsToWrite;
+                    self.WriteTo(jsonWriter, Default.Converters);
+                }
+                RegisterJsonStreamSerializationMetrics((int)counting.NumberOfWrittenBytes);
             }
         }
 
@@ -93,7 +135,7 @@ namespace Raven.Abstractions.Extensions
             bool gotRecord = false;
             while (!input.EndOfStream)
             {
-                char c = (char)input.Read();
+                char c = (char) input.Read();
                 if (c == openChar)
                 {
                     gotRecord = true;
@@ -124,7 +166,7 @@ namespace Raven.Abstractions.Extensions
         /// </summary>
         public static T JsonDeserialization<T>(this byte[] self)
         {
-            return (T)CreateDefaultJsonSerializer().Deserialize(new BsonReader(new MemoryStream(self)), typeof(T));
+            return (T) CreateDefaultJsonSerializer().Deserialize(new BsonReader(new MemoryStream(self)), typeof(T));
         }
 
         /// <summary>
@@ -132,9 +174,9 @@ namespace Raven.Abstractions.Extensions
         /// </summary>
         public static T JsonDeserialization<T>(this RavenJToken self)
         {
-            return (T)CreateDefaultJsonSerializer().Deserialize(new RavenJTokenReader(self), typeof(T));
+            return (T) CreateDefaultJsonSerializer().Deserialize(new RavenJTokenReader(self), typeof(T));
         }
-        
+
         /// <summary>
         /// Deserialize a <param name="self"/> to a list of instances of<typeparam name="T"/>
         /// </summary>
@@ -151,7 +193,7 @@ namespace Raven.Abstractions.Extensions
         {
             return CreateDefaultJsonSerializer().Deserialize<T>(self);
         }
-        
+
         /// <summary>
         /// Deserialize a <param name="stream"/> to an instance of<typeparam name="T"/>
         /// </summary>
@@ -165,7 +207,7 @@ namespace Raven.Abstractions.Extensions
 
         public static T Deserialize<T>(this JsonSerializer self, TextReader reader)
         {
-            return (T)self.Deserialize(reader, typeof(T));
+            return (T) self.Deserialize(reader, typeof(T));
         }
 
         private static readonly IContractResolver contractResolver = new DefaultServerContractResolver(shareCache: true)
@@ -200,7 +242,7 @@ namespace Raven.Abstractions.Extensions
                 if (fieldInfo != null && !fieldInfo.IsPublic)
                     return true;
                 return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Any();
-            } 
+            }
         }
 
         public static JsonSerializer CreateDefaultJsonSerializer()
@@ -221,7 +263,7 @@ namespace Raven.Abstractions.Extensions
             // as result we can't distigush between json and bson based on first 4 bytes
             // in bson 5-th byte is value type
             var bsonType = stream.Header[4];
-            return stream.ActualHeaderSize < 5 || bsonType > (byte)BsonType.RavenDBCustomFloat;
+            return stream.ActualHeaderSize < 5 || bsonType > (byte) BsonType.RavenDBCustomFloat;
         }
     }
 
@@ -229,21 +271,11 @@ namespace Raven.Abstractions.Extensions
     {
         private readonly Stream inner;
 
-        public int ActualHeaderSize 
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get; 
-            private set; 
-        }
+        public int ActualHeaderSize { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; private set; }
 
         private int headerSizePosition;
 
-        public byte[] Header 
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get; 
-            private set; 
-        }
+        public byte[] Header { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; private set; }
 
         private bool passedHeader;
 
@@ -265,6 +297,17 @@ namespace Raven.Abstractions.Extensions
         public override void Flush()
         {
             inner.Flush();
+        }
+
+        public override int ReadByte()
+        {
+            if (passedHeader)
+                return inner.ReadByte();
+
+
+            var b = Header[headerSizePosition++];
+            passedHeader = headerSizePosition >= ActualHeaderSize;
+            return b;
         }
 
         public override long Seek(long offset, SeekOrigin origin)
@@ -310,47 +353,29 @@ namespace Raven.Abstractions.Extensions
 
         public override bool CanRead
         {
-            get
-            {
-                return inner.CanRead;
-            }
+            get { return inner.CanRead; }
         }
 
         public override bool CanSeek
         {
-            get
-            {
-                return inner.CanSeek;
-            }
+            get { return inner.CanSeek; }
         }
 
         public override bool CanWrite
         {
-            get
-            {
-                return inner.CanWrite;
-            }
+            get { return inner.CanWrite; }
         }
 
         public override long Length
         {
-            get
-            {
-                return inner.Length;
-            }
+            get { return inner.Length; }
         }
 
         public override long Position
         {
-            get
-            {
-                return inner.Position;
-            }
+            get { return inner.Position; }
 
-            set
-            {
-                inner.Position = value;
-            }
+            set { inner.Position = value; }
         }
 
 #if !DNXCORE50

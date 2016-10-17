@@ -307,6 +307,7 @@
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\MemberInfoExtensions.cs" />
     <Compile Include="Extensions\RavenDateTimeExtensions.cs" />
+    <Compile Include="Util\InterlockedLock.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\ReflectionExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
@@ -452,7 +453,6 @@
     <Compile Include="Spatial\ShapeConverter.cs" />
     <Compile Include="Spatial\GeoJsonWktConverter.cs" />
     <Compile Include="Spatial\WktSanitizer.cs" />
-    <Compile Include="Streaming\ExcelOutputWriter.cs" />
     <Compile Include="Streaming\IOutputWriter.cs" />
     <Compile Include="Streaming\JsonOutputWriter.cs" />
     <Compile Include="SystemTime.cs" />
@@ -484,6 +484,12 @@
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
     <Compile Include="Util\EnvironmentUtils.cs" />
+    <Compile Include="Util\MiniMetrics\ActionScheduler.cs" />
+    <Compile Include="Util\MiniMetrics\Clock.cs" />
+    <Compile Include="Util\MiniMetrics\EWMA.cs" />
+    <Compile Include="Util\MiniMetrics\MeterMetric.cs" />
+    <Compile Include="Util\MiniMetrics\MeterValue.cs" />
+    <Compile Include="Util\MiniMetrics\MetricsScheduler.cs" />
     <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\CompletedTask.cs" />
@@ -514,7 +520,6 @@
     <Compile Include="Util\Streams\IBufferPool.cs" />
     <Compile Include="Util\Streams\NoBufferPool.cs" />
     <Compile Include="Util\Streams\Substream.cs" />
-    <Compile Include="Util\RavenTextFieldParser.cs" />
     <Compile Include="Util\MalformedLineException.cs" />
     <Compile Include="Threading\ThreadLocal.cs" />
     <Compile Include="Util\UndisposableStream.cs" />

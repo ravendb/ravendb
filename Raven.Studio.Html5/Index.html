@@ -1,20 +1,19 @@
 ﻿<!DOCTYPE html>
 <html>
-    <head>
-        <title>Raven.Studio</title>
-        
-        <meta charset="utf-8" />
-        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-        <meta name="format-detection" content="telephone=no"/>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        
-        <link rel="shortcut icon" href="favicon.ico" />
-        <link rel="apple-touch-icon" href="Content/images/logo.png"/>
-        
-        <!-- Do not remove the BEGIN CSS BLOCK comment below. It is used by the optimized build to inline and minify the style sheets. -->
-        <!-- BEGIN CSS BLOCK -->
+<head>
+    <title>Raven.Studio</title>
+
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="shortcut icon" href="favicon.ico" />
+    <link rel="apple-touch-icon" href="Content/images/logo.png" />
+    
+    <!-- build:css Content/styles.min.css -->
         <link rel="stylesheet" href="Content/bootstrap.css" />
         <link rel="stylesheet" href="Content/bootstrap-datetimepicker.css"/>
         <link rel="stylesheet" href="Content/bootstrap-select.css" />
@@ -29,19 +28,18 @@
         <link rel="stylesheet" href="Content/app.css"/>
         <link rel="stylesheet" href="Content/awesome-bootstrap-checkbox.css" />
         <link rel="stylesheet" href="Content/animate.min.css"/>
-        
-        <!-- END CSS BLOCK -->
+    <!-- /build -->
 
-        <script type="text/javascript">
-            if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
-                var msViewportStyle = document.createElement("style");
-                var mq = "@@-ms-viewport{width:auto!important}";
-                msViewportStyle.appendChild(document.createTextNode(mq));
-                document.getElementsByTagName("head")[0].appendChild(msViewportStyle);
-            }
-        </script>
-    </head>
-    <body>
+    <script type="text/javascript">
+        if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
+            var msViewportStyle = document.createElement("style");
+            var mq = "@@-ms-viewport{width:auto!important}";
+            msViewportStyle.appendChild(document.createTextNode(mq));
+            document.getElementsByTagName("head")[0].appendChild(msViewportStyle);
+        }
+    </script>
+</head>
+<body>
     <div id="applicationHost">
         <div class="splash">
             <div class="message">
@@ -54,34 +52,41 @@
         <input type="hidden" id="DownloadOptions" name="DownloadOptions" />
         <input type="hidden" id="ProgressTaskId" name="ProgressTaskId" value="-1" />
     </form>
-    <!-- Note: do not remove the "BEGIN VENDOR SCRIPTS" comment below. It is used by the optimized build to determine which scripts to inline. -->
-    <!-- BEGIN VENDOR SCRIPTS -->
-    <script type="text/javascript" src="Scripts/jquery-2.1.3.js"></script>
-    <script type="text/javascript" src="Scripts/jquery.blockUI.js"></script>
-    <script type="text/javascript" src="Scripts/nprogress.js"></script>
-    <script type="text/javascript" src="Scripts/knockout-3.2.0.js"></script>
-    <script type="text/javascript" src="Scripts/knockout.dirtyFlag.js"></script>
-    <script type="text/javascript" src="Scripts/knockout.mapping-2.4.1.js"></script>
-    <script type="text/javascript" src="Scripts/knockout-delegatedEvents.min.js"></script>
-    <script type="text/javascript" src="Scripts/knockout-postbox.min.js"></script>
-    <script type="text/javascript" src="Scripts/moment.min.js"></script>
-    <script type="text/javascript" src="Scripts/bootstrap.min.js"></script>
-    <script type="text/javascript" src="Scripts/bootstrap-datetimepicker.min.js"></script>
-    <script type="text/javascript" src="Scripts/bootstrap-contextmenu-2.1.js"></script>
-    <script type="text/javascript" src="Scripts/bootstrap-multiselect.js"></script>
-    <script type="text/javascript" src="Scripts/bootstrap-select.min.js"></script>
-    <script type="text/javascript" src="Scripts/jquery-ui-1.10.4.custom.min.js"></script>
-    <script type="text/javascript" src="Scripts/jquery.dynatree.js"></script>
-    <script type="text/javascript" src="Scripts/jwerty-0.3.js"></script>
-    <script type="text/javascript" src="Scripts/jquery.fullscreen.js"></script>
-    <script type="text/javascript" src="Scripts/spin.min.js"></script>
-    <script type="text/javascript" src="App/models/dto.js"></script>
-    <!-- END VENDOR SCRIPTS -->
-
+    
+    <!-- build:js App/libs.min.js -->
+        <script type="text/javascript" src="Scripts/jquery-2.1.3.js"></script>
+        <script type="text/javascript" src="Scripts/jquery.blockUI.js"></script>
+        <script type="text/javascript" src="Scripts/nprogress.js"></script>
+        <script type="text/javascript" src="Scripts/knockout-3.2.0.js"></script>
+        <script type="text/javascript" src="Scripts/knockout.dirtyFlag.js"></script>
+        <script type="text/javascript" src="Scripts/knockout.mapping-2.4.1.js"></script>
+        <script type="text/javascript" src="Scripts/knockout-delegatedEvents.min.js"></script>
+        <script type="text/javascript" src="Scripts/knockout-postbox.min.js"></script>
+        <script type="text/javascript" src="Scripts/moment.min.js"></script>
+        <script type="text/javascript" src="Scripts/bootstrap.min.js"></script>
+        <script type="text/javascript" src="Scripts/bootstrap-datetimepicker.min.js"></script>
+        <script type="text/javascript" src="Scripts/bootstrap-contextmenu-2.1.js"></script>
+        <script type="text/javascript" src="Scripts/bootstrap-multiselect.js"></script>
+        <script type="text/javascript" src="Scripts/bootstrap-select.min.js"></script>
+        <script type="text/javascript" src="Scripts/jquery-ui-1.10.4.custom.min.js"></script>
+        <script type="text/javascript" src="Scripts/jquery.dynatree.js"></script>
+        <script type="text/javascript" src="Scripts/jwerty-0.3.js"></script>
+        <script type="text/javascript" src="Scripts/jquery.fullscreen.js"></script>
+        <script type="text/javascript" src="Scripts/spin.min.js"></script>
+        <script type="text/javascript" src="App/models/dto.js"></script>
+        <script type="text/javascript" src="Scripts/analytics.js"></script>
+    <!-- /build -->
+    
     <script type="text/javascript">
         // Must pull down jQuery and nprogress before we show the progress indicator.
         NProgress.start();
     </script>
+    
     <script type="text/javascript" src="Scripts/require.js" data-main="App/main"></script>
+
+    <script type="text/javascript" src="Scripts/ace/ace.js"></script>
+    <script type="text/javascript" src="Scripts/ace/ext-language_tools.js"></script>
+    <script type="text/javascript" src="Scripts/ace/worker-json.js"></script>
+    
 </body>
 </html>

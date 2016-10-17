@@ -7,6 +7,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Storage;
 using System.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Extensions;
 using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
@@ -64,15 +65,15 @@ namespace Raven.Database.Indexing
                     }
                     catch (OperationCanceledException)
                     {
-                        Log.Info("Got rude cancellation of indexing as a result of shutdown, aborting current indexing run");
-                        return;
+                        Log.Info("Got rude cancellation of indexing, aborting current indexing run");
+                        continue;
                     }
                     catch (AggregateException ae)
                     {
                         if (IsOperationCanceledException(ae))
                         {
-                            Log.Info("Got rude cancellation of indexing as a result of shutdown, aborting current indexing run");
-                            return;
+                            Log.Info("Got rude cancellation of indexing, aborting current indexing run");
+                            continue;
                         }
 
                         foundWork = true;
@@ -132,76 +133,114 @@ namespace Raven.Database.Indexing
             }
         }
 
-        protected static bool IsOperationCanceledException(Exception e)
+        protected bool IsOperationCanceledException(Exception exception)
         {
-            var ae = e as AggregateException;
-            if (ae == null)
+            try
             {
-                return e is OperationCanceledException;
-            }
+                var ae = exception as AggregateException;
+                if (ae == null)
+                {
+                    return exception is OperationCanceledException;
+                }
 
-            foreach (var innerException in ae.Flatten().InnerExceptions)
+                foreach (var innerException in ae.Flatten().InnerExceptions)
+                {
+                    if (innerException is AggregateException &&
+                        IsOperationCanceledException(innerException))
+                        continue;
+
+                    if (innerException is OperationCanceledException == false)
+                        return false;
+                }
+
+                //return true only if all of the exceptions are operation canceled exceptions
+                return true;
+            }
+            catch (Exception e)
             {
-                if (innerException is AggregateException &&
-                    IsOperationCanceledException(innerException))
-                    continue;
-
-                if (innerException is OperationCanceledException == false)
-                    return false;
+                const string error = "Couldn't determine if exception was of kind OperationCanceledException";
+                Log.WarnException(error, e);
+                context.Database.AddAlert(new Alert
+                {
+                    AlertLevel = AlertLevel.Error,
+                    CreatedAt = DateTime.UtcNow,
+                    Title = error,
+                    UniqueKey = error,
+                    Message = e.ToString(),
+                    Exception = e.Message
+                });
+                return false;
             }
-
-            //return true only if all of the exceptions are operation canceled exceptions
-            return true;
         }
 
         protected bool HandleIfOutOfMemory(Exception exception, OutOfMemoryDetails details)
         {
-            var ae = exception as AggregateException;
-            if (ae == null)
+            try
             {
-                if (exception is OutOfMemoryException)
+                var ae = exception as AggregateException;
+                if (ae == null)
                 {
-                    HandleSystemOutOfMemoryException(exception);
-                    return true;
-                }  
+                    if (exception is OutOfMemoryException)
+                    {
+                        HandleSystemOutOfMemoryException(exception);
+                        return true;
+                    }
 
-                if (TransactionalStorageHelper.IsOutOfMemoryException(exception))
-                {
-                    HandleRavenOutOfMemoryException(exception, details);
-                    return true;
+                    if (TransactionalStorageHelper.IsOutOfMemoryException(exception))
+                    {
+                        HandleRavenOutOfMemoryException(exception, details);
+                        return true;
+                    }
+
+                    return false;
                 }
+
+                var isSystemOutOfMemory = false;
+                var isRavenOutOfMemoryException = false;
+                Exception oome = null;
+                Exception ravenOutOfMemoryException = null;
+
+                foreach (var innerException in ae.Flatten().InnerExceptions)
+                {
+                    if (innerException is OutOfMemoryException)
+                    {
+                        isSystemOutOfMemory = true;
+                        oome = innerException;
+                    }
+
+                    if (TransactionalStorageHelper.IsOutOfMemoryException(innerException))
+                    {
+                        isRavenOutOfMemoryException = true;
+                        ravenOutOfMemoryException = innerException;
+                    }
+
+                    if (isSystemOutOfMemory && isRavenOutOfMemoryException)
+                        break;
+                }
+
+                if (isSystemOutOfMemory)
+                    HandleSystemOutOfMemoryException(oome);
+
+                if (isRavenOutOfMemoryException)
+                    HandleRavenOutOfMemoryException(ravenOutOfMemoryException, details);
+
+                return isRavenOutOfMemoryException;
             }
-
-            var isSystemOutOfMemory = false;
-            var isRavenOutOfMemoryException = false;
-            Exception oome = null;
-            Exception ravenOutOfMemoryException = null;
-
-            foreach (var innerException in ae.Flatten().InnerExceptions)
+            catch (Exception e)
             {
-                if (innerException is OutOfMemoryException)
+                const string error = "Couldn't execute out of memory exception handler";
+                Log.WarnException(error, e);
+                context.Database.AddAlert(new Alert
                 {
-                    isSystemOutOfMemory = true;
-                    oome = innerException;
-                }
-
-                if (TransactionalStorageHelper.IsOutOfMemoryException(innerException))
-                {
-                    isRavenOutOfMemoryException = true;
-                    ravenOutOfMemoryException = innerException;
-                }
-
-                if (isSystemOutOfMemory && isRavenOutOfMemoryException)
-                    break;
+                    AlertLevel = AlertLevel.Error,
+                    CreatedAt = DateTime.UtcNow,
+                    Title = error,
+                    UniqueKey = error,
+                    Message = e.ToString(),
+                    Exception = e.Message
+                });
+                return false;
             }
-
-            if (isSystemOutOfMemory)
-                HandleSystemOutOfMemoryException(oome);
-
-            if (isRavenOutOfMemoryException)
-                HandleRavenOutOfMemoryException(ravenOutOfMemoryException, details);
-
-            return isRavenOutOfMemoryException;
         }
 
         public abstract bool ShouldRun { get; }

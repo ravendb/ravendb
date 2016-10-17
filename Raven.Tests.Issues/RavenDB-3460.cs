@@ -27,7 +27,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [TimeBombedFact(2016,9,1,"Edge-case for special character combination in a query. (This is not a regression, this case was not handled before)")]
+        [TimeBombedFact(2018,9,1,"Edge-case for special character combination in a query. (This is not a regression, this case was not handled before)")]
         public void Can_query_for_special_percentage_character()
         {
             using (var store = NewRemoteDocumentStore())

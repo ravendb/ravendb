@@ -94,20 +94,21 @@ namespace Raven.Traffic
 
                 const string postLineSeparatorRegex = "\\t\\d: databases\\/[\\w\\.]+";
                 const string endOfPostLineString = "\t\t\tQuery:";
-                const string uriCleanRegex = "http://[\\w\\.]+(:\\d*)?(\\/databases\\/[\\w\\.]+)?";
-
+                const string uriCleanRegex = "http://[\\w\\.-]+(:\\d*)?(\\/databases\\/[\\w\\.]+)?";
+                
                 Parallel.ForEach(trafficLogs, new ParallelOptions
                 {
-                    MaxDegreeOfParallelism = Environment.ProcessorCount
+                    MaxDegreeOfParallelism = 60
                 }, trafficLog =>
                 {
                     var sp = Stopwatch.StartNew();
                     GetRequest[] requestsArray = null;
 
-                    var uriString = Regex.Replace(trafficLog.RequestUri, uriCleanRegex, string.Empty);
-                    string trafficUrlPart;
+                    string uriString = Regex.Replace(trafficLog.RequestUri, uriCleanRegex, string.Empty);
+
+
                     string trafficQueryPart;
-                    trafficUrlPart = ExtractUrlAndQuery(uriString, out trafficQueryPart);
+                    var trafficUrlPart = ExtractUrlAndQuery(uriString, out trafficQueryPart);
 
                     var curCount = Interlocked.Increment(ref requestsCounter);
                     if (ValidateUrlString(trafficUrlPart))
@@ -164,22 +165,35 @@ namespace Raven.Traffic
                                 };
                             }).Where(x => x != null).ToArray();
                     }
-                    Interlocked.Add(ref totalCountOfLogicRequests, requestsArray.Length);
+                    Interlocked.Add(ref totalCountOfLogicRequests, requestsArray?.Length??0);
+                    if (requestsArray == null || requestsArray.Length == 0)
+                    {
+                        Interlocked.Increment(ref skippedRequestsCounter);
+                        if (queue != null)
+                        {
+                            queue.Enqueue(string.Format("{0} out of {1}, skipped",
+                                curCount, trafficLogs.Length, sp.ElapsedMilliseconds, totalSp.ElapsedMilliseconds));
+                        }
+                        return;
+                    }
                     try
                     {
+                        
                         store.DatabaseCommands.MultiGet(requestsArray);
+                        
+                        
                         if (queue != null)
                         {
                             queue.Enqueue(string.Format("{0} out of {1}, took {2} ms. Total Time: {3} ms",
                                 curCount, trafficLogs.Length, sp.ElapsedMilliseconds, totalSp.ElapsedMilliseconds));
                         }
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
                         Interlocked.Increment(ref skippedRequestsCounter);
                         if (queue != null)
                         {
-                            queue.Enqueue(string.Format("{0} out of {1}, failed",
+                            queue.Enqueue(string.Format("{0} out of {1}, failed, took {2} ms. Total Time: {3} ms",
                                 curCount, trafficLogs.Length, sp.ElapsedMilliseconds, totalSp.ElapsedMilliseconds));
                         }
                     }

@@ -83,9 +83,9 @@ namespace Raven.Database.Raft
             }
 
             if (string.IsNullOrEmpty(oauthSource))
-                oauthSource = nodeConnectionInfo.Uri.AbsoluteUri + "/OAuth/API-Key";
+                oauthSource = nodeConnectionInfo.GetAbsoluteUri() + "/OAuth/API-Key";
 
-            return GetAuthenticator(nodeConnectionInfo).DoOAuthRequestAsync(nodeConnectionInfo.Uri.AbsoluteUri, oauthSource, nodeConnectionInfo.ApiKey);
+            return GetAuthenticator(nodeConnectionInfo).DoOAuthRequestAsync(nodeConnectionInfo.GetAbsoluteUri(), oauthSource, nodeConnectionInfo.ApiKey);
         }
 
         private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpResponseMessage response, NodeConnectionInfo nodeConnectionInfo)
@@ -147,7 +147,7 @@ namespace Raven.Database.Raft
 
         public async Task<CanJoinResult> SendJoinServerInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo newNode)
         {
-            var url = leaderNode.Uri.AbsoluteUri + "admin/cluster/join";
+            var url = leaderNode.GetAbsoluteUri() + "admin/cluster/join";
             using (var request = CreateRequest(leaderNode, url, HttpMethods.Post))
             {
                 var response = await request.WriteAsync(() => new JsonContent(RavenJToken.FromObject(newNode))).ConfigureAwait(false);
@@ -227,7 +227,7 @@ namespace Raven.Database.Raft
 
         private async Task SendReplicationStateAsync(NodeConnectionInfo node, ReplicationState replicationState)
         {
-            var url = node.Uri.AbsoluteUri + "cluster/replicationState";
+            var url = node.GetAbsoluteUri() + "cluster/replicationState";
             using (var request = CreateRequest(node, url, HttpMethods.Post))
             {
                 var response = await request.WriteAsync(
@@ -243,7 +243,7 @@ namespace Raven.Database.Raft
         {
             try
             {
-                var url = node.Uri.AbsoluteUri + "stats";
+                var url = node.GetAbsoluteUri() + "stats";
                 using (var request = CreateRequest(node, url, HttpMethods.Get))
                 {
                     var response = await request.ExecuteAsync().ConfigureAwait(false);
@@ -262,7 +262,7 @@ namespace Raven.Database.Raft
 
         private async Task SendDatabaseDeleteInternalAsync(NodeConnectionInfo node, string databaseName, bool hardDelete)
         {
-            var url = node.Uri.AbsoluteUri + "admin/cluster/commands/database/" + Uri.EscapeDataString(databaseName) + "?hardDelete=" + hardDelete;
+            var url = node.GetAbsoluteUri() + "admin/cluster/commands/database/" + Uri.EscapeDataString(databaseName) + "?hardDelete=" + hardDelete;
             using (var request = CreateRequest(node, url, HttpMethods.Delete))
             {
                 var response = await request.ExecuteAsync().ConfigureAwait(false);
@@ -285,7 +285,7 @@ namespace Raven.Database.Raft
 
         private async Task PutAsync(NodeConnectionInfo node, string action, object content)
         {
-            var url = node.Uri.AbsoluteUri + action;
+            var url = node.GetAbsoluteUri() + action;
             using (var request = CreateRequest(node, url, HttpMethods.Put))
             {
                 var response = await request.WriteAsync(() => new JsonContent(RavenJObject.FromObject(content))).ConfigureAwait(false);
@@ -298,7 +298,7 @@ namespace Raven.Database.Raft
 
         public async Task<CanJoinResult> SendCanJoinAsync(NodeConnectionInfo nodeConnectionInfo)
         {
-            var url = nodeConnectionInfo.Uri.AbsoluteUri + "admin/cluster/canJoin?topologyId=" + raftEngine.CurrentTopology.TopologyId;
+            var url = nodeConnectionInfo.GetAbsoluteUri() + "admin/cluster/canJoin?topologyId=" + raftEngine.CurrentTopology.TopologyId;
 
             using (var request = CreateRequest(nodeConnectionInfo, url, HttpMethods.Get))
             {
@@ -340,7 +340,7 @@ namespace Raven.Database.Raft
 
         public async Task SendNodeUpdateInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo nodeToUpdate)
         {
-            var url = leaderNode.Uri.AbsoluteUri + "admin/cluster/update";
+            var url = leaderNode.GetAbsoluteUri() + "admin/cluster/update";
             using (var request = CreateRequest(leaderNode, url, HttpMethods.Post))
             {
                 var response = await request.WriteAsync(() => new JsonContent(RavenJToken.FromObject(nodeToUpdate))).ConfigureAwait(false);
@@ -388,7 +388,7 @@ namespace Raven.Database.Raft
 
         public async Task SendLeaveClusterInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo leavingNode)
         {
-            var url = leaderNode.Uri.AbsoluteUri + "admin/cluster/leave?name=" + leavingNode.Name;
+            var url = leaderNode.GetAbsoluteUri() + "admin/cluster/leave?name=" + leavingNode.Name;
             using (var request = CreateRequest(leaderNode, url, HttpMethods.Get))
             {
                 var response = await request.ExecuteAsync().ConfigureAwait(false);
@@ -469,7 +469,7 @@ namespace Raven.Database.Raft
 
         public async Task SendInitializeNewClusterForAsync(NodeConnectionInfo node, Guid? clusterId = null)
         {
-            var url = node.Uri.AbsoluteUri + "admin/cluster/initialize-new-cluster" + (clusterId.HasValue ? "?id=" + clusterId.Value : string.Empty);
+            var url = node.GetAbsoluteUri() + "admin/cluster/initialize-new-cluster" + (clusterId.HasValue ? "?id=" + clusterId.Value : string.Empty);
 
             using (var request = CreateRequest(node, url, HttpMethods.Patch))
             {
@@ -499,12 +499,12 @@ namespace Raven.Database.Raft
 
         internal SecuredAuthenticator GetAuthenticator(NodeConnectionInfo info)
         {
-            return _securedAuthenticatorCache.GetOrAdd(info.Uri.AbsoluteUri, _ => new SecuredAuthenticator(autoRefreshToken: false));
+            return _securedAuthenticatorCache.GetOrAdd(info.GetAbsoluteUri(), _ => new SecuredAuthenticator(autoRefreshToken: false));
         }
 
         internal ReturnToQueue GetConnection(NodeConnectionInfo nodeConnection, out HttpClient result)
         {
-            var connectionQueue = _httpClientsCache.GetOrAdd(nodeConnection.Uri.AbsoluteUri, _ => new ConcurrentQueue<HttpClient>());
+            var connectionQueue = _httpClientsCache.GetOrAdd(nodeConnection.GetAbsoluteUri(), _ => new ConcurrentQueue<HttpClient>());
 
             if (connectionQueue.TryDequeue(out result) == false)
             {
@@ -551,7 +551,7 @@ namespace Raven.Database.Raft
                 {
                     noLeaderThrown = false;
                     var leaderNode = raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds);
-                    var url = $"{leaderNode.Uri.AbsoluteUri}admin/cluster/changeVotingMode?isVoting={isVoting}";
+                    var url = $"{leaderNode.GetAbsoluteUri()}admin/cluster/changeVotingMode?isVoting={isVoting}";
                     using (var request = CreateRequest(leaderNode, url, HttpMethods.Post))
                     {
                         var response = await request.WriteAsync(() => new JsonContent(RavenJToken.FromObject(nodeConnectionInfo))).ConfigureAwait(false);

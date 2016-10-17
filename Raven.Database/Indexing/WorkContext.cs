@@ -148,7 +148,9 @@ namespace Raven.Database.Indexing
             if (storedIndexingErrors.Count == 0)
                 return;
 
-            var errors = storedIndexingErrors.Select(x => x.Data.JsonDeserialization<IndexingError>()).OrderBy(x => x.Timestamp);
+            var errors = storedIndexingErrors.Where(x => x != null)
+                .Select(x => x.Data.JsonDeserialization<IndexingError>())
+                .OrderBy(x => x.Timestamp);
 
             foreach (var error in errors)
             {
@@ -278,7 +280,8 @@ namespace Raven.Database.Indexing
             }
             ReplicationResetEvent.Set();
         }
-        public AutoResetEvent ReplicationResetEvent = new AutoResetEvent(false);
+    
+        public ManualResetEventSlim ReplicationResetEvent = new ManualResetEventSlim();
         public void AddError(int index, string indexName, string key, Exception exception)
         {
             AddError(index, indexName, key, exception, "Unknown");

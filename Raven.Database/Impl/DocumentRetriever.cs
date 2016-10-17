@@ -39,19 +39,22 @@ namespace Raven.Database.Impl
         private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
         private readonly Dictionary<string, RavenJToken> transformerParameters;
         private readonly HashSet<string> itemsToInclude;
+        private readonly bool hasTransformer;
         private bool disableCache;
 
         public Etag Etag = Etag.Empty;
 
         public DocumentRetriever(InMemoryRavenConfiguration configuration, IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers,
             Dictionary<string, RavenJToken> transformerParameters = null,
-            HashSet<string> itemsToInclude = null)
+            HashSet<string> itemsToInclude = null,
+            bool hasTransformer = false)
         {
             this.configuration = configuration;
             this.actions = actions;
             this.triggers = triggers;
             this.transformerParameters = transformerParameters ?? new Dictionary<string, RavenJToken>();
             this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
+            this.hasTransformer = hasTransformer;
         }
 
         public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch, bool skipDuplicateCheck)
@@ -275,7 +278,7 @@ namespace Raven.Database.Impl
 
             if (disableCache || cache.TryGetValue(key, out doc) == false)
             {
-                doc = actions.Documents.DocumentByKey(key);
+                doc = actions.Documents.DocumentByKey(key, hasTransformer);
             }
 
             if (nonAuthoritativeInformationBehavior != null)

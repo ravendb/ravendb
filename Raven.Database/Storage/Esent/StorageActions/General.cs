@@ -124,7 +124,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
         {
             var toDispose = new[]
                             {
-                                documents, 
+                                documents,
+                                duplicatedDocuments,
                                 queue, 
                                 lists, 
                                 directories, 

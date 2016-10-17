@@ -4,12 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
-using Raven.Abstractions.Extensions;
 using Raven.Tests.Common;
 using System.Collections.Concurrent;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Subscriptions
 {
@@ -22,10 +20,9 @@ namespace Raven.Tests.Subscriptions
             public List<Node> Children = new List<Node>();
         }
 
-        
-
-        [Fact]
-        public void PositivePathWithCollectionsTyped()
+        [Theory]
+        [PropertyData("Storages")]
+        public void PositivePathWithCollectionsTyped(string storage)
         {
             var nestedNode = new Node
             {
@@ -46,7 +43,7 @@ namespace Raven.Tests.Subscriptions
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -78,8 +75,9 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void PositivePathWithCollectionsUntyped()
+        [Theory]
+        [PropertyData("Storages")]
+        public void PositivePathWithCollectionsUntyped(string storage)
         {
             var nestedNode = new Node
             {
@@ -100,7 +98,7 @@ namespace Raven.Tests.Subscriptions
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -132,8 +130,9 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void NegativePathWithCollectionsTyped()
+        [Theory]
+        [PropertyData("Storages")]
+        public void NegativePathWithCollectionsTyped(string storage)
         {
             var nestedNode = new Node
             {
@@ -154,7 +153,7 @@ namespace Raven.Tests.Subscriptions
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -186,8 +185,9 @@ namespace Raven.Tests.Subscriptions
             }
         }
 
-        [Fact]
-        public void NegativePathWithCollectionsUntyped()
+        [Theory]
+        [PropertyData("Storages")]
+        public void NegativePathWithCollectionsUntyped(string storage)
         {
             var nestedNode = new Node
             {
@@ -208,7 +208,7 @@ namespace Raven.Tests.Subscriptions
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 using (var session = store.OpenSession())
                 {
@@ -238,6 +238,5 @@ namespace Raven.Tests.Subscriptions
                 subscription.Dispose();
             }
         }
-
     }
 }

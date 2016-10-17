@@ -5,6 +5,7 @@ import getOperationStatusCommand = require("commands/operations/getOperationStat
 import messagePublisher = require("common/messagePublisher");
 import importDatabaseCommand = require("commands/database/studio/importDatabaseCommand");
 import checksufficientdiskspaceCommand = require("commands/database/studio/checksufficientdiskspaceCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class importDatabase extends viewModelBase {
     showAdvancedOptions = ko.observable(false);
@@ -120,6 +121,7 @@ class importDatabase extends viewModelBase {
     }
 
     importDb() {
+        eventsCollector.default.reportEvent("database", "import");
         var db: database = this.activeDatabase();
         db.isImporting(true);
         this.isUploading(true);

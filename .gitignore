@@ -219,3 +219,7 @@ _NCrunch_RavenDB/
 # DNX
 *project.lock.json
 artifacts/
+/Raven.Studio.Html5/Content/styles.min.css
+/Raven.Studio.Html5/Scripts/libs.min.js
+/Raven.Studio.Html5/node_modules/*
+/node_modules/

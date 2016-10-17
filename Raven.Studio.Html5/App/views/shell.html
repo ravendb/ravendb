@@ -1,7 +1,5 @@
 <div>
-<div id="shellHeader" class="navbar navbar-fixed-top navbar-default" role="navigation" data-bind="style: {backgroundColor:  selectedColor().backgroundColor}">
-
-<div data-bind="text: selectedEnvironmentText(), visible: canShowEnvironmentText()" id="environment-header">Environment</div>
+<div id="shellHeader" class="navbar navbar-fixed-top navbar-default" role="navigation" data-bind="style: {backgroundColor: selectedColor().backgroundColor}">
 
 <div class="container-fluid">
 <div class="navbar-header">
@@ -17,7 +15,7 @@
 <div data-bind="visible: appUrls.isAreaActive('admin')">
     <ul class="nav navbar-nav">
         <li class="navbar-splitbutton active">
-            <h3>Manage Your Server</h3>
+            <h3 style="margin-top: 11px">Manage Your Server</h3>
         </li>
     </ul>
 </div>
@@ -106,10 +104,10 @@
                     </a>
                 </li>
                 <li>
-                    <a data-bind="attr: { href: newIndexUrl }">Index</a>
+                    <a href="#" data-bind="click : newIndex">Index</a>
                 </li>
                 <li>
-                    <a data-bind="attr: { href: newTransformerUrl }">Transformer</a>
+                    <a href="#" data-bind="click: newTransformer">Transformer</a>
                 </li>
             </ul>
         </li>
@@ -229,28 +227,26 @@
                 </li>
             </ul>
         </li>
+
         <li id="featureName" class="navbar-right">
-            <div>
+            <div class="btn-group pull-right" data-bind="visible: appUrls.isAreaActive('admin')()">
+                <button data-bind="click: navigateToResources.bind($root)" class="btn btn-warning" style="margin-top: 5px; margin-left: 10px">
+                    Resources
+                </button>
+            </div>
+
+            <div data-bind="visible: appUrls.isAreaActive('admin')() == false">
                 <ul class="nav navbar-nav">
                     <li class="vertical-navbar-menu-item">
-                        <a style="padding-right: 0; padding-left: 0; padding-bottom: 0; display: inline-block;" data-bind="attr: { href: getCurrentActiveFeatureHref() }">
-                            <span data-bind="text: getCurrentActiveFeatureName()"></span>&nbsp;
+                        <a style="padding-right: 0; padding-left: 0; padding-bottom: 0; display: inline-block;" data-bind="attr: { href: appUrls.resources() }">
+                            <span>Resources</span>&nbsp;
                             <i class="fa fa-caret-right" data-bind="visible: canShowResourcesNavbar"></i>&nbsp;
                         </a>
-                    </li>
-                    <li class="dropdown vertical-navbar-menu-item" data-bind="visible: appUrls.isAreaActive('admin')()">
-                        <a class="dropdown-toggle vertical-bottom-container" data-toggle="dropdown">
-                            <i class="fa fa-caret-down"></i>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a href="#resources" data-bind="click: navigateToResources.bind($root)">Resources</a>
-                            </li>
-                        </ul>
                     </li>
                 </ul>
             </div>
         </li>
+
         <li class="navbar-right" data-bind="visible: recordedErrors().length > 0, click: $root.showErrorsDialog.bind($root)" title="Show errors" style="padding-left: 0;">
             <a href="#" style="padding-left: 0; padding-right: 0"><i class="fa fa-warning text-danger"></i></a>
         </li>
@@ -293,7 +289,7 @@
                 <li><a class="navbar-link" data-bind="text: countOfFilteredIndexesText, attr: { href: $parents[1].appUrls.indexes, title: 'Total indexes including disabled and abandoned: ' + countOfIndexesText() }"></a></li>
                 <li><a class="navbar-link" data-bind="text: staleFilteredIndexesCountText, attr: { href: $parents[1].appUrls.status, title: 'Total stale indexes including disabled and abandoned: ' + staleIndexesCountText() }"></a></li>
                 <li><a class="navbar-link" data-bind="text: errorsCountText, attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
-                <!--<li><a class="navbar-link" data-bind="text: tasksCountText, attr: { href: $parents[1].appUrls.status }"></a></li>-->
+                <li><a class="navbar-link" data-bind="text: alertsCountText, attr: { href: $parents[1].appUrls.alerts }"></a></li>
                 <li class="raw-url hidden-sm" data-bind="visible: $root.rawUrlIsVisible">
                     <a class="navbar-link" href="#" target="_blank" data-bind="text: $root.currentRawUrl, attr: { href: $root.currentRawUrl, title: $root.currentRawUrl }" style="max-width: 180px; -ms-text-overflow: ellipsis; -o-text-overflow: ellipsis; text-overflow: ellipsis; overflow-x: hidden; white-space: nowrap;"></a>
                 </li>
@@ -356,12 +352,24 @@
                         </button>
                     </div>
                 </li>
-                <li class="server-build-link" data-bind="with: serverBuildVersion"><a class="navbar-link" data-bind="text: 'Server Build #' + BuildVersion"></a></li>
-                <li class="client-build-link" data-bind="with: clientBuildVersion"><a class="navbar-link" data-bind="text: 'Client Build #' + BuildVersion"></a></li>
+
+                <li class="environment-type" data-bind="visible: canShowEnvironmentText()">
+                    <a class="navbar-link" data-bind="text: selectedEnvironmentText(), style: { color: selectedColor().textColor }"></a>
+                </li>
+                <li class="server-build-link" data-bind="with: serverBuildVersion">
+                    <a class="navbar-link" data-bind="text: 'Server Build #' + BuildVersion"></a>
+                </li>
+                <li class="client-build-link" data-bind="with: clientBuildVersion">
+                    <a class="navbar-link" data-bind="text: 'Client Build #' + BuildVersion"></a>
+                </li>
                 <!-- /ko -->
             </ul>
 
         </div>
     </div>
 </footer>
+</div>
+
+<div data-bind="if: displayUsageStatsInfo()">
+    <div data-bind="compose: 'usageStats.html'"></div>
 </div>

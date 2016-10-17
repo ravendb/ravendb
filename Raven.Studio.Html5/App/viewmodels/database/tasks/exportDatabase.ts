@@ -5,6 +5,7 @@ import collection = require("models/database/documents/collection");
 import validateExportDatabaseOptionsCommand = require("commands/database/studio/validateExportDatabaseOptionsCommand");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
+import eventsCollector = require("common/eventsCollector");
 
 class filterSetting {
     path = ko.observable<string>("");
@@ -30,7 +31,7 @@ class exportDatabase extends viewModelBase {
     filters = ko.observableArray<filterSetting>();
     transformScript = ko.observable<string>();
     exportActionUrl: KnockoutComputed<string>;
-    noneDefualtFileName = ko.observable<string>("");
+    noneDefaultFileName = ko.observable<string>("");
     chooseDifferntFileName = ko.observable<boolean>(false);
     exportCommand: KnockoutComputed<string>;
 
@@ -56,7 +57,7 @@ class exportDatabase extends viewModelBase {
 
         this.exportCommand = ko.computed(() => {
             var targetServer = appUrl.forServer();
-            var outputFilename = this.chooseDifferntFileName() ? exportDatabase.escapeForShell(this.noneDefualtFileName()) : "raven.dump"; 
+            var outputFilename = this.chooseDifferntFileName() ? exportDatabase.escapeForShell(this.noneDefaultFileName()) : "raven.dump"; 
             var commandTokens = ["Raven.Smuggler", "out", targetServer, outputFilename];
 
             var types = [];
@@ -145,6 +146,7 @@ class exportDatabase extends viewModelBase {
     }
 
     startExport() {
+        eventsCollector.default.reportEvent("database", "export");
         var db = this.activeDatabase();
         db.isExporting(true);
         db.exportStatus("");
@@ -183,7 +185,7 @@ class exportDatabase extends viewModelBase {
             ShouldExcludeExpired: !this.includeExpiredDocuments(),
             Filters: filtersToSend,
             TransformScript: this.transformScript(),
-            NoneDefualtFileName: this.noneDefualtFileName()
+            NoneDefaultFileName: this.noneDefaultFileName()
         };
 
         new validateExportDatabaseOptionsCommand(smugglerOptions, this.activeDatabase())

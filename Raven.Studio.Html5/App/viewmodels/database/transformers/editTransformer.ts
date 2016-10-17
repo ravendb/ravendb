@@ -13,6 +13,7 @@ import jsonUtil = require("common/jsonUtil");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class editTransformer extends viewModelBase {
     editedTransformer = ko.observable<transformer>();
@@ -99,6 +100,7 @@ class editTransformer extends viewModelBase {
     }
 
     saveTransformer() {
+        eventsCollector.default.reportEvent("transformer", "save");
         if (this.isEditingExistingTransformer() && this.editedTransformer().wasNameChanged()) {
             var db = this.activeDatabase();
             var saveTransformerWithNewNameViewModel = new saveTransformerWithNewNameConfirm(this.editedTransformer(), db);
@@ -126,6 +128,7 @@ class editTransformer extends viewModelBase {
     }
 
     refreshTransformer() {
+        eventsCollector.default.reportEvent("transformer", "refresh");
         var canContinue = this.canContinueIfNotDirty("Unsaved Data", "You have unsaved data. Are you sure you want to refresh the transformer from the server?");
         canContinue
             .done(() => {
@@ -141,6 +144,7 @@ class editTransformer extends viewModelBase {
     }
 
     formatTransformer() {
+        eventsCollector.default.reportEvent("transformer", "format");
         var editedTransformer: transformer = this.editedTransformer();
 
         new formatIndexCommand(this.activeDatabase(), [editedTransformer.transformResults()])
@@ -156,6 +160,7 @@ class editTransformer extends viewModelBase {
     }
 
     deleteTransformer() {
+        eventsCollector.default.reportEvent("transformer", "delete");
         var transformer = this.editedTransformer();
 
         if (transformer) {

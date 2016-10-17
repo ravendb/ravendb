@@ -89,6 +89,12 @@ namespace Raven.Abstractions.Data
         public bool SkipDeleteFromIndex;
 
         /// <summary>
+        /// Whatever this document is relevant for indexing
+        /// Only relevant during indexing phases, and not available on the client
+        /// </summary>
+        public bool IsIrrelevantForIndexing;
+
+        /// <summary>
         /// Translate the json document to a <see cref = "RavenJObject" />
         /// </summary>
         public RavenJObject ToJson(bool checkForId = false)

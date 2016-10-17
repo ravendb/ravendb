@@ -3,19 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Diagnostics;
+using System;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
+using Raven.Database.Storage;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Extensions
 {
     public static class DocDbExtensions
     {
+        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+        private const int MaxTries = 10;
+
         public static void AddAlert(this DocumentDatabase self, Alert alert)
         {
+            var tries = 0;
             while (true)
             {
                 using(self.TransactionalStorage.DisableBatchNesting())
@@ -41,12 +48,12 @@ namespace Raven.Database.Extensions
                         metadata = alertsDoc.Metadata;
                     }
 
-                    var withSameUniqe = alertsDocument.Alerts.FirstOrDefault(alert1 => alert1.UniqueKey == alert.UniqueKey);
-                    if (withSameUniqe != null)
+                    var withSameUnique = alertsDocument.Alerts.FirstOrDefault(alert1 => alert1.UniqueKey == alert.UniqueKey);
+                    if (withSameUnique != null)
                     {
                         // copy information about observed
-                        alert.LastDismissedAt = withSameUniqe.LastDismissedAt;
-                        alertsDocument.Alerts.Remove(withSameUniqe);
+                        alert.LastDismissedAt = withSameUnique.LastDismissedAt;
+                        alertsDocument.Alerts.Remove(withSameUnique);
                     }
 
                     alertsDocument.Alerts.Add(alert);
@@ -60,6 +67,23 @@ namespace Raven.Database.Extensions
                     catch (ConcurrencyException)
                     {
                         //try again...
+                    }
+                    catch (Exception e)
+                    {
+                        if (TransactionalStorageHelper.IsOutOfMemoryException(e))
+                        {
+                            if (tries++ < MaxTries)
+                            {
+                                Thread.Sleep(11);
+                                continue;
+                            }
+
+                            Logger.WarnException("Couldn't save alerts document due to " +
+                                                 $"{self.TransactionalStorage.FriendlyName} out of memory exception", e);
+                            return;
+                        }
+
+                        throw;
                     }
                 }
             }
