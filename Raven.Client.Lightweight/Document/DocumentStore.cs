@@ -54,7 +54,7 @@ namespace Raven.Client.Document
         /// The current session id - only used during construction
         /// </summary>
         [ThreadStatic]
-        private static Guid? currentSessionId;
+        protected static Guid? currentSessionId;
         private const int DefaultNumberOfCachedRequests = 2048;
         private int maxNumberOfCachedRequests = DefaultNumberOfCachedRequests;
         private bool aggressiveCachingUsed;
