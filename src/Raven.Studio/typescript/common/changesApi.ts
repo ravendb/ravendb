@@ -80,7 +80,6 @@ class changesApi {
         new getSingleAuthTokenCommand(this.rs)
             .execute()
             .done((tokenObject: singleAuthToken) => {
-                this.rs.isLoading(false);
                 var token = tokenObject.Token;
                 var connectionString = "singleUseAuthToken=" + token + "&sendServerStartTime=true";
                 action.call(this, connectionString);
@@ -98,10 +97,6 @@ class changesApi {
                 }
                 else if (e.status === ResponseCodes.ServiceUnavailable) {
                     // We're still loading the database, try to reconnect every 2 seconds.
-                    if (this.rs.isLoading() === false) {
-                        messagePublisher.reportError(error || "Failed to connect to changes", e.responseText, e.statusText);
-                    }
-                    this.rs.isLoading(true);
                     setTimeout(() => this.connect(action, true), 2 * 1000);
                 }
                 else if (e.status !== ResponseCodes.Forbidden) { // authorized connection
@@ -170,15 +165,28 @@ class changesApi {
                 args.Param = value;
             }
 
-            let payload = JSON.stringify(args, null, 2);
-            this.webSocket.send(payload);
+            const payload = JSON.stringify(args, null, 2);
+
+            if (!this.closingOrClosed() || !this.isUnwatchCommand(command)) {
+                this.webSocket.send(payload);
+            }
+                
             this.saveSentMessages(needToSaveSentMessages, command, args);
         });
     }
 
+    private closingOrClosed() {
+        const state = this.webSocket.readyState;
+        return WebSocket.CLOSED === state || WebSocket.CLOSING === state;
+    }
+
+    private isUnwatchCommand(command: string) {
+        return command.slice(0, 2) === "un";
+    }
+
     private saveSentMessages(needToSaveSentMessages: boolean, command: string, args: chagesApiConfigureRequestDto) {
         if (needToSaveSentMessages) {
-            if (command.slice(0, 2) === "un") {
+            if (this.isUnwatchCommand(command)) {
                 var commandName = command.slice(2, command.length);
                 this.sentMessages = this.sentMessages.filter(msg => msg.Command !== commandName);
             } else {
@@ -188,7 +196,7 @@ class changesApi {
     }
 
     private fireEvents<T>(events: Array<any>, param: T, filter: (element: T) => boolean) {
-        for (var i = 0; i < events.length; i++) {
+        for (let i = 0; i < events.length; i++) {
             if (filter(param)) {
                 events[i].fire(param);
             }

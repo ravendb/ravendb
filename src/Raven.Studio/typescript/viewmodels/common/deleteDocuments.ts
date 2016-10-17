@@ -2,6 +2,7 @@ import dialog = require("plugins/dialog");
 import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
 import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import database = require("models/resources/database");
 
 class deleteDocuments extends dialogViewModelBase {
 
@@ -9,8 +10,8 @@ class deleteDocuments extends dialogViewModelBase {
     private deletionStarted = false;
     deletionTask = $.Deferred(); // Gives consumers a way to know when the async delete operation completes.
 
-    constructor(documents: Array<documentBase>, elementToFocusOnDismissal?: string) {
-        super(elementToFocusOnDismissal);
+    constructor(documents: Array<documentBase>, private db: database) {
+        super(null);
 
         if (documents.length === 0) {
             throw new Error("Must have at least one document to delete.");
@@ -21,7 +22,7 @@ class deleteDocuments extends dialogViewModelBase {
 
     deleteDocs() {
         var deletedDocIds = this.documents().map(i => i.getId());
-        var deleteCommand = new deleteDocumentsCommand(deletedDocIds, appUrl.getDatabase());
+        var deleteCommand = new deleteDocumentsCommand(deletedDocIds, this.db);
         var deleteCommandTask = deleteCommand.execute();
 
         deleteCommandTask.done(() => this.deletionTask.resolve(this.documents()));

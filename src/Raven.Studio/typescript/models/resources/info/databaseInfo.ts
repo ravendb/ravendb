@@ -27,7 +27,7 @@ class databaseInfo extends resourceInfo {
     }
 
     asResource(): database {
-        return new database(this.name);
+        return new database(this.name, true, []); //TODO: fill with value values or use resources manager to fetch those objects
     }
 }
 

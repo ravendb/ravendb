@@ -13,6 +13,11 @@ import deleteTypesCommand = require("commands/timeSeries/deleteTypesCommand");
 import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import commandBase = require("commands/commandBase");
+import resource = require("models/resources/resource");
+import database = require("models/resources/database");
+import filesystem = require("models/filesystem/filesystem");
+import counterStorage = require("models/counter/counterStorage");
+import timeSeries = require("models/timeSeries/timeSeries");
 
 class deleteItems extends dialogViewModelBase {
 
@@ -20,7 +25,7 @@ class deleteItems extends dialogViewModelBase {
     private deletionStarted = false;
     public deletionTask = $.Deferred(); // Gives consumers a way to know when the async delete operation completes.
 
-    constructor(items: Array<documentBase>, elementToFocusOnDismissal?: string) {
+    constructor(items: Array<documentBase>, private rs: resource, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
 
         if (items.length === 0) {
@@ -35,10 +40,10 @@ class deleteItems extends dialogViewModelBase {
         var deleteCommand: commandBase;
         var firstItem = this.items()[0];
         if (firstItem instanceof document) {
-            deleteCommand = new deleteDocumentsCommand(deleteItemsIds, appUrl.getDatabase());
+            deleteCommand = new deleteDocumentsCommand(deleteItemsIds, this.rs as database);
         }
         else if (firstItem instanceof file) {
-            deleteCommand = new deleteFilesCommand(deleteItemsIds, appUrl.getFileSystem());
+            deleteCommand = new deleteFilesCommand(deleteItemsIds, this.rs as filesystem);
         }
         else if (firstItem instanceof counterSummary) {
             var counters: any = this.items();
@@ -48,7 +53,7 @@ class deleteItems extends dialogViewModelBase {
                     counterName: x.getId()
                 }
             });
-            deleteCommand = new deleteCountersCommand(groupAndNames, appUrl.getCounterStorage());
+            deleteCommand = new deleteCountersCommand(groupAndNames, this.rs as counterStorage);
         } else if (firstItem instanceof timeSeriesPoint) {
             var points = this.items().map((x: timeSeriesPoint) => {
                 return {
@@ -57,14 +62,14 @@ class deleteItems extends dialogViewModelBase {
                     At: x.At
                 };
             });
-            deleteCommand = new deletePointsCommand(points, appUrl.getTimeSeries());
+            deleteCommand = new deletePointsCommand(points, this.rs as timeSeries);
         } else if (firstItem instanceof timeSeriesKey) {
             debugger 
         } else if (firstItem instanceof timeSeriesType) {
             var types = this.items().map((type: timeSeriesType) => {
                 return type.name;
             });
-            deleteCommand = new deleteTypesCommand(types, appUrl.getTimeSeries());
+            deleteCommand = new deleteTypesCommand(types, this.rs as timeSeries);
         } else {
             debugger 
         }

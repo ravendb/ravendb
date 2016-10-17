@@ -3,6 +3,7 @@
 import composition = require("durandal/composition");
 import appUrl = require("common/appUrl");
 import getFoldersCommand = require("commands/filesystem/getFoldersCommand");
+import filesystem = require("models/filesystem/filesystem");
 
 /*
  * A custom Knockout binding handler transforms the target element (a <div>) into a directory tree, powered by jquery-dynatree
@@ -36,7 +37,7 @@ class treeBindingHandler {
         var options: bindingOptions = ko.utils.unwrapObservable(valueAccessor());
 
         var tree = $(element).dynatree({
-            children: [{ title: appUrl.getFileSystem().name, key: "/", isLazy: true, isFolder: true }],
+            children: [{ title: appUrl.getFileSystemNameFromUrl(), key: "/", isLazy: true, isFolder: true }],
             onLazyRead: function (node) {
                 treeBindingHandler.loadNodeChildren("#" + element.id, node, options);
                 node.activate();
@@ -66,7 +67,7 @@ class treeBindingHandler {
         if (node && node.data && node.data.key != "/") {
             dir = node.data.key;
         }
-        var command = new getFoldersCommand(appUrl.getFileSystem(), 0, 1024, dir);
+        var command = new getFoldersCommand(new filesystem(appUrl.getFileSystemNameFromUrl()), 0, 1024, dir); //TODO: pass fs using injection or remove fs specific code from this class
         command.execute().done((results: folderNodeDto[]) => {
             node.setLazyNodeStatus(0);
 

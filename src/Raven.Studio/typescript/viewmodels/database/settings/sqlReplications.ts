@@ -126,7 +126,7 @@ class sqlReplications extends viewModelBase {
         var newDoc = new document(sr);
 
         if (newDoc) {
-            var viewModel = new deleteDocuments([newDoc]);
+            var viewModel = new deleteDocuments([newDoc], this.activeDatabase());
             viewModel.deletionTask.done(() => {
                 this.replications.remove(sr);
                 //this.fetchSqlReplications(this.activeDatabase());

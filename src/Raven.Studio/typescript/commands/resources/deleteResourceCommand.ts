@@ -10,7 +10,7 @@ type deletionResult = {
 
 class deleteDatabaseCommand extends commandBase {
     
-    private oneDatabasePath = endpoints.global.adminDatabases.adminDatabases;
+    private static readonly oneDatabasePath = endpoints.global.adminDatabases.adminDatabases;
 
     //TODO: use endpoints!
     private multipleDatabasesPath = "/admin/databases/batch-delete";
@@ -53,9 +53,10 @@ class deleteDatabaseCommand extends commandBase {
             "hard-delete": this.isHardDelete
         };
 
-        const disableOneResourcePath = (resource.type === TenantType.Database) ? this.oneDatabasePath :
+        const disableOneResourcePath = deleteDatabaseCommand.oneDatabasePath;
+            /* TODO:(resource.type === TenantType.Database) ? this.oneDatabasePath :
             resource.type === TenantType.FileSystem ? this.oneFileSystemPath :
-            resource.type === TenantType.CounterStorage ? this.oneCounterStoragePath : this.oneTimeSeriesPath;
+            resource.type === TenantType.CounterStorage ? this.oneCounterStoragePath : this.oneTimeSeriesPath;*/
         const url = disableOneResourcePath + this.urlEncodeArgs(args);
         return this.del(url, null)
             .done(() => this.reportSuccess("Successfully deleted " + resource.name))

@@ -20,7 +20,7 @@ class notificationCenterOperations {
 
     constructor() {
         this.storage = new notificationCenterPersistanceStorage(this.serverTime);
-        this.activeChangesApi = changesContext.currentResourceChangesApi;
+        this.activeChangesApi = changesContext.default.currentResourceChangesApi;
         ko.postbox.subscribe("ChangesApiReconnected", () => this.onReconnect());
         $(window).bind("storage", (event) => this.onStorageEvent(event));
     }
@@ -91,7 +91,7 @@ class notificationCenterOperations {
     }
 
     private subscribeForOperation(operationId: number, onChange: (e: Raven.Client.Data.OperationStatusChangeNotification) => void) {
-        const disposeHandle = changesContext.currentResourceChangesApi().watchOperation(operationId, onChange);
+        const disposeHandle = this.activeChangesApi().watchOperation(operationId, onChange);
         const watchedOp = new watchedOperation(operationId, disposeHandle);
         this.watchedOperations.unshift(watchedOp);
     }

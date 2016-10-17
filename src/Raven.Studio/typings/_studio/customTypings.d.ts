@@ -166,7 +166,7 @@ declare var Spinner: {
 interface Array<T> {
     remove(item: T): number;
     removeAll(items: T[]): void;
-    first(filter?: (item: T) => boolean): T;
+    first(filter?: (item: T) => boolean): T; //TODO: use find instead!
     last(filter?: (item: T) => boolean): T;
     pushAll(items: T[]): void;
     contains(item: T): boolean;
