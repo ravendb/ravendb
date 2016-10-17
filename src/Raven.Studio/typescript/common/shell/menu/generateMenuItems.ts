@@ -4,6 +4,7 @@ import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 
 import getManageServerMenuItem = require("common/shell/menu/items/manageServer");
 import getResourcesMenuItem = require("common/shell/menu/items/resources");
@@ -20,7 +21,7 @@ export = generateMenuItems;
 function generateMenuItems(resource: resource) {
     if (!resource) {
         return generateNoActiveResourceMenuItems();
-    } else if (resource.isDatabase()) {
+    } else if (resource instanceof database) {
         return generateActiveDatabaseMenuItems();
     } else {
         throw new Error(`Menu items for resource of type ${ resource.fullTypeName } are not implemented.`);

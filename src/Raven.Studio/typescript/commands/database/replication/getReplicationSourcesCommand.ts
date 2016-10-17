@@ -19,7 +19,7 @@ class getReplicationSourcesCommand extends commandBase {
             // insert remote databases info
             dtos.forEach(v => result[v.ServerInstanceId] = database.getNameFromUrl(v.Source));
             // ... and insert local database instance id
-            result[this.db.statistics().databaseId()] = this.db.name;
+            //TODO: result[this.db.statistics().databaseId()] = this.db.name;
 
             return result;
         });

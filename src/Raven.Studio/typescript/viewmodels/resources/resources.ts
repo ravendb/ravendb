@@ -114,7 +114,7 @@ class resources extends viewModelBase {
 
     resourceUrl(rs: resourceInfo): string {
         if (rs instanceof databaseInfo) {
-            const db = new database(rs.name); //TODO: make sure database is thin class!
+            const db = rs.asResource();
             return appUrl.forDocuments(null, db);
         }
         //TODO:fs, cs, ts
@@ -166,7 +166,7 @@ class resources extends viewModelBase {
             this.resources().sortedResources.remove(matchedResource);
             this.selectedResources.remove(matchedResource.qualifiedName);
 
-            //TODO: if it is selected resource then select none! - however it can be handled in shell ( ko.postbox.publish("SelectNone");)
+            this.changesContext.disconnectIfCurrent(matchedResource.asResource());
         }
     }
 
@@ -179,7 +179,11 @@ class resources extends viewModelBase {
 
             disableDatabaseToggleViewModel.result.done(result => {
                 if (result.can) {
-                    //TODO: send event to optionally disconnect from changes api
+                    if (disableAll) {
+                        selectedResources.forEach(rs => {
+                            this.changesContext.disconnectIfCurrent(rs);        
+                        });
+                    }
 
                     //TODO: spinners
 
@@ -198,12 +202,13 @@ class resources extends viewModelBase {
     private onResourceDisabledToggle(rs: resource, action: boolean) { //TODO: should we operate on resource or resourceInfo here?
         //TODO: review body of this method
         if (rs) {
+            /* TODO:
             rs.disabled(action);
-            rs.isChecked(false);
+            //TODO: rs.isChecked(false);
 
-            if (rs.isSelected() && rs.disabled() === false) {
+            if (!rs.disabled() === false) {
                 rs.activate();
-            }
+            }*/
         }
     }
 

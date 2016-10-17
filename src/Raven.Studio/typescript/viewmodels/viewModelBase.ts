@@ -1,20 +1,20 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
 import appUrl = require("common/appUrl");
-import activeResourceTracker = require("viewmodels/resources/activeResourceTracker");
+import activeResourceTracker = require("common/shell/activeResourceTracker");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import changeSubscription = require("common/changeSubscription");
 import oauthContext = require("common/oauthContext");
 import changesContext = require("common/changesContext");
-import messagePublisher = require("common/messagePublisher");
 import confirmationDialog = require("viewmodels/common/confirmationDialog");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import document = require("models/database/documents/document");
 import downloader = require("common/downloader");
+import resourcesManager = require("common/shell/resourcesManager");
 
 /*
- * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
+ * Base view model class that provides basic view model services, such as tracking the active resource and providing a means to add keyboard shortcuts.
 */
 class viewModelBase {
 
@@ -27,13 +27,17 @@ class viewModelBase {
 
     isBusy = ko.observable<boolean>(false);
 
+    protected resourcesManager = resourcesManager.default;
+
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
-    notifications: Array<changeSubscription> = [];
+    private notifications: Array<changeSubscription> = [];
     appUrls: computedAppUrls;
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
     static showSplash = ko.observable<boolean>(false);
     private isAttached = false;
+
+    protected changesContext = changesContext.default;
     
     dirtyFlag = new ko.DirtyFlag([]);
 
@@ -51,40 +55,34 @@ class viewModelBase {
         var self = this;
         setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
         this.downloader.reset();
-
-        var resource = appUrl.getResource();
+        
+        /* TODO
         if (resource && resource.disabled()) {
             messagePublisher.reportError(`${resource.fullTypeName} '${resource.name}' is disabled!`,
                 `You can't access any section of the ${resource.fullTypeName.toLowerCase()} while it's disabled.`);
 
-        }
+        }*/
 
         return true;
     }
 
     activate(args: any, isShell = false) {
-        var db = appUrl.getDatabase();
-        var currentDb = this.activeDatabase();
-        if (!!db && (!currentDb || currentDb.name !== db.name)) {
-            ko.postbox.publish("ActivateDatabaseWithName", db.name);
+        if (!isShell) {
+            this.resourcesManager.activateBasedOnCurrentUrl();    
         }
-
+    
         // create this ko.computed once to avoid creation and subscribing every 50 ms - thus creating memory leak.
         var adminArea = this.appUrls.isAreaActive("admin");
 
         oauthContext.enterApiKeyTask.done(() => {
-            // we have to wait for changes api to connect as well
-            // as obtaining changes api connection might take a while, we have to spin until connection is read
-            var createNotifySpinFunction = () => {
-                if (isShell || adminArea())
-                    return;
-                if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
-                    this.notifications = this.createNotifications();
-                } else {
-                    setTimeout(createNotifySpinFunction, 50);
-                }
-            }
-            createNotifySpinFunction();
+            if (isShell || adminArea())
+                return;
+
+            this.changesContext
+                .afterConnection
+                .done(() => {
+                    this.notifications.pushAll(this.createNotifications());
+                });
         });
 
         this.postboxSubscriptions = this.createPostboxSubscriptions();
@@ -209,7 +207,7 @@ class viewModelBase {
      * Navigates by replacing the current URL. It does not record a new entry in the browser's navigation history.
      */
     updateUrl(url: string) {
-        var options: DurandalNavigationOptions = {
+        const options: DurandalNavigationOptions = {
             replace: true,
             trigger: false
         };
@@ -267,10 +265,10 @@ class viewModelBase {
     canContinueIfNotDirty(title: string, confirmationMessage: string) {
         var deferred = $.Deferred<void>();
 
-        var isDirty = this.dirtyFlag().isDirty();
+        const isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
-            var confirmationMessageViewModel = this.confirmationMessage(title, confirmationMessage);
-            confirmationMessageViewModel.done(() => deferred.resolve());
+            this.confirmationMessage(title, confirmationMessage)
+                .done(() => deferred.resolve());
         } else {
             deferred.resolve();
         }
@@ -281,7 +279,7 @@ class viewModelBase {
     private beforeUnloadListener: EventListener = (e: any): any => {
         var isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
-            var message = "You have unsaved data.";
+            const message = "You have unsaved data.";
             e = e || window.event;
 
             // For IE and Firefox
@@ -295,7 +293,7 @@ class viewModelBase {
     }
 
     continueTest() {
-        var doc = document.empty();
+        const doc = document.empty();
         new saveDocumentCommand("Debug/Done", doc, this.activeDatabase(), false)
             .execute()
             .done(() => viewModelBase.hasContinueTestOption(false));

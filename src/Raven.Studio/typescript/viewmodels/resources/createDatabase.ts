@@ -9,8 +9,10 @@ import getStatusDebugConfigCommand = require("commands/database/debug/getStatusD
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import topology = require("models/database/replication/topology");
 import shell = require("viewmodels/shell");
+import resourcesManager = require("common/shell/resourcesManager");
 
 class createDatabase extends createResourceBase {
+
     resourceNameCapitalString = "Database";
     resourceNameString = "database";
 
@@ -42,7 +44,7 @@ class createDatabase extends createResourceBase {
     });
 
     constructor(parent: dialogViewModelBase) {
-        super(shell.databases, parent);
+        super(resourcesManager.default.databases, parent);
 
         if (!!this.licenseStatus() && this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true") {
             this.isPeriodicExportBundleEnabled(false);

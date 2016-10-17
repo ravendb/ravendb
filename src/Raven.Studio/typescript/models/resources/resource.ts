@@ -1,50 +1,38 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
+import EVENTS = require("common/constants/events");
+
 abstract class resource {
     isAdminCurrentTenant = ko.observable<boolean>(false);
-    isSelected = ko.observable<boolean>(false);
-    isChecked = ko.observable<boolean>(false);
-    itemCountText: KnockoutComputed<string>;
-    isVisible = ko.observable(true);
-    isLoading = ko.observable(false);
-    isLoaded = ko.observable<boolean>(false);
-    disabled = ko.observable<boolean>(false);
-    isLicensed: KnockoutComputed<boolean>;
     activeBundles = ko.observableArray<string>();
-    statistics: KnockoutObservable<any>;
-    fullTypeName: string;
+    name: string;
 
-    constructor(public name: string, public type: TenantType, isAdminCurrentTenant: boolean) {
+    constructor(name: string, isAdminCurrentTenant: boolean, activeBundles: string[]) {
+        this.name = name;
         this.isAdminCurrentTenant(isAdminCurrentTenant);
+        this.activeBundles(activeBundles);
     }
 
     activate() {
-        throw new Error("Activate must be overridden.");
+        ko.postbox.publish(EVENTS.Resource.Activate,
+            {
+                resource: this
+            });
     }
 
-    checkboxToggle() {
-        this.isChecked.toggle();
-    }
-
-    isDatabase() {
-        return this.type === TenantType.Database;
-    }
-
-    isFileSystem() {
-        return this.type === TenantType.FileSystem;
-    }
-
-    isCounterStorage() {
-        return this.type === TenantType.CounterStorage;
-    }
-
-    isTimeSeries() {
-        return this.type === TenantType.TimeSeries;
-    }
+    abstract get fullTypeName(): string;
 
     abstract get qualifier(): string;
 
     abstract get urlPrefix(): string;
+
+    abstract get type(): string;
+
+    updateUsing(incomingCopy: this) {
+        this.isAdminCurrentTenant = incomingCopy.isAdminCurrentTenant;
+        this.activeBundles = incomingCopy.activeBundles;
+        this.name = incomingCopy.name;
+    }
 
     get qualifiedName() {
         return this.qualifier + "/" + this.name;

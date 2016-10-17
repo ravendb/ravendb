@@ -1,14 +1,14 @@
 import dialog = require("plugins/dialog");
 import createResourceBase = require("viewmodels/resources/createResourceBase");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import shell = require("viewmodels/shell");
+import resourcesManager = require("common/shell/resourcesManager");
 
 class createTimeSeries extends createResourceBase {
     resourceNameCapitalString = "Time Series";
     resourceNameString = "time series";
 
     constructor(parent: dialogViewModelBase) {
-        super(shell.timeSeries, parent);
+        super(resourcesManager.default.timeSeries, parent);
         this.storageEngine("voron");
     }
 

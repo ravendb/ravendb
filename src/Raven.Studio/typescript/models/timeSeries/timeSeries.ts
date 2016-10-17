@@ -5,47 +5,38 @@ import license = require("models/auth/license");
 import timeSeriesStatistics = require("models/timeSeries/timeSeriesStatistics");
 
 class timeSeries extends resource {
-    statistics = ko.observable<timeSeriesStatistics>();
-    static type = "timeSeries";
-    iconName = "fa fa-fw fa-clock-o";
+    static readonly type = "timeSeries";
+    static readonly qualifier = "ts";
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = []) {
-        super(name, TenantType.TimeSeries, isAdminCurrentTenant);
+    constructor(name: string, isAdminCurrentTenant: boolean = true, bundles: string[] = []) {
+        super(name, isAdminCurrentTenant, bundles);
         if (!name) {
             debugger;
         }
-        this.fullTypeName = "Time Series";
-        this.disabled(isDisabled);
-        this.activeBundles(bundles);
-        this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().keysCountText() : "");
+        /* TODO
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
                 var timeSeriesValue = license.licenseStatus().Attributes.timeSeries;
                 return /^true$/i.test(timeSeriesValue);
             }
             return true;
-        });
-    }
-
-    activate() {
-        this.isLoaded(true);
-        ko.postbox.publish("ActivateTimeSeries", this);
-    }
-
-    saveStatistics(dto: timeSeriesStatisticsDto) {
-        if (!this.statistics()) {
-            this.statistics(new timeSeriesStatistics());
-        }
-
-        this.statistics().fromDto(dto);
+        });*/
     }
 
     get qualifier() {
-        return "ts";
+        return timeSeries.qualifier;
     }
 
     get urlPrefix() {
         return "ts";
+    }
+
+    get fullTypeName() {
+        return "Time Series";
+    }
+
+    get type() {
+        return timeSeries.type;
     }
 
     static getNameFromUrl(url: string) {
