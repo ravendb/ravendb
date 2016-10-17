@@ -984,7 +984,7 @@ class appUrl {
 
     static urlEncodeArgs(args: any): string {
         const propNameAndValues: Array<string> = [];
-        for (let prop in Object.keys(args)) {
+        for (let prop of Object.keys(args)) {
             const value = args[prop];
 
             if (value instanceof Array) {
