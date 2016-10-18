@@ -142,6 +142,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private HashSet<Slice> GetReferencesForDocument(string key)
         {
+            //TODO: Consider making this a LazyStringValue dictionary, instead
             if (ReferencesByCollection == null)
                 ReferencesByCollection = new Dictionary<string, Dictionary<string, HashSet<Slice>>>(StringComparer.OrdinalIgnoreCase);
 
