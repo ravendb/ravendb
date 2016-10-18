@@ -533,6 +533,9 @@ namespace Sparrow.Json
             _liveReaders.Clear();
             _arenaAllocator.ResetArena();
 
+            if(_tempBuffer != null)
+                GetNativeTempBuffer(_tempBuffer.SizeInBytes);
+
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
             // When a context is re-used, the buffer containing those field names was not reset and the strings are still valid and alive.
 

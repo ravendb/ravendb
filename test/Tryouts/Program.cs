@@ -20,7 +20,16 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-           
+            for (int i = 0; i < 15; i++)
+            {
+                Console.WriteLine(i);
+                using (var a = new SlowTests.Tests.Faceted.FacetedIndex())
+                {
+                    a.CanPerformFacetedSearch_Embedded();
+                }
+            }
+            if (DateTime.Today.Day != -1)
+                return;
             using (var store = new DocumentStore
             {
                 Url = "http://localhost:8080",
