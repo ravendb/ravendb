@@ -701,8 +701,8 @@ namespace Raven.Server.Documents
             for (int i = 0; i < key.Length; i++)
             {
                 char ch = key[i];
-                if(ch > 127) // not ASCII, use slower mode
-                    return GetSliceFromUnicodeKey(context, key, out keySlice, buffer, byteCount);
+                if (ch > 127) // not ASCII, use slower mode
+                    goto UnlikelyUnicode;
                 if (ch >= 65 && ch <= 90)
                     buffer[i] = (byte)(ch | 0x20);
                 else
@@ -711,6 +711,8 @@ namespace Raven.Server.Documents
 
             return Slice.External(context.Allocator, buffer, (ushort)key.Length, out keySlice);
 
+          UnlikelyUnicode:
+            return GetSliceFromUnicodeKey(context, key, out keySlice, buffer, byteCount);
         }
 
         private static ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromUnicodeKey(
