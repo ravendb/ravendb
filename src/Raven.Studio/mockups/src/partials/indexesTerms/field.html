@@ -1,6 +1,6 @@
-<div class="panel field" >
-    <div class="panel-header bar padding padding-sm" >
-        <i class="icon-arrow-right"></i>
+<div class="panel field ">
+    <div class="panel-header bar padding padding-sm collapsed" data-toggle="collapse" data-target="#{{ id }}" >
+        <i class="icon-arrow-down"></i>
         <h3 class="text-primary">
             {{ name }}
 
@@ -10,7 +10,7 @@
         </span>
     </div>
 
-    <div class="collapsible collapse">
+    <div class="collapsible collapse" id="{{ id }}">
         <div class="field-terms panel-body" >
             <ul class="list-unstyled row">
                 {{# times 100}}
