@@ -63,6 +63,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             if (entry->Size != result.Size)
                             {
                                 Delete(id);
+                                readResult = _parent.Read(_nestedValueKey);
                                 break;
                             }
                             var dataStart = _parent.DirectAdd(_nestedValueKey, reader.Length);
@@ -72,9 +73,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         }
                         entry = (ResultHeader*)((byte*)entry + sizeof(ResultHeader) + entry->Size);
                     }
-                    Memory.Copy(tmp.TempPagePointer, readResult.Reader.Base, readResult.Reader.Length);
-                    dataPosInTempPage = readResult.Reader.Length;
+                    
+                    if (readResult != null)
+                    {
+                        Memory.Copy(tmp.TempPagePointer, readResult.Reader.Base, readResult.Reader.Length);
+                        dataPosInTempPage = readResult.Reader.Length;
+                    }
                 }
+
                 Debug.Assert(dataPosInTempPage + sizeof(ResultHeader) + result.Size <= tmp.TempPageBuffer.Length);
                 var newEntry = (ResultHeader*)(tmp.TempPagePointer + dataPosInTempPage);
                 newEntry->Id = id;
