@@ -23,9 +23,9 @@ namespace Tryouts
             for (int i = 0; i < 15; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new SlowTests.Tests.Faceted.FacetedIndex())
+                using (var a = new FastTests.Client.Subscriptions.RavenDB_3193())
                 {
-                    a.CanPerformFacetedSearch_Embedded();
+                    a.ShouldRespectCollectionCriteria().Wait();
                 }
             }
             if (DateTime.Today.Day != -1)
