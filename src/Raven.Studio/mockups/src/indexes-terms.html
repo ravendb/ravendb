@@ -12,22 +12,26 @@
                 </h2>
 
                 {{> indexesTerms/field
-                    count="13"
+                count="13"
+                    id="panel-1"
                     name="Color"
                     valueTmpl="{{commerce.color}}"
                 }}
                 {{> indexesTerms/field
                     count="99"
+                    id="panel-2"
                     name="Name"
                     valueTmpl="{{name.firstName}} {{name.lastName}}"
                 }}
                 {{> indexesTerms/field
                     count="10"
+                    id="panel-3"
                     name="__documentID"
                     valueTmpl="{{random.number}}"
                 }}
                 {{> indexesTerms/field
                     count="120"
+                    id="panel-4"
                     name="Age"
                     valueTmpl="{{random.number}}"
                 }}
@@ -38,13 +42,6 @@
     {{> scripts }}
 
     <script>
-    $('.field .bar').on('click', function open(evnt) {
-            $(this).parent()
-            .toggleClass('open')
-            .find('.collapsible')
-            .collapse('toggle');
-    });
-
     $('.loadMore .btn').click('click', function () {
         $(this).toggleClass('btn-spinner');
     });
