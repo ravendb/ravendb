@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
+using Raven.Client.Smuggler;
 using Raven.Json.Linq;
 using Raven.Server.Documents;
 using Raven.Server.Web.Operations;
@@ -87,6 +88,9 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(ResourcesInfo));
 
+
+            // smuggler
+            scripter.AddType(typeof(DatabaseExportOptions));
 
             return scripter;
         }

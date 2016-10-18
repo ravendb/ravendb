@@ -29,6 +29,12 @@
                                     Include Indexes
                                 </label>
                             </div>
+                            <div class="toggle">
+                                <input id="toggle3" type="checkbox" data-bind="checked: includeIdentities">
+                                <label for="toggle3">
+                                    Include Identities
+                                </label>
+                            </div>
                         </div>
                         <div class="col-sm-6 col-lg-4">
                             <div class="toggle">
@@ -135,5 +141,6 @@
 
 <div class="hidden">
     <form method="post" id="exportDownloadForm">
+        <input type="hidden" name="DownloadOptions"/>
     </form>
 </div>

@@ -85,6 +85,7 @@ class exportDatabase extends viewModelBase {
         });
 
         this.exportCommand = ko.pureComputed<string>(() => {
+            //TODO: review this!
             var targetServer = appUrl.forServer();
             var model = this.model;
             var outputFilename = exportDatabase.escapeForShell(model.exportFileName());
@@ -100,12 +101,11 @@ class exportDatabase extends viewModelBase {
             if (model.includeTransformers()) {
                 types.push("Transformers");
             }
-            if (model.removeAnalyzers()) {
-                types.push("RemoveAnalyzers");
-            }
             if (types.length > 0) {
                 commandTokens.push("--operate-on-types=" + types.join(","));
             }
+
+            //TODO: identities, remove analyzers
 
             var databaseName = this.activeDatabase().name;
             commandTokens.push("--database=" + exportDatabase.escapeForShell(databaseName));
@@ -178,9 +178,10 @@ class exportDatabase extends viewModelBase {
             });
     }
 
-    private startDownload(args: smugglerOptionsDto) {
+    private startDownload(args: Raven.Client.Smuggler.DatabaseExportOptions) {
         const $form = $("#exportDownloadForm");
         const db = this.activeDatabase();
+        const $downloadOptions = $("[name=DownloadOptions]", $form);
 
         $.when<any>(this.getNextOperationId(db), this.getAuthToken(db))
             .then(([operationId]:[number], [token]:[singleAuthToken]) => {
@@ -188,17 +189,7 @@ class exportDatabase extends viewModelBase {
                 var authToken = (url.indexOf("?") === -1 ? "?" : "&") + "singleUseAuthToken=" + token.Token;
                 const operationPart = "&operationId=" + operationId;
                 $form.attr("action", appUrl.forResourceQuery(db) + url + authToken + operationPart);
-                $form.empty();
-                for (let key in args) {
-                    if (args.hasOwnProperty(key)) {
-                        $form.append($("<input />")
-                            .attr({
-                                type: "hidden",
-                                name: key,
-                                value: JSON.stringify((<any>args)[key], null, 2)
-                            }));
-                    }
-                }
+                $downloadOptions.val(JSON.stringify(args));
                 $form.submit();
 
                 notificationCenter.instance.monitorOperation(db, operationId)
