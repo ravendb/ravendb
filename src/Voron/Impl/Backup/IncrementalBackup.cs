@@ -48,7 +48,7 @@ namespace Voron.Impl.Backup
                 long numberOfBackedUpPages;
                 using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
                 {
-                    numberOfBackedUpPages = Incremental_Backup(env, compression, infoNotify, 
+                    numberOfBackedUpPages = Incremental_Backup(env, compression, infoNotify,
                         backupStarted,  package, string.Empty, copier);
                 }
                 file.Flush(true); // make sure that this is actually persisted fully to disk
@@ -97,7 +97,7 @@ namespace Voron.Impl.Backup
             long lastWrittenLogPage = -1;
             bool backupSuccess = true;
             IncrementalBackupInfo backupInfo;
-            using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite))
+            using (var txw = env.NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite))
             {
                 backupInfo = env.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
 
@@ -110,9 +110,9 @@ namespace Voron.Impl.Backup
                 // txw.Commit(); intentionally not committing
             }
 
-            using (env.NewLowLevelTransaction(TransactionFlags.Read))
+            using (env.NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.Read))
             {
-                backupStarted?.Invoke(); // we let call know that we have started the backup 
+                backupStarted?.Invoke(); // we let call know that we have started the backup
 
                 var usedJournals = new List<JournalFile>();
 
@@ -292,7 +292,7 @@ namespace Voron.Impl.Backup
         {
             using (env.Journal.Applicator.TakeFlushingLock())
             {
-                using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite))
+                using (var txw = env.NewLowLevelTransaction(new TransactionPersistentContext(true), TransactionFlags.ReadWrite))
                 {
                     env.FlushLogToDataFile(txw);
 
@@ -315,7 +315,7 @@ namespace Voron.Impl.Backup
         {
             using (env.Journal.Applicator.TakeFlushingLock())
             {
-                using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite))
+                using (var txw = env.NewLowLevelTransaction(new TransactionPersistentContext(true), TransactionFlags.ReadWrite))
                 {
                     env.FlushLogToDataFile(txw);
 
@@ -418,7 +418,7 @@ namespace Voron.Impl.Backup
                 }
                 catch
                 {
-                    // this is just a temporary directory, the worst case scenario is that we dont reclaim the space from the OS temp directory 
+                    // this is just a temporary directory, the worst case scenario is that we dont reclaim the space from the OS temp directory
                     // if for some reason we cannot delete it we are safe to ignore it.
                 }
             }

@@ -148,7 +148,7 @@ namespace Voron.Impl.Journal
             {
                 var initialSize = _env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize;
                 var journalRecoveryName = StorageEnvironmentOptions.JournalRecoveryName(journalNumber);
-                using (var recoveryPager = _env.Options.CreateScratchPager(journalRecoveryName, initialSize))
+                using (var recoveryPager = _env.Options.CreateScratchPager(journalRecoveryName,initialSize))
                 using (var pager = _env.Options.OpenJournalPager(journalNumber))
                 {
                     RecoverCurrentJournalSize(pager);
@@ -396,7 +396,6 @@ namespace Voron.Impl.Journal
             private long _lastSyncedTransactionId;
             private long _lastSyncedJournal;
             private long _oldestActiveTransactionWhenFlushed;
-
             private JournalFile _lastFlushedJournal;
             private bool _ignoreLockAlreadyTaken;
 
@@ -418,7 +417,7 @@ namespace Voron.Impl.Journal
                 try
                 {
                     Monitor.TryEnter(_flushingLock, timeToWait, ref lockTaken);
-
+                 
                     if (lockTaken == false)
                     {
                         if (timeToWait == TimeSpan.Zero)
@@ -521,7 +520,7 @@ namespace Voron.Impl.Journal
                     try
                     {
                         _waj._env.IncreaseTheChanceForGettingTheTransactionLock();
-                        using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(TransactionFlags.ReadWrite).JournalApplicatorTransaction())
+                        using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(new TransactionPersistentContext(true), TransactionFlags.ReadWrite).JournalApplicatorTransaction())
                         {
                             _lastSyncedJournal = lastProcessedJournal;
                             _lastSyncedTransactionId = lastFlushedTransactionId;
@@ -561,7 +560,7 @@ namespace Voron.Impl.Journal
                             _waj._env.FlushInProgressLock.ExitWriteLock();
                     }
                     _waj._env.QueueForSyncDataFile();
-                }
+                    }
                 finally
                 {
                     if (lockTaken)
@@ -696,7 +695,7 @@ namespace Voron.Impl.Journal
                 }
                 else
                 {
-                    using (var tx = _waj._env.NewLowLevelTransaction(TransactionFlags.ReadWrite).JournalApplicatorTransaction())
+                    using (var tx = _waj._env.NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite).JournalApplicatorTransaction())
                     {
                         var pagerState = _waj._dataPager.EnsureContinuous(last.PageNumber, numberOfPagesInLastPage);
                         tx.EnsurePagerStateReference(pagerState);
@@ -731,7 +730,7 @@ namespace Voron.Impl.Journal
                         continue;
                     if (j.Number == lastProcessedJournal) // we are in the last log we synced
                     {
-                        if (j.AvailablePages != 0 || //　if there are more pages to be used here or 
+                        if (j.AvailablePages != 0 || //　if there are more pages to be used here or
                         j.PageTranslationTable.MaxTransactionId() != lastFlushedTransactionId) // we didn't synchronize whole journal
                             continue; // do not mark it as unused
                     }
@@ -792,7 +791,7 @@ namespace Voron.Impl.Journal
             {
                 foreach (var journalFile in _journalsToDelete)
                 {
-                    // we need to release all unused journals 
+                    // we need to release all unused journals
                     // however here we don't force them to DeleteOnClose
                     // because we didn't synced the data file yet
                     // and we will need them on a next database recovery
@@ -895,16 +894,16 @@ namespace Voron.Impl.Journal
                 CurrentFile = null;
             }
 
-            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * _compressionPager.PageSize;
+            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages*_compressionPager.PageSize;
             if (compressionBufferSize > _env.Options.MaxScratchBufferSize)
             {
-                // the compression pager is too large, we probably had a big transaction and now can 
+                // the compression pager is too large, we probably had a big transaction and now can
                 // free all of that and come back to more reasonable values.
                 if (_logger.IsOperationsEnabled)
                 {
                     _logger.Operations(
-                        $"Compression buffer: {_compressionPager} has reached size {compressionBufferSize / 1024:#,#} kb which is more than the limit " +
-                        $"of {_env.Options.MaxScratchBufferSize / 1024:#,#} kb. Will trim it no to the max size allowed. If this is happen on a regular basis," +
+                        $"Compression buffer: {_compressionPager} has reached size {compressionBufferSize/1024:#,#} kb which is more than the limit " +
+                        $"of {_env.Options.MaxScratchBufferSize/1024:#,#} kb. Will trim it no to the max size allowed. If this is happen on a regular basis," +
                         " consider raising the limt (MaxScratchBufferSize option control it), since it can cause performance issues");
                 }
 
@@ -1017,7 +1016,7 @@ namespace Voron.Impl.Journal
 
         public void TruncateJournal(int pageSize)
         {
-            // switching transactions modes requires to close jounal, 
+            // switching transactions modes requires to close jounal,
             // truncate it (in case of recovery) and create next journal file
             _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, null);
             CurrentFile?.JournalWriter.Truncate(pageSize * CurrentFile.WritePagePosition);
