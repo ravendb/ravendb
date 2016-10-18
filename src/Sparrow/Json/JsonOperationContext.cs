@@ -44,7 +44,7 @@ namespace Sparrow.Json
         internal int InUse;
         private readonly JsonParserState _jsonParserState;
         private readonly ObjectJsonParser _objectJsonParser;
-        private BlittableJsonDocumentBuilder _writer;
+        private readonly BlittableJsonDocumentBuilder _writer;
 
         public static JsonOperationContext ShortTermSingleUse()
         {
