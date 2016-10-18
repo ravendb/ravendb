@@ -12,7 +12,6 @@
     "allowUnsafe": true,
     "emitEntryPoint": true,
     "warningsAsErrors": true,
-    "debugType": "portable",
     "define": [ "PORTABLE" ],
     "compile": {
       "include": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/metrics.net/Src/Metrics/**/*.cs" ]
@@ -45,10 +44,7 @@
     "Microsoft.Extensions.Configuration.CommandLine": "1.0.0",
     "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.0.0",
     "Microsoft.Extensions.Configuration.Json": "1.0.0",
-    "Microsoft.NETCore.App": {
-      "version": "1.0.1",
-      "type": "build"
-    },
+    "Microsoft.NETCore.App": "1.0.1",
     "Raven.Client": "4.0.0-*",
     "Sparrow": "4.0.0-*",
     "System.ComponentModel": "4.0.1",
@@ -68,14 +64,14 @@
       "dependencies": {
       },
       "imports": "dnxcore50"
-    }    
+    }
   },
 
   "runtimes": {
     "win7-x64": {},
     "win8-x64": {},
     "win10-x64": {},
-    "ubuntu.14.04-x64": {} 
+    "ubuntu.14.04-x64": {}
   },
 
   "userSecretsId": "aspnet5-Raven.Server-20160308043041"
