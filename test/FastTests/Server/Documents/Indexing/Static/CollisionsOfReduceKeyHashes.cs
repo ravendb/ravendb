@@ -100,7 +100,6 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
             TransactionOperationContext indexContext;
             using (index._contextPool.AllocateOperationContext(out indexContext))
-            using (indexContext)
             {
                 ulong hashOfReduceKey = 73493;
 

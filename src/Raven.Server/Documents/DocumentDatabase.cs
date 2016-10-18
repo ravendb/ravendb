@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -12,12 +11,9 @@ using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Impl.Backup;
@@ -33,7 +29,6 @@ namespace Raven.Server.Documents
         private readonly object _idleLocker = new object();
         private Task _indexStoreTask;
         private Task _transformerStoreTask;
-
         private readonly ConfigurationStorage _configurationStorage;
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
@@ -42,6 +37,7 @@ namespace Raven.Server.Documents
         {
             StartTime = SystemTime.UtcNow;
             Name = name;
+            ResourceName = "db/" + name;
             Configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             Notifications = new DocumentsNotifications();
@@ -74,7 +70,7 @@ namespace Raven.Server.Documents
 
         public Guid DbId => DocumentsStorage.Environment?.DbId ?? Guid.Empty;
 
-        public string ResourceName => $"db/{Name}";
+        public string ResourceName { get; }
 
         public RavenConfiguration Configuration { get; }
 

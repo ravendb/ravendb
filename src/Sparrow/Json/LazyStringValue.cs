@@ -63,6 +63,20 @@ namespace Sparrow.Json
             return result == 0 ? Size - otherSize : result;
         }
 
+        public static bool operator ==(LazyStringValue self, LazyStringValue str)
+        {
+            if (ReferenceEquals(self, null) && ReferenceEquals(str,null))
+                return true;
+            if (ReferenceEquals(self, null) || ReferenceEquals(str,null))
+                return false;
+            return self.Equals(str);
+        }
+
+        public static bool operator !=(LazyStringValue self, LazyStringValue str)
+        {
+            return !(self == str);
+        }
+
         public static bool operator ==(LazyStringValue self, string str)
         {
             if (ReferenceEquals(self, null) && str == null)
@@ -79,8 +93,8 @@ namespace Sparrow.Json
 
         public static implicit operator string(LazyStringValue self)
         {
-            if (self == null)
-                throw new ArgumentNullException(nameof(self));
+            if (self == (LazyStringValue)null)
+                return null;
 
             if (self.String != null)
                 return self.String;
@@ -95,11 +109,6 @@ namespace Sparrow.Json
             }
         }
 
-        public static implicit operator byte[](LazyStringValue self)
-        {
-            return Convert.FromBase64String(self);
-        }
-
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(obj, null))
@@ -109,7 +118,7 @@ namespace Sparrow.Json
             if (s != null)
                 return Equals(s);
             var comparer = obj as LazyStringValue;
-            if (comparer != null)
+            if (comparer != (LazyStringValue)null)
                 return Equals(comparer);
 
             return ReferenceEquals(obj, this);
@@ -132,7 +141,7 @@ namespace Sparrow.Json
 
             var lsv = obj as LazyStringValue;
 
-            if (lsv != null)
+            if (lsv != (LazyStringValue)null)
                 return CompareTo(lsv);
 
             var s = obj as string;

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
@@ -194,8 +195,8 @@ namespace Sparrow.Json
                 _propertyNames = new LazyStringValue[totalNumberOfProps];
             }
 
-            var propertyName = _propertyNames[propertyId];
-            if (propertyName == null)
+            LazyStringValue propertyName = _propertyNames[propertyId];
+            if (propertyName == (LazyStringValue)null) 
             {
                 var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId * _propNamesDataOffsetSize;
                 var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
@@ -340,9 +341,9 @@ namespace Sparrow.Json
             }
 
             var lazyStringValue = result as LazyStringValue;
-            if (lazyStringValue != null)
+            if (lazyStringValue != (LazyStringValue)null)
             {
-                str = lazyStringValue;
+                str = (string)lazyStringValue;
                 return true;
             }
 
@@ -480,8 +481,35 @@ namespace Sparrow.Json
             return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
         }
 
+        public class PropertiesInsertionBuffer
+        {
+            public int[] Properties;
+            public int[] Offsets;
+        }
+
+        public int GetPropertiesByInsertionOrder(PropertiesInsertionBuffer buffers)
+        {
+            if (buffers.Properties == null ||
+                buffers.Properties.Length < _propCount)
+            {
+                var size = Bits.NextPowerOf2(_propCount);
+                buffers.Properties = new int[size];
+                buffers.Offsets = new int[size];
+            }
+            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+            for (int i = 0; i < _propCount; i++)
+            {
+                var propertyIntPtr = _metadataPtr + i * metadataSize;
+                buffers.Offsets[i] = ReadNumber(propertyIntPtr, _currentOffsetSize);
+                buffers.Properties[i] = i;
+            }
+            Array.Sort(buffers.Offsets, buffers.Properties, 0, _propCount, NumericDescendingComparer.Instance);
+            return _propCount;
+        }
+
         public int[] GetPropertiesByInsertionOrder()
         {
+            //TODO: Move all callers to use the other overload
             var props = new int[_propCount];
             var offsets = new int[_propCount];
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
@@ -494,7 +522,6 @@ namespace Sparrow.Json
             Array.Sort(offsets, props, NumericDescendingComparer.Instance);
             return props;
         }
-
 
 
         internal object GetObject(BlittableJsonToken type, int position)

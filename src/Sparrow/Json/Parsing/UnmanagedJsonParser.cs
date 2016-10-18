@@ -76,6 +76,8 @@ namespace Sparrow.Json.Parsing
         public void NewDocument()
         {
             _maybeBeforePreamble = true;
+            _stringBuffer.Dispose();
+            _stringBuffer = _ctx.GetStream();
         }
 
         public bool Read()
