@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 
@@ -8,6 +9,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.UniqueConstraints
 {
+    [InheritedExport(typeof(AbstractPutTrigger))]
+    [ExportMetadata("Bundle", "Unique Constraints")]
+    [ExportMetadata("IsRavenExternalBundle", true)]
     public class UniqueConstraintsPutTrigger : AbstractPutTrigger
     {
         public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Etag etag, TransactionInformation transactionInformation)
