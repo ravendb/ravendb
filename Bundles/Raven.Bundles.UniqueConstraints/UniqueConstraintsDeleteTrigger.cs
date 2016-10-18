@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using Raven.Imports.Newtonsoft.Json.Linq;
 
@@ -10,6 +11,9 @@ namespace Raven.Bundles.UniqueConstraints
     using Raven.Database.Extensions;
     using System;
 
+    [InheritedExport(typeof(AbstractDeleteTrigger))]
+    [ExportMetadata("Bundle", "Unique Constraints")]
+    [ExportMetadata("IsRavenExternalBundle", true)]
     public class UniqueConstraintsDeleteTrigger : AbstractDeleteTrigger
     {
         public override void OnDelete(string key, TransactionInformation transactionInformation)

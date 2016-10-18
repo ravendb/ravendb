@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.ComponentModel.Composition;
 using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
@@ -10,6 +11,9 @@ using Raven.Database.Server;
 
 namespace Raven.Bundles.Authorization.Triggers
 {
+    [InheritedExport(typeof(AbstractDeleteTrigger))]
+    [ExportMetadata("Bundle", "Authorization")]
+    [ExportMetadata("IsRavenExternalBundle",true)]
     public class AuthorizationDeleteTrigger : AbstractDeleteTrigger
     {
         public AuthorizationDecisions AuthorizationDecisions { get; set; }

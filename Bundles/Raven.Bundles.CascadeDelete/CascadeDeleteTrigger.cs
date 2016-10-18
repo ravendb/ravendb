@@ -3,12 +3,16 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.ComponentModel.Composition;
 using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.CascadeDelete
 {
+    [InheritedExport(typeof(AbstractDeleteTrigger))]
+    [ExportMetadata("Bundle", "Cascade Delete")]
+    [ExportMetadata("IsRavenExternalBundle", true)]
     public class CascadeDeleteTrigger : AbstractDeleteTrigger
     {
         public override void OnDelete(string key, TransactionInformation transactionInformation)

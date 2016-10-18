@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.ComponentModel.Composition;
 using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
@@ -11,6 +12,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Authorization.Triggers
 {
+    [InheritedExport(typeof(AbstractReadTrigger))]
+    [ExportMetadata("Bundle", "Authorization")]
+    [ExportMetadata("IsRavenExternalBundle", true)]
     public class AuthorizationReadTrigger : AbstractReadTrigger
     {
         public AuthorizationDecisions AuthorizationDecisions { get; set; }

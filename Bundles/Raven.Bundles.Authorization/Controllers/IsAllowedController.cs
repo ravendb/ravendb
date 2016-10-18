@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -14,6 +15,10 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Bundles.Authorization.Controllers
 {
+    [InheritedExport(typeof(BaseDatabaseApiController))]
+    [ExportMetadata("Bundle", "Authorization")]
+    [ExportMetadata("IsRavenExternalBundle", true)]
+    [ExportMetadata("IsRavenExternalBundleController",true)]
     public class IsAllowedController : BaseDatabaseApiController
     {
         [HttpGet]
