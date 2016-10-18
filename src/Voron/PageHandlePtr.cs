@@ -8,27 +8,15 @@ namespace Voron
 {
     public struct PageHandlePtr
     {
+        public readonly long PageNumber;
         public readonly Page Value;
         public readonly bool IsWritable;
 
-        private const int Invalid = -1;
-
-        public PageHandlePtr(Page value, bool isWritable)
+        public PageHandlePtr(long pageNumber, Page value, bool isWritable)
         {
-            this.Value = value;
-            this.IsWritable = isWritable;
-        }
-
-        public long PageNumber
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return IsValid ? Value.PageNumber : Invalid; }
-        }
-
-        public bool IsValid
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Value != null; }
+            Value = value;
+            PageNumber = pageNumber;
+            IsWritable = isWritable;
         }
     }
 }

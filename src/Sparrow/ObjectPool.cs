@@ -11,6 +11,9 @@
 //    #define DETECT_LEAKS  //for now always enable DETECT_LEAKS in debug.
 //#endif
 
+using System.Diagnostics.Contracts;
+using System.Reflection;
+
 namespace Sparrow
 {
     using System;
@@ -39,8 +42,37 @@ namespace Sparrow
     /// Rationale: 
     ///    If there is no intent for reusing the object, do not use pool - just use "new". 
     /// </summary>
-    public class ObjectPool<T> where T : class
+    public class ObjectPool<T> : ObjectPool<T, NoResetSupport<T>>
+        where T : class
     {
+        public ObjectPool(Factory factory) : base(factory) {}
+
+        public ObjectPool(Factory factory, int size) : base(factory, size) {}
+    }
+
+    /// <summary>
+    /// Generic implementation of object pooling pattern with predefined pool size limit. The main
+    /// purpose is that limited number of frequently used objects can be kept in the pool for
+    /// further recycling.
+    /// 
+    /// Notes: 
+    /// 1) it is not the goal to keep all returned objects. Pool is not meant for storage. If there
+    ///    is no space in the pool, extra returned objects will be dropped.
+    /// 
+    /// 2) it is implied that if object was obtained from a pool, the caller will return it back in
+    ///    a relatively short time. Keeping checked out objects for long durations is ok, but 
+    ///    reduces usefulness of pooling. Just new up your own.
+    /// 
+    /// Not returning objects to the pool in not detrimental to the pool's work, but is a bad practice. 
+    /// Rationale: 
+    ///    If there is no intent for reusing the object, do not use pool - just use "new". 
+    /// </summary>
+    public class ObjectPool<T, TResetBehavior>
+        where T : class
+        where TResetBehavior : struct, IResetSupport<T>
+    {
+        private static readonly TResetBehavior Behavior = new TResetBehavior();
+
         private struct Element
         {
             internal T Value;
@@ -120,6 +152,12 @@ namespace Sparrow
             return inst;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ObjectPoolContext<T, TResetBehavior> AllocateInContext()
+        {
+            return new ObjectPoolContext<T, TResetBehavior>(this, Allocate());
+        }
+
         /// <summary>
         /// Produces an instance.
         /// </summary>
@@ -150,7 +188,7 @@ namespace Sparrow
 #endif
 #endif
             return inst;
-        }
+        }  
 
         private T AllocateSlow()
         {
@@ -186,6 +224,8 @@ namespace Sparrow
         {
             Validate(obj);
             ForgetTrackedObject(obj);
+
+            Behavior.Reset(obj);
 
             if (_firstItem == null)
             {
@@ -273,6 +313,39 @@ namespace Sparrow
 
                 Debug.Assert(value != obj, "freeing twice?");
             }
+        }
+    }
+
+
+    public interface IResetSupport<in T> where T : class
+    {
+        void Reset(T value);
+    }
+
+    public struct NoResetSupport<T> : IResetSupport<T> where T : class
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Reset(T value) {}
+    }
+
+    public struct ObjectPoolContext<T, TR> : IDisposable 
+        where T : class
+        where TR : struct, IResetSupport<T>
+    {
+        private readonly ObjectPool<T, TR> _owner;
+        public readonly T Value;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ObjectPoolContext(ObjectPool<T, TR> owner, T value )
+        {
+            this._owner = owner;
+            this.Value = value;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose()
+        {
+            this._owner.Free(Value);
         }
     }
 }

@@ -43,7 +43,7 @@ namespace Voron.Data.BTrees
             _llt = llt;
             _tx = tx;
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2);
-            _pageLocator = new PageLocator(_llt, llt.Flags == TransactionFlags.Read ? 16 : 8);
+            _pageLocator = new PageLocator(_llt, 32);
             _state = new TreeMutableState(llt)
             {
                 RootPageNumber = root
@@ -55,7 +55,7 @@ namespace Voron.Data.BTrees
             _llt = llt;
             _tx = tx;
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2);
-            _pageLocator = new PageLocator(_llt, llt.Flags == TransactionFlags.Read ? 16 : 8);
+            _pageLocator = new PageLocator(_llt, 32);
             _state = new TreeMutableState(llt);
             _state = state;
         }
@@ -1106,8 +1106,6 @@ namespace Voron.Data.BTrees
         public void ClearPagesCache()
         {
             _recentlyFoundPages?.Clear();
-
-            _pageLocator?.Clear();
         }
 
         public FixedSizeTree FixedTreeFor(Slice key, byte valSize = 0)

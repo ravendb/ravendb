@@ -1,4 +1,5 @@
 {
+  "version": "1.0.0-*",
   "buildOptions": {
     "allowUnsafe": true,
     "emitEntryPoint": true,
@@ -8,9 +9,8 @@
       "include": [ "**/*.cs" ]
     }
   },
-  "commands": {
-    "Voron.Benchmark": "Voron.Benchmark"
-  },
+
+  
   "configurations": {
     "Release": {
       "buildOptions": {
@@ -21,18 +21,16 @@
 
   "dependencies": {
     "BenchmarkDotNet": "0.9.9",
-    "Microsoft.CSharp": "4.0.1",
     "Microsoft.NETCore.App": {
       "type": "build",
       "version": "1.0.1"
     },
-    "Voron": "4.0.0-*"
+    "Voron": "4.0.0-*",
+    "xunit": "2.2.0-beta3-build3402"
   },
 
   "frameworks": {
     "netcoreapp1.0": {
-      "dependencies": {
-      },
       "imports": "dnxcore50"
     }
   },
@@ -41,8 +39,6 @@
     "win7-x64": {},
     "win8-x64": {},
     "win10-x64": {},
-    "ubuntu.14.04-x64": {}
-  },
-
-  "version": "4.0.0-*"
+    "ubuntu.14.04-x64": {} 
+  }
 }

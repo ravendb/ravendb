@@ -12,6 +12,7 @@
     "allowUnsafe": true,
     "emitEntryPoint": true,
     "warningsAsErrors": true,
+    "debugType": "portable",
     "define": [ "PORTABLE" ],
     "compile": {
       "include": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/metrics.net/Src/Metrics/**/*.cs" ]
@@ -44,7 +45,10 @@
     "Microsoft.Extensions.Configuration.CommandLine": "1.0.0",
     "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.0.0",
     "Microsoft.Extensions.Configuration.Json": "1.0.0",
-    "Microsoft.NETCore.App": "1.0.1",
+    "Microsoft.NETCore.App": {
+      "version": "1.0.1",
+      "type": "build"
+    },
     "Raven.Client": "4.0.0-*",
     "Sparrow": "4.0.0-*",
     "System.ComponentModel": "4.0.1",
