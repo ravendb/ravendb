@@ -23,9 +23,9 @@ namespace Tryouts
             for (int i = 0; i < 15; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Client.Subscriptions.RavenDB_3193())
+                using (var a = new FastTests.Server.Documents.Patching.AdvancedPatching())
                 {
-                    a.ShouldRespectCollectionCriteria().Wait();
+                    a.CanUpdateBasedOnAnotherDocumentProperty().Wait();
                 }
             }
             if (DateTime.Today.Day != -1)
