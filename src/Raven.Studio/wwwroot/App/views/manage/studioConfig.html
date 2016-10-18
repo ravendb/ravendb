@@ -9,22 +9,6 @@
             <h4>Server-wide settings</h4>
             <hr />
             <div class="form-group">
-                <label class="col-md-4 control-label">Warn when using System Database</label>
-                <div class="col-md-8">
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: isReadOnly">
-                            <span data-bind="visible: warnWhenUsingSystemDatabase">On</span>
-                            <span data-bind="visible: !warnWhenUsingSystemDatabase()">Off</span>
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" role="menu">
-                            <li><a href="#" data-bind="click: setSystemDatabaseWarning.bind($root, true)">On</a></li>
-                            <li><a href="#" data-bind="click: setSystemDatabaseWarning.bind($root, false)">Off</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            <div class="form-group">
                 <label class="col-md-4 control-label">Environment</label>
                 <div class="col-md-2">
                     <div id="select-color">

@@ -5,8 +5,10 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import shell = require("viewmodels/shell");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import appUrl = require("common/appUrl");
+import resourcesManager = require("common/shell/resourcesManager");
 
 class watchTrafficConfigDialog extends dialogViewModelBase {
+    private resourcesManager = resourcesManager.default;
     public configurationTask = $.Deferred();
     
     watchedResourceMode = ko.observable("SingleResourceView");
@@ -14,17 +16,17 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     lastSearchedwatchedResourceName = ko.observable<string>();
     resourceAutocompletes = ko.observableArray<string>([]);
     maxEntries = ko.observable<number>(1000);
-    allResourcesNames: KnockoutComputed<string[]>;
+    allResourcesNames: Array<string>;
     nameCustomValidityError: KnockoutComputed<string>;
     searchResults: KnockoutComputed<Array<string>>;
 
     constructor() {
         super();
-        this.allResourcesNames = shell.resourcesNamesComputed();
+        this.allResourcesNames = this.resourcesManager.resources().map(x => x.name);
 
         this.searchResults = ko.computed(() => {
             var newResourceName = this.resourceName();
-            return this.allResourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
+            return this.allResourcesNames.filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
         });
 
         this.nameCustomValidityError = ko.computed(() => {
@@ -36,7 +38,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
                 if (!newResourceName) {
                     errorMessage = "Resource name is required";
                 } else {
-                    var foundResource = this.allResourcesNames().first((name: string) => name === newResourceName);
+                    var foundResource = this.allResourcesNames.find((name: string) => name === newResourceName);
                     if (!foundResource) {
                         errorMessage = "Resource name doesn't exist!";
                     }
@@ -61,7 +63,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
                 this.resourceAutocompletes.removeAll();
                 return;
             }
-            this.resourceAutocompletes(this.allResourcesNames().filter((name: string) => name.toLowerCase().indexOf(search.toLowerCase()) === 0));
+            this.resourceAutocompletes(this.allResourcesNames.filter((name: string) => name.toLowerCase().indexOf(search.toLowerCase()) === 0));
         }
     }
     
@@ -76,7 +78,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     confirmConfig() {
         var tracedResource: resource;
         if (this.watchedResourceMode() === "SingleResourceView")
-            tracedResource = shell.resources().first((rs: resource) => rs.name === this.resourceName());
+            tracedResource = this.resourcesManager.resources().find((rs: resource) => rs.name === this.resourceName());
 
         var resourcePath = appUrl.forResourceQuery(tracedResource);
         

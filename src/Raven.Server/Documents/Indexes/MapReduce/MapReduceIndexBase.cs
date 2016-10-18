@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries;
@@ -22,6 +23,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         internal readonly MapReduceIndexingContext _mapReduceWorkContext = new MapReduceIndexingContext();
         private FixedSizeTree _documentMapEntries;
+
+        private IndexingStatsScope _stats;
+        private IndexingStatsScope _oldValueDeleteStats;
+        private IndexingStatsScope _newValueAddStats;
+        private IndexingStatsScope _mapPreparationStats;
 
         protected MapReduceIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
@@ -83,17 +89,21 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return tx.CreateTree(MapEntriesTreeName);
         }
 
-        protected unsafe int PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext)
+        protected unsafe int PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
+            EnsureValidStats(stats);
+
             Slice docKeyAsSlice;
             using (Slice.External(indexContext.Allocator, documentKey.Buffer, documentKey.Length, out docKeyAsSlice))
             {
-               _documentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
-                
                 Queue<MapEntry> existingEntries = null;
+                using (_mapPreparationStats?.Start() ?? (_mapPreparationStats = stats.For(IndexingOperation.Reduce.MapPreparation)))
+                {
+                    _documentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
 
-                if (_documentMapEntries.NumberOfEntries > 0)
-                    existingEntries = GetMapEntries(_documentMapEntries);
+                    if (_documentMapEntries.NumberOfEntries > 0)
+                        existingEntries = GetMapEntries(_documentMapEntries);
+                }
 
                 int resultsCount = 0;
 
@@ -123,21 +133,27 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         }
                         else
                         {
-                            _documentMapEntries.Delete(existing.Id);
-                            storeOfExisting.Delete(existing.Id);
+                            using (_oldValueDeleteStats?.Start() ?? (_oldValueDeleteStats = stats.For(IndexingOperation.Reduce.OldValueDelete)))
+                            {
+                                _documentMapEntries.Delete(existing.Id);
+                                storeOfExisting.Delete(existing.Id);
+                            }
                         }
                     }
 
-                    if (id == -1)
+                    using (_newValueAddStats?.Start() ?? (_newValueAddStats = stats.For(IndexingOperation.Reduce.NewValueAdd)))
                     {
-                        id = _mapReduceWorkContext.GetNextIdentifier();
+                        if (id == -1)
+                        {
+                            id = _mapReduceWorkContext.GetNextIdentifier();
 
-                        Slice val;
-                        using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))
-                            _documentMapEntries.Add(id, val);
+                            Slice val;
+                            using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))
+                                _documentMapEntries.Add(id, val);
+                        }
+
+                        GetResultsStore(reduceKeyHash, indexContext, create: true).Add(id, mapResult.Data);
                     }
-
-                    GetResultsStore(reduceKeyHash, indexContext, true).Add(id, mapResult.Data);
                 }
 
                 DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
@@ -150,8 +166,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     var oldState = GetResultsStore(oldResult.ReduceKeyHash, indexContext, create: false);
 
-                    oldState.Delete(oldResult.Id);
-                    _documentMapEntries.Delete(oldResult.Id);
+                    using (_oldValueDeleteStats?.Start() ?? (_oldValueDeleteStats = stats.For(IndexingOperation.Reduce.OldValueDelete)))
+                    {
+                        oldState.Delete(oldResult.Id);
+                        _documentMapEntries.Delete(oldResult.Id);
+                    }
                 }
 
                 return resultsCount;
@@ -194,12 +213,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             if (_mapReduceWorkContext.StoreByReduceKeyHash.TryGetValue(reduceKeyHash, out store) == false)
             {
                 Slice read;
-                using (_mapReduceWorkContext.ResultsStoreTypes.Read((long) reduceKeyHash, out read))
+                using (_mapReduceWorkContext.ResultsStoreTypes.Read((long)reduceKeyHash, out read))
                 {
                     MapResultsStorageType type;
 
                     if (read.HasValue)
-                        type = (MapResultsStorageType) (*read.CreateReader().Base);
+                        type = (MapResultsStorageType)(*read.CreateReader().Base);
                     else
                         type = MapResultsStorageType.Nested;
 
@@ -227,6 +246,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 _mapReduceWorkContext.Initialize(mapEntries);
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureValidStats(IndexingStatsScope stats)
+        {
+            if (_stats == stats)
+                return;
+
+            _stats = stats;
+            _newValueAddStats = null;
+            _oldValueDeleteStats = null;
+            _mapPreparationStats = null;
         }
     }
 }

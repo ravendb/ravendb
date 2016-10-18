@@ -38,6 +38,7 @@ class index {
 
     filteredOut = ko.observable<boolean>(false); //UI only property
     badgeClass: KnockoutComputed<string>;
+    badgeText: KnockoutComputed<string>;
     editUrl: KnockoutComputed<string>;
     queryUrl: KnockoutComputed<string>;
 
@@ -119,26 +120,52 @@ class index {
             const priority = this.priority();
 
             if (this.isFaulty()) {
-                return "state-faulty";
+                return "state-danger";
             }
 
             if (this.pausedUntilRestart()) {
-                return "state-paused";
+                return "state-warning";
             }
             
             if (priority.contains("Disabled")) {
-                return "state-disabled";
+                return "state-warning";
             }
 
             if (priority.contains("Idle")) {
-                return "state-idle";
+                return "state-warning";
             }
 
             if (priority.contains("Error")) {
-                return "state-error";
+                return "state-danger";
             }
 
-            return "state-normal";
+            return "state-success";
+        });
+
+        this.badgeText = ko.pureComputed(() => {
+            const priority = this.priority();
+
+            if (this.isFaulty()) {
+                return "Faulty";
+            }
+
+            if (this.pausedUntilRestart()) {
+                return "Paused";
+            }
+
+            if (priority.contains("Disabled")) {
+                return "Disabled";
+            }
+
+            if (priority.contains("Idle")) {
+                return "Idle";
+            }
+
+            if (priority.contains("Error")) {
+                return "Error";
+            }
+
+            return "Normal";
         });
     }
 

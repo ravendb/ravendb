@@ -29,7 +29,6 @@ interface logNotificationDto {
     RequestUri: string;
     TenantName: string;
     CustomInfo: string;
-    TenantType: TenantType;
     InnerRequestsCount?: number;
     QueryTimings: any;
 

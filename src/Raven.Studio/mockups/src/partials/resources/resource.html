@@ -1,8 +1,8 @@
-<div class="panel resource">
+<div class="panel panel-state resource">
     <div class="padding padding-sm">
-        <div class="state state-{{ state }}"></div>
+        <div class="state {{ stateClass }}" data-state-text="{{ stateText }}"></div>
         <div class="row">
-            <div class="col-sm-6 col-xl-4 info-container">
+            <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
                 <div class="checkbox">
                     <input type="checkbox" class="styled">
                     <label></label>
@@ -12,113 +12,114 @@
                     <a title="{{ name }}" href="#">{{ name }}</a>
                 </h3>
             </div>
-            <div class="col-sm-12 col-xl-6 col-flex vertical-divider properties-container">
+            <div class="col-xs-12 col-sm-12 col-xl-6  vertical-divider properties-container">
 
                 <div class="properties-item">
                     <div class="properties-value value-only">
-                        <i class="icon-drive"></i>
-                        <span>{{size}}</span>
+                        <div class="set-size">
+                            <i class="icon-drive"></i>
+                            <span>{{size}}</span>
+                        </div>
                     </div>
                 </div>
 
                 {{#if docs}}
                 <div class="properties-item">
                     <div class="properties-value value-only">
-                        <i class="icon-document-group"></i>
-                        <span>{{docs}} documents</span>
+                        <div class="set-size">
+                            <i class="icon-document-group"></i>
+                            <span>{{docs}} documents</span>
+                        </div>
                     </div>
                 </div>
-                {{/if}}
-
-                {{#if indexes}}
+                {{/if}} {{#if indexes}}
                 <div class="properties-item">
                     <div class="properties-value value-only">
-                        <i class="icon-index"></i>
-                        <span>{{indexes}} indexes</span>
+                        <div class="set-size">
+                            <i class="icon-index"></i>
+                            <span>{{indexes}} indexes</span>
+                        </div>
                     </div>
                 </div>
-                {{/if}}
-
-                {{#if files}}
+                {{/if}} {{#if files}}
                 <div class="properties-item">
                     <div class="properties-value value-only">
-                        <i class="icon-filesystem"></i>
-                        <span>{{files}} files</span>
+                        <div class="set-size">
+                            <i class="icon-filesystem"></i>
+                            <span>{{files}} files</span>
+                        </div>
                     </div>
                 </div>
-                {{/if}}
-
-                {{#if errors}}
+                {{/if}} {{#if errors}}
                 <div class="properties-item">
                     <div class="properties-value value-only text-danger">
-                        <i class="icon-exclamation"></i>
-                        <span>{{errors}} errors</span>
+                        <div class="set-size">
+                            <i class="icon-exclamation"></i>
+                            <span>{{errors}} errors</span>
+                        </div>
                     </div>
                 </div>
-                {{/if}}
-
-                {{#if alerts}}
+                {{/if}} {{#if alerts}}
                 <div class="properties-item">
                     <div class="properties-value value-only text-warning">
-                        <i class="icon-warning"></i>
-                        <span>{{alerts}} alerts</span>
+                        <div class="set-size">
+                            <i class="icon-warning"></i>
+                            <span>{{alerts}} alerts</span>
+                        </div>
                     </div>
                 </div>
-                {{/if}}
-
-                {{#if backedUp }}
+                {{/if}} {{#if backedUp }}
                 <div class="properties-item">
                     <div class="properties-value value-only {{backedUpClass}}">
-                        <i class="icon-backup"></i>
-                        <span>{{backedUp}}</span>
+                        <div class="set-size">
+                            <i class="icon-backup"></i>
+                            <span>{{backedUp}}</span>
+                        </div>
                     </div>
                 </div>
-                {{/if}}
-
-                {{#if upFor}}
+                {{/if}} {{#if upFor}}
                 <div class="properties-item">
                     <div class="properties-value value-only ">
-                        <i class="icon-recent"></i>
-                        <span>Up for {{ upFor }}</span>
+                        <div class="set-size">
+                            <i class="icon-recent"></i>
+                            <span>Up for {{ upFor }}</span>
+                        </div>
                     </div>
                 </div>
-                {{/if}}
-
-
-                {{#if indexingDisabled}}
+                {{/if}} {{#if indexingDisabled}}
                 <div class="properties-item">
                     <div class="properties-value value-only text-warning">
-                        <i class="icon-pause"></i>
-                        <span>Indexing disabled</span>
+                        <div class="set-size">
+                            <i class="icon-pause"></i>
+                            <span>Indexing disabled</span>
+                        </div>
                     </div>
                 </div>
-                {{/if}}
-
-                {{#if clientRejectionMode}}
+                {{/if}} {{#if clientRejectionMode}}
                 <div class="properties-item">
                     <div class="properties-value value-only text-warning">
-                        <i class="icon-umbrella"></i>
-                        <span>Clients rejection mode</span>
+                        <div class="set-size">
+                            <i class="icon-umbrella"></i>
+                            <span>Clients rejection mode</span>
+                        </div>
                     </div>
                 </div>
                 {{/if}}
 
             </div>
-            <div class="col-sm-6 col-xl-2 col-flex actions-container">
+            <div class="col-xs-12 col-sm-6 col-xl-2  actions-container">
                 <div class="actions">
                     <div class="btn-toolbar pull-right-sm" role="toolbar">
                         <div class="btn-group">
-                            {{#ifEq state 'disabled' }}
+                            {{#ifEq stateText 'disabled' }}
                             <button class="btn btn-default">
                                 <i class="icon-unlock"></i>
                                 <span>Enable</span>
-                            </button>
-                            {{else}}
+                            </button> {{else}}
                             <button class="btn btn-default">
                                 <i class="icon-lock"></i>
                                 <span>Disable</span>
-                            </button>
-                            {{/ifEq}}
+                            </button> {{/ifEq}}
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <span class="caret"></span>
                             <span class="sr-only">Toggle Dropdown</span>

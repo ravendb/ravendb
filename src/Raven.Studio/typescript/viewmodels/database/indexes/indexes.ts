@@ -84,7 +84,7 @@ class indexes extends viewModelBase {
             return firstLockMode;
         });
         this.indexesSelectionState = ko.pureComputed<checkbox>(() => {
-            var selectedCount = this.selectedIndexesName().length;
+            const selectedCount = this.selectedIndexesName().length;
             if (selectedCount === this.getAllIndexes().length)
                 return checkbox.Checked;
             if (selectedCount > 0)
@@ -302,7 +302,7 @@ class indexes extends viewModelBase {
         return [
             //TODO: it isn't implemented on server side yet: changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
             //TODO: use cool down
-            changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent())
+            this.changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent())
         ];
     }
 

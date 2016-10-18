@@ -1,45 +1,38 @@
 import EVENTS = require("common/constants/events");
 import resource = require("models/resources/resource");
-import license = require("models/auth/license");
-import counterStorageStatistics = require("models/counter/counterStorageStatistics");
 
-class counterStorage extends resource{
-    statistics = ko.observable<counterStorageStatistics>();
+class counterStorage extends resource {
     static type = "counterstorage";
-    iconName = "fa fa-fw fa-sort-numeric-desc";
+    static readonly qualifier = "cs";
 
     constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = []) {
-        super(name, TenantType.CounterStorage, isAdminCurrentTenant);
-        this.fullTypeName = "Counter Storage";
-        this.disabled(isDisabled);
-        this.activeBundles(bundles);
-        this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().counterCountText() : "");
-
+        super(name, isAdminCurrentTenant, bundles);
+        /* TODO:
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
                 var counterStorageValue = license.licenseStatus().Attributes.counterStorage;
                 return /^true$/i.test(counterStorageValue);
             }
             return true;
-        });
+        });*/
     }
 
-    activate() {
-        this.isLoaded(true);
-        ko.postbox.publish(EVENTS.Resource.Activate,
-        {
-            type: TenantType.CounterStorage,
-            resource: this
-        });
+    get qualifier() {
+        return counterStorage.qualifier;
     }
 
-    saveStatistics(dto: counterStorageStatisticsDto) {
-        if (!this.statistics()) {
-            this.statistics(new counterStorageStatistics());
-        }
-
-        this.statistics().fromDto(dto);
+    get urlPrefix() {
+        return "cs";
     }
+
+    get fullTypeName() {
+        return "Counter Storage";
+    }
+
+    get type() {
+        return counterStorage.type;
+    }
+
 } 
 
 export = counterStorage; 

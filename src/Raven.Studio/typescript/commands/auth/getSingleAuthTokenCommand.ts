@@ -6,10 +6,6 @@ class getSingleAuthTokenCommand extends commandBase {
 
     constructor(private resource: resource, private checkIfMachineAdmin :boolean = false) {
         super();
-
-        if (this.resource == null) {
-            throw new Error("Must specify resource");
-        }
     }
 
     execute(): JQueryPromise<singleAuthToken> {

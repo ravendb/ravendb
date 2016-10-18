@@ -1,0 +1,36 @@
+<div class="panel field" >
+    <div class="panel-header bar padding padding-sm" >
+        <i class="icon-arrow-right"></i>
+        <h3 class="text-primary">
+            {{ name }}
+
+        </h3>
+        <span class="badge pull-right">
+            {{ count }} loaded
+        </span>
+    </div>
+
+    <div class="collapsible collapse">
+        <div class="field-terms panel-body" >
+            <ul class="list-unstyled row">
+                {{# times 100}}
+                <li class="col-sm-3">
+                    <span>
+                        {{random ../valueTmpl }}
+                    </span>
+                </li>
+                {{/times}}
+            </ul>
+            <div class="loadMore">
+                <div class="row ">
+                    <div class="col-sm-12 text-center">
+                        <button class="btn btn-primary btn-block">
+                            <i class="icon-arrow-filled-down"></i>
+                            <span></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

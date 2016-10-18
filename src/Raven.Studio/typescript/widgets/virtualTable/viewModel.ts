@@ -17,7 +17,9 @@ import customColumns = require("models/database/documents/customColumns");
 import customFunctions = require("models/database/documents/customFunctions");
 import timeSeriesKey = require("models/timeSeries/timeSeriesKey");
 import timeSeriesType = require("models/timeSeries/timeSeriesType");
+import activeResourceTracker = require("common/shell/activeResourceTracker");
 
+//TODO: get rid of this class in flavor of new virtual pager
 class ctor {
 
     static idColumnWidth = 200;
@@ -351,14 +353,7 @@ class ctor {
             var entityName = this.getEntityName(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromEntityNameMemoized(rowData, entityName));
 
-            var editUrl: string;
-            if (rowData instanceof counterSummary) {
-                editUrl = appUrl.forEditCounter(appUrl.getResource(), (<any>rowData)["Group Name"], (<any>rowData)["Counter Name"]);
-            } else if (rowData instanceof timeSeriesKey) {
-                editUrl = appUrl.forTimeSeriesKey(rowData["Type"], rowData["Key"], appUrl.getTimeSeries());
-            } else {
-                editUrl = appUrl.forEditItem(!!rowData.getUrl() ? rowData.getUrl() : rowData["Id"], appUrl.getResource(), rowIndex, entityName);
-            }
+            var editUrl = appUrl.forEditItem(!!rowData.getUrl() ? rowData.getUrl() : rowData["Id"], activeResourceTracker.default.resource(), rowIndex, entityName);
             rowAtIndex.editUrl(editUrl);
         }
     }
@@ -368,21 +363,13 @@ class ctor {
         if (selectedItem) {
             var collectionName = this.items.collectionName;
             var itemIndex = this.settings.selectedIndices().first();
-
-            var editUrl: string;
-            if (selectedItem instanceof counterSummary) {
-                let item = selectedItem as any;
-                editUrl = appUrl.forEditCounter(appUrl.getResource(), item["Group Name"] as string, item["Counter Name"] as string);
-            } else if (selectedItem instanceof timeSeriesKey) {
-                editUrl = appUrl.forTimeSeriesKey(selectedItem["Type"], selectedItem["Key"], appUrl.getTimeSeries());
-            } else {
-                editUrl = appUrl.forEditItem(selectedItem.getUrl(), appUrl.getResource(), itemIndex, collectionName);
-            }
+            var editUrl = appUrl.forEditItem(selectedItem.getUrl(), activeResourceTracker.default.resource(), itemIndex, collectionName);
             router.navigate(editUrl);
         }
     }
 
     getCollectionClassFromEntityName(rowData: documentBase, entityName: string): string {
+        /* TODO:
         if (rowData instanceof document) {
             return collection.getCollectionCssClass(entityName, appUrl.getDatabase());
         }
@@ -391,7 +378,7 @@ class ctor {
         }
         if (rowData instanceof timeSeriesKey) {
             return timeSeriesType.getTypeCssClass(entityName, appUrl.getTimeSeries());
-        }
+        }*/
         return "";
     }
 
@@ -789,7 +776,7 @@ class ctor {
 
     deleteSelectedItems() {
         var items = this.getSelectedItems();
-        var deleteDocsVm = new deleteItems(items, this.focusableGridSelector);
+        var deleteDocsVm = new deleteItems(items, activeResourceTracker.default.resource(), this.focusableGridSelector);
 
         deleteDocsVm.deletionTask.done(() => {
             var deletedDocIndices = items.map(d => this.items.indexOf(d));
@@ -809,7 +796,7 @@ class ctor {
 
     getDocumentHref(documentId: string): string {
         if (typeof documentId == "string") {
-            return appUrl.forEditItem(documentId, appUrl.getDatabase(), null, null);
+            return appUrl.forEditItem(documentId, activeResourceTracker.default.database(), null, null);
         } else {
             return "#";
         }
@@ -817,7 +804,7 @@ class ctor {
 
     getGroupHref(group: string): string {
         if (typeof group == "string") {
-            return appUrl.forCounterStorageCounters(group, appUrl.getCounterStorage());
+            return appUrl.forCounterStorageCounters(group, activeResourceTracker.default.counterStorage());
         } else {
             return "#";
         }

@@ -1,30 +1,17 @@
 import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
 import resource = require("models/resources/resource");
-import database = require("models/resources/database");
 import dialog = require("plugins/dialog");
-import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import router = require("plugins/router");
+import resourceInfo = require("models/resources/info/resourceInfo");
 
 class deleteResourceConfirm extends dialogViewModelBase {
-    private isKeepingFiles = ko.observable(true);
-    private resourcesToDelete = ko.observableArray<resource>();
-    public deleteTask = $.Deferred();
+    private isKeepingFiles = ko.observable<boolean>(true);
+
+    deleteTask = $.Deferred<Array<resource>>();
     isDeletingDatabase: boolean;
-    exportDatabaseUrl: string;
 
-    constructor(resources: Array<resource>) {
+    constructor(private resourcesToDelete: Array<resourceInfo>) {
         super();
-
-        if (resources.length === 0) {
-            throw new Error("Must have at least one resource to delete.");
-        }
-
-        this.resourcesToDelete(resources);
-        this.isDeletingDatabase = resources[0] instanceof database;
-        if (this.isDeletingDatabase) {
-            this.exportDatabaseUrl = appUrl.forExportDatabase(<any>resources[0]);
-        }
     }
 
     keepFiles() {
@@ -36,7 +23,7 @@ class deleteResourceConfirm extends dialogViewModelBase {
     }
 
     deleteDatabase() {
-        new deleteResourceCommand(this.resourcesToDelete(), this.isKeepingFiles() === false)
+        new deleteResourceCommand(this.resourcesToDelete.map(x => x.asResource()), !this.isKeepingFiles())
             .execute()
             .done(results => this.deleteTask.resolve(results))
             .fail(details => this.deleteTask.reject(details));
@@ -49,11 +36,6 @@ class deleteResourceConfirm extends dialogViewModelBase {
         dialog.close(this);
     }
 
-    exportDatabase() {
-        this.resourcesToDelete.first().activate();
-        router.navigate(this.exportDatabaseUrl);
-        dialog.close(this);
-    }
 }
 
 export = deleteResourceConfirm;
