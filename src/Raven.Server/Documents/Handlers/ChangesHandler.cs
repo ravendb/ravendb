@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Handlers
                     }
                     catch (OperationCanceledException)
                     {
-                        
+
                     }
                     catch (Exception ex)
                     {
@@ -101,71 +101,74 @@ namespace Raven.Server.Documents.Handlers
             Database.Notifications.Connect(connection);
             var sendTask = connection.StartSendingNotifications(sendStartTime);
             var debugTag = "changes/" + connection.Id;
-            try
+            byte[] buffer;
+            using (context.GetManagedBuffer(out buffer))
             {
-                var buffer = context.GetManagedBuffer();
-                var segments = new[]
+                try
                 {
-                    new ArraySegment<byte>(buffer, 0, buffer.Length/2),
-                    new ArraySegment<byte>(buffer, buffer.Length/2, buffer.Length/2)
-                };
-                int index = 0;
-                var receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);
-                var jsonParserState = new JsonParserState();
-                using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
-                {
-                    var result = await receiveAsync;
-                    parser.SetBuffer(new ArraySegment<byte>(segments[index].Array, segments[index].Offset, result.Count));
-                    index++;
-                    receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);
-
-                    while (true)
+                    var segments = new[]
                     {
-                        using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState))
+                        new ArraySegment<byte>(buffer, 0, buffer.Length/2),
+                        new ArraySegment<byte>(buffer, buffer.Length/2, buffer.Length/2)
+                    };
+                    int index = 0;
+                    var receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);
+                    var jsonParserState = new JsonParserState();
+                    using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
+                    {
+                        var result = await receiveAsync;
+                        parser.SetBuffer(new ArraySegment<byte>(segments[index].Array, segments[index].Offset, result.Count));
+                        index++;
+                        receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);
+
+                        while (true)
                         {
-                            parser.NewDocument();
-                            builder.ReadObject();
-
-                            while (builder.Read() == false)
+                            using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState))
                             {
-                                result = await receiveAsync;
+                                parser.NewDocument();
+                                builder.ReadObject();
 
-                                parser.SetBuffer(new ArraySegment<byte>(segments[index].Array, segments[index].Offset, result.Count));
-                                if (++index >= segments.Length)
-                                    index = 0;
-                                receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);
-                            }
-
-                            builder.FinalizeDocument();
-
-                            using (var reader = builder.CreateReader())
-                            {
-                                string command, commandParameter;
-                                if (reader.TryGet("Command", out command) == false)
-                                    throw new ArgumentNullException(nameof(command), "Command argument is mandatory");
-
-                                reader.TryGet("Param", out commandParameter);
-                                connection.HandleCommand(command, commandParameter);
-
-                                int commandId;
-                                if (reader.TryGet("CommandId", out commandId))
+                                while (builder.Read() == false)
                                 {
-                                    connection.Confirm(commandId);
+                                    result = await receiveAsync;
+
+                                    parser.SetBuffer(new ArraySegment<byte>(segments[index].Array, segments[index].Offset, result.Count));
+                                    if (++index >= segments.Length)
+                                        index = 0;
+                                    receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);
+                                }
+
+                                builder.FinalizeDocument();
+
+                                using (var reader = builder.CreateReader())
+                                {
+                                    string command, commandParameter;
+                                    if (reader.TryGet("Command", out command) == false)
+                                        throw new ArgumentNullException(nameof(command), "Command argument is mandatory");
+
+                                    reader.TryGet("Param", out commandParameter);
+                                    connection.HandleCommand(command, commandParameter);
+
+                                    int commandId;
+                                    if (reader.TryGet("CommandId", out commandId))
+                                    {
+                                        connection.Confirm(commandId);
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
-            catch (IOException ex)
-            {
-                /* Client was disconnected, write to log */
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Client was disconnected", ex);
-            }
-            finally
-            {
-                Database.Notifications.Disconnect(connection.Id);
+                catch (IOException ex)
+                {
+                    /* Client was disconnected, write to log */
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Client was disconnected", ex);
+                }
+                finally
+                {
+                    Database.Notifications.Disconnect(connection.Id);
+                }
             }
             await sendTask;
         }
@@ -180,7 +183,7 @@ namespace Raven.Server.Documents.Handlers
             foreach (var idStr in ids)
             {
                 long id;
-                if (long.TryParse(idStr, NumberStyles.Any,CultureInfo.InvariantCulture, out id) == false)
+                if (long.TryParse(idStr, NumberStyles.Any, CultureInfo.InvariantCulture, out id) == false)
                     throw new ArgumentException($"Could not parse query string 'id' header as int64, value was: {idStr}");
 
                 Database.Notifications.Disconnect(id);
