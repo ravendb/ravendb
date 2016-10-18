@@ -2,11 +2,19 @@
 
     .field {
 
+        .collapsed {
+            .badge {
+                display: none;
+            }
+            .icon-arrow-down:before {
+                content: @arrow-right;
+            }
+        }
+
         .bar {
             cursor: pointer;
 
             .badge {
-                display: none;
                 position: relative;
                 top: 3px;
             }
@@ -52,17 +60,5 @@
                 }
             }
         }
-
-
-        &.open {
-            .icon-arrow-right:before {
-                content: @arrow-down;
-            }
-
-            .bar .badge {
-                display: inline;
-            }
-        }
-
     }
 }

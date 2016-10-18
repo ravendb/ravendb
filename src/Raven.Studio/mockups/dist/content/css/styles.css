@@ -10605,11 +10605,16 @@ pre {
   line-height: 1.5;
   border-radius: 0px;
 }
+.indexesTerms .field .collapsed .badge {
+  display: none;
+}
+.indexesTerms .field .collapsed .icon-arrow-down:before {
+  content: "\e91e";
+}
 .indexesTerms .field .bar {
   cursor: pointer;
 }
 .indexesTerms .field .bar .badge {
-  display: none;
   position: relative;
   top: 3px;
 }
@@ -10650,10 +10655,4 @@ pre {
 }
 .indexesTerms .field .field-terms .loadMore .btn-spinner span::before {
   content: 'Loading';
-}
-.indexesTerms .field.open .icon-arrow-right:before {
-  content: "\e918";
-}
-.indexesTerms .field.open .bar .badge {
-  display: inline;
 }
