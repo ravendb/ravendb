@@ -20,7 +20,7 @@
                 </div>
                 <div class="btn-group">
                     <button type="button" class="btn btn-default dropdown-toggle" title="Set lock mode for selected indexes"
-                            data-bind="enable: selectedIndexesName().length && !globalLockChangesInProgress(), css: { 'btn-spinner': globalLockChangesInProgress() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            data-bind="enable: selectedIndexesName().length && !spinners.globalLockChanges(), css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="icon-lock"></i><span>Lock mode</span>
                         <span class="caret"></span>
                         <span class="sr-only">Toggle Dropdown</span>
@@ -58,12 +58,12 @@
         </div>
         <div class="pull-right" id="toggleIndexing">
             <button class="btn btn-warning btn-toggle disable-indexing"
-                    data-bind="click: stopIndexing, visible: indexingEnabled(), enable: !globalStartStopInProgress(), css: { 'btn-spinner': globalStartStopInProgress() }">
+                    data-bind="click: stopIndexing, visible: indexingEnabled(), enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }">
                 <i class="icon-pause"></i>
                 <span>Pause indexing until restart</span>
             </button>
             <button class="btn btn-success btn-toggle enable-indexing"
-                    data-bind="click: startIndexing, visible: !indexingEnabled(), enable: !globalStartStopInProgress(), css: { 'btn-spinner': globalStartStopInProgress() }">
+                    data-bind="click: startIndexing, visible: !indexingEnabled(), enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }">
                 <i class="icon-play"></i>
                 <span>Enable indexing</span>
             </button>
@@ -143,7 +143,7 @@
     <span class="properties-label">Priority:</span>
     <div class="btn-group properties-value">
         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
-                data-bind="css: { 'btn-spinner': $root.localPriorityInProgress().contains(name) }, enable: $root.indexingEnabled() && !$root.localPriorityInProgress().contains(name)">
+                data-bind="css: { 'btn-spinner': $root.spinners.localPriority().contains(name) }, enable: $root.indexingEnabled() && !$root.spinners.localPriority().contains(name)">
             <span data-bind="visible: pausedUntilRestart()">
                 <i class="icon-cancel"></i>
                 <span>Paused until restart</span>
@@ -196,7 +196,7 @@
     <span class="properties-label">Mode:</span>
     <div class="btn-group properties-value">
         <button type="button" class="btn btn-block set-size dropdown-toggle" data-toggle="dropdown" 
-                data-bind="css: { 'btn-spinner': $root.localLockChangesInProgress().contains(name) }, enable: !$root.localLockChangesInProgress().contains(name)">
+                data-bind="css: { 'btn-spinner': $root.spinners.localLockChanges().contains(name) }, enable: !$root.spinners.localLockChanges().contains(name)">
             <span data-bind="visible: lockMode() === 'Unlock'">
                 <i class="icon-unlock"></i><span>Unlock</span>
             </span>

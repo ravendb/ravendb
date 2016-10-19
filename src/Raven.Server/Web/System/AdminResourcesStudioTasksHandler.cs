@@ -41,7 +41,7 @@ namespace Raven.Server.Web.System
             var names = HttpContext.Request.Query["name"];
             if (names.Count == 0)
                 throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
-            var isDisabled = GetBoolValueQueryString("isDisabled").Value;
+            var disableRequested = GetBoolValueQueryString("disable").Value;
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -79,21 +79,21 @@ namespace Raven.Server.Web.System
                         disabled = (bool)disabledValue;
                     }
 
-                    if (disabled != isDisabled)
+                    if (disabled == disableRequested)
                     {
-                        var state = isDisabled ? "disabled" : "enabled";
+                        var state = disableRequested ? "disabled" : "enabled";
                         context.Write(writer, new DynamicJsonValue
                         {
                             ["name"] = name,
                             ["success"] = false,
+                            ["disabled"] = disableRequested,
                             ["reason"] = $"Database already {state}",
                         });
                         continue;
                     }
 
                     var newDoc = new DynamicJsonValue(dbDoc);
-                    var newDisabled = isDisabled == false;
-                    newDoc.Properties.Enqueue(Tuple.Create("Disabled", (object)newDisabled));
+                    newDoc.Properties.Enqueue(Tuple.Create("Disabled", (object) disableRequested));
                     var newDoc2 = context.ReadObject(newDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     /* Right now only database resource is supported */
@@ -110,7 +110,7 @@ namespace Raven.Server.Web.System
                     {
                         ["name"] = name,
                         ["success"] = true,
-                        ["disabled"] = newDisabled,
+                        ["disabled"] = disableRequested,
                     });
                 }
                 writer.WriteEndArray();

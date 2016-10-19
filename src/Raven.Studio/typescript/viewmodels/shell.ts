@@ -51,7 +51,6 @@ class shell extends viewModelBase {
 
     private router = router;
     static studioConfigDocumentId = "Raven/StudioConfig";
-    private activeResource: KnockoutObservable<resource> = activeResourceTracker.default.resource;
 
     renewOAuthTokenTimeoutId: number;
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption()); //TODO:

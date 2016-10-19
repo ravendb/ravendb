@@ -13,8 +13,8 @@ class database extends resource {
     static readonly type = "database";
     static readonly qualifier = "db";
 
-    constructor(name: string, isAdminCurrentTenant: boolean, bundles: string[]) {
-        super(name, isAdminCurrentTenant, bundles);
+    constructor(name: string, isAdminCurrentTenant: boolean, disabled: boolean, bundles: string[]) {
+        super(name, isAdminCurrentTenant, disabled, bundles);
         /* TODO
         this.isLicensed = ko.pureComputed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {

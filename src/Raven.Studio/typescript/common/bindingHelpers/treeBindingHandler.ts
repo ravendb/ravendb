@@ -67,7 +67,7 @@ class treeBindingHandler {
         if (node && node.data && node.data.key != "/") {
             dir = node.data.key;
         }
-        var command = new getFoldersCommand(new filesystem(appUrl.getFileSystemNameFromUrl()), 0, 1024, dir); //TODO: pass fs using injection or remove fs specific code from this class
+        var command = new getFoldersCommand(new filesystem(appUrl.getFileSystemNameFromUrl(), true, false), 0, 1024, dir); //TODO: pass fs using injection or remove fs specific code from this class
         command.execute().done((results: folderNodeDto[]) => {
             node.setLazyNodeStatus(0);
 

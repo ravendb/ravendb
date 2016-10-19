@@ -235,6 +235,8 @@ class resourcesManager {
     private onResourceUpdateReceivedViaChangesApi() {
         //TODO: do we have to filter received notifications?
         this.refreshResources();
+
+        //TODO: if deleted this.changesContext.disconnectIfCurrent(matchedResource.asResource());
     }
 
     /* TODO: 

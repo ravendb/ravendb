@@ -33,7 +33,7 @@ class databaseInfo extends resourceInfo {
     }
 
     asResource(): database {
-        return new database(this.name, this.isAdmin(), this.bundles());
+        return new database(this.name, this.isAdmin(), this.disabled(), this.bundles());
     }
 }
 
