@@ -21,7 +21,7 @@ class filesystemInfo extends resourceInfo {
     }
 
     asResource(): filesystem {
-        return new filesystem(this.name, this.isAdmin(), this.bundles());
+        return new filesystem(this.name, this.isAdmin(), this.disabled(), this.bundles());
     }
 }
 

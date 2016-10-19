@@ -19,6 +19,17 @@ interface confirmDialogResult {
     can: boolean;
 }
 
+interface disableResourceResult {
+    qualifiedName: string;
+    success: boolean;
+    reason: string;
+    disabled: boolean;
+}
+
+interface deleteResourceConfirmResult extends confirmDialogResult {
+    keepFiles: boolean;
+}
+
 type menuItemType = "separator" | "intermediate" | "leaf";
 
 interface menuItem {

@@ -3,13 +3,13 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
-class confirmViewModelBase extends dialogViewModelBase {
+class confirmViewModelBase<T extends confirmDialogResult> extends dialogViewModelBase {
 
     private alreadyResolved = false;
-    result = $.Deferred<confirmDialogResult>(); 
+    result = $.Deferred<T>(); 
 
     confirm() {
-        this.result.resolve({ can: true });
+        this.result.resolve(this.prepareResponse(true));
         this.alreadyResolved = true;
         dialog.close(this);
     }
@@ -20,9 +20,16 @@ class confirmViewModelBase extends dialogViewModelBase {
 
     deactivate(args: any) {
         if (!this.alreadyResolved) {
-            this.result.resolve({ can: false });
+            this.result.resolve(this.prepareResponse(false));
         }
     }
+
+    protected prepareResponse(can: boolean): T {
+        return {
+            can: can
+        } as T;
+    }
+
 }
 
 export = confirmViewModelBase;

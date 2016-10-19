@@ -5,7 +5,6 @@ import saveIndexLockModeCommand = require("commands/database/index/saveIndexLock
 import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/database/indexes/resetIndexConfirm");
 import changeSubscription = require("common/changeSubscription");
-import changesContext = require("common/changesContext");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
@@ -32,10 +31,12 @@ class indexes extends viewModelBase {
     selectedIndexesName = ko.observableArray<string>();
     indexesSelectionState: KnockoutComputed<checkbox>;
 
-    globalStartStopInProgress = ko.observable<boolean>(false);
-    globalLockChangesInProgress = ko.observable<boolean>(false);
-    localPriorityInProgress = ko.observableArray<string>([]);
-    localLockChangesInProgress = ko.observableArray<string>([]);
+    spinners = {
+        globalStartStop: ko.observable<boolean>(false),
+        globalLockChanges: ko.observable<boolean>(false),
+        localPriority: ko.observableArray<string>([]),
+        localLockChanges: ko.observableArray<string>([])
+    }
 
     indexingEnabled = ko.observable<boolean>(true);
 
@@ -262,12 +263,12 @@ class indexes extends viewModelBase {
 
     private updateIndexLockMode(i: index, newLockMode: Raven.Abstractions.Indexing.IndexLockMode) {
         if (i.lockMode() !== newLockMode) {
-            this.localLockChangesInProgress.push(i.name);
+            this.spinners.localLockChanges.push(i.name);
 
             new saveIndexLockModeCommand([i], newLockMode, this.activeDatabase())
                 .execute()
                 .done(() => i.lockMode(newLockMode))
-                .always(() => this.localLockChangesInProgress.remove(i.name));
+                .always(() => this.spinners.localLockChanges.remove(i.name));
         }
     }
 
@@ -290,12 +291,12 @@ class indexes extends viewModelBase {
     private setIndexPriority(idx: index, newPriority: Raven.Client.Data.Indexes.IndexingPriority) {
         const originalPriority = idx.priority();
         if (originalPriority !== newPriority) {
-            this.localPriorityInProgress.push(idx.name);
+            this.spinners.localPriority.push(idx.name);
 
             new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
                 .execute()
                 .done(() => idx.priority(newPriority))
-                .always(() => this.localPriorityInProgress.remove(idx.name));
+                .always(() => this.spinners.localPriority.remove(idx.name));
         }
     }
 
@@ -337,14 +338,14 @@ class indexes extends viewModelBase {
         this.confirmationMessage("Are you sure?", `Do you want to ${lockModeStrForTitle} selected indexes?`)
             .done(can => {
                 if (can) {
-                    this.globalLockChangesInProgress(true);
+                    this.spinners.globalLockChanges(true);
 
                     const indexes = this.getSelectedIndexes();
 
                     new saveIndexLockModeCommand(indexes, lockModeString, this.activeDatabase())
                         .execute()
                         .done(() => indexes.forEach(i => i.lockMode(lockModeString)))
-                        .always(() => this.globalLockChangesInProgress(false));
+                        .always(() => this.spinners.globalLockChanges(false));
                 }
             });
     }
@@ -354,43 +355,43 @@ class indexes extends viewModelBase {
     }
 
     startIndexing(): void {
-        this.globalStartStopInProgress(true);
+        this.spinners.globalStartStop(true);
         new toggleIndexingCommand(true, this.activeDatabase())
             .execute()
             .done(() => this.indexingEnabled(true))
             .always(() => {
-                this.globalStartStopInProgress(false);
+                this.spinners.globalStartStop(false);
                 this.fetchIndexes();
             });
     }
 
     stopIndexing() {
-        this.globalStartStopInProgress(true);
+        this.spinners.globalStartStop(true);
         new toggleIndexingCommand(false, this.activeDatabase())
             .execute()
             .done(() => this.indexingEnabled(false))
             .always(() => {
-                this.globalStartStopInProgress(false);
+                this.spinners.globalStartStop(false);
                 this.fetchIndexes();
             });
     }
 
     resumeIndexing(idx: index) {
-        this.localPriorityInProgress.push(idx.name);
+        this.spinners.localPriority.push(idx.name);
 
         new toggleIndexingCommand(true, this.activeDatabase(), { name: [idx.name] })
             .execute()
             .done(() => idx.pausedUntilRestart(false))
-            .always(() => this.localPriorityInProgress.remove(idx.name));
+            .always(() => this.spinners.localPriority.remove(idx.name));
     }
 
     pauseUntilRestart(idx: index) {
-        this.localPriorityInProgress.push(idx.name);
+        this.spinners.localPriority.push(idx.name);
 
         new toggleIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
             .execute()
             .done(() => idx.pausedUntilRestart(true))
-            .always(() => this.localPriorityInProgress.remove(idx.name));
+            .always(() => this.spinners.localPriority.remove(idx.name));
     }
 
     toggleSelectAll() {

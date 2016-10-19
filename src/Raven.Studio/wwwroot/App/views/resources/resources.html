@@ -27,7 +27,7 @@
                     <i class="icon-trash"></i>
                     <span>Delete</span>
                 </button>
-                <button type="button" class="btn btn-default" data-bind="enable: selectedResources().length, click: toggleSelectedResources()">
+                <button type="button" class="btn btn-default" data-bind="enable: selectedResources().length && !spinners.globalToggleDisable(), click: toggleSelectedResources(), css: { 'btn-spinner': spinners.globalToggleDisable() }">
                     <i data-bind="visible: !allCheckedResourcesDisabled()" class="icon-lock"></i>
                     <span data-bind="visible: !allCheckedResourcesDisabled()">Disable</span>
                     <i data-bind="visible: allCheckedResourcesDisabled()" class="icon-unlock"></i>
@@ -67,9 +67,12 @@
                         <div class="actions">
                             <div class="btn-toolbar pull-right-sm" role="toolbar">
                                 <div class="btn-group">
-                                    <button class="btn btn-default">
-                                        <i class="icon-unlock"></i>
-                                        <span>Enable</span>
+                                    <button class="btn btn-default" 
+                                            data-bind="click: $root.toggleResource.bind($root, $data), css: { 'btn-spinner': $root.spinners.itemTakedowns().contains(qualifiedName) }, enable: !$root.spinners.itemTakedowns().contains(qualifiedName)">
+                                        <i class="icon-unlock" data-bind="visible: disabled()"></i>
+                                        <span data-bind="visible: disabled()">Enable</span>
+                                        <i class="icon-lock" data-bind="visible: !disabled()"></i>
+                                        <span data-bind="visible: !disabled()">Disable</span>
                                     </button>
                                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         <span class="caret"></span>
@@ -88,7 +91,7 @@
                                         </li>
                                     </ul>
                                 </div>
-                                <button class="btn btn-danger">
+                                <button class="btn btn-danger" data-bind="click: $root.deleteResource.bind($root, $data)">
                                     <i class="icon-trash"></i>
                                     <span>Delete</span>
                                 </button>
@@ -195,98 +198,3 @@
         </div>
     </div>
 </script>
-
-<!-- TODO:
-    <section>
-            <div class="text-center" data-bind="visible: resources().length == 0">
-                <div class="row">
-                    <div data-bind="css: { 'col-md-5' : showCreateCluster(), 'col-md-12': !showCreateCluster() }">
-                        <h2 class="page-header text-info">
-                            <i class="fa fa-database fa-5x"></i>
-                            <br />
-                            <br />
-                            <span>No databases, file systems, counter storages or time series are available.</span>
-                            <br />
-                            <small data-bind="visible: isGlobalAdmin() || canNavigateToAdminSettings()">
-                                <span data-bind="visible: isGlobalAdmin">
-                                    Go ahead and <a href="#" data-bind="click: newResource">create one now</a> or
-                                </span>
-                            </small>
-                        </h2>
-                    </div>
-                    <div class="col-md-2" data-bind="visible: showCreateCluster()">
-                        <h2 class="page-header text-info" style="border-bottom: 0">
-                            <i class="fa fa-5x">&nbsp;</i><br />
-                            OR
-                        </h2>
-                    </div>
-                    <div class="col-md-5" data-bind="visible: showCreateCluster()">
-                        <h2 class="page-header text-info" data-bind="visible: canCreateCluster()">
-                            <i class="fa fa-cubes fa-5x"></i>
-                            <br />
-                            <br />
-                            Create cluster <br />
-                            <small>Go ahead and <a href="#" data-bind="click: navigateToCreateCluster">create cluster</a></small><br />
-                            <small class="text-warning" data-bind="visible: $root.developerLicense()">Enterprise feature</small>
-                        </h2>
-                        <h2 class="page-header text-info" style="color: gray" data-bind="visible: !canCreateCluster()">
-                            <i class="fa fa-cubes fa-5x"></i>
-                            <br />
-                            <br />
-                            Create cluster <br />
-                            <small>Enterprise feature. <a href="http://ravendb.net/buy" target="_blank">Upgrade your license</a></small>
-                        </h2>
-                    </div>
-                </div>
-            </div>
-
-            <div class="resources-container" data-bind="foreach: resources">
-                <!--ko if: $data.isDatabase() --
-                <div class="resource" >
-                <div class="btn-group" data-bind="visible: $root.isGlobalAdmin()">
-                    <a class="dropdown-toggle" data-toggle="dropdown">
-                        <i class="fa fa-cogs fa-lg"></i>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-right" role="menu">
-                        <li class="dropdown-submenu">
-                            <a tabindex="-1" href="#">
-                                <i class="fa fa-arrow-down"></i>
-                                <span>Takedowns</span>
-                            </a>
-                            <ul class="dropdown-menu">
-                                <li role="presentation">
-                                    <a data-bind="click: function () { $root.toggleSelectedResources([$data]); return true; }, attr: { title: disabled() ? 'Enable Selected Database' : 'Disable Selected Database' }">
-                                        <i class="fa fa-fw" data-bind="css: { 'fa-lock': !disabled(), 'fa-unlock': disabled }"></i>
-                                        <span data-bind="text: disabled() ? 'Enable' : 'Disable'"></span>
-                                    </a>
-                                </li>
-                                <li role="presentation">
-                                    <a data-bind="click: function () { $root.disableDatabaseIndexing($data); return true; }, attr: { title: indexingDisabled() ? 'Enable Indexing' : 'Disable Indexing' }">
-                                        <i class="fa fa-fw fa-bolt" data-bind="style: { color: indexingDisabled() ?  'red' : 'green' }"></i>
-                                        <span data-bind="text: indexingDisabled() ? 'Enable indexing' : 'Disable indexing'"></span>
-                                    </a>
-                                </li>
-                                <li role="presentation">
-                                    <a data-bind="click: function () { $root.toggleRejectDatabaseClients($data); return true; }, attr: { title: rejectClientsMode() ? 'Accept clients mode' : 'Reject clients mode' }">
-                                        <i class="fa fa-fw fa-umbrella" data-bind="style: { color: rejectClientsMode() ? 'red' : 'green' }"></i>
-                                        <span data-bind="text: rejectClientsMode() ? 'Accept clients mode' : 'Reject clients mode'"></span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            <!-- /ko --
-            <!-- ko if: $data.isFileSystem() --
-            <div class="resource fs">
-                <div class="btn-group" data-bind="click: function () { $root.optionsClicked(true); }, visible: $root.isGlobalAdmin()">
-                    <a class="dropdown-toggle" data-toggle="dropdown">
-                        <i class="fa fa-cogs fa-lg"></i>
-                    </a>
-                </div>
-            </div>
-            <!-- /ko --
-
-        </div>
-    </section>-->
