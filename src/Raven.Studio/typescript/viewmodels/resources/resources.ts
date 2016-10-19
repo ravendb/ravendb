@@ -2,6 +2,7 @@ import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
+import EVENTS = require("common/constants/events");
 
 import resource = require("models/resources/resource");
 import database = require("models/resources/database");
@@ -52,7 +53,7 @@ class resources extends viewModelBase {
         this.selectionState = ko.pureComputed<checkbox>(() => {
             const resources = this.resources().sortedResources().filter(x => !x.filteredOut());
             var selectedCount = this.selectedResources().length;
-            if (selectedCount === resources.length)
+            if (resources.length && selectedCount === resources.length)
                 return checkbox.Checked;
             if (selectedCount > 0)
                 return checkbox.SomeChecked;
@@ -65,12 +66,27 @@ class resources extends viewModelBase {
         });
     }
 
+    createPostboxSubscriptions(): KnockoutSubscription[] {
+        return [
+            ko.postbox.subscribe(EVENTS.Resource.Created,
+                (value: resourceCreatedEventArgs) => {
+                    //TODO: we are assuming it is database for now. 
+                    this.fetchResources();
+                })
+        ];
+    }
+
     // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any): any {
         return true;
     }
 
     activate(args: any): JQueryPromise<resourcesInfo> {
+        super.activate(args);
+        return this.fetchResources();
+    }
+
+    private fetchResources(): JQueryPromise<resourcesInfo> {
         return new getResourcesCommand()
             .execute()
             .done(info => this.resources(info));
@@ -158,7 +174,6 @@ class resources extends viewModelBase {
         app.showDialog(confirmDeleteViewModel);
     }
 
-
     private onResourceDeleted(deletedResource: resource) {
         const matchedResource = this.resources().sortedResources().find(x => x.qualifiedName === deletedResource.qualifiedName);
 
@@ -213,6 +228,7 @@ class resources extends viewModelBase {
     }
 
     toggleDatabaseIndexing(db: databaseInfo) {
+        /* TODO:
         const start = db.indexingDisabled();
         const actionText = db.indexingDisabled() ? "Enable" : "Disable";
         const message = this.confirmationMessage(actionText + " indexing?", "Are you sure?");
@@ -222,7 +238,7 @@ class resources extends viewModelBase {
                 new toggleIndexingCommand(start, db.asResource())
                     .execute(); //TODO: update spinner + UI
             }
-        });
+        });*/
     }
 
     toggleRejectDatabaseClients(db: databaseInfo) {
@@ -251,6 +267,7 @@ class resources extends viewModelBase {
         shell.disconnectFromResourceChangesApi();
     }
     */
+  
 }
 
 export = resources;

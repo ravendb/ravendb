@@ -5,8 +5,11 @@ import filesystem = require("models/filesystem/filesystem");
 
 class filesystemInfo extends resourceInfo {
 
+    filesCount = ko.observable<number>();
+
     constructor(dto: Raven.Client.Data.FileSystemInfo) {
         super(dto);
+        this.filesCount(dto.FilesCount);
     }
 
     get qualifier() {
@@ -18,7 +21,7 @@ class filesystemInfo extends resourceInfo {
     }
 
     asResource(): filesystem {
-        return new filesystem(this.name);
+        return new filesystem(this.name, this.isAdmin(), this.bundles());
     }
 }
 

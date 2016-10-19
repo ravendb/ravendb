@@ -11,6 +11,8 @@ import fileSystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
 import timeSeries = require("models/timeSeries/timeSeries");
 import shell = require("viewmodels/shell");
+import EVENTS = require("common/constants/events");
+import resourcesManager = require("common/shell/resourcesManager");
 
 import createEncryption = require("viewmodels/resources/createEncryption");
 import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
@@ -199,8 +201,8 @@ class createResource extends dialogViewModelBase {
             new createDatabaseCommand(databaseName, settings, securedSettings)
                 .execute()
                 .done(() => {
-                    var newDatabase = this.addNewDatabase(databaseName, bundles, clusterWide);
-                    this.selectResource(newDatabase);
+                    this.addNewDatabase(databaseName, bundles, clusterWide);
+                    //TODO: this.selectResource(newDatabase);
 
                     var encryptionConfirmationDialogPromise = $.Deferred();
                     if (!jQuery.isEmptyObject(securedSettings)) {
@@ -212,6 +214,7 @@ class createResource extends dialogViewModelBase {
                         encryptionConfirmationDialogPromise.resolve();
                     }
 
+                    /* TODO:
                     this.createDefaultDatabaseSettings(newDatabase, bundles).always(() => {
                         if (bundles.contains("Quotas") || bundles.contains("Versioning") || bundles.contains("SqlReplication")) {
                             encryptionConfirmationDialogPromise.always(() => {
@@ -223,18 +226,24 @@ class createResource extends dialogViewModelBase {
                                 }, 1);
                             });
                         }
-                    });
+                    });*/
                 });
         });
     }
 
-    private addNewDatabase(databaseName: string, bundles: string[], clusterWide: boolean): database {
-        return null; //TODO:
+    private addNewDatabase(databaseName: string, bundles: string[], clusterWide: boolean): void {
+        ko.postbox.publish(EVENTS.Resource.Created, //TODO: it might be temporary event as we use changes api for notifications about newly created resources. 
+        {
+            qualifier: database.qualifier,
+            name: databaseName
+        } as resourceCreatedEventArgs);
+
         /* TODO
         var foundDatabase = this.databases.first((db: database) => db.name == databaseName);
 
         if (!foundDatabase) {
             var newDatabase = new database(databaseName, true, false, bundles, undefined, undefined, clusterWide);
+        //TODO: use resources manager to get instance of database object 
             this.databases.unshift(newDatabase);
             this.filterResources();
             return newDatabase;

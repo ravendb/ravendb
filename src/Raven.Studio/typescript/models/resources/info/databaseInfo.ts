@@ -5,13 +5,19 @@ import database = require("models/resources/database");
 
 class databaseInfo extends resourceInfo {
 
-    indexingDisabled = ko.observable<boolean>();
-    rejectClientsEnabled = ko.observable<boolean>();
+    rejectClients = ko.observable<boolean>();
+    indexingStatus = ko.observable<Raven.Client.Data.Indexes.IndexRunningStatus>();
+    indexingEnabled = ko.observable<boolean>();
+    documentsCount = ko.observable<number>();
+    indexesCount = ko.observable<number>();
 
     constructor(dto: Raven.Client.Data.DatabaseInfo) {
         super(dto);
-        this.indexingDisabled(dto.IndexingDisabled);
-        this.rejectClientsEnabled(dto.RejectClientsEnabled);
+        this.rejectClients(dto.RejectClients);
+        this.indexingStatus(dto.IndexingStatus);
+        this.indexingEnabled(dto.IndexingStatus === ("Running" as Raven.Client.Data.Indexes.IndexRunningStatus));
+        this.documentsCount(dto.DocumentsCount);
+        this.indexesCount(dto.IndexesCount);
     }
 
     get qualifier() {
@@ -27,7 +33,7 @@ class databaseInfo extends resourceInfo {
     }
 
     asResource(): database {
-        return new database(this.name, true, []); //TODO: fill with value values or use resources manager to fetch those objects
+        return new database(this.name, this.isAdmin(), this.bundles());
     }
 }
 
