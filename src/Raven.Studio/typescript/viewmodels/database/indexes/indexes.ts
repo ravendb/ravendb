@@ -85,7 +85,8 @@ class indexes extends viewModelBase {
         });
         this.indexesSelectionState = ko.pureComputed<checkbox>(() => {
             const selectedCount = this.selectedIndexesName().length;
-            if (selectedCount === this.getAllIndexes().length)
+            const indexesCount = this.getAllIndexes().length;
+            if (indexesCount && selectedCount === indexesCount)
                 return checkbox.Checked;
             if (selectedCount > 0)
                 return checkbox.SomeChecked;
@@ -383,7 +384,7 @@ class indexes extends viewModelBase {
             .always(() => this.localPriorityInProgress.remove(idx.name));
     }
 
-    disableUntilRestart(idx: index) {
+    pauseUntilRestart(idx: index) {
         this.localPriorityInProgress.push(idx.name);
 
         new toggleIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })

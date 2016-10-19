@@ -60,7 +60,7 @@
             <button class="btn btn-warning btn-toggle disable-indexing"
                     data-bind="click: stopIndexing, visible: indexingEnabled(), enable: !globalStartStopInProgress(), css: { 'btn-spinner': globalStartStopInProgress() }">
                 <i class="icon-pause"></i>
-                <span>Disable indexing until restart</span>
+                <span>Pause indexing until restart</span>
             </button>
             <button class="btn btn-success btn-toggle enable-indexing"
                     data-bind="click: startIndexing, visible: !indexingEnabled(), enable: !globalStartStopInProgress(), css: { 'btn-spinner': globalStartStopInProgress() }">
@@ -146,7 +146,7 @@
                 data-bind="css: { 'btn-spinner': $root.localPriorityInProgress().contains(name) }, enable: $root.indexingEnabled() && !$root.localPriorityInProgress().contains(name)">
             <span data-bind="visible: pausedUntilRestart()">
                 <i class="icon-cancel"></i>
-                <span>Disabled until restart</span>
+                <span>Paused until restart</span>
             </span>
             <span data-bind="visible: !pausedUntilRestart() && isNormalPriority()">
                 <i class="icon-check"></i>
@@ -179,8 +179,8 @@
                 </a>
             </li>
             <li data-bind="visible: canBePaused()">
-                <a href="#" data-bind="click: $root.disableUntilRestart.bind($root, $data)" title="Disable until restart">
-                    <i class="icon-cancel"></i><span>Disable until restart</span>
+                <a href="#" data-bind="click: $root.pauseUntilRestart.bind($root, $data)" title="Paused until restart">
+                    <i class="icon-cancel"></i><span>Pause until restart</span>
                 </a>
             </li>
             <li data-bind="visible: canBeResumed()">

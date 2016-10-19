@@ -73,3 +73,8 @@ interface operationIdDto {
 interface importDatabaseRequestDto {
     batchSize: number,
 }
+
+interface resourceCreatedEventArgs {
+    qualifier: string;
+    name: string;
+}

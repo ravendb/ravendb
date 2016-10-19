@@ -1,5 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -58,13 +60,30 @@ namespace Raven.Server.Web.System
                             writer.WriteComma();
                         first = false;
 
-                        //TODO: Actually handle this properly
+                        //TODO: Actually handle this properly - we use fake values for now!
                         var doc = new DynamicJsonValue
                         {
-                            [nameof(DatabaseInfo.Name)] = db.Key.Substring("db/".Length),
-                            [nameof(DatabaseInfo.Disabled)] = false,
-                            [nameof(DatabaseInfo.RejectClientsEnabled)] = false,
-                            [nameof(DatabaseInfo.IndexingDisabled)] = false
+                            [nameof(ResourceInfo.Bundles)] = new DynamicJsonArray(),
+                            [nameof(ResourceInfo.IsAdmin)] = true,
+                            [nameof(ResourceInfo.Name)] = db.Key.Substring("db/".Length),
+                            [nameof(ResourceInfo.Disabled)] = false,
+                            [nameof(ResourceInfo.TotalSize)] = new DynamicJsonValue
+                            {
+                                [nameof(Size.HumaneSize)] = "80.4 GBytes",
+                                [nameof(Size.SizeInBytes)] = 80.4 * 1024 * 1024 * 1024
+                            },
+                            [nameof(ResourceInfo.Errors)] = 5,
+                            [nameof(ResourceInfo.Alerts)] = 7,
+                            [nameof(ResourceInfo.UpTime)] = TimeSpan.FromDays(2.4).ToString(),
+                            [nameof(ResourceInfo.BackupInfo)] = new DynamicJsonValue
+                            {
+                                [nameof(BackupInfo.BackupInterval)] = TimeSpan.FromDays(7).ToString(),
+                                [nameof(BackupInfo.LastBackup)] = TimeSpan.FromDays(10).ToString()
+                            },
+                            [nameof(DatabaseInfo.DocumentsCount)] = 10234,
+                            [nameof(DatabaseInfo.IndexesCount)] = 30,
+                            [nameof(DatabaseInfo.RejectClients)] = true,
+                            [nameof(DatabaseInfo.IndexingStatus)] = IndexRunningStatus.Paused.ToString()
                         };
                         context.Write(writer, doc);
                     }
@@ -113,3 +132,5 @@ namespace Raven.Server.Web.System
         }
     }
 }
+ 
+ 

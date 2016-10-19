@@ -7,7 +7,7 @@ abstract class resource {
     activeBundles = ko.observableArray<string>();
     name: string;
 
-    constructor(name: string, isAdminCurrentTenant: boolean, activeBundles: string[]) {
+    protected constructor(name: string, isAdminCurrentTenant: boolean, activeBundles: string[]) {
         this.name = name;
         this.isAdminCurrentTenant(isAdminCurrentTenant);
         this.activeBundles(activeBundles);
