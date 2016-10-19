@@ -192,7 +192,7 @@ namespace Raven.Database.Config
                     }
                     catch (Exception e)
                     {
-                        log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+                        log.ErrorException("Failure to process low memory notification (low memory handler - " + handler + ")", e);
                     }
                 }
                 else
@@ -218,7 +218,7 @@ namespace Raven.Database.Config
                     }
                     catch (Exception e)
                     {
-                        log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+                        log.ErrorException("Failure to process low memory notification (low memory handler - " + handler + ")", e);
                     }
                 }
                 else
