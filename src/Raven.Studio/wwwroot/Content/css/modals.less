@@ -1,0 +1,63 @@
+.modal-dialog {
+    transition: all .3s ease-in-out !important;
+
+    .col-mod-md-6,
+    .col-mod-sm-12 {
+        position: relative;
+        min-height: 1px;
+        padding-left: 15px;
+        padding-right: 15px;
+        float: left;
+    }
+
+    .col-mod-sm-12 {
+        width: 100%;
+    }
+
+    &:not(.modal-sm) {
+        .col-mod-md-6 {
+            @media (min-width: @screen-sm) {
+                width: 50%;
+            }
+        }
+    }
+    .visible-mod-md {
+        .fadeindelay-style;
+    }
+
+    &.modal-sm {
+            .visible-mod-md {
+                display: none;
+            }
+
+            .hidden-mod-sm {
+                display: none;
+            }
+    }
+
+
+
+    .visible-mod-lg {
+        display: none;
+        .fadeindelay-style;
+    }
+
+    &.modal-lg {
+        .col-mod-lg-4 {
+            @media (min-width: @screen-sm) {
+                width: (@modal-lg / 3) - 1;
+            }
+        }
+
+        .col-mod-lg-8 {
+            @media (min-width: @screen-sm) {
+                width: (@modal-lg / 3 * 2) - 1;
+            }
+        }
+
+        .visible-mod-lg {
+            display: block;
+        }
+    }
+
+}
