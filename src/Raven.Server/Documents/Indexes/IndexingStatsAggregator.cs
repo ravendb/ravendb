@@ -127,6 +127,8 @@ namespace Raven.Server.Documents.Indexes
 
         public TimeSpan Duration => _sw.Elapsed;
 
+        public int MapAttempts => _stats.MapAttempts;
+
         public IndexingStatsScope For(string name, bool start = true)
         {
             if (_scopes == null)

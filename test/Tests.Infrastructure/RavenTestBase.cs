@@ -189,6 +189,7 @@ namespace FastTests
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path;
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";
+            doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString();
             modifyDatabaseDocument?.Invoke(doc);
 
             TransactionOperationContext context;
