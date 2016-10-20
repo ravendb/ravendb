@@ -30,26 +30,14 @@ namespace Voron
 {
     public class StorageEnvironment : IDisposable
     {
-        private static readonly Lazy<GlobalFlushingBehavior> GlobalFlusher = new Lazy<GlobalFlushingBehavior>(() =>
-        {
-            var flusher = new GlobalFlushingBehavior();
-            var thread = new Thread(flusher.VoronEnvironmentFlushing)
-            {
-                IsBackground = true,
-                Name = "Voron Global Flushing Thread"
-            };
-            thread.Start();
-            return flusher;
-        });
-
         public void QueueForSyncDataFile()
         {
-            GlobalFlusher.Value.MaybeSyncEnvironment(this);
+            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeSyncEnvironment(this);
         }
 
         public void ForceSyncDataFile()
         {
-            GlobalFlusher.Value.ForceFlushAndSyncEnvironment(this);
+            GlobalFlushingBehavior.GlobalFlusher.Value.ForceFlushAndSyncEnvironment(this);
         }
 
         /// <summary>
@@ -162,7 +150,7 @@ namespace Voron
                 {
                     return;
                 }
-                GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
             }
         }
 
@@ -360,7 +348,7 @@ namespace Voron
                     Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
                     if (txLockTaken == false || (flushInProgressReadLockTaken == false && FlushInProgressLock.IsWriteLockHeld == false))
                     {
-                        GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                        GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         throw new TimeoutException("Waited for " + wait +
                                                     " for transaction write lock, but could not get it");
                     }
@@ -372,7 +360,7 @@ namespace Voron
                             _endOfDiskSpace = null;
                             _cancellationTokenSource = new CancellationTokenSource();
                             Task.Run(IdleFlushTimer);
-                            GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                             ForceSyncDataFile();
                         }
                     }
@@ -460,7 +448,7 @@ namespace Voron
 
             Interlocked.Add(ref SizeOfUnflushedTransactionsInJournalFile, totalPages);
             if (tx.IsLazyTransaction == false)
-                GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
         }
 
         internal void TransactionCompleted(LowLevelTransaction tx)

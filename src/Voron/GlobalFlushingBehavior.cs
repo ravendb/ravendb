@@ -9,6 +9,18 @@ namespace Voron
 {
     public class GlobalFlushingBehavior
     {
+        internal static readonly Lazy<GlobalFlushingBehavior> GlobalFlusher = new Lazy<GlobalFlushingBehavior>(() =>
+        {
+            var flusher = new GlobalFlushingBehavior();
+            var thread = new Thread(flusher.VoronEnvironmentFlushing)
+            {
+                IsBackground = true,
+                Name = "Voron Global Flushing Thread"
+            };
+            thread.Start();
+            return flusher;
+        });
+
         private readonly ConcurrentQueue<StorageEnvironment> _maybeNeedToFlush = new ConcurrentQueue<StorageEnvironment>();
         private readonly ManualResetEventSlim _flushWriterEvent = new ManualResetEventSlim();
         private readonly SemaphoreSlim _concurrentFlushes = new SemaphoreSlim(StorageEnvironment.MaxConcurrentFlushes);
