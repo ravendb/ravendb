@@ -36,7 +36,7 @@ class Utils {
 
     static mockActiveDatabase(factory: dbCreator): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Utils.injector.require(["models/resources/database", "viewmodels/resources/activeResourceTracker"], (dbCtr: new () => database, resourceTracker: any) => {
+            Utils.injector.require(["models/resources/database", "common/shell/activeResourceTracker"], (dbCtr: new () => database, resourceTracker: any) => {
                 var dbInstance = factory(dbCtr);
                 resourceTracker.default.resource(dbInstance);
                 resolve();

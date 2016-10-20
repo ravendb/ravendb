@@ -6,14 +6,14 @@
                 <label></label>
             </div>
             <div class="resourcesToolbar-typeSelector btn-group">
-                <button class="btn btn-default" data-bind="css: { active: filters.includeDatabases() }, click: () => filters.includeDatabases.toggle()">
+                <button class="btn btn-default" data-bind="css: { active: filters.includeDatabases() }, click: filters.includeDatabases.toggle.bind(filters.includeDatabases)">
                     <i class="icon-database"></i>
                     <span>
                         Databases
                     </span>
                     <span class="badge" data-bind="text: resources().databasesCount(), visible: resources().databasesCount()"></span>
                 </button>
-                <button class="btn btn-default" data-bind="css: { active: filters.includeFilesystems() }, click: () => filters.includeFilesystems.toggle()">
+                <button class="btn btn-default" data-bind="css: { active: filters.includeFilesystems() }, click: filters.includeFilesystems.toggle.bind(filters.includeFilesystems)">
                     <i class="icon-filesystem"></i>
                     <span>
                         Filesystems
