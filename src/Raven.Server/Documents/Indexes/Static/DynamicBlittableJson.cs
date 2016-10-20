@@ -12,9 +12,8 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class DynamicBlittableJson : DynamicObject, IEnumerable<object>, IBlittableJsonContainer
     {
+        private Document _doc;
         public BlittableJsonReaderObject BlittableJson { get; private set; }
-
-        private LazyStringValue _key;
 
         public DynamicBlittableJson(Document document)
         {
@@ -28,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public void Set(Document document)
         {
-            _key = document.Key;
+            _doc = document;
             BlittableJson = document.Data;
         }
 
@@ -52,24 +51,34 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             if (name == Constants.Indexing.Fields.DocumentIdFieldName || name == "Id")
             {
-                if (_key == null)
-                {
-                    if (BlittableJson.TryGetMember(name, out result) == false)
-                        result = DynamicNullObject.Null;
+                if (BlittableJson.TryGetMember(name, out result))
+                    return true;
 
+                if (_doc == null)
+                {
+                    result = DynamicNullObject.Null;
                     return true;
                 }
 
-                result = _key;
+                result = _doc.Key;
                 return true;
             }
 
             var getResult = BlittableJson.TryGetMember(name, out result);
 
-            if (getResult == false && (name == Constants.Metadata.Id || name == Constants.Metadata.Etag))
+            if (getResult == false && _doc != null)
             {
-                result = BlittableJson.Modifications[name];
-                getResult = result != null;
+                switch (name)
+                {
+                    case Constants.Metadata.Id:
+                        result = _doc.Key;
+                        getResult = true;
+                        break;
+                    case Constants.Metadata.Etag:
+                        result = _doc.Etag;
+                        getResult = true;
+                        break;
+                }
             }
 
             if (result == null && name == "HasValue")
@@ -91,6 +100,12 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             result = TypeConverter.ToDynamicType(result);
+
+            if (name == Constants.Metadata.Key)
+            {
+                ((DynamicBlittableJson) result)._doc = _doc;
+            }
+
             return true;
         }
 
