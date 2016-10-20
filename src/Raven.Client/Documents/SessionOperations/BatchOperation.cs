@@ -55,7 +55,6 @@ namespace Raven.Client.Documents.SessionOperations
 
         public void SetResult(BatchResult result)
         {
-            //TODO - work in grogress
             for (var i = _deferredCommandsCount; i < result.Results.Length; i++)
             {
                 var batchResult = result.Results[i] as BlittableJsonReaderObject;
@@ -75,20 +74,20 @@ namespace Raven.Client.Documents.SessionOperations
                     continue;
 
                 string key;
-
+                long? etag;
                 BlittableJsonReaderObject metadata;
-                 batchResult.TryGet("Metadata", out metadata);
-                documentInfo.Metadata = metadata;
-                batchResult.TryGet("Key", out key);
-                _session.DocumentsById[key] = documentInfo;
-                /*documentMetadata.ETag = batchResult.Etag;
-                documentMetadata.Key = batchResult.Key;
-                documentMetadata.OriginalMetadata = (RavenJObject)batchResult.Metadata.CloneToken();
-                documentMetadata.Metadata = batchResult.Metadata;
-                documentMetadata.OriginalValue = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
-
-                GenerateEntityIdOnTheClient.TrySetIdentity(entity, batchResult.Key);
-                */
+                if (batchResult.TryGet("Metadata", out metadata))
+                    documentInfo.Metadata = metadata;
+                if (batchResult.TryGet("Etag", out etag))
+                    documentInfo.ETag = etag;
+                if (batchResult.TryGet("Key", out key))
+                {
+                    documentInfo.Id = key;
+                    _session.DocumentsById[key] = documentInfo;
+                }
+                //TODO - Efrat
+                /*GenerateEntityIdOnTheClient.TrySetIdentity(entity, batchResult.Key);*/
+                //TODO - Efrat - after listeners
                 foreach (var documentStoreListener in _session.Listeners.StoreListeners)
                 {
                     documentStoreListener.AfterStore(key, entity, metadata);

@@ -16,11 +16,13 @@ using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Client.Document;
 using Raven.Client.Document.Batches;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.SessionOperations;
 using Raven.Client.Http;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Json.Linq;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents
 {
@@ -34,6 +36,23 @@ namespace Raven.Client.Documents
         /// </summary>
         /// <value>The database commands.</value>
         public IDatabaseCommands DatabaseCommands { get; private set; }
+
+        /// <summary>
+        /// Get the accessor for advanced operations
+        /// </summary>
+        /// <remarks>
+        /// Those operations are rarely needed, and have been moved to a separate 
+        /// property to avoid cluttering the API
+        /// </remarks>
+        public ISyncAdvancedSessionOperation Advanced => this;
+
+        public IEagerSessionOperations Eagerly => this;
+
+        ILazySessionOperations ISyncAdvancedSessionOperation.Lazily => Lazily;
+
+        IEagerSessionOperations ISyncAdvancedSessionOperation.Eagerly => Eagerly;
+
+        public ILazySessionOperations Lazily => this;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
@@ -151,6 +170,8 @@ namespace Raven.Client.Documents
 
         #endregion Lazy
 
+        #region Include
+
         /// <summary>
         /// Begin a load while including the specified path
         /// </summary>
@@ -180,6 +201,10 @@ namespace Raven.Client.Documents
         {
             return new MultiLoaderWithInclude<object>(this).Include(path);
         }
+
+        #endregion Include
+
+        #region Load
 
         /// <summary>
         /// Loads the specified entity with the specified id.
@@ -337,30 +362,22 @@ namespace Raven.Client.Documents
             return loadOeration.GetDocuments<T>();
         }
 
-        /// <summary>
-        /// Get the accessor for advanced operations
-        /// </summary>
-        /// <remarks>
-        /// Those operations are rarely needed, and have been moved to a separate 
-        /// property to avoid cluttering the API
-        /// </remarks>
-        public ISyncAdvancedSessionOperation Advanced
+        public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null,
+           RavenPagingInformation pagingInformation = null, string skipAfter = null)
         {
-            get { return this; }
+            throw new NotImplementedException();
         }
 
-        public IEagerSessionOperations Eagerly => this;
-        ILazySessionOperations ISyncAdvancedSessionOperation.Lazily
+        public TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
+            int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null,
+            string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
         {
-            get { return Lazily; }
+            throw new NotImplementedException();
         }
 
-        IEagerSessionOperations ISyncAdvancedSessionOperation.Eagerly
-        {
-            get { return Eagerly; }
-        }
+        #endregion Load
 
-        public ILazySessionOperations Lazily => this;
+        #region Query
 
         /// <summary>
         /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
@@ -397,69 +414,6 @@ namespace Raven.Client.Documents
             throw new NotImplementedException();
         }
 
-        public FacetedQueryResult[] MultiFacetedSearch(params FacetQuery[] queries)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Refresh<T>(T entity)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query)
-        {
-            throw new NotImplementedException();
-        }
-        
-        public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
-        {
-            throw new NotImplementedException();
-        }
-
-        IEnumerator<StreamResult<T>> ISyncAdvancedSessionOperation.Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, int start = 0, int pageSize = Int32.MaxValue,
-            RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue,
-            RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null,
-            Dictionary<string, RavenJToken> transformerParameters = null)
-        {
-            throw new NotImplementedException();
-        }
-        
-        Operation ISyncAdvancedSessionOperation.DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
-        {
-            return DeleteByIndex(indexName, expression);
-        }
-
-        public Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
-        {
-            throw new NotImplementedException();
-        }
-
         /// <summary>
         /// Query the specified index using Lucene syntax
         /// </summary>
@@ -469,28 +423,10 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public IDocumentQuery<T> DocumentQuery<T>(string indexName, bool isMapReduce = false)
         {
-            return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, theListeners.QueryListeners, isMapReduce);
+            return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, TheListeners.QueryListeners, isMapReduce);
         }
 
         public IDocumentQuery<T> DocumentQuery<T>()
-        {
-            throw new NotImplementedException();
-        }
-
-        public string GetDocumentUrl(object entity)
-        {
-            throw new NotImplementedException();
-        }
-
-        public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null,
-            RavenPagingInformation pagingInformation = null, string skipAfter = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
-            int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null,
-            string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
         {
             throw new NotImplementedException();
         }
@@ -530,7 +466,7 @@ namespace Raven.Client.Documents
         {
             return new RavenQueryInspector<S>();
         }
-        
+
         /// <summary>
         /// Queries the index specified by <typeparamref name="TIndexCreator"/> using Linq.
         /// </summary>
@@ -542,47 +478,10 @@ namespace Raven.Client.Documents
             var indexCreator = new TIndexCreator();
             return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce);
         }
-        
+
         IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
         {
             return Advanced.DocumentQuery<T>(indexName, isMapReduce);
-        }
-
-        protected override JsonDocument GetJsonDocument(string documentKey)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override string GenerateKey(object entity)
-        {
-            return Conventions.GenerateDocumentKey(databaseName, DatabaseCommands, entity);
-        }
-
-        protected override Task<string> GenerateKeyAsync(object entity)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SaveChanges()
-        {
-            var saveChangesOeration = new BatchOperation(this);
-
-            var command = saveChangesOeration.CreateRequest();
-            if (command != null)
-            {
-                RequestExecuter.Execute(command, Context);
-                saveChangesOeration.SetResult(command.Result);
-            }
-        }
-
-        public void Defer(params ICommandData[] commands)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ResponseTimeInformation ExecuteAllPendingLazyOperations()
-        {
-            throw new NotImplementedException();
         }
 
         IRavenQueryable<T> IDocumentSession.Query<T>(string indexName, bool isMapReduce)
@@ -599,5 +498,148 @@ namespace Raven.Client.Documents
         {
             throw new NotImplementedException();
         }
+
+        #endregion Query
+
+        #region Stream
+
+        public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
+        {
+            throw new NotImplementedException();
+        }
+
+        IEnumerator<StreamResult<T>> ISyncAdvancedSessionOperation.Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, int start = 0, int pageSize = Int32.MaxValue,
+            RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue,
+            RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null,
+            Dictionary<string, RavenJToken> transformerParameters = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion Stream
+
+        #region DeleteByIndex
+
+        Operation ISyncAdvancedSessionOperation.DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
+        {
+            return DeleteByIndex(indexName, expression);
+        }
+
+        public Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        public void SaveChanges()
+        {
+            var saveChangesOeration = new BatchOperation(this);
+
+            var command = saveChangesOeration.CreateRequest();
+            if (command != null)
+            {
+                RequestExecuter.Execute(command, Context);
+                saveChangesOeration.SetResult(command.Result);
+            }
+        }
+
+        public void Refresh<T>(T entity)
+        {
+            DocumentInfo documentInfo;
+            if (DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
+                throw new InvalidOperationException("Cannot refresh a transient instance");
+            IncrementRequestCount();
+
+            //TODO - Efrat - Change when we have new DatabaseCommands.Get
+            var document = TempDatabaseCommandGet<T>(documentInfo);
+
+            RefreshInternal(entity, document, documentInfo);
+        }
+
+        private BlittableJsonReaderObject TempDatabaseCommandGet<T>(DocumentInfo documentInfo)
+        {
+            var command = new GetDocumentCommand
+            {
+                Ids = new[] {documentInfo.Id}
+            };
+            RequestExecuter.Execute(command, Context);
+            var document = (BlittableJsonReaderObject) command.Result.Results[0];
+            if (document == null)
+                throw new InvalidOperationException("Document '" + documentInfo.Id +
+                                                    "' no longer exists and was probably deleted");
+
+            object value;
+            document.TryGetMember(Constants.Metadata.Key, out value);
+            documentInfo.Metadata = value as BlittableJsonReaderObject;
+
+            object etag;
+            document.TryGetMember(Constants.Metadata.Etag, out etag);
+            documentInfo.ETag = etag as long?;
+
+            documentInfo.Document = document;
+            return document;
+        }
+
+        public string GetDocumentUrl(object entity)
+        {
+            throw new NotImplementedException();
+        }
+
+        public FacetedQueryResult[] MultiFacetedSearch(params FacetQuery[] queries)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override JsonDocument GetJsonDocument(string documentKey)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override string GenerateKey(object entity)
+        {
+            return Conventions.GenerateDocumentKey(DatabaseName, DatabaseCommands, entity);
+        }
+
+        protected override Task<string> GenerateKeyAsync(object entity)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ResponseTimeInformation ExecuteAllPendingLazyOperations()
+        {
+            throw new NotImplementedException();
+        }
+
     }
 }
