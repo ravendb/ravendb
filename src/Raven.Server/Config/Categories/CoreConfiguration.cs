@@ -20,8 +20,8 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/MaxPageSize")]
         public int MaxPageSize { get; set; }
 
-        [Description("The URLs which the server should listen to. By default we listen to localhost:8080")]
-        [DefaultValue("http://localhost:8080")]
+        [Description("The URLs which the server should listen to. By default we listen to all network interfaces at port 8080")]
+        [DefaultValue("http://0.0.0.0:8080")]
         [ConfigurationEntry("Raven/ServerUrl")]
         public string ServerUrl { get; set; }
 
