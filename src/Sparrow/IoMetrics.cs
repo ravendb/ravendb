@@ -9,9 +9,9 @@ namespace Sparrow
     {
         public enum MeterType
         {
-            WriteUsingSyscall,
-            WriteUsingMem,
-            Sync
+            JournalWrite,
+            DataFlush,
+            DataSync,
         }
 
         private readonly ConcurrentDictionary<string, FileIoMetrics> _fileMetrics =
@@ -52,14 +52,14 @@ namespace Sparrow
             IoMeterBuffer buffer;
             switch (type)
             {
-                case MeterType.WriteUsingMem:
-                    buffer = fileIoMetrics.WriteUsingMem;
+                case MeterType.JournalWrite:
+                    buffer = fileIoMetrics.JournalWrite;
                     break;
-                case MeterType.WriteUsingSyscall:
-                    buffer = fileIoMetrics.WriteUsingSyscall;
+                case MeterType.DataFlush:
+                    buffer = fileIoMetrics.DataFlush;
                     break;
-                case MeterType.Sync:
-                    buffer = fileIoMetrics.Sync;
+                case MeterType.DataSync:
+                    buffer = fileIoMetrics.DataSync;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -70,27 +70,28 @@ namespace Sparrow
         public class FileIoMetrics
         {
             public string FileName;
-            public IoMeterBuffer Sync;
-            public IoMeterBuffer WriteUsingMem;
-            public IoMeterBuffer WriteUsingSyscall;
+            public IoMeterBuffer JournalWrite;
+            public IoMeterBuffer DataFlush;
+            public IoMeterBuffer DataSync;
+
             public bool Closed;
 
             public FileIoMetrics(string filename, int metricsBufferSize, int summaryBufferSize)
             {
                 FileName = filename;
 
-                WriteUsingMem = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
-                WriteUsingSyscall = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
-                Sync = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
+                JournalWrite = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
+                DataFlush = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
+                DataSync = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
             }
 
 
             public List<IoMeterBuffer.MeterItem> GetRecentMetrics()
             {
                 var list = new List<IoMeterBuffer.MeterItem>();
-                list.AddRange(Sync.GetCurrentItems());
-                list.AddRange(WriteUsingMem.GetCurrentItems());
-                list.AddRange(WriteUsingSyscall.GetCurrentItems());
+                list.AddRange(DataSync.GetCurrentItems());
+                list.AddRange(JournalWrite.GetCurrentItems());
+                list.AddRange(DataFlush.GetCurrentItems());
 
                 list.Sort((x, y) => x.Start.CompareTo(y.Start));
 
@@ -100,9 +101,9 @@ namespace Sparrow
             public List<IoMeterBuffer.SummerizedItem> GetSummaryMetrics()
             {
                 var list = new List<IoMeterBuffer.SummerizedItem>();
-                list.AddRange(Sync.GetSummerizedItems());
-                list.AddRange(WriteUsingSyscall.GetSummerizedItems());
-                list.AddRange(WriteUsingMem.GetSummerizedItems());
+                list.AddRange(DataSync.GetSummerizedItems());
+                list.AddRange(DataFlush.GetSummerizedItems());
+                list.AddRange(JournalWrite.GetSummerizedItems());
 
                 list.Sort((x, y) => x.TotalTimeStart.CompareTo(y.TotalTimeStart));
 
