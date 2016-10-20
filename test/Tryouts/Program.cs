@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Documents.Indexing;
 using FastTests.Server.Documents.Indexing.Auto;
 using FastTests.Server.Documents.Queries.Dynamic.MapReduce;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Document;
@@ -24,47 +25,38 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var byteStringContext = new ByteStringContext())
+            using (var store = new DocumentStore
             {
-                Slice labelA;
-                Slice labelB;
-                Parallel.Invoke(() =>
+                Url = "http://localhost:8080",
+                DefaultDatabase = "TestDB"
+            })
+            {
+                store.Initialize(true);
+                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+                {
+                    Id = "TestDB",
+                    Settings = new Dictionary<string, string>
                     {
-                        using (Slice.From(byteStringContext, "A", ByteStringType.Immutable, out labelA))
-                        {
-                            var labelAsString = labelA.ToString();
-                            if (labelAsString != "A")
-                                throw new InvalidDataException("Should be equal A, but equals " + labelAsString);
-                        }
-                    },
-                    () =>
-                    {
-                        using (Slice.From(byteStringContext, "B", ByteStringType.Immutable, out labelB))
-                        {
-                            var labelBsString = labelB.ToString();
-                            if (labelBsString != "B")
-                                throw new InvalidDataException("Should be equal B, but equals " + labelBsString);
-                        }
-                    });
-            }
-            //for (int i = 0; i < 1000; i++)
-            //{
-            //    Parallel.Invoke(() =>
-            //    {
-            //        using (var test = new BasicIndexMetadataStorageTests())
-            //        {
-            //            test.Writing_indexes_transformers_and_tombstones_should_share_etags().Wait();
-            //        }
-            //    },
-            //    () => {
-            //        using (var test = new BasicIndexMetadataStorageTests())
-            //        {
-            //            test.Deleting_index_metadata_should_work().Wait();
-            //        }
-            //    });
-            //    Console.WriteLine(i);
-            //}
+                        { "Raven/DataDir", "Data" }
+                    }
+                });
 
+                new Users_Search().Execute(store);
+                new Users_Registrations_ByMonth().Execute(store);
+
+                using (var op = store.BulkInsert())
+                {
+                    for (int i = 0; i < 100000000; i++)
+                    {
+                        op.Store(new User
+                        {
+                            DisplayName = Guid.NewGuid().ToString(),
+                            CreationDate = DateTime.UtcNow,
+                            DownVotes = 432
+                        });
+                    }
+                }
+            }
         }
     }
 

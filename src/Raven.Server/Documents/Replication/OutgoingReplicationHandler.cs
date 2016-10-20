@@ -16,6 +16,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using System.Net.Http;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Replication.Messages;
@@ -42,8 +43,10 @@ namespace Raven.Server.Documents.Replication
         private long _lastSentTransformerEtag = 0;
 
         private DateTime _lastSentTime;
-        private readonly Dictionary<Guid, long> _destinationLastKnownChangeVector = new Dictionary<Guid, long>();
-        private string _destinationLastKnownChangeVectorString;
+        private readonly Dictionary<Guid, long> _destinationLastKnownDocumentChangeVector = new Dictionary<Guid, long>();
+        private readonly Dictionary<Guid, long> _destinationLastKnownIndexTransformerChangeVector = new Dictionary<Guid, long>();
+        private string _destinationLastKnownDocumentChangeVectorString;
+        private string _destinationLastKnownIndexTransformerChangeVectorString = String.Empty;
         private TcpClient _tcpClient;
         private BlittableJsonTextWriter _writer;
         private JsonOperationContext.MultiDocumentParser _parser;
@@ -135,7 +138,7 @@ namespace Raven.Server.Documents.Replication
 
                             while (_cts.IsCancellationRequested == false)
                             {
-                            _context.ResetAndRenew();							
+                                _context.ResetAndRenew();							
                                 if (documentsReplicationSender.ExecuteReplicationOnce() == false)
                                 {
                                     using (_context.OpenReadTransaction())
@@ -147,10 +150,22 @@ namespace Raven.Server.Documents.Replication
                                     }
                                 }
 
+                                if (indexesTransformersReplicationSender.ExecuteReplicationOnce() == false)
+                                {
+                                    using (_context.OpenReadTransaction())
+                                    {
+                                        var currentIndexEtag =
+                                            _database.IndexTransformerMetadataStorage
+                                                     .ReadLastEtag(_context.Transaction.InnerTransaction);
+                                        if (currentIndexEtag < _lastSentIndexEtag ||
+                                            currentIndexEtag < _lastSentTransformerEtag)
+                                            continue;
+                                    }
+                                }
                                 //if this returns false, this means either timeout or canceled token is activated                    
                                 while (_waitForChanges.Wait(_minimalHeartbeatInterval, _cts.Token) == false)
                                 {
-                                _context.ResetAndRenew();
+                                    _context.ResetAndRenew();
                                     using (_context.OpenReadTransaction())
                                     {
                                         SendHeartbeat();
@@ -175,20 +190,24 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void UpdateDestinationChangeVector(ReplicationMessageReply replicationBatchReply)
+        private void UpdateDestinationChangeVector(
+            ReplicationMessageReply replicationBatchReply,
+            long lastEtag,
+            Dictionary<Guid,long> destinationLastKnownDocumentChangeVector,
+            out long lastSentDocumentEtag,
+            out string lastKnownDocumentChangeVectorString)
         {
-            _destinationLastKnownChangeVector.Clear();
+            destinationLastKnownDocumentChangeVector.Clear();
 
-            _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
+            lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
-            _destinationLastKnownChangeVectorString = replicationBatchReply.CurrentChangeVector.Format();
+            lastKnownDocumentChangeVectorString = replicationBatchReply.CurrentChangeVector.Format();
 
             foreach (var changeVectorEntry in replicationBatchReply.CurrentChangeVector)
             {
-                _destinationLastKnownChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+                destinationLastKnownDocumentChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
-            if (DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction) >
-                replicationBatchReply.LastEtagAccepted)
+            if (lastEtag > replicationBatchReply.LastEtagAccepted)
             {
                 // We have changes that the other side doesn't have, this can be because we have writes
                 // or because we have documents that were replicated to us. Either way, we need to sync
@@ -274,7 +293,7 @@ namespace Raven.Server.Documents.Replication
                 _stream = inputStream;
             }
 
-            public void ExecuteReplicationOnce()
+            public bool ExecuteReplicationOnce()
             {
                 var sp = Stopwatch.StartNew();
                 var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
@@ -287,15 +306,70 @@ namespace Raven.Server.Documents.Replication
                     using (var tx = _context.OpenReadTransaction())
                     {
                         var indexMetadata =
-                            _parent._database.IndexTransformerMetadataStorage.GetMetadataAfter(_lastIndexEtag, MetadataStorageType.Index)
-                                .ToList();
+                            _parent._database.IndexTransformerMetadataStorage.GetMetadataAfter(
+                                _lastIndexEtag, MetadataStorageType.Index, tx.InnerTransaction)
+                                    .ToList();
                         var transformerMetadata =
-                            _parent._database.IndexTransformerMetadataStorage.GetMetadataAfter(_lastTransformerEtag,
-                                MetadataStorageType.Transformer).ToList();
+                            _parent._database.IndexTransformerMetadataStorage.GetMetadataAfter(
+                                _lastTransformerEtag, MetadataStorageType.Transformer,tx.InnerTransaction)
+                                    .ToList();
 
-                        _lastIndexEtag = indexMetadata.Last().Etag;
+                        long maxEtag;
+                        maxEtag = Math.Max(_lastIndexEtag,_lastTransformerEtag);
+                        if (indexMetadata.Count > 0)
+                        {
+                            maxEtag = indexMetadata[indexMetadata.Count - 1].Etag;
+                        }
+
+                        if (transformerMetadata.Count > 0)
+                        {
+                            maxEtag = Math.Max(maxEtag, transformerMetadata[transformerMetadata.Count - 1].Etag);
+                        }
                     }
                 }
+
+                return true;
+            }
+
+            private enum ReplicationItemType
+            {
+                Document,
+                Index,
+                Transformer
+            }
+
+            private void AddItemToReplicationBatch(
+                SortedList<long, ReplicationBatchItem> orderedReplicaItems,
+                ReplicationBatchItem item, 
+                ReplicationItemType itemType,
+                ref long lastIndex)
+            {
+                Dictionary<Guid,long> lastKnownChangeVector;
+                switch (itemType)
+                {
+                    case ReplicationItemType.Document:
+                        lastKnownChangeVector = _parent._destinationLastKnownDocumentChangeVector;
+                        break;
+                    case ReplicationItemType.Index:
+                    case ReplicationItemType.Transformer:
+                        lastKnownChangeVector = _parent._destinationLastKnownIndexTransformerChangeVector;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(itemType), itemType, null);
+                }
+                
+                // destination already has it
+                if (item.ChangeVector.GreaterThan(lastKnownChangeVector) == false)
+                {
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info(
+                            $"Skipping replication of {item.Key} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Dest: {_parent._destinationLastKnownDocumentChangeVectorString} ");
+                    }
+                    return;
+                }
+                lastIndex = Math.Max(lastIndex, item.Etag);
+                orderedReplicaItems.Add(item.Etag, item);
             }
         }
 
@@ -423,12 +497,12 @@ namespace Raven.Server.Documents.Replication
                     return;
                 }
                 // destination already has it
-                if (item.ChangeVector.GreaterThan(_parent._destinationLastKnownChangeVector) == false)
+                if (item.ChangeVector.GreaterThan(_parent._destinationLastKnownDocumentChangeVector) == false)
                 {
                     if (_log.IsInfoEnabled)
                     {
                         _log.Info(
-                            $"Skipping replication of {item.Key} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Dest: {_parent._destinationLastKnownChangeVectorString} ");
+                            $"Skipping replication of {item.Key} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Dest: {_parent._destinationLastKnownDocumentChangeVectorString} ");
                     }
                     return;
                 }
@@ -567,7 +641,12 @@ namespace Raven.Server.Documents.Replication
 
                 if (replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Ok)
                 {
-                    UpdateDestinationChangeVector(replicationBatchReply);
+                    UpdateDestinationChangeVector(
+                        replicationBatchReply,
+                        DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction),
+                        _destinationLastKnownDocumentChangeVector,
+                        out _lastSentDocumentEtag,
+                        out _destinationLastKnownDocumentChangeVectorString);
                     OnSuccessfulTwoWaysCommunication();
                 }
 
@@ -577,7 +656,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         case ReplicationMessageReply.ReplyType.Ok:
                             _log.Info(
-                                $"Received reply for replication batch from {_destination.Database} @ {_destination.Url}. New destination change vector is {_destinationLastKnownChangeVectorString}");
+                                $"Received reply for replication batch from {_destination.Database} @ {_destination.Url}. New destination change vector (documents) is {_destinationLastKnownDocumentChangeVectorString}");
                             break;
                         case ReplicationMessageReply.ReplyType.Error:
                             _log.Info(

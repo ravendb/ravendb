@@ -23,13 +23,7 @@ namespace Sparrow.Json
             public LazyStringValue Comparer;
             public int GlobalSortOrder;
             public int PropertyId;
-
-            public override string ToString()
-            {
-                return $"Value: {Comparer}, GlobalSortOrder: {GlobalSortOrder}, PropertyId: {PropertyId}";
-            }
         }
-
         private readonly List<PropertyName> _docPropNames = new List<PropertyName>();
         private readonly List<PropertyName> _propertiesSortOrder = new List<PropertyName>();
         private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>();

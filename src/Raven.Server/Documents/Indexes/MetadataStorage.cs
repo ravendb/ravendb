@@ -419,24 +419,29 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = Environment.ReadTransaction())
             {
-                var metadataTable = GetMetadataTableByType(storageType, tx);
-                foreach (var tvr in metadataTable.SeekForwardFrom(
-                                            _metadataSchema.
-                                                FixedSizeIndexes[MetadataEtagIndexName], etag))
+                foreach (var indexTransformerMetadata in GetMetadataAfter(etag, storageType, tx, start, take))
+                    yield return indexTransformerMetadata;
+            }
+        }
+
+        public IEnumerable<IndexTransformerMetadata> GetMetadataAfter(long etag, MetadataStorageType storageType, Transaction tx,int start = 0, int take = 1024)
+        {
+            var metadataTable = GetMetadataTableByType(storageType, tx);
+            foreach (var tvr in metadataTable.SeekForwardFrom(
+                _metadataSchema.
+                    FixedSizeIndexes[MetadataEtagIndexName], etag))
+            {
+                if (start > 0)
                 {
-
-                    if (start > 0)
-                    {
-                        start--;
-                        continue;
-                    }
-                    if (take-- <= 0)
-                    {
-                        yield break;
-                    }
-
-                    yield return TableValueToMetadata(tvr);
+                    start--;
+                    continue;
                 }
+                if (take-- <= 0)
+                {
+                    yield break;
+                }
+
+                yield return TableValueToMetadata(tvr);
             }
         }
 

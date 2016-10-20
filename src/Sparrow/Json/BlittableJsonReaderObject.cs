@@ -12,12 +12,14 @@ namespace Sparrow.Json
     public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
     {
         private UnmanagedWriteBuffer _buffer;
+        private readonly long _currentOffsetSize;
+        private readonly long _currentPropertyIdSize;
+
         private byte* _metadataPtr;
         private readonly int _size;
         private readonly int _propCount;
-        private readonly long _currentOffsetSize;
-        private readonly long _currentPropertyIdSize;
-        private byte* _objStart;
+        private byte* _objStart; 
+
         private LazyStringValue[] _propertyNames;
 
         public DynamicJsonValue Modifications;
