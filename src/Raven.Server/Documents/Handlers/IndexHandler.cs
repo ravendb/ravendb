@@ -599,7 +599,7 @@ namespace Raven.Server.Documents.Handlers
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteStartArray();
+                writer.WriteStartObject();
                 var first = true;
 
                 foreach (var index in indexes)
@@ -613,7 +613,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteString(index.TimeSpentIndexing.Elapsed.ToString("c"));
                 }
 
-                writer.WriteEndArray();
+                writer.WriteEndObject();
             }
             return Task.CompletedTask;
         }
