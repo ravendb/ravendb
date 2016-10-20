@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Platform.Win32;
 using Voron.Global;
@@ -98,7 +99,6 @@ namespace Voron.Impl.Paging
 
 
         private PagerState _pagerState;
-        private readonly ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
 
         public long NumberOfAllocatedPages { get; protected set; }
 
@@ -160,9 +160,8 @@ namespace Voron.Impl.Paging
                 PagerState = null;
             }
 
-            Task.WaitAll(_tasks.ToArray());
-
             Disposed = true;
+            NativeMemory.UnregisterFileMapping(FileName);
             GC.SuppressFinalize(this);
         }
 
@@ -221,10 +220,6 @@ namespace Voron.Impl.Paging
 
         public abstract override string ToString();
 
-        public void RegisterDisposal(Task run)
-        {
-            _tasks.Add(run);
-        }
 
         public static void ThrowAlreadyDisposedException()
         {

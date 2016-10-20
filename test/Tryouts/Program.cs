@@ -26,9 +26,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var x = new SlowTests.MailingList.IndexMetadata())
+                using (var x = new FastTests.Client.Indexing.IndexesFromClient())
                 {
-                    x.WillGenerateProperIndex();
+                    x.GetStats().Wait();
                 }
             }
         }

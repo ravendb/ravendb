@@ -78,6 +78,12 @@ namespace Sparrow.Utils
             mapping.TryAdd(start, size);
         }
 
+        public static void UnregisterFileMapping(string name)
+        {
+            ConcurrentDictionary<IntPtr, long> value;
+            FileMapping.TryRemove(name, out value);
+        }
+
         public static void UnregisterFileMapping(string name, IntPtr start, long size)
         {
             ConcurrentDictionary<IntPtr, long> mapping;
