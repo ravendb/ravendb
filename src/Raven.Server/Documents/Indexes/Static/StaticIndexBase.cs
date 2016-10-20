@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Lucene.Net.Documents;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -124,5 +125,20 @@ namespace Raven.Server.Documents.Indexes.Static
         public string[] OutputFields;
 
         public string[] GroupByFields;
+
+
+        public dynamic MetadataFor(dynamic doc)
+        {
+            var json = (DynamicBlittableJson)doc;
+            json.EnsureMetadata();
+            return doc[Constants.Metadata.Key];
+        }
+
+        public dynamic AsDocument(dynamic doc)
+        {
+            var json = (DynamicBlittableJson)doc;
+            json.EnsureMetadata();
+            return json;
+        }
     }
 }

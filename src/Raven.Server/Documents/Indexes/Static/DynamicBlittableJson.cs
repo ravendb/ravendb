@@ -15,6 +15,11 @@ namespace Raven.Server.Documents.Indexes.Static
         private Document _doc;
         public BlittableJsonReaderObject BlittableJson { get; private set; }
 
+        public void EnsureMetadata()
+        {
+            _doc?.EnsureMetadata();
+        }
+
         public DynamicBlittableJson(Document document)
         {
             Set(document);
