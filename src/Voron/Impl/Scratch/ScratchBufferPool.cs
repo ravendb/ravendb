@@ -33,7 +33,7 @@ namespace Voron.Impl.Scratch
         private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers =
             new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.Instance);
 
-        private readonly Stack<ScratchBufferItem> _recycleArea = new Stack<ScratchBufferItem>();
+        private readonly LinkedList<Tuple<DateTime, ScratchBufferItem>> _recycleArea = new LinkedList<Tuple<DateTime, ScratchBufferItem>>();
 
         public ScratchBufferPool(StorageEnvironment env)
         {
@@ -68,7 +68,8 @@ namespace Voron.Impl.Scratch
         {
             if (_recycleArea.Count > 0)
             {
-                var recycled = _recycleArea.Peek();
+                var recycled = _recycleArea.Last.Value.Item2;
+                _recycleArea.RemoveLast();
                 if (recycled.File.Size <= Math.Max(minSize, requestedSize ?? 0))
                 {
                     _scratchBuffers.TryAdd(recycled.Number, recycled);
@@ -159,11 +160,23 @@ namespace Voron.Impl.Scratch
             scratch.File.Free(page, asOfTxId);
             if (scratch.File.ActivelyUsedBytes != 0)
                 return;
+
+            while (_recycleArea.First != null)
+            {
+                if (DateTime.UtcNow - _recycleArea.First.Value.Item1 <= TimeSpan.FromMinutes(1))
+                {
+                    break;
+                }
+
+                _recycleArea.First.Value.Item2.File.Dispose();
+                _recycleArea.RemoveFirst();
+            }
+
             if (scratch == _current)
             {
                 if (scratch.File.Size <= _options.MaxScratchBufferSize)
                 {
-                    // we'll take teh chance that no one is using us to reset the memory allocations
+                    // we'll take the chance that no one is using us to reset the memory allocations
                     // and avoid fragmentation
                     scratch.File.Reset();
                     return;
@@ -186,11 +199,10 @@ namespace Voron.Impl.Scratch
                 return;
             }
 
-            if (_recycleArea.Count < 4 && 
-                scratch.File.Size == _current.File.Size)
+            if (scratch.File.Size == _current.File.Size)
             {
                 scratch.File.Reset();
-                _recycleArea.Push(scratch);
+                _recycleArea.AddLast(Tuple.Create(DateTime.UtcNow, scratch));
                 return;
             }
             scratch.File.Dispose();
