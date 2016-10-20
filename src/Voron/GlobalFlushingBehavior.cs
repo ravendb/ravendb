@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading;
-using Voron.Impl.Journal;
+using Sparrow.Logging;
 
 namespace Voron
 {
@@ -29,10 +28,12 @@ namespace Voron
         private readonly ConcurrentQueue<StorageEnvironment> _syncIsRequired = new ConcurrentQueue<StorageEnvironment>();
         private readonly ConcurrentDictionary<uint, MountPointInfo> _mountPoints = new ConcurrentDictionary<uint, MountPointInfo>();
 
+        private Logger _log = LoggingSource.Instance.GetLogger<GlobalFlushingBehavior>("Global Flusher");
+
         private class MountPointInfo
         {
             public readonly ConcurrentQueue<StorageEnvironment> StorageEnvironments = new ConcurrentQueue<StorageEnvironment>();
-            public DateTime LastSyncTimeInMountPoint = DateTime.MinValue;
+            public long LastSyncTimeInMountPointInTicks = DateTime.MinValue.Ticks;
         }
 
         public void VoronEnvironmentFlushing()
@@ -82,17 +83,18 @@ namespace Voron
 
             foreach (var mountPoint in _mountPoints)
             {
-                if (DateTime.UtcNow - mountPoint.Value.LastSyncTimeInMountPoint > TimeSpan.FromMinutes(1))
-                {
-                    int parallelSyncsPerIo = 3;
-                    parallelSyncsPerIo = Math.Min(parallelSyncsPerIo, mountPoint.Value.StorageEnvironments.Count);
+                var lastSync = new DateTime(Volatile.Read(ref mountPoint.Value.LastSyncTimeInMountPointInTicks));
+                if (DateTime.UtcNow - lastSync < TimeSpan.FromMinutes(1))
+                    continue;
 
-                    for (int i = 0; i < parallelSyncsPerIo; i++)
+                int parallelSyncsPerIo = 3;
+                parallelSyncsPerIo = Math.Min(parallelSyncsPerIo, mountPoint.Value.StorageEnvironments.Count);
+
+                for (int i = 0; i < parallelSyncsPerIo; i++)
+                {
+                    if (ThreadPool.QueueUserWorkItem(SyncAllEnvironmentsInMountPoint, mountPoint.Value) == false)
                     {
-                        if (ThreadPool.QueueUserWorkItem(SyncAllEnvironmentsInMountPoint, mountPoint.Value) == false)
-                        {
-                            SyncAllEnvironmentsInMountPoint(mountPoint.Value);
-                        }
+                        SyncAllEnvironmentsInMountPoint(mountPoint.Value);
                     }
                 }
             }
@@ -105,10 +107,22 @@ namespace Voron
             {
                 if (ThreadPool.QueueUserWorkItem(SyncEnvironment, envToSync) == false)
                 {
-                    // if threadpool queue is full - sync in this thread
                     SyncEnvironment(envToSync);
                 }
             }
+        }
+
+        private void SyncAllEnvironmentsInMountPoint(object mt)
+        {
+            var mountPointInfo = (MountPointInfo)mt;
+            StorageEnvironment env;
+            while (mountPointInfo.StorageEnvironments.TryDequeue(out env))
+            {
+                SyncEnvironment(env);
+            }
+            // we have mutliple threads racing for this value, no a concern, the last one wins is probably
+            // going to be the latest, or close enough that we don't care
+            Volatile.Write(ref mountPointInfo.LastSyncTimeInMountPointInTicks, DateTime.UtcNow.Ticks);
         }
 
         private void SyncEnvironment(object state)
@@ -117,44 +131,20 @@ namespace Voron
 
             if (env.Disposed)
                 return;
-
-            var applicator = env.Journal.Applicator;
-
-            long lastFlushedJournalCopy;
-            Dictionary<long, JournalFile> journalsToDeleteCopy; 
-            JournalFile lastFlushedJournalObjectCopy;
-            long oldestActiveTransactionCopy;
-            lock (applicator.LastFlushedLocker)
+            try
             {
-                lastFlushedJournalCopy = applicator.LastFlushedJournal;
-                journalsToDeleteCopy = new Dictionary<long, JournalFile>(applicator.JournalsToDelete);
-                lastFlushedJournalObjectCopy = applicator.LastFlushedJournalObject;
-                oldestActiveTransactionCopy = applicator.OldestActiveTransactionWhenFlushed;
-            }
 
-            var synced = applicator.SyncDataFile(oldestActiveTransactionCopy, journalsToDeleteCopy, lastFlushedJournalObjectCopy);
-            if (synced == false)
+                env.Journal.Applicator.SyncDataFile();
+            }
+            catch (Exception e)
             {
-                // already syncing this environment. enque for later sync
-                _maybeNeedToSync.Enqueue(env);
-                return;
+                if (_log.IsOperationsEnabled)
+                    _log.Operations($"Failed to sync data file for {env.Options.BasePath}", e);
+                env.FlushingTaskFailure = ExceptionDispatchInfo.Capture(e);
             }
-
-            applicator.LastSyncedJournal = lastFlushedJournalCopy;
         }
 
-        private void SyncAllEnvironmentsInMountPoint(object mt)
-        {
-            // TODO: Error handling
-            var mountPointInfo = (MountPointInfo)mt;
-            StorageEnvironment env;
-            while (mountPointInfo.StorageEnvironments.TryDequeue(out env))
-            {
-                SyncEnvironment(env);
-            }
-            mountPointInfo.LastSyncTimeInMountPoint = DateTime.UtcNow;
-        }
-
+      
         private void FlushEnvironments()
         {
             StorageEnvironment envToFlush;
@@ -194,7 +184,7 @@ namespace Voron
                     }
                     catch (Exception e)
                     {
-                        storageEnvironment.FlushingTaskFailure = ExceptionDispatchInfo.Capture(e.InnerException);
+                        storageEnvironment.FlushingTaskFailure = ExceptionDispatchInfo.Capture(e);
                     }
                     finally
                     {

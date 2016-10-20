@@ -361,7 +361,6 @@ namespace Voron
                             _cancellationTokenSource = new CancellationTokenSource();
                             Task.Run(IdleFlushTimer);
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-                            ForceSyncDataFile();
                         }
                     }
                 }
