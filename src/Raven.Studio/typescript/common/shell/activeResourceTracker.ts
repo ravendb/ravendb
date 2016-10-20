@@ -15,16 +15,16 @@ class activeResourceTracker {
     resource: KnockoutObservable<resource> = ko.observable<resource>();
 
     database: KnockoutComputed<database> = ko.computed<database>(() =>
-        this.tryCastActiveResource<database>(TenantType.Database));
+        this.tryCastActiveResource<database>(database.qualifier));
 
     fileSystem: KnockoutComputed<filesystem> = ko.computed<filesystem>(() =>
-        this.tryCastActiveResource<filesystem>(TenantType.FileSystem));
+        this.tryCastActiveResource<filesystem>(filesystem.qualifier));
 
     counterStorage: KnockoutComputed<counterStorage> = ko.computed<counterStorage>(() =>
-        this.tryCastActiveResource<counterStorage>(TenantType.CounterStorage));
+        this.tryCastActiveResource<counterStorage>(counterStorage.qualifier));
 
     timeSeries: KnockoutComputed<timeSeries> = ko.computed<timeSeries>(() =>
-        this.tryCastActiveResource<timeSeries>(TenantType.TimeSeries));
+        this.tryCastActiveResource<timeSeries>(timeSeries.qualifier));
 
     constructor() {
 
@@ -39,9 +39,9 @@ class activeResourceTracker {
         });
     }
 
-    private tryCastActiveResource<T extends resource>(checkType: TenantType): T {
-        let resource = this.resource();
-        if (resource && resource.type === checkType) {
+    private tryCastActiveResource<T extends resource>(expectedQualified: string): T {
+        const resource = this.resource();
+        if (resource && resource.qualifier === expectedQualified) {
             return resource as T;
         }
 

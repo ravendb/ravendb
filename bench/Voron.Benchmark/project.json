@@ -3,6 +3,7 @@
     "allowUnsafe": true,
     "emitEntryPoint": true,
     "warningsAsErrors": true,
+    "debugType": "portable",
     "compile": {
       "include": [ "**/*.cs" ]
     }
@@ -22,7 +23,7 @@
     "BenchmarkDotNet": "0.9.9",
     "Microsoft.CSharp": "4.0.1",
     "Microsoft.NETCore.App": {
-      "type": "platform",
+      "type": "build",
       "version": "1.0.1"
     },
     "Voron": "4.0.0-*"
@@ -34,6 +35,13 @@
       },
       "imports": "dnxcore50"
     }
+  },
+
+  "runtimes": {
+    "win7-x64": {},
+    "win8-x64": {},
+    "win10-x64": {},
+    "ubuntu.14.04-x64": {}
   },
 
   "version": "4.0.0-*"

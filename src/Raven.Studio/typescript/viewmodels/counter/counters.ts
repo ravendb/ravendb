@@ -52,7 +52,7 @@ class counters extends viewModelBase {
             if (!!selectedGroup) {
                 if (selectedGroup.name === counterGroup.allGroupsGroupName) {
                     var cs: counterStorage = this.activeCounterStorage();
-                    return !!cs.statistics() ? cs.statistics().countersCount() > 0 : false;
+                    return true; //TODO: return !!cs.statistics() ? cs.statistics().countersCount() > 0 : false;
                 }
                 return this.selectedGroup().countersCount() > 0;
             }
@@ -158,7 +158,7 @@ class counters extends viewModelBase {
     groupsLoaded(groups: Array<counterGroup>, cs: counterStorage) {
         // Create the "All Groups" pseudo collection.
         this.allGroupsGroup = counterGroup.createAllGroupsCollection(cs);
-        this.allGroupsGroup.countersCount = ko.computed(() => !!cs.statistics() ? cs.statistics().countersCount() : 0);
+        this.allGroupsGroup.countersCount = ko.observable(0); //TODO:  ko.computed(() => !!cs.statistics() ? cs.statistics().countersCount() : 0);
 
         // All systems a-go. Load them into the UI and select the first one.
         var allGroups = [this.allGroupsGroup].concat(groups);

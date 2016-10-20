@@ -63,7 +63,6 @@ class editDocument extends viewModelBase {
     private metaPropsToRestoreOnSave: any[] = [];
 
     private changeNotification: changeSubscription;
-    private databaseForEditedDoc: database;
 
     queryMode = {
         queryIndex: ko.observable<string>(),
@@ -104,13 +103,6 @@ class editDocument extends viewModelBase {
 
         this.isSaveEnabled = ko.pureComputed(() => this.dirtyFlag().isDirty());
 
-        // Find the database and collection we're supposed to load.
-        // Used for paging through items.
-        this.databaseForEditedDoc = this.activeDatabase();
-        if (navigationArgs && navigationArgs.database) {
-            ko.postbox.publish("ActivateDatabaseWithName", navigationArgs.database);
-        }
-
         if (navigationArgs && navigationArgs.id) {
             ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id)); 
         } else {
@@ -149,7 +141,6 @@ class editDocument extends viewModelBase {
 
     private activateById(id: string) {
         const canActivateResult = $.Deferred<canActivateResultDto>();
-        this.databaseForEditedDoc = appUrl.getDatabase();
         this.loadDocument(id)
             .done(() => {
                 this.changeNotification = this.createDocumentChangeNotification(id);
@@ -259,7 +250,7 @@ class editDocument extends viewModelBase {
     }
 
     createDocumentChangeNotification(docId: string): changeSubscription {
-        return changesContext.currentResourceChangesApi().watchDocument(docId, (n: Raven.Abstractions.Data.DocumentChangeNotification) => this.documentChangeNotification(n));
+        return this.changesContext.currentResourceChangesApi().watchDocument(docId, (n: Raven.Abstractions.Data.DocumentChangeNotification) => this.documentChangeNotification(n));
     }
 
     documentChangeNotification(n: Raven.Abstractions.Data.DocumentChangeNotification): void {
@@ -466,7 +457,7 @@ class editDocument extends viewModelBase {
     loadDocument(id: string): JQueryPromise<document> {
         this.isBusy(true);
 
-        return new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc)
+        return new getDocumentWithMetadataCommand(id, this.activeDatabase())
             .execute()
             .done((doc: document) => {
                 this.document(doc);
@@ -500,7 +491,7 @@ class editDocument extends viewModelBase {
     deleteDocument() {
         const doc = this.document();
         if (doc) {
-            const viewModel = new deleteDocuments([doc]);
+            const viewModel = new deleteDocuments([doc], this.activeDatabase());
             viewModel.deletionTask.done(() => this.connectedDocuments.onDocumentDeleted());
             app.showDialog(viewModel, editDocument.editDocSelector);
         } 

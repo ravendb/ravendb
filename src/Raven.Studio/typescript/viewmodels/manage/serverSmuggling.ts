@@ -7,6 +7,7 @@ import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import serverSmugglingLocalStorage = require("common/serverSmugglingLocalStorage");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import resourcesManager = require("common/shell/resourcesManager");
 
 class serverSmuggling extends viewModelBase {
     resources = ko.observableArray<serverSmugglingItem>([]);
@@ -37,7 +38,7 @@ class serverSmuggling extends viewModelBase {
     constructor() {
         super();
 
-        var smi = shell.databases().filter(d => d.name !== "<system>").map(d => new serverSmugglingItem(d));
+        var smi = resourcesManager.default.databases().map(d => new serverSmugglingItem(d));
         this.resources(smi);
 
         this.hasResources = ko.computed(() => this.resources().count() > 0);

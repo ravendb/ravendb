@@ -1,125 +1,88 @@
 import commandBase = require("commands/commandBase");
 import resource = require("models/resources/resource");
+import endpoints = require("endpoints");
+
+type rawDisableResourceResult = {
+    name: string;
+    success: boolean;
+    reason: string;
+    disabled: boolean;
+}
 
 class disableResourceToggleCommand extends commandBase {
-    private oneDatabasePath = "/admin/databases-toggle-disable";
-    private multipleDatabasesPath = "/admin/databases/batch-toggle-disable";
-    private oneFileSystemPath = "/admin/fs/";
-    private multipleFileSystemsPath = "/admin/fs-batch-toggle-disable";
-    private oneCounterStoragePath = "/admin/cs/";
-    private multipleCounterStoragesPath = "/admin/cs/batch-toggle-disable";
-    private oneTimeSeriesPath = "/admin/ts/";
-    private multipleTimeSeriesPath = "/admin/ts/batch-toggle-disable";
 
-    /**
-    * @param resources - The array of resources to toggle
-    * @param isSettingDisabled - Status of disabled to set
-    */
-    constructor(private resources: Array<resource>, private isSettingDisabled: boolean) {
+    constructor(private resources: Array<resource>, private disable: boolean) {
         super();
     }
 
-    execute(): JQueryPromise<any> {
-        var action = this.isSettingDisabled ? "disable" : "enable";
-
-        var toggleTask: JQueryPromise<any>;
-        if (this.resources.length == 1) {
-            toggleTask = this.disableOneResource(action);
-        } else {
-            toggleTask = this.disableMultipleResources(action);
-        }
-
-        return toggleTask;
+    get action() {
+        return this.disable ? "disable" : "enable";
     }
 
-    private disableOneResource(action: string): JQueryPromise<any> {
-        var resource = this.resources[0];
-        this.reportInfo("Trying to " + action + " " + resource.name + "...");
+    execute(): JQueryPromise<Array<disableResourceResult>> {
+        const tasks = [] as Array<Promise<Array<disableResourceResult>>>;
 
-        var args = (resource.type === TenantType.Database) ? {
-            id: resource.name,
-            isSettingDisabled: this.isSettingDisabled
-        } : {
-            isSettingDisabled: this.isSettingDisabled
-        };
-            
+        disableResourceToggleCommand
+            .groupResourcesByQualifier(this.resources)
+            .forEach((resources, group) => {
+                tasks.push(Promise.resolve(this.toggleDisableForGroup(group, resources)));
+            });
 
-        var disableOneResourcePath = (resource.type === TenantType.Database) ? this.oneDatabasePath :
-            resource.type === TenantType.FileSystem ? this.oneFileSystemPath :
-                resource.type === TenantType.CounterStorage ? this.oneCounterStoragePath : this.oneTimeSeriesPath;
-        var resourceName = (resource.type === TenantType.Database) ? "" : resource.name; 
-        var url = disableOneResourcePath + resourceName + this.urlEncodeArgs(args);
-        var toggleTask = this.post(url, null, null, { dataType: undefined });
-        
-        toggleTask.done(() => this.reportSuccess("Successfully " + action + "d " + name));
-        toggleTask.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " " + name, response.responseText, response.statusText));
-        
-        return toggleTask;
+        const joinedResultTask = $.Deferred<Array<disableResourceResult>>();
+
+        Promise.all(tasks)
+            .then((results: Array<Array<disableResourceResult>>) => {
+                const joinedResult = ([]).concat.apply([], results);
+                joinedResultTask.resolve(joinedResult);
+            })
+            .catch((result: any) => joinedResultTask.reject(result));
+
+        return joinedResultTask;
     }
 
-    private disableMultipleResources(action: string): JQueryPromise<any> {
-        var _arguments = arguments;
+    private static groupResourcesByQualifier(resources: Array<resource>) {
+        const result = new Map<string, Array<resource>>();
 
-        this.reportInfo("Trying to " + action + " " + this.resources.length + " resources...");
+        resources.forEach(rs => {
+            const qualifier = rs.qualifier;
 
-        var dbToToggle = this.resources.filter(r => r.type === TenantType.Database);
-        var fsToToggle = this.resources.filter(r => r.type === TenantType.FileSystem);
-        var csToToggle = this.resources.filter(r => r.type === TenantType.CounterStorage);
-        var tsToToggle = this.resources.filter(r => r.type === TenantType.TimeSeries);
-
-        var toggleTasks:Array<JQueryPromise<resource[]>> = [];
-
-        if (dbToToggle.length > 0) {
-            toggleTasks.push(this.toggleTask(dbToToggle, this.multipleDatabasesPath));
-        }
-
-        if (fsToToggle.length > 0) {
-            toggleTasks.push(this.toggleTask(fsToToggle, this.multipleFileSystemsPath));
-        }
-
-        if (csToToggle.length > 0) {
-            toggleTasks.push(this.toggleTask(csToToggle, this.multipleCounterStoragesPath));
-        }
-
-        if (tsToToggle.length > 0) {
-            toggleTasks.push(this.toggleTask(tsToToggle, this.multipleTimeSeriesPath));
-        }
-
-        var mergedPromise = $.Deferred();
-
-        var combinedPromise = $.when.apply(null, toggleTasks);
-        combinedPromise.done((...resources:resource[][]) => {
-            var toggledResources = [].concat.apply([], resources);
-            this.reportSuccess("Successfully " + action + "d " + toggledResources.length + " resources!");
-            mergedPromise.resolve(toggledResources);
+            if (result.has(qualifier)) {
+                result.get(qualifier).push(rs);
+            } else {
+                result.set(qualifier, [rs]);
+            }
         });
 
-        combinedPromise.fail((response: JQueryXHR) => {
-            this.reportError("Failed to " + action + " resources", response.responseText, response.statusText);
-            mergedPromise.reject(response);
-            });
-        return mergedPromise;
+        return result;
     }
 
-    private toggleTask(resources: Array<resource>, togglePath: string):JQueryPromise<resource[]> {
-        var _arguments = arguments;
-
-        var args = {
-            ids: resources.map(d => d.name),
-            isSettingDisabled: this.isSettingDisabled
+    private toggleDisableForGroup(qualifer: string, resources: resource[]): JQueryPromise<Array<disableResourceResult>> {
+        const args = {
+            name: resources.map(x => x.name),
+            disable: this.disable
         };
 
-        var url = togglePath + this.urlEncodeArgs(args);
+        const url = "/admin/" +
+            resources[0].urlPrefix +
+            endpoints.admin.adminResourcesStudioTasks.toggleDisable +
+            this.urlEncodeArgs(args);
 
-        var task = $.Deferred();
-        this.post(url, null, null, null, 9000 * resources.length)
-            .done((resourceNames: string[]) => {
-                task.resolve(resources.filter(r => resourceNames.contains(r.name)));
-            })
-            .fail(() => task.reject(_arguments));
+        const task = $.Deferred<Array<disableResourceResult>>();
+
+        this.post(url, null)
+            .done(result => task.resolve(this.extractAndMapResult(qualifer, result)))
+            .fail(reason => task.reject(reason));
+
         return task;
+    }
 
-        
+    private extractAndMapResult(qualifer: string, result: Array<rawDisableResourceResult>): Array<disableResourceResult> {
+        return result.map(x => ({
+            qualifiedName: qualifer + "/" + x.name,
+            success: x.success,
+            reason: x.reason,
+            disabled: x.disabled
+        }));
     }
 
 }

@@ -160,14 +160,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             mapResult.Data = mr;
             mapResult.ReduceKeyHash = _reduceKeyProcessor.Hash;
 
-            using (stats.For(IndexingOperation.Reduce.PutMapResults))
-            {
-                var resultsCount = PutMapResults(key, _singleOutputList, indexContext);
+            var resultsCount = PutMapResults(key, _singleOutputList, indexContext, stats);
 
-                DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
+            DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
 
-                return resultsCount;
-            }
+            return resultsCount;
         }
 
         public override int? ActualMaxNumberOfIndexOutputs { get; }

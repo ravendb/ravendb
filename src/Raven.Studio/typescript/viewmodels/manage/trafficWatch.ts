@@ -131,7 +131,7 @@ class trafficWatch extends viewModelBase {
     }
 
     enableQueryTiming() {
-        if (this.logConfig().Resource.isDatabase()) {
+        if (this.logConfig().Resource instanceof database) {
             new enableQueryTimings(<database>this.logConfig().Resource).execute();
         }
     }

@@ -1,7 +1,7 @@
 <nav class="navbar navbar-inverse navbar-fixed-top">
     <div class="container-fluid">
         <div class="navbar-header">
-            <a class="navbar-brand hidden-xs" href="#">RavenDB</a>
+            <a class="navbar-brand hidden-xs" href="#resources">RavenDB</a>
         </div>
         <div id="navbar">
             <ul class="nav navbar-nav navbar-right">
@@ -78,7 +78,7 @@
                         <div class="scroller">
                             <section>
                                 <ul class="database-list" data-bind="foreach: filteredResources">
-                                    <li><a href="#" data-bind="click: $root.selectResource.bind($root, $data), text: name" class="database"></a></li>
+                                    <li><a href="#" data-bind="click: $parent.selectResource.bind($parent, $data), text: name" class="database"></a></li>
                                 </ul>
                             </section>
                         </div>

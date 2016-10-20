@@ -1,0 +1,51 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
+{{> head title="Index terms" }}
+<body>
+    {{> spinner }} {{> topbar }} {{> menu }} {{> notification-center }}
+
+    <div class="container-fluid content-container">
+        <div class="content-container-margin">
+            <div class="indexesTerms">
+                <h2>Index terms for
+                    <span class="indexName text-primary">Persons/StuffByColorAndAge</span>
+                </h2>
+
+                {{> indexesTerms/field
+                count="13"
+                    id="panel-1"
+                    name="Color"
+                    valueTmpl="{{commerce.color}}"
+                }}
+                {{> indexesTerms/field
+                    count="99"
+                    id="panel-2"
+                    name="Name"
+                    valueTmpl="{{name.firstName}} {{name.lastName}}"
+                }}
+                {{> indexesTerms/field
+                    count="10"
+                    id="panel-3"
+                    name="__documentID"
+                    valueTmpl="{{random.number}}"
+                }}
+                {{> indexesTerms/field
+                    count="120"
+                    id="panel-4"
+                    name="Age"
+                    valueTmpl="{{random.number}}"
+                }}
+            </div>
+        </div>
+    </div>
+
+    {{> scripts }}
+
+    <script>
+    $('.loadMore .btn').click('click', function () {
+        $(this).toggleClass('btn-spinner');
+    });
+    </script>
+</body>
+
+</html>

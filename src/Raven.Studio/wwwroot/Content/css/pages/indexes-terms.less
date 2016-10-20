@@ -1,0 +1,64 @@
+.indexesTerms {
+
+    .field {
+
+        .collapsed {
+            .badge {
+                display: none;
+            }
+            .icon-arrow-down:before {
+                content: @arrow-right;
+            }
+        }
+
+        .bar {
+            cursor: pointer;
+
+            .badge {
+                position: relative;
+                top: 3px;
+            }
+        }
+
+        &:hover {
+        }
+
+        h3 {
+            display: inline;
+            position: relative;
+            margin: 0 0.5em 0.5em 0.5em;
+        }
+
+        .field-terms {
+            background-color: @gray-dark;
+
+            ul {
+
+                li {
+                    border: 1px solid transparent;
+
+                    span {
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                    }
+
+                    &:hover {
+                        .bg-primary;
+                    }
+                }
+            }
+
+            .loadMore {
+                background-color: @gray-base;
+
+                span::before {
+                    content: 'Load more';
+                }
+
+                .btn-spinner span::before {
+                    content: 'Loading'
+                }
+            }
+        }
+    }
+}

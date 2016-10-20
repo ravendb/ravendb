@@ -1,7 +1,7 @@
 import dialog = require("plugins/dialog");
 import deleteCollectionCommand = require("commands/database/documents/deleteCollectionCommand");
 import collection = require("models/database/documents/collection");
-import appUrl = require("common/appUrl");
+import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class deleteCollection extends dialogViewModelBase {
@@ -10,14 +10,14 @@ class deleteCollection extends dialogViewModelBase {
     private deletionStarted = false;
     isAllDocuments: boolean;
 
-    constructor(private collection: collection) {
+    constructor(private collection: collection, private db: database) {
         super();
         this.isAllDocuments = collection.isAllDocuments;
     }
 
     deleteCollection() {
         var collectionName = this.isAllDocuments ? "*" : this.collection.name;
-        var deleteCommand = new deleteCollectionCommand(collectionName, appUrl.getDatabase());
+        var deleteCommand = new deleteCollectionCommand(collectionName, this.db);
         var deleteCommandTask = deleteCommand.execute();
         deleteCommandTask.done((result) => this.deletionTask.resolve(result));
         deleteCommandTask.fail(response => this.deletionTask.reject(response));

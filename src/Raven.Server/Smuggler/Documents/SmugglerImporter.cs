@@ -41,6 +41,8 @@ namespace Raven.Server.Smuggler.Documents
 
             var state = new JsonParserState();
 
+            byte[] buffer;
+            using (context.GetManagedBuffer(out buffer))
             using (var parser = new UnmanagedJsonParser(context, state, "fileName"))
             {
                 var operateOnType = "__top_start_object";
@@ -48,7 +50,6 @@ namespace Raven.Server.Smuggler.Documents
                 var identities = new Dictionary<string, long>();
                 VersioningStorage versioningStorage = null;
 
-                var buffer = context.GetParsingBuffer();
                 while (true)
                 {
                     if (parser.Read() == false)

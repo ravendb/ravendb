@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#FFF">
     <meta name="msapplication-tap-highlight" content="no" />
 
-    <title></title>
+    <title>Indexes</title>
 
     <!--  <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
       <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
@@ -31,7 +31,7 @@
 
     <link href='https://fonts.googleapis.com/css?family=Lato:400,300,700,900,400italic,700italic' rel='stylesheet' type='text/css'>
 
-    <link rel="stylesheet" type="text/css" href="./content/css/bootstrap/bootstrap.css" />
+    <!-- <link rel="stylesheet" type="text/css" href="./content/css/bootstrap/bootstrap.css" /> -->
     <link rel="stylesheet" type="text/css" href="./content/css/styles.css">
 
     <!--[if IE 8]>
@@ -505,11 +505,11 @@
             </div>
             <hr />
             <h2>Cars</h2>
-            <div class="panel index">
+            <div class="panel panel-state index">
                 <div class="padding padding-sm">
-                    <div class="state state-error"></div>
+                    <div class="state state-danger" data-state-text="error"></div>
                     <div class="row">
-                        <div class="col-sm-6 col-xl-4 col-flex info-container">
+                        <div class="col-xs-12 col-sm-6 col-xl-4  info-container">
                             <div class="checkbox">
                                 <input type="checkbox" class="styled">
                                 <label></label>
@@ -517,19 +517,27 @@
                             <h3 class="index-name"><a href="#">Cars/ByMakerAndModel</a></h3>
                             <div class="index-type">AutoMap</div>
                         </div>
-                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
+                        <div class="col-xs-12 col-sm-12 col-xl-5  vertical-divider properties-container">
 
                             <div class="properties-item staleness">
-                                <div class="properties-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
+                                <div class="properties-value value-only">
+                                    <div class="set-size">
+                                        <i class="icon-reset"></i><span>Stale</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="properties-item entriesCount">
-                                <div class="properties-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
+                                <div class="properties-value value-only">
+                                    <div class="set-size">
+                                        <i class="icon-list"></i><span>1024 entries</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="properties-item priority">
                                 <span class="properties-label">Priority:</span>
-                                <div class="btn-group btn-group-xs">
-                                    <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown">
-                                        <i class="icon-cancel"></i><span>Disabled</span> <span class="caret"></span>
+                                <div class="btn-group properties-value">
+                                    <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown">
+                                        <i class="icon-reset"></i><span>Disabled until restart</span> <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu">
                                         <li><a href="#"><i class="icon-check"></i><span>Normal</span></a></li>
@@ -542,9 +550,9 @@
 
                             <div class="properties-item mode">
                                 <span class="properties-label">Mode:</span>
-                                <div class="btn-group btn-group-xs">
-                                    <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
-                                        <i class="icon-lock"></i><span>Locked</span> <span class="caret"></span>
+                                <div class="btn-group properties-value">
+                                    <button type="button" class="btn btn-block set-size dropdown-toggle" data-toggle="dropdown">
+                                        <i class="icon-lock-sidebyside"></i><span>Locked (Side by Side)</span> <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu">
                                         <li>
@@ -580,7 +588,7 @@
 
 
                         </div>
-                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                        <div class="col-xs-12 col-sm-6 col-xl-3  actions-container">
                             <div class="actions">
                                 <div class="btn-toolbar pull-right-sm" role="toolbar">
                                     <div class="btn-group " role="group">
@@ -601,9 +609,9 @@
                     </div>
                 </div>
             </div>
-            <div class="panel">
+            <div class="panel panel-state index">
                 <div class="padding padding-sm">
-                    <div class="state state-faulty"></div>
+                    <div class="state state-danger" data-state-text="faulty"></div>
                     <div class="row">
                         <div class="col-sm-6 col-xl-4">
                             <div class="checkbox">
@@ -615,25 +623,29 @@
                                 AutoMap &nbsp; <span class="label label-warning">TEST INDEX</span>
                             </div>
                         </div>
-                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
+                        <div class="col-sm-12 col-xl-5  vertical-divider properties-container">
 
                             <div class="properties-item text-success staleness">
                                 <div class="properties-value value-only">
-                                    <i class="icon-check"></i><span>Up to date</span>
+                                    <div class="set-size">
+                                        <i class="icon-check"></i><span>Up to date</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="properties-item entriesCount">
                                 <div class="properties-value value-only">
-                                    <i class="icon-list"></i>
-                                    <span>1024 entries</span>
+                                    <div class="set-size">
+                                        <i class="icon-list"></i>
+                                        <span>1024 entries</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="properties-item priority">
                                 <span class="properties-label ">Priority:</span>
-                                <div class="btn-group btn-group-xs">
-                                    <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown">
+                                <div class="btn-group properties-value ">
+                                    <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown">
                                         <i class="icon-coffee"></i>
                                         <span>Idle</span>
                                         <span class="caret"></span>
@@ -663,8 +675,8 @@
 
                             <div class="properties-item mode">
                                 <span class="properties-label">Mode:</span>
-                                <div class="btn-group btn-group-xs">
-                                    <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
+                                <div class="btn-group properties-value">
+                                    <button type="button" class="btn btn-block set-size dropdown-toggle" data-toggle="dropdown">
                                         <i class="icon-lock"></i>
                                         <span>Locked</span>
                                         <span class="caret"></span>
@@ -700,7 +712,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                        <div class="col-xs-12 col-sm-6 col-xl-3  actions-container">
                             <div class="actions">
                                 <div class="btn-toolbar pull-right-sm" role="toolbar">
                                     <div class="btn-group " role="group">
@@ -722,11 +734,11 @@
                 </div>
             </div>
             <h2>Dinosaurs</h2>
-            <div class="panel">
+            <div class="panel panel-state index">
                 <div class="padding padding-sm">
-                    <div class="state state-disabled"></div>
+                    <div class="state state-warning" data-state-text="disabled"></div>
                     <div class="row">
-                        <div class="col-sm-6 col-xl-4 col-flex info-container">
+                        <div class="col-xs-12 col-sm-6 col-xl-4  info-container">
                             <div class="checkbox">
                                 <input type="checkbox" class="styled">
                                 <label></label>
@@ -734,18 +746,25 @@
                             <h3 class="index-name"><a href="#">Dinosaurs/ByNumberOfTeeth</a></h3>
                             <div class="index-type">AutoMap</div>
                         </div>
-                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
+                        <div class="col-sm-12 col-xl-5  vertical-divider properties-container">
 
                             <div class="properties-item staleness">
-                                <div class="properties-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
+                                <div class="properties-value value-only">
+                                    <div class="set-size">
+                                        <i class="icon-reset"></i><span>Stale</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="properties-item entriesCount">
-                                <div class="properties-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
+                                <div class="properties-value value-only">
+                                    <div class="set-size">
+                                        <i class="icon-list"></i><span>1024 entries</span></div>
+                                </div>
                             </div>
                             <div class="properties-item priority">
                                 <span class="properties-label">Priority:</span>
-                                <div class="btn-group btn-group-xs">
-                                    <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown">
+                                <div class="btn-group properties-value">
+                                    <button type="button" class="btn dropdown-toggle set-size" data-toggle="dropdown">
                                         <i class="icon-check"></i><span>Normal</span> <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu">
@@ -758,8 +777,8 @@
 
                             <div class="properties-item mode">
                                 <span class="properties-label">Mode:</span>
-                                <div class="btn-group btn-group-xs">
-                                    <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
+                                <div class="btn-group properties-value">
+                                    <button type="button" class="btn btn-block dropdown-toggle set-size" data-toggle="dropdown">
                                         <i class="icon-lock"></i><span>Locked</span> <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu">
@@ -793,7 +812,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                        <div class="col-xs-12 col-sm-6 col-xl-3  actions-container">
                             <div class="actions">
                                 <div class="btn-toolbar pull-right-sm" role="toolbar">
                                     <div class="btn-group " role="group">
@@ -815,11 +834,11 @@
                 </div>
             </div>
             <h2>Orders</h2>
-            <div class="panel">
+            <div class="panel panel-state index">
                 <div class="padding padding-sm">
-                    <div class="state state-normal"></div>
+                    <div class="state state-success" data-state-text="normal"></div>
                     <div class="row">
-                        <div class="col-sm-6 col-xl-4 col-flex info-container">
+                        <div class="col-xs-12 col-sm-6 col-xl-4  info-container">
                             <div class="checkbox">
                                 <input type="checkbox" class="styled">
                                 <label></label>
@@ -827,18 +846,26 @@
                             <h3 class="index-name"><a href="#">Orders/ByCompany</a></h3>
                             <div class="index-type">AutoMap</div>
                         </div>
-                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
+                        <div class="col-xs-12 col-sm-12 col-xl-5  vertical-divider properties-container">
 
                             <div class="properties-item staleness">
-                                <div class="properties-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
+                                <div class="properties-value value-only">
+                                    <div class="set-size">
+                                        <i class="icon-reset"></i><span>Stale</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="properties-item entriesCount">
-                                <div class="properties-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
+                                <div class="properties-value value-only">
+                                    <div class="set-size">
+                                        <i class="icon-list"></i><span>1024 entries</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="properties-item priority">
                                 <span class="properties-label">Priority:</span>
-                                <div class="btn-group btn-group-xs">
-                                    <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown">
+                                <div class="btn-group properties-value">
+                                    <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown">
                                         <i class="icon-check"></i><span>Normal</span> <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu">
@@ -851,8 +878,8 @@
 
                             <div class="properties-item mode">
                                 <span class="properties-label">Mode:</span>
-                                <div class="btn-group btn-group-xs">
-                                    <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
+                                <div class="btn-group properties-value">
+                                    <button type="button" class="btn btn-block set-size dropdown-toggle" data-toggle="dropdown">
                                         <i class="icon-lock"></i><span>Locked</span> <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu">
@@ -886,7 +913,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                        <div class="col-xs-12 col-sm-6 col-xl-3  actions-container">
                             <div class="actions">
                                 <div class="btn-toolbar pull-right-sm" role="toolbar">
                                     <div class="btn-group " role="group">
@@ -908,11 +935,11 @@
                 </div>
             </div>
 
-            <div class="panel">
+            <div class="panel panel-state index">
                 <div class="padding padding-sm">
-                    <div class="state state-normal"></div>
+                    <div class="state state-success" data-state-text="normal"></div>
                     <div class="row">
-                        <div class="col-sm-6 col-xl-4 col-flex info-container">
+                        <div class="col-xs-12 col-sm-6 col-xl-4  info-container">
                             <div class="checkbox">
                                 <input type="checkbox" class="styled">
                                 <label></label>
@@ -920,18 +947,26 @@
                             <h3 class="index-name"><a href="#">Orders/ByProduct</a></h3>
                             <div class="index-type">AutoMap</div>
                         </div>
-                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
+                        <div class="col-xs-12 col-sm-12 col-xl-5  vertical-divider properties-container">
 
                             <div class="properties-item staleness">
-                                <div class="properties-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
+                                <div class="properties-value value-only">
+                                    <div class="set-size">
+                                        <i class="icon-reset"></i><span>Stale</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="properties-item entriesCount">
-                                <div class="properties-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
+                                <div class="properties-value value-only">
+                                    <div class="set-size">
+                                        <i class="icon-list"></i><span>1024 entries</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="properties-item priority">
                                 <span class="properties-label">Priority:</span>
-                                <div class="btn-group btn-group-xs">
-                                    <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown">
+                                <div class="btn-group properties-value">
+                                    <button type="button" class="btn dropdown-toggle set-size" data-toggle="dropdown">
                                         <i class="icon-check"></i><span>Normal</span> <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu">
@@ -944,8 +979,8 @@
 
                             <div class="properties-item mode">
                                 <span class="properties-label">Mode:</span>
-                                <div class="btn-group btn-group-xs">
-                                    <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
+                                <div class="btn-group properties-value">
+                                    <button type="button" class="btn btn-block set-size dropdown-toggle" data-toggle="dropdown">
                                         <i class="icon-lock"></i><span>Locked</span> <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu">
@@ -979,7 +1014,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                        <div class="col-xs-12 col-sm-6 col-xl-3  actions-container">
                             <div class="actions">
                                 <div class="btn-toolbar pull-right-sm" role="toolbar">
                                     <div class="btn-group " role="group">
@@ -1002,11 +1037,11 @@
             </div>
 
             <h2>Products</h2>
-            <div class="panel">
+            <div class="panel panel-state index">
                 <div class="padding padding-sm">
-                    <div class="state state-normal"></div>
+                    <div class="state state-success" data-state-text="normal"></div>
                     <div class="row">
-                        <div class="col-sm-6 col-xl-4 col-flex info-container">
+                        <div class="col-xs-12 col-sm-6 col-xl-4  info-container">
                             <div class="checkbox">
                                 <input type="checkbox" class="styled">
                                 <label></label>
@@ -1014,18 +1049,26 @@
                             <h3 class="index-name"><a href="#">Products/ByType</a></h3>
                             <div class="index-type">AutoMap</div>
                         </div>
-                        <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
+                        <div class="col-xs-12 col-sm-12 col-xl-5  vertical-divider properties-container">
 
                             <div class="properties-item staleness">
-                                <div class="properties-value value-only"><i class="icon-reset"></i><span>Stale</span></div>
+                                <div class="properties-value value-only">
+                                    <div class="set-size">
+                                        <i class="icon-reset"></i><span>Stale</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="properties-item entriesCount">
-                                <div class="properties-value value-only"><i class="icon-list"></i><span>1024 entries</span></div>
+                                <div class="properties-value value-only">
+                                    <div class="set-size">
+                                        <i class="icon-list"></i><span>1024 entries</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="properties-item priority">
                                 <span class="properties-label">Priority:</span>
-                                <div class="btn-group btn-group-xs">
-                                    <button type="button" class="btn properties-value dropdown-toggle" data-toggle="dropdown">
+                                <div class="btn-group properties-value">
+                                    <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown">
                                         <i class="icon-check"></i><span>Normal</span> <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu">
@@ -1038,8 +1081,8 @@
 
                             <div class="properties-item mode">
                                 <span class="properties-label">Mode:</span>
-                                <div class="btn-group btn-group-xs">
-                                    <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
+                                <div class="btn-group properties-value">
+                                    <button type="button" class="btn btn-block set-size dropdown-toggle" data-toggle="dropdown">
                                         <i class="icon-lock"></i><span>Locked</span> <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu">
@@ -1073,7 +1116,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                        <div class="col-xs-12 col-sm-6 col-xl-3  actions-container">
                             <div class="actions">
                                 <div class="btn-toolbar pull-right-sm" role="toolbar">
                                     <div class="btn-group " role="group">
@@ -1098,12 +1141,14 @@
     </div>
 
     <script type="text/javascript" src="./js/setup.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Faker/3.1.0/faker.min.js" ></script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.5/ace.js" type="text/javascript" charset="utf-8"></script>
     <script>
         var editor = ace.edit("docEditor");
         editor.setTheme("ace/theme/pastel_on_dark");
         editor.getSession().setMode("ace/mode/json");
+    
     </script>
 </body>
 

@@ -304,7 +304,7 @@ class editSqlReplication extends viewModelBase {
         var newDoc = new document(this.editedReplication().toDto());
 
         if (newDoc) {
-            var viewModel = new deleteDocuments([newDoc]);
+            var viewModel = new deleteDocuments([newDoc], this.activeDatabase());
             viewModel.deletionTask.done(() => {
                 this.dirtyFlag().reset(); //Resync Changes
                 router.navigate(appUrl.forCurrentDatabase().sqlReplications());

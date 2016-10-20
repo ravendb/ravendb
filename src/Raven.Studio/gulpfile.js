@@ -187,8 +187,7 @@ gulp.task('generate-test-list', function () {
 
 gulp.task('mochaTests', function () {
     var mocha = plugins.mochaPhantomjs({
-        reporter: 'spec',
-        dump: 'test.log'
+        reporter: 'spec' //use json for debugging
     });
 
     return gulp.src(PATHS.test.html).pipe(mocha);

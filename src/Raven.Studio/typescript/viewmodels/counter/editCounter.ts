@@ -111,7 +111,7 @@ class editCounter extends viewModelBase {
             CounterName: this.counterName(),
             Total: this.counter().total()
         });
-        var viewModel = new deleteItems([summary]);
+        var viewModel = new deleteItems([summary], this.activeCounterStorage());
         viewModel.deletionTask.done(() => {
             var countersUrl = appUrl.forCounterStorageCounters(null, this.activeCounterStorage());
             router.navigate(countersUrl);

@@ -5,7 +5,7 @@ import createResourceBase = require("viewmodels/resources/createResourceBase");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
-import shell = require("viewmodels/shell");
+import resourcesManager = require("common/shell/resourcesManager");
 
 class createFilesystem extends createResourceBase {
     resourceNameCapitalString = "File System";
@@ -15,7 +15,7 @@ class createFilesystem extends createResourceBase {
     isVersioningBundleEnabled = ko.observable(false);
 
     constructor(parent: dialogViewModelBase) {
-        super(shell.fileSystems, parent);
+        super(resourcesManager.default.fileSystems, parent);
     }
 
     nextOrCreate() {

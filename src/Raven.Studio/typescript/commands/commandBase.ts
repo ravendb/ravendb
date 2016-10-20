@@ -174,10 +174,11 @@ class commandBase {
             var dbBeingUpdated = request.getResponseHeader("Raven-Database-Load-In-Progress");
             if (dbBeingUpdated) {
                 ajaxTask.reject(request, status, error);
+                /* TODO
                 var currentDb = appUrl.getDatabase();
                 if (currentDb != null && currentDb.name === dbBeingUpdated) {
-                    router.navigate(appUrl.forUpgrade(new database(dbBeingUpdated)));
-                }
+                    router.navigate(appUrl.forUpgrade(new database(dbBeingUpdated, false, []))); //TODO: use resources manger to get this database!
+                }*/
             } else if (request.status === ResponseCodes.PreconditionFailed && oauthContext.apiKey()) {
                 this.oauthHandler.handleOAuth(ajaxTask, request, () => this.retryOriginalRequest(ajaxTask, originalArguments));
             } else {

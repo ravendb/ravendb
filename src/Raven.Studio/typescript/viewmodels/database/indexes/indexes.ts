@@ -3,9 +3,7 @@ import index = require("models/database/index/index");
 import appUrl = require("common/appUrl");
 import saveIndexLockModeCommand = require("commands/database/index/saveIndexLockModeCommand");
 import app = require("durandal/app");
-import resetIndexConfirm = require("viewmodels/database/indexes/resetIndexConfirm");
 import changeSubscription = require("common/changeSubscription");
-import changesContext = require("common/changesContext");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
@@ -14,6 +12,7 @@ import forceIndexReplace = require("commands/database/index/forceIndexReplace");
 import saveIndexPriorityCommand = require("commands/database/index/saveIndexPriorityCommand");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import getIndexesStatusCommand = require("commands/database/index/getIndexesStatusCommand");
+import resetIndexCommand = require("commands/database/index/resetIndexCommand");
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 
 type indexGroup = {
@@ -32,10 +31,12 @@ class indexes extends viewModelBase {
     selectedIndexesName = ko.observableArray<string>();
     indexesSelectionState: KnockoutComputed<checkbox>;
 
-    globalStartStopInProgress = ko.observable<boolean>(false);
-    globalLockChangesInProgress = ko.observable<boolean>(false);
-    localPriorityInProgress = ko.observableArray<string>([]);
-    localLockChangesInProgress = ko.observableArray<string>([]);
+    spinners = {
+        globalStartStop: ko.observable<boolean>(false),
+        globalLockChanges: ko.observable<boolean>(false),
+        localPriority: ko.observableArray<string>([]),
+        localLockChanges: ko.observableArray<string>([])
+    }
 
     indexingEnabled = ko.observable<boolean>(true);
 
@@ -84,8 +85,9 @@ class indexes extends viewModelBase {
             return firstLockMode;
         });
         this.indexesSelectionState = ko.pureComputed<checkbox>(() => {
-            var selectedCount = this.selectedIndexesName().length;
-            if (selectedCount === this.getAllIndexes().length)
+            const selectedCount = this.selectedIndexesName().length;
+            const indexesCount = this.getAllIndexes().length;
+            if (indexesCount && selectedCount === indexesCount)
                 return checkbox.Checked;
             if (selectedCount > 0)
                 return checkbox.SomeChecked;
@@ -175,19 +177,24 @@ class indexes extends viewModelBase {
     }
 
     resetIndex(indexToReset: index) {
-        const resetIndexVm = new resetIndexConfirm(indexToReset.name, this.activeDatabase());
+        this.confirmationMessage("Reset index?", "You're resetting " + indexToReset.name)
+            .done(result => {
+                if (result.can) {
 
-        // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
-        // let's issue marker to ignore index delete information for next few seconds because it might be caused by reset.
-        // Unfortunettely we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
-        // is resolved. 
-        this.resetsInProgress.add(indexToReset.name);
+                    // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
+                    // let's issue marker to ignore index delete information for next few seconds because it might be caused by reset.
+                    // Unfortunettely we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
+                    // is resolved. 
+                    this.resetsInProgress.add(indexToReset.name);
 
-        setTimeout(() => {
-            this.resetsInProgress.delete(indexToReset.name);
-        }, 30000);
+                    new resetIndexCommand(indexToReset.name, this.activeDatabase())
+                        .execute();
 
-        app.showDialog(resetIndexVm);
+                    setTimeout(() => {
+                        this.resetsInProgress.delete(indexToReset.name);
+                    }, 30000);
+                }
+            });
     }
 
     deleteIndex(i: index) {
@@ -261,12 +268,12 @@ class indexes extends viewModelBase {
 
     private updateIndexLockMode(i: index, newLockMode: Raven.Abstractions.Indexing.IndexLockMode) {
         if (i.lockMode() !== newLockMode) {
-            this.localLockChangesInProgress.push(i.name);
+            this.spinners.localLockChanges.push(i.name);
 
             new saveIndexLockModeCommand([i], newLockMode, this.activeDatabase())
                 .execute()
                 .done(() => i.lockMode(newLockMode))
-                .always(() => this.localLockChangesInProgress.remove(i.name));
+                .always(() => this.spinners.localLockChanges.remove(i.name));
         }
     }
 
@@ -289,12 +296,18 @@ class indexes extends viewModelBase {
     private setIndexPriority(idx: index, newPriority: Raven.Client.Data.Indexes.IndexingPriority) {
         const originalPriority = idx.priority();
         if (originalPriority !== newPriority) {
-            this.localPriorityInProgress.push(idx.name);
+            this.spinners.localPriority.push(idx.name);
 
-            new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
-                .execute()
-                .done(() => idx.priority(newPriority))
-                .always(() => this.localPriorityInProgress.remove(idx.name));
+            const optionalResumeTask = idx.pausedUntilRestart()
+                ? this.resumeIndexingInternal(idx)
+                : $.Deferred<void>().resolve();
+
+            optionalResumeTask.done(() => {
+                new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
+                    .execute()
+                    .done(() => idx.priority(newPriority))
+                    .always(() => this.spinners.localPriority.remove(idx.name));
+            });
         }
     }
 
@@ -302,7 +315,7 @@ class indexes extends viewModelBase {
         return [
             //TODO: it isn't implemented on server side yet: changesContext.currentResourceChangesApi().watchAllIndexes(e => this.processIndexEvent(e)),
             //TODO: use cool down
-            changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent())
+            this.changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent())
         ];
     }
 
@@ -336,14 +349,14 @@ class indexes extends viewModelBase {
         this.confirmationMessage("Are you sure?", `Do you want to ${lockModeStrForTitle} selected indexes?`)
             .done(can => {
                 if (can) {
-                    this.globalLockChangesInProgress(true);
+                    this.spinners.globalLockChanges(true);
 
                     const indexes = this.getSelectedIndexes();
 
                     new saveIndexLockModeCommand(indexes, lockModeString, this.activeDatabase())
                         .execute()
                         .done(() => indexes.forEach(i => i.lockMode(lockModeString)))
-                        .always(() => this.globalLockChangesInProgress(false));
+                        .always(() => this.spinners.globalLockChanges(false));
                 }
             });
     }
@@ -353,43 +366,57 @@ class indexes extends viewModelBase {
     }
 
     startIndexing(): void {
-        this.globalStartStopInProgress(true);
-        new toggleIndexingCommand(true, this.activeDatabase())
-            .execute()
-            .done(() => this.indexingEnabled(true))
-            .always(() => {
-                this.globalStartStopInProgress(false);
-                this.fetchIndexes();
+        this.confirmationMessage("Are you sure?", "Do you want to resume indexing?")
+            .done(result => {
+                if (result.can) {
+                    this.spinners.globalStartStop(true);
+                    new toggleIndexingCommand(true, this.activeDatabase())
+                        .execute()
+                        .done(() => this.indexingEnabled(true))
+                        .always(() => {
+                            this.spinners.globalStartStop(false);
+                            this.fetchIndexes();
+                        });
+                }
             });
     }
 
     stopIndexing() {
-        this.globalStartStopInProgress(true);
-        new toggleIndexingCommand(false, this.activeDatabase())
-            .execute()
-            .done(() => this.indexingEnabled(false))
-            .always(() => {
-                this.globalStartStopInProgress(false);
-                this.fetchIndexes();
+        this.confirmationMessage("Are you sure?", "Do you want to pause indexing until server restart?")
+            .done(result => {
+                if (result.can) {
+                    this.spinners.globalStartStop(true);
+                    new toggleIndexingCommand(false, this.activeDatabase())
+                        .execute()
+                        .done(() => this.indexingEnabled(false))
+                        .always(() => {
+                            this.spinners.globalStartStop(false);
+                            this.fetchIndexes();
+                        });
+                }
             });
     }
 
-    resumeIndexing(idx: index) {
-        this.localPriorityInProgress.push(idx.name);
+    resumeIndexing(idx: index): JQueryPromise<void> {
+        this.spinners.localPriority.push(idx.name);
 
-        new toggleIndexingCommand(true, this.activeDatabase(), { name: [idx.name] })
-            .execute()
-            .done(() => idx.pausedUntilRestart(false))
-            .always(() => this.localPriorityInProgress.remove(idx.name));
+        return this.resumeIndexingInternal(idx)
+            .always(() => this.spinners.localPriority.remove(idx.name));
     }
 
-    disableUntilRestart(idx: index) {
-        this.localPriorityInProgress.push(idx.name);
+    private resumeIndexingInternal(idx: index): JQueryPromise<void> {
+        return new toggleIndexingCommand(true, this.activeDatabase(), { name: [idx.name] })
+            .execute()
+            .done(() => idx.pausedUntilRestart(false));
+    }
+
+    pauseUntilRestart(idx: index) {
+        this.spinners.localPriority.push(idx.name);
 
         new toggleIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
             .execute()
             .done(() => idx.pausedUntilRestart(true))
-            .always(() => this.localPriorityInProgress.remove(idx.name));
+            .always(() => this.spinners.localPriority.remove(idx.name));
     }
 
     toggleSelectAll() {

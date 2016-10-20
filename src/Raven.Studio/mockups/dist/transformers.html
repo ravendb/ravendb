@@ -31,7 +31,7 @@
 
     <link href='https://fonts.googleapis.com/css?family=Lato:400,300,700,900,400italic,700italic' rel='stylesheet' type='text/css'>
 
-    <link rel="stylesheet" type="text/css" href="./content/css/bootstrap/bootstrap.css" />
+    <!-- <link rel="stylesheet" type="text/css" href="./content/css/bootstrap/bootstrap.css" /> -->
     <link rel="stylesheet" type="text/css" href="./content/css/styles.css">
 
     <!--[if IE 8]>
@@ -464,7 +464,7 @@
                 <div class="panel transformer">
                     <div class="padding padding-sm">
                         <div class="row">
-                            <div class="col-sm-6 col-xl-4 col-flex info-container">
+                            <div class="col-xs-12 col-sm-6  info-container">
                                 <div class="checkbox">
                                     <input type="checkbox" class="styled">
                                     <label></label>
@@ -473,12 +473,12 @@
                                     <a href="#">CarsByMakerAndModelTransformer</a>
                                 </h3>
                             </div>
-                            <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
+                            <div class="col-xs-12 col-sm-12 col-lg-4  vertical-divider properties-container">
 
                                 <div class="properties-item">
                                     <span class="properties-label">Mode:</span>
-                                    <div class="btn-group btn-group-xs">
-                                        <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
+                                    <div class="btn-group properties-value">
+                                        <button type="button" class="btn btn-block dropdown-toggle set-size" data-toggle="dropdown">
                                             <i class="icon-lock"></i><span>Locked</span> <span class="caret"></span>
                                         </button>
                                         <ul class="dropdown-menu">
@@ -498,7 +498,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                            <div class="col-xs-12 col-sm-6 col-lg-2  actions-container">
                                 <div class="actions">
                                     <div class="btn-toolbar pull-right-sm" role="toolbar">
                                         <div class="btn-group " role="group">
@@ -519,12 +519,14 @@
     </div>
 
     <script type="text/javascript" src="./js/setup.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Faker/3.1.0/faker.min.js" ></script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.5/ace.js" type="text/javascript" charset="utf-8"></script>
     <script>
         var editor = ace.edit("docEditor");
         editor.setTheme("ace/theme/pastel_on_dark");
         editor.getSession().setMode("ace/mode/json");
+    
     </script>
 </body>
 </html>
