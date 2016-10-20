@@ -163,10 +163,11 @@ namespace Voron.Platform.Posix
         public override void Sync()
         {
             //TODO: Is it worth it to change to just one call for msync for the entire file?
-            using (Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.DataSync, 0))
+            using (var metric = Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.DataSync, 0))
             {
                 foreach (var alloc in PagerState.AllocationInfos)
                 {
+                    metric.IncrementSize(alloc.Size);
                     var result = Syscall.msync(new IntPtr(alloc.BaseAddress), (ulong)alloc.Size, MsyncFlags.MS_SYNC);
                     if (result == -1)
                     {

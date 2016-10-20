@@ -329,10 +329,11 @@ namespace Voron.Platform.Win32
             if (Disposed)
                 ThrowAlreadyDisposedException();
 
-            using (Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.DataSync, 0))
+            using (var metric = Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.DataSync, 0))
             {
                 foreach (var allocationInfo in PagerState.AllocationInfos)
                 {
+                    metric.IncrementSize(allocationInfo.Size);
                     if (
                         Win32MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress,
                             new IntPtr(allocationInfo.Size)) == false)
