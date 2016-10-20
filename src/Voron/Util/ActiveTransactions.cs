@@ -21,42 +21,6 @@ namespace Voron.Util
             public Node[] Items = new Node[4];
             public int Length;
 
-            public struct Enumerator : IEnumerator<Node>
-            {
-                private int _index, _max;
-                private readonly Node[] _array;
-
-                public Enumerator(DynamicArray parent)
-                {
-                    _array = parent.Items;
-                    _max = Math.Min(parent.Length, _array.Length);
-                    _index = -1;
-                }
-
-                public bool MoveNext()
-                {
-                    return ++_index < _max;
-                }
-
-                public void Reset()
-                {
-                    _index = -1;
-                }
-
-                public Node Current => _array[_index];
-
-                object IEnumerator.Current => Current;
-
-                public void Dispose()
-                {
-                }
-            }
-
-            public Enumerator GetEnumerator()
-            {
-                return new Enumerator(this);
-            }
-
             public void Add(Node node)
             {
                 if (Length < Items.Length)
@@ -85,9 +49,11 @@ namespace Voron.Util
                 // ReSharper disable once LoopCanBeConvertedToQuery
                 foreach (var threadActiveTransactions in _activeTransactions.Values)
                 {
-                    foreach (var activeTransaction in threadActiveTransactions)
+                    var array = threadActiveTransactions.Items;
+                    var len = Math.Min(array.Length, threadActiveTransactions.Length);
+                    for (int i = 0; i < len; i++)
                     {
-                        var activeTransactionTransaction = activeTransaction.Transaction;
+                        var activeTransactionTransaction = array[i].Transaction;
                         // ReSharper disable once UseNullPropagation
                         if (activeTransactionTransaction == null)
                             continue;
@@ -105,8 +71,10 @@ namespace Voron.Util
         public void Add(LowLevelTransaction tx)
         {
             var threadActiveTxs = _activeTransactions.Value;
-            foreach (var node in threadActiveTxs)
+            for (int i = 0; i < threadActiveTxs.Length; i++)
             {
+                var node = threadActiveTxs.Items[i];
+              
                 if (node.Transaction != null)
                     continue;
 
@@ -129,9 +97,11 @@ namespace Voron.Util
 
                 foreach (var threadActiveTransactions in _activeTransactions.Values)
                 {
-                    foreach (var activeTransaction in threadActiveTransactions)
+                    var array = threadActiveTransactions.Items;
+                    var len = Math.Min(array.Length, threadActiveTransactions.Length);
+                    for (int i = 0; i < len; i++)
                     {
-                        var transaction = activeTransaction.Transaction;
+                        var transaction = array[i].Transaction;
                         if (transaction == null)
                             continue;
 
