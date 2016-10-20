@@ -20,7 +20,16 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-           
+            for (int i = 0; i < 15; i++)
+            {
+                Console.WriteLine(i);
+                using (var a = new FastTests.Server.Documents.Patching.AdvancedPatching())
+                {
+                    a.CanUpdateBasedOnAnotherDocumentProperty().Wait();
+                }
+            }
+            if (DateTime.Today.Day != -1)
+                return;
             using (var store = new DocumentStore
             {
                 Url = "http://localhost:8080",

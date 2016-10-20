@@ -72,7 +72,7 @@ namespace Voron
 
         private readonly StorageEnvironmentOptions _options;
 
-        private readonly ConcurrentSet<LowLevelTransaction> _activeTransactions = new ConcurrentSet<LowLevelTransaction>();
+        public readonly ActiveTransactions ActiveTransactions = new ActiveTransactions();
 
         private readonly AbstractPager _dataPager;
         private ExceptionDispatchInfo _flushingTaskFailure;
@@ -93,7 +93,7 @@ namespace Voron
 
         private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
         public bool Disposed;
-        private Logger _log;
+        private readonly Logger _log;
         public static int MaxConcurrentFlushes = 10; // RavenDB-5221
 
         public Guid DbId { get; set; }
@@ -254,59 +254,16 @@ namespace Voron
 
         }
 
-        public IFreeSpaceHandling FreeSpaceHandling
-        {
-            get { return _freeSpaceHandling; }
-        }
+        public IFreeSpaceHandling FreeSpaceHandling => _freeSpaceHandling;
 
-        public HeaderAccessor HeaderAccessor
-        {
-            get { return _headerAccessor; }
-        }
+        public HeaderAccessor HeaderAccessor => _headerAccessor;
 
-        public long OldestTransaction
-        {
-            get
-            {
-                var largestTx = long.MaxValue;
-                // ReSharper disable once LoopCanBeConvertedToQuery
-                foreach (var activeTransaction in _activeTransactions)
-                {
-                    if (largestTx > activeTransaction.Id)
-                        largestTx = activeTransaction.Id;
-                }
-                if (largestTx == long.MaxValue)
-                    return 0;
-                return largestTx;
-            }
-        }
+        public long NextPageNumber => State.NextPageNumber;
 
-        public long NextPageNumber
-        {
-            get { return State.NextPageNumber; }
-        }
+        public StorageEnvironmentOptions Options => _options;
 
-        public StorageEnvironmentOptions Options
-        {
-            get { return _options; }
-        }
+        public WriteAheadJournal Journal => _journal;
 
-        public WriteAheadJournal Journal
-        {
-            get { return _journal; }
-        }
-
-        internal List<ActiveTransaction> ActiveTransactions
-        {
-            get
-            {
-                return _activeTransactions.Select(x => new ActiveTransaction()
-                {
-                    Id = x.Id,
-                    Flags = x.Flags
-                }).ToList();
-            }
-        }
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
@@ -426,7 +383,7 @@ namespace Voron
                     _txCommit.ExitReadLock();
                 }
 
-                _activeTransactions.Add(tx);
+                ActiveTransactions.Add(tx);
                 var state = _dataPager.PagerState;
                 tx.EnsurePagerStateReference(state);
 
@@ -461,14 +418,11 @@ namespace Voron
         }
 
 
-        public long NextWriteTransactionId
-        {
-            get { return Volatile.Read(ref _transactionsCounter) + 1; }
-        }
+        public long NextWriteTransactionId => Volatile.Read(ref _transactionsCounter) + 1;
 
         internal void TransactionAfterCommit(LowLevelTransaction tx)
         {
-            if (_activeTransactions.Contains(tx) == false)
+            if (ActiveTransactions.Contains(tx) == false)
                 return;
 
             _txCommit.EnterWriteLock();
@@ -501,7 +455,7 @@ namespace Voron
 
         internal void TransactionCompleted(LowLevelTransaction tx)
         {
-            if (_activeTransactions.TryRemove(tx) == false)
+            if (ActiveTransactions.TryRemove(tx) == false)
                 return;
 
             if (tx.Flags != (TransactionFlags.ReadWrite))
@@ -574,7 +528,7 @@ namespace Voron
                     UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Options.PageSize,
                     AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Options.PageSize,
                     NextWriteTransactionId = NextWriteTransactionId,
-                    ActiveTransactions = ActiveTransactions
+                    ActiveTransactions = ActiveTransactions.AllTransactions
                 };
             }
         }
@@ -664,7 +618,7 @@ namespace Voron
         {
             try
             {
-                _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token,
+                _journal.Applicator.ApplyLogsToDataFile(ActiveTransactions.OldestTransaction, _cancellationTokenSource.Token,
                     // we intentionally don't wait, if the flush lock is held, something else is flushing, so we don't need
                     // to hold the thread
                     TimeSpan.Zero);
@@ -695,7 +649,7 @@ namespace Voron
 
         public void ForceLogFlushToDataFile(LowLevelTransaction tx)
         {
-            _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token,
+            _journal.Applicator.ApplyLogsToDataFile(ActiveTransactions.OldestTransaction, _cancellationTokenSource.Token,
                 Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30),
                 tx);
         }

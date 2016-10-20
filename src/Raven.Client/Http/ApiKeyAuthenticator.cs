@@ -168,7 +168,8 @@ namespace Raven.Client.Http
                         $"Trying to 'ReceiveAsync' WebSocket while not in Open state. State is {webSocket.State}");
 
                 var state = new JsonParserState();
-                var buffer = context.GetParsingBuffer();
+                byte[] buffer;
+                using (context.GetManagedBuffer(out buffer))
                 using (var parser = new UnmanagedJsonParser(context, state, "")) //TODO: FIXME
                 {
                     builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, nameof(ApiKeyAuthenticator) + "." + nameof(Recieve), parser, state);

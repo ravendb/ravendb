@@ -103,66 +103,67 @@ namespace Raven.Client.Document
         {
             const string debugTag = "bulk/insert/document";
             var jsonParserState = new JsonParserState();
-            var buffer = _jsonOperationContext.GetManagedBuffer();
-            var streamNetworkBuffer = new BufferedStream(serverStream, 32 * 1024);
-            var writeToStreamBuffer = new byte[32 * 1024];
+            var streamNetworkBuffer = new BufferedStream(serverStream, 32*1024);
+            var writeToStreamBuffer = new byte[32*1024];
             var header = Encoding.UTF8.GetBytes(RavenJObject.FromObject(new TcpConnectionHeaderMessage
             {
                 DatabaseName = MultiDatabase.GetDatabaseName(_url),
                 Operation = TcpConnectionHeaderMessage.OperationTypes.BulkInsert
             }).ToString());
             streamNetworkBuffer.Write(header, 0, header.Length);
-
-            while (_documents.IsCompleted == false)
+            byte[] buffer;
+            using (_jsonOperationContext.GetManagedBuffer(out buffer))
             {
-                _cts.Token.ThrowIfCancellationRequested();
-
-                MemoryStream jsonBuffer;
-
-                try
+                while (_documents.IsCompleted == false)
                 {
-                    jsonBuffer = _documents.Take();
-                }
-                catch (InvalidOperationException)
-                {
-                    break;
-                }
+                    _cts.Token.ThrowIfCancellationRequested();
 
-                var needToThrottle = _throttlingEvent.Wait(0) == false;
+                    MemoryStream jsonBuffer;
 
-                _jsonOperationContext.ResetAndRenew();
-                using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, debugTag))
-                using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
-                    BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag,
-                    jsonParser, jsonParserState))
-                {
-                    _jsonOperationContext.CachedProperties.NewDocument();
-                    builder.ReadObject();
-                    while (true)
+                    try
                     {
-                        var read = jsonBuffer.Read(buffer, 0, buffer.Length);
-                        if (read == 0)
-                            throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        jsonParser.SetBuffer(buffer, read);
-                        if (builder.Read())
-                            break;
+                        jsonBuffer = _documents.Take();
                     }
-                    _buffers.Add(jsonBuffer);
-                    builder.FinalizeDocument();
-                    WriteVariableSizeInt(streamNetworkBuffer, builder.SizeInBytes);
-                    WriteToStream(streamNetworkBuffer, builder, writeToStreamBuffer);
-                }
+                    catch (InvalidOperationException)
+                    {
+                        break;
+                    }
 
-                if (needToThrottle)
-                {
-                    streamNetworkBuffer.Flush();
-                    _throttlingEvent.Wait(500);
+                    var needToThrottle = _throttlingEvent.Wait(0) == false;
+
+                    _jsonOperationContext.ResetAndRenew();
+                    using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, debugTag))
+                    using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
+                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag,
+                        jsonParser, jsonParserState))
+                    {
+                        _jsonOperationContext.CachedProperties.NewDocument();
+                        builder.ReadObject();
+                        while (true)
+                        {
+                            var read = jsonBuffer.Read(buffer, 0, buffer.Length);
+                            if (read == 0)
+                                throw new EndOfStreamException("Stream ended without reaching end of json content");
+                            jsonParser.SetBuffer(buffer, read);
+                            if (builder.Read())
+                                break;
+                        }
+                        _buffers.Add(jsonBuffer);
+                        builder.FinalizeDocument();
+                        WriteVariableSizeInt(streamNetworkBuffer, builder.SizeInBytes);
+                        WriteToStream(streamNetworkBuffer, builder, writeToStreamBuffer);
+                    }
+
+                    if (needToThrottle)
+                    {
+                        streamNetworkBuffer.Flush();
+                        _throttlingEvent.Wait(500);
+                    }
                 }
+                streamNetworkBuffer.WriteByte(0); //done
+                streamNetworkBuffer.Flush();
             }
-            streamNetworkBuffer.WriteByte(0);//done
-            streamNetworkBuffer.Flush();
         }
-
 
         private static unsafe void WriteToStream(BufferedStream networkBufferedStream, BlittableJsonDocumentBuilder builder,
             byte[] buffer)
@@ -204,9 +205,11 @@ namespace Raven.Client.Document
            CancellationToken cancellationToken)
         {
             var jsonParserState = new JsonParserState();
+            byte[] bytes;
+            using (context.GetManagedBuffer(out bytes))
             using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
             {
-                var buffer = new ArraySegment<byte>(context.GetManagedBuffer());
+                var buffer = new ArraySegment<byte>(bytes);
 
                 var writer = new BlittableJsonDocumentBuilder(context,
                     BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState);

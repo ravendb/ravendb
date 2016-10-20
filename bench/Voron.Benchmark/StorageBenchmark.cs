@@ -33,7 +33,7 @@ namespace Voron.Benchmark
         /// the same as below.
         /// </summary>
         [Params(Configuration.Transactions)]
-        public int NumberOfTransactions { get; set; }
+        public int NumberOfTransactions { get; set; } = Configuration.Transactions;
 
         /// <summary>
         /// Number of Records per Transaction to use per test. The default uses
@@ -41,7 +41,7 @@ namespace Voron.Benchmark
         /// basis by doing the same as below.
         /// </summary>
         [Params(Configuration.RecordsPerTransaction)]
-        public int NumberOfRecordsPerTransaction { get; set; }
+        public int NumberOfRecordsPerTransaction { get; set; } = Configuration.RecordsPerTransaction;
 
         /// <summary>
         /// This is the job configuration for storage benchmarks. Changing this
