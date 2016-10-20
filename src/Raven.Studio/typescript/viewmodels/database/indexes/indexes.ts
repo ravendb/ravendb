@@ -3,7 +3,6 @@ import index = require("models/database/index/index");
 import appUrl = require("common/appUrl");
 import saveIndexLockModeCommand = require("commands/database/index/saveIndexLockModeCommand");
 import app = require("durandal/app");
-import resetIndexConfirm = require("viewmodels/database/indexes/resetIndexConfirm");
 import changeSubscription = require("common/changeSubscription");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
@@ -13,6 +12,7 @@ import forceIndexReplace = require("commands/database/index/forceIndexReplace");
 import saveIndexPriorityCommand = require("commands/database/index/saveIndexPriorityCommand");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import getIndexesStatusCommand = require("commands/database/index/getIndexesStatusCommand");
+import resetIndexCommand = require("commands/database/index/resetIndexCommand");
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 
 type indexGroup = {
@@ -177,19 +177,24 @@ class indexes extends viewModelBase {
     }
 
     resetIndex(indexToReset: index) {
-        const resetIndexVm = new resetIndexConfirm(indexToReset.name, this.activeDatabase());
+        this.confirmationMessage("Reset index?", "You're resetting " + indexToReset.name)
+            .done(result => {
+                if (result.can) {
 
-        // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
-        // let's issue marker to ignore index delete information for next few seconds because it might be caused by reset.
-        // Unfortunettely we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
-        // is resolved. 
-        this.resetsInProgress.add(indexToReset.name);
+                    // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
+                    // let's issue marker to ignore index delete information for next few seconds because it might be caused by reset.
+                    // Unfortunettely we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
+                    // is resolved. 
+                    this.resetsInProgress.add(indexToReset.name);
 
-        setTimeout(() => {
-            this.resetsInProgress.delete(indexToReset.name);
-        }, 30000);
+                    new resetIndexCommand(indexToReset.name, this.activeDatabase())
+                        .execute();
 
-        app.showDialog(resetIndexVm);
+                    setTimeout(() => {
+                        this.resetsInProgress.delete(indexToReset.name);
+                    }, 30000);
+                }
+            });
     }
 
     deleteIndex(i: index) {
@@ -293,10 +298,16 @@ class indexes extends viewModelBase {
         if (originalPriority !== newPriority) {
             this.spinners.localPriority.push(idx.name);
 
-            new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
-                .execute()
-                .done(() => idx.priority(newPriority))
-                .always(() => this.spinners.localPriority.remove(idx.name));
+            const optionalResumeTask = idx.pausedUntilRestart()
+                ? this.resumeIndexingInternal(idx)
+                : $.Deferred<void>().resolve();
+
+            optionalResumeTask.done(() => {
+                new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
+                    .execute()
+                    .done(() => idx.priority(newPriority))
+                    .always(() => this.spinners.localPriority.remove(idx.name));
+            });
         }
     }
 
@@ -355,37 +366,51 @@ class indexes extends viewModelBase {
     }
 
     startIndexing(): void {
-        this.spinners.globalStartStop(true);
-        new toggleIndexingCommand(true, this.activeDatabase())
-            .execute()
-            .done(() => this.indexingEnabled(true))
-            .always(() => {
-                this.spinners.globalStartStop(false);
-                this.fetchIndexes();
+        this.confirmationMessage("Are you sure?", "Do you want to resume indexing?")
+            .done(result => {
+                if (result.can) {
+                    this.spinners.globalStartStop(true);
+                    new toggleIndexingCommand(true, this.activeDatabase())
+                        .execute()
+                        .done(() => this.indexingEnabled(true))
+                        .always(() => {
+                            this.spinners.globalStartStop(false);
+                            this.fetchIndexes();
+                        });
+                }
             });
     }
 
     stopIndexing() {
-        this.spinners.globalStartStop(true);
-        new toggleIndexingCommand(false, this.activeDatabase())
-            .execute()
-            .done(() => this.indexingEnabled(false))
-            .always(() => {
-                this.spinners.globalStartStop(false);
-                this.fetchIndexes();
+        this.confirmationMessage("Are you sure?", "Do you want to pause indexing until server restart?")
+            .done(result => {
+                if (result.can) {
+                    this.spinners.globalStartStop(true);
+                    new toggleIndexingCommand(false, this.activeDatabase())
+                        .execute()
+                        .done(() => this.indexingEnabled(false))
+                        .always(() => {
+                            this.spinners.globalStartStop(false);
+                            this.fetchIndexes();
+                        });
+                }
             });
     }
 
-    resumeIndexing(idx: index) {
+    resumeIndexing(idx: index): JQueryPromise<void> {
         this.spinners.localPriority.push(idx.name);
 
-        new toggleIndexingCommand(true, this.activeDatabase(), { name: [idx.name] })
-            .execute()
-            .done(() => idx.pausedUntilRestart(false))
+        return this.resumeIndexingInternal(idx)
             .always(() => this.spinners.localPriority.remove(idx.name));
     }
 
-    pauseUntilRestart(idx: index) {
+    private resumeIndexingInternal(idx: index): JQueryPromise<void> {
+        return new toggleIndexingCommand(true, this.activeDatabase(), { name: [idx.name] })
+            .execute()
+            .done(() => idx.pausedUntilRestart(false));
+    }
+
+    disableUntilRestart(idx: index) {
         this.spinners.localPriority.push(idx.name);
 
         new toggleIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
