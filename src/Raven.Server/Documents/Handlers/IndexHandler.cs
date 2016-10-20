@@ -591,31 +591,44 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/indexes/total-time", "GET")]
+        public Task TotalTime()
+        {
+            var indexes = GetIndexesToReportOn();
+            JsonOperationContext context;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartArray();
+                var first = true;
+
+                foreach (var index in indexes)
+                {
+                    if (first == false)
+                    {
+                        writer.WriteComma();
+                    }
+                    first = false;
+                    writer.WritePropertyName(index.Name);
+                    writer.WriteString(index.TimeSpentIndexing.Elapsed.ToString("c"));
+                }
+
+                writer.WriteEndArray();
+            }
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/indexes/performance", "GET")]
         public Task Performance()
         {
-            var names = HttpContext.Request.Query["name"];
-            var froms = HttpContext.Request.Query["from"];
             var from = 0;
+            var froms = HttpContext.Request.Query["from"];
             if (froms.Count > 1)
                 throw new ArgumentException($"Query string value 'from' must appear exactly once");
             if (froms.Count > 0 && int.TryParse(froms[0], out from) == false)
                 throw new ArgumentException($"Query string value 'from' must be a number");
 
-            IEnumerable<Index> indexes;
-
-            if (names.Count == 0)
-                indexes = Database.IndexStore
-                    .GetIndexes()
-                    .OrderBy(x => x.IndexId);
-            else
-            {
-                indexes = Database.IndexStore
-                    .GetIndexes()
-                    .Where(x => names.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
-            }
-
-            var stats = indexes
+            var stats = GetIndexesToReportOn()
                 .Select(x => new IndexPerformanceStats
                 {
                     IndexName = x.Name,
@@ -669,6 +682,24 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return Task.CompletedTask;
+        }
+
+        private IEnumerable<Index> GetIndexesToReportOn()
+        {
+            IEnumerable<Index> indexes;
+            var names = HttpContext.Request.Query["name"];
+
+            if (names.Count == 0)
+                indexes = Database.IndexStore
+                    .GetIndexes()
+                    .OrderBy(x => x.IndexId);
+            else
+            {
+                indexes = Database.IndexStore
+                    .GetIndexes()
+                    .Where(x => names.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
+            }
+            return indexes;
         }
     }
 }

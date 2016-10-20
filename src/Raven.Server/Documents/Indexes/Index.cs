@@ -92,6 +92,8 @@ namespace Raven.Server.Documents.Indexes
         private DateTime? _lastQueryingTime;
         private DateTime? _lastIndexingTime;
 
+        public Stopwatch TimeSpentIndexing = new Stopwatch();
+
         public readonly HashSet<string> Collections;
 
         internal IndexStorage _indexStorage;
@@ -520,7 +522,16 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 cts.Token.ThrowIfCancellationRequested();
 
-                                var didWork = DoIndexingWork(scope, cts.Token);
+                                bool didWork;
+                                try
+                                {
+                                    TimeSpentIndexing.Start();
+                                    didWork = DoIndexingWork(scope, cts.Token);
+                                }
+                                finally
+                                {
+                                    TimeSpentIndexing.Stop();
+                                }
 
                                 _indexingBatchCompleted.SetAndResetAtomically();
 
