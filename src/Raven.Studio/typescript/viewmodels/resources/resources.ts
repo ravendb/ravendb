@@ -13,6 +13,7 @@ import toggleRejectDatabaseClients = require("commands/maintenance/toggleRejectD
 import disableResourceToggleCommand = require("commands/resources/disableResourceToggleCommand");
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
+import loadResourceCommand = require("commands/resources/loadResourceCommand");
 
 import resourcesInfo = require("models/resources/info/resourcesInfo");
 import getResourcesCommand = require("commands/resources/getResourcesCommand");
@@ -36,7 +37,10 @@ class resources extends viewModelBase {
 
     spinners = {
         globalToggleDisable: ko.observable<boolean>(false),
-        itemTakedowns: ko.observableArray<string>([])
+        itemTakedowns: ko.observableArray<string>([]),
+        resourceLoad: ko.observableArray<string>([]),
+        disableIndexing: ko.observableArray<string>([]), //TODO: bind on UI
+        toggleRejectMode: ko.observableArray<string>([]) //TODO: bind on UI
     }
 
     private static compactView = ko.observable<boolean>(false);
@@ -268,29 +272,42 @@ class resources extends viewModelBase {
         }
     }
 
-    toggleDatabaseIndexing(db: databaseInfo) {
-        /* TODO:
-        const start = db.indexingDisabled();
-        const actionText = db.indexingDisabled() ? "Enable" : "Disable";
-        const message = this.confirmationMessage(actionText + " indexing?", "Are you sure?");
+    loadResource(rs: resourceInfo) {
+        this.spinners.resourceLoad.push(rs.qualifiedName);
 
-        message.done(result => {
-            if (result.can) {
-                new toggleIndexingCommand(start, db.asResource())
-                    .execute(); //TODO: update spinner + UI
-            }
-        });*/
+        new loadResourceCommand(rs.asResource())
+            .execute()
+            .done(() => this.fetchResources())
+            .always(() => this.spinners.resourceLoad.remove(rs.qualifiedName));
+    }
+
+    toggleDatabaseIndexing(db: databaseInfo) {
+        const enableIndexing = !db.indexingEnabled();
+        const message = enableIndexing ? "Enable" : "Disable";
+
+        this.confirmationMessage("Are you sure?", message + " indexing?")
+            .done(result => {
+                if (result.can) {
+                    this.spinners.disableIndexing.push(db.qualifiedName);
+
+                    new toggleIndexingCommand(true, db.asResource())
+                        .execute()
+                        .done(() => db.indexingEnabled(enableIndexing))
+                        .always(() => this.spinners.disableIndexing.remove(db.qualifiedName));
+                }
+            });
     }
 
     toggleRejectDatabaseClients(db: databaseInfo) {
-        /* TODO
-        var action = !db.rejectClientsMode();
-        var actionText = action ? "reject clients mode" : "accept clients mode";
-        var message = this.confirmationMessage("Switch to " + actionText, "Are you sure?");
-        message.done(() => {
-            var task = new toggleRejectDatabaseClients(db.name, action).execute();
-            task.done(() => db.rejectClientsMode(action));
-        });*/
+        const rejectClients = !db.rejectClients();
+
+        const message = rejectClients ? "reject clients mode" : "accept clients mode";
+        this.confirmationMessage("Are you sure?", "Switch to " + message)
+            .done(result => {
+                if (result.can) {
+                    //TODO: progress (this.spinners.toggleRejectMode), command, update db object, etc
+                }
+            });
     }
 
 
