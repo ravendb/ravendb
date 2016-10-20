@@ -30,6 +30,7 @@ abstract class resourceInfo {
 
     badgeClass: KnockoutComputed<string>;
     badgeText: KnockoutComputed<string>;
+    online: KnockoutComputed<boolean>;
 
     canNavigateToResource: KnockoutComputed<boolean>;
 
@@ -71,6 +72,10 @@ abstract class resourceInfo {
     }
 
     private initializeObservables() {
+        this.online = ko.pureComputed(() => {
+            return !!this.uptime();
+        });
+
         this.badgeClass = ko.pureComputed(() => {
             if (!this.licensed()) {
                 return "state-danger";
@@ -79,7 +84,7 @@ abstract class resourceInfo {
                 return "state-warning";
             }
 
-            if (this.uptime()) {
+            if (this.online()) {
                 return "state-success";
             }
             return ""; // offline

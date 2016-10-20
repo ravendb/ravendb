@@ -60,7 +60,7 @@
                             <a data-bind="attr: { title: name, href: $root.resourceUrl($data) }, text: name, visible: canNavigateToResource()" href="#"></a>
                         </h3>
                     </div>
-                    <div class="col-xs-12 col-sm-12 col-xl-6 vertical-divider properties-container" data-bind="template: { name: 'properties-template' }">
+                    <div class="col-xs-12 col-sm-12 col-xl-6 vertical-divider properties-container" data-bind="template: { name: 'properties-template' }, visible: online()">
 
                     </div>
                     <div class="col-xs-12 col-sm-6 col-xl-2 actions-container">
@@ -68,6 +68,8 @@
                             <div class="btn-toolbar pull-right-sm" role="toolbar">
                                 <div class="btn-group">
                                     <button class="btn btn-default" 
+                                            data-bind="visible: !online(), click: $root.loadResource.bind($root, $data), css: { 'btn-spinner': $root.spinners.resourceLoad().contains(qualifiedName) }, enable: !$root.spinners.resourceLoad().contains(qualifiedName)">Load</button>
+                                    <button class="btn btn-default"
                                             data-bind="click: $root.toggleResource.bind($root, $data), css: { 'btn-spinner': $root.spinners.itemTakedowns().contains(qualifiedName) }, enable: !$root.spinners.itemTakedowns().contains(qualifiedName)">
                                         <i class="icon-unlock" data-bind="visible: disabled()"></i>
                                         <span data-bind="visible: disabled()">Enable</span>
@@ -79,13 +81,18 @@
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
                                     <ul class="dropdown-menu">
-                                        <li>
-                                            <a href="#">
+                                        <li data-bind="visible: online() && indexingEnabled()">
+                                            <a href="#" data-bind="click: $root.toggleDatabaseIndexing.bind($root, $data)">
                                                 <i class="icon-pause"></i> Disable indexing
                                             </a>
                                         </li>
+                                        <li data-bind="visible: online() && !indexingEnabled()">
+                                            <a href="#" data-bind="click: $root.toggleDatabaseIndexing.bind($root, $data)">
+                                                <i class="icon-play"></i> Enable indexing
+                                            </a>
+                                        </li>
                                         <li>
-                                            <a href="#">
+                                            <a href="#" data-bind="click: $root.toggleRejectDatabaseClients.bind($root, $data)">
                                                 <i class="icon-umbrella"></i> Reject clients mode
                                             </a>
                                         </li>
