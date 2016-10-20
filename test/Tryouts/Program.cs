@@ -23,9 +23,9 @@ namespace Tryouts
             for (int i = 0; i < 15; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Server.Documents.Patching.AdvancedPatching())
+                using (var a = new SlowTests.Server.Documents.SqlReplication.CanReplicateSlow())
                 {
-                    a.CanUpdateBasedOnAnotherDocumentProperty().Wait();
+                    a.CanDelete().Wait();
                 }
             }
             if (DateTime.Today.Day != -1)

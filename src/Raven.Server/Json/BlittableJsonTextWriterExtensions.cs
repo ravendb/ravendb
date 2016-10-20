@@ -971,6 +971,12 @@ namespace Raven.Server.Json
             writer.WriteComma();
             writer.WritePropertyName(Constants.Metadata.Id);
             writer.WriteString(document.Key);
+            if (document.IndexScore != null)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(Constants.Metadata.IndexScore);
+                writer.WriteDouble(document.IndexScore.Value);
+            }
             writer.WriteEndObject();
         }
 
