@@ -760,7 +760,7 @@ namespace Raven.Server.Documents.Indexes
             _mre.Set();
         }
 
-        public List<IndexingError> GetErrors()
+        public virtual List<IndexingError> GetErrors()
         {
             return _indexStorage.ReadErrors();
         }
