@@ -1502,16 +1502,6 @@ namespace Raven.Client.Indexes
             }
             if (expression != null)
             {
-                switch (node.Method.Name)
-                {
-                    case "MetadataFor":
-                        Visit(node.Arguments[0]);
-                        Out("[\"@metadata\"]");
-                        return node;
-                    case "AsDocument":
-                        Visit(node.Arguments[0]);
-                        return node;
-                }
                 if (expression.Type == typeof(IClientSideDatabase))
                 {
                     Out("Database");

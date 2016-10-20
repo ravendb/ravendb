@@ -73,5 +73,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(50)]
         [ConfigurationEntry("Raven/Indexing/MaxMapIndexOutputsPerDocument")]
         public int MaxMapReduceIndexOutputsPerDocument { get; set; }
+
+        [Description("EXPERT ONLY")]
+        [DefaultValue(16)]
+        [ConfigurationEntry("Raven/Indexing/MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory")]
+        public int MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory { get; set; }
     }
 }

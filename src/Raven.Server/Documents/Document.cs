@@ -19,6 +19,7 @@ namespace Raven.Server.Documents
         public LazyStringValue LoweredKey;
         public long StorageId;
         public BlittableJsonReaderObject Data;
+        public float? IndexScore;
         public ChangeVectorEntry[] ChangeVector;
 
         public unsafe ulong DataHash

@@ -49,7 +49,7 @@ namespace Sparrow
             fixed (char* pX = x.String)
             fixed (char* pY = y.String)
             {
-                return Memory.Compare((byte*)pX + x.Start * sizeof(char), (byte*)pY + y.Start * sizeof(char), x.Length + sizeof(char)) == 0;
+                return Memory.Compare((byte*)pX + x.Start * sizeof(char), (byte*)pY + y.Start * sizeof(char), x.Length * sizeof(char)) == 0;
             }
 
         }

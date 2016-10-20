@@ -48,8 +48,9 @@ namespace SlowTests.Voron
 			}
 
 			Env.FlushLogToDataFile();
+		    Env.Journal.Applicator.SyncDataFile();
 
-			Env.Options.IncrementalBackupEnabled = true;
+            Env.Options.IncrementalBackupEnabled = true;
 
 			var exception = Assert.Throws<InvalidOperationException>(() => BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0)));
 

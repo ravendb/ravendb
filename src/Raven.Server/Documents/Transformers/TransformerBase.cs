@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
@@ -104,6 +105,20 @@ namespace Raven.Server.Documents.Transformers
                 throw new InvalidOperationException("TransformWith was accessed without CurrentTransformationScope.Current being set");
 
             return CurrentTransformationScope.Current.TransformWith(transformer, maybeItems);
+        }
+
+        public dynamic MetadataFor(dynamic doc)
+        {
+            var json = (DynamicBlittableJson)doc;
+            json.EnsureMetadata();
+            return doc[Constants.Metadata.Key];
+        }
+
+        public dynamic AsDocument(dynamic doc)
+        {
+            var json = (DynamicBlittableJson)doc;
+            json.EnsureMetadata();
+            return json;
         }
     }
 }

@@ -69,7 +69,7 @@ namespace Raven.Client.Documents
         ///     Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="commands">Array of comands to be executed.</param>
-        void Defer(params ICommandData[] commands);
+        void Defer(params Dictionary<string, object>[] commands);
 
         /// <summary>
         ///     Evicts the specified entity from the session.
@@ -108,7 +108,7 @@ namespace Raven.Client.Documents
         ///     and associate the current state of the entity with the metadata from the server.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        DynamicJsonValue GetMetadataFor<T>(T instance);
+        Dictionary<string, string> GetMetadataFor<T>(T instance);
 
         /// <summary>
         ///     Determines whether the specified entity has changed.
