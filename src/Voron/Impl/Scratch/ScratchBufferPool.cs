@@ -174,10 +174,10 @@ namespace Voron.Impl.Scratch
                 newCurrent.File.PagerState.AddRef();
                 _current = newCurrent;
             }
-            GetReadOfFile(scratch);
+            RecyleScratchFile(scratch);
         }
 
-        private void GetReadOfFile(ScratchBufferItem scratch)
+        private void RecyleScratchFile(ScratchBufferItem scratch)
         {
             ScratchBufferItem _;
             if (_scratchBuffers.TryRemove(scratch.Number, out _) == false)
@@ -186,7 +186,8 @@ namespace Voron.Impl.Scratch
                 return;
             }
 
-            if (_recycleArea.Count < 4)
+            if (_recycleArea.Count < 4 && 
+                scratch.File.Size == _current.File.Size)
             {
                 scratch.File.Reset();
                 _recycleArea.Push(scratch);
