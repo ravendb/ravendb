@@ -65,7 +65,13 @@ namespace Voron
         private void SyncDesiredEnvironments()
         {
             StorageEnvironment envToSync;
-            while (_maybeNeedToSync.TryDequeue(out envToSync))
+            var limit = _maybeNeedToSync.Count;
+            while (
+                // if there is high traffic into the queue, we want to abort after 
+                // we processed whatever was already in there, to avoid holding up
+                // the rest of the operations
+                limit-- > 0 && 
+                _maybeNeedToSync.TryDequeue(out envToSync))
             {
                 if (envToSync.Disposed)
                     continue;
@@ -103,7 +109,13 @@ namespace Voron
         private void SyncRequiredEnvironments()
         {
             StorageEnvironment envToSync;
-            while (_syncIsRequired.TryDequeue(out envToSync))
+            var limit = _syncIsRequired.Count;
+            while (
+                // if there is high traffic into the queue, we want to abort after 
+                // we processed whatever was already in there, to avoid holding up
+                // the rest of the operations
+                limit-- > 0 &&
+                _syncIsRequired.TryDequeue(out envToSync))
             {
                 if (ThreadPool.QueueUserWorkItem(SyncEnvironment, envToSync) == false)
                 {
@@ -148,7 +160,13 @@ namespace Voron
         private void FlushEnvironments()
         {
             StorageEnvironment envToFlush;
-            while (_maybeNeedToFlush.TryDequeue(out envToFlush))
+            var limit = _maybeNeedToFlush.Count;
+            while (
+                // if there is high traffic into the queue, we want to abort after 
+                // we processed whatever was already in there, to avoid holding up
+                // the rest of the operations
+                limit-- > 0 &&
+                _maybeNeedToFlush.TryDequeue(out envToFlush))
             {
                 if (envToFlush.Disposed || envToFlush.Options.ManualFlushing)
                     continue;
