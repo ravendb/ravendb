@@ -5,28 +5,28 @@ using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
-using Raven.Server.Config.Settings;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.LowMemoryNotification;
 using Sparrow.Logging;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
     public class MapDocuments : IIndexingWork
     {
-        protected Logger _logger;
+        private readonly Logger _logger;
         private readonly Index _index;
         private readonly MapReduceIndexingContext _mapReduceContext;
+        private readonly IndexingConfiguration _configuration;
         private readonly DocumentsStorage _documentsStorage;
         private readonly IndexStorage _indexStorage;
 
-        public MapDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, MapReduceIndexingContext mapReduceContext)
+        public MapDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, MapReduceIndexingContext mapReduceContext, IndexingConfiguration configuration)
         {
             _index = index;
             _mapReduceContext = mapReduceContext;
+            _configuration = configuration;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
             _logger = LoggingSource.Instance
@@ -38,6 +38,10 @@ namespace Raven.Server.Documents.Indexes.Workers
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
+            var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
+                            ? _configuration.MaxTimeForDocumentTransactionToRemainOpenInSec.AsTimeSpan
+                            : TimeSpan.FromMinutes(15);
+
             var moreWorkFound = false;
             foreach (var collection in _index.Collections)
             {
@@ -54,18 +58,24 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var lastEtag = lastMappedEtag;
                     var count = 0;
                     var resultsCount = 0;
+                    var pageSize = int.MaxValue;
 
-                    var sw = Stopwatch.StartNew();
+                    var sw = new Stopwatch();
                     IndexWriteOperation indexWriter = null;
-                    var maxTimeForReadTxToRemainOpen = TimeSpan.FromSeconds(15);
                     var keepRunning = true;
+                    var lastCollectionEtag = -1L;
                     while (keepRunning)
                     {
                         using (databaseContext.OpenReadTransaction())
                         {
-                            var documents = GetDocumentsEnumerator(databaseContext, collection, lastEtag);
+                            sw.Restart();
 
-                            using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext,collectionStats))
+                            if (lastCollectionEtag == -1)
+                                lastCollectionEtag = _index.GetLastDocumentEtagInCollection(databaseContext, collection);
+
+                            var documents = GetDocumentsEnumerator(databaseContext, collection, lastEtag, pageSize);
+
+                            using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))
                             {
                                 while (true)
                                 {
@@ -113,12 +123,19 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             $"Failed to execute mapping function on {current.Key}. Exception: {e}");
                                     }
 
-                                    if (_index.CanContinueBatch(collectionStats) == false)
+                                    if (CanContinueBatch(collectionStats, lastEtag, lastCollectionEtag) == false)
                                     {
                                         keepRunning = false;
                                         break;
                                     }
-                                    if (sw.Elapsed > maxTimeForReadTxToRemainOpen)
+
+                                    if (count >= pageSize)
+                                    {
+                                        keepRunning = false;
+                                        break;
+                                    }
+
+                                    if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
                                         break;
                                 }
                             }
@@ -129,7 +146,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         continue;
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {count:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+                        _logger.Info($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {count:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
 
                     if (_index.Type.IsMap())
                     {
@@ -147,12 +164,22 @@ namespace Raven.Server.Documents.Indexes.Workers
             return moreWorkFound;
         }
 
-        private IEnumerable<Document> GetDocumentsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag)
+        public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
         {
-            var maxValue = int.MaxValue;
+            if (currentEtag >= maxEtag)
+                return false;
+
+            if (_index.CanContinueBatch(stats) == false)
+                return false;
+
+            return true;
+        }
+
+        private IEnumerable<Document> GetDocumentsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
+        {
             if (collection == Constants.Indexing.AllDocumentsCollection)
-                return _documentsStorage.GetDocumentsAfter(databaseContext, lastEtag + 1, 0, maxValue);
-            return _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, maxValue);
+                return _documentsStorage.GetDocumentsFrom(databaseContext, lastEtag + 1, 0, pageSize);
+            return _documentsStorage.GetDocumentsFrom(databaseContext, collection, lastEtag + 1, 0, pageSize);
         }
     }
 }

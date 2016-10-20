@@ -7,7 +7,8 @@ describe(viewUnderTest, () => {
 
     it('should bind empty list', () => {
 
-        utils.mockCommand('commands/database/index/getIndexStatsCommand', () => []);
+        utils.mockCommand('commands/database/index/getIndexesStatsCommand', () => []);
+        utils.mockCommand("commands/database/index/getIndexesStatusCommand", () => []);
         utils.mockCommand('commands/database/index/getPendingIndexReplacementsCommand', () => []);
 
         return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
@@ -16,7 +17,8 @@ describe(viewUnderTest, () => {
 
     it('should bind non-empty list', () => {
 
-        utils.mockCommand('commands/database/index/getIndexStatsCommand', () => getSampleIndexStats());
+        utils.mockCommand('commands/database/index/getIndexesStatsCommand', () => getSampleIndexStats());
+        utils.mockCommand("commands/database/index/getIndexesStatusCommand", () => getSampleIndexStatus());
         utils.mockCommand('commands/database/index/getPendingIndexReplacementsCommand', () => []);
 
         return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
@@ -26,7 +28,8 @@ describe(viewUnderTest, () => {
     it.skip('should bind side-by-side index list', () => { });
 
     it('should bind faulty index', () => {
-        utils.mockCommand('commands/database/index/getIndexStatsCommand', () => getFaultyIndexStats());
+        utils.mockCommand('commands/database/index/getIndexesStatsCommand', () => getFaultyIndexStats());
+        utils.mockCommand("commands/database/index/getIndexesStatusCommand", () => getFaultyIndexStatus());
         utils.mockCommand('commands/database/index/getPendingIndexReplacementsCommand', () => []);
 
         return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
@@ -34,6 +37,12 @@ describe(viewUnderTest, () => {
     });
 });
 
+function getFaultyIndexStatus(): Raven.Client.Data.Indexes.IndexingStatus {
+    return {
+        Status: "Running",
+        Indexes: []
+    }
+}
 
 function getFaultyIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
     return [
@@ -45,6 +54,7 @@ function getFaultyIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             "LastIndexingTime": null,
             "LastQueryingTime": null,
             "LockMode": "Unlock",
+            LastBatchStats: null as Raven.Client.Data.Indexes.IndexingPerformanceBasicStats,
             "Name": "Faulty/Indexes/8",
             "Priority": "None",
             "Type": "Faulty",
@@ -58,9 +68,32 @@ function getFaultyIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             "ReduceErrors": null,
             "ReduceSuccesses": null,
             "ErrorsCount": 0,
-            "IsTestIndex": false
+            MappedPerSecondRate: 0,
+            ReducedPerSecondRate: 0,
+            "IsTestIndex": false,
+            Status: "Paused"
         }
     ];
+}
+
+function getSampleIndexStatus(): Raven.Client.Data.Indexes.IndexingStatus {
+    return {
+        Status: "Running",
+        Indexes: [
+            {
+                Name: "Orders/Totals",
+                Status: "Running"
+            },
+            {
+                Name: "Product/Sales",
+                Status: "Running"    
+            },
+            {
+                Name: "Products/New",
+                Status: "Running"
+            }
+        ]
+    }
 }
 
 function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
@@ -72,14 +105,11 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
                 "Orders": {
                     "LastProcessedDocumentEtag": 977,
                     "LastProcessedTombstoneEtag": 0,
-                    "NumberOfDocumentsToProcess": 0,
-                    "NumberOfTombstonesToProcess": 0,
-                    "TotalNumberOfDocuments": 830,
-                    "TotalNumberOfTombstones": 0
+                    "DocumentLag": 0,
+                    "TombstoneLag": 0
                 }
             },
             "Memory": {
-                "InMemory": false,
                 "DiskSize": {
                     "SizeInBytes": 983040,
                     "HumaneSize": "960 KBytes"
@@ -87,8 +117,13 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
                 "ThreadAllocations": {
                     "SizeInBytes": 2588672,
                     "HumaneSize": "2.47 MBytes"
+                },
+                "MemoryBudget": {
+                    SizeInBytes: 123,
+                    HumaneSize: "1232"
                 }
             },
+            LastBatchStats: null as Raven.Client.Data.Indexes.IndexingPerformanceBasicStats,
             "LastIndexingTime": "2016-09-29T10:44:55.9350079Z",
             "LastQueryingTime": "2016-09-29T10:44:55.9199676Z",
             "LockMode": "LockedIgnore",
@@ -104,8 +139,11 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             "ReduceAttempts": null,
             "ReduceErrors": null,
             "ReduceSuccesses": null,
+            MappedPerSecondRate: 0,
+            ReducedPerSecondRate: 0,
             "ErrorsCount": 0,
-            "IsTestIndex": false
+            "IsTestIndex": false,
+            Status: "Paused"
         },
         {
             IsStale: false,
@@ -114,14 +152,11 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
                 "Orders": {
                     "LastProcessedDocumentEtag": 977,
                     "LastProcessedTombstoneEtag": 0,
-                    "NumberOfDocumentsToProcess": 0,
-                    "NumberOfTombstonesToProcess": 0,
-                    "TotalNumberOfDocuments": 830,
-                    "TotalNumberOfTombstones": 0
+                    "DocumentLag": 0,
+                    "TombstoneLag": 0
                 }
             },
             "Memory": {
-                "InMemory": false,
                 "DiskSize": {
                     "SizeInBytes": 1245184,
                     "HumaneSize": "1.19 MBytes"
@@ -129,8 +164,13 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
                 "ThreadAllocations": {
                     "SizeInBytes": 2588672,
                     "HumaneSize": "2.47 MBytes"
+                },
+                "MemoryBudget": {
+                    SizeInBytes: 123,
+                    HumaneSize: "1232"
                 }
             },
+            LastBatchStats: null as Raven.Client.Data.Indexes.IndexingPerformanceBasicStats,
             "LastIndexingTime": "2016-09-29T10:44:56.0849063Z",
             "LastQueryingTime": "2016-09-29T10:44:56.0773863Z",
             "LockMode": "Unlock",
@@ -146,8 +186,11 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             "ReduceAttempts": 2155,
             "ReduceErrors": 0,
             "ReduceSuccesses": 2155,
+            MappedPerSecondRate: 0,
+            ReducedPerSecondRate: 0,
             "ErrorsCount": 0,
-            "IsTestIndex": false
+            "IsTestIndex": false,
+            Status: "Paused"
         },
         {
             IsStale: false,
@@ -156,14 +199,12 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
                 "OrderItems": {
                     "LastProcessedDocumentEtag": 0,
                     "LastProcessedTombstoneEtag": 0,
-                    "NumberOfDocumentsToProcess": 0,
-                    "NumberOfTombstonesToProcess": 0,
-                    "TotalNumberOfDocuments": 0,
-                    "TotalNumberOfTombstones": 0
+                    "DocumentLag": 0,
+                    "TombstoneLag": 0
                 }
             },
+            LastBatchStats: null as Raven.Client.Data.Indexes.IndexingPerformanceBasicStats,
             "Memory": {
-                "InMemory": false,
                 "DiskSize": {
                     "SizeInBytes": 458752,
                     "HumaneSize": "448 KBytes"
@@ -171,6 +212,10 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
                 "ThreadAllocations": {
                     "SizeInBytes": 2523136,
                     "HumaneSize": "2.41 MBytes"
+                }, 
+                "MemoryBudget": {
+                    SizeInBytes: 123,
+                    HumaneSize: "1232"
                 }
             },
             "LastIndexingTime": "2016-09-29T10:44:56.1480722Z",
@@ -187,9 +232,12 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             "MapSuccesses": 0,
             "ReduceAttempts": null,
             "ReduceErrors": null,
+            MappedPerSecondRate: 0,
+            ReducedPerSecondRate: 0,
             "ReduceSuccesses": null,
             "ErrorsCount": 0,
-            "IsTestIndex": false
+            "IsTestIndex": false,
+            Status: "Paused"
         }
     ];
 }

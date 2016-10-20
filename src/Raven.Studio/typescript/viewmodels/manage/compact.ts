@@ -6,6 +6,7 @@ import filesystem = require("models/filesystem/filesystem");
 import startDbCompactCommand = require("commands/maintenance/startCompactCommand");
 import startFsCompactCommand = require("commands/filesystem/startCompactCommand");
 import accessHelper = require("viewmodels/shell/accessHelper");
+import resourcesManager = require("common/shell/resourcesManager");
 
 class resourceCompact {
     resourceName = ko.observable<string>('');
@@ -19,7 +20,7 @@ class resourceCompact {
 
     keepDown = ko.observable<boolean>(false);
 
-    constructor(private parent: compact, private type: string, private resources: KnockoutObservableArray<resource>) {
+    constructor(private parent: compact, private type: string, private resources: KnockoutComputed<resource[]>) {
         this.resourcesNames = ko.computed(() => resources().map((rs: resource) => rs.name));
 
         this.searchResults = ko.computed(() => {
@@ -61,8 +62,10 @@ class resourceCompact {
 
 }
 class compact extends viewModelBase {
-    private dbCompactOptions: resourceCompact = new resourceCompact(this, database.type, shell.databases);
-    private fsCompactOptions: resourceCompact = new resourceCompact(this, filesystem.type, shell.fileSystems);
+    resourcesManager = resourcesManager.default;
+
+    private dbCompactOptions: resourceCompact = new resourceCompact(this, database.type, this.resourcesManager.databases);
+    private fsCompactOptions: resourceCompact = new resourceCompact(this, filesystem.type, this.resourcesManager.fileSystems);
 
     isBusy = ko.observable<boolean>();
     isForbidden = ko.observable<boolean>();

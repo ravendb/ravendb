@@ -221,9 +221,9 @@ namespace Raven.Server.Documents.Queries
                 if (_ids != null && _ids.Count > 0)
                     documents = _documents.GetDocuments(_context, _ids, _start, _query.PageSize);
                 else if (_isAllDocsCollection)
-                    documents = _documents.GetDocumentsAfter(_context, 0, _start, _query.PageSize);
+                    documents = _documents.GetDocumentsFrom(_context, 0, _start, _query.PageSize);
                 else
-                    documents = _documents.GetDocumentsAfter(_context, _collection, 0, _start, _query.PageSize);
+                    documents = _documents.GetDocumentsFrom(_context, _collection, 0, _start, _query.PageSize);
 
                 return ApplySorting(documents);
             }
@@ -254,7 +254,7 @@ namespace Raven.Server.Documents.Queries
                 while (true)
                 {
                     var count = 0;
-                    foreach (var document in ApplySorting(_documents.GetDocumentsAfter(_context, _collection, 0, start, _query.PageSize)))
+                    foreach (var document in ApplySorting(_documents.GetDocumentsFrom(_context, _collection, 0, start, _query.PageSize)))
                     {
                         count++;
 

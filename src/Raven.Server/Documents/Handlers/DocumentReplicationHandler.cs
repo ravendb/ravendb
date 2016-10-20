@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var tombstones =
-                    context.DocumentDatabase.DocumentsStorage.GetTombstonesAfter(context, 0, start, take).ToList();
+                    context.DocumentDatabase.DocumentsStorage.GetTombstonesFrom(context, 0, start, take).ToList();
                 var array = new DynamicJsonArray();
                 foreach (var tombstone in tombstones)
                 {

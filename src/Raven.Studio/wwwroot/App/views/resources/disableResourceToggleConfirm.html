@@ -6,24 +6,24 @@
         <h4 class="modal-title">Sure?</h4>
     </div>
     <div class="modal-body">
-        <div data-bind="visible: resourcesToDisable().length === 1">
+        <div data-bind="visible: resources.length === 1">
             <span data-bind="text: deletionText"></span>
-            <strong data-bind="with: resourcesToDisable()[0]">
+            <strong data-bind="with: resources[0]">
                 <span data-bind="text: name"></span>
             </strong>
         </div>
-        <div data-bind="visible: resourcesToDisable().length > 1">
+        <div data-bind="visible: resources.length > 1">
             <span data-bind="text: deletionText"></span>
-            <strong data-bind="text: resourcesToDisable().length"></strong>
+            <strong data-bind="text: resources.length"></strong>
             resources
             <br />
-            <ul data-bind="foreach: resourcesToDisable" style="max-height: 100px; overflow-y: auto;">
+            <ul data-bind="foreach: resources" style="max-height: 100px; overflow-y: auto;">
                 <li><span data-bind="text: name"></span> (<span data-bind="text: fullTypeName"></span>)</li>
             </ul>
         </div>
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-default" data-bind="click: cancel">Nevermind</button>
-        <button type="button" class="btn btn-primary" data-bind="click: toggleDisableReources, text: confirmDeletionText"></button>
+        <button type="button" class="btn btn-primary" data-bind="click: confirm, text: confirmDeletionText"></button>
     </div>
 </div>

@@ -9,7 +9,7 @@ class mergedIndexesStorage {
 
         try {
             if (!!mergedIndexName && mergedIndexName.indexOf(db.mergedIndexLocalStoragePrefix) == 0) {
-                var suggestion: suggestionDto = localStorage.getObject(mergedIndexName);
+                var suggestion: any = localStorage.getObject(mergedIndexName);//TODO: don't use any here
                 localStorage.removeItem(mergedIndexName);
                 newSuggestion = new indexMergeSuggestion(suggestion);
             }

@@ -1,14 +1,14 @@
 import dialog = require("plugins/dialog");
 import createResourceBase = require("viewmodels/resources/createResourceBase");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import shell = require("viewmodels/shell");
+import resourcesManager = require("common/shell/resourcesManager");
 
 class createCounterStorage extends createResourceBase {
     resourceNameCapitalString = "Counter storage";
     resourceNameString = "counter storage";
 
     constructor(parent: dialogViewModelBase) {
-        super(shell.counterStorages, parent);
+        super(resourcesManager.default.counterStorages, parent);
         this.storageEngine("voron");
     }
 

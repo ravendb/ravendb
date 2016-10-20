@@ -6,7 +6,8 @@ var gulp = require('gulp'),
     rimraf = require('rimraf'),
     gulpHandlebars = require('gulp-compile-handlebars'),
     handlebars = require('handlebars'),
-    browserSync = require('browser-sync').create();
+    browserSync = require('browser-sync').create(),
+    faker;
 
 var TEMPLATE_OPTIONS = {
     batch : ['./src/partials']
@@ -21,11 +22,22 @@ handlebars.registerHelper('ifEq', function(v1, v2, options) {
   return options.inverse(this);
 });
 
+handlebars.registerHelper('times', function(n, block) {
+    var accum = '';
+    for(var i = 0; i < n; ++i)
+        accum += block.fn(i);
+    return accum;
+});
+
+handlebars.registerHelper('random', function (tmpl) {
+    return faker.fake(tmpl);
+});
+
 gulp.task('clean', function () {
     del.sync('dist');
 });
 
-gulp.task('partials', function () {
+gulp.task('partials', ['fixed-random-seed'], function () {
     return gulp.src('src/*.html')
     .pipe(addErrorHandling(gulpHandlebars(TEMPLATE_DATA, TEMPLATE_OPTIONS)))
     .pipe(gulp.dest('dist'));
@@ -56,6 +68,11 @@ gulp.task('copy-js', function () {
 gulp.task('copy-img', function () {
     return gulp.src([ '../wwwroot/Content/img/**/*' ])
         .pipe(gulp.dest('dist/content/img'));
+});
+
+gulp.task('fixed-random-seed', function () {
+    faker = require('faker')
+    faker.seed(1);
 });
 
 gulp.task('build', ['partials', 'less', 'copy-fonts', 'copy-img', 'copy-js']);

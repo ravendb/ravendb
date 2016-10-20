@@ -29,8 +29,7 @@ namespace Sparrow.Json
 
         private bool _disposed;
 
-        private byte[] _managedBuffer;
-        private byte[] _parsingBuffer;
+        private Stack<byte[]> _managedBuffers;
 
         private readonly LinkedList<BlittableJsonReaderObject> _liveReaders =
             new LinkedList<BlittableJsonReaderObject>();
@@ -48,7 +47,7 @@ namespace Sparrow.Json
         internal int InUse;
         private readonly JsonParserState _jsonParserState;
         private readonly ObjectJsonParser _objectJsonParser;
-        private BlittableJsonDocumentBuilder _writer;
+        private readonly BlittableJsonDocumentBuilder _writer;
 
         public static JsonOperationContext ShortTermSingleUse()
         {
@@ -70,18 +69,34 @@ namespace Sparrow.Json
             _writer = new BlittableJsonDocumentBuilder(this, _jsonParserState, _objectJsonParser);
         }
 
-        public byte[] GetParsingBuffer()
+        public ReturnBuffer GetManagedBuffer(out byte[] buffer)
         {
-            if (_parsingBuffer == null)
-                _parsingBuffer = new byte[4096];
-            return _parsingBuffer;
+            if (_managedBuffers == null)
+                _managedBuffers = new Stack<byte[]>();
+            buffer = _managedBuffers.Count == 0 ? 
+                new byte[4096] : 
+                _managedBuffers.Pop();
+            return new ReturnBuffer(buffer, this);
         }
 
-        public byte[] GetManagedBuffer()
+        public struct ReturnBuffer : IDisposable
         {
-            if (_managedBuffer == null)
-                _managedBuffer = new byte[4096];
-            return _managedBuffer;
+            private byte[] _buffer;
+            private readonly JsonOperationContext _parent;
+
+            public ReturnBuffer(byte[] buffer, JsonOperationContext parent)
+            {
+                _buffer = buffer;
+                _parent = parent;
+        }
+
+            public void Dispose()
+            {
+                if (_buffer == null)
+                    return;
+                _parent._managedBuffers.Push(_buffer);
+                _buffer = null;
+            }
         }
 
         /// <summary>
@@ -239,15 +254,16 @@ namespace Sparrow.Json
             CancellationToken cancellationToken)
         {
             _jsonParserState.Reset();
+            byte[] bytes;
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
+            using (GetManagedBuffer(out bytes))
             {
-                var buffer = new ArraySegment<byte>(GetManagedBuffer());
+                var buffer = new ArraySegment<byte>(bytes);
 
                 var writer = new BlittableJsonDocumentBuilder(this,
                     BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, _jsonParserState);
                 try
                 {
-
                 writer.ReadObject();
                 var result = await webSocket.ReceiveAsync(buffer, cancellationToken);
 
@@ -265,7 +281,7 @@ namespace Sparrow.Json
             }
                 catch (Exception)
                 {
-                    writer.Dispose();   
+                    writer.Dispose();
                     throw;
         }
             }
@@ -280,8 +296,9 @@ namespace Sparrow.Json
 
         private BlittableJsonReaderObject ParseToMemory(Stream stream, string debugTag, BlittableJsonDocumentBuilder.UsageMode mode)
         {
-            var buffer = GetParsingBuffer();
             _jsonParserState.Reset();
+            byte[] buffer;
+            using(GetManagedBuffer(out buffer))
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
             {
                 var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState);
@@ -314,8 +331,9 @@ namespace Sparrow.Json
 
         private async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
         {
-            var buffer = GetParsingBuffer();
             _jsonParserState.Reset();
+            byte[] buffer;
+            using (GetManagedBuffer(out buffer))
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, documentId))
             {
                 var writer = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, _jsonParserState);
@@ -351,8 +369,9 @@ namespace Sparrow.Json
         public async Task<BlittableJsonReaderArray> ParseArrayToMemoryAsync(Stream stream, string debugTag,
             BlittableJsonDocumentBuilder.UsageMode mode)
         {
-            var buffer = GetParsingBuffer();
             _jsonParserState.Reset();
+            byte[] buffer;
+            using (GetManagedBuffer(out buffer))
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
             {
                 var writer = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState);
@@ -394,13 +413,14 @@ namespace Sparrow.Json
             private readonly byte[] _buffer;
             private readonly UnmanagedJsonParser _parser;
             private readonly BlittableJsonDocumentBuilder _writer;
+            private ReturnBuffer _returnManagedBuffer;
 
             public MultiDocumentParser(JsonOperationContext context, Stream stream)
             {
                 _context = context;
                 _stream = stream;
                 var state = new JsonParserState();
-                _buffer = context.GetParsingBuffer();
+                _returnManagedBuffer = context.GetManagedBuffer(out _buffer);
                 _parser = new UnmanagedJsonParser(context, state, "parse/multi");
                 _writer = new BlittableJsonDocumentBuilder(_context, state, _parser);
             }
@@ -497,6 +517,7 @@ namespace Sparrow.Json
 
             public void Dispose()
                 {
+                _returnManagedBuffer.Dispose();
                 _parser?.Dispose();
                 _writer?.Dispose();
                 }
@@ -537,6 +558,9 @@ namespace Sparrow.Json
 
             _liveReaders.Clear();
             _arenaAllocator.ResetArena();
+
+            if(_tempBuffer != null)
+                GetNativeTempBuffer(_tempBuffer.SizeInBytes);
 
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
             // When a context is re-used, the buffer containing those field names was not reset and the strings are still valid and alive.

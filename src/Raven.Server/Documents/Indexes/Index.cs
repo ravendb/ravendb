@@ -117,7 +117,6 @@ namespace Raven.Server.Documents.Indexes
         private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
 
-
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
             if (indexId <= 0)
@@ -194,7 +193,7 @@ namespace Raven.Server.Documents.Indexes
 
         public string Name => Definition?.Name;
 
-        public IndexRunningStatus Status
+        public virtual IndexRunningStatus Status
         {
             get
             {
@@ -422,9 +421,7 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var collection in Collections)
             {
-                var lastDocEtag = collection == Constants.Indexing.AllDocumentsCollection
-                    ? DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction)
-                    : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                var lastDocEtag = GetLastDocumentEtagInCollection(databaseContext, collection);
 
                 var lastProcessedDocEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
@@ -433,9 +430,7 @@ namespace Raven.Server.Documents.Indexes
                     if (lastDocEtag > lastProcessedDocEtag)
                         return true;
 
-                    var lastTombstoneEtag = collection == Constants.Indexing.AllDocumentsCollection
-                        ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
-                        : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
+                    var lastTombstoneEtag = GetLastTombstoneEtagInCollection(databaseContext, collection);
 
                     var lastProcessedTombstoneEtag =
                         _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
@@ -516,6 +511,9 @@ namespace Raven.Server.Documents.Indexes
 
                         var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId());
                         _lastIndexingTime = stats.StartTime;
+
+                        AddIndexingPerformance(stats);
+
                         using (var scope = stats.CreateScope())
                         {
                             try
@@ -570,7 +568,7 @@ namespace Raven.Server.Documents.Indexes
                             }
                         }
 
-                        AddIndexingPerformance(stats);
+                        stats.Complete();
 
                         try
                         {
@@ -942,7 +940,10 @@ namespace Raven.Server.Documents.Indexes
                 if (string.Equals(indexPath, directory, StringComparison.OrdinalIgnoreCase) == false)
                     continue;
 
-                totalSize += mapping.Value;
+                foreach (var singleMapping in mapping.Value)
+                {
+                    totalSize += singleMapping.Value;
+                }
             }
 
             stats.DiskSize.SizeInBytes = totalSize;
@@ -1470,9 +1471,11 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexingPerformanceStats[] GetIndexingPerformance(int fromId)
         {
+            var lastStats = _lastStats;
+
             return _lastIndexingStats
                 .Where(x => x.Id >= fromId)
-                .Select(x => x.ToIndexingPerformanceStats())
+                .Select(x => x == lastStats ? x.ToIndexingPerformanceLiveStatsWithDetails() : x.ToIndexingPerformanceStats())
                 .ToArray();
         }
 
@@ -1493,28 +1496,40 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
-        public bool CanContinueBatch(IndexingStatsScope collectionStats)
+        public bool CanContinueBatch(IndexingStatsScope stats)
         {
-            collectionStats.RecordMapAllocations(_threadAllocations.Allocations);
+            stats.RecordMapAllocations(_threadAllocations.Allocations);
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
             {
-                var tryIncreasingMemoryUsageForIndex = TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), collectionStats);
-                if (tryIncreasingMemoryUsageForIndex == false)
+                if (TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), stats) == false)
                 {
-                    collectionStats.RecordMapCompletedReason("Cannot budget additional memory for batch");
+                    stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
+                    return false;
                 }
-                return tryIncreasingMemoryUsageForIndex;
             }
             return true;
         }
 
-        private bool TryIncreasingMemoryUsageForIndex(Size currentlyAllocated, IndexingStatsScope collectionStats)
+        public long GetLastDocumentEtagInCollection(DocumentsOperationContext databaseContext, string collection)
+        {
+            return collection == Constants.Indexing.AllDocumentsCollection
+                ? DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction)
+                : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+        }
+
+        public long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, string collection)
+        {
+            return collection == Constants.Indexing.AllDocumentsCollection
+                ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
+                : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
+        }
+
+        private bool TryIncreasingMemoryUsageForIndex(Size currentlyAllocated, IndexingStatsScope stats)
         {
             //TODO: This has to be exposed via debug endpoint
 
             // we run out our memory quota, so we need to see if we can increase it or break
             var memoryInfoResult = MemoryInformation.GetMemoryInfo();
-
 
             using (var currentProcess = Process.GetCurrentProcess())
             {
@@ -1523,7 +1538,7 @@ namespace Raven.Server.Documents.Indexes
                 // so we try to calculate how much such memory we can use with this assumption 
                 var memoryMappedSize = new Size(currentProcess.WorkingSet64 - currentProcess.PrivateMemorySize64, SizeUnit.Bytes);
 
-                collectionStats.RecordMapMemoryStats(currentProcess.WorkingSet64, currentProcess.PrivateMemorySize64, _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
+                stats.RecordMapMemoryStats(currentProcess.WorkingSet64, currentProcess.PrivateMemorySize64, _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
 
                 if (memoryMappedSize < Size.Zero)
                 {

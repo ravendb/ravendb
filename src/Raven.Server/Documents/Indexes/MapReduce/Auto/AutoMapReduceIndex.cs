@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return new IIndexingWork[]
             {
                 new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, _mapReduceWorkContext),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, _mapReduceWorkContext, DocumentDatabase.Configuration.Indexing),
                 new ReduceMapResultsOfAutoIndex(this, Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext),
             };
         }
@@ -71,91 +71,96 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return new AutoIndexDocsEnumerator(documents, stats);
         }
 
-        public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
+        public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            var document = ((Document[])mapResults)[0];
-            Debug.Assert(key == document.LoweredKey);
-
             var mappedResult = new DynamicJsonValue();
 
-            foreach (var indexField in Definition.MapFields.Values)
+            using (stats.For(IndexingOperation.Reduce.Aggregation))
             {
-                switch (indexField.MapReduceOperation)
+                var document = ((Document[])mapResults)[0];
+                Debug.Assert(key == document.LoweredKey);
+
+                foreach (var indexField in Definition.MapFields.Values)
                 {
-                    case FieldMapReduceOperation.Count:
-                        mappedResult[indexField.Name] = 1;
-                        break;
-                    case FieldMapReduceOperation.Sum:
-                        object fieldValue;
-                        StringSegment leftPath;
-                        BlittableJsonTraverser.Default.TryRead(document.Data, indexField.Name, out fieldValue, out leftPath);
+                    switch (indexField.MapReduceOperation)
+                    {
+                        case FieldMapReduceOperation.Count:
+                            mappedResult[indexField.Name] = 1;
+                            break;
+                        case FieldMapReduceOperation.Sum:
+                            object fieldValue;
+                            StringSegment leftPath;
+                            BlittableJsonTraverser.Default.TryRead(document.Data, indexField.Name, out fieldValue, out leftPath);
 
-                        var arrayResult = fieldValue as IEnumerable<object>;
+                            var arrayResult = fieldValue as IEnumerable<object>;
 
-                        if (arrayResult == null)
-                        {
-                            // explicitly adding this even if the value isn't there, as a null
-                            mappedResult[indexField.Name] = fieldValue;
-                            continue;
-                        }
-
-                        decimal total = 0;
-
-                        foreach (var item in arrayResult)
-                        {
-                            if (item == null)
-                                continue;
-
-                            double doubleValue;
-                            long longValue;
-
-                            switch (BlittableNumber.Parse(item, out doubleValue, out longValue))
+                            if (arrayResult == null)
                             {
-                                case NumberParseResult.Double:
-                                    total += (decimal)doubleValue;
-                                    break;
-                                case NumberParseResult.Long:
-                                    total += longValue;
-                                    break;
+                                // explicitly adding this even if the value isn't there, as a null
+                                mappedResult[indexField.Name] = fieldValue;
+                                continue;
                             }
-                        }
 
-                        mappedResult[indexField.Name] = total;
+                            decimal total = 0;
 
-                        break;
-                    case FieldMapReduceOperation.None:
-                        object result;
-                        BlittableJsonTraverser.Default.TryRead(document.Data, indexField.Name, out result, out leftPath);
+                            foreach (var item in arrayResult)
+                            {
+                                if (item == null)
+                                    continue;
 
-                        // explicitly adding this even if the value isn't there, as a null
-                        mappedResult[indexField.Name] = result;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
+                                double doubleValue;
+                                long longValue;
+
+                                switch (BlittableNumber.Parse(item, out doubleValue, out longValue))
+                                {
+                                    case NumberParseResult.Double:
+                                        total += (decimal)doubleValue;
+                                        break;
+                                    case NumberParseResult.Long:
+                                        total += longValue;
+                                        break;
+                                }
+                            }
+
+                            mappedResult[indexField.Name] = total;
+
+                            break;
+                        case FieldMapReduceOperation.None:
+                            object result;
+                            BlittableJsonTraverser.Default.TryRead(document.Data, indexField.Name, out result, out leftPath);
+
+                            // explicitly adding this even if the value isn't there, as a null
+                            mappedResult[indexField.Name] = result;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+
+                _reduceKeyProcessor.Reset();
+
+                foreach (var groupByFieldName in Definition.GroupByFields.Keys)
+                {
+                    object result;
+                    StringSegment leftPath;
+                    BlittableJsonTraverser.Default.TryRead(document.Data, groupByFieldName, out result, out leftPath);
+                    // explicitly adding this even if the value isn't there, as a null
+                    mappedResult[groupByFieldName] = result;
+
+                    _reduceKeyProcessor.Process(indexContext.Allocator, result);
                 }
             }
 
-            _reduceKeyProcessor.Reset();
-
-            foreach (var groupByFieldName in Definition.GroupByFields.Keys)
-            {
-                object result;
-                StringSegment leftPath;
-                BlittableJsonTraverser.Default.TryRead(document.Data, groupByFieldName, out result, out leftPath);
-                // explicitly adding this even if the value isn't there, as a null
-                mappedResult[groupByFieldName] = result;
-
-                _reduceKeyProcessor.Process(indexContext.Allocator,result);
-            }
-
-            var mappedresult = indexContext.ReadObject(mappedResult, key);
+            BlittableJsonReaderObject mr;
+            using (stats.For(IndexingOperation.Reduce.AggregationConversion))
+                mr = indexContext.ReadObject(mappedResult, key);
 
             var mapResult = _singleOutputList[0];
 
-            mapResult.Data = mappedresult;
+            mapResult.Data = mr;
             mapResult.ReduceKeyHash = _reduceKeyProcessor.Hash;
 
-            var resultsCount = PutMapResults(key, _singleOutputList, indexContext);
+            var resultsCount = PutMapResults(key, _singleOutputList, indexContext, stats);
 
             DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
 

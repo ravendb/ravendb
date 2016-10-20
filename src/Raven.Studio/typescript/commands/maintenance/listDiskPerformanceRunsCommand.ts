@@ -1,9 +1,6 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
-import appUrl = require("common/appUrl");
 
 class listDiskPerformanceRunsCommand extends commandBase {
-    private db: database = appUrl.getDatabase();
 
     constructor() {
         super();
@@ -21,7 +18,7 @@ class listDiskPerformanceRunsCommand extends commandBase {
             };
         };
 
-        return this.query("/indexes/dynamic/DiskIoPerformanceRuns", args, this.db, (r: any) => r.Results.map(mapper));//TODO: use endpoints
+        return this.query("/indexes/dynamic/DiskIoPerformanceRuns", args, null, (r: any) => r.Results.map(mapper));//TODO: use endpoints
     }
 }
 

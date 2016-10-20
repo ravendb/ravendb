@@ -50,6 +50,7 @@ class databaseAccess {
         this.readOnly(dto.ReadOnly);
         this.tenantId(dto.TenantId != null ? dto.TenantId : '');
 
+        /* TODO:
         this.searchResults = ko.computed(() => {
             var readOnly = accessHelper.isGlobalAdmin() === false &&
                 accessHelper.canReadWriteSettings() === false &&
@@ -62,8 +63,9 @@ class databaseAccess {
                             .concat("*")
                             .filter((x, i, c) => c.indexOf(x) == i);
             return resourceNames.filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
-        });
+        });*/
 
+        /* TODO:
         this.tenantCustomValidityError = ko.computed(() => {
             var errorMessage: string = "";
             var newTenantId = this.tenantId();
@@ -77,7 +79,7 @@ class databaseAccess {
             }
 
             return errorMessage;
-        });
+        });*/
     }
 
     toDto(): databaseAccessDto {

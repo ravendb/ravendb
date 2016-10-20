@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 
 class saveIndexDefinitionCommand extends commandBase {
 
-    constructor(private index: indexDefinitionDto, private db: database) {
+    constructor(private index: Raven.Client.Indexing.IndexDefinition, private db: database) {
         super();
     }
 

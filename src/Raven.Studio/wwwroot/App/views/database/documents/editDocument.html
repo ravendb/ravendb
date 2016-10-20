@@ -1,4 +1,4 @@
-<form data-bind="submit: saveDocument">
+<form data-bind="submit: saveDocument" class="editDocument">
     <div id="right-options-panel" class="flex-window">
         <div class="panel flex-window-head">
             <div class="panel-body">
@@ -6,11 +6,11 @@
                 <hr class="small" />
                 <dl class="dl-horizontal small" data-bind="with: metadata">
                     <dt>Etag:</dt>
-                    <dd data-bind="text: etag, attr: {title:etag}"></dd>
+                    <dd data-bind="text: etag, attr: { title: etag }"></dd>
                     <dt>Modified:</dt>
-                    <dd data-bind="text: lastModifiedFullDate, attr: {title:lastModifiedFullDate}"></dd>
+                    <dd data-bind="text: lastModifiedFullDate, attr: { title: lastModifiedFullDate }"></dd>
                     <dt>Size:</dt>
-                    <dd><span data-bind="text: $root.documentSize() , attr: {title:$root.documentSize() }"></span> KB</dd>
+                    <dd><span data-bind="text: $root.documentSize() , attr: { title: $root.documentSize() }"></span> KB</dd>
                 </dl>
             </div>
         </div>
@@ -59,46 +59,62 @@
     <div class="flex-window">
         <div class="flex-winddow-head">
             <div class="clearfix">
-                <h2 class="pull-left-sm">
+                <h2 class="pull-left-md documentId">
                     <span data-bind="if: isCreatingNewDocument()">
-                        <span data-bind="if: provideCustomNameForNewDocument()">
-                            <input id="documentName" required="required" type="text" class="edit-inline" placeholder="document ID"
-                                   data-bind="textInput: $root.userSpecifiedId, attr: { disabled: $root.isBusy }, customValidity: userSpecifiedIdCustomValidityError" />
-                        </span>
-                        <span data-bind="if: !provideCustomNameForNewDocument()">
-                            <span data-bind="visible: collectionForNewDocument(), text: collectionForNewDocument() + '/'"></span>
-                            <span>&lt;auto-generated ID&gt;</span>
-                            <a data-bind="click: enableCustomNameProvider" class="icon-edit reset-color"></a>
+
+                        <span id="obj-name" class="editable-input-inline" data-bind="css: { 'edit': provideCustomNameForNewDocument() }">
+                            <span class="value-container">
+                                <span class="static-name padding padding-xs">
+                                    <span data-bind="visible: collectionForNewDocument(), text: collectionForNewDocument() + '/'"></span><span class="text-primary">&lt;auto-generated&gt;</span>
+                                </span>
+                                <input type="text" name="documentId" id="documentIdInput" required="required"
+                                       class="edit-inline padding padding-xs" placeholder="document ID" 
+                                       data-bind="textInput: $root.userSpecifiedId, attr: { disabled: $root.isBusy }, customValidity: userSpecifiedIdCustomValidityError, hasFocus: userIdHasFocus()" />
+                            </span>
+                            <button class="edit-button btn-toggle btn btn-sm" data-bind="click: enableCustomNameProvider">
+                                <i class="icon-edit"></i>
+                                <span class="text"></span>
+                            </button>
                         </span>
                     </span>
                     <span data-bind="if: !isCreatingNewDocument()">
-                        <a class="reset-color" data-bind="click: connectedDocuments.toggleStar.bind(connectedDocuments, $data)"><span data-bind="attr: { class: connectedDocuments.currentDocumentIsStarred()?'icon-star-filled favorite':'icon-star' }"></span></a>
+                        <a class="reset-color btn-toggle markFavourite" data-bind="click: connectedDocuments.toggleStar.bind(connectedDocuments, $data)">
+                            <span data-bind="attr: { class: connectedDocuments.currentDocumentIsStarred()?'icon-star-filled favorite':'icon-star' }"></span>
+                        </a>
                         <span data-bind="text: userSpecifiedId"></span>
                     </span>
                 </h2>
-                <div class="pull-left-sm" data-bind="if: !isCreatingNewDocument()">
-                    Last modified <span data-bind="text: metadata().lastModifiedAsAgo"></span>
-                </div>
-                <div class="pull-right-sm" data-bind="visible: displayDocumentChangeNotification()"><small><span class="icon-warning text-warning"></span> Document has been modified outside of studio. <a href="#" data-bind="click: refreshDocument">click here to refresh</a></small></div>
+                
+                <p class="pull-right-md padding padding-xs" data-bind="if: displayLastModifiedDate()">
+                    <small>Last modified <span data-bind="text: metadata().lastModifiedAsAgo"></span></small>
+                </p>
+                <p class="pull-right-md bg-warning padding padding-xs" data-bind="visible: displayDocumentChangeNotification()">
+                    <small>
+                        <span class="icon-warning"></span> Document has been modified outside of studio. <a href="#" data-bind="click: refreshDocument">click here to refresh</a>
+                    </small>
+                </p>
             </div>
             <div class="btn-bar">
                 <div class="pull-left-sm">
-                    <div class="btn-group">
-                        <button type="submit" class="btn btn-success" data-bind="enable: isSaveEnabled"><span class="icon-save"></span> Save</button>
-                        <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <span class="caret"></span>
-                            <span class="sr-only">Toggle Dropdown</span>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a href="#" data-bind="click: saveAsNew">Save as new <span data-bind="text: entityName"></span></a></li>
-                            <li><a href="#">Save as...</a></li>
-                        </ul>
-                    </div>
-                    <button type="button" data-bind="click: deleteDocument" class="btn btn-danger"><span class="icon-trash"></span> Delete</button>
+                    <button type="submit" class="btn btn-success save-btn" data-bind="enable: isSaveEnabled">
+                        <i class="icon-save"></i> 
+                        <span>Save</span>
+                    </button>
+                    <button type="button" class="clone-btn btn btn-default" data-bind="click: saveAsNew">
+                        <i class="icon-clone"></i>
+                        <span>Clone</span>
+                    </button>
+                    <button type="button" data-bind="click: deleteDocument" class="delete-btn btn btn-danger">
+                        <i class="icon-trash"></i>
+                        <span>Delete</span>
+                    </button>
                 </div>
                 <div class="pull-right-sm">
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default" data-bind="click: toClipboard"><span class="icon-copy"></span> Copy</button>
+                        <button type="button" class="btn btn-default" data-bind="click: toClipboard">
+                            <i class="icon-copy-to-clipboard"></i> 
+                            <span>Copy to clipboard</span>
+                        </button>
                         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <span class="caret"></span>
                             <span class="sr-only">Toggle Dropdown</span>
@@ -112,9 +128,9 @@
             <hr class="small" />
             <div class="clearfix">
                 <div class="btn-group btn-group-sm pull-right" role="group">
-                    <button type="button" class="btn btn-default" data-bind="enable: !isNewLineFriendlyMode(), click: formatDocument"><span class="icon-indent"></span> Format</button>
-                    <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleAutoCollapse"><span class="icon-collapse"></span> Toggle collapse</button>
-                    <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleNewlineMode"><span class="icon-newline"></span> Toggle new lines</button>
+                    <button type="button" class="btn btn-default" data-bind="enable: !isNewLineFriendlyMode(), click: formatDocument"><span class="icon-indent"></span> <span>Format</span></button>
+                    <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleAutoCollapse"><span class="icon-collapse"></span> <span>Toggle collapse</span></button>
+                    <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleNewlineMode"><span class="icon-newline"></span> <span>Toggle new lines</span></button>
                 </div>
             </div>
         </div>

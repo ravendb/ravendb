@@ -44,7 +44,8 @@ namespace Raven.Abstractions.Data
             RemovedField,
             ArrayValueAdded,
             ArrayValueRemoved,
-            FieldTypeChanged
+            FieldTypeChanged,
+            EntityTypeChanged
         }
 
         protected bool Equals(DocumentsChanges other)

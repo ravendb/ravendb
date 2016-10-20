@@ -35,6 +35,7 @@ namespace FastTests.Utils
         [InlineData("2.21:07:32")]
         [InlineData("-2.21:07:32")]
         [InlineData("2.21:07:32.232")]
+        [InlineData("333.21:07:32.232")]
         public void CanParseValidTimeSpans(string dt)
         {
             var expected = TimeSpan.ParseExact(dt,"c", CultureInfo.InvariantCulture);
@@ -44,6 +45,25 @@ namespace FastTests.Utils
             {
                 TimeSpan ts;
                 Assert.True(LazyStringParser.TryParseTimeSpan(buffer, bytes.Length, out ts));
+                Assert.Equal(expected, ts);
+            }
+        }
+
+        [Theory]
+        [InlineData("21:07:32 some text")]
+        [InlineData("2.21:07:32 some text")]
+        [InlineData("333.21:07:32.232 some text")]
+        public void WillNotParseAsTimeSpan(string dt)
+        {
+            TimeSpan expected;
+            var result = TimeSpan.TryParseExact(dt, "c", CultureInfo.InvariantCulture, out expected);
+            Assert.False(result);
+
+            var bytes = Encoding.UTF8.GetBytes(dt);
+            fixed (byte* buffer = bytes)
+            {
+                TimeSpan ts;
+                Assert.False(LazyStringParser.TryParseTimeSpan(buffer, bytes.Length, out ts));
                 Assert.Equal(expected, ts);
             }
         }

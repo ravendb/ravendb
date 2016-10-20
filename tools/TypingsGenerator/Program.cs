@@ -33,6 +33,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(TsPrimitive.String, typeof(Guid))
                 .WithTypeMapping(TsPrimitive.String, typeof(TimeSpan))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
+                .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(List<>))
                 .WithTypeMapping(TsPrimitive.Any, typeof(RavenJObject))
                 .WithTypeMapping(TsPrimitive.Any, typeof(RavenJValue))
                 .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
@@ -75,12 +76,16 @@ namespace TypingsGenerator
             
             // indexes
             scripter.AddType(typeof(IndexStats));
+            scripter.AddType(typeof(IndexingStatus));
             scripter.AddType(typeof(IndexPerformanceStats));
+            scripter.AddType(typeof(IndexDefinition));
 
 
             // transformers
             scripter.AddType(typeof(TransformerDefinition));
 
+
+            scripter.AddType(typeof(ResourcesInfo));
 
 
             return scripter;

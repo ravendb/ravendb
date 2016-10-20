@@ -29,7 +29,6 @@ namespace Raven.Server.Documents
         private readonly object _idleLocker = new object();
         private Task _indexStoreTask;
         private Task _transformerStoreTask;
-
         private readonly ConfigurationStorage _configurationStorage;
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
@@ -38,6 +37,7 @@ namespace Raven.Server.Documents
         {
             StartTime = SystemTime.UtcNow;
             Name = name;
+            ResourceName = "db/" + name;
             Configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             Notifications = new DocumentsNotifications();
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents
 
         public Guid DbId => DocumentsStorage.Environment?.DbId ?? Guid.Empty;
 
-        public string ResourceName => $"db/{Name}";
+        public string ResourceName { get; }
 
         public RavenConfiguration Configuration { get; }
 

@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         bool anyDocumentsSentInCurrentIteration = false;
                         using (dbContext.OpenReadTransaction())
                         {
-                            var documents = TcpConnection.DocumentDatabase.DocumentsStorage.GetDocumentsAfter(dbContext,
+                            var documents = TcpConnection.DocumentDatabase.DocumentsStorage.GetDocumentsFrom(dbContext,
                                 criteria.Collection,
                                 startEtag+1, 0, _options.MaxDocsPerBatch);
                             _buffer.SetLength(0);

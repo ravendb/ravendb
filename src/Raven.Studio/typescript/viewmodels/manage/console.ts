@@ -1,12 +1,12 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import adminJsScriptCommand = require("commands/maintenance/adminJsScriptCommand");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class consoleJs extends viewModelBase {
-
     resourceName = ko.observable<string>('');
     isBusy = ko.observable<boolean>();
     resourcesNames: KnockoutComputed<string[]>;
@@ -43,7 +43,7 @@ class consoleJs extends viewModelBase {
 
 
         aceEditorBindingHandler.install();
-        this.resourcesNames = ko.computed(() => shell.databases().map((rs: resource) => rs.name));
+        this.resourcesNames = ko.computed(() => this.resourcesManager.databases().map((rs: resource) => rs.name));
         this.searchResults = ko.computed(() => {
             var newResourceName = this.resourceName();
             return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
@@ -52,7 +52,7 @@ class consoleJs extends viewModelBase {
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
             var newResourceName = this.resourceName();
-            var foundRs = shell.databases().first((rs: resource) => newResourceName === rs.name && rs.type === TenantType.Database);
+            const foundRs = this.resourcesManager.getDatabaseByName(newResourceName);
 
             if (!foundRs && newResourceName.length > 0) {
                 errorMessage = "Database name doesn't exist!";

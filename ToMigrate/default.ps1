@@ -83,7 +83,7 @@ task Compile -depends Init, CompileHtml5 {
     }
     
     if ($commit -ne "0000000000000000000000000000000000000000") {
-        exec { &"$tools_dir\GitLink.Custom.exe" "$base_dir" /u https://github.com/ayende/ravendb /c $global:configuration /b master /s "$commit" /f "$sln_file_name" }
+        exec { &"$tools_dir\GitLink.Custom.exe" "$base_dir" /u https://github.com/ravendb/ravendb /c $global:configuration /b master /s "$commit" /f "$sln_file_name" }
     }
     
     exec { &"$tools_dir\Assembly.Validator.exe" "$lib_dir" "$lib_dir\Sources\" }

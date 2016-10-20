@@ -167,6 +167,7 @@ namespace Raven.Server.Documents
         private UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
         private int _hasConflicts;
+        private static readonly Encoding Utf8 = Encoding.UTF8;
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {
@@ -404,15 +405,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, long etag, int start, int take)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, int start, int take)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag))
             {
-                if (result.Id == etag)
-                    continue;
-
                 if (start > 0)
                 {
                     start--;
@@ -427,16 +425,13 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, long etag)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag))
             {
-                if (result.Id == etag)
-                    continue;
-
                 yield return TableValueToDocument(context, result);
             }
         }
@@ -465,7 +460,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, string collection, long etag, int start, int take)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, string collection, long etag, int start, int take)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -476,9 +471,6 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], etag))
             {
-                if (result.Id == etag)
-                    continue;
-
                 if (start > 0)
                 {
                     start--;
@@ -560,7 +552,7 @@ namespace Raven.Server.Documents
             return doc;
         }
 
-        public IEnumerable<DocumentTombstone> GetTombstonesAfter(
+        public IEnumerable<DocumentTombstone> GetTombstonesFrom(
             DocumentsOperationContext context,
             long etag,
             int start,
@@ -584,7 +576,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<DocumentTombstone> GetTombstonesAfter(
+        public IEnumerable<DocumentTombstone> GetTombstonesFrom(
             DocumentsOperationContext context,
             string collection,
             long etag,
@@ -667,28 +659,56 @@ namespace Raven.Server.Documents
 
         public static ByteStringContext.ExternalScope GetSliceFromKey(DocumentsOperationContext context, string key, out Slice keySlice)
         {
-            var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
+            var byteCount = Utf8.GetMaxByteCount(key.Length);
 
             var buffer = context.GetNativeTempBuffer(
-                byteCount
-                + sizeof(char) * key.Length); // for the lower calls
+                byteCount // this buffer is allocated to also serve the GetSliceFromUnicodeKey
+                + sizeof(char) * key.Length);
 
+
+            if (key.Length > 512)
+                ThrowKeyTooBig(key);
+
+
+            for (int i = 0; i < key.Length; i++)
+            {
+                char ch = key[i];
+                if (ch > 127) // not ASCII, use slower mode
+                    goto UnlikelyUnicode;
+                if (ch >= 65 && ch <= 90)
+                    buffer[i] = (byte)(ch | 0x20);
+                else
+                    buffer[i] = (byte)ch;
+            }
+
+            return Slice.External(context.Allocator, buffer, (ushort)key.Length, out keySlice);
+
+          UnlikelyUnicode:
+            return GetSliceFromUnicodeKey(context, key, out keySlice, buffer, byteCount);
+        }
+
+        private static ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromUnicodeKey(
+            DocumentsOperationContext context, 
+            string key, 
+            out Slice keySlice,
+            byte* buffer, int byteCount)
+        {
             fixed (char* pChars = key)
             {
-                var destChars = (char*)buffer;
+                var destChars = (char*) buffer;
                 for (var i = 0; i < key.Length; i++)
                 {
                     destChars[i] = char.ToLowerInvariant(pChars[i]);
                 }
 
-                var keyBytes = buffer + key.Length * sizeof(char);
+                var keyBytes = buffer + key.Length*sizeof(char);
 
-                var size = Encoding.UTF8.GetBytes(destChars, key.Length, keyBytes, byteCount);
+                var size = Utf8.GetBytes(destChars, key.Length, keyBytes, byteCount);
 
                 if (size > 512)
-                    ThrowKeyTooBig(key, size);
+                    ThrowKeyTooBig(key);
 
-                return Slice.External(context.Allocator, keyBytes, (ushort)size, out keySlice);
+                return Slice.External(context.Allocator, keyBytes, (ushort) size, out keySlice);
             }
         }
 
@@ -708,7 +728,7 @@ namespace Raven.Server.Documents
             // The total length of the string is stored in the actual table (and include the var int size 
             // prefix.
 
-            var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
+            var byteCount = Utf8.GetMaxByteCount(str.Length);
             var jsonParserState = new JsonParserState();
             jsonParserState.FindEscapePositionsIn(str);
             var maxKeyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
@@ -730,14 +750,14 @@ namespace Raven.Server.Documents
 
                 lowerKey = buffer + str.Length * sizeof(char);
 
-                lowerSize = Encoding.UTF8.GetBytes(destChars, str.Length, lowerKey, byteCount);
+                lowerSize = Utf8.GetBytes(destChars, str.Length, lowerKey, byteCount);
 
                 if (lowerSize > 512)
-                    ThrowKeyTooBig(str, lowerSize);
+                    ThrowKeyTooBig(str);
 
                 key = buffer + str.Length * sizeof(char) + byteCount;
                 var writePos = key;
-                keySize = Encoding.UTF8.GetBytes(pChars, str.Length, writePos + maxKeyLenSize, byteCount);
+                keySize = Utf8.GetBytes(pChars, str.Length, writePos + maxKeyLenSize, byteCount);
 
                 var actualKeyLenSize = JsonParserState.VariableSizeIntSize(keySize);
                 if (actualKeyLenSize < maxKeyLenSize)
@@ -753,10 +773,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static void ThrowKeyTooBig(string str, int lowerSize)
+        private static void ThrowKeyTooBig(string str)
         {
             throw new ArgumentException(
-                $"Key cannot exceed 512 bytes, but the key was {lowerSize} bytes. The invalid key is '{str}'.",
+                $"Key cannot exceed 512 bytes, but the key was {Utf8.GetByteCount(str)} bytes. The invalid key is '{str}'.",
                 nameof(str));
         }
 
@@ -1751,7 +1771,7 @@ namespace Raven.Server.Documents
         {
             CollectionName collectionName;
             if (_collectionsCache.TryGetValue(collection, out collectionName) == false && throwIfDoesNotExist)
-                throw new InvalidOperationException($"There is not collection for '{collection}'.");
+                throw new InvalidOperationException($"There is no collection for '{collection}'.");
 
             return collectionName;
         }

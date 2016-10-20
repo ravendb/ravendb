@@ -1323,7 +1323,7 @@ mark,
   text-transform: capitalize;
 }
 .text-muted {
-  color: #a9adad;
+  color: #686f6f;
 }
 .text-primary {
   color: #ff5500;
@@ -2430,7 +2430,7 @@ table {
 caption {
   padding-top: 8px;
   padding-bottom: 8px;
-  color: #a9adad;
+  color: #686f6f;
   text-align: left;
 }
 th {
@@ -2732,7 +2732,7 @@ output {
   color: #e9eaea;
   background-color: transparent;
   background-image: none;
-  border: 1px solid #686f6f;
+  border: 1px solid #3a4242;
   border-radius: 0px;
   -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
   box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
@@ -5115,7 +5115,7 @@ a.label:focus {
   vertical-align: middle;
   white-space: nowrap;
   text-align: center;
-  background-color: #a9adad;
+  background-color: #686f6f;
   border-radius: 10px;
 }
 .badge:empty {
@@ -5149,6 +5149,26 @@ a.badge:focus {
 }
 .nav-pills > li > a > .badge {
   margin-left: 3px;
+}
+.badge.badge-primary {
+  color: #3a4242;
+  background-color: #ff5500;
+}
+.badge.badge-success {
+  color: #3a4242;
+  background-color: #58b36a;
+}
+.badge.badge-info {
+  color: #3a4242;
+  background-color: #4d90b3;
+}
+.badge.badge-warning {
+  color: #3a4242;
+  background-color: #f7d631;
+}
+.badge.badge-danger {
+  color: #3a4242;
+  background-color: #e55151;
 }
 .jumbotron {
   padding-top: 30px;

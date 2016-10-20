@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         private HandleReferences _handleReferences;
 
-        private readonly Dictionary<string, AnonymusObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymusObjectToBlittableMapResultsEnumerableWrapper>();
+        private readonly Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper>();
 
         private int _maxNumberOfIndexOutputs;
         private int _actualMaxNumberOfIndexOutputs;
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
 
-            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, _mapReduceWorkContext));
+            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, _mapReduceWorkContext, DocumentDatabase.Configuration.Indexing));
             workers.Add(new ReduceMapResultsOfStaticIndex(this, _compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext));
 
             return workers.ToArray();
@@ -107,15 +107,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            AnonymusObjectToBlittableMapResultsEnumerableWrapper wrapper;
+            AnonymousObjectToBlittableMapResultsEnumerableWrapper wrapper;
             if (_enumerationWrappers.TryGetValue(CurrentIndexingScope.Current.SourceCollection, out wrapper) == false)
             {
-                _enumerationWrappers[CurrentIndexingScope.Current.SourceCollection] = wrapper = new AnonymusObjectToBlittableMapResultsEnumerableWrapper(this,indexContext);
+                _enumerationWrappers[CurrentIndexingScope.Current.SourceCollection] = wrapper = new AnonymousObjectToBlittableMapResultsEnumerableWrapper(this, indexContext);
             }
 
-            wrapper.InitializeForEnumeration(mapResults, indexContext);
+            wrapper.InitializeForEnumeration(mapResults, indexContext, stats);
 
-            return PutMapResults(key, wrapper, indexContext);
+            return PutMapResults(key, wrapper, indexContext, stats);
         }
 
         public override int? ActualMaxNumberOfIndexOutputs
@@ -150,34 +150,40 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return _compiled.ReferencedCollections;
         }
 
-        private class AnonymusObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>
+        private class AnonymousObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>
         {
-            private readonly MapReduceIndex _index;
             private IEnumerable _items;
             private TransactionOperationContext _indexContext;
             private PropertyAccessor _propertyAccessor;
+            private IndexingStatsScope _stats;
+            private IndexingStatsScope _buildNewReduceResultStats;
             private readonly ReduceKeyProcessor _reduceKeyProcessor;
             private readonly HashSet<string> _fields;
             private readonly HashSet<string> _groupByFields;
 
-            public AnonymusObjectToBlittableMapResultsEnumerableWrapper(MapReduceIndex index, TransactionOperationContext indexContext)
+            public AnonymousObjectToBlittableMapResultsEnumerableWrapper(MapReduceIndex index, TransactionOperationContext indexContext)
             {
-                _index = index;
                 _indexContext = indexContext;
-                _fields = new HashSet<string>(_index.Definition.MapFields.Keys);
-                _groupByFields = _index.Definition.GroupByFields;
-                _reduceKeyProcessor = new ReduceKeyProcessor(_index.Definition.GroupByFields.Count, _index._unmanagedBuffersPool);
+                _fields = new HashSet<string>(index.Definition.MapFields.Keys);
+                _groupByFields = index.Definition.GroupByFields;
+                _reduceKeyProcessor = new ReduceKeyProcessor(index.Definition.GroupByFields.Count, index._unmanagedBuffersPool);
             }
 
-            public void InitializeForEnumeration(IEnumerable items, TransactionOperationContext indexContext)
+            public void InitializeForEnumeration(IEnumerable items, TransactionOperationContext indexContext, IndexingStatsScope stats)
             {
                 _items = items;
                 _indexContext = indexContext;
+
+                if (_stats == stats)
+                    return;
+
+                _stats = stats;
+                _buildNewReduceResultStats = _stats.For(IndexingOperation.Reduce.BuildNewReduceResult, start: false);
             }
 
             public IEnumerator<MapResult> GetEnumerator()
             {
-                return new Enumerator(_items.GetEnumerator(), this);
+                return new Enumerator(_items.GetEnumerator(), this, _buildNewReduceResultStats);
             }
 
             IEnumerator IEnumerable.GetEnumerator()
@@ -189,15 +195,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private class Enumerator : IEnumerator<MapResult>
             {
                 private readonly IEnumerator _enumerator;
-                private readonly AnonymusObjectToBlittableMapResultsEnumerableWrapper _parent;
+                private readonly AnonymousObjectToBlittableMapResultsEnumerableWrapper _parent;
+                private readonly IndexingStatsScope _stats;
                 private readonly HashSet<string> _fields;
                 private readonly HashSet<string> _groupByFields;
                 private readonly ReduceKeyProcessor _reduceKeyProcessor;
 
-                public Enumerator(IEnumerator enumerator, AnonymusObjectToBlittableMapResultsEnumerableWrapper parent)
+                public Enumerator(IEnumerator enumerator, AnonymousObjectToBlittableMapResultsEnumerableWrapper parent, IndexingStatsScope stats)
                 {
                     _enumerator = enumerator;
                     _parent = parent;
+                    _stats = stats;
                     _groupByFields = _parent._groupByFields;
                     _fields = _parent._fields;
                     _reduceKeyProcessor = _parent._reduceKeyProcessor;
@@ -210,28 +218,31 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     var document = _enumerator.Current;
 
-                    var accessor = _parent._propertyAccessor ?? (_parent._propertyAccessor = PropertyAccessor.Create(document.GetType()));
-
-                    var mapResult = new DynamicJsonValue();
-
-                    _reduceKeyProcessor.Reset();
-
-                    foreach (var field in _fields)
+                    using (_stats.Start())
                     {
-                        var value = accessor.Properties[field].GetValue(document);
-                        var blittableValue = TypeConverter.ToBlittableSupportedType(value, _parent._indexContext);
-                        mapResult[field] = blittableValue;
+                        var accessor = _parent._propertyAccessor ?? (_parent._propertyAccessor = PropertyAccessor.Create(document.GetType()));
 
-                        if (_groupByFields.Contains(field))
+                        var mapResult = new DynamicJsonValue();
+
+                        _reduceKeyProcessor.Reset();
+
+                        foreach (var field in _fields)
                         {
-                            _reduceKeyProcessor.Process(_parent._indexContext.Allocator, blittableValue);
+                            var value = accessor.Properties[field].GetValue(document);
+                            var blittableValue = TypeConverter.ToBlittableSupportedType(value, _parent._indexContext);
+                            mapResult[field] = blittableValue;
+
+                            if (_groupByFields.Contains(field))
+                            {
+                                _reduceKeyProcessor.Process(_parent._indexContext.Allocator, blittableValue);
+                            }
                         }
+
+                        var reduceHashKey = _reduceKeyProcessor.Hash;
+
+                        Current.Data = _parent._indexContext.ReadObject(mapResult, "map-result");
+                        Current.ReduceKeyHash = reduceHashKey;
                     }
-
-                    var reduceHashKey = _reduceKeyProcessor.Hash;
-
-                    Current.Data = _parent._indexContext.ReadObject(mapResult, "map-result");
-                    Current.ReduceKeyHash = reduceHashKey;
 
                     return true;
                 }

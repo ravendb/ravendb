@@ -11,5 +11,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
                      Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token);
+
+        bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag);
     }
 }

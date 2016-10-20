@@ -25,7 +25,7 @@
     }
 
     .align-checkboxes {
-        margin-left: 20px;
+        margin-left: 23px;
         position: relative;
         top: -2px;
     }
@@ -46,10 +46,6 @@
                 border-left: 1px solid @gray-dark;
             }
         }
-    }
-
-    .inline-block {
-        display: inline-block;
     }
 
     .resource {
@@ -77,13 +73,6 @@
             display: flex;
             flex-wrap: wrap;
 
-            @media (min-width:@screen-sm) {
-                .actions {
-                    .vcenter;
-                    width: 100%;
-                    padding: 0 15px;
-                }
-            }
             @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
                 .info-container {
                     order: 1;
@@ -97,149 +86,56 @@
                     order: 2;
                 }
             }
-
-            .col-flex {
-                padding: 0 15px;
-            }
         }
 
         .resource-name {
             color: @brand-primary;
-            font-size: 120%;
+            font-size: 118%;
             margin-left: 30px;
-            margin-top: 7px;
             margin-bottom: 0;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
 
-        .state {
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            width: 30px;
-
-            &:before {
-                color: @gray-lighter;
-                font-size: 12px;
-                letter-spacing: 0.5pt;
-                -moz-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
-                -webkit-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
-                -o-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
-                -ms-transform: rotate(-90deg) translateX(-50%) translateY(-50%);
-                transform: rotate(-90deg) translateX(-50%) translateY(-50%);
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform-origin: top left;
-            }
-
-            &.state-disabled {
-                background-color: @brand-warning-dark;
-
-                &:before {
-                    content: 'DISABLED';
-                }
-            }
-
-            &.state-offline  {
-                background-color: @gray-light;
-
-                &:before {
-                    content: 'OFFLINE';
-                }
-            }
-
-            &.state-online {
-                background-color: @brand-success-dark;
-
-                &:before {
-                    content: 'NORMAL';
-                }
-            }
-        }
-
         .checkbox {
             position: relative;
             margin: 0;
-            top: 4px;
+            top: -2px;
             float: left;
         }
     }
 
-    .properties-label,
-    .properties-value {
-        text-align: left;
-        display: inline-block;
-
-        .btn-sm;
-        width: 140px;
-
-        &.value-only {
-            width: auto;
-        }
-
-        .caret {
-            margin-top: 8px;
-            float: right;
-        }
-
-
-        [class*=" icon-"],
-        [class^="icon-"] {
-
-            & + span {
-                margin-left: 9px;
-            }
-        }
-    }
-
     .properties-container {
-        display: flex;
-        height: 90px;
-        flex-wrap: wrap;
         flex-direction: column;
-        flex-grow: 0;
+        height: 80px;
         align-content: flex-start;
         overflow: hidden;
-    }
 
-    .properties-item {
+        .properties-item {
 
-        width: 200px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-
-        &.text-success {
-            [class*=" icon-"],
-            [class^="icon-"] {
-                color: inherit;
-
-                & + span {
-                    margin-left: 9px;
-                    color: inherit;
-                }
+            .set-size {
+                padding: 0px 10px;
             }
-        }
-    }
 
-    .properties-label {
-        width: 70px;
+            height: 22px;
+        }
     }
 
     &.resources_compact {
-
+        .panel {
+            margin-bottom: 10px;
+        }
         .resource  {
 
             .checkbox {
-                top: 0;
+                top: -7px;
             }
 
             .resource-name {
                 top: 0;
                 font-size: 85%;
+                line-height: 120%;
             }
 
             .state::before {
@@ -247,16 +143,20 @@
             }
 
             .properties-container {
-                // height: 56px;
                 top: 5px;
                 height: 25px;
                 display: inline;
 
                 .properties-item {
-                    float:left;
-                    font-size: 90%;
                     width: auto;
+                    float: left;
+                    font-size: 90%;
                     text-overflow: ellipsis;
+
+                    .set-size {
+                        position: static;
+                        padding-right: 10px;
+                    }
                 }
             }
 

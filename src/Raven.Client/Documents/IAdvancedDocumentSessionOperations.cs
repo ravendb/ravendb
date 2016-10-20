@@ -10,6 +10,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents
 {
@@ -107,7 +108,7 @@ namespace Raven.Client.Documents
         ///     and associate the current state of the entity with the metadata from the server.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        RavenJObject GetMetadataFor<T>(T instance);
+        DynamicJsonValue GetMetadataFor<T>(T instance);
 
         /// <summary>
         ///     Determines whether the specified entity has changed.

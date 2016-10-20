@@ -29,7 +29,6 @@ interface logNotificationDto {
     RequestUri: string;
     TenantName: string;
     CustomInfo: string;
-    TenantType: TenantType;
     InnerRequestsCount?: number;
     QueryTimings: any;
 
@@ -339,46 +338,6 @@ interface documentCountDto {
     IsEtl: boolean;
 }
 
-interface indexMergeSuggestionsDto {
-    Suggestions: suggestionDto[];
-    Unmergables: any;
-}
-
-interface suggestionDto {
-    CanMerge: string[];
-    Collection: string;
-    MergedIndex: indexDefinitionDto;
-    CanDelete: string[];
-    SurpassingIndex: string;
-}
-
-interface indexDefinitionContainerDto {
-    Index: indexDefinitionDto;
-}
-
-interface indexDefinitionDto {
-    Name: string;
-    LockMode: string;
-    Map: string;
-    Maps: string[];
-    Reduce: string;
-    IsTestIndex: boolean;
-    IsSideBySideIndex: boolean;
-    IsMapReduce: boolean;
-    IsCompiled: boolean;
-    Stores: any;
-    Indexes: any;
-    SortOptions: any;
-    Analyzers: any;
-    Fields: any; //TODO: type
-    SuggestionsOptions: any;
-    TermVectors: any;
-    SpatialIndexes: any; // This will be an object with zero or more properties, each property being the name of one of the .Fields, its value being of type spatialIndexDto.
-    InternalFieldsMapping: any;
-    Type: string;
-    MaxIndexOutputsPerDocument: number;
-}
-
 /*
  * Represents a spatial field of an index. Shows up in the Edit Index view when the index has spatial fields defined.
 */
@@ -521,11 +480,6 @@ interface windowsAuthDataDto {
 interface windowsAuthDto {
     RequiredGroups: windowsAuthDataDto[];
     RequiredUsers: windowsAuthDataDto[];
-}
-
-interface indexDefinitionListItemDto {
-    name: string;
-    definition: indexDefinitionDto;
 }
 
 interface transformerParamDto {

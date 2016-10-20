@@ -22,7 +22,7 @@ class notificationCenterAlerts {
     activeChangesApi: KnockoutObservable<changesApi>;
 
     constructor() {
-        this.activeChangesApi = changesContext.currentResourceChangesApi;
+        this.activeChangesApi = changesContext.default.currentResourceChangesApi;
         ko.postbox.subscribe("ChangesApiReconnected", () => this.onReconnect());
         $(window).bind("storage", (event) => this.onStorageEvent(event));
     }

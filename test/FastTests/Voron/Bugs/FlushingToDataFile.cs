@@ -178,7 +178,7 @@ namespace FastTests.Voron.Bugs
                         }
                     }
 
-                    Assert.Equal(transactions.OrderBy(x => x.LowLevelTransaction.Id).First().LowLevelTransaction.Id, env.OldestTransaction);
+                    Assert.Equal(transactions.OrderBy(x => x.LowLevelTransaction.Id).First().LowLevelTransaction.Id, env.ActiveTransactions.OldestTransaction);
 
                     foreach (var tx in transactions)
                     {

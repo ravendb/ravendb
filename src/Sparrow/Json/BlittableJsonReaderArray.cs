@@ -55,8 +55,8 @@ namespace Sparrow.Json
                 return null;
 
             var lazyStringValue = obj as LazyStringValue;
-            if (lazyStringValue != null)
-                return lazyStringValue;
+            if (lazyStringValue != (LazyStringValue)null)
+                return (string)lazyStringValue;
             var lazyCompressedStringValue = obj as LazyCompressedStringValue;
             if (lazyCompressedStringValue != null)
                 return lazyCompressedStringValue;

@@ -5,25 +5,24 @@ import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
 import timeSeries = require("models/timeSeries/timeSeries");
 import resource = require("models/resources/resource");
-import activeResource = require("../viewmodels/resources/activeResourceTracker");
+import activeResource = require("common/shell/activeResourceTracker");
 import router = require("plugins/router");
 import collection = require("models/database/documents/collection");
 import messagePublisher = require("common/messagePublisher");
 
-// Helper class with static methods for generating app URLs.
 class appUrl {
 
     static detectAppUrl() {
-        var path = window.location.pathname.replace("\\", "/").replace("%5C", "/");
-        var suffix = "studio/index.html";
-        if (path.indexOf(suffix, path.length - suffix.length) !== -1) {
+        const path = window.location.pathname.replace("\\", "/").replace("%5C", "/");
+        const suffix = "studio/index.html";
+        if (path.endsWith(suffix)) {
             return path.substring(0, path.length - suffix.length - 1);
         }
         return "";
     }
 
-    //private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
-    public static baseUrl = appUrl.detectAppUrl(); // This should be used when serving HTML5 Studio from the server app.
+    static baseUrl = appUrl.detectAppUrl();
+
     private static currentDatabase = activeResource.default.database;
     private static currentFilesystem = activeResource.default.fileSystem;
     private static currentCounterStorage = activeResource.default.counterStorage;
@@ -338,11 +337,6 @@ class appUrl {
         return "#timeseries";
     }
 
-    /**
-    * Gets the URL for edit document.
-    * @param id The ID of the document to edit, or null to edit a new document.
-    * @param database The database to use in the URL. If null, the current database will be used.
-    */
     static forEditDoc(id: string, db: database): string {
         var databaseUrlPart = appUrl.getEncodedDbPart(db);
         var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
@@ -611,32 +605,32 @@ class appUrl {
     }
 
     static forIndexes(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/indexes?" + databasePart;
     }
 
     static forNewIndex(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/indexes/edit?" + databasePart;
     }
 
     static forEditIndex(indexName: string, db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
     static forNewTransformer(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/transformers/edit?" + databasePart;
     }
 
     static forEditTransformer(transformerName: string, db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/transformers/edit/" + encodeURIComponent(transformerName) + "?" + databasePart;
     }
 
     static forTransformers(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/transformers?" + databasePart;
     }
 
@@ -687,27 +681,27 @@ class appUrl {
     }
 
     static forMegeSuggestions(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/indexes/mergeSuggestions?" + databasePart;
     }
 
     static forImportDatabase(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/importDatabase?" + databasePart;
     }
 
     static forExportDatabase(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
+        const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/exportDatabase?" + databasePart;
     }
 
     static forImportFilesystem(fs: filesystem): string {
-        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        const filesystemPart = appUrl.getEncodedFsPart(fs);
         return "#filesystems/tasks/importFilesystem?" + filesystemPart;
     }
 
     static forExportFilesystem(fs: filesystem): string {
-        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        const filesystemPart = appUrl.getEncodedFsPart(fs);
         return "#filesystems/tasks/exportFilesystem?" + filesystemPart;
     }
 
@@ -831,134 +825,38 @@ class appUrl {
         return "#filesystems/edit?" + fileIdPart + filesystemPart;
     }
 
-    /**
-    * Gets the resource from the current web browser address. Returns the system database if no resource name is found.
-    */
-    static getResource(): resource {
-        var appFileSystem = appUrl.getFileSystem();
-        var appCounterStorage = appUrl.getCounterStorage();
-        var appTimeSeries = appUrl.getTimeSeries();
 
-        if (!!appFileSystem) {
-            return appFileSystem;
-        }
-        else if (!!appCounterStorage) {
-            return appCounterStorage;
-        }
-        else if (!!appTimeSeries) {
-            return appTimeSeries;
-        }
-        else {
-            return appUrl.getDatabase();
-        }
-    }
-
-    /**
-    * Gets the database from the current web browser address. Returns the system database if no database name was found.
-    */
-    static getDatabase(): database {
-
-        // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
-        
-        var dbIndicator = "database=";
-        var hash = window.location.hash;
-        var dbIndex = hash.indexOf(dbIndicator);
-        if (dbIndex >= 0) {
-            // A database is specified in the address.
-            var dbSegmentEnd = hash.indexOf("&", dbIndex);
-            if (dbSegmentEnd === -1) {
-                dbSegmentEnd = hash.length;
+    private static getResourceNameFromUrl(urlParamName: string) {
+        const indicator = urlParamName + "=";
+        const hash = window.location.hash;
+        const index = hash.indexOf(indicator);
+        if (index >= 0) {
+            let segmentEnd = hash.indexOf("&", index);
+            if (segmentEnd === -1) {
+                segmentEnd = hash.length;
             }
 
-            var databaseName = hash.substring(dbIndex + dbIndicator.length, dbSegmentEnd);
-            var unescapedDatabaseName = decodeURIComponent(databaseName);
-            var db = new database(unescapedDatabaseName);
-            return db;
+            const resourceName = hash.substring(index + indicator.length, segmentEnd);
+            return decodeURIComponent(resourceName);
         } else {
-            // No database is specified in the URL. Assume it's the system database.
             return null;
         } 
     }
 
-    /**
-    * Gets the file system from the current web browser address. Returns null if no file system name was found.
-    */
-    static getFileSystem(): filesystem {
+    static getDatabaseNameFromUrl(): string {
+        return appUrl.getResourceNameFromUrl(database.type);
+    }
 
-        // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
-
-        var fileSystemIndicator = "filesystem=";
-        var hash = window.location.hash;
-        var fsIndex = hash.indexOf(fileSystemIndicator);
-        if (fsIndex >= 0) {
-            // A database is specified in the address.
-            var fsSegmentEnd = hash.indexOf("&", fsIndex);
-            if (fsSegmentEnd === -1) {
-                fsSegmentEnd = hash.length;
-            }
-
-            var fileSystemName = hash.substring(fsIndex + fileSystemIndicator.length, fsSegmentEnd);
-            var unescapedFileSystemName = decodeURIComponent(fileSystemName);
-            var fs = new filesystem(unescapedFileSystemName);
-            return fs;
-        } else {
-            // No file system is specified in the URL.
-            return null;
-        }
+    static getFileSystemNameFromUrl(): string {
+        return appUrl.getResourceNameFromUrl(filesystem.type);
     }
  
-    /**
-    * Gets the counter storage from the current web browser address. Returns null if no counter storage name was found.
-    */
-    static getCounterStorage(): counterStorage {
-
-        // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
-
-        var counterStorageIndicator = "counterstorage=";
-        var hash = window.location.hash;
-        var csIndex = hash.indexOf(counterStorageIndicator);
-        if (csIndex >= 0) {
-            // A database is specified in the address.
-            var csSegmentEnd = hash.indexOf("&", csIndex);
-            if (csSegmentEnd === -1) {
-                csSegmentEnd = hash.length;
-            }
-
-            var counterStorageName = hash.substring(csIndex + counterStorageIndicator.length, csSegmentEnd);
-            var unescapedCounterStorageName = decodeURIComponent(counterStorageName);
-            var cs = new counterStorage(unescapedCounterStorageName);
-            return cs;
-        } else {
-            // No counter storage is specified in the URL.
-            return null;
-        }
+    static getCounterStorageNameFromUrl(): string {
+        return appUrl.getResourceNameFromUrl(counterStorage.type);
     }
  
-    /**
-    * Gets the time series from the current web browser address. Returns null if no time series name was found.
-    */
-    static getTimeSeries(): timeSeries {
-
-        // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
-
-        var timeSeriesIndicator = "timeseries=";
-        var hash = window.location.hash;
-        var tsIndex = hash.indexOf(timeSeriesIndicator);
-        if (tsIndex >= 0) {
-            // A database is specified in the address.
-            var tsSegmentEnd = hash.indexOf("&", tsIndex);
-            if (tsSegmentEnd === -1) {
-                tsSegmentEnd = hash.length;
-            }
-
-            var timeSeriesName = hash.substring(tsIndex + timeSeriesIndicator.length, tsSegmentEnd);
-            var unescapedTimeSeriesName = decodeURIComponent(timeSeriesName);
-            var ts = new timeSeries(unescapedTimeSeriesName);
-            return ts;
-        } else {
-            // No time series is specified in the URL.
-            return null;
-        }
+    static getTimeSeriesNameFromUrl(): string {
+        return appUrl.getResourceNameFromUrl(timeSeries.type);
     }
 
     /**
@@ -972,61 +870,56 @@ class appUrl {
     * Gets the address for the current page but for the specified resource.
     */
     static forCurrentPage(rs: resource) {
-        var routerInstruction = router.activeInstruction();
+        const routerInstruction = router.activeInstruction();
         if (routerInstruction) {
 
-            var currentResourceName: string = null;
-            var currentResourceType: string = null;
-            var currentResourceTypeEnum: TenantType;
-            var dbInUrl = routerInstruction.queryParams[database.type];
+            let currentResourceName: string = null;
+            let currentResourceType: string = null;
+            let currentResourceQualifier: string;
+            const dbInUrl = routerInstruction.queryParams[database.type];
             if (dbInUrl) {
                 currentResourceName = dbInUrl;
                 currentResourceType = database.type;
-                currentResourceTypeEnum = TenantType.Database;
+                currentResourceQualifier = database.qualifier;
             } else {
-                var fsInUrl = routerInstruction.queryParams[filesystem.type];
+                const fsInUrl = routerInstruction.queryParams[filesystem.type];
                 if (fsInUrl) {
                     currentResourceName = fsInUrl;
                     currentResourceType = filesystem.type;
-                    currentResourceTypeEnum = TenantType.FileSystem;
+                    currentResourceQualifier = filesystem.qualifier;
                 } else {
-                    var csInUrl = routerInstruction.queryParams[counterStorage.type];
+                    const csInUrl = routerInstruction.queryParams[counterStorage.type];
                     if (csInUrl) {
                         currentResourceName = csInUrl;
                         currentResourceType = counterStorage.type;
-                        currentResourceTypeEnum = TenantType.CounterStorage;
+                        currentResourceQualifier = counterStorage.qualifier;
                     } else {
-                        var tsInUrl = routerInstruction.queryParams[timeSeries.type];
+                        const tsInUrl = routerInstruction.queryParams[timeSeries.type];
                         if (tsInUrl) {
                             currentResourceName = tsInUrl;
                             currentResourceType = timeSeries.type;
-                            currentResourceTypeEnum = TenantType.TimeSeries;
+                            currentResourceQualifier = timeSeries.qualifier;
                         }
                     }
                 }
             }
 
-            if (currentResourceType && currentResourceTypeEnum !== rs.type) {
+            if (currentResourceType && currentResourceQualifier !== rs.qualifier) {
                 // user changed resource type - navigate to resources page and preselect resource
                 return appUrl.forResources() + "?" + rs.type + "=" + encodeURIComponent(rs.name);
             }
-            var isDifferentResourceInAddress = !currentResourceName || currentResourceName !== rs.name.toLowerCase();
+            const isDifferentResourceInAddress = !currentResourceName || currentResourceName !== rs.name.toLowerCase();
             if (isDifferentResourceInAddress) {
-                var existingAddress = window.location.hash;
-                var existingDbQueryString = currentResourceName ? currentResourceType + "=" + encodeURIComponent(currentResourceName) : null;
-                var newDbQueryString = currentResourceType + "=" + encodeURIComponent(rs.name);
-                var newUrlWithDatabase = existingDbQueryString ?
-                    existingAddress.replace(existingDbQueryString, newDbQueryString) :
+                const existingAddress = window.location.hash;
+                const existingQueryString = currentResourceName ? currentResourceType + "=" + encodeURIComponent(currentResourceName) : null;
+                const newQueryString = currentResourceType + "=" + encodeURIComponent(rs.name);
+                return existingQueryString ?
+                    existingAddress.replace(existingQueryString, newQueryString) :
                     existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + rs.type + "=" + encodeURIComponent(rs.name);
-
-                return newUrlWithDatabase;
             }
         }
     }
 
-    /**
-    * Gets an object containing computed URLs that update when the current database updates.
-    */
     static forCurrentDatabase(): computedAppUrls {
         return appUrl.currentDbComputeds;
     }
@@ -1055,8 +948,7 @@ class appUrl {
         }
         if (res instanceof timeSeries) {
             return appUrl.getEncodedTimeSeriesPart(res);
-        }
-        else {
+        } else {
             return appUrl.getEncodedDbPart(<database>res);
         }
     }
@@ -1073,38 +965,30 @@ class appUrl {
         return cs ? "&counterstorage=" + encodeURIComponent(cs.name) : "";
     }
 
-    public static warnWhenUsingSystemDatabase: boolean = true;
-
-    public static mapUnknownRoutes(router: DurandalRouter) {
+    static mapUnknownRoutes(router: DurandalRouter) {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
-            var queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
+            const queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
 
-            if (instruction.fragment === "has-api-key" || instruction.fragment.indexOf("api-key") === 0) {
-
+            if (instruction.fragment === "has-api-key" || instruction.fragment.startsWith("api-key")) {
                 // reload page to reinitialize shell and properly consume/provide OAuth token
                 location.reload();
             } else {
                 messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
 
-                var fragment = instruction.fragment;
-                var appUrls: computedAppUrls = appUrl.currentDbComputeds;
-                var newLoationHref: string;
-                if (fragment.indexOf("admin/settings") == 0) { //admin settings section
-                    newLoationHref = appUrls.adminSettings();
-                } else {
-                    newLoationHref = appUrls.resourcesManagement();
-                }
-                location.href = newLoationHref;
+                const fragment = instruction.fragment;
+                const appUrls = appUrl.currentDbComputeds;
+                location.href = fragment.startsWith("admin/settings") ? appUrls.adminSettings() : appUrls.resourcesManagement();
             }
         });
     }
 
-    public static urlEncodeArgs(args: any): string {
-        var propNameAndValues: Array<string> = [];
-        for (var prop in args) {
-            var value = args[prop];
+    static urlEncodeArgs(args: any): string {
+        const propNameAndValues: Array<string> = [];
+        for (let prop of Object.keys(args)) {
+            const value = args[prop];
+
             if (value instanceof Array) {
-                for (var i = 0; i < value.length; i++) {
+                for (let i = 0; i < value.length; i++) {
                     propNameAndValues.push(prop + "=" + encodeURIComponent(value[i]));
                 }
             } else if (value !== undefined) {

@@ -153,7 +153,7 @@ namespace FastTests.Server.Documents
             {
                 ctx.OpenWriteTransaction();
 
-                var documents = _documentDatabase.DocumentsStorage.GetDocumentsAfter(ctx, 0, 0, 100).ToList();
+                var documents = _documentDatabase.DocumentsStorage.GetDocumentsFrom(ctx, 0, 0, 100).ToList();
                 Assert.Equal(3, documents.Count);
                 string name;
                 documents[0].Data.TryGet("Name", out name);
@@ -386,7 +386,7 @@ namespace FastTests.Server.Documents
             {
                 ctx.OpenWriteTransaction();
 
-                var documents = _documentDatabase.DocumentsStorage.GetDocumentsAfter(ctx, "Users", 0, 0, 10).ToList();
+                var documents = _documentDatabase.DocumentsStorage.GetDocumentsFrom(ctx, "Users", 0, 0, 10).ToList();
                 Assert.Equal(2, documents.Count);
                 string name;
                 documents[0].Data.TryGet("Name", out name);
