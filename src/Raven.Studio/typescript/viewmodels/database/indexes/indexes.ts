@@ -410,7 +410,7 @@ class indexes extends viewModelBase {
             .done(() => idx.pausedUntilRestart(false));
     }
 
-    disableUntilRestart(idx: index) {
+    pauseUntilRestart(idx: index) {
         this.spinners.localPriority.push(idx.name);
 
         new toggleIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
