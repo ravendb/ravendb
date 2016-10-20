@@ -1,5 +1,9 @@
+using System;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using Microsoft.AspNetCore.Http;
+using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents;
@@ -21,27 +25,34 @@ namespace Raven.Server.Smuggler.Documents
         public long? StartRevisionDocumentsEtag;
         public int? RevisionDocumentsLimit;
 
+        public DatabaseExportOptions Options;
         public DatabaseItemType OperateOnTypes;
 
-        public SmugglerExporter(DocumentDatabase database)
+        public SmugglerExporter(DocumentDatabase database, DatabaseExportOptions options = null)
         {
             _database = database;
             OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers
                 | DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Identities;
+            Options = options;
         }
 
-        public ExportResult Export(DocumentsOperationContext context, string destinationFilePath)
+        public ExportResult Export(DocumentsOperationContext context, string destinationFilePath, Action<IOperationProgress> onProgress = null)
         {
             using (var stream = File.Create(destinationFilePath))
             {
-                return Export(context, stream);
+                return Export(context, stream, onProgress);
             }
         }
 
-        public ExportResult Export(DocumentsOperationContext context, Stream destinationStream)
+        public ExportResult Export(DocumentsOperationContext context, Stream destinationStream, Action<IOperationProgress> onProgress = null)
         {
             var result = new ExportResult();
+            var progress = new IndeterminateProgress
+            {
+                Progress = "Starting Export",
+            };
 
+            onProgress?.Invoke(progress);
             using (var gZipStream = new GZipStream(destinationStream, CompressionMode.Compress, leaveOpen: true))
             using (var writer = new BlittableJsonTextWriter(context, gZipStream))
             {
@@ -54,6 +65,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(("Docs"));
+
                     var documents = DocumentsLimit.HasValue
                         ? _database.DocumentsStorage.GetDocumentsFrom(context, StartDocsEtag ?? 0, 0, DocumentsLimit.Value)
                         : _database.DocumentsStorage.GetDocumentsFrom(context, StartDocsEtag ?? 0);
@@ -172,7 +184,6 @@ namespace Raven.Server.Smuggler.Documents
 
                 writer.WriteEndObject();
             }
-
             return result;
         }
     }
