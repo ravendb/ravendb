@@ -2,10 +2,11 @@ import commandBase = require("commands/commandBase");
 import resource = require("models/resources/resource");
 import endpoints = require("endpoints");
 
-type disableResourceResult = {
+type rawDisableResourceResult = {
     name: string;
     success: boolean;
     reason: string;
+    disabled: boolean;
 }
 
 class disableResourceToggleCommand extends commandBase {
@@ -19,30 +20,31 @@ class disableResourceToggleCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Array<disableResourceResult>> {
-        const tasks = [] as Array<JQueryPromise<Array<disableResourceResult>>>;
+        const tasks = [] as Array<Promise<Array<disableResourceResult>>>;
 
         disableResourceToggleCommand
-            .groupResourcesByType(this.resources)
+            .groupResourcesByQualifier(this.resources)
             .forEach((resources, group) => {
-                tasks.push(this.toggleDisableForGroup(group, resources));
+                tasks.push(Promise.resolve(this.toggleDisableForGroup(group, resources)));
             });
 
         const joinedResultTask = $.Deferred<Array<disableResourceResult>>();
 
-        $.when.apply(null, tasks)
-            .done((...results: disableResourceResult[][]) => {
-                joinedResultTask.resolve([].concat.apply([], results));
+        Promise.all(tasks)
+            .then((results: Array<Array<disableResourceResult>>) => {
+                const joinedResult = ([]).concat.apply([], results);
+                joinedResultTask.resolve(joinedResult);
             })
-            .fail((result: any) => joinedResultTask.reject(result));
+            .catch((result: any) => joinedResultTask.reject(result));
 
         return joinedResultTask;
     }
 
-    private static groupResourcesByType(resources: Array<resource>) {
+    private static groupResourcesByQualifier(resources: Array<resource>) {
         const result = new Map<string, Array<resource>>();
 
         resources.forEach(rs => {
-            const qualifier = rs.urlPrefix;
+            const qualifier = rs.qualifier;
 
             if (result.has(qualifier)) {
                 result.get(qualifier).push(rs);
@@ -54,18 +56,33 @@ class disableResourceToggleCommand extends commandBase {
         return result;
     }
 
-    private toggleDisableForGroup(groupName: string, resources: resource[]): JQueryPromise<Array<disableResourceResult>> {
+    private toggleDisableForGroup(qualifer: string, resources: resource[]): JQueryPromise<Array<disableResourceResult>> {
         const args = {
             name: resources.map(x => x.name),
-            isDisabled: this.disable
+            disable: this.disable
         };
 
         const url = "/admin/" +
-            groupName +
+            resources[0].urlPrefix +
             endpoints.admin.adminResourcesStudioTasks.toggleDisable +
             this.urlEncodeArgs(args);
 
-        return this.post(url, null, null);
+        const task = $.Deferred<Array<disableResourceResult>>();
+
+        this.post(url, null)
+            .done(result => task.resolve(this.extractAndMapResult(qualifer, result)))
+            .fail(reason => task.reject(reason));
+
+        return task;
+    }
+
+    private extractAndMapResult(qualifer: string, result: Array<rawDisableResourceResult>): Array<disableResourceResult> {
+        return result.map(x => ({
+            qualifiedName: qualifer + "/" + x.name,
+            success: x.success,
+            reason: x.reason,
+            disabled: x.disabled
+        }));
     }
 
 }

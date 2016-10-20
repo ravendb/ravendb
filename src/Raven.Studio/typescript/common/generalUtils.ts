@@ -12,6 +12,14 @@ class genUtils {
         return parts.join(".");
     }
 
+    static timeSpanAsAgo(input: string, withSuffix: boolean): string {
+        if (!input) {
+            return null;
+        }
+
+        return moment.duration("-" + input).humanize(withSuffix);
+    }
+
     static formatTimeSpan(input: string) {
         var timeParts = input.split(":");
         var miliPart: string[];

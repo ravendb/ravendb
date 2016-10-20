@@ -5,8 +5,8 @@ class counterStorage extends resource {
     static type = "counterstorage";
     static readonly qualifier = "cs";
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = []) {
-        super(name, isAdminCurrentTenant, bundles);
+    constructor(name: string, isAdminCurrentTenant: boolean, isDisabled: boolean, bundles: string[] = []) {
+        super(name, isAdminCurrentTenant, isDisabled, bundles);
         /* TODO:
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {

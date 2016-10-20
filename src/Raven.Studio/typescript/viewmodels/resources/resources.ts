@@ -2,6 +2,7 @@ import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
+import EVENTS = require("common/constants/events");
 
 import resource = require("models/resources/resource");
 import database = require("models/resources/database");
@@ -11,6 +12,7 @@ import disableResourceToggleConfirm = require("viewmodels/resources/disableResou
 import toggleRejectDatabaseClients = require("commands/maintenance/toggleRejectDatabaseClients");
 import disableResourceToggleCommand = require("commands/resources/disableResourceToggleCommand");
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
+import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
 
 import resourcesInfo = require("models/resources/info/resourcesInfo");
 import getResourcesCommand = require("commands/resources/getResourcesCommand");
@@ -32,7 +34,12 @@ class resources extends viewModelBase {
     selectedResources = ko.observableArray<string>([]);
     allCheckedResourcesDisabled: KnockoutComputed<boolean>;
 
-    static compactView = ko.observable<boolean>(false);
+    spinners = {
+        globalToggleDisable: ko.observable<boolean>(false),
+        itemTakedowns: ko.observableArray<string>([])
+    }
+
+    private static compactView = ko.observable<boolean>(false);
     compactView = resources.compactView;
 
     isGlobalAdmin = accessHelper.isGlobalAdmin;
@@ -52,7 +59,7 @@ class resources extends viewModelBase {
         this.selectionState = ko.pureComputed<checkbox>(() => {
             const resources = this.resources().sortedResources().filter(x => !x.filteredOut());
             var selectedCount = this.selectedResources().length;
-            if (selectedCount === resources.length)
+            if (resources.length && selectedCount === resources.length)
                 return checkbox.Checked;
             if (selectedCount > 0)
                 return checkbox.SomeChecked;
@@ -65,12 +72,28 @@ class resources extends viewModelBase {
         });
     }
 
+    createPostboxSubscriptions(): KnockoutSubscription[] {
+        return [
+            //TODO: bind on resource deleted
+            ko.postbox.subscribe(EVENTS.Resource.Created,
+                (value: resourceCreatedEventArgs) => {
+                    //TODO: we are assuming it is database for now. 
+                    this.fetchResources();
+                })
+        ];
+    }
+
     // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any): any {
         return true;
     }
 
     activate(args: any): JQueryPromise<resourcesInfo> {
+        super.activate(args);
+        return this.fetchResources();
+    }
+
+    private fetchResources(): JQueryPromise<resourcesInfo> {
         return new getResourcesCommand()
             .execute()
             .done(info => this.resources(info));
@@ -145,19 +168,31 @@ class resources extends viewModelBase {
         }
     }
 
+    deleteResource(rs: resourceInfo) {
+        this.deleteResources([rs]);
+    }
+
     deleteSelectedResources() {
-        const selectedResources = this.getSelectedResources();
-        const confirmDeleteViewModel = new deleteResourceConfirm(selectedResources);
+       this.deleteResources(this.getSelectedResources());
+    }
+
+    private deleteResources(toDelete: resourceInfo[]) {
+        const confirmDeleteViewModel = new deleteResourceConfirm(toDelete);
 
         confirmDeleteViewModel
-            .deleteTask
-            .done((deletedResources: Array<resource>) => {
-                deletedResources.forEach(rs => this.onResourceDeleted(rs));
+            .result
+            .done((confirmResult: deleteResourceConfirmResult) => {
+                if (confirmResult.can) {
+                    new deleteResourceCommand(toDelete.map(x => x.asResource()), !confirmResult.keepFiles)
+                        .execute()
+                        .done((deletedResources: Array<resource>) => {
+                            deletedResources.forEach(rs => this.onResourceDeleted(rs));
+                        });
+                }
             });
 
         app.showDialog(confirmDeleteViewModel);
     }
-
 
     private onResourceDeleted(deletedResource: resource) {
         const matchedResource = this.resources().sortedResources().find(x => x.qualifiedName === deletedResource.qualifiedName);
@@ -165,8 +200,6 @@ class resources extends viewModelBase {
         if (matchedResource) {
             this.resources().sortedResources.remove(matchedResource);
             this.selectedResources.remove(matchedResource.qualifiedName);
-
-            this.changesContext.disconnectIfCurrent(matchedResource.asResource());
         }
     }
 
@@ -185,13 +218,14 @@ class resources extends viewModelBase {
                         });
                     }
 
-                    //TODO: spinners
+                    this.spinners.globalToggleDisable(true);
 
                     new disableResourceToggleCommand(selectedResources, disableAll)
                         .execute()
                         .done(disableResult => {
-                            //TODO: update UI state via onResourceDisabledToggle
-                        });
+                            disableResult.forEach(x => this.onResourceDisabled(x));
+                        })
+                        .always(() => this.spinners.globalToggleDisable(false));
                 }
             });
 
@@ -199,20 +233,43 @@ class resources extends viewModelBase {
         }
     }
 
-    private onResourceDisabledToggle(rs: resource, action: boolean) { //TODO: should we operate on resource or resourceInfo here?
-        //TODO: review body of this method
-        if (rs) {
-            /* TODO:
-            rs.disabled(action);
-            //TODO: rs.isChecked(false);
+    toggleResource(rsInfo: resourceInfo) {
+        const disable = !rsInfo.disabled();
 
-            if (!rs.disabled() === false) {
-                rs.activate();
-            }*/
+        const rs = rsInfo.asResource();
+        const disableDatabaseToggleViewModel = new disableResourceToggleConfirm([rs], disable);
+
+        disableDatabaseToggleViewModel.result.done(result => {
+            if (result.can) {
+                if (disable) {
+                    this.changesContext.disconnectIfCurrent(rs);
+                }
+
+                this.spinners.itemTakedowns.push(rs.qualifiedName);
+
+                new disableResourceToggleCommand([rs], disable)
+                    .execute()
+                    .done(disableResult => {
+                        disableResult.forEach(x => this.onResourceDisabled(x));
+                    })
+                    .always(() => this.spinners.itemTakedowns.remove(rs.qualifiedName));
+            }
+        });
+
+        app.showDialog(disableDatabaseToggleViewModel);
+    }
+
+    private onResourceDisabled(result: disableResourceResult) {
+        const resources = this.resources().sortedResources();
+        const matchedResource = resources.find(rs => rs.qualifiedName === result.qualifiedName);
+
+        if (matchedResource) {
+            matchedResource.disabled(result.disabled);
         }
     }
 
     toggleDatabaseIndexing(db: databaseInfo) {
+        /* TODO:
         const start = db.indexingDisabled();
         const actionText = db.indexingDisabled() ? "Enable" : "Disable";
         const message = this.confirmationMessage(actionText + " indexing?", "Are you sure?");
@@ -222,7 +279,7 @@ class resources extends viewModelBase {
                 new toggleIndexingCommand(start, db.asResource())
                     .execute(); //TODO: update spinner + UI
             }
-        });
+        });*/
     }
 
     toggleRejectDatabaseClients(db: databaseInfo) {
@@ -251,6 +308,7 @@ class resources extends viewModelBase {
         shell.disconnectFromResourceChangesApi();
     }
     */
+  
 }
 
 export = resources;

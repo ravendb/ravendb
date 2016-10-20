@@ -47,6 +47,18 @@ class resourcesManager {
 
             throw new Error(`Invalid resource type ${resource.type}`);
         });
+
+        ko.postbox.subscribe(EVENTS.Resource.Created,
+            (value: resourceCreatedEventArgs) => {
+                //TODO: we are assuming it is database for now. 
+                this.refreshResources()
+                    .done(() => {
+                        const newlyCreatedDatabase = this.getDatabaseByName(value.name);
+                        if (newlyCreatedDatabase) {
+                            newlyCreatedDatabase.activate();
+                        }
+                    });
+            });
     }
 
     getDatabaseByName(name: string): database {
@@ -139,7 +151,7 @@ class resourcesManager {
         //TODO: this.fecthStudioConfigForDatabase(db);
 
         this.changesContext.updateChangesApi(db, (changes: changesApi) => {
-            changes.watchAllDocs(() => this.refreshResources()) //TODO: use cooldown
+            changes.watchAllDocs(() => this.refreshResources()); //TODO: use cooldown
             /* TODO
             changes.watchAllIndexes(() => this.fetchDbStats(db)),
             changes.watchBulks(() => this.fetchDbStats(db))*/
@@ -193,7 +205,7 @@ class resourcesManager {
         const incomingResources = incomingData.sortedResources().map(x => x.asResource());
         const incomingResourcesQualified = incomingResources.map(x => x.qualifiedName);
 
-        const deletedResources = existingResources().filter(x => !incomingResourcesQualified.contains(x.qualifier));
+        const deletedResources = existingResources().filter(x => !incomingResourcesQualified.contains(x.qualifiedName));
 
         existingResources.removeAll(deletedResources);
 
@@ -223,6 +235,8 @@ class resourcesManager {
     private onResourceUpdateReceivedViaChangesApi() {
         //TODO: do we have to filter received notifications?
         this.refreshResources();
+
+        //TODO: if deleted this.changesContext.disconnectIfCurrent(matchedResource.asResource());
     }
 
     /* TODO: 

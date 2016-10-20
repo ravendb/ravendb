@@ -177,7 +177,7 @@ class commandBase {
                 /* TODO
                 var currentDb = appUrl.getDatabase();
                 if (currentDb != null && currentDb.name === dbBeingUpdated) {
-                    router.navigate(appUrl.forUpgrade(new database(dbBeingUpdated, false, [])));
+                    router.navigate(appUrl.forUpgrade(new database(dbBeingUpdated, false, []))); //TODO: use resources manger to get this database!
                 }*/
             } else if (request.status === ResponseCodes.PreconditionFailed && oauthContext.apiKey()) {
                 this.oauthHandler.handleOAuth(ajaxTask, request, () => this.retryOriginalRequest(ajaxTask, originalArguments));

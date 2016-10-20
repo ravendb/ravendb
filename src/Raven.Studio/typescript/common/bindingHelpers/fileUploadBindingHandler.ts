@@ -5,6 +5,7 @@ import uploadItem = require("models/filesystem/uploadItem");
 import uploadFileToFilesystemCommand = require("commands/filesystem/uploadFileToFilesystemCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import uploadQueueHelper = require("common/uploadQueueHelper");
+import activeResourceTracker = require("common/shell/activeResourceTracker");
 
 // Usage: <input type="file" data-bind="fileUpload: { files: files, uploads: uploadQueue, success: uploadSuccess.bind($data), fail: uploadFailed.bind($data) }" />
 // files: KnockoutObservable<File[]>
@@ -36,7 +37,6 @@ class fileUploadBindingHandler {
             success: (i: uploadItem) => void;
             fail: (i: uploadItem) => void;
         } = <any>ko.utils.unwrapObservable(valueAccessor());
-        var context = viewModel;
         var filesystem = ko.utils.unwrapObservable<filesystem>(bindingContext.$data["activeFilesystem"]);
         
         if (options) {
@@ -51,7 +51,7 @@ class fileUploadBindingHandler {
                     var file = files[i];
                     var guid = system.guid();
                     var directory = options.directory() ? options.directory() : ""
-                    var item = new uploadItem(guid, directory + "/" + file.name, uploadQueueHelper.queuedStatus, context.activeFilesystem());
+                    var item = new uploadItem(guid, directory + "/" + file.name, uploadQueueHelper.queuedStatus, activeResourceTracker.default.fileSystem());
                     options.uploads.push(item);
                     
                     new uploadFileToFilesystemCommand(file, directory, guid, filesystem, (e: any) => this.uploadProgressReported(e), true)

@@ -1,5 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
+using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -58,15 +61,49 @@ namespace Raven.Server.Web.System
                             writer.WriteComma();
                         first = false;
 
-                        //TODO: Actually handle this properly
-                        var doc = new DynamicJsonValue
+                        // TODO: Actually handle this properly - we use fake values for now!
+                        // TODO: ugly and temporary starts here:
                         {
-                            [nameof(DatabaseInfo.Name)] = db.Key.Substring("db/".Length),
-                            [nameof(DatabaseInfo.Disabled)] = false,
-                            [nameof(DatabaseInfo.RejectClientsEnabled)] = false,
-                            [nameof(DatabaseInfo.IndexingDisabled)] = false
-                        };
-                        context.Write(writer, doc);
+                            var disabled = false;
+                            object disabledValue;
+                            if (db.Data.TryGetMember("Disabled", out disabledValue))
+                            {
+                                disabled = (bool)disabledValue;
+                            }
+                            var dbName = db.Key.Substring("db/".Length);
+                            Task<DocumentDatabase> dbTask;
+                            var online = ServerStore.DatabasesLandlord.ResourcesStoresCache.TryGetValue(dbName, out dbTask);
+                            var indexingStatus = dbTask != null && dbTask.IsCompleted ? dbTask.Result.IndexStore.Status.ToString() : null; //TODO: should/can we get this info when database is offline?
+
+                            var doc = new DynamicJsonValue
+                            {
+                                [nameof(ResourceInfo.Bundles)] = new DynamicJsonArray(),
+                                [nameof(ResourceInfo.IsAdmin)] = true,
+                                [nameof(ResourceInfo.Name)] = dbName,
+                                [nameof(ResourceInfo.Disabled)] = disabled,
+                                [nameof(ResourceInfo.TotalSize)] = new DynamicJsonValue
+                                {
+                                    [nameof(Size.HumaneSize)] = "80.4 GBytes",
+                                    [nameof(Size.SizeInBytes)] = 80.4 * 1024 * 1024 * 1024
+                                },
+                                [nameof(ResourceInfo.Errors)] = 5,
+                                [nameof(ResourceInfo.Alerts)] = 7,
+                                [nameof(ResourceInfo.UpTime)] = online ? TimeSpan.FromDays(2.4).ToString() : null,
+                                [nameof(ResourceInfo.BackupInfo)] = new DynamicJsonValue
+                                {
+                                    [nameof(BackupInfo.BackupInterval)] = TimeSpan.FromDays(7).ToString(),
+                                    [nameof(BackupInfo.LastBackup)] = TimeSpan.FromDays(10).ToString()
+                                },
+                                [nameof(DatabaseInfo.DocumentsCount)] = 10234,
+                                [nameof(DatabaseInfo.IndexesCount)] = 30,
+                                [nameof(DatabaseInfo.RejectClients)] = true,
+                                [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus
+                            };
+
+                            context.Write(writer, doc);
+                        } //TODO: end of ugly and temporary code!
+                        
+                        
                     }
                     writer.WriteEndArray();
 
@@ -94,7 +131,7 @@ namespace Raven.Server.Web.System
                             writer.WriteComma();
                         first = false;
 
-                        //TODO: Actually handle this properly
+                        //TODO: Actually handle this properly - do we need all those files in here? right now we are using /resources in studio
                         var doc = new DynamicJsonValue
                         {
                             ["Bundles"] = new DynamicJsonArray(),
@@ -113,3 +150,5 @@ namespace Raven.Server.Web.System
         }
     }
 }
+ 
+ 
