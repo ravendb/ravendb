@@ -2306,6 +2306,17 @@ namespace Raven.Database.Indexing
 
         public LowMemoryHandlerStatistics HandleLowMemory()
         {
+            if (disposed)
+            {
+                return new LowMemoryHandlerStatistics
+                {
+                    Name = $"Index: {PublicName}",
+                    DatabaseName = context.DatabaseName,
+                    Summary = "Index is already disposed. Nothing to free.",
+                    EstimatedUsedMemory = 0
+                };
+            }
+
             bool tryEnter = false;
             var res = new LowMemoryHandlerStatistics();
             try
@@ -2331,7 +2342,7 @@ namespace Raven.Database.Indexing
                 RecreateSearcher();
                 return new LowMemoryHandlerStatistics
                 {
-                    Name = $"CachedIndexedTerms:{PublicName}",
+                    Name = $"Index: {PublicName}",
                     DatabaseName = context.DatabaseName,
                     Summary = $"Writing in memory index {IndexId} to disk, recreating index readers and writers, freeing write and read cache"
                 };
