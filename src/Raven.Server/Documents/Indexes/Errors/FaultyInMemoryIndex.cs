@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Errors
                     Error = _e?.ToString(),
                     Action = $"Index with id {IndexId} is in-memory implementation of a faulty index"
                 }
-            }
+            };
         }
 
         public override int? ActualMaxNumberOfIndexOutputs
