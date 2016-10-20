@@ -2,12 +2,15 @@ using System;
 using System.Threading.Tasks;
 
 using FastTests;
-
+using Microsoft.AspNetCore.Hosting.Internal;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Json.Linq;
-
+using Sparrow.Json;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -60,7 +63,217 @@ namespace SlowTests.NewClient
             }
         }
 
-        
+        [Fact]
+        public void CanUseEvict()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenNewSession())
+                {
+                    var user = new User { Id = "users/1", Name = "John" };
+
+                    session.Store(user);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenNewSession())
+                {
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                    session.Load<User>("users/1");
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    var user = session.Load<User>("users/1");
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    session.Advanced.Evict(user);
+
+                    session.Load<User>("users/1");
+
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseClear()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Id = "users/1", Name = "John" };
+
+                    session.Store(user);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenNewSession())
+                {
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                    session.Load<User>("users/1");
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    session.Load<User>("users/1");
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    session.Advanced.Clear();
+
+                    session.Load<User>("users/1");
+
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseIsLoaded()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenNewSession())
+                {
+                    var user = new User { Id = "users/1", Name = "John" };
+
+                    session.Store(user);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenNewSession())
+                {
+                    Assert.False(session.Advanced.IsLoaded("users/1"));
+
+                    session.Load<User>("users/1");
+
+                    Assert.True(session.Advanced.IsLoaded("users/1"));
+                    Assert.False(session.Advanced.IsLoaded("users/2"));
+
+                    session.Advanced.Clear();
+
+                    Assert.False(session.Advanced.IsLoaded("users/1"));
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseRefresh()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenNewSession())
+                {
+                    var user = new User { Id = "users/1", Name = "John" };
+
+                    session.Store(user);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenNewSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    Assert.NotNull(user);
+                    Assert.Equal("John", user.Name);
+
+                    //TODO - Change when we have new DatabaseCommands.Get and Put
+                    long etag;
+                    InMemoryDocumentSessionOperations.DocumentInfo newMetadata;
+                    var document = TempGetCommand(session, out etag, out newMetadata);
+
+                    newMetadata.Entity = session.ConvertToEntity(typeof(User), "users/1", document);
+                    ((User)newMetadata.Entity).Name = "Jonathan";
+                    TempPutCommand(session, newMetadata, etag);
+
+                    user = session.Load<User>("users/1");
+
+                    Assert.NotNull(user);
+                    Assert.Equal("John", user.Name);
+
+                    session.Advanced.Refresh(user);
+
+                    Assert.NotNull(user);
+                    Assert.Equal("Jonathan", user.Name);
+                }
+            }
+        }
+
+        private static void TempPutCommand(DocumentSession session, InMemoryDocumentSessionOperations.DocumentInfo newMetadata, long etag)
+        {
+            var newDocument = session.EntityToBlittable.ConvertEntityToBlittable(newMetadata.Entity, newMetadata);
+            var putCommand = new PutDocumentCommand()
+            {
+                Id = "users/1",
+                Etag = etag,
+                Document = newDocument,
+                Context = session.Context
+            };
+            session.RequestExecuter.Execute(putCommand, session.Context);
+        }
+
+        private static BlittableJsonReaderObject TempGetCommand(DocumentSession session, out long etag,
+            out InMemoryDocumentSessionOperations.DocumentInfo newMetadata)
+        {
+            var command = new GetDocumentCommand
+            {
+                Ids = new[] {"users/1"}
+            };
+            session.RequestExecuter.Execute(command, session.Context);
+            var document = (BlittableJsonReaderObject) command.Result.Results[0];
+            BlittableJsonReaderObject metadata;
+            if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
+                throw new InvalidOperationException("Document must have a metadata");
+            string id;
+            if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
+                throw new InvalidOperationException("Document must have an id");
+            if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
+                throw new InvalidOperationException("Document must have an etag");
+            newMetadata = new InMemoryDocumentSessionOperations.DocumentInfo
+            {
+                Id = id,
+                Document = document,
+                Metadata = metadata,
+                ETag = etag
+            };
+            return document;
+        }
+
+        [Fact]
+        public void CanUseOptmisticConcurrency()
+        {
+            const string entityId = "users/1";
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenNewSession())
+                {
+                    Assert.False(session.Advanced.UseOptimisticConcurrency);
+                    session.Advanced.UseOptimisticConcurrency = true;
+
+                    session.Store(new User { Id = entityId, Name = "User1" });
+                    session.SaveChanges();
+
+                    using (var otherSession = store.OpenNewSession())
+                    {
+                        var otherUser = otherSession.Load<User>(entityId);
+                        otherUser.Name = "OtherName";
+                        otherSession.Store(otherUser);
+                        otherSession.SaveChanges();
+                    }
+
+                    var user = session.Load<User>("users/1");
+                    user.Name = "Name";
+                    session.Store(user);
+                    var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+                    //Assert.Equal("PUT attempted on document '" + entityId + "' using a non current etag", e.Message);
+                }
+            }
+        }
+
         [Fact]
         public void CanGetDocumentMetadata()
         {
@@ -87,7 +300,6 @@ namespace SlowTests.NewClient
             }
         }
 
-        
         [Fact]
         public void CanMarkReadOnly()
         {
@@ -112,7 +324,7 @@ namespace SlowTests.NewClient
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    Assert.True(session.Advanced.GetMetadataFor<Company>(company).Value<bool>("Raven-Read-Only"));
+                    Assert.Equal("true", session.Advanced.GetMetadataFor<Company>(company)["Raven-Read-Only"]);
                 }
             }
         }

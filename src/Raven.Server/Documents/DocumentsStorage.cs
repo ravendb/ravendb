@@ -931,7 +931,11 @@ namespace Raven.Server.Documents
             if (expectedEtag != null && doc.Etag != expectedEtag)
             {
                 throw new ConcurrencyException(
-                    $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                    $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                {
+                    ActualETag = doc.Etag,
+                    ExpectedETag = (long)expectedEtag
+                };
             }
 
             EnsureLastEtagIsPersisted(context, doc.Etag);
@@ -1463,7 +1467,10 @@ namespace Raven.Server.Documents
                         if (expectedEtag != null && expectedEtag != 0)
                         {
                             throw new ConcurrencyException(
-                                $"Document {key} does not exists, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                                $"Document {key} does not exists, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                            {
+                                ExpectedETag = (long)expectedEtag
+                            };
                         }
                         table.Insert(tbv);
                     }
@@ -1472,9 +1479,14 @@ namespace Raven.Server.Documents
                         int size;
                         var pOldEtag = oldValue.Read(1, out size);
                         var oldEtag = IPAddress.NetworkToHostOrder(*(long*)pOldEtag);
+                        //TODO
                         if (expectedEtag != null && oldEtag != expectedEtag)
                             throw new ConcurrencyException(
-                                $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                                $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                            {
+                                ActualETag = oldEtag,
+                                ExpectedETag = (long) expectedEtag
+                            };
 
                         int oldSize;
                         var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
