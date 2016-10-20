@@ -55,6 +55,10 @@ namespace Voron
                 SyncRequiredEnvironments();
             }
             // ReSharper disable once FunctionNeverReturns
+
+            // Note that we intentionally don't have error handling here.
+            // If this code throw an exception that bubbles up to here, we WANT the process
+            // to die, since we can't recover from the flusher thread dying.
         }
 
         private void SyncDesiredEnvironments()
@@ -65,27 +69,25 @@ namespace Voron
                 if (envToSync.Disposed)
                     continue;
 
-                MountPointInfo mpi;
-                if (_mountPoints.TryGetValue(envToSync.Options.DataPager.UniquePhysicalDriveId, out mpi) == false)
-                {
-                    _mountPoints[envToSync.Options.DataPager.UniquePhysicalDriveId] = mpi = new MountPointInfo();
-                }
-
                 if (envToSync.IsDataFileEnqueuedToSync)
                     continue;
 
                 envToSync.IsDataFileEnqueuedToSync = true;
+
+                var mpi = _mountPoints.GetOrAdd(envToSync.Options.DataPager.UniquePhysicalDriveId,
+                    _ => new MountPointInfo());
+
                 mpi.StorageEnvironments.Enqueue(envToSync);
             }
 
             foreach (var mountPoint in _mountPoints)
             {
-                if (DateTime.UtcNow - mountPoint.Value.LastSyncTimeInMountPoint > TimeSpan.FromMinutes(1)) // TODO :: ADIADI :: make this time in config option. how about variable value ?
+                if (DateTime.UtcNow - mountPoint.Value.LastSyncTimeInMountPoint > TimeSpan.FromMinutes(1))
                 {
-                    int parallelSyncsPerIO = 3; // TODO :: ADIADI :: make it config option
-                    parallelSyncsPerIO = Math.Min(parallelSyncsPerIO, mountPoint.Value.StorageEnvironments.Count);
+                    int parallelSyncsPerIo = 3;
+                    parallelSyncsPerIo = Math.Min(parallelSyncsPerIo, mountPoint.Value.StorageEnvironments.Count);
 
-                    for (int i = 0; i < parallelSyncsPerIO; i++)
+                    for (int i = 0; i < parallelSyncsPerIo; i++)
                     {
                         if (ThreadPool.QueueUserWorkItem(SyncAllEnvironmentsInMountPoint, mountPoint.Value) == false)
                         {
@@ -98,7 +100,6 @@ namespace Voron
 
         private void SyncRequiredEnvironments()
         {
-            // TODO: Error handling
             StorageEnvironment envToSync;
             while (_syncIsRequired.TryDequeue(out envToSync))
             {
@@ -120,21 +121,15 @@ namespace Voron
             var applicator = env.Journal.Applicator;
 
             long lastFlushedJournalCopy;
-            ConcurrentDictionary<long, JournalFile> journalsToDeleteCopy; // TODO : change to non-cuncurrent dictionary ? (not cuncurrently used however needed for use with SyncDataFile signature)
+            Dictionary<long, JournalFile> journalsToDeleteCopy; 
             JournalFile lastFlushedJournalObjectCopy;
             long oldestActiveTransactionCopy;
-            try
+            lock (applicator.LastFlushedLocker)
             {
-                Monitor.Enter(applicator.LastFlushedLocker);
-
                 lastFlushedJournalCopy = applicator.LastFlushedJournal;
-                journalsToDeleteCopy = new ConcurrentDictionary<long, JournalFile>(applicator.JournalsToDelete);
+                journalsToDeleteCopy = new Dictionary<long, JournalFile>(applicator.JournalsToDelete);
                 lastFlushedJournalObjectCopy = applicator.LastFlushedJournalObject;
                 oldestActiveTransactionCopy = applicator.OldestActiveTransactionWhenFlushed;
-            }
-            finally
-            {
-                Monitor.Exit(applicator.LastFlushedLocker);
             }
 
             var synced = applicator.SyncDataFile(oldestActiveTransactionCopy, journalsToDeleteCopy, lastFlushedJournalObjectCopy);
