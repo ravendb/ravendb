@@ -1438,11 +1438,10 @@ namespace Raven.Server.Documents
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
-            TableValueReader oldValue;
             Slice keySlice;
             using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out keySlice))
             {
-                oldValue = table.ReadByKey(keySlice);
+                var oldValue = table.ReadByKey(keySlice);
 
                 if (changeVector == null)
                 {
@@ -1517,6 +1516,8 @@ namespace Raven.Server.Documents
                 Type = DocumentChangeTypes.Put,
                 IsSystemDocument = collectionName.IsSystem,
             });
+
+            _documentDatabase.Metrics.DocPutsPerSecond.Mark();
 
             return new PutResult
             {
