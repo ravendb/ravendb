@@ -393,8 +393,8 @@ namespace Voron.Impl.Journal
             private readonly object _flushingLock = new object();
             private readonly WriteAheadJournal _waj;
 
-            private long _lastSyncedTransactionId;
-            private long _lastSyncedJournal;
+            private long _lastFlushedTransactionId;
+            private long _lastFlushedJournalId;
             private long _oldestActiveTransactionWhenFlushed;
 
             private JournalFile _lastFlushedJournal;
@@ -439,7 +439,7 @@ namespace Voron.Impl.Journal
                     if (jrnls.Count == 0)
                         return; // nothing to do
 
-                    Debug.Assert(jrnls.First().Number >= _lastSyncedJournal);
+                    Debug.Assert(jrnls.First().Number >= _lastFlushedJournalId);
 
                     var pagesToWrite = new Dictionary<long, PagePosition>();
 
@@ -450,7 +450,7 @@ namespace Voron.Impl.Journal
 
                     foreach (var journalFile in jrnls)
                     {
-                        if (journalFile.Number < _lastSyncedJournal)
+                        if (journalFile.Number < _lastFlushedJournalId)
                             continue;
                         var currentJournalMaxTransactionId = -1L;
 
@@ -458,7 +458,7 @@ namespace Voron.Impl.Journal
                         if (oldestActiveTransaction != 0)
                             maxTransactionId = Math.Min(oldestActiveTransaction - 1, maxTransactionId);
 
-                        foreach (var pagePosition in journalFile.PageTranslationTable.Iterate(_lastSyncedTransactionId, maxTransactionId))
+                        foreach (var pagePosition in journalFile.PageTranslationTable.Iterate(_lastFlushedTransactionId, maxTransactionId))
                         {
                             if (pagePosition.Value.IsFreedPageMarker)
                             {
@@ -467,7 +467,7 @@ namespace Voron.Impl.Journal
                                 continue;
                             }
 
-                            if (journalFile.Number == _lastSyncedJournal && pagePosition.Value.TransactionId <= _lastSyncedTransactionId)
+                            if (journalFile.Number == _lastFlushedJournalId && pagePosition.Value.TransactionId <= _lastFlushedTransactionId)
                                 continue;
 
                             currentJournalMaxTransactionId = Math.Max(currentJournalMaxTransactionId, pagePosition.Value.TransactionId);
@@ -523,10 +523,10 @@ namespace Voron.Impl.Journal
                         _waj._env.IncreaseTheChanceForGettingTheTransactionLock();
                         using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(TransactionFlags.ReadWrite).JournalApplicatorTransaction())
                         {
-                            _lastSyncedJournal = lastProcessedJournal;
-                            _lastSyncedTransactionId = lastFlushedTransactionId;
+                            _lastFlushedJournalId = lastProcessedJournal;
+                            _lastFlushedTransactionId = lastFlushedTransactionId;
                             _oldestActiveTransactionWhenFlushed = oldestActiveTransaction;
-                            _lastFlushedJournal = _waj._files.First(x => x.Number == _lastSyncedJournal);
+                            _lastFlushedJournal = _waj._files.First(x => x.Number == lastProcessedJournal);
 
                             if (unusedJournals.Count > 0)
                             {
@@ -582,7 +582,7 @@ namespace Voron.Impl.Journal
                 long lastSyncedTransactionId;
                 long oldestActiveTransaction;
                 JournalFile lastFlushedJournal;
-                var journalsToDelete = new List<JournalFile>();
+                var journalsToDelete = new List<KeyValuePair<long, JournalFile>>();
                 bool lockTaken = false;
                 try
                 {
@@ -596,14 +596,20 @@ namespace Voron.Impl.Journal
                         return; 
                     }
                     oldestActiveTransaction = _oldestActiveTransactionWhenFlushed;
-                    lastSyncedJournal = _lastSyncedJournal;
-                    lastSyncedTransactionId = _lastSyncedTransactionId;
+                    lastSyncedJournal = _lastFlushedJournalId;
+                    lastSyncedTransactionId = _lastFlushedTransactionId;
                     lastFlushedJournal = _lastFlushedJournal;
-                    foreach (var toDelete in _journalsToDelete.Values)
+                    foreach (var toDelete in _journalsToDelete)
                     {
+                        if (toDelete.Key > lastSyncedJournal)
+                            continue;
+
                         journalsToDelete.Add(toDelete);
                     }
-                    _journalsToDelete.Clear();
+                    foreach (var kvp in journalsToDelete)
+                    {
+                        _journalsToDelete.Remove(kvp.Key);
+                    }
                 }
                 finally
                 {
@@ -621,9 +627,9 @@ namespace Voron.Impl.Journal
                     foreach (var toDelete in journalsToDelete)
                     {
                         if (_waj._env.Options.IncrementalBackupEnabled == false)
-                            toDelete.DeleteOnClose = true;
+                            toDelete.Value.DeleteOnClose = true;
 
-                        toDelete.Release();
+                        toDelete.Value.Release();
                     }
                 }
             }
@@ -713,12 +719,12 @@ namespace Voron.Impl.Journal
                 // to read the most updated version)
                 foreach (var journalFile in unusedJournalFiles.OrderBy(x => x.Number))
                 {
-                    journalFile.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
+                    journalFile.FreeScratchPagesOlderThan(txw, _lastFlushedTransactionId);
                 }
 
                 foreach (var jrnl in _waj._files.OrderBy(x => x.Number))
                 {
-                    jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
+                    jrnl.FreeScratchPagesOlderThan(txw, _lastFlushedTransactionId);
                 }
             }
 
@@ -855,20 +861,21 @@ namespace Voron.Impl.Journal
 
                 var current = _waj._files.First();
 
-                if (current.Number != _lastSyncedJournal)
-                    throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile?.Number ?? -1, _lastSyncedJournal));
+                if (current.Number != _lastFlushedJournalId)
+                    throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile?.Number ?? -1, _lastFlushedJournalId));
 
 
-                if (_waj._env.NextWriteTransactionId - 1 != _lastSyncedTransactionId)
+                if (_waj._env.NextWriteTransactionId - 1 != _lastFlushedTransactionId)
                     throw new InvalidOperationException("Cannot delete current journal because it hasn't synced everything up to the last write transaction");
 
                 _waj._files = _waj._files.RemoveFront(1);
                 _waj.CurrentFile = null;
 
+                _waj._headerAccessor.Modify(header => _waj._updateLogInfo(header));
+
                 current.DeleteOnClose = true;
                 current.Release();
 
-                _waj._headerAccessor.Modify(header => _waj._updateLogInfo(header));
             }
         }
 

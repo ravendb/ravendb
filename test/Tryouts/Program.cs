@@ -26,9 +26,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var x = new FastTests.Client.Indexing.IndexesFromClient())
+                using (var x = new SlowTests.Tests.Indexes.OldIndexRunWhileNewIndexesAreRunning())
                 {
-                    x.GetStats().Wait();
+                    x.ShouldWork();
                 }
             }
         }
