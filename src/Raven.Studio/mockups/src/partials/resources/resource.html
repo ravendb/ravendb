@@ -13,7 +13,7 @@
                 </h3>
             </div>
             <div class="col-xs-12 col-sm-12 col-xl-6  vertical-divider properties-container">
-
+                {{#if size}}
                 <div class="properties-item">
                     <div class="properties-value value-only">
                         <div class="set-size">
@@ -22,6 +22,7 @@
                         </div>
                     </div>
                 </div>
+                {{/if}}
 
                 {{#if docs}}
                 <div class="properties-item">
@@ -111,19 +112,29 @@
                 <div class="actions">
                     <div class="btn-toolbar pull-right-sm" role="toolbar">
                         <div class="btn-group">
+                            {{#ifEq stateText 'offline' }}
+                                <button class="btn btn-default">
+                                    <i class="icon-load"></i>
+                                    <span>Load</span>
+                                </button>
+                            {{/ifEq}}
                             {{#ifEq stateText 'disabled' }}
-                            <button class="btn btn-default">
-                                <i class="icon-unlock"></i>
-                                <span>Enable</span>
-                            </button> {{else}}
-                            <button class="btn btn-default">
-                                <i class="icon-lock"></i>
-                                <span>Disable</span>
-                            </button> {{/ifEq}}
+                                <button class="btn btn-default">
+                                    <i class="icon-unlock"></i>
+                                    <span>Enable</span>
+                                </button>
+                            {{/ifEq}}
+                            {{#ifEq stateText 'online' }}
+                                <button class="btn btn-default">
+                                    <i class="icon-lock"></i>
+                                    <span>Disable</span>
+                                </button>
+                            {{/ifEq}}
+                            {{#ifEq stateText 'online' 'disabled'}}
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <span class="caret"></span>
-                            <span class="sr-only">Toggle Dropdown</span>
-                        </button>
+                                <span class="caret"></span>
+                                <span class="sr-only">Toggle Dropdown</span>
+                            </button>
                             <ul class="dropdown-menu">
                                 <li>
                                     <a href="#">
@@ -136,6 +147,7 @@
                                     </a>
                                 </li>
                             </ul>
+                            {{/ifEq}}
                         </div>
                         <button class="btn btn-danger">
                             <i class="icon-trash"></i>
