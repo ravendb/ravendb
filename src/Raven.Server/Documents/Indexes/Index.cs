@@ -1499,10 +1499,14 @@ namespace Raven.Server.Documents.Indexes
         public bool CanContinueBatch(IndexingStatsScope stats)
         {
             stats.RecordMapAllocations(_threadAllocations.Allocations);
+            
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
             {
                 if (TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), stats) == false)
                 {
+                    if (stats.MapAttempts < DocumentDatabase.Configuration.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
+                        return true;
+
                     stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
                     return false;
                 }
