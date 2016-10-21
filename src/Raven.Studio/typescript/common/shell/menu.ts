@@ -74,7 +74,7 @@ class menu {
             const leafItem = $data as leafMenuItem;
             require([leafItem.moduleId],
                 (viewModel: any) => {
-                    app.showDialog(new viewModel);
+                    app.showBootstrapDialog(new viewModel);
                 });
         } else {
             let a = $event.currentTarget as HTMLAnchorElement;

@@ -71,7 +71,7 @@ class search extends viewModelBase {
         searchSingleInputClauseViewModel
             .applyFilterTask
                 .done((input: string) => this.addToSearchInput("__fileName:" + queryUtil.escapeTerm(input) + "*"));
-        app.showDialog(searchSingleInputClauseViewModel);
+        app.showBootstrapDialog(searchSingleInputClauseViewModel);
     }
 
     fileNameEndsWith() {
@@ -79,7 +79,7 @@ class search extends viewModelBase {
         searchSingleInputClauseViewModel
             .applyFilterTask
                 .done((input: string) => this.addToSearchInput("__rfileName:" + queryUtil.escapeTerm(String.prototype.reverse(input)) + "*"));
-        app.showDialog(searchSingleInputClauseViewModel);
+        app.showBootstrapDialog(searchSingleInputClauseViewModel);
     }
 
     fileSizeBetween() {
@@ -87,7 +87,7 @@ class search extends viewModelBase {
         searchFileSizeRangeClauseViewModel
             .applyFilterTask
             .done((input: string) => this.addToSearchInput(input));
-        app.showDialog(searchFileSizeRangeClauseViewModel);
+        app.showBootstrapDialog(searchFileSizeRangeClauseViewModel);
     }
 
     hasMetadata() {
@@ -95,7 +95,7 @@ class search extends viewModelBase {
         searchHasMetadataClauseViewModel
             .applyFilterTask
                 .done((input: string) => this.addToSearchInput(queryUtil.escapeTerm(input)));
-        app.showDialog(searchHasMetadataClauseViewModel);
+        app.showBootstrapDialog(searchHasMetadataClauseViewModel);
     }
 
     inFolder() {
@@ -109,7 +109,7 @@ class search extends viewModelBase {
                 var escaped = queryUtil.escapeTerm(input);
                 this.addToSearchInput("__directoryName:" + escaped);
             });
-        app.showDialog(inFolderViewModel);
+        app.showBootstrapDialog(inFolderViewModel);
     }
 
     lastModifiedBetween() {
@@ -117,7 +117,7 @@ class search extends viewModelBase {
         searchLastModifiedBetweenClauseViewModel
             .applyFilterTask
             .done((input: string) => this.addToSearchInput(input));
-        app.showDialog(searchLastModifiedBetweenClauseViewModel);
+        app.showBootstrapDialog(searchLastModifiedBetweenClauseViewModel);
     }
 
     addToSearchInput(input: string) {
@@ -134,23 +134,23 @@ class search extends viewModelBase {
             .fetch(0, 1)
             .done((results: pagedResultSet<any>) => {
                 if (results.totalResultCount === 0) {
-                    app.showMessage("There are no files matching your query.", "Nothing to do");
+                    app.showBootstrapMessage("There are no files matching your query.", "Nothing to do");
                 } else {
                     this.promptDeleteFilesMatchingQuery(results.totalResultCount);
-}
+                }
             });
     }
 
     promptDeleteFilesMatchingQuery(resultCount: number) {
         var viewModel = new deleteFilesMatchingQueryConfirm(this.searchText(), resultCount, this.activeFilesystem());
         app
-            .showDialog(viewModel)
+            .showBootstrapDialog(viewModel)
             .done(() => this.search());
     }
 
     resetIndex() {
         var resetIndexVm = new resetIndexConfirm(this.activeFilesystem());
-        app.showDialog(resetIndexVm);
+        app.showBootstrapDialog(resetIndexVm);
     }
 }
 

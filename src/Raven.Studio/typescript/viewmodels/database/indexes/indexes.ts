@@ -240,7 +240,7 @@ class indexes extends viewModelBase {
     private promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
             const deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
-            app.showDialog(deleteIndexesVm);
+            app.showBootstrapDialog(deleteIndexesVm); 
             deleteIndexesVm.deleteTask
                 .done((deleted: boolean) => {
                     if (deleted) {
@@ -325,7 +325,7 @@ class indexes extends viewModelBase {
 
     cancelSideBySideIndex(i: index) {
         const cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([i.name], this.activeDatabase());
-        app.showDialog(cancelSideBySideIndexViewModel);
+        app.showBootstrapDialog(cancelSideBySideIndexViewModel);
         cancelSideBySideIndexViewModel.cancelTask
             .done((closedWithoutDeletion: boolean) => {
                 if (!closedWithoutDeletion) {

@@ -65,11 +65,6 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
    attached() {
        super.attached();
        $("#docIdInput").focus();
-       var that = this;
-       jwerty.key("esc", e => {
-           e.preventDefault();
-           dialog.close(that);
-       }, this, this.dialogSelectorName == "" ? dialogViewModelBase.dialogSelector : this.dialogSelectorName);
    }
 
     fetchDocumentIdAutocompletes(query: string) {

@@ -319,7 +319,7 @@ class editDocument extends viewModelBase {
 
     toggleNewlineMode() {
         if (this.isNewLineFriendlyMode() === false && parseInt(this.documentSize().replace(",", "")) > 1024) {
-            app.showMessage("This operation might take long time with big documents, are you sure you want to continue?", "Toggle newline mode", ["Cancel", "Continue"])
+            app.showBootstrapMessage("This operation might take long time with big documents, are you sure you want to continue?", "Toggle newline mode", ["Cancel", "Continue"])
                 .then((dialogResult: string) => {
                     if (dialogResult === "Continue") {
                         this.isNewLineFriendlyMode.toggle();
@@ -493,7 +493,7 @@ class editDocument extends viewModelBase {
         if (doc) {
             const viewModel = new deleteDocuments([doc], this.activeDatabase());
             viewModel.deletionTask.done(() => this.connectedDocuments.onDocumentDeleted());
-            app.showDialog(viewModel, editDocument.editDocSelector);
+            app.showBootstrapDialog(viewModel, editDocument.editDocSelector);
         } 
     }
 
@@ -532,7 +532,7 @@ class editDocument extends viewModelBase {
         const generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
         const deffered = generate.execute();
         deffered.done((code: string) => {
-            app.showDialog(new showDataDialog("Generated Class", code));
+            app.showBootstrapDialog(new showDataDialog("Generated Class", code));
         });
     }
 }

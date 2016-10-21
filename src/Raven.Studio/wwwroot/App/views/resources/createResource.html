@@ -1,42 +1,45 @@
-<div class="messageBox" tabindex="-1" style="min-width: 500px;">
-    <form id="createDbForm" data-bind="submit: nextOrCreate">
-        <div class="modal-header">
-            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true"></button>
-            <h4 class="modal-title">Create 
-                <span data-bind="text: resourceType" style="font-weight: bold"></span>
-            </h4>
-        </div>
-        <div class="modal-body" style="max-height: 600px; overflow: auto">
-            <div class="form-group">
-                <label>Resource type</label>
-                <div class="text-center">
-                    <div class="btn-group" data-toggle="buttons">
-                        <!--ko foreach: resourceTypes-->
-                        <label class="btn" data-bind="attr: { title: $data.title }, css: { 'btn-primary': $data.resourceType === $parent.checkedResource(), 'btn-default': $data.resourceType !== $parent.checkedResource() }">
-                            <input type="radio" name="radio" data-bind="checkedValue: $data.resourceType, bsChecked: $parent.checkedResource">
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i data-bind="attr: { class: $data.iconName }">&nbsp;&nbsp;&nbsp;</i><br/>
-                        </label>
-                        <!-- /ko -->
+<div class="modal-dialog" role="document">
+    <div class="modal-content modal-lg">
+        <form id="createDbForm" data-bind="submit: nextOrCreate">
+            <div class="modal-header">
+                <button type="button" class="close" data-bind="click: cancel" aria-hidden="true"></button>
+                <h4 class="modal-title">
+                    Create
+                    <span data-bind="text: resourceType" style="font-weight: bold"></span>
+                </h4>
+            </div>
+            <div class="modal-body" style="max-height: 600px; overflow: auto">
+                <div class="form-group">
+                    <label>Resource type</label>
+                    <div class="text-center">
+                        <div class="btn-group" data-toggle="buttons">
+                            <!--ko foreach: resourceTypes-->
+                            <label class="btn" data-bind="attr: { title: $data.title }, css: { 'btn-primary': $data.resourceType === $parent.checkedResource(), 'btn-default': $data.resourceType !== $parent.checkedResource() }">
+                                <input type="radio" name="radio" data-bind="checkedValue: $data.resourceType, bsChecked: $parent.checkedResource">
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i data-bind="attr: { class: $data.iconName }">&nbsp;&nbsp;&nbsp;</i><br />
+                            </label>
+                            <!-- /ko -->
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div id="dbContainer" class="row" style="min-height: 460px;" data-bind="with: createDatabasePart, visible: checkedResource() == databaseType">
-                <div data-bind="compose: 'resources/createDatabase.html'"></div>
+                <div id="dbContainer" class="row" style="min-height: 460px;" data-bind="with: createDatabasePart, visible: checkedResource() == databaseType">
+                    <div data-bind="compose: 'resources/createDatabase.html'"></div>
+                </div>
+                <div id="fsContainer" class="row" style="min-height: 460px;" data-bind="with: createFileSystemPart, visible: checkedResource() == fileSystemType">
+                    <div data-bind="compose: 'resources/createFilesystem.html'"></div>
+                </div>
+                <div id="csContainer" class="row" style="min-height: 460px;" data-bind="with: createCounterStoragePart, visible: checkedResource() == counterStorageType">
+                    <div data-bind="compose: 'resources/createCounterStorage.html'"></div>
+                </div>
+                <div id="tsContainer" class="row" style="min-height: 460px;" data-bind="with: createTimeSeriesPart, visible: checkedResource() == timeSeriesType">
+                    <div data-bind="compose: 'resources/createTimeSeries.html'"></div>
+                </div>
             </div>
-            <div id="fsContainer" class="row" style="min-height: 460px;" data-bind="with: createFileSystemPart, visible: checkedResource() == fileSystemType">
-                <div data-bind="compose: 'resources/createFilesystem.html'"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create</button>
             </div>
-            <div id="csContainer" class="row" style="min-height: 460px;" data-bind="with: createCounterStoragePart, visible: checkedResource() == counterStorageType">
-                <div data-bind="compose: 'resources/createCounterStorage.html'"></div>
-            </div>
-            <div id="tsContainer" class="row" style="min-height: 460px;" data-bind="with: createTimeSeriesPart, visible: checkedResource() == timeSeriesType">
-                <div data-bind="compose: 'resources/createTimeSeries.html'"></div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary">Create</button>
-        </div>
-    </form>
+        </form>
+    </div>
 </div>

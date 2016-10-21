@@ -104,7 +104,7 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
                 } else if ("Reason" in response) {
                     msg += ": " + response.Reason;
                 }
-            app.showMessage(msg, "Error");
+                app.showBootstrapMessage(msg, "Error");
         });
     }
     

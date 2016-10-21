@@ -1,47 +1,49 @@
-<div class="messageBox" tabindex="-1">
-    <div class="modal-header">
-        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
-            <i class="fa fa-times"></i>
-        </button>
-        <h4 class="modal-title">Map batch information</h4>
-    </div>
-    <div class="modal-body">
-        <table class="table table-condensed table-striped" data-bind="with: indexingBatchInfo">
-            <thead>
-                <tr>
-                    <th>Batch type</th>
-                    <th data-bind="text: BatchType"></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Indexes to work on</td>
-                    <td>
-                        <ul data-bind="foreach: IndexesToWorkOn">
-                            <li data-bind="text: $data"></li>
-                        </ul>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Total document count</td>
-                    <td data-bind="text: TotalDocumentCount.toLocaleString(2)"></td>
-                </tr>
-                <tr>
-                    <td>Total document size</td>
-                    <td data-bind="text: TotalDocumentSize.toLocaleString(2)"></td>
-                </tr>
-                <tr>
-                    <td>Started at</td>
-                    <td data-bind="text: StartedAt"></td>
-                </tr>
-                <tr>
-                    <td>Total duration [ms]</td>
-                    <td data-bind="text: TotalDurationMs.toLocaleString(2)"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-bind="click: cancel">Close</button>
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                <i class="fa fa-times"></i>
+            </button>
+            <h4 class="modal-title">Map batch information</h4>
+        </div>
+        <div class="modal-body">
+            <table class="table table-condensed table-striped" data-bind="with: indexingBatchInfo">
+                <thead>
+                    <tr>
+                        <th>Batch type</th>
+                        <th data-bind="text: BatchType"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Indexes to work on</td>
+                        <td>
+                            <ul data-bind="foreach: IndexesToWorkOn">
+                                <li data-bind="text: $data"></li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Total document count</td>
+                        <td data-bind="text: TotalDocumentCount.toLocaleString(2)"></td>
+                    </tr>
+                    <tr>
+                        <td>Total document size</td>
+                        <td data-bind="text: TotalDocumentSize.toLocaleString(2)"></td>
+                    </tr>
+                    <tr>
+                        <td>Started at</td>
+                        <td data-bind="text: StartedAt"></td>
+                    </tr>
+                    <tr>
+                        <td>Total duration [ms]</td>
+                        <td data-bind="text: TotalDurationMs.toLocaleString(2)"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Close</button>
+        </div>
     </div>
 </div>

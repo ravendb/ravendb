@@ -1,18 +1,21 @@
-<div class="messageBox" tabindex="-1"  data-bind="style: { width: width() + 'px', height: height() + 'px', 'marginLeft': left() + 'px', 'marginTop': top() + 'px' }">
-    <div class="modal-header">
-        <button type="button" class="close" data-bind="click: close" aria-hidden="true"></button>
-        <h4 class="modal-title">Copy documents</h4>
-    </div>
-    <div class="modal-body" data-bind="style: { height: bodyHeight() + 'px' }">
-        <h4><strong>CTRL+C, Enter</strong><span> to copy</span></h4>
-        <ul class="nav nav-tabs">
-            <li data-bind="click: activateDocs, css: { active: isCopyingDocs}"><a style="cursor: pointer;">Docs</a></li>
-            <li data-bind="click: activateIds, css: { active: isCopyingDocs() === false }"><a style="cursor: pointer;">Ids</a></li>
-        </ul>
-        <textarea id="documentsText" rows="10" style="width: 100%; resize: none" class="form-control" autofocus="autofocus" data-bind="style : { height: (bodyHeight() - 110) + 'px' }, value: documentsOrIdsText, event: { focus: function () { $(this).select(); } }" />
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-bind="click: close">Close</button>
-        <span class="dialogResizer"></span>
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="fa fa-times"></i>
+            </button>
+            <h4 class="modal-title">Copy documents</h4>
+        </div>
+        <div class="modal-body">
+            <h4><strong>CTRL+C, Enter</strong><span> to copy</span></h4>
+            <ul class="nav nav-tabs">
+                <li data-bind="click: activateDocs, css: { active: isCopyingDocs}"><a style="cursor: pointer;">Docs</a></li>
+                <li data-bind="click: activateIds, css: { active: isCopyingDocs() === false }"><a style="cursor: pointer;">Ids</a></li>
+            </ul>
+            <textarea id="documentsText" rows="10" style="width: 100%; resize: none" class="form-control" autofocus="autofocus" data-bind="value: documentsOrIdsText, event: { focus: function () { $(this).select(); } }" />
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-bind="click: close">Close</button>
+        </div>
     </div>
 </div>

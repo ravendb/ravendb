@@ -22,7 +22,6 @@ class copyDocuments extends dialogViewModelBase {
 
     attached() {
         super.attached();
-        this.registerResizing("copyDocumentsResize");
         this.selectText();
 
         jwerty.key("CTRL+C, enter", e => {
@@ -42,11 +41,6 @@ class copyDocuments extends dialogViewModelBase {
 
     close() {
         dialog.close(this);
-    }
-
-    detached() {
-        super.detached();
-        this.unregisterResizing("copyDocumentsResize");
     }
 
     activateDocs() {

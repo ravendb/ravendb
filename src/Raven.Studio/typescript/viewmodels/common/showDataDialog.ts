@@ -9,7 +9,6 @@ class showDataDialog extends dialogViewModelBase {
     
     attached() {
         super.attached();
-        this.registerResizing("documentsResize");
         this.selectText();
 
         //TODO: create createKeyboardShortcut in dialog view model base and use it
@@ -21,12 +20,8 @@ class showDataDialog extends dialogViewModelBase {
     }
 
     deactivate() {
+        //TODO: call super?
         $("#inputData").unbind('keydown.jwerty');
-    }
-
-    detached() {
-        super.detached();
-        this.unregisterResizing("documentsResize");
     }
 
     selectText() {

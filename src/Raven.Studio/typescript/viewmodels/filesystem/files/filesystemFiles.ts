@@ -354,7 +354,7 @@ class filesystemFiles extends viewModelBase {
             this.addedFolder(newNode);
         });
 
-        app.showDialog(createFolderVm);
+        app.showBootstrapDialog(createFolderVm);
     }
 
     refresh() {
@@ -401,7 +401,7 @@ class filesystemFiles extends viewModelBase {
                 selectedItem.setId(newName);
                 grid.refreshCollectionData();
             });
-            app.showDialog(dialog);
+            app.showBootstrapDialog(dialog);
         }
     }
 
@@ -488,7 +488,7 @@ class filesystemFiles extends viewModelBase {
                 .execute()
                 .done((results: pagedResultSet<any>) => {
                 if (results.totalResultCount === 0) {
-                    app.showMessage("There are no files matching your query.", "Nothing to do");
+                    app.showBootstrapMessage("There are no files matching your query.", "Nothing to do");
                 } else {
                     this.promptDeleteFilesMatchingQuery(results.totalResultCount, query);
                 }
@@ -498,7 +498,7 @@ class filesystemFiles extends viewModelBase {
 
     promptDeleteFilesMatchingQuery(resultCount: number, query: string) {
         var viewModel = new deleteFilesMatchingQueryConfirm(query, resultCount, this.activeFilesystem());
-        app.showDialog(viewModel);
+        app.showBootstrapDialog(viewModel);
         viewModel.deletionTask.done(() => this.loadFiles());
     }
 }

@@ -192,7 +192,7 @@ class createResource extends dialogViewModelBase {
                     };
                     encryptionDeferred.resolve(securedSettings);
                 });
-            app.showDialog(createEncryptionViewModel);
+            app.showBootstrapDialog(createEncryptionViewModel);
         } else {
             encryptionDeferred.resolve();
         }
@@ -209,7 +209,7 @@ class createResource extends dialogViewModelBase {
                         var createEncryptionConfirmationViewModel = new createEncryptionConfirmation(savedKey);
                         createEncryptionConfirmationViewModel.dialogPromise.done(() => encryptionConfirmationDialogPromise.resolve());
                         createEncryptionConfirmationViewModel.dialogPromise.fail(() => encryptionConfirmationDialogPromise.reject());
-                        app.showDialog(createEncryptionConfirmationViewModel);
+                        app.showBootstrapDialog(createEncryptionConfirmationViewModel);
                     } else {
                         encryptionConfirmationDialogPromise.resolve();
                     }
@@ -222,7 +222,7 @@ class createResource extends dialogViewModelBase {
                                 // (it isn't recalculated when dialog is already opened)
                                 setTimeout(() => {
                                     var settingsDialog = new databaseSettingsDialog(bundles);
-                                    app.showDialog(settingsDialog);
+                                    app.showBootstrapDialog(settingsDialog);
                                 }, 1);
                             });
                         }
@@ -307,7 +307,7 @@ class createResource extends dialogViewModelBase {
                     };
                     encryptionDeferred.resolve(securedSettings);
                 });
-            app.showDialog(createEncryptionViewModel);
+            app.showBootstrapDialog(createEncryptionViewModel);
         } else {
             encryptionDeferred.resolve();
         }
@@ -324,7 +324,7 @@ class createResource extends dialogViewModelBase {
                         var createEncryptionConfirmationViewModel = new createEncryptionConfirmation(savedKey);
                         createEncryptionConfirmationViewModel.dialogPromise.done(() => encryptionConfirmationDialogPromise.resolve());
                         createEncryptionConfirmationViewModel.dialogPromise.fail(() => encryptionConfirmationDialogPromise.reject());
-                        app.showDialog(createEncryptionConfirmationViewModel);
+                        app.showBootstrapDialog(createEncryptionConfirmationViewModel);
                     } else {
                         encryptionConfirmationDialogPromise.resolve();
                     }
@@ -333,7 +333,7 @@ class createResource extends dialogViewModelBase {
                         if (bundles.contains("Versioning")) {
                             encryptionConfirmationDialogPromise.always(() => {
                                 var settingsDialog = new filesystemSettingsDialog(bundles);
-                                app.showDialog(settingsDialog);
+                                app.showBootstrapDialog(settingsDialog);
                             });
                         }
                     });

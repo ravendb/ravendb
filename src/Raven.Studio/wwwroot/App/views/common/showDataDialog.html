@@ -1,17 +1,20 @@
-<div class="messageBox" tabindex="-1"  data-bind="style: { width: width() + 'px', height: height() + 'px', 'marginLeft': left() + 'px', 'marginTop': top() + 'px' }">
-    <div class="modal-header">
-        <button type="button" class="close glyphicon glyphicon-remove remove-icon" data-bind="click: close" aria-hidden="true"></button>
-        <h4 class="modal-title" data-bind="text: title"></h4>
-    </div>
-    <div class="modal-body">
-        <h4><strong>CTRL+C, </strong>to copy</h4>
-        <div>
-            <textarea data-bind="text: inputData, event: { focus: function () { $(this).select(); } },style : { height: (bodyHeight() - 110) + 'px' } " id="inputData" rows="13" style="width: 100%; resize: none" class="form-control" autofocus="autofocus"></textarea>
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="fa fa-times"></i>
+            </button>
+            <h4 class="modal-title" data-bind="text: title"></h4>
         </div>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-bind="click: close">Close</button>
-        <span class="dialogResizer"></span>
-    </div>
+        <div class="modal-body">
+            <h4><strong>CTRL+C, </strong>to copy</h4>
+            <div>
+                <textarea data-bind="text: inputData, event: { focus: function () { $(this).select(); } }" id="inputData" rows="13" style="width: 100%; resize: none" class="form-control" autofocus="autofocus"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-bind="click: close">Close</button>
+        </div>
 
+    </div>
 </div>

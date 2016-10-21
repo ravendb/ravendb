@@ -23,9 +23,6 @@ class selectColumns extends dialogViewModelBase {
     private completionSearchSubscriptions: Array<KnockoutSubscription> = [];
     private autoCompleterSupport: autoCompleterSupport;
     private columnsNames = ko.observableArray<string>([]);
-    maxTableHeight = ko.observable<number>();
-    lineHeight: number = 51;
-    isScrollNeeded: KnockoutComputed<boolean>;
 
     constructor(private customColumns: customColumns, private customFunctions: customFunctions, private context: any, private database: database, names: string[]) {
         super();
@@ -34,23 +31,6 @@ class selectColumns extends dialogViewModelBase {
         this.regenerateBindingSubscriptions();
         this.monitorForNewRows();
         this.autoCompleterSupport = new autoCompleterSupport(this.autoCompleteBase, this.autoCompleteResults, true);
-        this.maxTableHeight(Math.floor($(window).height() * 0.43));
-        
-        $(window).resize(() => {
-            this.maxTableHeight(Math.floor($(window).height() * 0.43));
-            this.alignBoxVertically();
-        });
-
-        this.isScrollNeeded = ko.computed(() => {
-            var currentColumnsCount = this.customColumns.columns().length;
-            var currentColumnHeight = currentColumnsCount * this.lineHeight;
-
-            if (currentColumnHeight > this.maxTableHeight()) {
-                return true;
-            }
-
-            return false;
-        });
     }
 
     private generateCompletionBase() {
@@ -142,18 +122,10 @@ class selectColumns extends dialogViewModelBase {
 
     insertNewRow() {
         this.customColumns.columns.push(customColumnParams.empty());
-
-        if (!this.isScrollNeeded()) {
-            this.alignBoxVertically();
-        }
     }
 
     deleteRow(row: customColumnParams) {
         this.customColumns.columns.remove(row);
-
-        if (!this.isScrollNeeded()) {
-             this.alignBoxVertically();
-        }
     }
 
     moveUp(row: customColumnParams) {
@@ -175,7 +147,6 @@ class selectColumns extends dialogViewModelBase {
     customScheme(val: boolean) {
         if (this.customColumns.customMode() != val) {
             this.customColumns.customMode(val);
-            this.alignBoxVertically();
         }
     }
 

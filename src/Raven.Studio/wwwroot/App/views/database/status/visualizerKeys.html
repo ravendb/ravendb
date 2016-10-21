@@ -1,27 +1,29 @@
-<div class="messageBox" tabindex="-1" style="width: 500px;">
-    <div class="modal-header">
-        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
-            <i class="fa fa-times"></i>
-        </button>
-        <h4 class="modal-title">Document Ids and Reduce Keys</h4>
-    </div>
-    <div class="modal-body" data-bind="with: visualizer">
-        <div class="row">
-            <div class="col-lg-6">
-                <h4>Document Ids (<span data-bind="text: docKeys().length"></span>)</h4>
-                <ul data-bind="foreach: docKeys">
-                    <li data-bind="text: $data"></li>
-                </ul>
-            </div>
-            <div class="col-lg-6">
-                <h4>Reduce Keys (<span data-bind="text: reduceKeys().length"></span>)</h4>
-                <ul data-bind="foreach: reduceKeys">
-                    <li data-bind="text: $data"></li>
-                </ul>
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                <i class="fa fa-times"></i>
+            </button>
+            <h4 class="modal-title">Document Ids and Reduce Keys</h4>
+        </div>
+        <div class="modal-body" data-bind="with: visualizer">
+            <div class="row">
+                <div class="col-lg-6">
+                    <h4>Document Ids (<span data-bind="text: docKeys().length"></span>)</h4>
+                    <ul data-bind="foreach: docKeys">
+                        <li data-bind="text: $data"></li>
+                    </ul>
+                </div>
+                <div class="col-lg-6">
+                    <h4>Reduce Keys (<span data-bind="text: reduceKeys().length"></span>)</h4>
+                    <ul data-bind="foreach: reduceKeys">
+                        <li data-bind="text: $data"></li>
+                    </ul>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-bind="click: cancel">Close</button>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Close</button>
+        </div>
     </div>
 </div>

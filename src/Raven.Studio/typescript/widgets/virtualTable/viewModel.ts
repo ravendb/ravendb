@@ -747,7 +747,7 @@ class ctor {
         var selectedDocs = this.getSelectedItems();
         var copyDocumentsVm = new copyDocuments(selectedDocs, this.focusableGridSelector);
         copyDocumentsVm.isCopyingDocs(idsOnly === false);
-        app.showDialog(copyDocumentsVm);
+        app.showBootstrapDialog(copyDocumentsVm);
     }
 
     getSelectedItems(max?: number): Array<any> {
@@ -791,7 +791,7 @@ class ctor {
             // with changes api. Now we don't use changes api to update the documents list, so this isn't a problem.
             this.onWindowHeightChanged();
         });
-        app.showDialog(deleteDocsVm);
+        app.showBootstrapDialog(deleteDocsVm);
     }
 
     getDocumentHref(documentId: string): string {
