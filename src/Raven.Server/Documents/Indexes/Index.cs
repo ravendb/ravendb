@@ -674,6 +674,8 @@ namespace Raven.Server.Documents.Indexes
             if (Priority.HasFlag(IndexingPriority.Error) || writeErrors < WriteErrorsLimit)
                 return;
 
+            // TODO we should create notification here?
+
             SetPriority(IndexingPriority.Error);
         }
 
@@ -681,6 +683,8 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_logger.IsOperationsEnabled)
                 _logger.Operations($"Data corruption occured for '{Name}' ({IndexId}).", e);
+
+            // TODO we should create notification here?
 
             SetPriority(IndexingPriority.Error);
         }
@@ -692,6 +696,8 @@ namespace Raven.Server.Documents.Indexes
 
             if (_logger.IsOperationsEnabled)
                 _logger.Operations(failureInformation.GetErrorMessage());
+
+            // TODO we should create notification here?
 
             SetPriority(IndexingPriority.Error);
         }
