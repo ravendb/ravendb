@@ -346,12 +346,8 @@ namespace Raven.Server
             if (_disposed)
                 return;
             _disposed = true;
-            Console.WriteLine("Starting dispose");
-            var sp = Stopwatch.StartNew();
             Metrics?.Dispose();
-            Console.WriteLine(sp.Elapsed);
             _webHost?.Dispose();
-            Console.WriteLine("Disposed server");
             if (_tcpListenerTask != null)
             {
                 if (_tcpListenerTask.IsCompleted)
@@ -374,9 +370,7 @@ namespace Raven.Server
                     }
                 }
             }
-            Console.WriteLine("Disposed tcp");
             ServerStore?.Dispose();
-            Console.WriteLine("Disposed server store");
             Timer?.Dispose();
         }
 

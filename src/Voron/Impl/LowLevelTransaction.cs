@@ -517,7 +517,8 @@ namespace Voron.Impl
 
             var totalNumberOfAllocatedPages = _allocatedPagesInTransaction + _overflowPagesInTransaction;
             if (totalNumberOfAllocatedPages > 0 || // nothing changed in this transaction
-                (this.IsLazyTransaction == false && this._journal != null && this._journal.HasDataInLazyTxBuffer()))  // allow call to writeToJournal for flushing lazy tx
+                // allow call to writeToJournal for flushing lazy tx
+                (IsLazyTransaction == false &&  _journal?.HasDataInLazyTxBuffer() == true)) 
             {
                 var numberOfWrittenPages = _journal.WriteToJournal(this, totalNumberOfAllocatedPages + PagesTakenByHeader);
                 FlushedToJournal = true;
