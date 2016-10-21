@@ -1,41 +1,43 @@
-<div class="messageBox" tabindex="-1" style="width: 700px">
-    <div class="modal-header">
-        <button type="button" class="close" data-bind="click: close" aria-hidden="true">
-            <i class="fa fa-times"></i>
-        </button>
-        <h4 class="modal-title">Replace index: <span data-bind="text: indexName"></span></h4>
-    </div>
-    <div class="modal-body">
-        <form class="form-horizontal" role="form" id="replaceIndexForm">
-            <div class="form-group">
-                <label class="col-md-4 control-label">Replace conditions:</label>
-                <div class="col-md-8">
-                    <button type="button" class="btn btn-default" disabled="disabled">
-                        <i data-bind="css: { 'fa-check': true }" class="fa fa-fw"></i> When new index become non-stale
-                    </button>
-                    <button type="button" class="btn btn-default" data-bind="click: toggleEtagMode">
-                        <i data-bind="css: { 'fa-check': etagMode() }" class="fa fa-fw"></i> index etag reaches last indexed etag of old index
-                    </button>
-                    <button type="button" class="btn btn-default" data-bind="click: toggleDateMode">
-                        <i data-bind="css: { 'fa-check': dateMode() }" class="fa fa-fw"></i> date is reached
-                    </button>
-                </div>
-            </div>
-            <div class="form-group" data-bind="visible: dateMode()">
-                <label class="col-md-4 control-label">Replacement date (UTC):</label>
-                <div class="col-md-8">
-                    <div class="input-group date" data-bind="datePicker: replaceDate">
-                        <input id="replaceDate" type="text"  class="form-control" data-bind="value: replaceDateText" />
-                        <span class="input-group-addon">
-                            <span class="fa fa-calendar"></span>
-                        </span>
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1" style="width: 700px">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="fa fa-times"></i>
+            </button>
+            <h4 class="modal-title">Replace index: <span data-bind="text: indexName"></span></h4>
+        </div>
+        <div class="modal-body">
+            <form class="form-horizontal" role="form" id="replaceIndexForm">
+                <div class="form-group">
+                    <label class="col-md-4 control-label">Replace conditions:</label>
+                    <div class="col-md-8">
+                        <button type="button" class="btn btn-default" disabled="disabled">
+                            <i data-bind="css: { 'fa-check': true }" class="fa fa-fw"></i> When new index become non-stale
+                        </button>
+                        <button type="button" class="btn btn-default" data-bind="click: toggleEtagMode">
+                            <i data-bind="css: { 'fa-check': etagMode() }" class="fa fa-fw"></i> index etag reaches last indexed etag of old index
+                        </button>
+                        <button type="button" class="btn btn-default" data-bind="click: toggleDateMode">
+                            <i data-bind="css: { 'fa-check': dateMode() }" class="fa fa-fw"></i> date is reached
+                        </button>
                     </div>
                 </div>
-            </div>
-        </form>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-bind="click: close">Close</button>
-        <button type="submit" class="btn btn-primary" data-bind="click: saveReplace, enable: saveEnabled">Save</button>
+                <div class="form-group" data-bind="visible: dateMode()">
+                    <label class="col-md-4 control-label">Replacement date (UTC):</label>
+                    <div class="col-md-8">
+                        <div class="input-group date" data-bind="datePicker: replaceDate">
+                            <input id="replaceDate" type="text" class="form-control" data-bind="value: replaceDateText" />
+                            <span class="input-group-addon">
+                                <span class="fa fa-calendar"></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: close">Close</button>
+            <button type="submit" class="btn btn-primary" data-bind="click: saveReplace, enable: saveEnabled">Save</button>
+        </div>
     </div>
 </div>

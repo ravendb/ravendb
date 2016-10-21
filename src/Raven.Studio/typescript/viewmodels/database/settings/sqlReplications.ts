@@ -79,7 +79,7 @@ class sqlReplications extends viewModelBase {
         var self = this;
         var action = disable ? "disable" : "enable";
         var actionCapitalized = action.capitalizeFirstLetter();
-        app.showMessage("Are you sure that you want to " + action + " all SQL Replications?", 
+        app.showBootstrapMessage("Are you sure that you want to " + action + " all SQL Replications?", 
                 actionCapitalized + " SQL Replications", ["Cancel", actionCapitalized])
             .then((dialogResult: string) => {
                 if (dialogResult === actionCapitalized) {
@@ -94,7 +94,7 @@ class sqlReplications extends viewModelBase {
 
     showStats(replicationName:string) {
         var viewModel = new sqlReplicationStatsDialog(this.activeDatabase(), replicationName);
-        app.showDialog(viewModel);
+        app.showBootstrapDialog(viewModel);
     }
 
     getSqlReplicationUrl(sqlReplicationName: string) {
@@ -131,13 +131,13 @@ class sqlReplications extends viewModelBase {
                 this.replications.remove(sr);
                 //this.fetchSqlReplications(this.activeDatabase());
             });
-            app.showDialog(viewModel, sqlReplications.sqlReplicationsSelector);
+            app.showBootstrapDialog(viewModel, sqlReplications.sqlReplicationsSelector);
 
         }
     }
 
     resetSqlReplication(replicationId: string) {
-        app.showMessage("You are about to reset this SQL Replication, forcing replication of all collection items", "SQL Replication Reset", ["Cancel", "Reset"])
+        app.showBootstrapMessage("You are about to reset this SQL Replication, forcing replication of all collection items", "SQL Replication Reset", ["Cancel", "Reset"])
             .then((dialogResult: string) => {
                 if (dialogResult === "Reset") {
                     new resetSqlReplicationCommand(this.activeDatabase(), replicationId).execute()

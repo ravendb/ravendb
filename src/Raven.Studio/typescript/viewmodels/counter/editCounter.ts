@@ -93,7 +93,7 @@ class editCounter extends viewModelBase {
             var execute = counterCommand.execute();
             execute.done(() => this.refresh());
         });
-        app.showDialog(counterChangeVm);
+        app.showBootstrapDialog(counterChangeVm);
     }
 
     reset() {
@@ -116,7 +116,7 @@ class editCounter extends viewModelBase {
             var countersUrl = appUrl.forCounterStorageCounters(null, this.activeCounterStorage());
             router.navigate(countersUrl);
         });
-        app.showDialog(viewModel, editCounter.container);
+        app.showBootstrapDialog(viewModel, editCounter.container);
     }
 
     removeFromTopRecentCounters(groupName: string, counterName: string) {

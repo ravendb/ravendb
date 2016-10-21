@@ -76,7 +76,7 @@ class adminLogs extends viewModelBase {
 
         var currentConfig = this.adminLogsConfig() ? this.adminLogsConfig().clone() : this.defaultLogsConfig();
         var adminLogsConfigViewModel = new adminLogsConfigureDialog(currentConfig);
-        app.showDialog(adminLogsConfigViewModel);
+        app.showBootstrapDialog(adminLogsConfigViewModel);
         adminLogsConfigViewModel.configurationTask.done((x: any) => {
             this.adminLogsConfig(x);
             this.reconnect();
@@ -104,7 +104,7 @@ class adminLogs extends viewModelBase {
                     tokenDeferred.resolve();
                 })
                 .fail(() => {
-                    app.showMessage("You are not authorized to trace this resource", "Authorization error");
+                    app.showBootstrapMessage("You are not authorized to trace this resource", "Authorization error");
                 });*/
         } else {
             tokenDeferred.resolve();
@@ -133,7 +133,7 @@ class adminLogs extends viewModelBase {
                 this.connected(false);
             });
         } else {
-            app.showMessage("Cannot disconnect, connection does not exist", "Disconnect");
+            app.showBootstrapMessage("Cannot disconnect, connection does not exist", "Disconnect");
             return $.Deferred().reject();
         }
     }

@@ -1,30 +1,32 @@
-<div class="messageBox" tabindex="-1" style="width: 600px;">
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1" style="width: 600px;">
 
-    <form class="form-inline" data-bind="submit: applyFilter">
-        <div class="modal-header">
-            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
-                <i class="fa fa-times"></i>
-            </button>
-            <h4 class="modal-title">Add search filter</h4>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label>File size between: </label>
-                <div class="input-group">
-                    <input style="width: 120px" type="number" min="0" class="form-control" data-bind="value: inputs[0], valueUpdate: 'afterkeydown'" />
-                    <select style="width: 70px" class="form-control" data-bind="options: units, value: sizeFromUnit, optionsText: 'name'"></select>
-                </div>
-                <label> and: </label>
-                <div class="input-group">
-                    <input style="width: 120px" type="number" min="0" class="form-control" data-bind="value: inputs[1], valueUpdate: 'afterkeydown'" />
-                    <select style="width: 70px" class="form-control" data-bind="options: units, value: sizeToUnit, optionsText: 'name'"></select>
+        <form class="form-inline" data-bind="submit: applyFilter">
+            <div class="modal-header">
+                <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                    <i class="fa fa-times"></i>
+                </button>
+                <h4 class="modal-title">Add search filter</h4>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>File size between: </label>
+                    <div class="input-group">
+                        <input style="width: 120px" type="number" min="0" class="form-control" data-bind="value: inputs[0], valueUpdate: 'afterkeydown'" />
+                        <select style="width: 70px" class="form-control" data-bind="options: units, value: sizeFromUnit, optionsText: 'name'"></select>
+                    </div>
+                    <label> and: </label>
+                    <div class="input-group">
+                        <input style="width: 120px" type="number" min="0" class="form-control" data-bind="value: inputs[1], valueUpdate: 'afterkeydown'" />
+                        <select style="width: 70px" class="form-control" data-bind="options: units, value: sizeToUnit, optionsText: 'name'"></select>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button type="submit" data-bind="enable: enabled()" class="btn btn-primary">Apply</button>
-            <button type="button" class="btn btn-default" data-bind="click: close">Cancel</button>
-        </div>
-    </form>
+            <div class="modal-footer">
+                <button type="submit" data-bind="enable: enabled()" class="btn btn-primary">Apply</button>
+                <button type="button" class="btn btn-default" data-bind="click: close">Cancel</button>
+            </div>
+        </form>
 
+    </div>
 </div>

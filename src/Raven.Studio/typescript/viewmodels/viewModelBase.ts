@@ -250,7 +250,7 @@ class viewModelBase {
     protected confirmationMessage(title: string, confirmationMessage: string, options: string[] = ["No", "Yes"], forceRejectWithResolve: boolean = false): JQueryPromise<confirmDialogResult> {
         const viewTask = $.Deferred<confirmDialogResult>();
 
-        app.showDialog(new confirmationDialog(confirmationMessage, title, options))
+        app.showBootstrapDialog(new confirmationDialog(confirmationMessage, title, options))
             .done((answer) => {
                 var isConfirmed = answer === options.last();
                 if (isConfirmed) {

@@ -464,7 +464,7 @@ class shell extends viewModelBase {
                         .done((latestServerBuildResult: latestServerBuildVersionDto) => {
                             if (latestServerBuildResult.LatestBuild > currentBuildVersion) { //
                                 var latestBuildReminderViewModel = new latestBuildReminder(latestServerBuildResult);
-                                app.showDialog(latestBuildReminderViewModel);
+                                app.showBootstrapDialog(latestBuildReminderViewModel);
                             }
                         });
                 }
@@ -506,7 +506,7 @@ class shell extends viewModelBase {
 
     showApiKeyDialog() {
         var dialog = new enterApiKey();
-        return app.showDialog(dialog).then(() => window.location.href = "#resources");
+        return app.showBootstrapDialog(dialog).then(() => window.location.href = "#resources");
     }
 
     uploadStatusChanged(item: uploadItem) {
@@ -517,7 +517,7 @@ class shell extends viewModelBase {
 
     showLicenseStatusDialog() {
         var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage(), license.hotSpare());
-        app.showDialog(dialog);
+        app.showBootstrapDialog(dialog);
     }
 
     logOut() {

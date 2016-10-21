@@ -252,7 +252,7 @@ class editIndex extends viewModelBase {
                 dialog.getRenameTask()
                     .done(() => this.renameIndex(this.loadedIndexName(), index.Name as string));
 
-                app.showDialog(dialog);
+                app.showBootstrapDialog(dialog);
             } else {
                 this.saveIndex(index);
             }
@@ -369,14 +369,14 @@ class editIndex extends viewModelBase {
     }
 
     copyIndex() {
-        app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
+        app.showBootstrapDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
     }
 
     createCSharpCode() {
         new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.activeDatabase())
             .execute()
             .done((data: string) => {
-              app.showDialog(new showDataDialog("C# Index Definition", data));
+                app.showBootstrapDialog(new showDataDialog("C# Index Definition", data));
             });
     }
 
@@ -561,7 +561,7 @@ class editIndex extends viewModelBase {
                 .always(() => dialog.close(replaceDialog));
         });
 
-        app.showDialog(replaceDialog);
+        app.showBootstrapDialog(replaceDialog);
     }
 }
 

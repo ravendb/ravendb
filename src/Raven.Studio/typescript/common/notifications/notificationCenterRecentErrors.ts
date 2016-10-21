@@ -32,7 +32,7 @@ class notificationCenterRecentErrors {
 
     showErrorsDialog() {
         const errorDetails: recentErrors = new recentErrors(this.recordedErrors);
-        app.showDialog(errorDetails);
+        app.showBootstrapDialog(errorDetails);
     }
 
     showAlert(alert: alertArgs) {
