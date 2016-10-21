@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 
 using Raven.Abstractions;
+using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Exceptions;
 
@@ -128,6 +129,8 @@ namespace Raven.Server.Documents.Indexes
         public TimeSpan Duration => _sw.Elapsed;
 
         public int MapAttempts => _stats.MapAttempts;
+
+        public int ErrorsCount => _stats.Errors?.Count ?? 0;
 
         public IndexingStatsScope For(string name, bool start = true)
         {

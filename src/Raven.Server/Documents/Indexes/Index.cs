@@ -550,6 +550,16 @@ namespace Raven.Server.Documents.Indexes
                                     _logger.Info($"Out of memory occurred for '{Name} ({IndexId})'.", oome);
                                 // TODO [ppekrol] GC?
                             }
+                            catch (InvalidDataException ide)
+                            {
+                                HandleIndexCorruption(ide);
+                                return;
+                            }
+                            catch (IndexCorruptionException ice)
+                            {
+                                HandleIndexCorruption(ice);
+                                return;
+                            }
                             catch (IndexWriteException iwe)
                             {
                                 HandleWriteErrors(scope, iwe);
@@ -570,7 +580,12 @@ namespace Raven.Server.Documents.Indexes
 
                             try
                             {
-                                _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
+                                var failureInformation = _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
+                                HandleIndexFailureInformation(failureInformation);
+                            }
+                            catch (InvalidDataException ide)
+                            {
+                                HandleIndexCorruption(ide);
                             }
                             catch (Exception e)
                             {
@@ -659,7 +674,41 @@ namespace Raven.Server.Documents.Indexes
             if (Priority.HasFlag(IndexingPriority.Error) || writeErrors < WriteErrorsLimit)
                 return;
 
+            // TODO we should create notification here?
+
             SetPriority(IndexingPriority.Error);
+        }
+
+        private void HandleIndexCorruption(Exception e)
+        {
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Data corruption occured for '{Name}' ({IndexId}).", e);
+
+            // TODO we should create notification here?
+
+            SetPriority(IndexingPriority.Error);
+        }
+
+        private void HandleIndexFailureInformation(IndexFailureInformation failureInformation)
+        {
+            if (failureInformation.IsInvalidIndex == false)
+                return;
+
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations(failureInformation.GetErrorMessage());
+
+            // TODO we should create notification here?
+
+            SetPriority(IndexingPriority.Error);
+        }
+
+        public void HandleError(Exception e)
+        {
+            var ide = e as InvalidDataException;
+            if (ide == null)
+                return;
+
+            throw new IndexCorruptionException(e);
         }
 
         protected abstract IIndexingWork[] CreateIndexWorkExecutors();
@@ -1015,6 +1064,9 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+
+            if (Priority.HasFlag(IndexingPriority.Error))
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored.");
 
             if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
                 SetPriority(IndexingPriority.Normal);
@@ -1510,7 +1562,13 @@ namespace Raven.Server.Documents.Indexes
         public bool CanContinueBatch(IndexingStatsScope stats)
         {
             stats.RecordMapAllocations(_threadAllocations.Allocations);
-            
+
+            if (stats.ErrorsCount >= IndexStorage.MaxNumberOfKeptErrors)
+            {
+                stats.RecordMapCompletedReason($"Number of errors ({stats.ErrorsCount}) reached maximum number of allowed errors per batch ({IndexStorage.MaxNumberOfKeptErrors})");
+                return false;
+            }
+
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
             {
                 if (TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), stats) == false)
@@ -1614,6 +1672,5 @@ namespace Raven.Server.Documents.Indexes
                 return true;
             }
         }
-
     }
 }
