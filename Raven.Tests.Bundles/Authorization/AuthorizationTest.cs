@@ -28,7 +28,8 @@ namespace Raven.Tests.Bundles.Authorization
         {
             RouteCacher.ClearCache();
 
-            server = GetNewServer(configureConfig: configuration => configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly)));
+            server = GetNewServer(activeBundles: "Authorization", configureConfig: 
+                configuration => configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly)));
             store = NewRemoteDocumentStore(ravenDbServer: server,  databaseName: DatabaseName);
             
             foreach (DictionaryEntry de in HttpRuntime.Cache)
