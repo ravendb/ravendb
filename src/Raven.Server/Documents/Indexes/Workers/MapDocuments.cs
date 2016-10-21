@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
-                            ? _configuration.MaxTimeForDocumentTransactionToRemainOpenInSec.AsTimeSpan
+                            ? _configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan
                             : TimeSpan.FromMinutes(15);
 
             var moreWorkFound = false;
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
         {
-            if (currentEtag >= maxEtag)
+            if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
                 return false;
 
             if (_index.CanContinueBatch(stats) == false)
