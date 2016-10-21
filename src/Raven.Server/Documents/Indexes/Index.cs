@@ -1546,6 +1546,9 @@ namespace Raven.Server.Documents.Indexes
         {
             stats.RecordMapAllocations(_threadAllocations.Allocations);
 
+            if (stats.ErrorsCount >= IndexStorage.MaxNumberOfKeptErrors)
+                return false;
+
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
             {
                 if (TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), stats) == false)
