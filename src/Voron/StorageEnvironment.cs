@@ -287,11 +287,13 @@ namespace Voron
                                 // any future calls to flush will abort because we are marked as disposed
 
                                 Disposed = true;
+                                _journal.Applicator.WaitForSyncToCompleteOnDispose();
                             }
                         }
                         else
                         {
                             Disposed = true;
+                            _journal.Applicator.WaitForSyncToCompleteOnDispose();
                         }
                     }
                 }

@@ -391,6 +391,7 @@ namespace Voron.Impl.Journal
         {
             private readonly Dictionary<long, JournalFile> _journalsToDelete = new Dictionary<long, JournalFile>();
             private readonly object _flushingLock = new object();
+            private readonly object _fsyncLock = new object();
             private readonly WriteAheadJournal _waj;
 
             private long _lastFlushedTransactionId;
@@ -570,6 +571,45 @@ namespace Voron.Impl.Journal
                 }
             }
 
+            public void WaitForSyncToCompleteOnDispose()
+            {
+                if (Monitor.IsEntered(_flushingLock) == false)
+                    throw new InvalidOperationException("This method can only be called while holding the flush lock");
+
+                if (_waj._env.Disposed == false)
+                    throw new InvalidOperationException(
+                        "This method can only be called after the storage environment has been disposed");
+
+                if (Monitor.TryEnter(_fsyncLock))
+                {
+                    Monitor.Exit(_fsyncLock);
+                    return;
+                }
+
+                // now the sync lock is in progress, but it can't complete because we are holding the flush lock
+                // we'll first give the flush lock and then wait on the fsync lock until the sync is completed
+                // then we'll re-aqcuire the flush lock
+
+                Monitor.Exit(_flushingLock);
+                try
+                {
+                    Monitor.Enter(_fsyncLock);
+                    try
+                    {
+                        // now we know that the sync is done
+                    }
+                    finally
+                    {
+                        Monitor.Exit(_fsyncLock);
+                    }
+                }
+                finally
+                {
+                    Monitor.Enter(_flushingLock);// reacquire the lock
+                }
+
+            }
+
             internal void SyncDataFile()
             {
                 // This function can take a LONG time, and it needs to run concurrently with the
@@ -578,60 +618,74 @@ namespace Voron.Impl.Journal
                 // 2) Take a snapshot of the current status of this env flushing status
                 // 3) Release the lock & sync the file (take a long time)
                 // 4) Re-take the lock, update the sync status in the header with the values we snapshotted
-
-                long lastSyncedJournal;
-                long lastSyncedTransactionId;
-                long oldestActiveTransaction;
-                JournalFile lastFlushedJournal;
-                var journalsToDelete = new List<KeyValuePair<long, JournalFile>>();
-                bool lockTaken = false;
+                bool fsyncLockTaken = false;
                 try
                 {
-                    Monitor.TryEnter(_flushingLock, TimeSpan.FromMilliseconds(250), ref lockTaken);
+                    long lastSyncedJournal;
+                    long lastSyncedTransactionId;
+                    long oldestActiveTransaction;
+                    JournalFile lastFlushedJournal;
+                    var journalsToDelete = new List<KeyValuePair<long, JournalFile>>();
+                    bool flushLockTaken = false;
+                    try
+                    {
+                        Monitor.TryEnter(_flushingLock, TimeSpan.FromMilliseconds(250), ref flushLockTaken);
 
-                    if (lockTaken == false)
-                    {
-                        // can't get the lock, we'll try again later, this time we are running
-                        // as forced, because we have higher priority
-                        _waj._env.ForceSyncDataFile();
-                        return; 
-                    }
-                    oldestActiveTransaction = _oldestActiveTransactionWhenFlushed;
-                    lastSyncedJournal = _lastFlushedJournalId;
-                    lastSyncedTransactionId = _lastFlushedTransactionId;
-                    lastFlushedJournal = _lastFlushedJournal;
-                    foreach (var toDelete in _journalsToDelete)
-                    {
-                        if (toDelete.Key > lastSyncedJournal)
-                            continue;
+                        if (flushLockTaken == false)
+                        {
+                            // can't get the lock, we'll try again later, this time we are running
+                            // as forced, because we have higher priority
+                            _waj._env.ForceSyncDataFile();
+                            return;
+                        }
 
-                        journalsToDelete.Add(toDelete);
+                        if (_waj._env.Disposed)
+                            return; // we have already disposed, nothing to do here
+                        // we only ever take the _fsyncLock _after_ we already took the flush lock
+                        // so this will never be contended
+                        Monitor.Enter(_fsyncLock, ref fsyncLockTaken);
+                        oldestActiveTransaction = _oldestActiveTransactionWhenFlushed;
+                        lastSyncedJournal = _lastFlushedJournalId;
+                        lastSyncedTransactionId = _lastFlushedTransactionId;
+                        lastFlushedJournal = _lastFlushedJournal;
+                        foreach (var toDelete in _journalsToDelete)
+                        {
+                            if (toDelete.Key > lastSyncedJournal)
+                                continue;
+
+                            journalsToDelete.Add(toDelete);
+                        }
+                        foreach (var kvp in journalsToDelete)
+                        {
+                            _journalsToDelete.Remove(kvp.Key);
+                        }
                     }
-                    foreach (var kvp in journalsToDelete)
+                    finally
                     {
-                        _journalsToDelete.Remove(kvp.Key);
+                        if (flushLockTaken)
+                            Monitor.Exit(_flushingLock);
+                    }
+
+                    // We do the sync _outside_ of the lock, letting the rest of the stuff proceed
+                    _waj._dataPager.Sync();
+
+                    lock (_flushingLock)
+                    {
+                        UpdateFileHeaderAfterDataFileSync(lastFlushedJournal, oldestActiveTransaction, lastSyncedJournal, lastSyncedTransactionId);
+
+                        foreach (var toDelete in journalsToDelete)
+                        {
+                            if (_waj._env.Options.IncrementalBackupEnabled == false)
+                                toDelete.Value.DeleteOnClose = true;
+
+                            toDelete.Value.Release();
+                        }
                     }
                 }
                 finally
                 {
-                    if (lockTaken)
-                        Monitor.Exit(_flushingLock);
-                }
-
-                // We do the sync _outside_ of the lock, letting the rest of the stuff proceed
-                _waj._dataPager.Sync();
-
-                lock (_flushingLock)
-                {
-                    UpdateFileHeaderAfterDataFileSync(lastFlushedJournal, oldestActiveTransaction, lastSyncedJournal, lastSyncedTransactionId);
-
-                    foreach (var toDelete in journalsToDelete)
-                    {
-                        if (_waj._env.Options.IncrementalBackupEnabled == false)
-                            toDelete.Value.DeleteOnClose = true;
-
-                        toDelete.Value.Release();
-                    }
+                    if (fsyncLockTaken)
+                        Monitor.Exit(_fsyncLock);
                 }
             }
 
