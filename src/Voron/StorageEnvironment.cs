@@ -150,7 +150,8 @@ namespace Voron
                 {
                     return;
                 }
-                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
+                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
             }
         }
 
