@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 
@@ -34,8 +35,10 @@ namespace Raven.Server.Documents.Indexes
         private readonly Dictionary<string, CollectionName> _referencedCollections;
 
         private StorageEnvironment _environment;
-
+        
         public const int MaxNumberOfKeptErrors = 500;
+
+        internal bool _simulateCorruption;
 
         public IndexStorage(Index index, TransactionContextPool contextPool, DocumentDatabase database)
         {
@@ -316,6 +319,9 @@ namespace Raven.Server.Documents.Indexes
 
         private unsafe void WriteLastEtag(RavenTransaction tx, string tree, Slice collection, long etag)
         {
+            if (_simulateCorruption)
+                throw new InvalidDataException("Simulated corruption.");
+
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Writing last etag for '{_index.Name} ({_index.IndexId})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
 

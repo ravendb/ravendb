@@ -582,6 +582,11 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
                             }
+                            catch (InvalidDataException ide)
+                            {
+                                HandleIndexCorruption(ide);
+                                return;
+                            }
                             catch (Exception e)
                             {
                                 if (_logger.IsInfoEnabled)
@@ -1042,6 +1047,9 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+
+            if (Priority.HasFlag(IndexingPriority.Error))
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored.");
 
             if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
                 SetPriority(IndexingPriority.Normal);
