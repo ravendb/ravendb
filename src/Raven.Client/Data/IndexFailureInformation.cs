@@ -10,6 +10,8 @@ namespace Raven.Client.Data
     /// </summary>
     public class IndexFailureInformation
     {
+        private const float FailureThreshold = 0.15f;
+
         /// <summary>
         /// Indicates whether this is invalid index.
         /// </summary>
@@ -25,12 +27,12 @@ namespace Raven.Client.Data
                 // we don't have enough attempts to make a useful determination
                 if (attempts + reduceAttempts < 100)
                     return false;
-                return (errors + (reduceErrors ?? 0)) / (float)(attempts + (reduceAttempts ?? 0)) > 0.15;
+                return (errors + (reduceErrors ?? 0)) / (float)(attempts + (reduceAttempts ?? 0)) > FailureThreshold;
             }
             // we don't have enough attempts to make a useful determination
             if (attempts < 100)
                 return false;
-            return (errors / (float)attempts) > 0.15;
+            return (errors / (float)attempts) > FailureThreshold;
         }
 
         /// <summary>
@@ -80,9 +82,18 @@ namespace Raven.Client.Data
         {
             get
             {
-                if (MapAttempts == 0)
+                var attempts = MapAttempts;
+                if (ReduceAttempts.HasValue)
+                    attempts += ReduceAttempts.Value;
+
+                if (attempts == 0)
                     return 0;
-                return MapErrors / (float)MapAttempts;
+
+                var errors = MapErrors;
+                if (ReduceErrors.HasValue)
+                    errors += ReduceErrors.Value;
+
+                return errors / (float)errors;
             }
         }
 
@@ -92,7 +103,10 @@ namespace Raven.Client.Data
         /// <returns></returns>
         public string GetErrorMessage()
         {
-            return $"Index {Name} ({IndexId}) is invalid, out of {MapAttempts} indexing attempts, {MapErrors} has failed.\r\nError rate of {FailureRate:#.##%} exceeds allowed 15% error rate";
+            if (ReduceAttempts.HasValue == false)
+                return $"Index {Name} ({IndexId}) is invalid, out of {MapAttempts} map attempts, {MapErrors} has failed. Error rate of {FailureRate:#.##%} exceeds allowed 15% error rate";
+
+            return $"Index {Name} ({IndexId}) is invalid, out of {MapAttempts} map attempts and {ReduceAttempts} reduce attempts, {MapErrors} and {ReduceErrors} has failed respectively. Error rate of {FailureRate:#.##%} exceeds allowed 15% error rate";
         }
     }
 }
