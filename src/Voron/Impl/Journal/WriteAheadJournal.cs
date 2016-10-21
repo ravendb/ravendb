@@ -593,10 +593,14 @@ namespace Voron.Impl.Journal
                 Monitor.Exit(_flushingLock);
                 try
                 {
+                    // we wait to take the lock here to ensure that all previous sync operations
+                    // has completed, and we know that no new ones can start
                     Monitor.Enter(_fsyncLock);
                     try
                     {
                         // now we know that the sync is done
+                        // we also know that no other sync can start now
+                        // because Disposed is set to true
                     }
                     finally
                     {
@@ -623,10 +627,13 @@ namespace Voron.Impl.Journal
                 {
                     long lastSyncedJournal;
                     long lastSyncedTransactionId;
-                    long oldestActiveTransaction;
-                    JournalFile lastFlushedJournal;
                     var journalsToDelete = new List<KeyValuePair<long, JournalFile>>();
                     bool flushLockTaken = false;
+                    // this is a pointer because we need to pass the value to a lambda
+                    // inside UpdateFileHeaderAfterDataFileSync, so we just allocate it here.
+                    // We need those values to be the frozen value at the time we _started_ the
+                    // sync process
+                    TransactionHeader* lastReadTxHeader = stackalloc TransactionHeader[1];
                     try
                     {
                         Monitor.TryEnter(_flushingLock, TimeSpan.FromMilliseconds(250), ref flushLockTaken);
@@ -641,13 +648,23 @@ namespace Voron.Impl.Journal
 
                         if (_waj._env.Disposed)
                             return; // we have already disposed, nothing to do here
+
+                        if (_lastFlushedJournal == null)
+                            return; // nothing was flushed since we last synced, nothing to do
+
                         // we only ever take the _fsyncLock _after_ we already took the flush lock
                         // so this will never be contended
-                        Monitor.Enter(_fsyncLock, ref fsyncLockTaken);
-                        oldestActiveTransaction = _oldestActiveTransactionWhenFlushed;
+                        Monitor.TryEnter(_fsyncLock, ref fsyncLockTaken);
+                        if (fsyncLockTaken == false)
+                        {
+                            // probably another sync taking place right now, let us schedule another one, just in case
+                            _waj._env.QueueForSyncDataFile();
+                            return;
+                        }
                         lastSyncedJournal = _lastFlushedJournalId;
                         lastSyncedTransactionId = _lastFlushedTransactionId;
-                        lastFlushedJournal = _lastFlushedJournal;
+                        SetLastReadTxHeader(_lastFlushedJournal, _oldestActiveTransactionWhenFlushed, lastReadTxHeader);
+                        _lastFlushedJournal = null;
                         foreach (var toDelete in _journalsToDelete)
                         {
                             if (toDelete.Key > lastSyncedJournal)
@@ -671,7 +688,7 @@ namespace Voron.Impl.Journal
 
                     lock (_flushingLock)
                     {
-                        UpdateFileHeaderAfterDataFileSync(lastFlushedJournal, oldestActiveTransaction, lastSyncedJournal, lastSyncedTransactionId);
+                        UpdateFileHeaderAfterDataFileSync(lastSyncedJournal, lastSyncedTransactionId, lastReadTxHeader);
 
                         foreach (var toDelete in journalsToDelete)
                         {
@@ -801,14 +818,29 @@ namespace Voron.Impl.Journal
                 return unusedJournalFiles;
             }
 
-            private void UpdateFileHeaderAfterDataFileSync(JournalFile file, 
-                long oldestActiveTransaction, 
-                long lastSyncedJournal, 
-                long lastSyncedTransactionId)
+            private void UpdateFileHeaderAfterDataFileSync(long lastSyncedJournal, 
+                long lastSyncedTransactionId, TransactionHeader* lastReadTxHeader)
             {
-                var txHeaders = stackalloc TransactionHeader[2];
-                var readTxHeader = &txHeaders[0];
-                var lastReadTxHeader = txHeaders[1];
+                Debug.Assert(lastSyncedJournal != -1);
+                Debug.Assert(lastSyncedTransactionId != -1);
+
+                _waj._headerAccessor.Modify(header =>
+                {
+                    header->TransactionId = lastReadTxHeader->TransactionId;
+                    header->LastPageNumber = lastReadTxHeader->LastPageNumber;
+
+                    header->Journal.LastSyncedJournal = lastSyncedJournal;
+                    header->Journal.LastSyncedTransactionId = lastSyncedTransactionId;
+
+                    header->Root = lastReadTxHeader->Root;
+
+                    _waj._updateLogInfo(header);
+                });
+            }
+
+            private void SetLastReadTxHeader(JournalFile file, long oldestActiveTransaction, TransactionHeader* lastReadTxHeader)
+            {
+                var readTxHeader = stackalloc TransactionHeader[1];
 
                 long txPos = 0;
                 while (true)
@@ -820,33 +852,17 @@ namespace Voron.Impl.Journal
                     if (readTxHeader->TransactionId + 1 == oldestActiveTransaction)
                         break;
 
-                    lastReadTxHeader = *readTxHeader;
+                    *lastReadTxHeader = *readTxHeader;
 
                     var totalSize = readTxHeader->CompressedSize + sizeof(TransactionHeader);
 
 
-                    var totalPages = (totalSize / _waj._env.Options.PageSize) +
-                                     (totalSize % _waj._env.Options.PageSize == 0 ? 0 : 1);
+                    var totalPages = (totalSize/_waj._env.Options.PageSize) +
+                                     (totalSize%_waj._env.Options.PageSize == 0 ? 0 : 1);
 
                     // We skip to the next transaction header.
                     txPos += totalPages;
                 }
-
-                Debug.Assert(lastSyncedJournal != -1);
-                Debug.Assert(lastSyncedTransactionId != -1);
-
-                _waj._headerAccessor.Modify(header =>
-                {
-                    header->TransactionId = lastReadTxHeader.TransactionId;
-                    header->LastPageNumber = lastReadTxHeader.LastPageNumber;
-
-                    header->Journal.LastSyncedJournal = lastSyncedJournal;
-                    header->Journal.LastSyncedTransactionId = lastSyncedTransactionId;
-
-                    header->Root = lastReadTxHeader.Root;
-
-                    _waj._updateLogInfo(header);
-                });
             }
 
             public void Dispose()
@@ -861,10 +877,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            public bool IsCurrentThreadInFlushOperation
-            {
-                get { return Monitor.IsEntered(_flushingLock); }
-            }
+            public bool IsCurrentThreadInFlushOperation => Monitor.IsEntered(_flushingLock);
 
             public IDisposable TryTakeFlushingLock(ref bool lockTaken, TimeSpan? timeout = null)
             {
