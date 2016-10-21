@@ -380,8 +380,9 @@ namespace Raven.Server.Documents.Indexes
 
                 if (stats.Errors != null)
                 {
-                    foreach (var error in stats.Errors)
+                    for (var i = Math.Max(stats.Errors.Count - MaxNumberOfKeptErrors, 0); i < stats.Errors.Count; i++)
                     {
+                        var error = stats.Errors[i];
                         var ticksBigEndian = Bits.SwapBytes(error.Timestamp.Ticks);
                         using (var document = context.GetLazyString(error.Document))
                         using (var action = context.GetLazyString(error.Action))
