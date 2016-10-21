@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data
 {
     /// <summary>
     /// Information about index failure rates
@@ -14,9 +14,9 @@ namespace Raven.Abstractions.Data
         /// Indicates whether this is invalid index.
         /// </summary>
         /// <value><c>true</c> if this is invalid index; otherwise, <c>false</c>.</value>
-        public bool IsInvalidIndex => CheckIndexInvalid(Attempts, Errors, ReduceAttempts, ReduceErrors);
+        public bool IsInvalidIndex => CheckIndexInvalid(MapAttempts, MapErrors, ReduceAttempts, ReduceErrors);
 
-        public static bool CheckIndexInvalid(int attempts, int errors, int? reduceAttempts, int? reduceErrors)
+        public static bool CheckIndexInvalid(long attempts, long errors, long? reduceAttempts, long? reduceErrors)
         {
             if ((attempts == 0 || errors == 0) && (reduceAttempts == null || reduceAttempts == 0))
                 return false;
@@ -36,37 +36,42 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Number of reduce attempts.
         /// </summary>
-        public int? ReduceAttempts { get; set; }
+        public long? ReduceAttempts { get; set; }
 
         /// <summary>
         /// Number of reduce errors.
         /// </summary>
-        public int? ReduceErrors { get; set; }
+        public long? ReduceErrors { get; set; }
 
         /// <summary>
         /// Number of reduce successes.
         /// </summary>
-        public int? ReduceSuccesses { get; set; }
+        public long? ReduceSuccesses { get; set; }
 
         /// <summary>
         /// Index id (internal).
         /// </summary>
-        public int Id { get; set; }
+        public int IndexId { get; set; }
+
+        /// <summary>
+        /// Index name
+        /// </summary>
+        public string Name { get; set; }
 
         /// <summary>
         /// Number of indexing attempts.
         /// </summary>
-        public int Attempts { get; set; }
+        public long MapAttempts { get; set; }
 
         /// <summary>
         /// Number of indexing errors.
         /// </summary>
-        public int Errors { get; set; }
+        public long MapErrors { get; set; }
 
         /// <summary>
         /// Number of indexing successes.
         /// </summary>
-        public int Successes { get; set; }
+        public long MapSuccesses { get; set; }
 
         /// <summary>
         /// Failure rate.
@@ -75,9 +80,9 @@ namespace Raven.Abstractions.Data
         {
             get
             {
-                if (Attempts == 0)
+                if (MapAttempts == 0)
                     return 0;
-                return (Errors / (float)Attempts);
+                return MapErrors / (float)MapAttempts;
             }
         }
 
@@ -87,10 +92,7 @@ namespace Raven.Abstractions.Data
         /// <returns></returns>
         public string GetErrorMessage()
         {
-            const string msg =
-                "Index {0} is invalid, out of {1} indexing attempts, {2} has failed.\r\nError rate of {3:#.##%} exceeds allowed 15% error rate";
-            return string.Format(msg,
-                                 Id, Attempts, Errors, FailureRate);
+            return $"Index {Name} ({IndexId}) is invalid, out of {MapAttempts} indexing attempts, {MapErrors} has failed.\r\nError rate of {FailureRate:#.##%} exceeds allowed 15% error rate";
         }
     }
 }

@@ -580,12 +580,12 @@ namespace Raven.Server.Documents.Indexes
 
                             try
                             {
-                                _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
+                                var failureInformation = _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
+                                HandleIndexFailureInformation(failureInformation);
                             }
                             catch (InvalidDataException ide)
                             {
                                 HandleIndexCorruption(ide);
-                                return;
                             }
                             catch (Exception e)
                             {
@@ -681,6 +681,17 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_logger.IsOperationsEnabled)
                 _logger.Operations($"Data corruption occured for '{Name}' ({IndexId}).", e);
+
+            SetPriority(IndexingPriority.Error);
+        }
+
+        private void HandleIndexFailureInformation(IndexFailureInformation failureInformation)
+        {
+            if (failureInformation.IsInvalidIndex == false)
+                return;
+
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations(failureInformation.GetErrorMessage());
 
             SetPriority(IndexingPriority.Error);
         }
