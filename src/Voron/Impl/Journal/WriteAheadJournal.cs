@@ -541,13 +541,9 @@ namespace Voron.Impl.Journal
 
                             if (txw != null)
                             {
-                                // we force a dummy change to a page, so when we commit, this will be written to the journal
-                                // as well as force us to generate a new transaction id, which will mean that the next time
-                                // that we run, we have freed lazy transactions, we have freed all the pages that were freed
-                                // in this transaction
-                                if (_waj.HasLazyTransactions)
-                                    txw.ModifyPage(0);
-
+                                // by forcing a commit, we free the read transaction that held the lazy tx buffer (if existed)
+                                // and make those pages available in the scratch files
+                                txw.IsLazyTransaction = false;
                                 _waj.HasLazyTransactions = false;
 
                                 txw.Commit();
@@ -560,7 +556,12 @@ namespace Voron.Impl.Journal
                         if (tryEnterReadLock)
                             _waj._env.FlushInProgressLock.ExitWriteLock();
                     }
-                    _waj._env.QueueForSyncDataFile();
+                    // if we aren't on the same journal, we have to force the sync, to avoid
+                    // having lots of journals around
+                    if (_waj.CurrentFile != _lastFlushedJournal)
+                        _waj._env.ForceSyncDataFile();
+                    else
+                        _waj._env.QueueForSyncDataFile();
                 }
                 finally
                 {

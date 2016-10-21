@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using Sparrow.Logging;
@@ -23,12 +24,12 @@ namespace Voron
         private readonly ConcurrentQueue<StorageEnvironment> _maybeNeedToFlush = new ConcurrentQueue<StorageEnvironment>();
         private readonly ManualResetEventSlim _flushWriterEvent = new ManualResetEventSlim();
         private readonly SemaphoreSlim _concurrentFlushes = new SemaphoreSlim(StorageEnvironment.MaxConcurrentFlushes);
-
+        private readonly HashSet<StorageEnvironment> _avoidDuplicates = new HashSet<StorageEnvironment>();
         private readonly ConcurrentQueue<StorageEnvironment> _maybeNeedToSync = new ConcurrentQueue<StorageEnvironment>();
         private readonly ConcurrentQueue<StorageEnvironment> _syncIsRequired = new ConcurrentQueue<StorageEnvironment>();
         private readonly ConcurrentDictionary<uint, MountPointInfo> _mountPoints = new ConcurrentDictionary<uint, MountPointInfo>();
 
-        private Logger _log = LoggingSource.Instance.GetLogger<GlobalFlushingBehavior>("Global Flusher");
+        private readonly Logger _log = LoggingSource.Instance.GetLogger<GlobalFlushingBehavior>("Global Flusher");
 
         private class MountPointInfo
         {
@@ -43,7 +44,11 @@ namespace Voron
             // it as needed
             while (true)
             {
-                if (_flushWriterEvent.Wait(5000) == false)
+                _avoidDuplicates.Clear();
+                var maybeNeedSync = _maybeNeedToSync.Count;
+                var millisecondsTimeout = 5000 - maybeNeedSync;
+                if (millisecondsTimeout <= 0 || 
+                    _flushWriterEvent.Wait(millisecondsTimeout) == false)
                 {
                     // sync after 5 seconds if no flushing occured
                     SyncDesiredEnvironments();
@@ -64,6 +69,7 @@ namespace Voron
 
         private void SyncDesiredEnvironments()
         {
+            _avoidDuplicates.Clear();
             StorageEnvironment envToSync;
             var limit = _maybeNeedToSync.Count;
             while (
@@ -73,6 +79,9 @@ namespace Voron
                 limit-- > 0 && 
                 _maybeNeedToSync.TryDequeue(out envToSync))
             {
+                if (_avoidDuplicates.Add(envToSync) == false)
+                    continue; // already seen
+
                 if (envToSync.Disposed)
                     continue;
 
@@ -108,6 +117,7 @@ namespace Voron
 
         private void SyncRequiredEnvironments()
         {
+            _avoidDuplicates.Clear();
             StorageEnvironment envToSync;
             var limit = _syncIsRequired.Count;
             while (
@@ -117,6 +127,9 @@ namespace Voron
                 limit-- > 0 &&
                 _syncIsRequired.TryDequeue(out envToSync))
             {
+                if (_avoidDuplicates.Add(envToSync) == false)
+                    continue; // avoid duplicates in batch
+
                 if (ThreadPool.QueueUserWorkItem(SyncEnvironment, envToSync) == false)
                 {
                     SyncEnvironment(envToSync);
@@ -159,6 +172,7 @@ namespace Voron
       
         private void FlushEnvironments()
         {
+            _avoidDuplicates.Clear();
             StorageEnvironment envToFlush;
             var limit = _maybeNeedToFlush.Count;
             while (
@@ -168,6 +182,8 @@ namespace Voron
                 limit-- > 0 &&
                 _maybeNeedToFlush.TryDequeue(out envToFlush))
             {
+                if (_avoidDuplicates.Add(envToFlush) == false)
+                    continue; // avoid duplicates
                 if (envToFlush.Disposed || envToFlush.Options.ManualFlushing)
                     continue;
 
