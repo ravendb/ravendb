@@ -550,6 +550,16 @@ namespace Raven.Server.Documents.Indexes
                                     _logger.Info($"Out of memory occurred for '{Name} ({IndexId})'.", oome);
                                 // TODO [ppekrol] GC?
                             }
+                            catch (InvalidDataException ide)
+                            {
+                                HandleIndexCorruption(ide);
+                                return;
+                            }
+                            catch (IndexCorruptionException ice)
+                            {
+                                HandleIndexCorruption(ice);
+                                return;
+                            }
                             catch (IndexWriteException iwe)
                             {
                                 HandleWriteErrors(scope, iwe);
@@ -660,6 +670,23 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             SetPriority(IndexingPriority.Error);
+        }
+
+        private void HandleIndexCorruption(Exception e)
+        {
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Data corruption occured for '{Name}' ({IndexId}).", e);
+
+            SetPriority(IndexingPriority.Error);
+        }
+
+        public void HandleError(Exception e)
+        {
+            var ide = e as InvalidDataException;
+            if (ide == null)
+                return;
+
+            throw new IndexCorruptionException(e);
         }
 
         protected abstract IIndexingWork[] CreateIndexWorkExecutors();
@@ -1510,7 +1537,7 @@ namespace Raven.Server.Documents.Indexes
         public bool CanContinueBatch(IndexingStatsScope stats)
         {
             stats.RecordMapAllocations(_threadAllocations.Allocations);
-            
+
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
             {
                 if (TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), stats) == false)
@@ -1614,6 +1641,5 @@ namespace Raven.Server.Documents.Indexes
                 return true;
             }
         }
-
     }
 }

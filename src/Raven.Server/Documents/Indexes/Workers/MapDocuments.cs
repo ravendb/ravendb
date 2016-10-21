@@ -113,6 +113,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     }
                                     catch (Exception e)
                                     {
+                                        _index.HandleError(e);
+
                                         collectionStats.RecordMapError();
                                         if (_logger.IsInfoEnabled)
                                             _logger.Info(

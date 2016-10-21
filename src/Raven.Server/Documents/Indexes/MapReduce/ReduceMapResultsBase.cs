@@ -167,6 +167,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
             catch (Exception e)
             {
+                _index.HandleError(e);
+
                 foreach (var item in _aggregationBatch)
                 {
                     item.Dispose();
@@ -260,6 +262,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
                 catch (Exception e)
                 {
+                    _index.HandleError(e);
+
                     var message =
                         $"Failed to execute reduce function for reduce key '{tree.Name}' on a leaf page #{page} of '{_indexDefinition.Name}' index.";
 
@@ -333,6 +337,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                     catch (Exception e)
                     {
+                        _index.HandleError(e);
+
                         var message =
                             $"Failed to execute reduce function for reduce key '{tree.Name}' on a branch page #{page} of '{_indexDefinition.Name}' index.";
 
