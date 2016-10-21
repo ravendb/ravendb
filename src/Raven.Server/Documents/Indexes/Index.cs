@@ -1558,7 +1558,10 @@ namespace Raven.Server.Documents.Indexes
             stats.RecordMapAllocations(_threadAllocations.Allocations);
 
             if (stats.ErrorsCount >= IndexStorage.MaxNumberOfKeptErrors)
+            {
+                stats.RecordMapCompletedReason($"Number of errors ({stats.ErrorsCount}) reached maximum number of allowed errors per batch ({IndexStorage.MaxNumberOfKeptErrors})");
                 return false;
+            }
 
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
             {
