@@ -124,9 +124,8 @@ namespace Voron.Platform.Win32
                 _totalAllocationSize = fileLength;
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize / _pageSize;
-            PagerState.Release();
-            PagerState = CreatePagerState();
+            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            SetPagerState(CreatePagerState());
         }
 
         private uint GetPhysicalDriveId(string drive)
@@ -188,14 +187,13 @@ namespace Voron.Platform.Win32
             {
                 newPagerState = CreatePagerState();
 
-                var tmp = PagerState;
-                PagerState = newPagerState;
-                tmp.Release(); //replacing the pager state --> so one less reference for it
+                SetPagerState(newPagerState);
+
                 PagerState.DebugVerify(newLengthAfterAdjustment);
             }
 
             _totalAllocationSize += allocationSize;
-            NumberOfAllocatedPages = _totalAllocationSize / _pageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
 
             return newPagerState;
         }
@@ -313,7 +311,6 @@ namespace Voron.Platform.Win32
                 AllocationInfos = new[] { allocationInfo }
             };
 
-            newPager.AddRef(); // one for the pager
             return newPager;
         }
 
@@ -329,19 +326,27 @@ namespace Voron.Platform.Win32
             if (Disposed)
                 ThrowAlreadyDisposedException();
 
-            using (var metric = Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.DataSync, 0))
+            var currentState = GetPagerStateAndAddRefAtomically();
+            try
             {
-                foreach (var allocationInfo in PagerState.AllocationInfos)
+                using (var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0))
                 {
-                    metric.IncrementSize(allocationInfo.Size);
-                    if (
-                        Win32MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress,
-                            new IntPtr(allocationInfo.Size)) == false)
+                    foreach (var allocationInfo in currentState.AllocationInfos)
+                    {
+                        metric.IncrementSize(allocationInfo.Size);
+                        if (
+                            Win32MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress,
+                                new IntPtr(allocationInfo.Size)) == false)
+                            throw new Win32Exception();
+                    }
+
+                    if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
                         throw new Win32Exception();
                 }
-
-                if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
-                    throw new Win32Exception();
+            }
+            finally
+            {
+                currentState.Release();
             }
         }
 

@@ -53,9 +53,8 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err);
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize / _pageSize;
-            PagerState.Release();
-            PagerState = CreatePagerState();
+            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            SetPagerState(CreatePagerState());
         }
 
 
@@ -115,12 +114,10 @@ namespace Voron.Platform.Posix
 
             newPagerState.DebugVerify(newLengthAfterAdjustment);
 
-            var tmp = PagerState;
-            PagerState = newPagerState;
-            tmp.Release(); //replacing the pager state --> so one less reference for it
+            SetPagerState(newPagerState);
 
             _totalAllocationSize += allocationSize;
-            NumberOfAllocatedPages = _totalAllocationSize/ _pageSize;
+            NumberOfAllocatedPages = _totalAllocationSize/ PageSize;
 
             return newPagerState;
         }
@@ -156,25 +153,32 @@ namespace Voron.Platform.Posix
                 AllocationInfos = new[] { allocationInfo }
             };
 
-            newPager.AddRef(); // one for the pager
             return newPager;
         }
 
         public override void Sync()
         {
             //TODO: Is it worth it to change to just one call for msync for the entire file?
-            using (var metric = Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.DataSync, 0))
+            var currentState = GetPagerStateAndAddRefAtomically();
+            try
             {
-                foreach (var alloc in PagerState.AllocationInfos)
+                using (var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0))
                 {
-                    metric.IncrementSize(alloc.Size);
-                    var result = Syscall.msync(new IntPtr(alloc.BaseAddress), (ulong)alloc.Size, MsyncFlags.MS_SYNC);
-                    if (result == -1)
+                    foreach (var alloc in currentState.AllocationInfos)
                     {
-                        var err = Marshal.GetLastWin32Error();
-                        PosixHelper.ThrowLastError(err);
+                        metric.IncrementSize(alloc.Size);
+                        var result = Syscall.msync(new IntPtr(alloc.BaseAddress), (ulong)alloc.Size, MsyncFlags.MS_SYNC);
+                        if (result == -1)
+                        {
+                            var err = Marshal.GetLastWin32Error();
+                            PosixHelper.ThrowLastError(err);
+                        }
                     }
                 }
+            }
+            finally
+            {
+                currentState.Release();
             }
         }
 
