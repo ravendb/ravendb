@@ -12,6 +12,11 @@
                     <a title="{{ name }}" href="#">{{ name }}</a>
                 </h3>
             </div>
+            {{#ifEq stateText 'offline'}}
+                <div class="col-xs-12 col-sm-12 col-xl-6 vertical-divider properties-container">
+                </div>
+            {{/ifEq}}
+            {{#ifEq stateText 'online' 'disabled' }}
             <div class="col-xs-12 col-sm-12 col-xl-6  vertical-divider properties-container">
                 {{#if size}}
                 <div class="properties-item">
@@ -108,6 +113,8 @@
                 {{/if}}
 
             </div>
+            {{/ifEq}}
+
             <div class="col-xs-12 col-sm-6 col-xl-2  actions-container">
                 <div class="actions">
                     <div class="btn-toolbar pull-right-sm" role="toolbar">

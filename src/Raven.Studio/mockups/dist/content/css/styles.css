@@ -7713,19 +7713,6 @@ button.close {
 .checkbox input[type="radio"] .styled:checked + label::after {
   color: #fff;
 }
-.checkbox-group .checkbox {
-  margin-top: 0;
-  margin-bottom: 0;
-  padding-bottom: 5px;
-  margin-left: -15px;
-  padding-left: 36px;
-  margin-right: -15px;
-  padding-right: 15px;
-  transition: background-color 0.2s ease;
-}
-.checkbox-group .checkbox:hover {
-  background-color: #2c3333;
-}
 @font-face {
   font-family: 'icomoon';
   src: url('fonts/icomoon.eot?vnwqsf');
@@ -8302,6 +8289,98 @@ button.close {
 .modal-dialog {
   transition: all 0.3s ease-in-out !important;
 }
+.modal-dialog .modal-settings-panel {
+  margin-left: -15px;
+  margin-right: -15px;
+}
+@media (min-width: 768px) {
+  .modal-dialog .modal-settings-panel {
+    display: flex;
+  }
+}
+.modal-dialog .modal-settings-panel .modal-settings-panel-main {
+  padding-left: 15px;
+  padding-right: 15px;
+  flex-shrink: 0;
+}
+@media (min-width: 768px) {
+  .modal-dialog .modal-settings-panel .modal-settings-panel-main {
+    width: 298px;
+  }
+}
+.modal-dialog .modal-settings-panel .modal-settings-panel-main .settings-group {
+  margin-bottom: 10px;
+}
+.modal-dialog .modal-settings-panel .modal-settings-panel-main .settings-group .settings-item {
+  margin-left: -15px;
+  margin-right: -15px;
+  padding-left: 15px;
+  padding-right: 15px;
+  border-top: 2px solid #2c3333;
+}
+.modal-dialog .modal-settings-panel .modal-settings-panel-main .settings-group .settings-item:last-of-type {
+  border-bottom: 2px solid #2c3333;
+}
+.modal-dialog .modal-settings-panel .modal-settings-panel-main .settings-group .settings-item > .btn {
+  border: none;
+  box-shadow: none;
+}
+.modal-dialog .modal-settings-panel .modal-settings-panel-main .settings-group .checkbox {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-bottom: 5px;
+  margin-left: -15px;
+  padding-left: 36px;
+  margin-right: -15px;
+  padding-right: 15px;
+  transition: background-color 0.2s ease;
+}
+.modal-dialog .modal-settings-panel .modal-settings-panel-main .settings-group .checkbox .btn {
+  margin-top: -2px;
+  margin-bottom: -2px;
+  margin-right: -15px;
+  padding-left: 15px;
+  padding-right: 15px;
+  border: none;
+  border-left: 2px solid #2c3333;
+  box-shadow: none;
+  height: 43px;
+}
+.modal-dialog .modal-settings-panel .modal-settings-panel-main .settings-group .checkbox:hover,
+.modal-dialog .modal-settings-panel .modal-settings-panel-main .settings-group .checkbox.active {
+  background-color: #2c3333;
+}
+.modal-dialog .modal-settings-panel .modal-settings-panel-main .settings-group .checkbox:hover .btn,
+.modal-dialog .modal-settings-panel .modal-settings-panel-main .settings-group .checkbox.active .btn {
+  z-index: 1;
+  position: relative;
+  border-left-color: #272e2e;
+  background-color: #3a4242;
+}
+.modal-dialog .modal-settings-panel .modal-settings-panel-main .settings-group .btn:hover {
+  background-color: #3a4242;
+}
+.modal-dialog .modal-settings-panel .modal-settings-panel-slideout {
+  display: block;
+  background-color: #2c3333;
+  padding: 15px;
+  -webkit-animation: fadeindelay 0.6s 1 both;
+  -moz-animation: fadeindelay 0.6s 1 both;
+  -ms-animation: fadeindelay 0.6s 1 both;
+  animation: fadeindelay 0.6s 1 both;
+  overflow: hidden;
+}
+.modal-dialog .modal-settings-panel .modal-settings-panel-slideout .panel-body {
+  box-shadow: inset 0 0 0 1px #3a4242;
+}
+@media (min-width: 768px) {
+  .modal-dialog .modal-settings-panel .modal-settings-panel-slideout {
+    width: 600px;
+  }
+}
+.modal-dialog.modal-sm .modal-settings-panel .modal-settings-panel-slideout {
+  display: none;
+}
 .modal-dialog .col-mod-md-6,
 .modal-dialog .col-mod-sm-12 {
   position: relative;
@@ -8319,11 +8398,10 @@ button.close {
   }
 }
 .modal-dialog .visible-mod-md {
-  -webkit-animation: fadeindelay 0.6s 1 both;
-  -moz-animation: fadeindelay 0.6s 1 both;
-  -ms-animation: fadeindelay 0.6s 1 both;
-  animation: fadeindelay 0.6s 1 both;
-  overflow: hidden;
+  -webkit-animation: fadein 0.3s 1 both;
+  -moz-animation: fadein 0.3s 1 both;
+  -ms-animation: fadein 0.3s 1 both;
+  animation: fadein 0.3s 1 both;
 }
 .modal-dialog.modal-sm .visible-mod-md {
   display: none;
@@ -8333,20 +8411,19 @@ button.close {
 }
 .modal-dialog .visible-mod-lg {
   display: none;
-  -webkit-animation: fadeindelay 0.6s 1 both;
-  -moz-animation: fadeindelay 0.6s 1 both;
-  -ms-animation: fadeindelay 0.6s 1 both;
-  animation: fadeindelay 0.6s 1 both;
-  overflow: hidden;
+  -webkit-animation: fadein 0.3s 1 both;
+  -moz-animation: fadein 0.3s 1 both;
+  -ms-animation: fadein 0.3s 1 both;
+  animation: fadein 0.3s 1 both;
 }
 @media (min-width: 768px) {
   .modal-dialog.modal-lg .col-mod-lg-4 {
-    width: 299px;
+    width: 33.33333333%;
   }
 }
 @media (min-width: 768px) {
   .modal-dialog.modal-lg .col-mod-lg-8 {
-    width: 599px;
+    width: 66.66666667%;
   }
 }
 .modal-dialog.modal-lg .visible-mod-lg {
@@ -10319,7 +10396,7 @@ pre {
   display: inline;
   float: right;
   padding: 0;
-  margin-top: -5px;
+  margin-top: -3px;
   margin-left: 10px;
   margin-right: -10px;
   line-height: normal;
