@@ -339,10 +339,19 @@ namespace Raven.Server
         public RequestRouter Router { get; private set; }
         public MetricsCountersManager Metrics { get; private set; }
 
+        private bool _disposed;
+
         public void Dispose()
         {
+            if (_disposed)
+                return;
+            _disposed = true;
+            Console.WriteLine("Starting dispose");
+            var sp = Stopwatch.StartNew();
             Metrics?.Dispose();
+            Console.WriteLine(sp.Elapsed);
             _webHost?.Dispose();
+            Console.WriteLine("Disposed server");
             if (_tcpListenerTask != null)
             {
                 if (_tcpListenerTask.IsCompleted)
@@ -365,7 +374,9 @@ namespace Raven.Server
                     }
                 }
             }
+            Console.WriteLine("Disposed tcp");
             ServerStore?.Dispose();
+            Console.WriteLine("Disposed server store");
             Timer?.Dispose();
         }
 
