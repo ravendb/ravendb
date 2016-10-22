@@ -1461,7 +1461,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected int MinimumSizeForCalculateIndexEtagLength()
         {
-            var length = sizeof(long)*2*Collections.Count + // last document etags and last mapped etags per collection
+            var length = sizeof(long)*3*Collections.Count + // last document etag, last tombstone etag and last mapped etags per collection
                          sizeof(int) + // definition hash
                          1; // isStale
             return length;
@@ -1474,9 +1474,12 @@ namespace Raven.Server.Documents.Indexes
             foreach (var collection in Collections)
             {
                 var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
+                var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection);
                 var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
                 *(long*)indexEtagBytes = lastDocEtag;
+                indexEtagBytes += sizeof(long);
+                *(long*)indexEtagBytes = lastTombstoneEtag;
                 indexEtagBytes += sizeof(long);
                 *(long*)indexEtagBytes = lastMappedEtag;
                 indexEtagBytes += sizeof(long);

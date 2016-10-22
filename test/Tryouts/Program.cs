@@ -27,9 +27,9 @@ namespace Tryouts
             {
                 Console.Write(i);
                 var sp = Stopwatch.StartNew();
-                using (var x = new FastTests.Smuggler.SmugglerApiTests())
+                using (var x = new SlowTests.Tests.Views.MapReduce())
                 {
-                    x.CanExportAndImportWithVersioingRevisionDocuments().Wait();
+                    x.CanDelete();
                 }
                 Console.WriteLine(" - " + sp.Elapsed);
             }
