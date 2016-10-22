@@ -98,7 +98,7 @@ namespace Voron.Data.Tables
         /// Using this constructor WILL NOT register the Table for commit in
         /// the Transaction, and hence changes WILL NOT be commited.
         /// </summary>
-        public Table(TableSchema schema, Slice name, Transaction tx, int tag, bool doSchemaValidation = false)
+        public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree,  bool doSchemaValidation = false)
         {
             Name = name;
 
@@ -106,9 +106,9 @@ namespace Voron.Data.Tables
             _tx = tx;
             _pageSize = _tx.LowLevelTransaction.DataPager.PageSize;
 
-            _tableTree = _tx.ReadTree(name, RootObjectType.Table);
+            _tableTree = tableTree;
             if (_tableTree == null)
-                throw new InvalidDataException($"Cannot find collection name {name}");
+                throw new ArgumentNullException(nameof(tableTree),"Cannot open table " + Name);
 
             var stats = (TableSchemaStats*)_tableTree.DirectRead(TableSchema.StatsSlice);
             if (stats == null)

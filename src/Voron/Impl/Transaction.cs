@@ -83,14 +83,14 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Table OpenTable(TableSchema schema, string name)
+        public Table OpenTable(TableSchema schema, string name, bool throwIfDoesNotExist = true)
         {
             Slice nameSlice;
             Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice);
-            return OpenTable(schema, nameSlice);
+            return OpenTable(schema, nameSlice, throwIfDoesNotExist);
         }
 
-        public Table OpenTable(TableSchema schema, Slice name)
+        public Table OpenTable(TableSchema schema, Slice name, bool throwIfDoesNotExist = true)
         {
             if(_tables == null)
                 _tables = new Dictionary<Slice, Table>(SliceComparer.Instance);
@@ -99,7 +99,12 @@ namespace Voron.Impl
             if (_tables.TryGetValue(name, out openTable))
                 return openTable;
 
-            openTable = new Table(schema, name, this, 1);
+            var tableTree = ReadTree(name, RootObjectType.Table);
+
+            if (tableTree == null)
+                return null;
+
+            openTable = new Table(schema, name, this, tableTree);
             _tables.Add(name, openTable);
 
             return openTable;
