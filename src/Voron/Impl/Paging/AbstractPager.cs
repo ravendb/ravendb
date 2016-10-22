@@ -8,6 +8,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Utils;
 using Voron.Data.BTrees;
+using Voron.Exceptions;
 using Voron.Platform.Win32;
 using Voron.Global;
 
@@ -264,7 +265,7 @@ namespace Voron.Impl.Paging
         {
             // this is a separate method because we don't want to have an exception throwing in the hot path
 
-            throw new ArgumentOutOfRangeException(nameof(pageNumber),
+            throw new VoronUnrecoverableErrorException(
                 "The page " + pageNumber + " was not allocated, allocated pages: " + NumberOfAllocatedPages + " in " +
                 GetSourceName());
         }
