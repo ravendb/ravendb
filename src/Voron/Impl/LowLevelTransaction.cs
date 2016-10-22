@@ -55,6 +55,7 @@ namespace Voron.Impl
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
         private CommitStats _requestedCommitStats;
 
+        public TransactionPersistentContext PersistentContext { get; }
         public TransactionFlags Flags { get; }
 
         public bool IsLazyTransaction
@@ -87,9 +88,9 @@ namespace Voron.Impl
 
         public ulong Hash => _txHeader->Hash;
 
-        public LowLevelTransaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null )
+        public LowLevelTransaction(StorageEnvironment env, long id, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null )
         {
-            DataPager = env.Options.DataPager;            
+            DataPager = env.Options.DataPager;
             _env = env;
             _journal = env.Journal;
             _id = id;
@@ -97,8 +98,9 @@ namespace Voron.Impl
             _allocator = context ?? new ByteStringContext();
             _disposeAllocator = context == null;
 
+            PersistentContext = transactionPersistentContext;
             Flags = flags;
-         
+
             PageSize = DataPager.PageSize;
 
             var scratchPagerStates = env.ScratchBufferPool.GetPagerStatesOfAllScratches();
@@ -119,7 +121,7 @@ namespace Voron.Impl
                 InitializeRoots();
 
                 JournalSnapshots = _journal.GetSnapshots();
-               
+
 
                 return;
             }
@@ -218,13 +220,13 @@ namespace Voron.Impl
             Page newPage;
             if ( currentPage.IsOverflow )
             {
-                newPage = AllocateOverflowRawPage(currentPage.OverflowSize, num, currentPage);
+                newPage = AllocateOverflowRawPage(currentPage.OverflowSize, num, currentPage, zeroPage: false);
                 pageSize = Environment.Options.PageSize*
                            DataPager.GetNumberOfOverflowPages(currentPage.OverflowSize);
             }
             else
             {
-                newPage = AllocatePage(1, num, currentPage); // allocate new page in a log file but with the same number			
+                newPage = AllocatePage(1, num, currentPage, zeroPage: false); // allocate new page in a log file but with the same number			
                 pageSize = Environment.Options.PageSize;
             }
 
@@ -240,7 +242,7 @@ namespace Voron.Impl
         private bool _disposed;
 
         public Page GetPage(long pageNumber)
-        {	        
+        {
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
 
@@ -272,13 +274,13 @@ namespace Voron.Impl
                 p = _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? DataPager.ReadPage(this, pageNumber);
                 Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
             }
-            
+
             TrackReadOnlyPage(p);
 
             return p;
         }
 
-        public Page AllocatePage(int numberOfPages, long? pageNumber = null, Page previousPage = null)
+        public Page AllocatePage(int numberOfPages, long? pageNumber = null, Page previousPage = null, bool zeroPage = true)
         {
             if (pageNumber == null)
             {
@@ -289,10 +291,10 @@ namespace Voron.Impl
                     State.NextPageNumber += numberOfPages;
                 }
             }
-            return AllocatePage(numberOfPages, pageNumber.Value, previousPage);
+            return AllocatePage(numberOfPages, pageNumber.Value, previousPage, zeroPage);
         }
 
-        public Page AllocateOverflowRawPage(long pageSize, long? pageNumber = null, Page previousPage = null)
+        public Page AllocateOverflowRawPage(long pageSize, long? pageNumber = null, Page previousPage = null, bool zeroPage = true)
         {
             long overflowSize = 0 + pageSize;
             if (overflowSize > int.MaxValue - 1)
@@ -302,14 +304,14 @@ namespace Voron.Impl
 
             long numberOfPages = (overflowSize / PageSize) + (overflowSize % PageSize == 0 ? 0 : 1);
 
-            var overflowPage = AllocatePage((int)numberOfPages, pageNumber, previousPage);
+            var overflowPage = AllocatePage((int)numberOfPages, pageNumber, previousPage, zeroPage);
             overflowPage.Flags = PageFlags.Overflow;
             overflowPage.OverflowSize = (int)overflowSize;
 
             return overflowPage;
         }
 
-        private Page AllocatePage(int numberOfPages, long pageNumber, Page previousVersion)
+        private Page AllocatePage(int numberOfPages, long pageNumber, Page previousVersion, bool zeroPage)
         {	       
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
@@ -353,7 +355,9 @@ namespace Voron.Impl
             var newPage = _env.ScratchBufferPool.ReadPage(this, pageFromScratchBuffer.ScratchFileNumber,
                 pageFromScratchBuffer.PositionInScratchBuffer);
             
-            UnmanagedMemory.Set(newPage.Pointer, 0, Environment.Options.PageSize * numberOfPages);
+            if ( zeroPage )
+                UnmanagedMemory.Set(newPage.Pointer, 0, Environment.Options.PageSize * numberOfPages);
+
             newPage.PageNumber = pageNumber;
             newPage.Flags = PageFlags.Single;
 
@@ -475,7 +479,7 @@ namespace Voron.Impl
 
                 if (numberOfOverflowPages > 1) // prevent adding range which length is 0
                     _dirtyOverflowPages.Add(pageNumber + 1, numberOfOverflowPages - 1); // change the range of the overflow page
-            }            
+            }
         }
 
 
@@ -639,13 +643,13 @@ namespace Voron.Impl
         private void UntrackPage(long pageNumber)
         {
             readOnlyPages.Remove(pageNumber);
-            writablePages.Remove(pageNumber);                
+            writablePages.Remove(pageNumber);
         }
 
         private void TrackWritablePage(Page page)
         {
             if (readOnlyPages.ContainsKey(page.PageNumber))
-                readOnlyPages.Remove(page.PageNumber);            
+                readOnlyPages.Remove(page.PageNumber);
 
             if (!writablePages.ContainsKey(page.PageNumber))
             {

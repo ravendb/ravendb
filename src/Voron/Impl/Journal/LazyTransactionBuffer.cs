@@ -43,10 +43,10 @@ namespace Voron.Impl.Journal
         {
             if (_readTransaction != null)
                 return;
-            // This transaction is required to prevent flushing of the data from the 
-            // scratch file to the data file before the lazy transaction buffers have 
+            // This transaction is required to prevent flushing of the data from the
+            // scratch file to the data file before the lazy transaction buffers have
             // actually been flushed to the journal file
-            _readTransaction = tx.Environment.NewLowLevelTransaction(TransactionFlags.Read);
+            _readTransaction = tx.Environment.NewLowLevelTransaction(new TransactionPersistentContext(true), TransactionFlags.Read);
         }
 
         public void WriteBufferToFile(JournalFile journalFile, LowLevelTransaction tx)
