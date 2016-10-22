@@ -682,7 +682,6 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleIndexCorruption(Exception e)
         {
-            Console.WriteLine(e);
             if (_logger.IsOperationsEnabled)
                 _logger.Operations($"Data corruption occured for '{Name}' ({IndexId}).", e);
 
@@ -825,12 +824,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (Priority == priority)
                     return;
-
-                if (priority == IndexingPriority.Error)
-                {
-                    Console.Beep();
-                    Console.WriteLine(Environment.StackTrace);
-                }
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Changing priority for '{Name} ({IndexId})' from '{Priority}' to '{priority}'.");
