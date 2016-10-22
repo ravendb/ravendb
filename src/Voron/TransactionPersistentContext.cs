@@ -11,7 +11,7 @@ namespace Voron
     public class TransactionPersistentContext
     {
         public bool IsLongLived { get; set; }
-        private readonly Stack<PageLocator> pageLocators = new Stack<PageLocator>();
+        private readonly Stack<PageLocator> _pageLocators = new Stack<PageLocator>();
         private readonly ByteStringContext _allocator = new ByteStringContext();
 
         public TransactionPersistentContext(bool isLongLived = false)
@@ -23,9 +23,9 @@ namespace Voron
         {
             PageLocator locator = null;
 
-            if (pageLocators.Count != 0)
+            if (_pageLocators.Count != 0)
             {
-                locator = pageLocators.Pop();
+                locator = _pageLocators.Pop();
                 locator.Renew(tx, IsLongLived ? 128 : 16);
             }
             else
@@ -40,7 +40,7 @@ namespace Voron
         public void FreePageLocator(PageLocator locator)
         {
             Debug.Assert(locator != null);
-            pageLocators.Push(locator);
+            _pageLocators.Push(locator);
         }
     }
 }
