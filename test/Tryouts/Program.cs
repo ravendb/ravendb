@@ -27,9 +27,9 @@ namespace Tryouts
             {
                 Console.Write(i);
                 var sp = Stopwatch.StartNew();
-                using (var x = new SlowTests.Tests.Views.MapReduce())
+                using (var x = new FastTests.Client.Documents.BasicDocuments())
                 {
-                    x.CanDelete();
+                    x.GetAsyncWithTransformer().Wait();
                 }
                 Console.WriteLine(" - " + sp.Elapsed);
             }

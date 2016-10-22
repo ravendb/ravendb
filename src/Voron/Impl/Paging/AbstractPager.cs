@@ -43,8 +43,11 @@ namespace Voron.Impl.Paging
             }
         }
 
-        protected PagerState GetPagerStateAndAddRefAtomically()
+        internal PagerState GetPagerStateAndAddRefAtomically()
         {
+            if (Disposed)
+                ThrowAlreadyDisposedException();
+
             lock (_pagerStateModificationLocker)
             {
                 if (_pagerState == null)
@@ -246,16 +249,6 @@ namespace Voron.Impl.Paging
             return current + Bits.NextPowerOf2(actualIncrease);
         }
 
-        public long WriteDirect(byte* p, long pagePosition, int pagesToWrite)
-        {
-            if (Disposed)
-                ThrowAlreadyDisposedException();
-
-            long toCopy = pagesToWrite * _pageSize;
-            Memory.BulkCopy(PagerState.MapBase + pagePosition * _pageSize, p, toCopy);
-
-            return toCopy;
-        }
 
         public abstract override string ToString();
 

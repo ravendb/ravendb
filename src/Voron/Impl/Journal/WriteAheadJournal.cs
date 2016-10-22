@@ -746,10 +746,7 @@ namespace Voron.Impl.Journal
                     using (_waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.DataFlush,
                             totalPages * _waj._dataPager.PageSize))
                     {
-                        foreach (var page in sortedPages)
-                        {
-                            _waj._dataPager.WritePage(page);
-                        }
+                        _waj._dataPager.Write(sortedPages);
                     }
                 }
                 finally
