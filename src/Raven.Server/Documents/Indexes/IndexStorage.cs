@@ -18,6 +18,7 @@ using Voron.Data.Tables;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
+using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -321,7 +322,7 @@ namespace Raven.Server.Documents.Indexes
         private unsafe void WriteLastEtag(RavenTransaction tx, string tree, Slice collection, long etag)
         {
             if (_simulateCorruption)
-                throw new InvalidDataException("Simulated corruption.");
+                throw new VoronUnrecoverableErrorException("Simulated corruption.");
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Writing last etag for '{_index.Name} ({_index.IndexId})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
