@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
@@ -294,12 +295,30 @@ namespace FastTests
             var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded +
                                 "&withStop=true";
 
-            Process.Start(documentsPage); // start the server
+            OpenBrowser(documentsPage);// start the server
 
             do
             {
                 Thread.Sleep(100);
             } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+        }
+
+        public static void OpenBrowser(string url)
+        {
+            Console.WriteLine(url);
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{url}\"")); // Works ok on windows
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                Process.Start("xdg-open", url); // Works ok on linux
+            }
+            else
+            {
+                Console.WriteLine("Do it yourself!");
+            }
         }
 
         protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null,
