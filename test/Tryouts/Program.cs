@@ -25,11 +25,13 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-                Console.WriteLine(i);
-                using (var x = new FastTests.NewClient.Query())
+                Console.Write(i);
+                var sp = Stopwatch.StartNew();
+                using (var x = new FastTests.Smuggler.SmugglerApiTests())
                 {
-                    x.Query_With_Customize();
+                    x.CanExportAndImportWithVersioingRevisionDocuments().Wait();
                 }
+                Console.WriteLine(" - " + sp.Elapsed);
             }
         }
     }
