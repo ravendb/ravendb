@@ -1447,42 +1447,45 @@ namespace Raven.Server.Documents.Indexes
         protected virtual unsafe long CalculateIndexEtag(bool isStale, DocumentsOperationContext documentsContext,
             TransactionOperationContext indexContext)
         {
-            var indexEtagBytes = new long[
-                1 + // definition hash
-                1 + // isStale
-                2 * Collections.Count // last document etags and last mapped etags per collection
-                ];
+            var length = MinimumSizeForCalculateIndexEtagLength();
+
+            var indexEtagBytes = stackalloc byte[length];
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, documentsContext, indexContext);
 
             unchecked
             {
-                fixed (long* buffer = indexEtagBytes)
-                {
-                    return
-                        (long)Hashing.XXHash64.Calculate((byte*)buffer, (ulong)(indexEtagBytes.Length * sizeof(long)));
-                }
+                return (long) Hashing.XXHash64.Calculate(indexEtagBytes, (ulong)length);
             }
         }
 
-        protected int CalculateIndexEtagInternal(long[] indexEtagBytes, bool isStale,
+        protected int MinimumSizeForCalculateIndexEtagLength()
+        {
+            var length = sizeof(long)*2*Collections.Count + // last document etags and last mapped etags per collection
+                         sizeof(int) + // definition hash
+                         1; // isStale
+            return length;
+        }
+
+        protected unsafe void CalculateIndexEtagInternal(byte* indexEtagBytes, bool isStale,
             DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
-            var index = 0;
-
-            indexEtagBytes[index++] = Definition.GetHashCode();
-            indexEtagBytes[index++] = isStale ? 0L : 1L;
 
             foreach (var collection in Collections)
             {
                 var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
                 var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
-                indexEtagBytes[index++] = lastDocEtag;
-                indexEtagBytes[index++] = lastMappedEtag;
+                *(long*)indexEtagBytes = lastDocEtag;
+                indexEtagBytes += sizeof(long);
+                *(long*)indexEtagBytes = lastMappedEtag;
+                indexEtagBytes += sizeof(long);
             }
 
-            return index;
+
+            *(int*)indexEtagBytes = Definition.GetHashCode();
+            indexEtagBytes += sizeof(int);
+            *indexEtagBytes = isStale ? (byte)0 : (byte)1;
         }
 
         public long GetIndexEtag()
