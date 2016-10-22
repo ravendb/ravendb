@@ -962,6 +962,7 @@ namespace Raven.Server.Json
                     writer.WriteValue(property.Item3 & BlittableJsonReaderBase.TypesMask, property.Item2);
                 }
             }
+          
             if (first == false)
             {
                 writer.WriteComma();
@@ -1011,10 +1012,12 @@ namespace Raven.Server.Json
                 writer.WriteValue(property.Item3 & BlittableJsonReaderBase.TypesMask, property.Item2);
             }
 
-            if (first == false)
-                writer.WriteComma();
-            WriteMetadata(writer, document, metadata);
-
+            if (metadata != null || document.Key != null) // projections don't get metadata
+            {
+                if (first == false)
+                    writer.WriteComma();
+                WriteMetadata(writer, document, metadata);
+            }
             writer.WriteEndObject();
 
         }
