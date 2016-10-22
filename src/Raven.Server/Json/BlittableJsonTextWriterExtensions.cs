@@ -977,6 +977,9 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(Constants.Metadata.IndexScore);
                 writer.WriteDouble(document.IndexScore.Value);
             }
+            writer.WriteComma();
+            writer.WritePropertyName(Constants.Headers.LastModified);
+            writer.WriteString(document.LastModified.GetDefaultRavenFormat());
             writer.WriteEndObject();
         }
 
