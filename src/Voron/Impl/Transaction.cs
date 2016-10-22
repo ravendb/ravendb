@@ -317,6 +317,39 @@ namespace Voron.Impl
 
         public void Dispose()
         {
+            if (_trees != null)
+            {
+                foreach (var tree in _trees)
+                {
+                    tree.Value?.Dispose();
+                }
+            }
+
+            if (_multiValueTrees != null)
+            {
+                foreach (var item in _multiValueTrees)
+                {
+                    item.Value?.Dispose();
+                    item.Key.Item1?.Dispose();
+                }
+            }
+
+            if (_tables != null)
+            {
+                foreach (var table in _tables)
+                {
+                    table.Value?.Dispose();
+                }
+            }
+
+            if (_globalFixedSizeTree != null)
+            {
+                foreach (var tree in _globalFixedSizeTree)
+                {
+                    tree.Value?.Dispose();
+                }
+            }
+
             _lowLevelTransaction?.Dispose();
         }
 

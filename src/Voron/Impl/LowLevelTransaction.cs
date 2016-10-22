@@ -55,6 +55,7 @@ namespace Voron.Impl
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
         private CommitStats _requestedCommitStats;
 
+        public TransactionPersistentContext PersistentContext { get; }
         public TransactionFlags Flags { get; }
 
         public bool IsLazyTransaction
@@ -87,9 +88,9 @@ namespace Voron.Impl
 
         public ulong Hash => _txHeader->Hash;
 
-        public LowLevelTransaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null )
+        public LowLevelTransaction(StorageEnvironment env, long id, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null )
         {
-            DataPager = env.Options.DataPager;            
+            DataPager = env.Options.DataPager;
             _env = env;
             _journal = env.Journal;
             _id = id;
@@ -97,8 +98,9 @@ namespace Voron.Impl
             _allocator = context ?? new ByteStringContext();
             _disposeAllocator = context == null;
 
+            PersistentContext = transactionPersistentContext;
             Flags = flags;
-         
+
             PageSize = DataPager.PageSize;
 
             var scratchPagerStates = env.ScratchBufferPool.GetPagerStatesOfAllScratches();
@@ -119,7 +121,7 @@ namespace Voron.Impl
                 InitializeRoots();
 
                 JournalSnapshots = _journal.GetSnapshots();
-               
+
 
                 return;
             }
@@ -240,7 +242,7 @@ namespace Voron.Impl
         private bool _disposed;
 
         public Page GetPage(long pageNumber)
-        {	        
+        {
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
 
@@ -272,7 +274,7 @@ namespace Voron.Impl
                 p = _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? DataPager.ReadPage(this, pageNumber);
                 Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
             }
-            
+
             TrackReadOnlyPage(p);
 
             return p;
@@ -477,7 +479,7 @@ namespace Voron.Impl
 
                 if (numberOfOverflowPages > 1) // prevent adding range which length is 0
                     _dirtyOverflowPages.Add(pageNumber + 1, numberOfOverflowPages - 1); // change the range of the overflow page
-            }            
+            }
         }
 
 
@@ -642,13 +644,13 @@ namespace Voron.Impl
         private void UntrackPage(long pageNumber)
         {
             readOnlyPages.Remove(pageNumber);
-            writablePages.Remove(pageNumber);                
+            writablePages.Remove(pageNumber);
         }
 
         private void TrackWritablePage(Page page)
         {
             if (readOnlyPages.ContainsKey(page.PageNumber))
-                readOnlyPages.Remove(page.PageNumber);            
+                readOnlyPages.Remove(page.PageNumber);
 
             if (!writablePages.ContainsKey(page.PageNumber))
             {

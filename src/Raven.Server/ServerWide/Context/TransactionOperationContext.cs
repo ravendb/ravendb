@@ -12,6 +12,7 @@ namespace Raven.Server.ServerWide.Context
     public class TransactionOperationContext : TransactionOperationContext<RavenTransaction>
     {
         private readonly StorageEnvironment _environment;
+        public TransactionPersistentContext PersistentContext = new TransactionPersistentContext();
 
         public TransactionOperationContext(StorageEnvironment environment, int initialSize, int longLivedSize) :
             base(initialSize, longLivedSize)
@@ -21,12 +22,12 @@ namespace Raven.Server.ServerWide.Context
 
         protected override RavenTransaction CreateReadTransaction(ByteStringContext context)
         {
-            return new RavenTransaction(_environment.ReadTransaction(context));
+            return new RavenTransaction(_environment.ReadTransaction(PersistentContext, context));
         }
 
         protected override RavenTransaction CreateWriteTransaction(ByteStringContext context)
         {
-            return new RavenTransaction(_environment.WriteTransaction(context));
+            return new RavenTransaction(_environment.WriteTransaction(PersistentContext, context));
         }
 
         public StorageEnvironment Environment => _environment;
@@ -40,7 +41,7 @@ namespace Raven.Server.ServerWide.Context
         public ByteStringContext Allocator;
         public TTransaction Transaction;
 
-        protected TransactionOperationContext(int initialSize, int longLivedSize): 
+        protected TransactionOperationContext(int initialSize, int longLivedSize):
             base(initialSize, longLivedSize)
         {
             Allocator = new ByteStringContext();
@@ -112,7 +113,7 @@ namespace Raven.Server.ServerWide.Context
 
             // we skip on creating / disposing the allocator
 
-            base.Renew(); 
+            base.Renew();
         }
 
         protected override void Renew()
