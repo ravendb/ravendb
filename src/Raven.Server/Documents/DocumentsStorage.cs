@@ -864,6 +864,8 @@ namespace Raven.Server.Documents
 
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 4);
 
+            result.LastModified = new DateTime(*(long*) tvr.Read(5, out size));
+
             return result;
         }
 
@@ -1471,6 +1473,8 @@ namespace Raven.Server.Documents
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
+            var lastModifiedTicks = DateTime.UtcNow.Ticks;
+
             Slice keySlice;
             using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out keySlice))
             {
@@ -1488,10 +1492,11 @@ namespace Raven.Server.Documents
                     var tbv = new TableValueBuilder
                     {
                         {lowerKey, lowerSize}, //0
-                        {(byte*) &newEtagBigEndian, sizeof(long)}, //1
+                        newEtagBigEndian, //1
                         {keyPtr, keySize}, //2
                         {document.BasePointer, document.Size}, //3
-                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length} //4
+                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length}, //4
+                        lastModifiedTicks // 5
                     };
 
                     if (oldValue == null)
@@ -1510,7 +1515,7 @@ namespace Raven.Server.Documents
                     {
                         int size;
                         var pOldEtag = oldValue.Read(1, out size);
-                        var oldEtag = IPAddress.NetworkToHostOrder(*(long*)pOldEtag);
+                        var oldEtag = Bits.SwapBytes(*(long*)pOldEtag);
                         //TODO
                         if (expectedEtag != null && oldEtag != expectedEtag)
                             throw new ConcurrencyException(
