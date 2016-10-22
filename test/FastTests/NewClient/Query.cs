@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -77,11 +78,25 @@ namespace FastTests.NewClient
                 }
                 using (var newSession = store.OpenNewSession())
                 {
-                    var queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()
-                        .Customize(x => x.AlphaNumericOrdering<Dog>(d => d.Name))
-                        .Customize(x => x.WaitForNonStaleResults())
-                        .Where(x => x.Age > 2)
-                        .ToList();
+                    List<DogsIndex.Result> queryResult;
+                    try
+                    {
+                        queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()
+                            .Customize(x => x.AlphaNumericOrdering<Dog>(d => d.Name))
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .Where(x => x.Age > 2)
+                            .ToList();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        for (int i = 0; i < 3; i++)
+                        {
+                            Console.Beep();
+                        }
+                        Console.ReadLine();
+                        throw;
+                    }
 
                     Assert.Equal(queryResult[0].Name, "Brian");
                     Assert.Equal(queryResult[1].Name, "Django");

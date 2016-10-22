@@ -503,7 +503,7 @@ namespace Voron.Data.BTrees
             }
 
             if (p.IsLeaf == false)
-                throw new InvalidDataException("Index points to a non leaf page " + p.PageNumber);
+                throw new VoronUnrecoverableErrorException("Index points to a non leaf page " + p.PageNumber);
 
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
@@ -570,7 +570,7 @@ namespace Voron.Data.BTrees
             cursorConstructor = _ => cursor;
 
             if (p.IsLeaf == false)
-                throw new InvalidDataException("Index points to a non leaf page");
+                throw new VoronUnrecoverableErrorException("Index points to a non leaf page");
 
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
@@ -678,7 +678,7 @@ namespace Voron.Data.BTrees
             }
 
             if (page.IsLeaf == false)
-                throw new InvalidDataException("Index points to a non leaf page");
+                throw new VoronUnrecoverableErrorException("Index points to a non leaf page");
 
             node = page.Search(_llt, key); // will set the LastSearchPosition
 
@@ -711,7 +711,7 @@ namespace Voron.Data.BTrees
             }
 
             if (page.IsLeaf == false)
-                throw new InvalidDataException("Index points to a non leaf page");
+                throw new VoronUnrecoverableErrorException("Index points to a non leaf page");
             
             node = page.Search(_llt, key); // will set the LastSearchPosition
 

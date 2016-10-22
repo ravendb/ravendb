@@ -43,6 +43,7 @@ using Sparrow.Logging;
 using Sparrow.Utils;
 using Size = Raven.Server.Config.Settings.Size;
 using Voron.Debugging;
+using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -550,7 +551,7 @@ namespace Raven.Server.Documents.Indexes
                                     _logger.Info($"Out of memory occurred for '{Name} ({IndexId})'.", oome);
                                 // TODO [ppekrol] GC?
                             }
-                            catch (InvalidDataException ide)
+                            catch (VoronUnrecoverableErrorException ide)
                             {
                                 HandleIndexCorruption(ide);
                                 return;
@@ -681,6 +682,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleIndexCorruption(Exception e)
         {
+            Console.WriteLine(e);
             if (_logger.IsOperationsEnabled)
                 _logger.Operations($"Data corruption occured for '{Name}' ({IndexId}).", e);
 
@@ -704,7 +706,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void HandleError(Exception e)
         {
-            var ide = e as InvalidDataException;
+            var ide = e as VoronUnrecoverableErrorException;
             if (ide == null)
                 return;
 
@@ -823,6 +825,12 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (Priority == priority)
                     return;
+
+                if (priority == IndexingPriority.Error)
+                {
+                    Console.Beep();
+                    Console.WriteLine(Environment.StackTrace);
+                }
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Changing priority for '{Name} ({IndexId})' from '{Priority}' to '{priority}'.");
