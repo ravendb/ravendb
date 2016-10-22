@@ -3,16 +3,18 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
+using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -23,6 +25,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Xunit;
+using JsonTextWriter = Raven.Imports.Newtonsoft.Json.JsonTextWriter;
 
 namespace FastTests
 {
@@ -248,14 +251,36 @@ namespace FastTests
                           ? TimeSpan.FromMinutes(15)
                           : TimeSpan.FromMinutes(1));
 
-            var spinUntil = SpinWait.SpinUntil(() =>
-                        databaseCommands.GetStatistics().Indexes.All(x => x.IsStale == false),
-                timeout.Value);
 
-            if (spinUntil)
-                return;
+            var sp = Stopwatch.StartNew();
+            while (sp.Elapsed < timeout.Value)
+            {
+                if (databaseCommands.GetStatistics().Indexes.All(x => x.IsStale == false))
+                    return;
+                Thread.Sleep(32);
+            }
 
-            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value);
+            var request = databaseCommands.CreateRequest("/indexes/performance",HttpMethod.Get);
+            var perf = request.ReadResponseJson();
+            request = databaseCommands.CreateRequest("/indexes/errors", HttpMethod.Get);
+            var errors = request.ReadResponseJson();
+
+            var total = new RavenJObject
+            {
+                ["Errors"] = errors,
+                ["Performance"] = perf
+            };
+
+            var file = Path.GetTempFileName() + ".json";
+            using (var writer = File.CreateText(file))
+            {
+                var jsonTextWriter = new JsonTextWriter(writer);
+                total.WriteTo(jsonTextWriter);
+                jsonTextWriter.Flush();
+            }
+            
+
+            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
         }
 
         public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)
