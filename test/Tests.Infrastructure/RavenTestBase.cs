@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
@@ -256,8 +257,14 @@ namespace FastTests
             var sp = Stopwatch.StartNew();
             while (sp.Elapsed < timeout.Value)
             {
-                if (databaseCommands.GetStatistics().Indexes.All(x => x.IsStale == false))
+                var databaseStatistics = databaseCommands.GetStatistics();
+                if (databaseStatistics.Indexes.All(x => x.IsStale == false))
                     return;
+
+                if (databaseStatistics.Indexes.Any(x => x.Priority == IndexingPriority.Error))
+                {
+                    break;
+                }
                 Thread.Sleep(32);
             }
 
@@ -280,6 +287,14 @@ namespace FastTests
                 jsonTextWriter.Flush();
             }
             
+            var stats = databaseCommands.GetStatistics();
+
+            var corrupted = stats.Indexes.Where(x => x.Priority == IndexingPriority.Error).ToList();
+            if (corrupted.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"The following indexes are with error state: {string.Join(",", corrupted.Select(x => x.Name))} - details at " + file);
+            }
 
             throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
         }
