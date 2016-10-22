@@ -203,11 +203,15 @@ namespace Raven.Server.Documents.Indexes
                 hashCode = (hashCode * 397) ^ (Name?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Collections?.GetEnumerableHashCode() ?? 0);
 
+                hashCode = ComputeRestOfHash(hashCode);
+
                 _cachedHashCode = hashCode;
 
                 return hashCode;
             }
         }
+
+        protected abstract int ComputeRestOfHash(int hashCode);
 
         public static string TryReadNameFromMetadataFile(DirectoryInfo directory)
         {
