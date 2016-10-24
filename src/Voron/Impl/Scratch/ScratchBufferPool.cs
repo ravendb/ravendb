@@ -3,12 +3,7 @@ using Sparrow.Binary;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
-using Voron.Exceptions;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Scratch
@@ -38,6 +33,7 @@ namespace Voron.Impl.Scratch
         private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers =
             new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.Instance);
 
+        private readonly LinkedList<Tuple<DateTime, ScratchBufferItem>> _recycleArea = new LinkedList<Tuple<DateTime, ScratchBufferItem>>();
 
         public ScratchBufferPool(StorageEnvironment env)
         {
@@ -70,6 +66,17 @@ namespace Voron.Impl.Scratch
 
         private ScratchBufferItem NextFile(long minSize, long? requestedSize)
         {
+            if (_recycleArea.Count > 0)
+            {
+                var recycled = _recycleArea.Last.Value.Item2;
+                _recycleArea.RemoveLast();
+                if (recycled.File.Size <= Math.Max(minSize, requestedSize ?? 0))
+                {
+                    _scratchBuffers.TryAdd(recycled.Number, recycled);
+                    return recycled;
+                }
+            }
+
             _currentScratchNumber++;
             AbstractPager scratchPager;
             if (requestedSize != null)
@@ -153,10 +160,25 @@ namespace Voron.Impl.Scratch
             scratch.File.Free(page, asOfTxId);
             if (scratch.File.ActivelyUsedBytes != 0)
                 return;
+
+            while (_recycleArea.First != null)
+            {
+                if (DateTime.UtcNow - _recycleArea.First.Value.Item1 <= TimeSpan.FromMinutes(1))
+                {
+                    break;
+                }
+
+                _recycleArea.First.Value.Item2.File.Dispose();
+                _recycleArea.RemoveFirst();
+            }
+
             if (scratch == _current)
             {
                 if (scratch.File.Size <= _options.MaxScratchBufferSize)
                 {
+                    // we'll take the chance that no one is using us to reset the memory allocations
+                    // and avoid fragmentation
+                    scratch.File.Reset();
                     return;
                 }
                 // this is the current one, but the size is too big, since no one is using the scratch 
@@ -165,8 +187,24 @@ namespace Voron.Impl.Scratch
                 newCurrent.File.PagerState.AddRef();
                 _current = newCurrent;
             }
+            RecyleScratchFile(scratch);
+        }
+
+        private void RecyleScratchFile(ScratchBufferItem scratch)
+        {
             ScratchBufferItem _;
-            _scratchBuffers.TryRemove(scratchNumber, out _);
+            if (_scratchBuffers.TryRemove(scratch.Number, out _) == false)
+            {
+                scratch.File.Dispose();
+                return;
+            }
+
+            if (scratch.File.Size == _current.File.Size)
+            {
+                scratch.File.Reset();
+                _recycleArea.AddLast(Tuple.Create(DateTime.UtcNow, scratch));
+                return;
+            }
             scratch.File.Dispose();
         }
 

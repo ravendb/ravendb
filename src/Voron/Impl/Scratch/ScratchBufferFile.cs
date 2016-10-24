@@ -44,6 +44,16 @@ namespace Voron.Impl.Scratch
             _pageSize = scratchPager.PageSize;
         }
 
+        public void Reset()
+        {
+            _allocatedPages.Clear();
+            _freePagesBySizeAvailableImmediately.Clear();
+            _freePagesBySize.Clear();
+            _freePagesByTransaction.Clear();
+            _lastUsedPage = 0;
+            _allocatedPagesUsedSize = 0;
+        }
+
         public PagerState PagerState => _scratchPager.PagerState;
 
         public int Number => _scratchNumber;

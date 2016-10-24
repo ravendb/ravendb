@@ -6,6 +6,7 @@
 using System;
 using System.Runtime.Serialization;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 
 namespace Raven.Abstractions.Exceptions
 {

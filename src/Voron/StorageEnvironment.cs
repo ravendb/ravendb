@@ -41,7 +41,7 @@ namespace Voron
         }
 
         /// <summary>
-        /// This is the shared storage where we are going to store all the static constants for names. 
+        /// This is the shared storage where we are going to store all the static constants for names.
         /// WARNING: This context will never be released, so only static constants should be added here.
         /// </summary>
         public static readonly ByteStringContext LabelsContext = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes);
@@ -51,8 +51,8 @@ namespace Voron
         /// when we are flushing to the data file, there is a need to take the write tx lock to mutate
         /// some of our in memory data structures safely. However, if there is a thread, such as tx merger thread,
         /// that is doing high frequency transactions, the unfairness in the lock will automatically ensure that we'll
-        /// have very hard time actually getting the write lock in the flushing thread. 
-        /// 
+        /// have very hard time actually getting the write lock in the flushing thread.
+        ///
         /// When this value is set to a non negative number, we check if the current thread id equals to this number, and if not
         /// we'll yield the thread for 1 ms. The idea is that this will allow the flushing thread, which doesn't have this limitation
         /// to actually capture the lock, do its work, and then reset it.
@@ -150,7 +150,8 @@ namespace Voron
                 {
                     return;
                 }
-                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
+                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
             }
         }
 
@@ -178,7 +179,7 @@ namespace Voron
 
             _transactionsCounter = (header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
 
-            using (var tx = NewLowLevelTransaction(TransactionFlags.ReadWrite))
+            using (var tx = NewLowLevelTransaction(new TransactionPersistentContext(true), TransactionFlags.ReadWrite))
             {
                 var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root);
                 root.Name = Constants.RootTreeNameSlice;
@@ -227,7 +228,7 @@ namespace Voron
             {
                 Options = Options
             };
-            using (var tx = NewLowLevelTransaction(TransactionFlags.ReadWrite))
+            using (var tx = NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite))
             {
                 var root = Tree.Create(tx, null);
 
@@ -270,27 +271,29 @@ namespace Voron
                     bool lockTaken = false;
                     using (_journal.Applicator.TryTakeFlushingLock(ref lockTaken))
                     {
-                        // note that we have to set the dispose flag when under the lock 
-                        // (either with TryTake or Take), to avoid data race between the 
+                        // note that we have to set the dispose flag when under the lock
+                        // (either with TryTake or Take), to avoid data race between the
                         // flusher & the dispose. The flusher will check the dispose status
                         // only after it successfully took the lock.
 
                         if (lockTaken == false)
                         {
                             // if we are here, then we didn't get the flush lock, so it is currently being run
-                            // we need to wait for it to complete (so we won't be shutting down the db while we 
+                            // we need to wait for it to complete (so we won't be shutting down the db while we
                             // are flushing and maybe access invalid memory.
                             using (_journal.Applicator.TakeFlushingLock())
                             {
-                                // when we are here, we know that we aren't flushing, and we can dispose, 
+                                // when we are here, we know that we aren't flushing, and we can dispose,
                                 // any future calls to flush will abort because we are marked as disposed
 
                                 Disposed = true;
+                                _journal.Applicator.WaitForSyncToCompleteOnDispose();
                             }
                         }
                         else
                         {
                             Disposed = true;
+                            _journal.Applicator.WaitForSyncToCompleteOnDispose();
                         }
                     }
                 }
@@ -321,17 +324,27 @@ namespace Voron
             }
         }
 
+        public Transaction ReadTransaction(TransactionPersistentContext transactionPersistentContext, ByteStringContext context = null)
+        {
+            return new Transaction(NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read, context));
+        }
+
         public Transaction ReadTransaction(ByteStringContext context = null)
         {
-            return new Transaction(NewLowLevelTransaction(TransactionFlags.Read, context));
+            return new Transaction(NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.Read, context));
+        }
+
+        public Transaction WriteTransaction(TransactionPersistentContext transactionPersistentContext, ByteStringContext context = null)
+        {
+            return new Transaction(NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null));
         }
 
         public Transaction WriteTransaction(ByteStringContext context = null)
         {
-            return new Transaction(NewLowLevelTransaction(TransactionFlags.ReadWrite, context, null));
+            return new Transaction(NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite, context, null));
         }
 
-        internal LowLevelTransaction NewLowLevelTransaction(TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)
+        internal LowLevelTransaction NewLowLevelTransaction(TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)
         {
             bool txLockTaken = false;
             bool flushInProgressReadLockTaken = false;
@@ -371,7 +384,7 @@ namespace Voron
                 try
                 {
                     long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-                    tx = new LowLevelTransaction(this, txId, flags, _freeSpaceHandling, context);
+                    tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling, context);
                 }
                 finally
                 {
@@ -513,7 +526,7 @@ namespace Voron
 
         public EnvironmentStats Stats()
         {
-            using (var tx = NewLowLevelTransaction(TransactionFlags.Read))
+            using (var tx = NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.Read))
             {
                 var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
 
@@ -633,7 +646,7 @@ namespace Voron
 
         public TransactionsModeResult SetTransactionMode(TransactionsMode mode, TimeSpan duration)
         {
-            using (var tx = NewLowLevelTransaction(TransactionFlags.ReadWrite))
+            using (var tx = NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite))
             {
                 var oldMode = Options.TransactionsMode;
 
@@ -653,7 +666,7 @@ namespace Voron
                 {
 
                     tx.IsLazyTransaction = false;
-                    // we only commit here, the rest of the of the options are without 
+                    // we only commit here, the rest of the of the options are without
                     // commit and we use the tx lock
                     tx.Commit();
                 }

@@ -16,6 +16,7 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -595,25 +596,46 @@ namespace Raven.Server.Documents.Handlers
         public Task TotalTime()
         {
             var indexes = GetIndexesToReportOn();
-            JsonOperationContext context;
+            DocumentsOperationContext context;
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteStartObject();
-                var first = true;
+                var dja = new DynamicJsonArray();
 
                 foreach (var index in indexes)
                 {
-                    if (first == false)
+                    DateTime baseLine = DateTime.MinValue;
+                    using (context.OpenReadTransaction())
                     {
-                        writer.WriteComma();
+                        foreach (var collection in index.Collections)
+                        {
+                            var etag = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
+                            var document = Database.DocumentsStorage.GetDocumentsFrom(context, collection, etag,0,1).FirstOrDefault();
+                            if (document != null)
+                            {
+                                if (document.LastModified > baseLine)
+                                    baseLine = document.LastModified;
+                            }
+                        }
                     }
-                    first = false;
-                    writer.WritePropertyName(index.Name);
-                    writer.WriteString(index.TimeSpentIndexing.Elapsed.ToString("c"));
+                    var createdTimestamp = index.GetStats().CreatedTimestamp;
+                    if (createdTimestamp > baseLine)
+                        baseLine = createdTimestamp;
+
+                    var lastBatch = index.GetIndexingPerformance(0)
+                                    .LastOrDefault(x => x.Completed != null)
+                                    ?.Completed ?? DateTime.UtcNow;
+
+                    
+                    dja.Add(new DynamicJsonValue
+                    {
+                        ["Name"] = index.Name,
+                        ["TotalIndexingTime"] = index.TimeSpentIndexing.Elapsed.ToString("c"),
+                        ["LagTime"] = (lastBatch - baseLine).ToString("c")
+                    });
                 }
 
-                writer.WriteEndObject();
+                context.Write(writer, dja);
             }
             return Task.CompletedTask;
         }

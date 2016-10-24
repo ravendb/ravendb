@@ -490,8 +490,7 @@ namespace Raven.Server.Documents.Indexes
                         index?.Dispose();
                         exceptions?.Add(e);
 
-                        // TODO arek: I think we can ignore auto indexes here, however for static ones try to retrieve names
-                        var fakeIndex = new FaultyInMemoryIndex(indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexDirectory) ?? indexName);
+                        var fakeIndex = new FaultyInMemoryIndex(e,indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexDirectory) ?? indexName);
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Could not open index with id {indexId}. Created in-memory, fake instance: {fakeIndex.Name}", e);

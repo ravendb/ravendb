@@ -14,6 +14,7 @@ using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using FastTests;
+using SlowTests.Tests.Views;
 using StressTests;
 using Voron;
 
@@ -25,11 +26,14 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-                Console.WriteLine(i);
-                using (var x = new SlowTests.MailingList.IndexMetadata())
+                Console.Write(i);
+                var sp = Stopwatch.StartNew();
+               
+                using (var x = new MapReduce_IndependentSteps())
                 {
-                    x.WillGenerateProperIndex();
+                    x.CanGetReducedValues();
                 }
+                Console.WriteLine(" - " + sp.Elapsed);
             }
         }
     }

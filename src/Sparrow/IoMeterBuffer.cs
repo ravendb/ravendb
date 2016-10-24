@@ -65,20 +65,25 @@ namespace Sparrow
         {
             private readonly IoMeterBuffer _parent;
             private readonly IoMetrics.MeterType _type;
-            private readonly long _size;
+            public long Size;
             private readonly long _start;
 
             public DurationMeasurement(IoMeterBuffer parent, IoMetrics.MeterType type, long size)
             {
                 _parent = parent;
                 _type = type;
-                _size = size;
+                Size = size;
                 _start = Stopwatch.GetTimestamp();
+            }
+
+            public void IncrementSize(long size)
+            {
+                Size += size;
             }
 
             public void Dispose()
             {
-                _parent.Mark(_size, _start, _type);
+                _parent.Mark(Size, _start, _type);
             }
         }
 

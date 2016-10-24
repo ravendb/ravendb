@@ -43,6 +43,7 @@ using Sparrow.Logging;
 using Sparrow.Utils;
 using Size = Raven.Server.Config.Settings.Size;
 using Voron.Debugging;
+using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -550,6 +551,16 @@ namespace Raven.Server.Documents.Indexes
                                     _logger.Info($"Out of memory occurred for '{Name} ({IndexId})'.", oome);
                                 // TODO [ppekrol] GC?
                             }
+                            catch (VoronUnrecoverableErrorException ide)
+                            {
+                                HandleIndexCorruption(ide);
+                                return;
+                            }
+                            catch (IndexCorruptionException ice)
+                            {
+                                HandleIndexCorruption(ice);
+                                return;
+                            }
                             catch (IndexWriteException iwe)
                             {
                                 HandleWriteErrors(scope, iwe);
@@ -570,7 +581,12 @@ namespace Raven.Server.Documents.Indexes
 
                             try
                             {
-                                _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
+                                var failureInformation = _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
+                                HandleIndexFailureInformation(failureInformation);
+                            }
+                            catch (InvalidDataException ide)
+                            {
+                                HandleIndexCorruption(ide);
                             }
                             catch (Exception e)
                             {
@@ -659,7 +675,41 @@ namespace Raven.Server.Documents.Indexes
             if (Priority.HasFlag(IndexingPriority.Error) || writeErrors < WriteErrorsLimit)
                 return;
 
+            // TODO we should create notification here?
+
             SetPriority(IndexingPriority.Error);
+        }
+
+        private void HandleIndexCorruption(Exception e)
+        {
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Data corruption occured for '{Name}' ({IndexId}).", e);
+
+            // TODO we should create notification here?
+
+            SetPriority(IndexingPriority.Error);
+        }
+
+        private void HandleIndexFailureInformation(IndexFailureInformation failureInformation)
+        {
+            if (failureInformation.IsInvalidIndex == false)
+                return;
+
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations(failureInformation.GetErrorMessage());
+
+            // TODO we should create notification here?
+
+            SetPriority(IndexingPriority.Error);
+        }
+
+        public void HandleError(Exception e)
+        {
+            var ide = e as VoronUnrecoverableErrorException;
+            if (ide == null)
+                return;
+
+            throw new IndexCorruptionException(e);
         }
 
         protected abstract IIndexingWork[] CreateIndexWorkExecutors();
@@ -760,7 +810,7 @@ namespace Raven.Server.Documents.Indexes
             _mre.Set();
         }
 
-        public List<IndexingError> GetErrors()
+        public virtual List<IndexingError> GetErrors()
         {
             return _indexStorage.ReadErrors();
         }
@@ -1015,6 +1065,9 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+
+            if (Priority.HasFlag(IndexingPriority.Error))
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored.");
 
             if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
                 SetPriority(IndexingPriority.Normal);
@@ -1394,42 +1447,48 @@ namespace Raven.Server.Documents.Indexes
         protected virtual unsafe long CalculateIndexEtag(bool isStale, DocumentsOperationContext documentsContext,
             TransactionOperationContext indexContext)
         {
-            var indexEtagBytes = new long[
-                1 + // definition hash
-                1 + // isStale
-                2 * Collections.Count // last document etags and last mapped etags per collection
-                ];
+            var length = MinimumSizeForCalculateIndexEtagLength();
+
+            var indexEtagBytes = stackalloc byte[length];
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, documentsContext, indexContext);
 
             unchecked
             {
-                fixed (long* buffer = indexEtagBytes)
-                {
-                    return
-                        (long)Hashing.XXHash64.Calculate((byte*)buffer, (ulong)(indexEtagBytes.Length * sizeof(long)));
-                }
+                return (long) Hashing.XXHash64.Calculate(indexEtagBytes, (ulong)length);
             }
         }
 
-        protected int CalculateIndexEtagInternal(long[] indexEtagBytes, bool isStale,
+        protected int MinimumSizeForCalculateIndexEtagLength()
+        {
+            var length = sizeof(long)*3*Collections.Count + // last document etag, last tombstone etag and last mapped etags per collection
+                         sizeof(int) + // definition hash
+                         1; // isStale
+            return length;
+        }
+
+        protected unsafe void CalculateIndexEtagInternal(byte* indexEtagBytes, bool isStale,
             DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
-            var index = 0;
-
-            indexEtagBytes[index++] = Definition.GetHashCode();
-            indexEtagBytes[index++] = isStale ? 0L : 1L;
 
             foreach (var collection in Collections)
             {
                 var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
+                var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection);
                 var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
-                indexEtagBytes[index++] = lastDocEtag;
-                indexEtagBytes[index++] = lastMappedEtag;
+                *(long*)indexEtagBytes = lastDocEtag;
+                indexEtagBytes += sizeof(long);
+                *(long*)indexEtagBytes = lastTombstoneEtag;
+                indexEtagBytes += sizeof(long);
+                *(long*)indexEtagBytes = lastMappedEtag;
+                indexEtagBytes += sizeof(long);
             }
 
-            return index;
+
+            *(int*)indexEtagBytes = Definition.GetHashCode();
+            indexEtagBytes += sizeof(int);
+            *indexEtagBytes = isStale ? (byte)0 : (byte)1;
         }
 
         public long GetIndexEtag()
@@ -1510,7 +1569,13 @@ namespace Raven.Server.Documents.Indexes
         public bool CanContinueBatch(IndexingStatsScope stats)
         {
             stats.RecordMapAllocations(_threadAllocations.Allocations);
-            
+
+            if (stats.ErrorsCount >= IndexStorage.MaxNumberOfKeptErrors)
+            {
+                stats.RecordMapCompletedReason($"Number of errors ({stats.ErrorsCount}) reached maximum number of allowed errors per batch ({IndexStorage.MaxNumberOfKeptErrors})");
+                return false;
+            }
+
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
             {
                 if (TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), stats) == false)
@@ -1614,6 +1679,5 @@ namespace Raven.Server.Documents.Indexes
                 return true;
             }
         }
-
     }
 }
