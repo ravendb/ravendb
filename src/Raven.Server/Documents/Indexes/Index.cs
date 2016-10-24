@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -1063,11 +1064,7 @@ namespace Raven.Server.Documents.Indexes
             DocumentsOperationContext documentsContext, OperationCancelToken token)
             where TQueryResult : QueryResultServerSide
         {
-            if (_disposed)
-                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
-
-            if (Priority.HasFlag(IndexingPriority.Error))
-                throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored.");
+            AssertIndexState();
 
             if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
                 SetPriority(IndexingPriority.Normal);
@@ -1118,8 +1115,7 @@ namespace Raven.Server.Documents.Indexes
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 
                             if (wait == null)
-                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value,
-                                    _indexingBatchCompleted);
+                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, _indexingBatchCompleted);
 
                             await wait.WaitForIndexingAsync().ConfigureAwait(false);
                             continue;
@@ -1195,8 +1191,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task<FacetedQueryResult> FacetedQuery(FacetQuery query, long facetSetupEtag,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
-            if (_disposed)
-                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+            AssertIndexState();
 
             if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
                 SetPriority(IndexingPriority.Normal);
@@ -1206,6 +1201,7 @@ namespace Raven.Server.Documents.Indexes
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, null);
 
             TransactionOperationContext indexContext;
+
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
                 var result = new FacetedQueryResult();
@@ -1261,6 +1257,8 @@ namespace Raven.Server.Documents.Indexes
         public virtual TermsQueryResult GetTerms(string field, string fromValue, int pageSize,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
+            AssertIndexState();
+
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenReadTransaction())
@@ -1274,7 +1272,7 @@ namespace Raven.Server.Documents.Indexes
 
                 using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                 {
-                    result.Terms = reader.Terms(field, fromValue, pageSize);
+                    result.Terms = reader.Terms(field, fromValue, pageSize, token.Token);
                 }
 
                 return result;
@@ -1284,6 +1282,8 @@ namespace Raven.Server.Documents.Indexes
         public virtual MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
+            AssertIndexState();
+
             Transformer transformer = null;
             if (string.IsNullOrEmpty(query.Transformer) == false)
             {
@@ -1352,6 +1352,16 @@ namespace Raven.Server.Documents.Indexes
 
                 return result;
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AssertIndexState()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+
+            if (Priority.HasFlag(IndexingPriority.Error))
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored.");
         }
 
         private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQueryBase query, SortedField[] sortedFields)
@@ -1455,13 +1465,13 @@ namespace Raven.Server.Documents.Indexes
 
             unchecked
             {
-                return (long) Hashing.XXHash64.Calculate(indexEtagBytes, (ulong)length);
+                return (long)Hashing.XXHash64.Calculate(indexEtagBytes, (ulong)length);
             }
         }
 
         protected int MinimumSizeForCalculateIndexEtagLength()
         {
-            var length = sizeof(long)*3*Collections.Count + // last document etag, last tombstone etag and last mapped etags per collection
+            var length = sizeof(long) * 3 * Collections.Count + // last document etag, last tombstone etag and last mapped etags per collection
                          sizeof(int) + // definition hash
                          1; // isStale
             return length;

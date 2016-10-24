@@ -316,7 +316,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }).ToArray());
         }
 
-        public HashSet<string> Terms(string field, string fromValue, int pageSize)
+        public HashSet<string> Terms(string field, string fromValue, int pageSize, CancellationToken token)
         {
             var results = new HashSet<string>();
             using (var termEnum = _searcher.IndexReader.Terms(new Term(field, fromValue ?? string.Empty)))
@@ -325,6 +325,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     while (termEnum.Term == null || fromValue.Equals(termEnum.Term.Text))
                     {
+                        token.ThrowIfCancellationRequested();
+
                         if (termEnum.Next() == false)
                             return results;
                     }
@@ -332,6 +334,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 while (termEnum.Term == null ||
                     field.Equals(termEnum.Term.Field))
                 {
+                    token.ThrowIfCancellationRequested();
+
                     if (termEnum.Term != null)
                         results.Add(termEnum.Term.Text);
 
