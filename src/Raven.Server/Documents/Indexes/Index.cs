@@ -1096,6 +1096,8 @@ namespace Raven.Server.Documents.Indexes
 
                 while (true)
                 {
+                    AssertIndexState();
+
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
                         documentsContext.OpenReadTransaction();
@@ -1211,6 +1213,8 @@ namespace Raven.Server.Documents.Indexes
 
                 while (true)
                 {
+                    AssertIndexState();
+
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
                         documentsContext.OpenReadTransaction();
