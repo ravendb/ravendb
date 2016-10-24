@@ -34,6 +34,7 @@ namespace Raven.Server.Documents
         public static TimeSpan TwoMinutesTimespan = TimeSpan.FromMinutes(2);
         private readonly ConcurrentDictionary<long, SubscriptionState> _subscriptionStates = new ConcurrentDictionary<long, SubscriptionState>();
         private readonly TableSchema _subscriptionsSchema = new TableSchema();
+        private readonly TransactionPersistentContext _transactionContext = new TransactionPersistentContext(true);
         private readonly DocumentDatabase _db;
         private readonly StorageEnvironment _environment;
         private Sparrow.Logging.Logger _logger; 
@@ -75,7 +76,7 @@ namespace Raven.Server.Documents
 
         public void Initialize()
         {
-            using (var tx = _environment.WriteTransaction())
+            using (var tx = _environment.WriteTransaction(_transactionContext))
             {
                 tx.CreateTree(SubscriptionSchema.IdsTree);
                 _subscriptionsSchema.Create(tx, SubscriptionSchema.SubsTree);
@@ -91,7 +92,7 @@ namespace Raven.Server.Documents
             // and doing that without holding the tx lock
             JsonDeserializationServer.SubscriptionCriteria(criteria);
 
-            using (var tx = _environment.WriteTransaction())
+            using (var tx = _environment.WriteTransaction(_transactionContext))
             {
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 var subscriptionsTree = tx.ReadTree(SubscriptionSchema.IdsTree);
@@ -128,7 +129,7 @@ namespace Raven.Server.Documents
 
         public unsafe void AcknowledgeBatchProcessed(long id, long lastEtag)
         {
-            using (var tx = _environment.WriteTransaction())
+            using (var tx = _environment.WriteTransaction(_transactionContext))
             {
                 var config = GetSubscriptionConfig(id, tx);
 
@@ -164,7 +165,7 @@ namespace Raven.Server.Documents
 
         public unsafe void GetCriteriaAndEtag(long id, DocumentsOperationContext context, out SubscriptionCriteria criteria, out long startEtag)
         {
-            using (var tx = _environment.ReadTransaction())
+            using (var tx = _environment.ReadTransaction(_transactionContext))
             {
                 var config = GetSubscriptionConfig(id, tx);
 
@@ -196,7 +197,7 @@ namespace Raven.Server.Documents
 
         public unsafe void AssertSubscriptionIdExists(long id)
         {
-            using (var tx = _environment.ReadTransaction())
+            using (var tx = _environment.ReadTransaction(_transactionContext))
             {
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 var subscriptionId = Bits.SwapBytes((ulong)id);
@@ -222,7 +223,7 @@ namespace Raven.Server.Documents
                 subscriptionState.Dispose();
             }
 
-            using (var tx = _environment.WriteTransaction())
+            using (var tx = _environment.WriteTransaction(_transactionContext))
             {
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
 
@@ -317,7 +318,7 @@ namespace Raven.Server.Documents
         public unsafe void GetAllSubscriptions(BlittableJsonTextWriter writer,
             DocumentsOperationContext context, int start, int take)
         {
-            using (var tx = _environment.WriteTransaction())
+            using (var tx = _environment.WriteTransaction(_transactionContext))
             {
                 var subscriptions = new List<DynamicJsonValue>();
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
@@ -369,7 +370,7 @@ namespace Raven.Server.Documents
         public void GetRunningSusbscriptions(BlittableJsonTextWriter writer,
            DocumentsOperationContext context, int start, int take)
         {
-            using (var tx = _environment.ReadTransaction())
+            using (var tx = _environment.ReadTransaction(_transactionContext))
             {
                 var connections = new List<DynamicJsonValue>(take);
                 var skipped = 0;
@@ -412,7 +413,7 @@ namespace Raven.Server.Documents
             var subscriptionConnection = subscriptionState.Connection;
             if (subscriptionConnection == null) return null;
 
-            using (var tx = _environment.ReadTransaction())
+            using (var tx = _environment.ReadTransaction(_transactionContext))
             {
                 var subscriptionData =
                     ExtractSubscriptionConfigValue(GetSubscriptionConfig(subscriptionId, tx), context);
@@ -435,7 +436,7 @@ namespace Raven.Server.Documents
         }
         public long GetAllSubscriptionsCount()
         {
-            using (var tx = _environment.WriteTransaction())
+            using (var tx = _environment.WriteTransaction(_transactionContext))
             {
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 return table.NumberOfEntries;

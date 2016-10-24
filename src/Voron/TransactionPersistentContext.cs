@@ -1,36 +1,49 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Json;
 using Voron.Impl;
 
 namespace Voron
 {
-    public class TransactionPersistentContext
+    public class TransactionPersistentContext : IDisposable
     {
-        public bool IsLongLived { get; set; }
+        private bool _longLivedTransaction;
+        private int _cacheSize;
+
+        public bool LongLivedTransactions
+        {
+            get { return _longLivedTransaction; }
+            set
+            {
+                _longLivedTransaction = value;
+                _cacheSize = _longLivedTransaction ? 128 : 16;
+            }
+        }
+
         private readonly Stack<PageLocator> pageLocators = new Stack<PageLocator>();
         private readonly ByteStringContext _allocator = new ByteStringContext();
 
-        public TransactionPersistentContext(bool isLongLived = false)
+        public TransactionPersistentContext(bool longLivedTransactions = false)
         {
-            IsLongLived = isLongLived;
+            LongLivedTransactions = longLivedTransactions;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PageLocator AllocatePageLocator(LowLevelTransaction tx)
         {
             PageLocator locator = null;
-
             if (pageLocators.Count != 0)
             {
                 locator = pageLocators.Pop();
-                locator.Renew(tx, IsLongLived ? 128 : 16);
+                locator.Renew(tx, _cacheSize);
             }
             else
             {
-                locator = new PageLocator(_allocator, tx, IsLongLived ? 128 : 16);
+                locator = new PageLocator(_allocator, tx, _cacheSize);
             }
 
             return locator;
@@ -41,6 +54,11 @@ namespace Voron
         {
             Debug.Assert(locator != null);
             pageLocators.Push(locator);
+        }
+
+        public void Dispose()
+        {
+            _allocator?.Dispose();
         }
     }
 }
