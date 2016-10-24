@@ -120,6 +120,7 @@ namespace Raven.Server.Documents.Indexes
         private bool _allocationCleanupNeeded;
         private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
+        private string _errorPriorityReason;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -326,6 +327,9 @@ namespace Raven.Server.Documents.Indexes
 
                 if (DocumentDatabase.Configuration.Indexing.Disabled)
                     return;
+
+                if (Priority.HasFlag(IndexingPriority.Error))
+                    SetPriority(IndexingPriority.Normal);
 
                 _cancellationTokenSource = new CancellationTokenSource();
 
@@ -554,13 +558,11 @@ namespace Raven.Server.Documents.Indexes
                             }
                             catch (VoronUnrecoverableErrorException ide)
                             {
-                                HandleIndexCorruption(ide);
-                                return;
+                                HandleIndexCorruption(scope, ide);
                             }
                             catch (IndexCorruptionException ice)
                             {
-                                HandleIndexCorruption(ice);
-                                return;
+                                HandleIndexCorruption(scope, ice);
                             }
                             catch (IndexWriteException iwe)
                             {
@@ -585,9 +587,9 @@ namespace Raven.Server.Documents.Indexes
                                 var failureInformation = _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
                                 HandleIndexFailureInformation(failureInformation);
                             }
-                            catch (InvalidDataException ide)
+                            catch (VoronUnrecoverableErrorException vuee)
                             {
-                                HandleIndexCorruption(ide);
+                                HandleIndexCorruption(scope, vuee);
                             }
                             catch (Exception e)
                             {
@@ -677,17 +679,20 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             // TODO we should create notification here?
-
+            _errorPriorityReason = $"Priority was changed due to excessive number of write errors ({writeErrors}).";
             SetPriority(IndexingPriority.Error);
         }
 
-        private void HandleIndexCorruption(Exception e)
+        private void HandleIndexCorruption(IndexingStatsScope stats, Exception e)
         {
+            stats.AddCorruptionError(e);
+
             if (_logger.IsOperationsEnabled)
                 _logger.Operations($"Data corruption occured for '{Name}' ({IndexId}).", e);
 
             // TODO we should create notification here?
 
+            _errorPriorityReason = $"Priority was changed due to data corruption with message '{e.Message}'";
             SetPriority(IndexingPriority.Error);
         }
 
@@ -696,11 +701,14 @@ namespace Raven.Server.Documents.Indexes
             if (failureInformation.IsInvalidIndex == false)
                 return;
 
+            var message = failureInformation.GetErrorMessage();
+
             if (_logger.IsOperationsEnabled)
-                _logger.Operations(failureInformation.GetErrorMessage());
+                _logger.Operations(message);
 
             // TODO we should create notification here?
 
+            _errorPriorityReason = message;
             SetPriority(IndexingPriority.Error);
         }
 
@@ -825,6 +833,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (Priority == priority)
                     return;
+
+                if (priority.HasFlag(IndexingPriority.Error) == false)
+                    _errorPriorityReason = null;
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Changing priority for '{Name} ({IndexId})' from '{Priority}' to '{priority}'.");
@@ -1365,7 +1376,13 @@ namespace Raven.Server.Documents.Indexes
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
 
             if (Priority.HasFlag(IndexingPriority.Error))
-                throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored.");
+            {
+                var errorPriorityReason = _errorPriorityReason;
+                if (string.IsNullOrWhiteSpace(errorPriorityReason) == false)
+                    throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored. {errorPriorityReason}");
+
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored. Please check index errors avaiable at '/databases/{DocumentDatabase.Name}/indexes/errors?name={Name}'.");
+            }
         }
 
         private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQueryBase query, SortedField[] sortedFields)
