@@ -12,7 +12,7 @@ namespace Raven.Client.Data.Indexes
 
         public static class Map
         {
-            public const string DocumentRead = "Document/Read";
+            public const string DocumentRead = "Storage/DocumentRead";
 
             public const string Linq = "Linq";
 
@@ -39,16 +39,16 @@ namespace Raven.Client.Data.Indexes
             public const string NestedValuesScope = "NestedValues";
             public const string LeafAggregation = "Aggregation/Leafs";
             public const string BranchAggregation = "Aggregation/Branches";
-            public const string StoringReduceResult = "Store/ReduceResults";
-            public const string StoringNestedValues = "Store/Values";
-            public const string NestedValuesAggregation = "Aggregation/Values";
-            public const string NestedValuesRead = "Store/Read";
-            public const string Aggregation = "Aggregation";
-            public const string AggregationConversion = "Aggregation/Conversion";
-            public const string OldValueDelete = "Store/OldValueDelete";
-            public const string NewValueAdd = "Store/NewValueAdd";
-            public const string BuildNewReduceResult = "Build/NewReduceResult";
-            public static string MapPreparation = "Map/Preparation";
+            public const string StoringReduceResult = "Storage/ReduceResults";
+            public const string StoringNestedValues = "Storage/Values";
+            public const string NestedValuesAggregation = "Aggregation/NestedValues";
+            public const string NestedValuesRead = "Storage/Read";
+            public const string BlittableJsonAggregation = "Aggregation/BlittableJson";
+            public const string CreateBlittableJson = "CreateBlittableJson";
+            public const string RemoveMapResult = "Storage/RemoveMapResult";
+            public const string PutMapResult = "Storage/PutMapResult";
+            public static string GetMapEntriesTree = "GetMapEntriesTree";
+            public static string GetMapEntries = "GetMapEntries";
         }
     }
 }
