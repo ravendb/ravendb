@@ -30,7 +30,7 @@ namespace Voron
             }
             else
             {
-                locator = new PageLocator(_allocator, tx, IsLongLived ? 128 : 16);
+                locator = new PageLocator(tx, IsLongLived ? 128 : 16);
             }
 
             return locator;

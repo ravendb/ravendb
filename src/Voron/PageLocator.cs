@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
-using Sparrow;
+﻿using System.Diagnostics;
 using Voron.Impl;
 
 namespace Voron
@@ -13,7 +7,7 @@ namespace Voron
     {
         private const ushort Invalid = 0;
         private LowLevelTransaction _tx;
-        private readonly ushort* _fingerprints;
+        private readonly ushort[] _fingerprints;
         private readonly PageHandlePtr[] _cache;
 
         private int _cacheSize;
@@ -45,10 +39,10 @@ namespace Voron
                 _fingerprints[i] = Invalid;
         }
 
-        public PageLocator(ByteStringContext allocator, LowLevelTransaction tx, int cacheSize = 8)
+        public PageLocator(LowLevelTransaction tx, int cacheSize = 8)
         {
             _cache = new PageHandlePtr[512];
-            _fingerprints = (ushort*)allocator.Allocate(512 * sizeof(ushort)).Ptr;
+            _fingerprints = new ushort[512];
             Renew(tx, cacheSize);
         }
 
