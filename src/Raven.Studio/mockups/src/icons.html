@@ -1,0 +1,789 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+{{> head }}
+
+<body>
+    {{> spinner }} {{> topbar }} {{> menu }} {{> notification-center }}
+
+    <div class="container-fluid content-container">
+        <div class="content-container-margin">
+            <h1>Style quide and components</h1>
+            <hr />
+            <section class="panel">
+                <div class="panel-body">
+                    <h3>Missing icons</h3>
+                    <ul>
+                        <li>Tasks</li>
+                        <li>Import Database</li>
+                        <li>Export Database</li>
+                        <li>Create Sample Data</li>
+                        <li>CSV Import</li>
+                        <li>Settings</li>
+                        <li>Database Settings</li>
+                        <li>Quotas</li>
+                        <li>Replication</li>
+                        <li>ETL</li>
+                        <li>SQL Replication</li>
+                        <li>Versioning</li>
+                        <li>Periodic Export</li>
+                        <li>Custom Functions</li>
+                        <li>Studio Config</li>
+                        <li>Stats</li>
+                        <li>Stats</li>
+                        <li>Indexing</li>
+                        <li>Indexing performance</li>
+                        <li>Index stats</li>
+                        <li>Index batch size</li>
+                        <li>Prefetches</li>
+                        <li>Storage</li>
+                        <li>Collections storage</li>
+                        <li>Debug</li>
+                        <li>Changes</li>
+                        <li>Data subscriptions</li>
+                        <li>Metrics</li>
+                        <li>Config</li>
+                        <li>Doc refs</li>
+                        <li>Currently indexing</li>
+                        <li>Queries</li>
+                        <li>Tasks</li>
+                        <li>Index fields</li>
+                        <li>Identities</li>
+                        <li>Web Socket</li>
+                        <li>Requests count</li>
+                        <li>Stats</li>
+                        <li>Logs</li>
+                        <li>Running Tasks</li>
+                        <li>Alerts</li>
+                        <li>Index Errors</li>
+                        <li>Replication Stats</li>
+                        <li>SQL Replication Stats</li>
+                        <li>User Info</li>
+                        <li>Map/Reduce Visualizer</li>
+                        <li>Debug</li>
+                        <li>Storage</li>
+                        <li>SERVER</li>
+                        <li>Resources</li>
+                        <li>Dashboard</li>
+                        <li>New database</li>
+                        <li>New filesystem</li>
+                        <li>New counter</li>
+                        <li>New time series</li>
+                        <li>Manage server</li>
+                        <li>Manage server</li>
+                        <li>Global config</li>
+                        <li>Periodic export</li>
+                        <li>Cluster-wide database settings</li>
+                        <li>Replication</li>
+                        <li>SQL Replication</li>
+                        <li>Quotas</li>
+                        <li>Custom functions</li>
+                        <li>Versioning</li>
+                        <li>API Keys</li>
+                        <li>Cluster</li>
+                        <li>Server Smuggling</li>
+                        <li>Backup</li>
+                        <li>Compact</li>
+                        <li>Restore</li>
+                        <li>Admin Logs</li>
+                        <li>Server Topology</li>
+                        <li>Traffic Watch</li>
+                        <li>License Information</li>
+                        <li>Gather Debug Info</li>
+                        <li>IO Test</li>
+                        <li>Disk IO Viewer</li>
+                        <li>Administrator JS Console</li>
+                        <li>Studio Config</li>
+                        <li>Hot Spare</li>
+                        <li>About</li>
+                    </ul>
+                </div>
+            </section>
+
+            <h2>Icons</h2>
+            <section id="icons-list">
+                <div class="row">
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-magic-wand"></div>
+                                <hr />
+                                <span>.icon-magic-wand</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-empty-set"></div>
+                                <hr />
+                                <span>.icon-empty-set</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-drive"></div>
+                                <hr />
+                                <span>.icon-drive</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-backup"></div>
+                                <hr />
+                                <span>.icon-backup</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-umbrella"></div>
+                                <hr />
+                                <span>.icon-umbrella</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-coffee"></div>
+                                <hr />
+                                <span>.icon-coffee</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-exclamation"></div>
+                                <hr />
+                                <span>.icon-exclamation</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-hash"></div>
+                                <hr />
+                                <span>.icon-hash</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-copy-to-clipboard"></div>
+                                <hr />
+                                <span>.icon-copy-to-clipboard</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-filesystem"></div>
+                                <hr />
+                                <span>.icon-filesystem</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-swap"></div>
+                                <hr />
+                                <span>.icon-swap</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-force"></div>
+                                <hr />
+                                <span>.icon-force</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-unlock"></div>
+                                <hr />
+                                <span>.icon-unlock</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-lock"></div>
+                                <hr />
+                                <span>.icon-lock</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-lock-error"></div>
+                                <hr />
+                                <span>.icon-lock-error</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-lock-sidebyside"></div>
+                                <hr />
+                                <span>.icon-lock-sidebyside</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-revert"></div>
+                                <hr />
+                                <span>.icon-revert</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-reset"></div>
+                                <hr />
+                                <span>.icon-reset</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-play"></div>
+                                <hr />
+                                <span>.icon-play</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-pause"></div>
+                                <hr />
+                                <span>.icon-pause</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-stop"></div>
+                                <hr />
+                                <span>.icon-stop</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-merge"></div>
+                                <hr />
+                                <span>.icon-merge</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-import"></div>
+                                <hr />
+                                <span>.icon-import</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-export"></div>
+                                <hr />
+                                <span>.icon-export</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-index"></div>
+                                <hr />
+                                <span>.icon-index</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-menu"></div>
+                                <hr />
+                                <span>.icon-menu</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-newtab"></div>
+                                <hr />
+                                <span>.icon-newtab</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-up"></div>
+                                <hr />
+                                <span>.icon-arrow-up</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-right"></div>
+                                <hr />
+                                <span>.icon-arrow-right</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-down"></div>
+                                <hr />
+                                <span>.icon-arrow-down</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-left"></div>
+                                <hr />
+                                <span>.icon-arrow-left</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-filled-up"></div>
+                                <hr />
+                                <span>.icon-arrow-filled-up</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-filled-right"></div>
+                                <hr />
+                                <span>.icon-arrow-filled-right</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-filled-down"></div>
+                                <hr />
+                                <span>.icon-arrow-filled-down</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-arrow-filled-left"></div>
+                                <hr />
+                                <span>.icon-arrow-filled-left</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-cancel"></div>
+                                <hr />
+                                <span>.icon-cancel</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-collapse"></div>
+                                <hr />
+                                <span>.icon-collapse</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-checkbox"></div>
+                                <hr />
+                                <span>.icon-checkbox</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-checkbox-on"></div>
+                                <hr />
+                                <span>.icon-checkbox-on</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-code"></div>
+                                <hr />
+                                <span>.icon-code</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-database"></div>
+                                <hr />
+                                <span>.icon-database</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-document"></div>
+                                <hr />
+                                <span>.icon-document</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-document2"></div>
+                                <hr />
+                                <span>.icon-document2</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-document-group"></div>
+                                <hr />
+                                <span>.icon-document-group</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-help"></div>
+                                <hr />
+                                <span>.icon-help</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-info"></div>
+                                <hr />
+                                <span>.icon-info</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-list"></div>
+                                <hr />
+                                <span>.icon-list</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-menu-collapse"></div>
+                                <hr />
+                                <span>.icon-menu-collapse</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-menu-expand"></div>
+                                <hr />
+                                <span>.icon-menu-expand</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-notifications"></div>
+                                <hr />
+                                <span>.icon-notifications</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-plus"></div>
+                                <hr />
+                                <span>.icon-plus</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-save"></div>
+                                <hr />
+                                <span>.icon-save</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-search"></div>
+                                <hr />
+                                <span>.icon-search</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-settings"></div>
+                                <hr />
+                                <span>.icon-settings</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-trash"></div>
+                                <hr />
+                                <span>.icon-trash</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-warning"></div>
+                                <hr />
+                                <span>.icon-warning</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-danger"></div>
+                                <hr />
+                                <span>.icon-danger</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-star-filled"></div>
+                                <hr />
+                                <span>.icon-star-filled</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-star"></div>
+                                <hr />
+                                <span>.icon-star</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-recent"></div>
+                                <hr />
+                                <span>.icon-recent</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-newline"></div>
+                                <hr />
+                                <span>.icon-newline</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-link"></div>
+                                <hr />
+                                <span>.icon-indent</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-edit"></div>
+                                <hr />
+                                <span>.icon-edit</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-copy"></div>
+                                <hr />
+                                <span>.icon-copy</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-copy-to-clipboard"></div>
+                                <hr />
+                                <span>.icon-copy-to-clipboard</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-cut"></div>
+                                <hr />
+                                <span>.icon-cut</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-paste"></div>
+                                <hr />
+                                <span>.icon-paste</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-clone"></div>
+                                <hr />
+                                <span>.icon-clone</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-circle"></div>
+                                <hr />
+                                <span>.icon-circle</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-circle-filled"></div>
+                                <hr />
+                                <span>.icon-circle-filled</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-edited"></div>
+                                <hr />
+                                <span>.icon-edited</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-check"></div>
+                                <hr />
+                                <span>.icon-check</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <hr />
+
+
+
+        </div>
+    </div>
+
+
+    <script type="text/javascript">
+        function changeState(el) {
+            if (el.readOnly) el.checked = el.readOnly = false;
+            else if (!el.checked) el.readOnly = el.indeterminate = true;
+        }
+    </script>
+
+    {{> modals/includeAll }} {{> scripts }}
+
+</body>
+
+</html>
