@@ -11,9 +11,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                using (var x = new FastTests.Voron.Trees.FreeSpaceTest())
+                using (var x = new FastTests.Voron.Compaction.StorageCompactionTests())
                 {
-                    x.CanReuseMostOfFreePages_RemainingOnesCanBeTakenToHandleFreeSpace();
+                    x.ShouldDeleteCurrentJournalEvenThoughItHasAvailableSpace();
                 }
                 Console.WriteLine(sp.Elapsed);
             }

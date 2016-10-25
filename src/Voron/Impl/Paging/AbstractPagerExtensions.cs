@@ -23,20 +23,23 @@ namespace Voron.Impl.Paging
             return requestedPageNumber + numberOfPages > pager.NumberOfAllocatedPages;
         }
 
-        public static void Write(this AbstractPager pager, List<Page> pages)
+        public static long Write(this AbstractPager pager, List<Page> pages)
         {
             var pagerState = pager.GetPagerStateAndAddRefAtomically();
             try
             {
+                long total = 0;
                 foreach (var page in pages)
                 {
                     var startPage = page.PageNumber;
 
-                    var toWrite = pager.GetNumberOfPages(page);
-                    Memory.BulkCopy(pagerState.MapBase + startPage * pager.PageSize,
+                    var toWrite = pager.GetNumberOfPages(page) * pager.PageSize;
+                    total += toWrite;
+                    Memory.BulkCopy(pagerState.MapBase + startPage*pager.PageSize,
                         page.Pointer,
-                        toWrite * pager.PageSize);
+                        toWrite);
                 }
+                return total;
             }
             finally
             {

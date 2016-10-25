@@ -148,7 +148,7 @@ namespace Voron.Impl.Journal
             {
                 var initialSize = _env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize;
                 var journalRecoveryName = StorageEnvironmentOptions.JournalRecoveryName(journalNumber);
-                using (var recoveryPager = _env.Options.CreateScratchPager(journalRecoveryName,initialSize))
+                using (var recoveryPager = _env.Options.CreateScratchPager(journalRecoveryName, initialSize))
                 using (var pager = _env.Options.OpenJournalPager(journalNumber))
                 {
                     RecoverCurrentJournalSize(pager);
@@ -399,6 +399,8 @@ namespace Voron.Impl.Journal
             private long _oldestActiveTransactionWhenFlushed;
             private JournalFile _lastFlushedJournal;
             private bool _ignoreLockAlreadyTaken;
+            private long _totalWrittenButUnsyncedBytes;
+            private DateTime _lastSyncTime;
 
             public JournalApplicator(WriteAheadJournal waj)
             {
@@ -418,7 +420,7 @@ namespace Voron.Impl.Journal
                 try
                 {
                     Monitor.TryEnter(_flushingLock, timeToWait, ref lockTaken);
-                 
+
                     if (lockTaken == false)
                     {
                         if (timeToWait == TimeSpan.Zero)
@@ -556,18 +558,29 @@ namespace Voron.Impl.Journal
                         if (tryEnterReadLock)
                             _waj._env.FlushInProgressLock.ExitWriteLock();
                     }
-                    // if we aren't on the same journal, we have to force the sync, to avoid
-                    // having lots of journals around
-                    if (_waj.CurrentFile != _lastFlushedJournal)
-                        _waj._env.ForceSyncDataFile();
-                    else
-                        _waj._env.QueueForSyncDataFile();
-                    }
+                    QueueDataFileSync();
+                }
                 finally
                 {
                     if (lockTaken)
                         Monitor.Exit(_flushingLock);
                 }
+            }
+
+            private void QueueDataFileSync()
+            {
+                if (_totalWrittenButUnsyncedBytes < 32 * Constants.Size.Megabyte)
+                    return;
+
+                if (DateTime.UtcNow - _lastSyncTime < TimeSpan.FromMinutes(3))
+                    return;
+
+                // if we aren't on the same journal, we have to force the sync, to avoid
+                // having lots of journals around
+                if (_waj.CurrentFile != _lastFlushedJournal)
+                    _waj._env.ForceSyncDataFile();
+                else
+                    _waj._env.QueueForSyncDataFile();
             }
 
             public void WaitForSyncToCompleteOnDispose()
@@ -625,6 +638,7 @@ namespace Voron.Impl.Journal
                 try
                 {
                     long lastSyncedJournal;
+                    long currentTotalWrittenBytes;
                     long lastSyncedTransactionId;
                     var journalsToDelete = new List<KeyValuePair<long, JournalFile>>();
                     bool flushLockTaken = false;
@@ -649,7 +663,8 @@ namespace Voron.Impl.Journal
                             return; // we have already disposed, nothing to do here
 
                         if (_lastFlushedJournal == null)
-                            return; // nothing was flushed since we last synced, nothing to do
+                            // nothing was flushed since we last synced, nothing to do
+                            return;
 
                         // we only ever take the _fsyncLock _after_ we already took the flush lock
                         // so this will never be contended
@@ -660,10 +675,14 @@ namespace Voron.Impl.Journal
                             _waj._env.QueueForSyncDataFile();
                             return;
                         }
+                        currentTotalWrittenBytes = _totalWrittenButUnsyncedBytes;
                         lastSyncedJournal = _lastFlushedJournalId;
                         lastSyncedTransactionId = _lastFlushedTransactionId;
                         SetLastReadTxHeader(_lastFlushedJournal, _oldestActiveTransactionWhenFlushed, lastReadTxHeader);
+
                         _lastFlushedJournal = null;
+                        _lastSyncTime = DateTime.UtcNow;
+
                         foreach (var toDelete in _journalsToDelete)
                         {
                             if (toDelete.Key > lastSyncedJournal)
@@ -687,6 +706,7 @@ namespace Voron.Impl.Journal
 
                     lock (_flushingLock)
                     {
+                        _totalWrittenButUnsyncedBytes -= currentTotalWrittenBytes;
                         UpdateFileHeaderAfterDataFileSync(lastSyncedJournal, lastSyncedTransactionId, lastReadTxHeader);
 
                         foreach (var toDelete in journalsToDelete)
@@ -742,11 +762,15 @@ namespace Voron.Impl.Journal
 
                     EnsureDataPagerSpacing(transaction, last, numberOfPagesInLastPage, alreadyInWriteTx);
 
+                    long written = 0;
                     using (_waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.DataFlush,
                             totalPages * _waj._dataPager.PageSize))
                     {
-                        _waj._dataPager.Write(sortedPages);
+                        written += _waj._dataPager.Write(sortedPages);
                     }
+
+
+                    _totalWrittenButUnsyncedBytes += written;
                 }
                 finally
                 {
@@ -814,7 +838,7 @@ namespace Voron.Impl.Journal
                 return unusedJournalFiles;
             }
 
-            private void UpdateFileHeaderAfterDataFileSync(long lastSyncedJournal, 
+            private void UpdateFileHeaderAfterDataFileSync(long lastSyncedJournal,
                 long lastSyncedTransactionId, TransactionHeader* lastReadTxHeader)
             {
                 Debug.Assert(lastSyncedJournal != -1);
@@ -853,8 +877,8 @@ namespace Voron.Impl.Journal
                     var totalSize = readTxHeader->CompressedSize + sizeof(TransactionHeader);
 
 
-                    var totalPages = (totalSize/_waj._env.Options.PageSize) +
-                                     (totalSize%_waj._env.Options.PageSize == 0 ? 0 : 1);
+                    var totalPages = (totalSize / _waj._env.Options.PageSize) +
+                                     (totalSize % _waj._env.Options.PageSize == 0 ? 0 : 1);
 
                     // We skip to the next transaction header.
                     txPos += totalPages;
@@ -966,7 +990,7 @@ namespace Voron.Impl.Journal
                 CurrentFile = null;
             }
 
-            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages*_compressionPager.PageSize;
+            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * _compressionPager.PageSize;
             if (compressionBufferSize > _env.Options.MaxScratchBufferSize)
             {
                 // the compression pager is too large, we probably had a big transaction and now can
@@ -974,8 +998,8 @@ namespace Voron.Impl.Journal
                 if (_logger.IsOperationsEnabled)
                 {
                     _logger.Operations(
-                        $"Compression buffer: {_compressionPager} has reached size {compressionBufferSize/1024:#,#} kb which is more than the limit " +
-                        $"of {_env.Options.MaxScratchBufferSize/1024:#,#} kb. Will trim it no to the max size allowed. If this is happen on a regular basis," +
+                        $"Compression buffer: {_compressionPager} has reached size {compressionBufferSize / 1024:#,#} kb which is more than the limit " +
+                        $"of {_env.Options.MaxScratchBufferSize / 1024:#,#} kb. Will trim it no to the max size allowed. If this is happen on a regular basis," +
                         " consider raising the limt (MaxScratchBufferSize option control it), since it can cause performance issues");
                 }
 
