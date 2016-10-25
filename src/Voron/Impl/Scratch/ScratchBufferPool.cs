@@ -77,7 +77,7 @@ namespace Voron.Impl.Scratch
                 if (recycled.File.Size <= Math.Max(minSize, requestedSize ?? 0) && 
                     // even though this is in the recyle bin, there might still be some transactions looking at it
                     // so we have to make sure that this is realy unused before actually reusing it
-                    recycled.File.ActivelyUsedBytes(_env.ActiveTransactions.OldestTransaction) == 0)
+                    recycled.File.HasActivelyUsedBytes(_env.ActiveTransactions.OldestTransaction) == false)
                 {
                     recycled.File.Reset();
                     _recycleArea.Remove(current);
@@ -186,18 +186,24 @@ namespace Voron.Impl.Scratch
             {
                 if (scratch.File.Size <= _options.MaxScratchBufferSize)
                 {
+                    // called by tx commit
+                    if (asOfTxId == -1)
+                        return;
+
                     // we'll take the chance that no one is using us to reset the memory allocations
                     // and avoid fragmentation, we can only do that if no transaction is looking at us
-                    if(scratch.File.ActivelyUsedBytes(asOfTxId) == 0)
+                    if(scratch.File.HasActivelyUsedBytes(asOfTxId) == false)
                         scratch.File.Reset();
+
                     return;
                 }
-                // this is the current one, but the size is too big, since no one is using the scratch 
-                // right now (and we hold the write transaction), let us trim it
+
+                // this is the current one, but the size is too big, let us trim it
                 var newCurrent = NextFile(_options.InitialLogFileSize, _options.MaxScratchBufferSize);
                 newCurrent.File.PagerState.AddRef();
                 _current = newCurrent;
             }
+
             RecyleScratchFile(scratch);
         }
 
