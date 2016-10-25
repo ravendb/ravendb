@@ -114,6 +114,8 @@
         (function setupMainMenu() {
 
             $('#main-menu a').click(function (e) {
+                $('#main-menu a').removeClass('active');
+                $(this).addClass('active');
                 var $list = $(this).closest('ul');
                 var hasOpenSubmenus = $list.find('.level-show').length;
                 var isOpenable = $(this).siblings('.level').length;
