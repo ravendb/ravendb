@@ -26,9 +26,9 @@ namespace Raven.Tryouts
                 //{
                 //    x.Frequent_updates_of_document_should_not_cause_deadlock_in_prefetcher();
                 //}
-                using (var x = new RavenDB_5390())
+                using (var x = new RavenDB_2516())
                 {
-                    x.Frequent_updates_of_document_should_not_cause_deadlock_in_prefetcher();
+                    x.ReplicationTopologyDiscovererSimpleTestWithOAuth();
                 }                
             }
 

@@ -38,7 +38,7 @@ namespace Raven.Tests.Issues.Prefetcher
 
             var transactionalStorage = new TransactionalStorage(configuration, () => { }, () => { }, () => { }, () => { });
             transactionalStorage.Initialize(new SequentialUuidGenerator { EtagBase = 0 }, new OrderedPartCollection<AbstractDocumentCodec>());
-
+            
             var workContext = new WorkContext
             {
                 Configuration = configuration,
@@ -107,7 +107,9 @@ namespace Raven.Tests.Issues.Prefetcher
 
             public void Dispose()
             {
+                WorkContext.StopWorkRude(); //make sure cancellation token is at "cancel" state
                 WorkContext.Dispose();
+
                 PrefetchingBehavior.Dispose();
                 TransactionalStorage.Dispose();
             }
