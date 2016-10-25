@@ -273,6 +273,8 @@ namespace Raven.Database.Actions
                     cts.Token.ThrowIfCancellationRequested();
 
                     var docsToInsert = docs.ToArray();
+                    docsToInsert.ForEach(document => document.Key = string.IsNullOrWhiteSpace(document.Key) ? Guid.NewGuid().ToString() : document.Key.Trim());
+
                     var batch = 0;
                     var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
