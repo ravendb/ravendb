@@ -19,7 +19,7 @@ namespace SlowTests.SlowTests.Issues
             using (var documentStore = GetDocumentStore())
             {
                 var sp = Stopwatch.StartNew();
-                Parallel.For(0, iterations, i =>
+                Parallel.For(0, iterations, RavenTestHelper.DefaultParallelOptions, i =>
                 {
                     // ReSharper disable once AccessToDisposedClosure
                     using (var session = documentStore.OpenSession())
