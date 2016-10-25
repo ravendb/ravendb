@@ -15,7 +15,7 @@ namespace Raven.Tests.Issues
             // this test does not guarantee to fail on very run however 9/10 runs is failed
 
             var prefetcher = CreatePrefetcher();
-
+            var futureBatchCreated = false;
             var task = Task.Factory.StartNew(() =>
             {
                 for (int i = 0; i < 1000; i++)
@@ -23,7 +23,10 @@ namespace Raven.Tests.Issues
                     AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 1);
 
                     if (prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize > 0)
+                    {
+                        futureBatchCreated = true;
                         break;
+                    }
                 }
             });
 
@@ -31,7 +34,7 @@ namespace Raven.Tests.Issues
             {
                 prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 1); // get docs to ensure a future batch will be added
 
-                return prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize > 0;
+                return prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize > 0 || futureBatchCreated;
             }, TimeSpan.FromSeconds(10)));
             
             task.Wait();
