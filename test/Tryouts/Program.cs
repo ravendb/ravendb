@@ -10,9 +10,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                
-                using (var x = new SlowTests.SlowTests.Issues.RavenDB_2812())
+                using (var x = new FastTests.Voron.Bugs.Isolation())
                 {
-                    x.ShouldProperlyPageResults();
+                    x.MultiTreeIteratorShouldBeIsolated2();
                 }
             }
         }

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using Voron.Impl;
 
 namespace Voron
@@ -22,8 +23,6 @@ namespace Voron
             if (cacheSize > 512)
                 cacheSize = 512;
 
-            Array.Clear(_cache, 0, _cacheSize);
-
             // Align cache size to 8 for loop unrolling
             _cacheSize = cacheSize;
 
@@ -35,8 +34,8 @@ namespace Voron
             _current = -1;
             _tx = tx;
 
-            for (int i = 0; i < _cacheSize; i++)
-                _fingerprints[i] = Invalid;
+            Array.Clear(_cache, 0, _cacheSize);
+            Array.Clear(_fingerprints, 0, _cacheSize);
         }
 
         public PageLocator(LowLevelTransaction tx, int cacheSize = 8)
