@@ -46,7 +46,7 @@ namespace Voron
             {
                 _avoidDuplicates.Clear();
                 var maybeNeedSync = _maybeNeedToSync.Count;
-                var millisecondsTimeout = 5000 - maybeNeedSync;
+                var millisecondsTimeout = 1000 - maybeNeedSync;
                 if (millisecondsTimeout <= 0 || 
                     _flushWriterEvent.Wait(millisecondsTimeout) == false)
                 {
@@ -84,11 +84,6 @@ namespace Voron
 
                 if (envToSync.Disposed)
                     continue;
-
-                if (envToSync.IsDataFileEnqueuedToSync)
-                    continue;
-
-                envToSync.IsDataFileEnqueuedToSync = true;
 
                 var mpi = _mountPoints.GetOrAdd(envToSync.Options.DataPager.UniquePhysicalDriveId,
                     _ => new MountPointInfo());

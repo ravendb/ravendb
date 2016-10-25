@@ -428,8 +428,6 @@ namespace Voron
 
         public long NextWriteTransactionId => Volatile.Read(ref _transactionsCounter) + 1;
 
-        public bool IsDataFileEnqueuedToSync { get; set; }
-
         internal void TransactionAfterCommit(LowLevelTransaction tx)
         {
             if (ActiveTransactions.Contains(tx) == false)
