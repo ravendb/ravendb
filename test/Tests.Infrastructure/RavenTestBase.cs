@@ -268,7 +268,7 @@ namespace FastTests
                 Thread.Sleep(32);
             }
 
-            var request = databaseCommands.CreateRequest("/indexes/performance",HttpMethod.Get);
+            var request = databaseCommands.CreateRequest("/indexes/performance", HttpMethod.Get);
             var perf = request.ReadResponseJson();
             request = databaseCommands.CreateRequest("/indexes/errors", HttpMethod.Get);
             var errors = request.ReadResponseJson();
@@ -286,7 +286,7 @@ namespace FastTests
                 total.WriteTo(jsonTextWriter);
                 jsonTextWriter.Flush();
             }
-            
+
             var stats = databaseCommands.GetStatistics();
 
             var corrupted = stats.Indexes.Where(x => x.Priority == IndexingPriority.Error).ToList();
