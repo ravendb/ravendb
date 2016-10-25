@@ -92,6 +92,8 @@ namespace Raven.Client.Document
 
             var metadata = new RavenJObject();
 
+            id = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString() : id.Trim();
+
             var tag = documentStore.Conventions.GetDynamicTagName(entity);
             if (tag != null)
                 metadata.Add(Constants.RavenEntityName, tag);
@@ -105,6 +107,8 @@ namespace Raven.Client.Document
 
         public void Store(RavenJObject document, RavenJObject metadata, string id, int? dataSize = null)
         {
+            id = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString() : id.Trim();
+
             OnBeforeEntityInsert(id, document, metadata);
 
             Operation.Write(id, metadata, document, dataSize);

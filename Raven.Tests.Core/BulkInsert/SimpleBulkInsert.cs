@@ -142,5 +142,28 @@ namespace Raven.Tests.Core.BulkInsert
                 }
             }
         }
+
+        [Theory]
+#if !DNXCORE50
+        [PropertyData("InsertOptions")]
+#else
+        [MemberData("InsertOptions")]
+#endif
+        public void StoreWithSpacesInDocumentId(BulkInsertOptions options)
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var bulkInsert = store.BulkInsert(options: options))
+                {
+                    bulkInsert.Store(new User { Name = "Id With Spaces" },"users/12       ");    
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Load<User>("users/12       ");
+                    Assert.Equal(users.Name, "Id With Spaces");
+                }
+            }
+        }
     }
 }
