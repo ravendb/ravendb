@@ -1,7 +1,7 @@
 import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
 import resource = require("models/resources/resource");
 
-class disableResourceToggleConfirm extends confirmViewModelBase {
+class disableResourceToggleConfirm extends confirmViewModelBase<confirmDialogResult> {
 
     desiredAction = ko.observable<string>();
     deletionText: string;

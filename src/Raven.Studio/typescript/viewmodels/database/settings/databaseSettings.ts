@@ -109,7 +109,7 @@ class databaseSettings extends viewModelBase {
             .done(() => {
                 this.isEditingEnabled(true);
             });
-        app.showDialog(editDbConfirm);
+        app.showBootstrapDialog(editDbConfirm);
     }
 
     refreshFromServer() {
@@ -181,7 +181,7 @@ class databaseSettings extends viewModelBase {
                 }
 
             });
-        app.showDialog(editDbConfirm);
+        app.showBootstrapDialog(editDbConfirm);
     }
 
     private fetchDatabaseSettings(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {

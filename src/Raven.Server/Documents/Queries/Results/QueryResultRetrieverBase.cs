@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
 
             doc.Data = newData;
-            doc.EnsureMetadata(score);
+            doc.IndexScore = score;
 
             return doc;
         }

@@ -301,7 +301,7 @@ namespace Raven.Client.Documents.Async
 
         protected override Task<string> GenerateKeyAsync(object entity)
         {
-            return Conventions.GenerateDocumentKeyAsync(databaseName, AsyncDatabaseCommands, entity);
+            return Conventions.GenerateDocumentKeyAsync(DatabaseName, AsyncDatabaseCommands, entity);
         }
 
         public async Task<BlittableJsonReaderObject> GetMetadataForAsync<T>(T instance)
@@ -387,7 +387,7 @@ namespace Raven.Client.Documents.Async
         /// </summary>
         public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce)
         {
-            return new AsyncDocumentQuery<T>(this, null, AsyncDatabaseCommands, index, new string[0], new string[0], theListeners.QueryListeners, isMapReduce);
+            return new AsyncDocumentQuery<T>(this, null, AsyncDatabaseCommands, index, new string[0], new string[0], TheListeners.QueryListeners, isMapReduce);
         }
 
         public RavenQueryInspector<S> CreateRavenQueryInspector<S>()
@@ -444,7 +444,7 @@ namespace Raven.Client.Documents.Async
             throw new NotImplementedException();
         }
 
-        DynamicJsonValue IAdvancedDocumentSessionOperations.GetMetadataFor<T>(T instance)
+        Dictionary<string, string> IAdvancedDocumentSessionOperations.GetMetadataFor<T>(T instance)
         {
             throw new NotImplementedException();
         }

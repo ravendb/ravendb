@@ -53,7 +53,12 @@ class changesContext {
         if (currentChanges) {
             this.disconnectFromResourceChangesApi();
         }
-        //TODO: TODO: (!rs.disabled() && rs.isLicensed()) &&*
+
+        if (rs.disabled) { //TODO: or not licensed
+            this.navigateToResourceSpecificPage(rs);
+            return;
+        }
+
         const newChanges = new changesApi(rs);
         newChanges.connectToChangesApiTask.done(() => {
             this.currentResourceChangesApi(newChanges);

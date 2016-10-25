@@ -431,7 +431,7 @@ class infoPackage extends viewModelBase {/*
             })
             .fail(e => messagePublisher.reportError(e));
          
-        app.showDialog(dialog);
+        app.showBootstrapDialog(dialog);
     }
 
     moreDetails() {

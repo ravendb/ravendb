@@ -156,7 +156,7 @@ class timeSeriesTypes extends viewModelBase {
                 .execute()
                 .done(() => this.refresh());
         });
-        app.showDialog(changeVm);
+        app.showBootstrapDialog(changeVm);
     }
 
     refresh() {

@@ -128,6 +128,9 @@ namespace Raven.Server.ServerWide.Context
 
             CloseTransaction();
 
+            if (Allocator?.ShouldDisposeOnReset != true)
+                return;
+
             Allocator?.Dispose();
             Allocator = null;
         }

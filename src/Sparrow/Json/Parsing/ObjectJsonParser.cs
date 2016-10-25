@@ -287,7 +287,7 @@ namespace Sparrow.Json.Parsing
                 }
 
                 var lsv = current as LazyStringValue;
-                if (lsv != null)
+                if (lsv != (LazyStringValue)null)
                 {
                     _state.StringBuffer = lsv.Buffer;
                     _state.StringSize = lsv.Size;

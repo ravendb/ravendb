@@ -1,81 +1,83 @@
-<div class="messageBox" tabindex="-1">
-    <div class="modal-header">
-        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
-            <i class="fa fa-times"></i>
-        </button>
-        <h4 class="modal-title">Indexing information</h4>
-    </div>
-    <div class="modal-body">
-        <table id="mapStatsInfo" class="table table-condensed table-striped" data-bind="with: perfStats">
-            <thead>
-                <tr>
-                    <th>Index stats:</th>
-                    <th data-bind="text: indexName, attr: { colspan: CacheThreadCount }"></th>
-                </tr>
-            </thead>
-            <tbody data-bind="with: stats">
-                <tr>
-                    <td>Operation</td>
-                    <td data-bind="text: Operation, attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-                <tr>
-                    <td>Input count</td>
-                    <td data-bind="text: InputCount.toLocaleString(2), attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-                <tr>
-                    <td>Items count</td>
-                    <td data-bind="text: ItemsCount.toLocaleString(2), attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-                <tr>
-                    <td>Output count</td>
-                    <td data-bind="text: OutputCount.toLocaleString(2), attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-                <tr>
-                    <td>Duration</td>
-                    <td data-bind="text: Duration, attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-                <tr>
-                    <td>Started</td>
-                    <td data-bind="text: Started, attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-                <!-- ko foreach: Operations -->
-                <!-- ko if:CacheIsSingleThread -->
-                <tr class="sto">
-                    <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }"></span> <span data-bind="text: Name + ' [ms]'"></span></td>
-                    <td data-bind="text: DurationMs, attr: { colspan: $root.perfStats.CacheThreadCount }"></td>
-                </tr>
-                <!-- /ko -->
-                <!-- ko if:!CacheIsSingleThread -->
-                <tr>
-                    <td><span class="rect_legend ParallelBlock"></span> Parallel block</td>
-                    <!-- ko foreach: BatchedOperations -->
-                    <td data-bind="text: 'Thread #' + ( 1 + $index())"></td>
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                <i class="fa fa-times"></i>
+            </button>
+            <h4 class="modal-title">Indexing information</h4>
+        </div>
+        <div class="modal-body">
+            <table id="mapStatsInfo" class="table table-condensed table-striped" data-bind="with: perfStats">
+                <thead>
+                    <tr>
+                        <th>Index stats:</th>
+                        <th data-bind="text: indexName, attr: { colspan: CacheThreadCount }"></th>
+                    </tr>
+                </thead>
+                <tbody data-bind="with: stats">
+                    <tr>
+                        <td>Operation</td>
+                        <td data-bind="text: Operation, attr: { colspan: $parent.CacheThreadCount }"></td>
+                    </tr>
+                    <tr>
+                        <td>Input count</td>
+                        <td data-bind="text: InputCount.toLocaleString(2), attr: { colspan: $parent.CacheThreadCount }"></td>
+                    </tr>
+                    <tr>
+                        <td>Items count</td>
+                        <td data-bind="text: ItemsCount.toLocaleString(2), attr: { colspan: $parent.CacheThreadCount }"></td>
+                    </tr>
+                    <tr>
+                        <td>Output count</td>
+                        <td data-bind="text: OutputCount.toLocaleString(2), attr: { colspan: $parent.CacheThreadCount }"></td>
+                    </tr>
+                    <tr>
+                        <td>Duration</td>
+                        <td data-bind="text: Duration, attr: { colspan: $parent.CacheThreadCount }"></td>
+                    </tr>
+                    <tr>
+                        <td>Started</td>
+                        <td data-bind="text: Started, attr: { colspan: $parent.CacheThreadCount }"></td>
+                    </tr>
+                    <!-- ko foreach: Operations -->
+                    <!-- ko if:CacheIsSingleThread -->
+                    <tr class="sto">
+                        <td><span data-bind="attr: { 'class': 'rect_legend ' + Name }"></span> <span data-bind="text: Name + ' [ms]'"></span></td>
+                        <td data-bind="text: DurationMs, attr: { colspan: $root.perfStats.CacheThreadCount }"></td>
+                    </tr>
                     <!-- /ko -->
-                </tr>
-                <tr class="mto">
-                    <td class="mto_indent">Thread start delay [ms]</td>
-                    <!-- ko foreach: BatchedOperations -->
-                    <td data-bind="text: StartDelay"></td>
+                    <!-- ko if:!CacheIsSingleThread -->
+                    <tr>
+                        <td><span class="rect_legend ParallelBlock"></span> Parallel block</td>
+                        <!-- ko foreach: BatchedOperations -->
+                        <td data-bind="text: 'Thread #' + ( 1 + $index())"></td>
+                        <!-- /ko -->
+                    </tr>
+                    <tr class="mto">
+                        <td class="mto_indent">Thread start delay [ms]</td>
+                        <!-- ko foreach: BatchedOperations -->
+                        <td data-bind="text: StartDelay"></td>
+                        <!-- /ko -->
+                    </tr>
+                    <!-- ko foreach: BatchedOperations[0].Operations -->
+                    <tr class="mto">
+                        <td class="mto_indent"><span data-bind="attr: { 'class': 'rect_legend ' + Name }"></span> <span data-bind="text: Name + ' [ms]'"></span></td>
+                        <!-- ko foreach: $parent.BatchedOperations -->
+                        <td data-bind="text: Operations[$parentContext.$index()].DurationMs"></td>
+                        <!-- /ko -->
+                    </tr>
                     <!-- /ko -->
-                </tr>
-                <!-- ko foreach: BatchedOperations[0].Operations -->
-                <tr class="mto">
-                    <td class="mto_indent"><span data-bind="attr: { 'class': 'rect_legend ' + Name }"></span> <span data-bind="text: Name + ' [ms]'"></span></td>
-                    <!-- ko foreach: $parent.BatchedOperations -->
-                    <td data-bind="text: Operations[$parentContext.$index()].DurationMs"></td>
                     <!-- /ko -->
-                </tr>
-                <!-- /ko -->
-                <!-- /ko -->
-                <!-- /ko -->
-                <tr>
-                    <td>Waiting time since<br /> last batch completed</td>
-                    <td data-bind="text: WaitingTimeSinceLastBatchCompleted, attr: { colspan: $parent.CacheThreadCount }"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-bind="click: cancel">Close</button>
+                    <!-- /ko -->
+                    <tr>
+                        <td>Waiting time since<br /> last batch completed</td>
+                        <td data-bind="text: WaitingTimeSinceLastBatchCompleted, attr: { colspan: $parent.CacheThreadCount }"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Close</button>
+        </div>
     </div>
 </div>

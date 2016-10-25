@@ -1,14 +1,8 @@
-import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
-import resource = require("models/resources/resource");
-import dialog = require("plugins/dialog");
-import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
 import resourceInfo = require("models/resources/info/resourceInfo");
 
-class deleteResourceConfirm extends dialogViewModelBase {
+class deleteResourceConfirm extends confirmViewModelBase<deleteResourceConfirmResult> {
     private isKeepingFiles = ko.observable<boolean>(true);
-
-    deleteTask = $.Deferred<Array<resource>>();
-    isDeletingDatabase: boolean;
 
     constructor(private resourcesToDelete: Array<resourceInfo>) {
         super();
@@ -22,18 +16,15 @@ class deleteResourceConfirm extends dialogViewModelBase {
         this.isKeepingFiles(false);
     }
 
-    deleteDatabase() {
-        new deleteResourceCommand(this.resourcesToDelete.map(x => x.asResource()), !this.isKeepingFiles())
-            .execute()
-            .done(results => this.deleteTask.resolve(results))
-            .fail(details => this.deleteTask.reject(details));
-        
-        dialog.close(this);
+    protected getCofirmButton(): HTMLElement {
+        return $(".modal-footer:visible .btn-danger")[0] as HTMLElement;
     }
 
-    cancel() {
-        this.deleteTask.reject();
-        dialog.close(this);
+    protected prepareResponse(can: boolean): deleteResourceConfirmResult {
+        return {
+            can: can,
+            keepFiles: this.isKeepingFiles()
+        };
     }
 
 }

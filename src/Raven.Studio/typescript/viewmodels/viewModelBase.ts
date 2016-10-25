@@ -1,6 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
 import appUrl = require("common/appUrl");
+import messagePublisher = require("common/messagePublisher");
 import activeResourceTracker = require("common/shell/activeResourceTracker");
 import router = require("plugins/router");
 import app = require("durandal/app");
@@ -18,10 +19,11 @@ import resourcesManager = require("common/shell/resourcesManager");
 */
 class viewModelBase {
 
-    activeDatabase = activeResourceTracker.default.database;
-    activeFilesystem = activeResourceTracker.default.fileSystem;
-    activeCounterStorage = activeResourceTracker.default.counterStorage;
-    activeTimeSeries = activeResourceTracker.default.timeSeries;
+    protected activeDatabase = activeResourceTracker.default.database;
+    protected activeFilesystem = activeResourceTracker.default.fileSystem;
+    protected activeCounterStorage = activeResourceTracker.default.counterStorage;
+    protected activeTimeSeries = activeResourceTracker.default.timeSeries;
+    protected activeResource = activeResourceTracker.default.resource;
     
     downloader = new downloader();
 
@@ -55,13 +57,14 @@ class viewModelBase {
         var self = this;
         setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
         this.downloader.reset();
-        
-        /* TODO
-        if (resource && resource.disabled()) {
+
+        const resource = this.activeResource();
+        if (resource && resource.disabled) {
             messagePublisher.reportError(`${resource.fullTypeName} '${resource.name}' is disabled!`,
                 `You can't access any section of the ${resource.fullTypeName.toLowerCase()} while it's disabled.`);
 
-        }*/
+            return false;
+        }
 
         return true;
     }
@@ -247,7 +250,7 @@ class viewModelBase {
     protected confirmationMessage(title: string, confirmationMessage: string, options: string[] = ["No", "Yes"], forceRejectWithResolve: boolean = false): JQueryPromise<confirmDialogResult> {
         const viewTask = $.Deferred<confirmDialogResult>();
 
-        app.showDialog(new confirmationDialog(confirmationMessage, title, options))
+        app.showBootstrapDialog(new confirmationDialog(confirmationMessage, title, options))
             .done((answer) => {
                 var isConfirmed = answer === options.last();
                 if (isConfirmed) {

@@ -767,7 +767,7 @@ class visualizer extends viewModelBase {
     }
 
     displayKeyInfo() {
-        app.showDialog(new visualizerKeys(this));
+        app.showBootstrapDialog(new visualizerKeys(this));
     }
 
     saveAsSvg() {
@@ -807,7 +807,7 @@ class visualizer extends viewModelBase {
                 this.updateGraph();
             });
 
-        app.showDialog(dialog);
+        app.showBootstrapDialog(dialog);
     }
 
 

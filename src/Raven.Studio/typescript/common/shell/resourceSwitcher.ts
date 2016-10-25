@@ -74,6 +74,7 @@ class resourceSwitcher {
 
     selectResource(rs: resource) {
         rs.activate();
+        this.hide();
     }
 
     private show() {

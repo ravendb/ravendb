@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
-import appUrl = require("common/appUrl");
 
 type termsForField = {
     name: string;
@@ -16,17 +15,15 @@ class indexTerms extends viewModelBase {
     fields = ko.observableArray<termsForField>();
     indexName: string;
 
-    static readonly termsPageLimit = 100;
+    indexPageUrl: KnockoutComputed<string>;
 
-    constructor() {
-        super();
-        this.appUrls = appUrl.forCurrentDatabase();
-    }
+    static readonly termsPageLimit = 100; //TODO: consider higher value?
 
     activate(indexName: string): JQueryPromise<Raven.Client.Indexing.IndexDefinition> {
         super.activate(indexName);
 
         this.indexName = indexName;
+        this.indexPageUrl = this.appUrls.editIndex(this.indexName);
         return this.fetchIndexDefinition(indexName);
     }
 

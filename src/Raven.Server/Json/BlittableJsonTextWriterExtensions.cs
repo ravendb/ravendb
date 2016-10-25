@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -913,20 +914,106 @@ namespace Raven.Server.Json
 
                 using (document.Data)
                 {
-                    writer.WriteDocument(context, document, metadataOnly);
+                    if(metadataOnly == false)
+                        writer.WriteDocument(context, document);
+                    else
+                        writer.WriteDocumentMetadata(context, document);
                 }
             }
 
             writer.WriteEndArray();
         }
 
-        public static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly)
-        {
-            document.EnsureMetadata();
-            if (metadataOnly)
-                document.RemoveAllPropertiesExceptMetadata();
+        [ThreadStatic]
+        private static BlittableJsonReaderObject.PropertiesInsertionBuffer _buffers;
 
-            context.Write(writer, document.Data);
+        public static void WriteDocumentMetadata(this BlittableJsonTextWriter writer, JsonOperationContext context,
+            Document document)
+        {
+            if (_buffers == null)
+                _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
+
+
+            writer.WriteStartObject();
+            BlittableJsonReaderObject metadata;
+            document.Data.TryGet(Constants.Metadata.Key, out metadata);
+            WriteMetadata(writer, document, metadata);
+
+            writer.WriteEndObject();
+        }
+
+        private static void WriteMetadata(BlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata)
+        {
+            writer.WritePropertyName(Constants.Metadata.Key);
+            writer.WriteStartObject();
+            bool first = true;
+            if (metadata != null)
+            {
+                var size = metadata.Count;
+                for (int i = 0; i < size; i++)
+                {
+                    if (first == false)
+                    {
+                        writer.WriteComma();
+                    }
+                    first = false;
+                    var property = metadata.GetPropertyByIndex(i);
+                    writer.WritePropertyName(property.Item1);
+                    writer.WriteValue(property.Item3 & BlittableJsonReaderBase.TypesMask, property.Item2);
+                }
+            }
+            if (first == false)
+            {
+                writer.WriteComma();
+            }
+            writer.WritePropertyName(Constants.Metadata.Etag);
+            writer.WriteInteger(document.Etag);
+            writer.WriteComma();
+            writer.WritePropertyName(Constants.Metadata.Id);
+            writer.WriteString(document.Key);
+            if (document.IndexScore != null)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(Constants.Metadata.IndexScore);
+                writer.WriteDouble(document.IndexScore.Value);
+            }
+            writer.WriteEndObject();
+        }
+
+        public static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
+        {
+            if (_buffers == null)
+                _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
+
+            writer.WriteStartObject();
+
+            var metadataField = context.GetLazyStringForFieldWithCaching(Constants.Metadata.Key);
+            bool first = true;
+            BlittableJsonReaderObject metadata = null;
+            var size = document.Data.GetPropertiesByInsertionOrder(_buffers);
+            for (int i = 0; i < size; i++)
+            {
+                var property = document.Data.GetPropertyByIndex(_buffers.Properties[i]);
+                if (metadataField.Equals(property.Item1))
+                {
+                    metadata = (BlittableJsonReaderObject)property.Item2;
+                    continue;
+                }
+                if (first == false)
+                {
+                    writer.WriteComma();
+                }
+                first = false;
+                writer.WritePropertyName(property.Item1);
+                writer.WriteValue(property.Item3 & BlittableJsonReaderBase.TypesMask, property.Item2);
+            }
+
+            if (first == false)
+                writer.WriteComma();
+            WriteMetadata(writer, document, metadata);
+
+            writer.WriteEndObject();
+
         }
     }
 }

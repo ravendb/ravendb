@@ -162,14 +162,8 @@ namespace Voron.Platform.Posix
 
         public override void Sync()
         {
-            long totalSize = 0;
-            foreach (var allocationInfo in PagerState.AllocationInfos)
-            {
-                totalSize += allocationInfo.Size;
-            }
-
             //TODO: Is it worth it to change to just one call for msync for the entire file?
-            using (Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.Sync, totalSize))
+            using (Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.DataSync, 0))
             {
                 foreach (var alloc in PagerState.AllocationInfos)
                 {

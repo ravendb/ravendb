@@ -228,7 +228,7 @@ class metrics extends viewModelBase {
 
     private showDetails(op: any) {
         var dialog = new tempStatDialog(op);
-        app.showDialog(dialog);
+        app.showBootstrapDialog(dialog);
     }
 
     fileSelected() {

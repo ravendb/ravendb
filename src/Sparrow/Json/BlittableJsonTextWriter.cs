@@ -24,15 +24,21 @@ namespace Sparrow.Json
 
         private int _pos;
         private readonly byte[] _buffer;
+        private JsonOperationContext.ReturnBuffer _returnBuffer;
 
         public BlittableJsonTextWriter(JsonOperationContext context, Stream stream)
         {
             _context = context;
             _stream = stream;
-            _buffer = context.GetManagedBuffer();
+            _returnBuffer = context.GetManagedBuffer(out _buffer);
         }
 
         public int Position => _pos;
+
+        public override string ToString()
+        {
+            return Encoding.UTF8.GetString(_buffer, 0, _pos);
+        }
 
         public void WriteObjectOrdered(BlittableJsonReaderObject obj)
         {
@@ -92,7 +98,7 @@ namespace Sparrow.Json
             WriteEndArray();
         }
 
-        private void WriteValue(BlittableJsonToken token, object val, bool originalPropertyOrder = false)
+        public void WriteValue(BlittableJsonToken token, object val, bool originalPropertyOrder = false)
         {
             switch (token)
             {
@@ -140,7 +146,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void WriteString(LazyStringValue str)
         {
-            if (str == null)
+            if (str == (LazyStringValue)null)
             {
                 WriteNull();
                 return;
@@ -398,6 +404,7 @@ namespace Sparrow.Json
         public void Dispose()
         {
             Flush();
+            _returnBuffer.Dispose();
         }
 
         public void WriteNewLine()
@@ -406,5 +413,6 @@ namespace Sparrow.Json
             _buffer[_pos++] = (byte)'\r';
             _buffer[_pos++] = (byte)'\n';
         }
+
     }
 }

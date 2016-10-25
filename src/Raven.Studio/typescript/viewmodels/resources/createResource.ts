@@ -11,6 +11,8 @@ import fileSystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
 import timeSeries = require("models/timeSeries/timeSeries");
 import shell = require("viewmodels/shell");
+import EVENTS = require("common/constants/events");
+import resourcesManager = require("common/shell/resourcesManager");
 
 import createEncryption = require("viewmodels/resources/createEncryption");
 import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
@@ -190,7 +192,7 @@ class createResource extends dialogViewModelBase {
                     };
                     encryptionDeferred.resolve(securedSettings);
                 });
-            app.showDialog(createEncryptionViewModel);
+            app.showBootstrapDialog(createEncryptionViewModel);
         } else {
             encryptionDeferred.resolve();
         }
@@ -199,19 +201,20 @@ class createResource extends dialogViewModelBase {
             new createDatabaseCommand(databaseName, settings, securedSettings)
                 .execute()
                 .done(() => {
-                    var newDatabase = this.addNewDatabase(databaseName, bundles, clusterWide);
-                    this.selectResource(newDatabase);
+                    this.addNewDatabase(databaseName, bundles, clusterWide);
+                    //TODO: this.selectResource(newDatabase);
 
                     var encryptionConfirmationDialogPromise = $.Deferred();
                     if (!jQuery.isEmptyObject(securedSettings)) {
                         var createEncryptionConfirmationViewModel = new createEncryptionConfirmation(savedKey);
                         createEncryptionConfirmationViewModel.dialogPromise.done(() => encryptionConfirmationDialogPromise.resolve());
                         createEncryptionConfirmationViewModel.dialogPromise.fail(() => encryptionConfirmationDialogPromise.reject());
-                        app.showDialog(createEncryptionConfirmationViewModel);
+                        app.showBootstrapDialog(createEncryptionConfirmationViewModel);
                     } else {
                         encryptionConfirmationDialogPromise.resolve();
                     }
 
+                    /* TODO:
                     this.createDefaultDatabaseSettings(newDatabase, bundles).always(() => {
                         if (bundles.contains("Quotas") || bundles.contains("Versioning") || bundles.contains("SqlReplication")) {
                             encryptionConfirmationDialogPromise.always(() => {
@@ -219,22 +222,28 @@ class createResource extends dialogViewModelBase {
                                 // (it isn't recalculated when dialog is already opened)
                                 setTimeout(() => {
                                     var settingsDialog = new databaseSettingsDialog(bundles);
-                                    app.showDialog(settingsDialog);
+                                    app.showBootstrapDialog(settingsDialog);
                                 }, 1);
                             });
                         }
-                    });
+                    });*/
                 });
         });
     }
 
-    private addNewDatabase(databaseName: string, bundles: string[], clusterWide: boolean): database {
-        return null; //TODO:
+    private addNewDatabase(databaseName: string, bundles: string[], clusterWide: boolean): void {
+        ko.postbox.publish(EVENTS.Resource.Created, //TODO: it might be temporary event as we use changes api for notifications about newly created resources. 
+        {
+            qualifier: database.qualifier,
+            name: databaseName
+        } as resourceCreatedEventArgs);
+
         /* TODO
         var foundDatabase = this.databases.first((db: database) => db.name == databaseName);
 
         if (!foundDatabase) {
             var newDatabase = new database(databaseName, true, false, bundles, undefined, undefined, clusterWide);
+        //TODO: use resources manager to get instance of database object 
             this.databases.unshift(newDatabase);
             this.filterResources();
             return newDatabase;
@@ -298,7 +307,7 @@ class createResource extends dialogViewModelBase {
                     };
                     encryptionDeferred.resolve(securedSettings);
                 });
-            app.showDialog(createEncryptionViewModel);
+            app.showBootstrapDialog(createEncryptionViewModel);
         } else {
             encryptionDeferred.resolve();
         }
@@ -315,7 +324,7 @@ class createResource extends dialogViewModelBase {
                         var createEncryptionConfirmationViewModel = new createEncryptionConfirmation(savedKey);
                         createEncryptionConfirmationViewModel.dialogPromise.done(() => encryptionConfirmationDialogPromise.resolve());
                         createEncryptionConfirmationViewModel.dialogPromise.fail(() => encryptionConfirmationDialogPromise.reject());
-                        app.showDialog(createEncryptionConfirmationViewModel);
+                        app.showBootstrapDialog(createEncryptionConfirmationViewModel);
                     } else {
                         encryptionConfirmationDialogPromise.resolve();
                     }
@@ -324,7 +333,7 @@ class createResource extends dialogViewModelBase {
                         if (bundles.contains("Versioning")) {
                             encryptionConfirmationDialogPromise.always(() => {
                                 var settingsDialog = new filesystemSettingsDialog(bundles);
-                                app.showDialog(settingsDialog);
+                                app.showBootstrapDialog(settingsDialog);
                             });
                         }
                     });

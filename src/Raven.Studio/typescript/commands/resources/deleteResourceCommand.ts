@@ -8,7 +8,7 @@ type deletionResult = {
     reason: string;
 }
 
-class deleteDatabaseCommand extends commandBase {
+class deleteResourceCommand extends commandBase {
     
     private static readonly oneDatabasePath = endpoints.global.adminDatabases.adminDatabases;
 
@@ -53,7 +53,7 @@ class deleteDatabaseCommand extends commandBase {
             "hard-delete": this.isHardDelete
         };
 
-        const disableOneResourcePath = deleteDatabaseCommand.oneDatabasePath;
+        const disableOneResourcePath = deleteResourceCommand.oneDatabasePath;
             /* TODO:(resource.type === TenantType.Database) ? this.oneDatabasePath :
             resource.type === TenantType.FileSystem ? this.oneFileSystemPath :
             resource.type === TenantType.CounterStorage ? this.oneCounterStoragePath : this.oneTimeSeriesPath;*/
@@ -131,4 +131,4 @@ class deleteDatabaseCommand extends commandBase {
 
 } 
 
-export = deleteDatabaseCommand;
+export = deleteResourceCommand;

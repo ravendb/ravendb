@@ -175,7 +175,7 @@ class editSqlReplication extends viewModelBase {
 
     showStats() {
         var viewModel = new sqlReplicationStatsDialog(this.activeDatabase(), this.editedReplication().name());
-        app.showDialog(viewModel);
+        app.showBootstrapDialog(viewModel);
     }
 
     refreshSqlReplication() {
@@ -309,13 +309,13 @@ class editSqlReplication extends viewModelBase {
                 this.dirtyFlag().reset(); //Resync Changes
                 router.navigate(appUrl.forCurrentDatabase().sqlReplications());
             });
-            app.showDialog(viewModel, editSqlReplication.editSqlReplicationSelector);
+            app.showBootstrapDialog(viewModel, editSqlReplication.editSqlReplicationSelector);
 
         }
     }
     resetSqlReplication() {
 
-        app.showMessage("You are about to reset this SQL Replication, forcing replication of all collection items", "SQL Replication Reset", ["Cancel", "Reset"])
+        app.showBootstrapMessage("You are about to reset this SQL Replication, forcing replication of all collection items", "SQL Replication Reset", ["Cancel", "Reset"])
             .then((dialogResult: string) => {
                 if (dialogResult === "Reset") {
                     var replicationId = this.initialReplicationId;
@@ -330,7 +330,7 @@ class editSqlReplication extends viewModelBase {
     simulateSqlReplication() {
         this.editedReplication().script(this.script());
         var viewModel = new sqlReplicationSimulationDialog(this.activeDatabase(), this.editedReplication(), this.simulationDocumentId);
-        app.showDialog(viewModel);
+        app.showBootstrapDialog(viewModel);
     }
 
     getSqlReplicationConnectionStringsUrl(sqlReplicationName: string) {

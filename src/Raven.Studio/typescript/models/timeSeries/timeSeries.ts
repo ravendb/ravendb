@@ -8,8 +8,8 @@ class timeSeries extends resource {
     static readonly type = "timeSeries";
     static readonly qualifier = "ts";
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, bundles: string[] = []) {
-        super(name, isAdminCurrentTenant, bundles);
+    constructor(name: string, isAdminCurrentTenant: boolean, disabled: boolean, bundles: string[] = []) {
+        super(name, isAdminCurrentTenant, disabled, bundles);
         if (!name) {
             debugger;
         }

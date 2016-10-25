@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Queries
 
             using (result.Data)
             {
-                _writer.WriteDocument(_context, result, metadataOnly: false);
+                _writer.WriteDocument(_context, result);
             }
         }
 

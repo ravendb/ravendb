@@ -428,7 +428,7 @@ class patch extends viewModelBase {
 
     savePatch() {
         var savePatchViewModel: savePatch = new savePatch();
-        app.showDialog(savePatchViewModel);
+        app.showBootstrapDialog(savePatchViewModel);
         savePatchViewModel.onExit().done((patchName) => {
             new savePatchCommand(patchName, this.patchDocument(), this.activeDatabase())
                 .execute()
@@ -555,7 +555,7 @@ class patch extends viewModelBase {
     executePatchOnAll() {
         var confirmExec = new executePatchConfirm();
         confirmExec.viewTask.done(() => this.executePatchByIndex());
-        app.showDialog(confirmExec);
+        app.showBootstrapDialog(confirmExec);
     }
 
     private executePatchByIndex() {
@@ -646,7 +646,7 @@ class patch extends viewModelBase {
     private confirmAndExecutePatch(keys: string[]) {
         var confirmExec = new executePatchConfirm();
         confirmExec.viewTask.done(() => this.executePatch(keys));
-        app.showDialog(confirmExec);
+        app.showBootstrapDialog(confirmExec);
     }
 
     private executePatch(keys: string[]) {

@@ -120,7 +120,7 @@ class filesystemEditFile extends viewModelBase {
                 var filesUrl = appUrl.forFilesystemFiles(this.activeFilesystem());
                 router.navigate(filesUrl);
             });
-            app.showDialog(viewModel, filesystemEditFile.editFileSelector);
+            app.showBootstrapDialog(viewModel, filesystemEditFile.editFileSelector);
         }
 
         this.dirtyFlag().reset(); // Resync Changes
@@ -133,7 +133,7 @@ class filesystemEditFile extends viewModelBase {
             this.removeFromTopRecentFiles(currentFileName);
             router.navigate(appUrl.forEditFile(newName, this.activeFilesystem()));
         });
-        app.showDialog(dialog);
+        app.showBootstrapDialog(dialog);
     }
 
     removeFromTopRecentFiles(fileName: string) {

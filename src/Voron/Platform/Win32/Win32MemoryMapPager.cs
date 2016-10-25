@@ -9,12 +9,14 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
+using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util;
+using static Voron.Platform.Win32.Win32NativeMethods;
 
 namespace Voron.Platform.Win32
 {
@@ -28,6 +30,7 @@ namespace Voron.Platform.Win32
         private readonly Win32NativeFileAccess _access;
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
         private bool _copyOnWriteMode;
+        private readonly Logger _logger;
 
         [StructLayout(LayoutKind.Explicit)]
         private struct SplitValue
@@ -48,9 +51,10 @@ namespace Voron.Platform.Win32
                                    Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
             :base(options)
         {
-            Win32NativeMethods.SYSTEM_INFO systemInfo;
-            Win32NativeMethods.GetSystemInfo(out systemInfo);
+            SYSTEM_INFO systemInfo;
+            GetSystemInfo(out systemInfo);
             FileName = file;
+            _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{file}");
             AllocationGranularity = systemInfo.allocationGranularity;
             _access = access;
             _copyOnWriteMode = Options.CopyOnWriteMode && FileName.EndsWith(Constants.DatabaseFilename);
@@ -78,6 +82,22 @@ namespace Voron.Platform.Win32
             }
 
             _fileInfo = new FileInfo(file);
+            var drive = _fileInfo.Directory.Root.Name.TrimEnd('\\');
+
+            try
+            {
+                if (PhysicalDrivePerMountCache.TryGetValue(drive, out UniquePhysicalDriveId) == false)
+                    UniquePhysicalDriveId = GetPhysicalDriveId(drive);
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Physical drive '{drive}' unique id = '{UniquePhysicalDriveId}' for file '{file}'");
+            }
+            catch (Exception ex)
+            {
+                UniquePhysicalDriveId = 0;
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to determine physical drive Id for drive letter '{drive}', file='{file}'", ex);
+            }
 
             var streamAccessType = _access == Win32NativeFileAccess.GenericRead
                 ? FileAccess.Read
@@ -107,6 +127,37 @@ namespace Voron.Platform.Win32
             NumberOfAllocatedPages = _totalAllocationSize / _pageSize;
             PagerState.Release();
             PagerState = CreatePagerState();
+        }
+
+        private uint GetPhysicalDriveId(string drive)
+        {
+            var sdn = new StorageDeviceNumber();
+
+            var driveHandle = CreateFile(@"\\.\" + drive, 0, 0, IntPtr.Zero, (uint)CreationDisposition.OPEN_EXISTING, 0, IntPtr.Zero);
+
+            if (driveHandle.ToInt64() == -1)
+            {
+                int lastWin32ErrorCode = Marshal.GetLastWin32Error();
+                throw new IOException("Failed to CreateFile for Drive : " + drive,
+                    new Win32Exception(lastWin32ErrorCode));
+            }
+            try
+            {
+                int requiredSize;
+                if (DeviceIoControl(driveHandle,
+                        (int)IoControlCode.IOCTL_STORAGE_GET_DEVICE_NUMBER, IntPtr.Zero, 0, new IntPtr(&sdn), sizeof(StorageDeviceNumber),
+                        out requiredSize, IntPtr.Zero) == false)
+                {
+                    int lastWin32ErrorCode = Marshal.GetLastWin32Error();
+                    throw new IOException("Failed to DeviceIoControl for Drive : " + drive,
+                        new Win32Exception(lastWin32ErrorCode));
+                }
+            }
+            finally
+            {
+                CloseHandle(driveHandle);
+            }
+            return (uint)((int)sdn.DeviceType << 8) + sdn.DeviceNumber;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -278,12 +329,7 @@ namespace Voron.Platform.Win32
             if (Disposed)
                 ThrowAlreadyDisposedException();
 
-            long totalSize = 0;
-            foreach (var allocationInfo in PagerState.AllocationInfos)
-            {
-                totalSize += allocationInfo.Size;
-            }
-            using (Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.Sync, totalSize))
+            using (Options.IoMetrics.MeterIoRate(FileName,IoMetrics.MeterType.DataSync, 0))
             {
                 foreach (var allocationInfo in PagerState.AllocationInfos)
                 {

@@ -15,8 +15,10 @@ var TEMPLATE_OPTIONS = {
 
 var TEMPLATE_DATA = {};
 
-handlebars.registerHelper('ifEq', function(v1, v2, options) {
-  if(v1 === v2) {
+handlebars.registerHelper('ifEq', function() {
+    var args = Array.prototype.slice.call(arguments);
+    var options = args[args.length - 1];
+  if(args.slice(1, args.length - 1).some(function (x) { return x === args[0]; })) {
     return options.fn(this);
   }
   return options.inverse(this);

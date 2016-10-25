@@ -1,51 +1,52 @@
-
-<form id="selectCsvColumnsForm" data-bind="submit: exportCsv">
-    <div class="messageBox" tabindex="-1" style="width: 715px;">
-        <div class="modal-header">
-            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
-                <i class="fa fa-times"></i>
-            </button>
-            <h4 class="modal-title">Choose columns for CSV export</h4>
+<div class="modal-dialog" role="document">
+    <form id="selectCsvColumnsForm" data-bind="submit: exportCsv">
+        <div class="modal-content" tabindex="-1" style="width: 715px;">
+            <div class="modal-header">
+                <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                    <i class="fa fa-times"></i>
+                </button>
+                <h4 class="modal-title">Choose columns for CSV export</h4>
+            </div>
+            <div class="modal-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr style="height: 39px">
+                            <th class="col-md-8">Name</th>
+                            <th class="col-md-2">Options</th>
+                        </tr>
+                    </thead>
+                    <tbody data-bind="foreach: csvColumns">
+                        <tr>
+                            <td class="col-md-8">
+                                <div style="position: relative">
+                                    <input class="form-control" required type="text" data-bind="attr: { 'id': $root.generateBindingInputId($index()) }, textInput: name, valueUpdate: 'afterkeydown', event: { keydown: $root.consumeUpDownArrowKeys.bind($root), click: $root.consumeClick.bind($root) }" autocomplete="off" />
+                                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + $root.generateBindingInputId($index()), foreach: $root.autoCompleteResults">
+                                        <li role="presentation" data-bind="click: $root.completeTheWord.bind($root)">
+                                            <a href="#" data-bind="click: $root.completeTheWord.bind($root)">
+                                                <span class="text" data-bind="text: $data"></span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                            <td class="col-md-2">
+                                <div class="btn-group">
+                                    <button data-bind="click: $root.moveUp.bind($root, $data), disable: ($index() === 0)" type="button" class="btn btn-default"><i class="fa fa-arrow-up"></i></button>
+                                    <button data-bind="click: $root.moveDown.bind($root, $data), disable: ($index() === $root.csvColumns().length - 1)" type="button" class="btn btn-default"><i class="fa fa-arrow-down"></i></button>
+                                    <button type="button" class="btn btn-default" data-bind="click: $root.deleteRow.bind($root, $data)"><i class="fa fa-trash-o"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary" data-bind="enable: $root.csvColumns().length > 0">Export</button>
+                <button type="button" class="btn pull-left btn-default" data-bind="click: insertNewRow">
+                    <i class="fa fa-plus"></i> New column
+                </button>
+            </div>
         </div>
-        <div class="modal-body">
-            <table class="table table-hover" data-bind="css: { 'custom-table': isScrollNeeded }">
-                <thead>
-                    <tr style="height: 39px">
-                        <th class="col-md-8">Name</th>
-                        <th class="col-md-2">Options</th>
-                    </tr>
-                </thead>
-                <tbody data-bind="foreach: csvColumns, css: { 'custom-table-tbody': isScrollNeeded }">
-                    <tr>
-                        <td class="col-md-8">
-                            <div style="position: relative">
-                                <input class="form-control" required type="text" data-bind="attr: { 'id': $root.generateBindingInputId($index()) }, textInput: name, valueUpdate: 'afterkeydown', event: { keydown: $root.consumeUpDownArrowKeys.bind($root), click: $root.consumeClick.bind($root) }" autocomplete="off" />
-                                <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + $root.generateBindingInputId($index()), foreach: $root.autoCompleteResults">
-                                    <li role="presentation" data-bind="click: $root.completeTheWord.bind($root)">
-                                        <a href="#" data-bind="click: $root.completeTheWord.bind($root)">
-                                            <span class="text" data-bind="text: $data"></span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </td>
-                        <td class="col-md-2">
-                            <div class="btn-group">
-                                <button data-bind="click: $root.moveUp.bind($root, $data), disable: ($index() === 0)" type="button" class="btn btn-default"><i class="fa fa-arrow-up"></i></button>
-                                <button data-bind="click: $root.moveDown.bind($root, $data), disable: ($index() === $root.csvColumns().length - 1)" type="button" class="btn btn-default"><i class="fa fa-arrow-down"></i></button>
-                                <button type="button" class="btn btn-default" data-bind="click: $root.deleteRow.bind($root, $data)"><i class="fa fa-trash-o"></i></button>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary" data-bind="enable: $root.csvColumns().length > 0">Export</button>
-            <button type="button" class="btn pull-left btn-default" data-bind="click: insertNewRow">
-                <i class="fa fa-plus"></i> New column
-            </button>
-        </div>
-    </div>
-</form>
+    </form>
+</div>

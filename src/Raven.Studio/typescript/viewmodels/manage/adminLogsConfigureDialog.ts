@@ -5,7 +5,6 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import adminLogsConfig = require("models/database/debug/adminLogsConfig");
 import adminLogsConfigEntry = require("models/database/debug/adminLogsConfigEntry");
-import appUrl = require('common/appUrl');
 
 class adminLogsConfigureDialog extends dialogViewModelBase {
 
@@ -15,29 +14,8 @@ class adminLogsConfigureDialog extends dialogViewModelBase {
 
     private activeInput: JQuery;
 
-    maxTableHeight = ko.observable<number>();
-    lineHeight: number = 51;
-    isScrollNeeded: KnockoutComputed<boolean>;
-
     constructor(private logConfig: adminLogsConfig) {
         super();
-        this.maxTableHeight(Math.floor($(window).height() * 0.43));
-        
-        $(window).resize(() => {
-            this.maxTableHeight(Math.floor($(window).height() * 0.43));
-            this.alignBoxVertically();
-        });
-
-        this.isScrollNeeded = ko.computed(() => {
-            var currentColumnsCount = this.logConfig.entries().length;
-            var currentColumnHeight = currentColumnsCount * this.lineHeight;
-
-            if (currentColumnHeight > this.maxTableHeight()) {
-                return true;
-            }
-
-            return false;
-        });
     }
 
     attached() {
@@ -70,24 +48,16 @@ class adminLogsConfigureDialog extends dialogViewModelBase {
                 } else if ("Reason" in response) {
                     msg += ": " + response.Reason;
                 }
-                app.showMessage(msg, "Error");
+                app.showBootstrapMessage(msg, "Error");
             });
     }
 
     addCategory() {
         this.logConfig.entries.push(new adminLogsConfigEntry("Raven.", "Debug"));
-
-        if (!this.isScrollNeeded()) {
-            this.alignBoxVertically();
-        }
     }
 
     deleteRow(row: adminLogsConfigEntry) {
         this.logConfig.entries.remove(row);
-
-        if (!this.isScrollNeeded()) {
-             this.alignBoxVertically();
-        }
     }
 
     generateBindingInputId(index: number) {

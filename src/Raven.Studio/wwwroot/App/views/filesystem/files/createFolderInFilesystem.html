@@ -1,22 +1,24 @@
-<div class="messageBox" tabindex="-1" style="width: 515px">
-    <form class="form-horizontal" data-bind="submit: create">
-        <div class="modal-header">
-            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
-                <i class="fa fa-times"></i>
-            </button>
-            <h4 class="modal-title">Create folder</h4>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label class="col-sm-2 control-label" for="folderName">Name</label>
-                <div class="col-sm-10">
-                    <input required type="text" class="form-control" autofocus id="folderName" placeholder="Folder Name" data-bind="value: folderName, customValidity: folderNameCustomValidityError, valueUpdate: 'afterkeydown'">
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1">
+        <form class="form-horizontal" data-bind="submit: create">
+            <div class="modal-header">
+                <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                    <i class="fa fa-times"></i>
+                </button>
+                <h4 class="modal-title">Create folder</h4>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label" for="folderName">Name</label>
+                    <div class="col-sm-10">
+                        <input required type="text" class="form-control" autofocus id="folderName" placeholder="Folder Name" data-bind="value: folderName, customValidity: folderNameCustomValidityError, valueUpdate: 'afterkeydown'">
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary">Create</button>
-        </div>
-    </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create</button>
+            </div>
+        </form>
+    </div>
 </div>

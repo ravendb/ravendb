@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Documents.Commands;
@@ -279,7 +280,18 @@ namespace Raven.Client.Http
                     break;
                 case HttpStatusCode.Conflict:
                     // TODO: Conflict resolution
-                    break;
+                    //TODO - Efrat - current implementation is temporary
+                    using (var stream = await response.Content.ReadAsStreamAsync())
+                    {
+                        var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
+                        object o;
+                        blittableJsonReaderObject.TryGetMember("Type", out o);
+                        object m;
+                        blittableJsonReaderObject.TryGetMember("Message", out m);
+                        if (o.ToString() == "Voron.Exceptions.ConcurrencyException")
+                            throw new ConcurrencyException();
+                        break;
+                    }
                 default:
                     await ThrowServerError(context, response);
                     break;

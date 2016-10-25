@@ -41,10 +41,11 @@ namespace Raven.Client.Documents
             _streamWriter = new StreamWriter(_stream, StreamWriter.Null.Encoding, 1024, true);
 
         }
-        public readonly Dictionary<object, Dictionary<string, JToken>> MissingDictionary = new Dictionary<object, Dictionary<string, JToken>>(ObjectReferenceEqualityComparer<object>.Default);
+        public readonly Dictionary<object, Dictionary<string, object>> MissingDictionary = new Dictionary<object, Dictionary<string, object>>(ObjectReferenceEqualityComparer<object>.Default);
         
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentInfo documentInfo)
         {
+            //TODO - Efrat - add Listeners and SetClrType
             _stream.Position = 0;
             try
             {
@@ -53,6 +54,9 @@ namespace Raven.Client.Documents
             
                 var json = _session.Context.ReadForMemory(_stream, "convention.Serialize");
 
+                if ( (documentInfo.Metadata.Modifications != null) && (documentInfo.Metadata.Modifications.Properties.Count == 0))
+                    documentInfo.Metadata.Modifications = null;
+
                 if (json.Modifications == null)
                 {
                     json.Modifications = new DynamicJsonValue(documentInfo.Metadata)
@@ -60,11 +64,6 @@ namespace Raven.Client.Documents
                         [Constants.Metadata.Key] = documentInfo.Metadata
                     };
                 }
-                else
-                {
-                    //TODO
-                }
-
                 return _session.Context.ReadObject(json, documentInfo.Id);
             }
             finally
@@ -82,6 +81,7 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject document)
         {
+            //TODO -  Add RegisterMissingProperties ???
             try
             {
                 var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(entityType);

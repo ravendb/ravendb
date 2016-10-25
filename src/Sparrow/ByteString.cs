@@ -491,7 +491,7 @@ namespace Sparrow
 
     public unsafe class ByteStringContext<TAllocator> : IDisposable where TAllocator : struct, IByteStringAllocator
     {
-        public static TAllocator _allocator;
+        public static TAllocator Allocator;
 
         private class SegmentInformation
         {
@@ -556,16 +556,11 @@ namespace Sparrow
             this._internalReusableStringPoolCount = new int[LogMinBlockSize];
 
             this._internalCurrent = AllocateSegment(allocationBlockSize);
-            this._externalCurrent = AllocateSegment(allocationBlockSize);
+            AllocateExternalSegment(allocationBlockSize);
 
             this._externalStringPool = new Stack<IntPtr>(64);
 
             PrepareForValidation();
-        }
-
-        private void ThrowSingleUseTaken()
-        {
-            throw new NotSupportedException("Attempt to call SingleUse when SingleUse scope is still in use");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -891,7 +886,7 @@ namespace Sparrow
 
         private SegmentInformation AllocateSegment(int size)
         {
-            var memorySegment = _allocator.Allocate(size);
+            var memorySegment = Allocator.Allocate(size);
 
             byte* start = memorySegment.Segment;
             byte* end = start + memorySegment.Size;
@@ -905,7 +900,7 @@ namespace Sparrow
 
         private void AllocateExternalSegment(int size)
         {
-            var memorySegment = _allocator.Allocate(size);
+            var memorySegment = Allocator.Allocate(size);
 
             byte* start = memorySegment.Segment;
             byte* end = start + memorySegment.Size;
@@ -1283,6 +1278,12 @@ namespace Sparrow
 
 #endif
 
+        public bool ShouldDisposeOnReset => 
+            // if we have more than internal/external segments, that meant that we grew
+            // so we are better releasing the memory back at the context end and recovering 
+            // anew with memory that wouldn't be fragmented
+            _wholeSegments.Count > 2;
+
         private bool _disposed; 
 
         ~ByteStringContext()
@@ -1319,7 +1320,7 @@ namespace Sparrow
                     }
                     else
                     {
-                        _allocator.Free(segment.Memory);
+                        Allocator.Free(segment.Memory);
                     }
                 }
             }

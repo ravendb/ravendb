@@ -33,6 +33,8 @@ namespace Voron.Impl.Scratch
         // Local writable state. Can perform multiple reads, but must never do multiple writes simultaneously.
         private int _currentScratchNumber = -1;
 
+        private Dictionary<int, PagerState> _pagerStatesAllScratchesCache;
+
         private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers =
             new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.Instance);
 
@@ -41,13 +43,23 @@ namespace Voron.Impl.Scratch
         {
             _options = env.Options;
             _current = NextFile(_options.InitialLogFileSize, null);
+            UpdateCacheForPagerStatesOfAllScratches();
         }
 
         public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
         {
-            // This is not risky anymore, but the caller must understand this is a monotonically incrementing snapshot. 
-            return _scratchBuffers.ToDictionary(x => x.Key, y => y.Value.File.PagerState,
-                NumericEqualityComparer.Instance);
+            //the caller must understand this is a monotonically incrementing snapshot.  
+            return _pagerStatesAllScratchesCache;
+        }
+
+        public void UpdateCacheForPagerStatesOfAllScratches()
+        {
+            var dic = new Dictionary<int, PagerState>(NumericEqualityComparer.Instance);
+            foreach (var scratchBufferItem in _scratchBuffers)
+            {
+                dic[scratchBufferItem.Key] = scratchBufferItem.Value.File.PagerState;
+            }
+            _pagerStatesAllScratchesCache = dic;
         }
 
         internal long GetNumberOfAllocations(int scratchNumber)

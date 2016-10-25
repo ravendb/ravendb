@@ -1,40 +1,42 @@
-<div class="messageBox" tabindex="-1" style="width: 52%">
-    <form data-bind="submit: nextOrCreate">
-        <div class="modal-header">
-            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true"></button>
-            <h4 class="modal-title" data-bind="text: (isNew() ? 'New' : 'Update') + ' Type'"></h4>
-        </div>
-        <div class="modal-body">
-            <div class="row">
-                <div data-bind="with: editedType">
-                    <div class="col-md-12">
-                        <label class="col-md-3" for="type">Type:</label>
-                        <div class="col-md-7" for="type">
-                            <input required type="text" class="form-control" id="type" placeholder="Type Name" data-bind="value: type, customValidity: typeCustomValidityError, valueUpdate: 'afterkeydown'">
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1" style="width: 52%">
+        <form data-bind="submit: nextOrCreate">
+            <div class="modal-header">
+                <button type="button" class="close" data-bind="click: cancel" aria-hidden="true"></button>
+                <h4 class="modal-title" data-bind="text: (isNew() ? 'New' : 'Update') + ' Type'"></h4>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div data-bind="with: editedType">
+                        <div class="col-md-12">
+                            <label class="col-md-3" for="type">Type:</label>
+                            <div class="col-md-7" for="type">
+                                <input required type="text" class="form-control" id="type" placeholder="Type Name" data-bind="value: type, customValidity: typeCustomValidityError, valueUpdate: 'afterkeydown'">
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-12" data-bind="foreach: fields">
-                        <label class="col-md-3" data-bind="text: 'Field ' + ($index() + 1) + ':', for: 'field' + $index()"></label>
-                        <div class="col-md-7" style="display: inline-block">
-                            <input required type="text" class="form-control" data-bind="attr: { placeholder: 'Field ' + ($index() + 1), id: 'field' + $index() }, value: $parent.fields()[$index()], valueUpdate: 'afterkeydown'">
+                        <div class="col-md-12" data-bind="foreach: fields">
+                            <label class="col-md-3" data-bind="text: 'Field ' + ($index() + 1) + ':', for: 'field' + $index()"></label>
+                            <div class="col-md-7" style="display: inline-block">
+                                <input required type="text" class="form-control" data-bind="attr: { placeholder: 'Field ' + ($index() + 1), id: 'field' + $index() }, value: $parent.fields()[$index()], valueUpdate: 'afterkeydown'">
+                            </div>
+                            <div class="col-md-1" style="display: inline-block">
+                                <button type="button" style="font-size: 14px;" class="red" title="Add field" data-bind="click: $parent.removeField.bind($parent, $data), visible: $parent.fields().length > 1">
+                                    <i class="fa fa-remove"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="col-md-1" style="display: inline-block">
-                            <button type="button" style="font-size: 14px;" class="red" title="Add field" data-bind="click: $parent.removeField.bind($parent, $data), visible: $parent.fields().length > 1">
-                                <i class="fa fa-remove"></i>
+                        <div class="col-md-12" style="text-align: center;margin-left: 5px;margin-top: 4px;">
+                            <button type="button" style="font-size: 14px;" class="btn btn-default" title="Add field" data-bind="click: addField">
+                                <i class="fa fa-plus"></i> Add Field
                             </button>
                         </div>
                     </div>
-                    <div class="col-md-12" style="text-align: center;margin-left: 5px;margin-top: 4px;">
-                        <button type="button" style="font-size: 14px;" class="btn btn-default" title="Add field" data-bind="click: addField">
-                            <i class="fa fa-plus"></i> Add Field
-                        </button>
-                    </div>
                 </div>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary" data-bind="text: isNew() ? 'Append' : 'Update'"></button>
-        </div>
-    </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary" data-bind="text: isNew() ? 'Append' : 'Update'"></button>
+            </div>
+        </form>
+    </div>
 </div>
