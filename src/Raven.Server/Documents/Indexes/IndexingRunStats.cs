@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 using Raven.Abstractions;
 using Raven.Client.Data;
@@ -41,6 +42,11 @@ namespace Raven.Server.Documents.Indexes
         public void AddReduceError(string message)
         {
             AddError(null, message, "Reduce");
+        }
+
+        public void AddCorruptionError(Exception exception)
+        {
+            AddError(null, $"Index corruption occurred: {exception}", "Corruption");
         }
 
         public void AddWriteError(IndexWriteException exception)
