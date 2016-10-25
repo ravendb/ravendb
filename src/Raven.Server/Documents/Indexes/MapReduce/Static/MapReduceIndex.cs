@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private TransactionOperationContext _indexContext;
             private PropertyAccessor _propertyAccessor;
             private IndexingStatsScope _stats;
-            private IndexingStatsScope _buildNewReduceResultStats;
+            private IndexingStatsScope _createBlittableResultStats;
             private readonly ReduceKeyProcessor _reduceKeyProcessor;
             private readonly HashSet<string> _fields;
             private readonly HashSet<string> _groupByFields;
@@ -178,12 +178,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     return;
 
                 _stats = stats;
-                _buildNewReduceResultStats = _stats.For(IndexingOperation.Reduce.BuildNewReduceResult, start: false);
+                _createBlittableResultStats = _stats.For(IndexingOperation.Reduce.CreateBlittableJson, start: false);
             }
 
             public IEnumerator<MapResult> GetEnumerator()
             {
-                return new Enumerator(_items.GetEnumerator(), this, _buildNewReduceResultStats);
+                return new Enumerator(_items.GetEnumerator(), this, _createBlittableResultStats);
             }
 
             IEnumerator IEnumerable.GetEnumerator()
@@ -196,16 +196,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             {
                 private readonly IEnumerator _enumerator;
                 private readonly AnonymousObjectToBlittableMapResultsEnumerableWrapper _parent;
-                private readonly IndexingStatsScope _stats;
+                private readonly IndexingStatsScope _createBlittableResult;
                 private readonly HashSet<string> _fields;
                 private readonly HashSet<string> _groupByFields;
                 private readonly ReduceKeyProcessor _reduceKeyProcessor;
 
-                public Enumerator(IEnumerator enumerator, AnonymousObjectToBlittableMapResultsEnumerableWrapper parent, IndexingStatsScope stats)
+                public Enumerator(IEnumerator enumerator, AnonymousObjectToBlittableMapResultsEnumerableWrapper parent, IndexingStatsScope createBlittableResult)
                 {
                     _enumerator = enumerator;
                     _parent = parent;
-                    _stats = stats;
+                    _createBlittableResult = createBlittableResult;
                     _groupByFields = _parent._groupByFields;
                     _fields = _parent._fields;
                     _reduceKeyProcessor = _parent._reduceKeyProcessor;
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     var document = _enumerator.Current;
 
-                    using (_stats.Start())
+                    using (_createBlittableResult.Start())
                     {
                         var accessor = _parent._propertyAccessor ?? (_parent._propertyAccessor = PropertyAccessor.Create(document.GetType()));
 
