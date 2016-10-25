@@ -22,14 +22,14 @@ namespace Raven.Server.ServerWide.Context
             _documentDatabase = documentDatabase;
         }
 
-        protected override DocumentsTransaction CreateReadTransaction(ByteStringContext context)
+        protected override DocumentsTransaction CreateReadTransaction()
         {
-            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(context), _documentDatabase.Notifications);
+            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(PersistentContext, Allocator), _documentDatabase.Notifications);
         }
 
-        protected override DocumentsTransaction CreateWriteTransaction(ByteStringContext context)
+        protected override DocumentsTransaction CreateWriteTransaction()
         {
-            var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(context), _documentDatabase.Notifications);
+            var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(PersistentContext, Allocator), _documentDatabase.Notifications);
 
             var options = _documentDatabase.DocumentsStorage.Environment.Options;
 

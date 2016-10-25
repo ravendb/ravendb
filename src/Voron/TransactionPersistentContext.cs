@@ -1,36 +1,49 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Json;
 using Voron.Impl;
 
 namespace Voron
 {
-    public class TransactionPersistentContext
+    public class TransactionPersistentContext : IDisposable
     {
-        public bool IsLongLived { get; set; }
-        private readonly Stack<PageLocator> _pageLocators = new Stack<PageLocator>();
-        private readonly ByteStringContext _allocator = new ByteStringContext();
+        private bool _longLivedTransaction;
+        private int _cacheSize;
 
-        public TransactionPersistentContext(bool isLongLived = false)
+        public bool LongLivedTransactions
         {
-            IsLongLived = isLongLived;
+            get { return _longLivedTransaction; }
+            set
+            {
+                _longLivedTransaction = value;
+                _cacheSize = _longLivedTransaction ? 128 : 16;
+            }
         }
 
+        private readonly Stack<PageLocator> pageLocators = new Stack<PageLocator>();
+        private readonly ByteStringContext _allocator = new ByteStringContext();
+
+        public TransactionPersistentContext(bool longLivedTransactions = false)
+        {
+            LongLivedTransactions = longLivedTransactions;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PageLocator AllocatePageLocator(LowLevelTransaction tx)
         {
             PageLocator locator = null;
-
-            if (_pageLocators.Count != 0)
+            if (pageLocators.Count != 0)
             {
-                locator = _pageLocators.Pop();
-                locator.Renew(tx, IsLongLived ? 128 : 16);
+                locator = pageLocators.Pop();
+                locator.Renew(tx, _cacheSize);
             }
             else
             {
-                locator = new PageLocator(tx, IsLongLived ? 128 : 16);
+                locator = new PageLocator(_allocator, tx, _cacheSize);
             }
 
             return locator;
@@ -40,7 +53,12 @@ namespace Voron
         public void FreePageLocator(PageLocator locator)
         {
             Debug.Assert(locator != null);
-            _pageLocators.Push(locator);
+            pageLocators.Push(locator);
+        }
+
+        public void Dispose()
+        {
+            _allocator?.Dispose();
         }
     }
 }

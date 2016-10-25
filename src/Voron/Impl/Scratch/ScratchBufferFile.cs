@@ -120,6 +120,23 @@ namespace Voron.Impl.Scratch
             return true;
         }
 
+        public long ActivelyUsedBytes(long oldestActiveTransaction)
+        {
+            long result = _allocatedPagesUsedSize;
+
+            var keys = _freePagesByTransaction.Keys;
+            var values = _freePagesByTransaction.Values;
+            for (int i = 0; i < keys.Count; i++)
+            {
+                if (keys[i] < oldestActiveTransaction)
+                    break;
+
+                result += values[i];
+            }
+
+            return result * _pageSize;
+        }
+
         public void Free(long page, long asOfTxId)
         {
             PageFromScratchBuffer value;
@@ -181,7 +198,7 @@ namespace Voron.Impl.Scratch
             return _scratchPager.AcquirePagePointer(tx, p);
         }
 
-        public long ActivelyUsedBytes => _allocatedPagesUsedSize*_pageSize;
+        public long CurrentlyAllocatedBytes => _allocatedPagesUsedSize*_pageSize;
 
         internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
         {

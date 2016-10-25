@@ -1031,6 +1031,7 @@ namespace Voron.Data.BTrees
                 _pageLocator = null;
             }
         }
+
         private void CheckConcurrency(Slice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
         {
             if (expectedVersion.HasValue && nodeVersion != expectedVersion.Value)

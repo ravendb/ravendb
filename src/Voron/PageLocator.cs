@@ -22,7 +22,7 @@ namespace Voron
             if (cacheSize > 512)
                 cacheSize = 512;
 
-            //Array.Clear(_cache, 0, _cacheSize);
+            Array.Clear(_cache, 0, _cacheSize);
 
             // Align cache size to 8 for loop unrolling
             _cacheSize = cacheSize;

@@ -12,7 +12,6 @@ namespace Raven.Server.ServerWide.Context
     public class TransactionOperationContext : TransactionOperationContext<RavenTransaction>
     {
         private readonly StorageEnvironment _environment;
-        public TransactionPersistentContext PersistentContext = new TransactionPersistentContext();
 
         public TransactionOperationContext(StorageEnvironment environment, int initialSize, int longLivedSize) :
             base(initialSize, longLivedSize)
@@ -20,14 +19,14 @@ namespace Raven.Server.ServerWide.Context
             _environment = environment;
         }
 
-        protected override RavenTransaction CreateReadTransaction(ByteStringContext context)
+        protected override RavenTransaction CreateReadTransaction()
         {
-            return new RavenTransaction(_environment.ReadTransaction(PersistentContext, context));
+            return new RavenTransaction(_environment.ReadTransaction(PersistentContext, Allocator));
         }
 
-        protected override RavenTransaction CreateWriteTransaction(ByteStringContext context)
+        protected override RavenTransaction CreateWriteTransaction()
         {
-            return new RavenTransaction(_environment.WriteTransaction(PersistentContext, context));
+            return new RavenTransaction(_environment.WriteTransaction(PersistentContext, Allocator));
         }
 
         public StorageEnvironment Environment => _environment;
@@ -40,6 +39,7 @@ namespace Raven.Server.ServerWide.Context
 
         public ByteStringContext Allocator;
         public TTransaction Transaction;
+        public TransactionPersistentContext PersistentContext = new TransactionPersistentContext();
 
         protected TransactionOperationContext(int initialSize, int longLivedSize):
             base(initialSize, longLivedSize)
@@ -52,14 +52,14 @@ namespace Raven.Server.ServerWide.Context
             if (Transaction != null && Transaction.Disposed == false)
                 throw new InvalidOperationException("Transaction is already opened");
 
-            Transaction = CreateReadTransaction(Allocator);
+            Transaction = CreateReadTransaction();
 
             return Transaction;
         }
 
-        protected abstract TTransaction CreateReadTransaction(ByteStringContext allocator);
+        protected abstract TTransaction CreateReadTransaction();
 
-        protected abstract TTransaction CreateWriteTransaction(ByteStringContext allocator);
+        protected abstract TTransaction CreateWriteTransaction();
 
         public virtual RavenTransaction OpenWriteTransaction()
         {
@@ -68,7 +68,7 @@ namespace Raven.Server.ServerWide.Context
                 throw new InvalidOperationException("Transaction is already opened");
             }
 
-            Transaction = CreateWriteTransaction(Allocator);
+            Transaction = CreateWriteTransaction();
 
             return Transaction;
         }
@@ -96,6 +96,7 @@ namespace Raven.Server.ServerWide.Context
             base.Dispose();
 
             Allocator?.Dispose();
+            PersistentContext?.Dispose();
 
             if (_pinnedObjects != null)
             {

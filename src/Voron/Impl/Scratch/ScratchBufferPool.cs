@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Scratch
@@ -19,6 +20,7 @@ namespace Voron.Impl.Scratch
     /// </summary>
     public unsafe class ScratchBufferPool : IDisposable
     {
+        private readonly StorageEnvironment _env;
         // Immutable state. 
         private readonly StorageEnvironmentOptions _options;
 
@@ -37,6 +39,7 @@ namespace Voron.Impl.Scratch
 
         public ScratchBufferPool(StorageEnvironment env)
         {
+            _env = env;
             _options = env.Options;
             _current = NextFile(_options.InitialLogFileSize, null);
             UpdateCacheForPagerStatesOfAllScratches();
@@ -66,15 +69,22 @@ namespace Voron.Impl.Scratch
 
         private ScratchBufferItem NextFile(long minSize, long? requestedSize)
         {
-            if (_recycleArea.Count > 0)
+            var current = _recycleArea.Last;
+            while(current != null)
             {
-                var recycled = _recycleArea.Last.Value.Item2;
-                _recycleArea.RemoveLast();
-                if (recycled.File.Size <= Math.Max(minSize, requestedSize ?? 0))
+                var recycled = current.Value.Item2;
+                
+                if (recycled.File.Size <= Math.Max(minSize, requestedSize ?? 0) && 
+                    // even though this is in the recyle bin, there might still be some transactions looking at it
+                    // so we have to make sure that this is realy unused before actually reusing it
+                    recycled.File.ActivelyUsedBytes(_env.ActiveTransactions.OldestTransaction) == 0)
                 {
+                    recycled.File.Reset();
+                    _recycleArea.Remove(current);
                     _scratchBuffers.TryAdd(recycled.Number, recycled);
                     return recycled;
                 }
+                current = current.Previous;
             }
 
             _currentScratchNumber++;
@@ -158,7 +168,7 @@ namespace Voron.Impl.Scratch
         {
             var scratch = _scratchBuffers[scratchNumber];
             scratch.File.Free(page, asOfTxId);
-            if (scratch.File.ActivelyUsedBytes != 0)
+            if (scratch.File.CurrentlyAllocatedBytes != 0)
                 return;
 
             while (_recycleArea.First != null)
@@ -177,8 +187,9 @@ namespace Voron.Impl.Scratch
                 if (scratch.File.Size <= _options.MaxScratchBufferSize)
                 {
                     // we'll take the chance that no one is using us to reset the memory allocations
-                    // and avoid fragmentation
-                    scratch.File.Reset();
+                    // and avoid fragmentation, we can only do that if no transaction is looking at us
+                    if(scratch.File.ActivelyUsedBytes(asOfTxId) == 0)
+                        scratch.File.Reset();
                     return;
                 }
                 // this is the current one, but the size is too big, since no one is using the scratch 
@@ -201,7 +212,6 @@ namespace Voron.Impl.Scratch
 
             if (scratch.File.Size == _current.File.Size)
             {
-                scratch.File.Reset();
                 _recycleArea.AddLast(Tuple.Create(DateTime.UtcNow, scratch));
                 return;
             }

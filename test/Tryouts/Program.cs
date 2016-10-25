@@ -6,16 +6,14 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 1000; i++)
             {
-                Console.Write(i);
-                var sp = Stopwatch.StartNew();
+                Console.WriteLine(i);
                
-                using (var x = new MapReduce_IndependentSteps())
+                using (var x = new SlowTests.SlowTests.Issues.RavenDB_2812())
                 {
-                    x.CanGetReducedValues();
+                    x.ShouldProperlyPageResults();
                 }
-                Console.WriteLine(" - " + sp.Elapsed);
             }
         }
     }
