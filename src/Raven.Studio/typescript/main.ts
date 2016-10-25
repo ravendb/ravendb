@@ -15,7 +15,8 @@ requirejs.config({
           "d3": "../lib/d3/d3",
           "dagre": "../lib/dagre/dist/dagre.core",
           "forge": "../lib/forge/js/forge",
-          "moment": "../lib/moment/moment"
+          "moment": "../lib/moment/moment",
+          "plugins/bootstrapModal": "../App/plugins/bootstrapModal"
       }  
     },
 
@@ -38,7 +39,8 @@ define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dial
     app.configurePlugins({
         router: true,
         dialog: true,
-        widget: true
+        widget: true,
+        bootstrapModal: true
     });
 
     app.start().then(() => {
@@ -52,7 +54,7 @@ define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dial
             composition.defaultTransitionName = "fadeIn";
         } else {
             //The browser doesn't support WebSocket
-            app.showMessage("Your browser isn't supported. Please use a modern browser!", ":-(", []);
+            app.showBootstrapMessage("Your browser isn't supported. Please use a modern browser!", ":-(", []);
         }
     });
 });

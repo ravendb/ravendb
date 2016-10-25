@@ -108,7 +108,7 @@ class types extends viewModelBase {
                 .execute()
                 .done(() => this.refresh());
         });
-        app.showDialog(changeVm);
+        app.showBootstrapDialog(changeVm);
     }
 
     changeType() {
@@ -124,7 +124,7 @@ class types extends viewModelBase {
                 .execute()
                 .done(() => this.refresh());
         });
-        app.showDialog(typeChangeVM);
+        app.showBootstrapDialog(typeChangeVM);
     }
 
     refresh() {

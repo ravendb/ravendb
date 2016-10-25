@@ -195,7 +195,7 @@ class resources extends viewModelBase {
                 }
             });
 
-        app.showDialog(confirmDeleteViewModel);
+        app.showBootstrapDialog(confirmDeleteViewModel);
     }
 
     private onResourceDeleted(deletedResource: resource) {
@@ -233,7 +233,7 @@ class resources extends viewModelBase {
                 }
             });
 
-            app.showDialog(disableDatabaseToggleViewModel);
+            app.showBootstrapDialog(disableDatabaseToggleViewModel);
         }
     }
 
@@ -260,7 +260,7 @@ class resources extends viewModelBase {
             }
         });
 
-        app.showDialog(disableDatabaseToggleViewModel);
+        app.showBootstrapDialog(disableDatabaseToggleViewModel);
     }
 
     private onResourceDisabled(result: disableResourceResult) {

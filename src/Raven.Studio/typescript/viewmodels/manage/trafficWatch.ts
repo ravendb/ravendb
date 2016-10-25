@@ -120,7 +120,7 @@ class trafficWatch extends viewModelBase {
 
     configureConnection() {
         var configDialog = new watchTrafficConfigDialog();
-        app.showDialog(configDialog);
+        app.showBootstrapDialog(configDialog);
 
         configDialog.configurationTask.done((x: any) => {
             this.logConfig(x);
@@ -139,7 +139,7 @@ class trafficWatch extends viewModelBase {
     reconnect() {
         if (!this.watchClient) {
             if (!this.logConfig) {
-                app.showMessage("Cannot reconnect, please configure connection properly", "Connection Error");
+                app.showBootstrapMessage("Cannot reconnect, please configure connection properly", "Connection Error");
                 return;
             }
             this.connect();
@@ -170,7 +170,7 @@ class trafficWatch extends viewModelBase {
                     tokenDeferred.resolve();
                 })
                 .fail((e) => {
-                    app.showMessage("You are not authorized to trace this resource", "Authorization error");
+                    app.showBootstrapMessage("You are not authorized to trace this resource", "Authorization error");
                 });
         } else {
             tokenDeferred.resolve();
@@ -200,7 +200,7 @@ class trafficWatch extends viewModelBase {
                 this.isConnected(false);
             });
         } else {
-            app.showMessage("Cannot disconnect, connection does not exist", "Disconnect");
+            app.showBootstrapMessage("Cannot disconnect, connection does not exist", "Disconnect");
             return $.Deferred().reject();
         }
     }

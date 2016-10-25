@@ -7,6 +7,7 @@
     <div class="container-fluid content-container">
         <div class="content-container-margin">
             <div class="resources">
+                <button class="btn btn-primary" data-toggle="modal" data-target="#newDatabase">test modal</button>
 
                 {{> resources/toolbar }}
 
@@ -82,17 +83,16 @@
 
                 {{> resources/resource
                     name="db/WeirdLongLeggedBugsWithWingsAndDotsOnTheForehead"
-                    docs="1M"
-                    indexes="25"
-                    size="10MB"
+
                     type="database"
                     stateClass=""
                     stateText="offline"
-                    backedUpDays=45
+
                     backedUpClass="text-danger"
                 }}
 
+        {{> modals/includeAll }}
         {{> scripts }}
-</body>
 
+</body>
 </html>

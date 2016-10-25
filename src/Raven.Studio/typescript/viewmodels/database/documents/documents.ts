@@ -332,7 +332,7 @@ class documents extends viewModelBase {
 
                 this.updateGridAfterOperationComplete(collection, result.OperationId);
             });
-            app.showDialog(viewModel);
+            app.showBootstrapDialog(viewModel);
         }
     }
 
@@ -419,7 +419,7 @@ class documents extends viewModelBase {
 
     selectCsvColumns() {
         var dialog = new selectCsvColumnsDialog(this.getDocumentsGrid().getColumnsNames());
-        app.showDialog(dialog);
+        app.showBootstrapDialog(dialog);
 
         dialog.onExit().done((cols: string[]) => {
             this.exportCsvInternal(cols);
@@ -441,7 +441,7 @@ class documents extends viewModelBase {
         });
 
         var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase(), columnsNames);
-        app.showDialog(selectColumnsViewModel);
+        app.showBootstrapDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols) => {
             this.currentColumnsParams(cols);
             this.currentCollection().bindings(this.currentColumnsParams().getBindings());
@@ -540,7 +540,7 @@ class documents extends viewModelBase {
             var generate = new generateClassCommand(this.activeDatabase(), id, "csharp");
             var deffered = generate.execute();
             deffered.done((code: any) => {
-                app.showDialog(new showDataDialog("Generated Class", code["Code"]));
+                app.showBootstrapDialog(new showDataDialog("Generated Class", code["Code"]));
             });
         }
     }

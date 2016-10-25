@@ -189,7 +189,7 @@ class counters extends viewModelBase {
             var execute = counterCommand.execute();
             execute.done(() => this.refreshGridAndGroup(change.group()));
         });
-        app.showDialog(counterChangeVm);
+        app.showBootstrapDialog(counterChangeVm);
     }
 
     refresh() {
@@ -221,7 +221,7 @@ class counters extends viewModelBase {
                 var execute = counterCommand.execute();
                 execute.done(() => this.refreshGridAndGroup(counterData.GroupName));
             });
-            app.showDialog(counterChangeVm);
+            app.showBootstrapDialog(counterChangeVm);
         }
     }
 
@@ -307,7 +307,7 @@ class counters extends viewModelBase {
                     this.refreshGridAndGroup(group.name);
                 }
             });
-        app.showDialog(deleteGroupVm);
+            app.showBootstrapDialog(deleteGroupVm);
     }
 
     private updateGroups(receivedGroups: Array<counterGroup>) {

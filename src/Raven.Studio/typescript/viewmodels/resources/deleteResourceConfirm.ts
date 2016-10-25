@@ -16,6 +16,10 @@ class deleteResourceConfirm extends confirmViewModelBase<deleteResourceConfirmRe
         this.isKeepingFiles(false);
     }
 
+    protected getCofirmButton(): HTMLElement {
+        return $(".modal-footer:visible .btn-danger")[0] as HTMLElement;
+    }
+
     protected prepareResponse(can: boolean): deleteResourceConfirmResult {
         return {
             can: can,

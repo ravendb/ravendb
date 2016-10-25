@@ -227,7 +227,7 @@ class configuration extends viewModelBase {
             .done(() => {
                 this.removeKey(this.currentKey().key);
             });
-        app.showDialog(deleteConfigurationKeyViewModel);
+        app.showBootstrapDialog(deleteConfigurationKeyViewModel);
     }
 
     removeKey(key: string) {
@@ -278,7 +278,7 @@ class configuration extends viewModelBase {
                     })
                     .fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not create Configuration Key!", errorThrown));
             });
-        app.showDialog(createConfigurationKeyViewModel);
+        app.showBootstrapDialog(createConfigurationKeyViewModel);
     }
 } 
 

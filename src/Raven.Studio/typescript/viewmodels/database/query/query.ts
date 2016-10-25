@@ -184,7 +184,7 @@ class query extends viewModelBase {
 
     openQueryStats() {
         var viewModel = new queryStatsDialog(this.queryStats(), this.selectedIndexEditUrl(), this.didDynamicChangeIndex(), this.rawJsonUrl());
-        app.showDialog(viewModel);
+        app.showBootstrapDialog(viewModel);
     }
 
     canActivate(args: any): any {
@@ -607,7 +607,7 @@ class query extends viewModelBase {
             .fetch(0, 1)
             .done((results: pagedResultSet<any>) => {
                 if (results.totalResultCount === 0) {
-                    app.showMessage("There are no documents matching your query.", "Nothing to do");
+                    app.showBootstrapMessage("There are no documents matching your query.", "Nothing to do");
                 } else {
                     this.promptDeleteDocsMatchingQuery(results.totalResultCount);
                 }
@@ -617,7 +617,7 @@ class query extends viewModelBase {
     promptDeleteDocsMatchingQuery(resultCount: number) {
         var viewModel = new deleteDocumentsMatchingQueryConfirm(this.selectedIndex(), this.queryText(), resultCount, this.activeDatabase());
         app
-            .showDialog(viewModel)
+            .showBootstrapDialog(viewModel)
             .done(() => this.runQuery());
     }
 
@@ -640,7 +640,7 @@ class query extends viewModelBase {
             this.activeDatabase(),
             this.getQueryGrid().getColumnsNames());
 
-        app.showDialog(selectColumnsViewModel);
+        app.showBootstrapDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols: customColumns) => {
             this.currentColumnsParams(cols);
 
@@ -777,7 +777,7 @@ class query extends viewModelBase {
                 this.queryText(this.queryText() + this.searchField() + ":" + queryUtil.escapeTerm(input));
             }
         });
-        app.showDialog(fieldStartsWithViewModel);
+        app.showBootstrapDialog(fieldStartsWithViewModel);
     }
 
     fieldValueRange() {
@@ -815,7 +815,7 @@ class query extends viewModelBase {
             }
 
         });
-        app.showDialog(fieldRangeFilterViewModel);  
+        app.showBootstrapDialog(fieldRangeFilterViewModel);
     }
 
     fieldValueInMethod() {
@@ -829,7 +829,7 @@ class query extends viewModelBase {
                 var escapedStrings = inputs.map((s: string) => queryUtil.escapeTerm(s)).join();
                 this.queryText(this.queryText() + "@in<" + this.searchField() + ">:(" + escapedStrings + ")");
             });
-        app.showDialog(inMethodFilterViewModel);        
+        app.showBootstrapDialog(inMethodFilterViewModel);
     }
     }
 

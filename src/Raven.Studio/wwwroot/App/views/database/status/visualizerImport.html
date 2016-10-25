@@ -1,20 +1,22 @@
-<div class="messageBox" tabindex="-1" >
-    <form data-bind="submit: doImport">
-        <div class="modal-header">
-            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
-                <i class="fa fa-times"></i>
-            </button>
-            <h4 class="modal-title">Import visualization</h4>
-        </div>
-        <div class="modal-body">
-            
-            Select file to import. <br />
-            <input id="importFilePicker" type="file" data-bind="event: { change: fileSelected }" />
-            
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-bind="click: cancel">Close</button>
-            <button type="submit" class="btn btn-primary" data-bind="enable: hasFileSelected"><i class="fa fa-upload"></i> Import</button>
-        </div>
-    </form>
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1">
+        <form data-bind="submit: doImport">
+            <div class="modal-header">
+                <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                    <i class="fa fa-times"></i>
+                </button>
+                <h4 class="modal-title">Import visualization</h4>
+            </div>
+            <div class="modal-body">
+
+                Select file to import. <br />
+                <input id="importFilePicker" type="file" data-bind="event: { change: fileSelected }" />
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bind="click: cancel">Close</button>
+                <button type="submit" class="btn btn-primary" data-bind="enable: hasFileSelected"><i class="fa fa-upload"></i> Import</button>
+            </div>
+        </form>
+    </div>
 </div>

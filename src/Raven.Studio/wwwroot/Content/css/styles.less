@@ -3,17 +3,17 @@
 @import "checkbox-toggle.less";
 @import "icons.less";
 @import "animations.less";
-
+@import "modals.less";
 /*
     Available animations (add "classname;" inside your class)
     .bouncein-style
     .spin-style
     .slidein-style
     .topexpand-style (used in expandable search)
+    .fadein-style
 */
 @import "testing-elements.less";
 /* do not include in final build */
-
 /* LOCAL VARIABLES AND KEYFRAMES*/
 @menu-width: 280px;
 @menu-width-collapsed: 120px;
@@ -110,7 +110,7 @@ h6 {
 .btn {
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 
-    &:not(.dropdown-toggle) {
+    &:not(.dropdown-toggle), &.btn-block {
         .caret {
             margin-left: 2px;
             margin-right: -2px;
@@ -155,6 +155,10 @@ a {
         color: inherit;
         cursor: pointer;
     }
+}
+
+.btn-group.btn-block>.dropdown-menu {
+    min-width: 100%;
 }
 
 .padding {
@@ -1933,6 +1937,29 @@ pre {
     }
 }
 
+.panel {
+    .panel-heading {
+        .right-action-button {
+            display: inline;
+            float: right;
+            padding: 0;
+            margin-top:-3px;
+            margin-left: 10px;
+            margin-right: -10px;
+            line-height: normal;
+            color: inherit;
+            background: transparent;
+            border:none;
+
+            opacity: .5;
+
+            &:hover {
+                opacity: 1;
+            }
+        }
+    }
+}
+
 .panel-state {
     position: relative;
     padding-left: 30px;
@@ -1983,11 +2010,10 @@ pre {
     }
 }
 
-.input-group-btn>.btn  {
+.input-group-btn > .btn {
     border-color: @input-border;
     border-left-color: @gray-dark;
 }
-
 @import "pages/tasks-sampleData";
 @import "pages/tasks-csvImport";
 @import "pages/tasks-subscriptions";

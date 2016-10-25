@@ -158,7 +158,7 @@ class synchronizationConflicts extends viewModelBase {
 
                 this.selectNone();
             });
-        app.showDialog(resolveConflictViewModel);
+        app.showBootstrapDialog(resolveConflictViewModel);
     }
 
     resolveWithRemoteVersion() {
@@ -195,7 +195,7 @@ class synchronizationConflicts extends viewModelBase {
 
                 this.selectNone();
             });
-        app.showDialog(resolveConflictViewModel);
+        app.showBootstrapDialog(resolveConflictViewModel);
     }
 
     toggleSelectAll() {
