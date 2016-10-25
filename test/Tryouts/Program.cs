@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace Tryouts
 {
@@ -9,11 +10,12 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-               
-                using (var x = new FastTests.Voron.Bugs.Isolation())
+                var sp = Stopwatch.StartNew();
+                using (var x = new FastTests.Voron.Trees.FreeSpaceTest())
                 {
-                    x.MultiTreeIteratorShouldBeIsolated2();
+                    x.CanReuseMostOfFreePages_RemainingOnesCanBeTakenToHandleFreeSpace();
                 }
+                Console.WriteLine(sp.Elapsed);
             }
         }
     }
