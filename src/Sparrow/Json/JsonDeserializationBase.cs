@@ -128,7 +128,12 @@ namespace Sparrow.Json
             {
                 return Expression.Default(type);
             }*/
-
+            if (propertyType == typeof(string[]))
+            {
+                var method = typeof(JsonDeserializationBase).GetMethod(nameof(ToArrayOfString), BindingFlags.NonPublic | BindingFlags.Static);
+                method = method.MakeGenericMethod(propertyType);
+                return Expression.Call(method, json, Expression.Constant(propertyName));
+            }
             if (propertyType.IsArray)
             {
                 var valueType = propertyType.GetElementType();
@@ -244,6 +249,21 @@ namespace Sparrow.Json
 
             return collection;
         }
+
+        private static string[] ToArrayOfString(BlittableJsonReaderObject json, string name)
+        {
+            var collection = new List<string>();
+
+            BlittableJsonReaderArray jsonArray;
+            if (json.TryGet(name, out jsonArray) == false || jsonArray == null)
+                return collection.ToArray();
+
+            foreach (var value in jsonArray)
+                collection.Add(value.ToString());
+
+            return collection.ToArray();
+        }
+
 
         private static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()
         {

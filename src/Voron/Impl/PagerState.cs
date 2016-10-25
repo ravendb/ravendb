@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Sparrow.Utils;
 using Voron.Impl.Paging;
 
 
@@ -71,12 +71,16 @@ namespace Voron.Impl
             {
                 foreach (var allocationInfo in AllocationInfos)
                     _pager.ReleaseAllocationInfo(allocationInfo.BaseAddress, allocationInfo.Size);
+                AllocationInfos = null;
+            
             }
 
             if (Files != null && DisposeFilesOnDispose)
             {
                 foreach (var file in Files)
+                {
                     file.Dispose();
+                }
 
                 Files = null;
             }

@@ -49,11 +49,19 @@ namespace Voron.Util
                 // ReSharper disable once LoopCanBeConvertedToQuery
                 foreach (var threadActiveTransactions in _activeTransactions.Values)
                 {
+                    if(threadActiveTransactions == null)
+                        continue;
+
                     var array = threadActiveTransactions.Items;
                     var len = Math.Min(array.Length, threadActiveTransactions.Length);
                     for (int i = 0; i < len; i++)
                     {
-                        var activeTransactionTransaction = array[i].Transaction;
+                        var node = array[i];
+                        // ReSharper disable once UseNullPropagation
+                        if (node == null)
+                            continue;
+
+                        var activeTransactionTransaction = node.Transaction;
                         // ReSharper disable once UseNullPropagation
                         if (activeTransactionTransaction == null)
                             continue;

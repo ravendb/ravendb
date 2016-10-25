@@ -339,8 +339,13 @@ namespace Raven.Server
         public RequestRouter Router { get; private set; }
         public MetricsCountersManager Metrics { get; private set; }
 
+        private bool _disposed;
+
         public void Dispose()
         {
+            if (_disposed)
+                return;
+            _disposed = true;
             Metrics?.Dispose();
             _webHost?.Dispose();
             if (_tcpListenerTask != null)

@@ -73,7 +73,7 @@ namespace Voron.Impl.Journal
             var numberOfPages = _recoveryPager.GetNumberOfOverflowPages(current->UncompressedSize);
             _recoveryPager.EnsureContinuous(0, numberOfPages);
             var outputPage = _recoveryPager.AcquirePagePointer(null, 0);
-            UnmanagedMemory.Set(outputPage, 0, numberOfPages * options.PageSize);
+            UnmanagedMemory.Set(outputPage, 0, (long)numberOfPages * options.PageSize);
 
             try
             {

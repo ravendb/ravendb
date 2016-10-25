@@ -78,8 +78,8 @@ namespace FastTests.Voron.Trees
         [Fact]
         public void CanReuseMostOfFreePages_RemainingOnesCanBeTakenToHandleFreeSpace()
         {
-            const int maxPageNumber = 4000000;
-            const int numberOfFreedPages = 100;
+            const int maxPageNumber = 400;
+            const int numberOfFreedPages = 10;
             var random = new Random(3);
             var freedPages = new HashSet<long>();
 
@@ -129,8 +129,8 @@ namespace FastTests.Voron.Trees
         [Fact]
         public void FreeSpaceHandlingShouldNotReturnPagesThatAreAlreadyAllocated()
         {
-            const int maxPageNumber = 400000;
-            const int numberOfFreedPages = 60;
+            const int maxPageNumber = 400;
+            const int numberOfFreedPages = 6;
             var random = new Random(2);
             var freedPages = new HashSet<long>();
 
@@ -189,8 +189,8 @@ namespace FastTests.Voron.Trees
         [Fact]
         public void CanGetListOfAllFreedPages()
         {
-            const int maxPageNumber = 10000;
-            const int numberOfFreedPages = 5000;
+            const int maxPageNumber = 100;
+            const int numberOfFreedPages = 500;
             var random = new Random();
             var freedPages = new HashSet<long>();
             var allocatedPages = new List<long>(maxPageNumber);

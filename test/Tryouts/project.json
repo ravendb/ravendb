@@ -41,7 +41,6 @@
       "type": "platform",
       "version": "1.0.1"
     },
-    "AsyncFriendlyStackTrace": "1.4.1",
-    "StressTests": "4.0.0-*"
+    "AsyncFriendlyStackTrace": "1.4.1"
   }
 }

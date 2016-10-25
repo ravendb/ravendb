@@ -6,7 +6,9 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Utils;
 using Voron.Data.BTrees;
+using Voron.Exceptions;
 using Voron.Platform.Win32;
 using Voron.Global;
 
@@ -18,13 +20,43 @@ namespace Voron.Impl.Paging
 
         public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new ConcurrentDictionary<string, uint>();
 
-        protected int MinIncreaseSize => 16*_pageSize; // 64 KB with 4Kb pages. 
+        protected int MinIncreaseSize => 16 * _pageSize; // 64 KB with 4Kb pages. 
 
         protected int MaxIncreaseSize => Constants.Size.Gigabyte;
 
         private long _increaseSize;
         private DateTime _lastIncrease;
-        protected readonly int _pageSize;
+        private readonly int _pageSize;
+        private readonly object _pagerStateModificationLocker = new object();
+
+        public void SetPagerState(PagerState newState)
+        {
+            if (Disposed)
+                ThrowAlreadyDisposedException();
+
+            lock (_pagerStateModificationLocker)
+            {
+                _debugInfo = GetSourceName();
+                var oldState = _pagerState;
+                newState.AddRef();
+                _pagerState = newState;
+                oldState?.Release();
+            }
+        }
+
+        internal PagerState GetPagerStateAndAddRefAtomically()
+        {
+            if (Disposed)
+                ThrowAlreadyDisposedException();
+
+            lock (_pagerStateModificationLocker)
+            {
+                if (_pagerState == null)
+                    return null;
+                _pagerState.AddRef();
+                return _pagerState;
+            }
+        }
 
         public PagerState PagerState
         {
@@ -33,14 +65,6 @@ namespace Voron.Impl.Paging
                 if (Disposed)
                     ThrowAlreadyDisposedException();
                 return _pagerState;
-            }
-            set
-            {
-                if (Disposed)
-                    ThrowAlreadyDisposedException();
-
-                _debugInfo = GetSourceName();
-                _pagerState = value;
             }
         }
 
@@ -58,47 +82,66 @@ namespace Voron.Impl.Paging
             _options = options;
             _pageSize = _options.PageSize;
 
-            Debug.Assert((_pageSize - Constants.TreePageHeaderSize)/Constants.MinKeysInPage >= 1024);
+            Debug.Assert((_pageSize - Constants.TreePageHeaderSize) / Constants.MinKeysInPage >= 1024);
 
 
             PageMaxSpace = _pageSize - Constants.TreePageHeaderSize;
-            NodeMaxSize = PageMaxSpace/2 - 1;
+            NodeMaxSize = PageMaxSpace / 2 - 1;
 
             // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
             Debug.Assert(NodeMaxSize < ushort.MaxValue);
 
             _increaseSize = MinIncreaseSize;
 
-            PageMinSpace = (int)(PageMaxSpace*0.33);
-            PagerState = new PagerState(this);
+            PageMinSpace = (int)(PageMaxSpace * 0.33);
 
-            PagerState.AddRef();
+            SetPagerState(new PagerState(this));
         }
 
         public StorageEnvironmentOptions Options => _options;
 
         public int PageSize
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return _pageSize; }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _pageSize; }
         }
 
-        public int PageMinSpace { [MethodImpl(MethodImplOptions.AggressiveInlining)] get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)] private set; }
+        public int PageMinSpace
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
 
-        public bool DeleteOnClose { [MethodImpl(MethodImplOptions.AggressiveInlining)] get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)] set; }
+        public bool DeleteOnClose
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set;
+        }
 
-        public int NodeMaxSize { [MethodImpl(MethodImplOptions.AggressiveInlining)] get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)] private set; }
+        public int NodeMaxSize
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
 
-        public int PageMaxSpace { [MethodImpl(MethodImplOptions.AggressiveInlining)] get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)] private set; }
+        public int PageMaxSpace
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
 
         public static readonly int RequiredSpaceForNewNode = Constants.NodeHeaderSize + Constants.NodeOffsetSize;
 
 
         private PagerState _pagerState;
-        private readonly ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
 
         public long NumberOfAllocatedPages { get; protected set; }
 
@@ -116,7 +159,7 @@ namespace Voron.Impl.Paging
 
             tx?.EnsurePagerStateReference(state);
 
-            return state.MapBase + pageNumber*_pageSize;
+            return state.MapBase + pageNumber * _pageSize;
         }
 
         public abstract void Sync();
@@ -132,8 +175,8 @@ namespace Voron.Impl.Paging
 
             // this ensure that if we want to get a range that is more than the current expansion
             // we will increase as much as needed in one shot
-            var minRequested = (requestedPageNumber + numberOfPages)*_pageSize;
-            var allocationSize = Math.Max(NumberOfAllocatedPages*_pageSize, PageSize);
+            var minRequested = (requestedPageNumber + numberOfPages) * _pageSize;
+            var allocationSize = Math.Max(NumberOfAllocatedPages * _pageSize, PageSize);
             while (minRequested > allocationSize)
             {
                 allocationSize = GetNewLength(allocationSize);
@@ -154,15 +197,14 @@ namespace Voron.Impl.Paging
 
             _options.IoMetrics.FileClosed(FileName);
 
-            if (PagerState != null)
+            if (_pagerState != null)
             {
-                PagerState.Release();
-                PagerState = null;
+                _pagerState.Release();
+                _pagerState = null;
             }
 
-            Task.WaitAll(_tasks.ToArray());
-
             Disposed = true;
+            NativeMemory.UnregisterFileMapping(FileName);
             GC.SuppressFinalize(this);
         }
 
@@ -186,11 +228,11 @@ namespace Voron.Impl.Paging
             TimeSpan timeSinceLastIncrease = (now - _lastIncrease);
             if (timeSinceLastIncrease.TotalSeconds < 30)
             {
-                _increaseSize = Math.Min(_increaseSize*2, MaxIncreaseSize);
+                _increaseSize = Math.Min(_increaseSize * 2, MaxIncreaseSize);
             }
             else if (timeSinceLastIncrease.TotalMinutes > 2)
             {
-                _increaseSize = Math.Max(MinIncreaseSize, _increaseSize/2);
+                _increaseSize = Math.Max(MinIncreaseSize, _increaseSize / 2);
             }
 
             _lastIncrease = now;
@@ -202,29 +244,15 @@ namespace Voron.Impl.Paging
             // the file size increases, we will reserve more & more from the OS.
             // This also plays avoids "I added 300 records and the file size is 64MB" problems that occur when we are too
             // eager to reserve space
-            var actualIncrease = Math.Min(_increaseSize, current/4);
+            var actualIncrease = Math.Min(_increaseSize, current / 4);
 
             // we then want to get the next power of two number, to get pretty file size
             return current + Bits.NextPowerOf2(actualIncrease);
         }
 
-        public long WriteDirect(byte* p, long pagePosition, int pagesToWrite)
-        {
-            if (Disposed)
-                ThrowAlreadyDisposedException();
-
-            long toCopy = pagesToWrite*_pageSize;
-            Memory.BulkCopy(PagerState.MapBase + pagePosition*_pageSize, p, toCopy);
-
-            return toCopy;
-        }
 
         public abstract override string ToString();
 
-        public void RegisterDisposal(Task run)
-        {
-            _tasks.Add(run);
-        }
 
         public static void ThrowAlreadyDisposedException()
         {
@@ -237,7 +265,7 @@ namespace Voron.Impl.Paging
         {
             // this is a separate method because we don't want to have an exception throwing in the hot path
 
-            throw new ArgumentOutOfRangeException(nameof(pageNumber),
+            throw new VoronUnrecoverableErrorException(
                 "The page " + pageNumber + " was not allocated, allocated pages: " + NumberOfAllocatedPages + " in " +
                 GetSourceName());
         }

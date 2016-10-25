@@ -32,11 +32,13 @@ namespace Raven.Server.Documents
             _environment = environment;
             _contextPool = contextPool;
 
-            using (var tx = _environment.WriteTransaction())
+            TransactionOperationContext context;
+            using (contextPool.AllocateOperationContext(out context))
+            using (var tx = _environment.WriteTransaction(context.PersistentContext))
             {
                 _alertsSchema.Create(tx, AlertsSchema.AlertsTree);
 
-                tx.Commit();                
+                tx.Commit();
             }
 
            

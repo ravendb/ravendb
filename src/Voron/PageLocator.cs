@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
-using Sparrow;
 using Voron.Impl;
 
 namespace Voron
@@ -12,20 +7,21 @@ namespace Voron
     public unsafe class PageLocator
     {
         private const ushort Invalid = 0;
-        private readonly LowLevelTransaction _tx;
-
-        private readonly int _cacheSize;
-        private readonly ushort* _fingerprints;
+        private LowLevelTransaction _tx;
+        private readonly ushort[] _fingerprints;
         private readonly PageHandlePtr[] _cache;
 
+        private int _cacheSize;
         private int _current;
 
-
-        public PageLocator(LowLevelTransaction tx, int cacheSize = 8)
+        public void Renew(LowLevelTransaction tx, int cacheSize)
         {
             Debug.Assert(tx != null);
             Debug.Assert(cacheSize > 0);
-            _tx = tx;
+            Debug.Assert(cacheSize <= 512);
+
+            if (cacheSize > 512)
+                cacheSize = 512;
 
             // Align cache size to 8 for loop unrolling
             _cacheSize = cacheSize;
@@ -36,11 +32,17 @@ namespace Voron
             }
 
             _current = -1;
-            _cache = new PageHandlePtr[_cacheSize];
+            _tx = tx;
 
-            _fingerprints = (ushort*)_tx.Allocator.Allocate(_cacheSize * sizeof(ushort)).Ptr;
-            for (ushort i = 0; i < _cacheSize; i++)
-                _fingerprints[i] = Invalid;
+            Array.Clear(_cache, 0, _cacheSize);
+            Array.Clear(_fingerprints, 0, _cacheSize);
+        }
+
+        public PageLocator(LowLevelTransaction tx, int cacheSize = 8)
+        {
+            _cache = new PageHandlePtr[512];
+            _fingerprints = new ushort[512];
+            Renew(tx, cacheSize);
         }
 
         public Page GetReadOnlyPage(long pageNumber)
@@ -93,7 +95,7 @@ namespace Voron
             Found7: i += 7;
 
             Found:
-            // This is not the common case on the loop and we are returning anyways. It doesnt matter the jump is far.
+            // This is not the common case on the loop and we are returning anyways. It doesn't matter the jump is far.
             if (_cache[i].PageNumber == pageNumber)
                 return _cache[i].Value;
 
@@ -161,7 +163,6 @@ namespace Voron
         public void Clear()
         {
             _current = -1;
-            Array.Clear(_cache, 0, _cache.Length);
             for (int i = 0; i < _cacheSize; i++)
                 _fingerprints[i] = Invalid;
         }
@@ -213,7 +214,6 @@ namespace Voron
             Found:
             if (_cache[i].PageNumber == pageNumber)
             {
-                _cache[i] = new PageHandlePtr();
                 _fingerprints[i] = Invalid;
             }
         }
