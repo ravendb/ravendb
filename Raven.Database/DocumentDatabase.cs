@@ -951,6 +951,12 @@ namespace Raven.Database
 
             exceptionAggregator.Execute(() =>
             {
+                if (workContext != null)
+                    workContext.StopWorkRude();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
                 if (prefetcher != null)
                     prefetcher.Dispose();
             });
@@ -959,9 +965,6 @@ namespace Raven.Database
             {
                 initializer.UnsubscribeToDomainUnloadOrProcessExit();
                 disposed = true;
-
-                if (workContext != null)
-                    workContext.StopWorkRude();
             });
 
             if (initializer != null)

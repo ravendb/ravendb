@@ -212,6 +212,7 @@ namespace Raven.Database.Actions
                             // Even though technically we are running into a situation that is considered to be corrupt data
                             // we can safely recover from it by removing the other parts of the index.
                             Database.IndexStorage.DeleteIndex(indexId);
+                            actions.Indexing.PrepareIndexForDeletion(indexId);
                             actions.Indexing.DeleteIndex(indexId, WorkContext.CancellationToken);
 
                             string indexName;

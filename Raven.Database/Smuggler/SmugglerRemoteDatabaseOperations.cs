@@ -265,7 +265,7 @@ namespace Raven.Smuggler
             }
         }
 
-        public void ShowProgress(string format, params object[] args)
+        public virtual void ShowProgress(string format, params object[] args)
         {
             try
             {

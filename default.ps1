@@ -10,7 +10,6 @@ properties {
     $sln_file = "$base_dir\$sln_file_name"
     $tools_dir = "$base_dir\Tools"
     $release_dir = "$base_dir\Release"
-    $liveTest_dir = "C:\Sites\RavenDB 3\Web"
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
     $msbuild = "C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
@@ -375,8 +374,8 @@ task CopyServer -depends CreateOutpuDirectories {
         "$base_dir\DefaultConfigs\NLog.Ignored.config")
     $server_files | ForEach-Object { Copy-Item "$_" $build_dir\Output\Server }
 
-    mkdir -Path $build_dir\Output\Server\Tools
-    echo "Tools have been moved from the main distribution package and are now available as a separate download. Download dedicated tools package from our http://ravendb.net/downloads page." > $build_dir\Output\Server\Tools\where_are_tools.txt
+    mkdir -Path $build_dir\Output\Tools
+    echo "Tools have been moved from the main distribution package and are now available as a separate download. Download dedicated tools package from our http://ravendb.net/downloads page." > $build_dir\Output\Tools\where_are_tools.txt
 
     Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
@@ -546,84 +545,11 @@ task DoRelease -depends DoReleasePart1, `
     Write-Host "Done building RavenDB"
 }
 
-task UploadStable -depends Stable, DoRelease, Upload, UploadNuget, UpdateLiveTest
+task UploadStable -depends Stable, DoRelease, Upload, UploadNuget
 
 task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 
 task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
-
-task UpdateLiveTest {
-    $appPoolName = "RavenDB 3"
-    $appPoolState = (Get-WebAppPoolState $appPoolName).Value
-    Write-Host "App pool state is: $appPoolState"
-
-    if($appPoolState -ne "Stopped") {
-        Stop-WebAppPool $appPoolName -ErrorAction SilentlyContinue # The error is probably because it was already stopped
-
-        # Wait for the apppool to shut down.
-        do
-        {
-            Write-Host "Wait for '$appPoolState' to be stopped"
-            Start-Sleep -Seconds 1
-            $appPoolState = (Get-WebAppPoolState $appPoolName).Value
-        }
-        until ($appPoolState -eq "Stopped")
-    }
-
-    if(Test-Path "$liveTest_dir\Plugins") {
-        Remove-Item "$liveTest_dir\Plugins\*" -Force -Recurse -ErrorAction SilentlyContinue
-    } else {
-        mkdir "$liveTest_dir\Plugins" -ErrorAction SilentlyContinue
-    }
-    Copy-Item "$base_dir\Bundles\Raven.Bundles.LiveTest\bin\Release\Raven.Bundles.LiveTest.dll" "$liveTest_dir\Plugins\Raven.Bundles.LiveTest.dll" -ErrorAction SilentlyContinue
-
-    Remove-Item "\bin" -Force -Recurse -ErrorAction SilentlyContinue
-    mkdir "$liveTest_dir\bin" -ErrorAction SilentlyContinue
-    Copy-Item "$build_dir\Output\Web\bin" "$liveTest_dir\" -Recurse -ErrorAction SilentlyContinue
-
-    $appPoolState = (Get-WebAppPoolState $appPoolName).Value
-    Write-Host "App pool state is: $appPoolState"
-
-    if ($appPoolState -eq "Stopped") {
-        Write-Output "Starting IIS app pool $appPoolName"
-        Start-WebAppPool $appPoolName
-    } else {
-        Write-Output "Restarting IIS app pool $appPoolName"
-        Restart-WebAppPool $appPoolName
-    }
-    # Wait for the apppool to start.
-    do
-    {
-        Write-Host "Wait for '$appPoolState' to be started"
-        Start-Sleep -Seconds 1
-        $appPoolState = (Get-WebAppPoolState $appPoolName).Value
-    }
-    until ($appPoolState -eq "Started")
-
-    Write-Output "Done updating $appPoolName"
-}
-
-task MonitorLiveTestRunning {
-    $appPoolName = "RavenDB 3"
-    $appPoolState = (Get-WebAppPoolState $appPoolName).Value
-    Write-Host "App pool state is: $appPoolState"
-
-    if ($appPoolState -eq "Stopped") {
-        Write-Output "Starting IIS app pool $appPoolName"
-        Start-WebAppPool $appPoolName
-
-        # Wait for the apppool to start.
-        do
-        {
-            Write-Host "Wait for '$appPoolState' to be started"
-            Start-Sleep -Seconds 1
-            $appPoolState = (Get-WebAppPoolState $appPoolName).Value
-        }
-        until ($appPoolState -eq "Started")
-    }
-
-    Write-Output "Done monitoring $appPoolName"
-}
 
 task Upload {
     Write-Host "Starting upload"

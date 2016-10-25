@@ -18,14 +18,18 @@ namespace Raven.Tryouts
         public static void Main(string[] args)
         {
 #if !DNXCORE50
-
-            for (int i = 0; i < 100; i++)
+            //TODO: finish checking this test, it seems to have race condition or sometihing
+            for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var x = new WithFailovers())
+                //using (var x = new RavenDB_5390())
+                //{
+                //    x.Frequent_updates_of_document_should_not_cause_deadlock_in_prefetcher();
+                //}
+                using (var x = new RavenDB_5390())
                 {
-                    x.ReadFromLeaderWriteToLeaderWithFailoversShouldWork(3);
-                }
+                    x.Frequent_updates_of_document_should_not_cause_deadlock_in_prefetcher();
+                }                
             }
 
 #endif
