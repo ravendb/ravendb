@@ -296,9 +296,15 @@ namespace Sparrow.Json
             if (_pos + len < _buffer.Length)
                 return;
             if (len >= _buffer.Length)
-                throw new ArgumentOutOfRangeException(nameof(len));
+                ThrowValueTooBigForBuffer();
 
             Flush();
+        }
+
+        private static void ThrowValueTooBigForBuffer()
+        {
+            // ReSharper disable once NotResolvedInText
+            throw new ArgumentOutOfRangeException("len");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
