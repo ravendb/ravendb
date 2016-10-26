@@ -386,8 +386,11 @@ more responsive application.
                     return docInfo.Entity;
             }
 
-            if (includedDocumentsByKey.TryGetValue(key, out docInfo) && docInfo.Entity != null)
+            if (includedDocumentsByKey.TryGetValue(key, out docInfo))
             {
+                if (docInfo.Entity == null)
+                    docInfo.Entity = ConvertToEntity(entityType, key, document);
+
                 if (noTracking == false)
                 {
                     includedDocumentsByKey.Remove(key);
