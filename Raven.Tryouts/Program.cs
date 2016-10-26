@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using Raven.Tests.Raft.Client;
+using Raven.Tests.Smuggler;
 #if !DNXCORE50
 using Raven.Tests.Sorting;
 using Raven.SlowTests.RavenThreadPool;
@@ -18,14 +19,18 @@ namespace Raven.Tryouts
         public static void Main(string[] args)
         {
 #if !DNXCORE50
-
+            //TODO: finish checking this test, it seems to have race condition or sometihing
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var x = new WithFailovers())
+                //using (var x = new RavenDB_5390())
+                //{
+                //    x.Frequent_updates_of_document_should_not_cause_deadlock_in_prefetcher();
+                //}
+                using (var x = new SmugglerExecutionTests())
                 {
-                    x.ReadFromLeaderWriteToLeaderWithFailoversShouldWork(3);
-                }
+                    x.CanExportImportIncrementalSmugglerMaxSplitExportFileSize().Wait();
+                }                
             }
 
 #endif

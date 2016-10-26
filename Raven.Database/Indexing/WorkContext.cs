@@ -195,6 +195,7 @@ namespace Raven.Database.Indexing
                     workerWorkCounter = currentWorkCounter;
                     return true;
                 }
+                
                 CancellationToken.ThrowIfCancellationRequested();
                 if (log.IsDebugEnabled)
                     log.Debug("No work was found, workerWorkCounter: {0}, for: {1}, will wait for additional work", workerWorkCounter, name);
@@ -271,11 +272,13 @@ namespace Raven.Database.Indexing
         {
             if (log.IsDebugEnabled)
                 log.Debug("Stopping background workers");
-            doWork = false;
-            doIndexing = false;
-            doReducing = false;
+
             lock (waitForWork)
             {
+                doWork = false;
+                doIndexing = false;
+                doReducing = false;
+
                 Monitor.PulseAll(waitForWork);
             }
             ReplicationResetEvent.Set();
@@ -357,8 +360,8 @@ namespace Raven.Database.Indexing
 
         public void StopWorkRude()
         {
-            StopWork();
             cancellationTokenSource.Cancel();
+            StopWork();
         }
 
         public CancellationToken CancellationToken

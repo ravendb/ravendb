@@ -783,8 +783,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
         {
             var src = GetQueryStringValue("from");
 
-            var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
-            if (replicationTask == null)
+            //precaution
+            if (ReplicationTask == null)
             {
                 return GetMessageWithObject(new
                 {
@@ -792,7 +792,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 }, HttpStatusCode.NotFound);
             }
 
-            replicationTask.HandleHeartbeat(src, wake: true);
+            ReplicationTask.HandleHeartbeat(src, wake: true);
 
             return GetEmptyMessage();
         }

@@ -1432,7 +1432,7 @@ namespace Raven.Database.Config
             Port = defaultConfiguration.Port;
             OAuthTokenKey = defaultConfiguration.OAuthTokenKey;
             OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
-
+            Replication.ReplicationPropagationDelayInSeconds = defaultConfiguration.Replication.ReplicationPropagationDelayInSeconds;
             FileSystem.MaximumSynchronizationInterval = defaultConfiguration.FileSystem.MaximumSynchronizationInterval;
 
             Encryption.UseSsl = defaultConfiguration.Encryption.UseSsl;

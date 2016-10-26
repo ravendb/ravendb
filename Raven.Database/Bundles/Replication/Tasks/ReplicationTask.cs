@@ -413,6 +413,14 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
+        /// <summary>
+        /// this is intended for tests only, should not be used in production code
+        /// </summary>
+        public void ForceReplicationToRunOnce()
+        {
+            docDb.WorkContext.ReplicationResetEvent.Set();
+        }
+
         private void CleanupPrefetchingBehaviors(IEnumerable<string> allDestinations, IEnumerable<string> failingDestinations)
         {
             PrefetchingBehavior prefetchingBehaviorToDispose;
