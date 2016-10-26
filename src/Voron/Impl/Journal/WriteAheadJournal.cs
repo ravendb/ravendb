@@ -402,6 +402,8 @@ namespace Voron.Impl.Journal
             private long _totalWrittenButUnsyncedBytes;
             private DateTime _lastSyncTime;
 
+            public long TotalWrittenButUnsyncedBytes => Volatile.Read(ref _totalWrittenButUnsyncedBytes);
+
             public JournalApplicator(WriteAheadJournal waj)
             {
                 _waj = waj;

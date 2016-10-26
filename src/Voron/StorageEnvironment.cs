@@ -152,6 +152,9 @@ namespace Voron
                 }
                 if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
                     GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
+                    QueueForSyncDataFile();
+
             }
         }
 

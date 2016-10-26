@@ -68,7 +68,7 @@ namespace Sparrow.Json
             if (_managedBuffers == null)
                 _managedBuffers = new Stack<byte[]>();
             buffer = _managedBuffers.Count == 0 ? 
-                new byte[1024 * 32] : 
+                new byte[1024 * 32] :  // 32 KB is the size that is used by Kestrel's buffers
                 _managedBuffers.Pop();
             return new ReturnBuffer(buffer, this);
         }
