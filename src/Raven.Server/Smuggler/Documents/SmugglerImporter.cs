@@ -103,7 +103,8 @@ namespace Raven.Server.Smuggler.Documents
                             if (operateOnType == "Docs" && OperateOnTypes.HasFlag(DatabaseItemType.Documents))
                             {
                                 result.DocumentsCount++;
-                                _batchPutCommand.Add(builder.CreateReader());
+                                using (var reader = builder.CreateReader())
+                                    _batchPutCommand.Add(reader);
                                 await HandleBatchOfDocuments(context, parser, buildVersion);
                             }
                             else if (operateOnType == "RevisionDocuments" &&
@@ -113,7 +114,8 @@ namespace Raven.Server.Smuggler.Documents
                                     break;
 
                                 result.RevisionDocumentsCount++;
-                                _batchPutCommand.Add(builder.CreateReader());
+                                using (var reader = builder.CreateReader())
+                                    _batchPutCommand.Add(reader);
                                 await HandleBatchOfDocuments(context, parser, buildVersion);
                             }
                             else
@@ -255,7 +257,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private async Task HandleBatchOfDocuments(DocumentsOperationContext context, UnmanagedJsonParser parser, long buildVersion)
         {
-            if (_batchPutCommand.Documents.Count >= 32)
+            if (_batchPutCommand.TotalSize >= 16 * Voron.Global.Constants.Size.Megabyte)
             {
                 if (_prevCommand != null)
                 {
@@ -285,6 +287,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DocumentDatabase _database;
             private readonly long _buildVersion;
 
+            public long TotalSize;
             public readonly List<BlittableJsonReaderObject> Documents = new List<BlittableJsonReaderObject>();
             private readonly IDisposable _resetContext;
             private readonly DocumentsOperationContext _context;
@@ -349,6 +352,7 @@ namespace Raven.Server.Smuggler.Documents
                 var mem = _context.GetMemory(doc.Size);
                 Memory.Copy((byte*)mem.Address, doc.BasePointer, doc.Size);
                 Documents.Add(new BlittableJsonReaderObject((byte*)mem.Address, doc.Size, _context));
+                TotalSize += doc.Size;
             }
         }
     }
