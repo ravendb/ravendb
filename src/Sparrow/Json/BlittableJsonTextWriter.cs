@@ -146,7 +146,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void WriteString(LazyStringValue str)
         {
-            if (str == (LazyStringValue)null)
+            if (str == null)
             {
                 WriteNull();
                 return;
@@ -159,6 +159,21 @@ namespace Sparrow.Json
             _buffer[_pos++] = Quote;
             var escapeSequencePos = size;
             var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+            if (numberOfEscapeSequences == 0)
+            {
+                WriteRawString(strBuffer, size);
+
+                EnsureBuffer(1);
+                _buffer[_pos++] = Quote;
+                return;
+            }
+
+            UnlikedlyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
+        }
+
+        private unsafe void UnlikedlyWriteEscapeSequences(LazyStringValue str, int numberOfEscapeSequences, int escapeSequencePos,
+            byte* strBuffer, int size)
+        {
             while (numberOfEscapeSequences > 0)
             {
                 numberOfEscapeSequences--;
@@ -168,7 +183,7 @@ namespace Sparrow.Json
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
                 var b = *(strBuffer++);
                 EnsureBuffer(2);
-                _buffer[_pos++] = (byte)'\\';
+                _buffer[_pos++] = (byte) '\\';
                 _buffer[_pos++] = GetEscapeCharacter(b);
             }
             // write remaining (or full string) to the buffer in one shot
@@ -245,6 +260,11 @@ namespace Sparrow.Json
                 return;
             }
 
+            UnlikelyWriteLargeRawString(buffer, size);
+        }
+
+        private unsafe void UnlikelyWriteLargeRawString(byte* buffer, int size)
+        {
             // need to do this in pieces
             var posInStr = 0;
             fixed (byte* p = _buffer)
