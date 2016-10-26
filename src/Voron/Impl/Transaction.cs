@@ -1,6 +1,7 @@
 ﻿using Sparrow;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -20,18 +21,24 @@ namespace Voron.Impl
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
-        private readonly Dictionary<Slice, Table> _tables = new Dictionary<Slice, Table>(SliceComparer.Instance);
+        private Dictionary<Slice, Table> _tables;
 
-        private readonly Dictionary<Slice, Tree> _trees = new Dictionary<Slice, Tree>(SliceComparer.Instance);
+        private Dictionary<Slice, Tree> _trees;
 
-        private readonly Dictionary<Slice, FixedSizeTree> _globalFixedSizeTree =
-            new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
+        private Dictionary<Slice, FixedSizeTree> _globalFixedSizeTree;
 
-        public IEnumerable<Tree> Trees => _trees.Values;
+        public IEnumerable<Tree> Trees => _trees == null ? Enumerable.Empty<Tree>() : _trees.Values;
 
         public Transaction(LowLevelTransaction lowLevelTransaction)
         {
             _lowLevelTransaction = lowLevelTransaction;
+        }
+
+        private void EnsureTrees()
+        {
+            if (_trees != null)
+                return;
+            _trees = new Dictionary<Slice, Tree>(SliceComparer.Instance);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -44,6 +51,8 @@ namespace Voron.Impl
 
         public Tree ReadTree(Slice treeName, RootObjectType type = RootObjectType.VariableSizeTree)
         {
+            EnsureTrees();
+
             Tree tree;
             if (_trees.TryGetValue(treeName, out tree))
                 return tree;
@@ -74,20 +83,28 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Table OpenTable(TableSchema schema, string name)
+        public Table OpenTable(TableSchema schema, string name, bool throwIfDoesNotExist = true)
         {
             Slice nameSlice;
             Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice);
-            return OpenTable(schema, nameSlice);
+            return OpenTable(schema, nameSlice, throwIfDoesNotExist);
         }
 
-        public Table OpenTable(TableSchema schema, Slice name)
+        public Table OpenTable(TableSchema schema, Slice name, bool throwIfDoesNotExist = true)
         {
+            if(_tables == null)
+                _tables = new Dictionary<Slice, Table>(SliceComparer.Instance);
+
             Table openTable;
             if (_tables.TryGetValue(name, out openTable))
                 return openTable;
 
-            openTable = new Table(schema, name, this, 1);
+            var tableTree = ReadTree(name, RootObjectType.Table);
+
+            if (tableTree == null)
+                return null;
+
+            openTable = new Table(schema, name, this, tableTree);
             _tables.Add(name, openTable);
 
             return openTable;
@@ -122,9 +139,12 @@ namespace Voron.Impl
                 }
             }
 
-            foreach (var participant in _tables.Values)
+            if (_tables != null)
             {
-                participant.PrepareForCommit();
+                foreach (var participant in _tables.Values)
+                {
+                    participant.PrepareForCommit();
+                }
             }
         }
 
@@ -164,6 +184,8 @@ namespace Voron.Impl
 
         internal void AddTree(Slice name, Tree tree)
         {
+            EnsureTrees();
+
             Tree value;
             if (_trees.TryGetValue(name, out value) && value != null)
             {
@@ -218,7 +240,7 @@ namespace Voron.Impl
                     _multiValueTrees.Remove(recordToRemove);
                 }
             }
-
+            // already created in ReadTree
             _trees.Remove(name);
         }
 
@@ -250,10 +272,11 @@ namespace Voron.Impl
             _lowLevelTransaction.RootObjects.Delete(fromName);
 
             var ptr = _lowLevelTransaction.RootObjects.DirectAdd(toName, sizeof(TreeRootHeader));
-            fromTree.State.CopyTo((TreeRootHeader*)ptr);
+            fromTree.State.CopyTo((TreeRootHeader*) ptr);
             fromTree.Name = toName;
             fromTree.State.IsModified = true;
 
+            // _trees already ensrued already created in ReadTree
             _trees.Remove(fromName);
             _trees.Remove(toName);
 
@@ -294,6 +317,39 @@ namespace Voron.Impl
 
         public void Dispose()
         {
+            if (_trees != null)
+            {
+                foreach (var tree in _trees)
+                {
+                    tree.Value?.Dispose();
+                }
+            }
+
+            if (_multiValueTrees != null)
+            {
+                foreach (var item in _multiValueTrees)
+                {
+                    item.Value?.Dispose();
+                    item.Key.Item1?.Dispose();
+                }
+            }
+
+            if (_tables != null)
+            {
+                foreach (var table in _tables)
+                {
+                    table.Value?.Dispose();
+                }
+            }
+
+            if (_globalFixedSizeTree != null)
+            {
+                foreach (var tree in _globalFixedSizeTree)
+                {
+                    tree.Value?.Dispose();
+                }
+            }
+
             _lowLevelTransaction?.Dispose();
         }
 
@@ -319,6 +375,9 @@ namespace Voron.Impl
 
         public FixedSizeTree GetGlobalFixedSizeTree(Slice name, ushort valSize)
         {
+            if (_globalFixedSizeTree == null)
+                _globalFixedSizeTree = new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
+
             FixedSizeTree tree;
             if (_globalFixedSizeTree.TryGetValue(name, out tree) == false)
             {

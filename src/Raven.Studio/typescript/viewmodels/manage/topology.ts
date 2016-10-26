@@ -169,7 +169,7 @@ class topology extends viewModelBase {
         this.isLoadingDocumentToReplicateCount(true);
         var getDocsToReplicateCount =
             new getDocumentsLeftToReplicate(sourceUrl, destinationUrl, databaseName,
-                    sourceId, new database(sourceDatabaseName))
+                    sourceId, new database(sourceDatabaseName)) //TODO: use resources manager to get instance of database class
                 .execute();
 
         getDocsToReplicateCount
@@ -236,7 +236,7 @@ class topology extends viewModelBase {
                 SourceId: this.getServerId(currentLink.SendServerId, currentLink.StoredServerId)
             };
 
-            var db = new database(sourceDatabaseName);
+            var db = new database(sourceDatabaseName); //TODO: use resources manager to fetch instance of database 
             this.downloader.downloadByPost(db, url, requestData, this.isLoadingDocumentToReplicateCount, this.exportProgress);
 
             this.isLoadingDocumentToReplicateCount(false);

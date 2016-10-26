@@ -1,78 +1,80 @@
-<div id="CreateEncriptionDialog" class="messageBox" tabindex="-1">
-    <form data-bind="submit: save" class="form-horizontal">
-        <div class="modal-header">
-            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true"></button>
-            <h4 class="modal-title">Create Encryption</h4>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label for="keyName" class="col-sm-4 control-label">Select Key <br /><small class="text-muted">(Base64 Encoding)</small></label>
-                <div class="col-sm-8">
-                    <div class="input-group">
-                        <input required pattern="^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})([=]{1,2})?$" type="text" class="form-control" id="key" placeholder="Key" data-bind="value: key" autocomplete="off" />
-                        <span class="input-group-btn">
-                            <button class="btn btn-default" type="button" data-bind="click: refresh_encryption">
-                                <i class="fa fa-refresh"></i>
+<div class="modal-dialog" role="document">
+    <div id="CreateEncriptionDialog" class="modal-content" tabindex="-1">
+        <form data-bind="submit: save" class="form-horizontal">
+            <div class="modal-header">
+                <button type="button" class="close" data-bind="click: cancel" aria-hidden="true"></button>
+                <h4 class="modal-title">Create Encryption</h4>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="keyName" class="col-sm-4 control-label">Select Key <br /><small class="text-muted">(Base64 Encoding)</small></label>
+                    <div class="col-sm-8">
+                        <div class="input-group">
+                            <input required pattern="^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})([=]{1,2})?$" type="text" class="form-control" id="key" placeholder="Key" data-bind="value: key" autocomplete="off" />
+                            <span class="input-group-btn">
+                                <button class="btn btn-default" type="button" data-bind="click: refresh_encryption">
+                                    <i class="fa fa-refresh"></i>
+                                </button>
+                            </span>
+                        </div>
+                        <p class="help-block">
+                            <!--You can use the auto generated key or enter one of your own.-->
+                            <br />
+                            <i class="fa fa-warning text-warning"></i> Save this key in a safe place. If you lose this key you could lose access to your data.
+                        </p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="encryptionAlgorithm" class="col-sm-4 control-label">Encryption Algorithm</label>
+                    <div class="col-sm-8">
+                        <!--<select class="form-control" required data-bind="options: ['DES', 'RC2', 'Rijndael', 'Triple DES'], value: encryptionAlgorithm, valueAllowUnset: false, hasFocus: algorithmFocus"></select>-->
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="text: encryptionAlgorithm"></span>
+                                <span class="caret"></span>
                             </button>
-                        </span>
-                    </div>
-                    <p class="help-block">
-                        <!--You can use the auto generated key or enter one of your own.-->
-                        <br />
-                        <i class="fa fa-warning text-warning"></i> Save this key in a safe place. If you lose this key you could lose access to your data.
-                    </p>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="encryptionAlgorithm" class="col-sm-4 control-label">Encryption Algorithm</label>
-                <div class="col-sm-8">
-                    <!--<select class="form-control" required data-bind="options: ['DES', 'RC2', 'Rijndael', 'Triple DES'], value: encryptionAlgorithm, valueAllowUnset: false, hasFocus: algorithmFocus"></select>-->
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                            <span data-bind="text: encryptionAlgorithm"></span>
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" role="menu" data-bind="foreach: ['DES', 'RC2', 'Rijndael', 'Triple DES']">
-                            <li><a href="#" style="text-decoration: none;" data-bind="text: $data, click: $root.encryptionAlgorithm.bind($root.encryptionAlgorithm, $data)"></a></li>
-                        </ul>
+                            <ul class="dropdown-menu" role="menu" data-bind="foreach: ['DES', 'RC2', 'Rijndael', 'Triple DES']">
+                                <li><a href="#" style="text-decoration: none;" data-bind="text: $data, click: $root.encryptionAlgorithm.bind($root.encryptionAlgorithm, $data)"></a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label for="encryptionBits" class="col-sm-4 control-label">Encryption Key Bits</label>
-                <div class="col-sm-8">
-                    <!--<select class="form-control" required data-bind="options: ['128', '192', '256'], value: encryptionBits, valueAllowUnset: false, hasFocus: bitsFocus"></select>-->
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                            <span data-bind="text: encryptionBits"></span>
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" role="menu" data-bind="foreach: ['128', '192', '256']">
-                            <li><a href="#" style="text-decoration: none;" data-bind="text: $data, click: $root.encryptionBits.bind($root.encryptionBits, $data)"></a></li>
-                        </ul>
+                <div class="form-group">
+                    <label for="encryptionBits" class="col-sm-4 control-label">Encryption Key Bits</label>
+                    <div class="col-sm-8">
+                        <!--<select class="form-control" required data-bind="options: ['128', '192', '256'], value: encryptionBits, valueAllowUnset: false, hasFocus: bitsFocus"></select>-->
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="text: encryptionBits"></span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu" data-bind="foreach: ['128', '192', '256']">
+                                <li><a href="#" style="text-decoration: none;" data-bind="text: $data, click: $root.encryptionBits.bind($root.encryptionBits, $data)"></a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label for="encryptedIndexes" class="col-sm-4 control-label">Indexes</label>
-                <div class="col-sm-8">
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                            <span data-bind="visible: isEncryptedIndexes">Encrypt</span>
-                            <span data-bind="visible: !isEncryptedIndexes()">Don't encrypt</span>
-                            <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu" role="menu">
-                            <li><a href="#" style="text-decoration: none;" data-bind="click: isEncryptedIndexes.bind(isEncryptedIndexes, true)">Encrypt</a></li>
-                            <li><a href="#" style="text-decoration: none;" data-bind="click: isEncryptedIndexes.bind(isEncryptedIndexes, false)">Unencrypt</a></li>
-                        </ul>
+                <div class="form-group">
+                    <label for="encryptedIndexes" class="col-sm-4 control-label">Indexes</label>
+                    <div class="col-sm-8">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="visible: isEncryptedIndexes">Encrypt</span>
+                                <span data-bind="visible: !isEncryptedIndexes()">Don't encrypt</span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#" style="text-decoration: none;" data-bind="click: isEncryptedIndexes.bind(isEncryptedIndexes, true)">Encrypt</a></li>
+                                <li><a href="#" style="text-decoration: none;" data-bind="click: isEncryptedIndexes.bind(isEncryptedIndexes, false)">Unencrypt</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary">Save</button>
-        </div>
-    </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
 </div>

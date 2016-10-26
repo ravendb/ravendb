@@ -29,7 +29,8 @@ namespace Raven.Server.Documents.Queries.Results
 
             var doc = DirectGet(null, id);
 
-            doc?.EnsureMetadata(score);
+            if (doc != null)
+                doc.IndexScore = score;
 
             return doc;
         }

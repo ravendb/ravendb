@@ -39,7 +39,7 @@ class filesystemEditFile extends viewModelBase {
         super.activate(args);
         this.updateHelpLink("RJBNGR");
         this.metadata = ko.computed(() => this.file() ? this.file().__metadata : null);
-        this.filesystemForEditedFile = appUrl.getFileSystem();
+        this.filesystemForEditedFile = this.activeFilesystem();
         if (args.id != null) {
             this.appendRecentFile(args.id);
             this.fileName(args.id);
@@ -115,12 +115,12 @@ class filesystemEditFile extends viewModelBase {
     deleteFile() {
         var file = this.file();
         if (file) {
-            var viewModel = new deleteItems([file]);
+            var viewModel = new deleteItems([file], this.activeFilesystem());
             viewModel.deletionTask.done(() => {
                 var filesUrl = appUrl.forFilesystemFiles(this.activeFilesystem());
                 router.navigate(filesUrl);
             });
-            app.showDialog(viewModel, filesystemEditFile.editFileSelector);
+            app.showBootstrapDialog(viewModel, filesystemEditFile.editFileSelector);
         }
 
         this.dirtyFlag().reset(); // Resync Changes
@@ -133,7 +133,7 @@ class filesystemEditFile extends viewModelBase {
             this.removeFromTopRecentFiles(currentFileName);
             router.navigate(appUrl.forEditFile(newName, this.activeFilesystem()));
         });
-        app.showDialog(dialog);
+        app.showBootstrapDialog(dialog);
     }
 
     removeFromTopRecentFiles(fileName: string) {

@@ -1,40 +1,40 @@
-﻿
 <!doctype html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
 {{> head }}
+
 <body>
     {{> spinner }}
     {{> topbar }}
     {{> menu }}
     {{> notification-center }}
 
-<div class="container-fluid content-container">
-    <div class="content-container-margin sampleData">
-        <h1>Create sample data</h1>
+    <div class="container-fluid content-container">
+        <div class="content-container-margin sampleData">
+            <h1>Create sample data</h1>
 
-        <div class="panel panel-default">
-            <div class="panel-body">
-                <p class="bg-info padding">
-                    <i class="icon-info"></i>
-                    <span>Creating sample data requires an empty database.</span>
-                </p>
-                <div class="row">
-                    <div class="col-sm-12">
-                        <button class="btn btn-default">
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <p class="bg-info padding">
+                        <i class="icon-info"></i>
+                        <span>Creating sample data requires an empty database.</span>
+                    </p>
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <button class="btn btn-default">
                             <i class="icon-code"></i>
                             <span>Copy C# classes for sample data</span>
                         </button>
-                        <button class="btn btn-primary btn-toggle sampleData-createBtn" data-target=".sampleData-createBtn" data-class="btn-spinner">
-                            <i class="icon-document-group"></i>
+                            <button class="btn btn-primary btn-toggle sampleData-createBtn" data-target=".sampleData-createBtn" data-class="btn-spinner">
+                            <i class="icon-magic-wand"></i>
                             <span>Create sample data</span>
                         </button>
+                        </div>
                     </div>
-                </div>
-                <br>
-                <div class="row">
-                    <div class="col-sm-12">
-                        <h2>Sample data C# code</h2>
-                        <textarea class="sampleData-classes">
+                    <br>
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <h2>Sample data C# code</h2>
+                            <textarea class="sampleData-classes">
 namespace Orders {
 
     public class Company
@@ -156,13 +156,16 @@ namespace Orders {
     }
 }
                                         </textarea>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
-
                     </div>
                 </div>
-                {{> scripts }}
-            </body>
-            </html>
+            </div>
+
+        </div>
+    </div>
+
+    {{> modals/includeAll }}
+    {{> scripts }}
+
+</body>
+</html>

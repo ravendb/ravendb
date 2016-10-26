@@ -7,6 +7,7 @@
     <div class="container-fluid content-container">
         <div class="content-container-margin">
             <div class="resources">
+                <button class="btn btn-primary" data-toggle="modal" data-target="#newDatabase">test modal</button>
 
                 {{> resources/toolbar }}
 
@@ -18,7 +19,8 @@
                     indexes="94"
                     size="3.5GB"
                     type="database"
-                    state="disabled"
+                    stateClass="state-warning"
+                    stateText="disabled"
                     backedUp="Backed up 1 day ago"
                     backedUpClass="text-success"
                     indexingDisabled="true"
@@ -31,7 +33,8 @@
                     docs="4.5K"
                     indexes="24"
                     type="database"
-                    state="online"
+                    stateClass="state-success"
+                    stateText="online"
                     upFor="2 days"
                     backedUp="Backed up 5 days ago"
                     backedUpClass="text-warning"
@@ -44,7 +47,8 @@
                     indexes="2"
                     size="50GB"
                     type="database"
-                    state="online"
+                    stateClass="state-success"
+                    stateText="online"
                     upFor="2 days"
                     backedUp="Never backed up"
                     backedUpClass="text-danger"
@@ -55,7 +59,8 @@
                     size="51GB"
                     files="12M"
                     type="filesystem"
-                    state="online"
+                    stateClass="state-success"
+                    stateText="online"
                     upFor="100 days"
                     backedUp="Backed up 3 days ago"
                     backedUpClass="text-success"
@@ -67,7 +72,8 @@
                     indexes="0"
                     size="0MB"
                     type="database"
-                    state="online"
+                    stateClass="state-success"
+                    stateText="online"
                     upFor="100 days"
                     backedUp="Never backed up"
                     backedUpClass="text-danger"
@@ -77,16 +83,16 @@
 
                 {{> resources/resource
                     name="db/WeirdLongLeggedBugsWithWingsAndDotsOnTheForehead"
-                    docs="1M"
-                    indexes="25"
-                    size="10MB"
+
                     type="database"
-                    state="offline"
-                    backedUpDays=45
+                    stateClass=""
+                    stateText="offline"
+
                     backedUpClass="text-danger"
                 }}
 
+        {{> modals/includeAll }}
         {{> scripts }}
-</body>
 
+</body>
 </html>

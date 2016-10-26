@@ -1,20 +1,22 @@
-<div class="messageBox" tabindex="-1">
-    <form data-bind="submit: create">
-        <div class="modal-header">
-            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
-                <i class="fa fa-times"></i>
-            </button>
-            <h4 class="modal-title">Create Configuration Key</h4>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label for="databaseName">Name</label>
-                <input required autofocus type="text" class="form-control" id="configurationKeyName" placeholder="Configuration Key Name" data-bind="value: configurationKeyName, hasfocus: configurationKeyNameFocus">
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1">
+        <form data-bind="submit: create">
+            <div class="modal-header">
+                <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                    <i class="fa fa-times"></i>
+                </button>
+                <h4 class="modal-title">Create Configuration Key</h4>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary">Create</button>
-        </div>
-    </form>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="databaseName">Name</label>
+                    <input required autofocus type="text" class="form-control" id="configurationKeyName" placeholder="Configuration Key Name" data-bind="value: configurationKeyName, hasfocus: configurationKeyNameFocus">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create</button>
+            </div>
+        </form>
+    </div>
 </div>

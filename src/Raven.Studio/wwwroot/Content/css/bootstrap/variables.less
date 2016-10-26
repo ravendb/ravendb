@@ -209,7 +209,7 @@
 //** Text color for `<input>`s
 @input-color:                    @gray-lighter;
 //** `<input>` border color
-@input-border:                   @gray;
+@input-border:                   @gray-dark;
 
 // TODO: Rename `@input-border-radius` to `@input-border-radius-base` in v4
 //** Default `.form-control` border radius
@@ -624,18 +624,18 @@
 @modal-title-line-height:     @line-height-base;
 
 //** Background color of modal content area
-@modal-content-bg:                             #fff;
+@modal-content-bg:                             darken(@gray-darker,2%);
 //** Modal content border color
-@modal-content-border-color:                   rgba(0,0,0,.2);
+@modal-content-border-color:                   @gray-base;
 //** Modal content border color **for IE8**
-@modal-content-fallback-border-color:          #999;
+@modal-content-fallback-border-color:          @gray-base;
 
 //** Modal backdrop background color
-@modal-backdrop-bg:           #000;
+@modal-backdrop-bg:           @gray-base;
 //** Modal backdrop opacity
 @modal-backdrop-opacity:      .5;
 //** Modal header border color
-@modal-header-border-color:   #e5e5e5;
+@modal-header-border-color:   @gray-darker;
 //** Modal footer border color
 @modal-footer-border-color:   @modal-header-border-color;
 
@@ -805,7 +805,7 @@
 @badge-color:                 #fff;
 //** Linked badge text color on hover
 @badge-link-hover-color:      #fff;
-@badge-bg:                    @gray-light;
+@badge-bg:                    @gray;
 
 //** Badge text color in active nav link
 @badge-active-color:          @link-color;
@@ -855,8 +855,8 @@
 //##
 
 @close-font-weight:           bold;
-@close-color:                 #000;
-@close-text-shadow:           0 1px 0 #fff;
+@close-color:                 @brand-primary;
+@close-text-shadow:           0 1px 0 @gray-base;
 
 
 //== Code

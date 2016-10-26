@@ -50,7 +50,7 @@
                 <div class="panel transformer">
                     <div class="padding padding-sm">
                         <div class="row">
-                            <div class="col-sm-6 col-xl-4 col-flex info-container">
+                            <div class="col-xs-12 col-sm-6  info-container">
                                 <div class="checkbox">
                                     <input type="checkbox" class="styled">
                                     <label></label>
@@ -59,12 +59,12 @@
                                     <a href="#">CarsByMakerAndModelTransformer</a>
                                 </h3>
                             </div>
-                            <div class="col-sm-12 col-xl-5 col-flex vertical-divider properties-container">
+                            <div class="col-xs-12 col-sm-12 col-lg-4  vertical-divider properties-container">
 
                                 <div class="properties-item">
                                     <span class="properties-label">Mode:</span>
-                                    <div class="btn-group btn-group-xs">
-                                        <button type="button" class="btn btn-block properties-value dropdown-toggle" data-toggle="dropdown">
+                                    <div class="btn-group properties-value">
+                                        <button type="button" class="btn btn-block dropdown-toggle set-size" data-toggle="dropdown">
                                             <i class="icon-lock"></i><span>Locked</span> <span class="caret"></span>
                                         </button>
                                         <ul class="dropdown-menu">
@@ -84,7 +84,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-sm-6 col-xl-3 col-flex actions-container">
+                            <div class="col-xs-12 col-sm-6 col-lg-2  actions-container">
                                 <div class="actions">
                                     <div class="btn-toolbar pull-right-sm" role="toolbar">
                                         <div class="btn-group " role="group">
@@ -104,6 +104,7 @@
         </div>
     </div>
 
+    {{> modals/includeAll }}
     {{> scripts }}
 </body>
 </html>

@@ -176,7 +176,7 @@ class transformers extends viewModelBase {
         const db = this.activeDatabase();
         const deleteViewmodel = new deleteTransformerConfirm(transformers.map(i => i.name()), db);
         deleteViewmodel.deleteTask.done(() => this.removeTransformersFromAllGroups(transformers));
-        app.showDialog(deleteViewmodel);
+        app.showBootstrapDialog(deleteViewmodel);
     }
 
     private removeTransformersFromAllGroups(transformers: Array<transformer>) {

@@ -16,7 +16,8 @@ const SearchBox = {
 
 const Resource = {
     Activate: 'Resource.Activate',
-    Disconnect: 'Resource.Disconnect'
+    Disconnect: 'Resource.Disconnect',
+    Created: 'Resource.Created'
 };
 
 const NotificationCenter = {

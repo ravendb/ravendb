@@ -1,33 +1,35 @@
-<div class="messageBox" tabindex="-1">
-    <div class="modal-header">
-        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
-            <i class="fa fa-times"></i>
-        </button>
-        <h4 class="modal-title">Prefetching information</h4>
-    </div>
-    <div class="modal-body">
-        <table class="table table-condensed table-striped" data-bind="with: data">
-            <tbody>
-                <tr>
-                    <td>Started at</td>
-                    <td data-bind="text: Timestamp"></td>
-                </tr>
-                <tr>
-                    <td>Total duration [ms]</td>
-                    <td data-bind="text: DurationMs.toLocaleString(2)"></td>
-                </tr>
-                <tr>
-                    <td>Size</td>
-                    <td data-bind="text: Size.toLocaleString(2)"></td>
-                </tr>
-                <tr>
-                    <td>Retries</td>
-                    <td data-bind="text: Retries.toLocaleString(2)"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-bind="click: cancel">Close</button>
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                <i class="fa fa-times"></i>
+            </button>
+            <h4 class="modal-title">Prefetching information</h4>
+        </div>
+        <div class="modal-body">
+            <table class="table table-condensed table-striped" data-bind="with: data">
+                <tbody>
+                    <tr>
+                        <td>Started at</td>
+                        <td data-bind="text: Timestamp"></td>
+                    </tr>
+                    <tr>
+                        <td>Total duration [ms]</td>
+                        <td data-bind="text: DurationMs.toLocaleString(2)"></td>
+                    </tr>
+                    <tr>
+                        <td>Size</td>
+                        <td data-bind="text: Size.toLocaleString(2)"></td>
+                    </tr>
+                    <tr>
+                        <td>Retries</td>
+                        <td data-bind="text: Retries.toLocaleString(2)"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Close</button>
+        </div>
     </div>
 </div>

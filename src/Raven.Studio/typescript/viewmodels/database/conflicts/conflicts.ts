@@ -82,7 +82,7 @@ class conflicts extends viewModelBase {
             return this.loadReplicationSources(this.activeDatabase());
         }).done(() => {
             this.fetchAutomaticConflictResolution(this.activeDatabase());
-            this.fetchConflicts(appUrl.getDatabase());
+            this.fetchConflicts(this.activeDatabase());
         });
     }
 

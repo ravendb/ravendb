@@ -1,35 +1,22 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
-import EVENTS = require("common/constants/events");
 import resource = require("models/resources/resource");
 import license = require("models/auth/license");
-import databaseStatistics = require("models/resources/databaseStatistics");
 
 class database extends resource {
-    statistics = ko.observable<databaseStatistics>();
-    indexingDisabled = ko.observable<boolean>(false);
-    rejectClientsMode = ko.observable<boolean>(false);
-    clusterWide = ko.observable<boolean>(false);
+    //TODO: remove local storage name props from this class
     recentQueriesLocalStorageName: string;
     recentPatchesLocalStorageName: string;
     mergedIndexLocalStoragePrefix: string;
     starredDocumentsLocalStorageName: string;
-    static type = "database";
-    iconName: KnockoutComputed<string>;
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false, isLoaded = false, clusterWide = false) {
-        super(name, TenantType.Database, isAdminCurrentTenant);
-        this.fullTypeName = "Database";
-        this.disabled(isDisabled);
-        this.activeBundles(bundles);
-        this.indexingDisabled(isIndexingDisabled);
-        this.rejectClientsMode(isRejectClientsMode);
-        this.isLoaded(isLoaded);
-        this.clusterWide(clusterWide);
-        this.iconName = ko.computed(() => !this.clusterWide() ? "fa fa-fw fa-database" : "fa fa-fw fa-cubes");
-        this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().countOfDocumentsText() : "");
+    static readonly type = "database";
+    static readonly qualifier = "db";
+
+    constructor(name: string, isAdminCurrentTenant: boolean, disabled: boolean, bundles: string[]) {
+        super(name, isAdminCurrentTenant, disabled, bundles);
+        /* TODO
         this.isLicensed = ko.pureComputed(() => {
-            return true; /*
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
                 var attributes = license.licenseStatus().Attributes;
                 var result = this.activeBundles()
@@ -37,29 +24,12 @@ class database extends resource {
                     .reduce((a, b) => /^true$/i.test(a) && /^true$/i.test(b), true);
                 return result;
             }
-            return true;*/
-        });
+            return true;
+        });*/
         this.recentQueriesLocalStorageName = "ravenDB-recentQueries." + name;
         this.recentPatchesLocalStorageName = "ravenDB-recentPatches." + name;
         this.mergedIndexLocalStoragePrefix = "ravenDB-mergedIndex." + name;
         this.starredDocumentsLocalStorageName = "ravenDB-starredDocuments." + name;
-    }
-
-    activate() {
-        this.isLoaded(true);
-        ko.postbox.publish(EVENTS.Resource.Activate,
-        {
-            type: TenantType.Database,
-            resource: this
-        });
-    }
-
-    saveStatistics(dto: databaseStatisticsDto) {
-        if (!this.statistics()) {
-            this.statistics(new databaseStatistics());
-        }
-
-        this.statistics().fromDto(dto);
     }
 
     private attributeValue(attributes: any, bundleName: string) {
@@ -76,12 +46,33 @@ class database extends resource {
         return (index > 0) ? url.substring(index + 10) : "";
     }
 
-    isBundleActive(bundleName: string) {
-        if (!!bundleName) {
-            var bundle = this.activeBundles.first((x: string) => x.toLowerCase() === bundleName.toLowerCase());
-            return !!bundle;
+    isBundleActive(bundleName: string): boolean {
+        if (bundleName) {
+            return !!this.activeBundles().find((x: string) => x.toLowerCase() === bundleName.toLowerCase());
         }
         return false;
+    }
+
+    get fullTypeName() {
+        return "Database";
+    }
+
+    get qualifier() {
+        return database.qualifier;
+    }
+
+    get urlPrefix() {
+        return "databases";
+    }
+
+    get type() {
+        return database.type;
+    }
+
+    updateUsing(incomingCopy: this): void {
+        super.updateUsing(incomingCopy);
+
+        //TODO: assign other props
     }
 }
 

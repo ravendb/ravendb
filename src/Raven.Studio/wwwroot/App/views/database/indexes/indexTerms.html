@@ -1,24 +1,46 @@
-<div class="panel-group panel-group-wo-margin" id="accordion" data-bind="foreach: fields">
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <h4 class="panel-title">
-                <a data-toggle="collapse" data-parent="#accordion" data-bind="text: name, attr: { href: '#termCollapse' + $index() }"></a>
-            </h4>
-        </div>
-        <div class="panel-collapse collapse" data-bind="attr: { id: 'termCollapse' + $index() }">
-            <div class="panel=body">
-                <div data-bind="foreach: terms">
-                    <div class="col-md-3" data-bind="text: $data">
+<div class="indexesTerms">
+    <h2>
+        Index terms for
+        <a data-bind="attr: { href: indexPageUrl }" class="indexName text-primary">Persons/StuffByColorAndAge</a>
+    </h2>
+
+    <div data-bind="foreach: fields">
+        <div class="panel field">
+            <div class="panel-header bar padding padding-sm collapsed" data-toggle="collapse" data-bind="attr: { href: '#termCollapse' + $index() }">
+                <i class="icon-arrow-down"></i>
+                <h3 class="text-primary" data-bind="text: name">
+                </h3>
+                <span class="badge pull-right">
+                    <span data-bind="text: terms().length"></span> loaded
+                </span>
+            </div>
+            
+            <h4 class="text-center" data-bind="visible: !terms().length">No entries were found</h4>
+
+            <div class="collapse" data-bind="attr: { id: 'termCollapse' + $index() }">
+                <div class="field-terms panel-body">
+                    <ul class="list-unstyled row" data-bind="foreach: terms">
+                        <li class="col-sm-3">
+                            <span data-bind="text: $data">
+                            </span>
+                        </li>
+                    </ul>
+                    <div class="loadMore" data-bind="visible: hasMoreTerms">
+                        <div class="row">
+                            <div class="col-sm-12 text-center">
+                                <button class="btn btn-primary btn-block" data-bind="enable: !loadInProgress(), css: { 'btn-spinner': loadInProgress() }, click: $root.loadMore.bind($root, name)">
+                                    <i class="icon-arrow-filled-down"></i>
+                                    <span></span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <h4 class="text-center" data-bind="visible: !terms().length">No entries were found</h4>
-                
-                <button class="btn btn-default" 
-                        data-bind="visible: hasMoreTerms, click: $root.loadMore.bind($root, name), enable: !loadInProgress(), css: { 'btn-spinner': loadInProgress() }">Load more</button>
             </div>
         </div>
     </div>
 </div>
+
 <div data-bind="visible: fields().length === 0">
     <h4>No fields were found.</h4>
 </div>

@@ -2,7 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading;
-
+using System.Threading.Tasks;
 using Raven.Server.Extensions;
 using Raven.Server.Utils;
 using Voron.Platform.Posix;
@@ -14,6 +14,11 @@ namespace FastTests
 {
     public static class RavenTestHelper
     {
+        public static ParallelOptions DefaultParallelOptions = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = Environment.ProcessorCount * 2
+        };
+
         private static int _pathCount;
 
         public static string NewDataPath(string testName, int serverPort, bool forceCreateDir = false)

@@ -1,35 +1,37 @@
-<div class="messageBox" tabindex="-1" style="z-index: 1001">
-    <form data-bind="submit: loadThePatch" id="select-columns-form">
-        <div class="modal-header">
-            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
-                <i class="fa fa-times"></i>
-            </button>
-            <h4 class="modal-title">Load Patch</h4>
-        </div>
-        
-        <div class="modal-body">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <label>Select saved patch to load</label><br/>
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                <span data-bind="text: patchName"></span>
-                                <span class="caret"></span>
-                            </button>
-                            <ul id="collectionToPatch" class="dropdown-menu" role="menu">
-                                <!-- ko foreach: patches -->
-                                <li data-bind="click: $root.setSelectedPatch.bind($root, $data)"><a href="#" data-bind="text: $data.name()"></a></li>
-                                <!-- /ko -->
-                            </ul>
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1" style="z-index: 1001">
+        <form data-bind="submit: loadThePatch" id="select-columns-form">
+            <div class="modal-header">
+                <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                    <i class="fa fa-times"></i>
+                </button>
+                <h4 class="modal-title">Load Patch</h4>
+            </div>
+
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label>Select saved patch to load</label><br />
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <span data-bind="text: patchName"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul id="collectionToPatch" class="dropdown-menu" role="menu">
+                                    <!-- ko foreach: patches -->
+                                    <li data-bind="click: $root.setSelectedPatch.bind($root, $data)"><a href="#" data-bind="text: $data.name()"></a></li>
+                                    <!-- /ko -->
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">OK</button>
-            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-        </div>
-    </form>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">OK</button>
+                <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+            </div>
+        </form>
+    </div>
 </div>

@@ -3,12 +3,8 @@ using Sparrow.Binary;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
-using Voron.Exceptions;
+using System.Runtime.InteropServices;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Scratch
@@ -24,6 +20,7 @@ namespace Voron.Impl.Scratch
     /// </summary>
     public unsafe class ScratchBufferPool : IDisposable
     {
+        private readonly StorageEnvironment _env;
         // Immutable state. 
         private readonly StorageEnvironmentOptions _options;
 
@@ -33,21 +30,35 @@ namespace Voron.Impl.Scratch
         // Local writable state. Can perform multiple reads, but must never do multiple writes simultaneously.
         private int _currentScratchNumber = -1;
 
+        private Dictionary<int, PagerState> _pagerStatesAllScratchesCache;
+
         private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers =
             new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.Instance);
 
+        private readonly LinkedList<Tuple<DateTime, ScratchBufferItem>> _recycleArea = new LinkedList<Tuple<DateTime, ScratchBufferItem>>();
 
         public ScratchBufferPool(StorageEnvironment env)
         {
+            _env = env;
             _options = env.Options;
             _current = NextFile(_options.InitialLogFileSize, null);
+            UpdateCacheForPagerStatesOfAllScratches();
         }
 
         public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
         {
-            // This is not risky anymore, but the caller must understand this is a monotonically incrementing snapshot. 
-            return _scratchBuffers.ToDictionary(x => x.Key, y => y.Value.File.PagerState,
-                NumericEqualityComparer.Instance);
+            //the caller must understand this is a monotonically incrementing snapshot.  
+            return _pagerStatesAllScratchesCache;
+        }
+
+        public void UpdateCacheForPagerStatesOfAllScratches()
+        {
+            var dic = new Dictionary<int, PagerState>(NumericEqualityComparer.Instance);
+            foreach (var scratchBufferItem in _scratchBuffers)
+            {
+                dic[scratchBufferItem.Key] = scratchBufferItem.Value.File.PagerState;
+            }
+            _pagerStatesAllScratchesCache = dic;
         }
 
         internal long GetNumberOfAllocations(int scratchNumber)
@@ -58,6 +69,24 @@ namespace Voron.Impl.Scratch
 
         private ScratchBufferItem NextFile(long minSize, long? requestedSize)
         {
+            var current = _recycleArea.Last;
+            while(current != null)
+            {
+                var recycled = current.Value.Item2;
+                
+                if (recycled.File.Size <= Math.Max(minSize, requestedSize ?? 0) && 
+                    // even though this is in the recyle bin, there might still be some transactions looking at it
+                    // so we have to make sure that this is realy unused before actually reusing it
+                    recycled.File.HasActivelyUsedBytes(_env.ActiveTransactions.OldestTransaction) == false)
+                {
+                    recycled.File.Reset();
+                    _recycleArea.Remove(current);
+                    _scratchBuffers.TryAdd(recycled.Number, recycled);
+                    return recycled;
+                }
+                current = current.Previous;
+            }
+
             _currentScratchNumber++;
             AbstractPager scratchPager;
             if (requestedSize != null)
@@ -139,22 +168,59 @@ namespace Voron.Impl.Scratch
         {
             var scratch = _scratchBuffers[scratchNumber];
             scratch.File.Free(page, asOfTxId);
-            if (scratch.File.ActivelyUsedBytes != 0)
+            if (scratch.File.CurrentlyAllocatedBytes != 0)
                 return;
+
+            while (_recycleArea.First != null)
+            {
+                if (DateTime.UtcNow - _recycleArea.First.Value.Item1 <= TimeSpan.FromMinutes(1))
+                {
+                    break;
+                }
+
+                _recycleArea.First.Value.Item2.File.Dispose();
+                _recycleArea.RemoveFirst();
+            }
+
             if (scratch == _current)
             {
                 if (scratch.File.Size <= _options.MaxScratchBufferSize)
                 {
+                    // called by tx commit
+                    if (asOfTxId == -1)
+                        return;
+
+                    // we'll take the chance that no one is using us to reset the memory allocations
+                    // and avoid fragmentation, we can only do that if no transaction is looking at us
+                    if(scratch.File.HasActivelyUsedBytes(asOfTxId) == false)
+                        scratch.File.Reset();
+
                     return;
                 }
-                // this is the current one, but the size is too big, since no one is using the scratch 
-                // right now (and we hold the write transaction), let us trim it
+
+                // this is the current one, but the size is too big, let us trim it
                 var newCurrent = NextFile(_options.InitialLogFileSize, _options.MaxScratchBufferSize);
                 newCurrent.File.PagerState.AddRef();
                 _current = newCurrent;
             }
+
+            RecyleScratchFile(scratch);
+        }
+
+        private void RecyleScratchFile(ScratchBufferItem scratch)
+        {
             ScratchBufferItem _;
-            _scratchBuffers.TryRemove(scratchNumber, out _);
+            if (_scratchBuffers.TryRemove(scratch.Number, out _) == false)
+            {
+                scratch.File.Dispose();
+                return;
+            }
+
+            if (scratch.File.Size == _current.File.Size)
+            {
+                _recycleArea.AddLast(Tuple.Create(DateTime.UtcNow, scratch));
+                return;
+            }
             scratch.File.Dispose();
         }
 

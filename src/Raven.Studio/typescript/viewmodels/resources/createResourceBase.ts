@@ -3,6 +3,7 @@ import resource = require("models/resources/resource");
 import license = require("models/auth/license");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
+
 class createResourceBase extends viewModelBase {
     creationTask = $.Deferred();
     creationTaskStarted = false;
@@ -26,7 +27,7 @@ class createResourceBase extends viewModelBase {
     tempPathVisible = ko.computed(() => this.storageEngine() === "voron");
     licenseStatus: KnockoutObservable<licenseStatusDto>;
 
-    constructor(protected resources: KnockoutObservableArray<resource>, protected parent: dialogViewModelBase) {
+    constructor(protected resources: KnockoutComputed<resource[]>, protected parent: dialogViewModelBase) {
         super();
 
         this.licenseStatus = license.licenseStatus;

@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             var mappedResult = new DynamicJsonValue();
 
-            using (stats.For(IndexingOperation.Reduce.Aggregation))
+            using (stats.For(IndexingOperation.Reduce.BlittableJsonAggregation))
             {
                 var document = ((Document[])mapResults)[0];
                 Debug.Assert(key == document.LoweredKey);
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             }
 
             BlittableJsonReaderObject mr;
-            using (stats.For(IndexingOperation.Reduce.AggregationConversion))
+            using (stats.For(IndexingOperation.Reduce.CreateBlittableJson))
                 mr = indexContext.ReadObject(mappedResult, key);
 
             var mapResult = _singleOutputList[0];
@@ -160,14 +160,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             mapResult.Data = mr;
             mapResult.ReduceKeyHash = _reduceKeyProcessor.Hash;
 
-            using (stats.For(IndexingOperation.Reduce.PutMapResults))
-            {
-                var resultsCount = PutMapResults(key, _singleOutputList, indexContext);
+            var resultsCount = PutMapResults(key, _singleOutputList, indexContext, stats);
 
-                DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
+            DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
 
-                return resultsCount;
-            }
+            return resultsCount;
         }
 
         public override int? ActualMaxNumberOfIndexOutputs { get; }

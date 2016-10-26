@@ -18,30 +18,34 @@ function getResourcesMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: [""],
             title: "New database",
-            moduleId: "viewmodels/resources/resources",
+            moduleId: "viewmodels/resources/createResource",
             nav: true,
             css: 'icon-resources',
+            openAsDialog: true
         }),
         new leafMenuItem({
             route: [""],
             title: "New filesystem",
-            moduleId: "viewmodels/resources/resources",
+            moduleId: "viewmodels/resources/createResource",
             nav: true,
             css: 'icon-resources',
+            openAsDialog: true
         }),
         new leafMenuItem({
             route: [""],
             title: "New counter",
-            moduleId: "viewmodels/resources/resources",
+            moduleId: "viewmodels/resources/createResource",
             nav: true,
             css: 'icon-resources',
+            openAsDialog: true
         }),
         new leafMenuItem({
             route: [""],
-            title: "New time serie",
-            moduleId: "viewmodels/resources/resources",
+            title: "New time series",
+            moduleId: "viewmodels/resources/createResource",
             nav: true,
             css: 'icon-resources',
+            openAsDialog: true
         })
     ];
 

@@ -31,7 +31,7 @@
 
     <link href='https://fonts.googleapis.com/css?family=Lato:400,300,700,900,400italic,700italic' rel='stylesheet' type='text/css'>
 
-    <link rel="stylesheet" type="text/css" href="./content/css/bootstrap/bootstrap.css" />
+    <!-- <link rel="stylesheet" type="text/css" href="./content/css/bootstrap/bootstrap.css" /> -->
     <link rel="stylesheet" type="text/css" href="./content/css/styles.css">
 
     <!--[if IE 8]>
@@ -48,7 +48,7 @@
     <div class="container-fluid">
         <div class="navbar-header">
 
-            <a class="navbar-brand hidden-xs" href="#">RavenDB</a>
+            <a class="navbar-brand hidden-xs" href="/">RavenDB</a>
         </div>
         <div id="navbar">
             <ul class="nav navbar-nav navbar-right">
@@ -347,10 +347,39 @@
                     </ul>
                 </div>
             </li>
+            <h3>SERVER</h3>
+            <li class="arrow-right">
+                <a href="#" title="Tasks"><span class="icon-resources"></span>Resources</a>
+                <div class="level level-1" data-level-name="Resources">
+                    <h2>Resources</h2>
+                    <a class="back" href="#" title="back">back</a>
+                    <ul>
+                        <li><a href="#"><span class="icon-plus"></span>Dashboard</a></li>
+                        <hr/>
+                        <li><a href="#" data-toggle="modal" data-target="#newDatabase"><span class="icon-plus"></span>New database</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>New filesystem</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>New counter</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>New time series</a></li>
+                    </ul>
+                </div>
+            </li>
+            <li class="arrow-right">
+                <a href="#" title="Settings"><span class="icon-settings"></span>Settings</a>
+                <div class="level level-1" data-level-name="Settings">
+                    <h2>Settings</h2>
+                    <a class="back" href="#">back</a>
+                    <ul>
+                        <li><a href="#"><span class="icon-plus"></span>Database Settings</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Replication</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>ETL</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Custom Functions</a></li>
+                        <li><a href="#"><span class="icon-plus"></span>Studio Config</a></li>
+                    </ul>
+                </div>
+            </li>
             <li><a href="#" title="License"><span class="icon-license"></span>License</a></li>
         </ul>
     </div>
-
 </nav>
  <div id="notification-center" >
     <div class="panel panel-success">
@@ -436,14 +465,412 @@
 
     </div>
 
+    <div class="modal fade" id="newDatabase" tabindex="-1" role="dialog" aria-labelledby="newDatabaseLabel">
+        <div class="modal-dialog modal-sm" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="newDatabaseLabel">New database</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-settings-panel">
+                        <div class="modal-settings-panel-main">
+                            <div class="form-group">
+                                <h3>NAME</h3>
+                                <input type="text" class="form-control">
+                            </div>
+                            <h3>BUNDLES</h3>
+                            <div class="settings-group">
+                                <div class="checkbox settings-item">
+                                    <input id="check-compression" class="styled" type="checkbox">
+                                    <label for="check-compression">Compression</label>
+                                </div>
+                                <div class="checkbox settings-item active">
+                                    <input id="check-encryption" class="styled" type="checkbox">
+                                    <label for="check-encryption">Encryption</label>
+                                    <button class="btn pull-right btn-toggle" data-target=".encryption" data-class="hidden">
+                                        <i class="icon-settings"></i>
+                                    </button>
+                                </div>
+                                <div class="checkbox settings-item">
+                                    <input id="check-expiration" class="styled" type="checkbox">
+                                    <label for="check-expiration">Expiration</label>
+                                </div>
+                                <div class="checkbox">
+                                    <input id="check-periodic-export" class="styled" type="checkbox">
+                                    <label for="check-periodic-export">Periodic Export</label>
+                                </div>
+                                <div class="checkbox settings-item">
+                                    <input id="check-quotas" class="styled" type="checkbox">
+                                    <label for="check-quotas">Quotas</label>
+                                    <button class="btn pull-right btn-toggle" data-target=".quotas" data-class="hidden">
+                                        <i class="icon-settings"></i>
+                                    </button>
+                                </div>
+                                <div class="checkbox settings-item">
+                                    <input id="check-replication" class="styled" type="checkbox">
+                                    <label for="check-replication">Replication</label>
+                                </div>
+                                <div class="checkbox settings-item">
+                                    <input id="check-scripted-index" class="styled" type="checkbox">
+                                    <label for="check-scripted-index">Scripted Index</label>
+                                </div>
+                                <div class="checkbox settings-item">
+                                    <input id="check-sql-replication" class="styled" type="checkbox">
+                                    <label for="check-sql-replication">SQL Replication</label>
+                                    <button class="btn pull-right btn-toggle" data-target=".sqlreplication" data-class="hidden">
+                                        <i class="icon-settings"></i>
+                                    </button>
+                                </div>
+                                <div class="checkbox settings-item">
+                                    <input id="check-versioning" class="styled" type="checkbox">
+                                    <label for="check-versioning">Versioning</label>
+                                    <button class="btn pull-right btn-toggle" data-target=".versioning" data-class="hidden">
+                                        <i class="icon-settings"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-block btn-toggle btn-info" data-target=".advanced" data-class="hidden">
+                                <i class="icon-settings"></i><span>Advanced</span>
+                            </button>
+                        </div>
+                        <div class="modal-settings-panel-slideout">
+    
+                                <div class="advanced hidden">
+                                    <h3>ADVANCED</h3>
+                                    <div class="form-group row">
+                                        <div class="col-md-4">
+                                            <label>Path</label>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <input type="text" class="form-control" value="~/">
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <div class="col-md-4">
+                                            <label>Logs</label>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <input type="text" class="form-control" value="~/">
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <div class="col-md-4">
+                                            <label>Indexes</label>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <input type="text" class="form-control" value="~/{Database Name}/Indexes/">
+                                        </div>
+                                    </div>
+                                    <div class="checkbox">
+                                        <input id="check-incremental-backup" class="styled" type="checkbox">
+                                        <label for="check-incremental-backup">Incremental Backup</label>
+                                    </div>
+                                </div>
+                                <div class="quotas hidden">
+                                    <h3>QUOTAS</h3>
+                                    <div class="form-group row">
+                                        <div class="col-md-6">
+                                            <label>Maximum size:</label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="input-group">
+                                                <input required="" type="number" class="form-control" min="0"> <span class="input-group-addon">MB</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <div class="col-md-6">
+                                            <label>Warning limit threshold:</label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="input-group">
+                                                <input required="" type="number" class="form-control" min="0"> <span class="input-group-addon">MB</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <div class="col-md-6">
+                                            <label>Maximum number of docs:</label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="input-group">
+                                                <input required="" type="number" class="form-control" min="0">
+                                                <span class="input-group-addon">docs</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <div class="col-md-6">
+                                            <label>Warning threshold for docs:</label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="input-group">
+                                                <input required="" type="number" class="form-control" min="0">
+                                                <span class="input-group-addon">docs</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+    
+                                <div class="encryption hidden">
+                                    <div class="form-group row">
+                                        <div class="col-md-6">
+                                            <label for="keyName" class="control-label">
+                                                Select Key <small class="text-muted">(Base64 Encoding)</small>
+                                            </label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="input-group">
+                                                <input required="" pattern="^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})([=]{1,2})?$" type="text" class="form-control" id="key" placeholder="Key" autocomplete="off">
+                                                <span class="input-group-btn">
+                                                <button class="btn btn-default" type="button">
+                                                    <i class="icon-reset"></i>
+                                                </button>
+                                            </span>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12">
+                                            <p class="bg-info padding padding-sm small">
+                                                <i class="icon-warning"></i> Save this key in a safe place. If you lose this key you could lose access to your data.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <div class="col-md-6">
+                                            <label for="encryptionAlgorithm">Encryption Algorithm</label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="btn-group btn-block">
+                                                <button type="button" class="btn btn-block dropdown-toggle" data-toggle="dropdown">
+                                                            <span data-bind="text: encryptionAlgorithm">Rijndael</span>
+                                                            <span class="caret"></span>
+                                                        </button>
+                                                <ul class="dropdown-menu" role="menu" data-bind="foreach: ['DES', 'RC2', 'Rijndael', 'Triple DES']">
+                                                    <li><a href="#" style="text-decoration: none;">DES</a></li>
+                                                    <li><a href="#" style="text-decoration: none;">RC2</a></li>
+                                                    <li><a href="#" style="text-decoration: none;">Rijndael</a></li>
+                                                    <li><a href="#" style="text-decoration: none;">Triple DES</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <div class="col-md-6">
+                                            <label for="encryptionBits">Encryption Key Bits</label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="btn-group btn-block">
+                                                <button type="button" class="btn btn-block dropdown-toggle" data-toggle="dropdown">
+                                                            <span data-bind="text: encryptionBits">256</span>
+                                                            <span class="caret"></span>
+                                                        </button>
+                                                <ul class="dropdown-menu" role="menu">
+                                                    <li><a href="#" style="text-decoration: none;">128</a></li>
+                                                    <li><a href="#" style="text-decoration: none;">192</a></li>
+                                                    <li><a href="#" style="text-decoration: none;">256</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <div class="col-md-6">
+                                            <label for="encryptedIndexes" class="control-label">Indexes</label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="btn-group btn-block">
+                                                <button type="button" class="btn btn-block dropdown-toggle" data-toggle="dropdown">
+                                                            <span data-bind="visible: isEncryptedIndexes">Encrypt</span>
+                                                            <span data-bind="visible: !isEncryptedIndexes()" style="display: none;">Don't encrypt</span>
+                                                            <span class="caret"></span>
+                                                        </button>
+                                                <ul class="dropdown-menu" role="menu">
+                                                    <li><a href="#" style="text-decoration: none;">Encrypt</a></li>
+                                                    <li><a href="#" style="text-decoration: none;">Unencrypt</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+    
+                                <div class="versioning hidden">
+                                    <h3>VERSIONING</h3>
+                                    <div class="form-group">
+                                        <button class="btn btn-default">
+                                            <i class="icon-plus"></i>
+                                            <span>Add versioning</span>
+                                        </button>
+                                    </div>
+                                    <div class="panel panel-default">
+                                        <div class="panel-heading">
+                                            <button class="icon-trash text-primary right-action-button"></button>
+                                            <h3 class="panel-title">Versioning setup for DefaultConfiguration</h3>
+                                        </div>
+                                        <div class="panel-body">
+                                            <div class="form-group row">
+                                                <div class="col-sm-6">
+                                                    <label>Override:</label>
+                                                </div>
+                                                <div class="col-sm-6">
+                                                    <div class="btn-group btn-block">
+                                                        <button type="button" class="btn dropdown-toggle btn-block" data-toggle="dropdown">
+                                                        <span>Yes</span>
+                                                        <span style="display: none;">No</span>
+                                                    <span class="caret"></span>
+                                                </button>
+                                                        <ul class="dropdown-menu" role="menu">
+                                                            <li><a href="#">Yes</a></li>
+                                                            <li><a href="#">No</a></li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-sm-6">
+                                                    <label>Collection</label>
+                                                </div>
+                                                <div class="col-sm-6">
+                                                    <input required="" type="text" class="form-control">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-sm-6">
+                                                    <label>Max Revisions</label>
+                                                </div>
+                                                <div class="col-sm-6">
+                                                    <input required="" type="number" class="form-control">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-sm-6">
+                                                    <label>Excluded</label>
+                                                </div>
+                                                <div class="col-sm-6">
+                                                    <div class="btn-group btn-block">
+                                                        <button type="button" class="btn btn-block dropdown-toggle" data-toggle="dropdown">
+                                                        <span>Include</span>
+                                                        <span style="display: none;">Exclude</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                        <ul class="dropdown-menu" role="menu">
+                                                            <li><a href="#">Include</a></li>
+                                                            <li><a href="#">Exclude</a></li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label class="col-sm-6 control-label">Exclude unless explicit</label>
+                                                <div class="col-sm-6">
+                                                    <div class="btn-group btn-block">
+                                                        <button type="button" class="btn btn-block dropdown-toggle" data-toggle="dropdown">
+                                                            <span>Include</span>
+                                                            <span style="display: none;">Exclude</span>
+                                                            <span class="caret"></span>
+                                                        </button>
+                                                        <ul class="dropdown-menu" role="menu">
+                                                            <li><a href="#">Include</a></li>
+                                                            <li><a href="#">Exclude</a></li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="checkbox">
+                                                <input id="check-purge-on-delete" class="styled" type="checkbox">
+                                                <label for="check-purge-on-delete">Purge on delete</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="sqlreplication hidden">
+                                    <h3>SQL Replication Connection Strings</h3>
+                                    <div class="form-group">
+                                        <button class="btn btn-default">
+                                            <i class="icon-plus"></i>
+                                            <span>New connection string</span>
+                                        </button>
+                                    </div>
+                                    <div class="sql-replication-connection-card panel panel-default">
+                                        <div class="panel-heading">
+                                            <h3 class="panel-title">
+                                                <button class="icon-trash text-primary right-action-button"></button>
+                                                <span title="Overridden from global configuration" style="display: none;">
+                                                    <i class="fa fa-arrow-down"></i>
+                                                </span>
+                                                <span>new</span>
+                                                <button type="button" class="close" aria-hidden="true" title="Remove this connection"><i class="fa fa-times"></i></button>                            </h3> </div>
+                                        <div class="panel-body">
+                                            <div class="form-group row">
+                                                <div class="col-md-4">
+                                                    <label>Name</label>
+                                                </div>
+                                                <div class="col-md-8">
+                                                    <input required="" name="name" class="form-control" type="text">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <div class="col-md-4">
+                                                    <label>SQL Provider</label>
+                                                </div>
+                                                <div class="col-md-8">
+                                                    <div class="dropdown">
+                                                        <button class="btn dropdown-toggle btn-block" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                            Select provider
+                                                            <span class="caret"></span>
+                                                        </button>
+                                                        <ul class="dropdown-menu">
+                                                            <li><a href="#" value="System.Data.SqlClient">System.Data.SqlClient</a></li>
+                                                            <li><a href="#" value="System.Data.SqlServerCe.4.0">System.Data.SqlServerCe.4.0</a></li>
+                                                            <li><a href="#" value="System.Data.OleDb">System.Data.OleDb</a></li>
+                                                            <li><a href="#" value="System.Data.OracleClient">System.Data.OracleClient</a></li>
+    
+                                                            <li><a href="#" value="MySql.Data.MySqlClient">MySql.Data.MySqlClient</a></li>
+                                                            <li><a href="#" value="System.Data.SqlServerCe.3.5">System.Data.SqlServerCe.3.5</a></li>
+                                                            <li><a href="#" value="Npgsql">Npgsql</a></li>
+    
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Connection String</label>
+                                                <textarea tabindex="6" rows="4" required="" class="form-control"></textarea>
+                                            </div>
+                                            <div class="form-group">
+    
+                                                <button type="button" class="btn btn-default btn-block">Test connection</button>
+    
+                                                <div class="progress progress-striped">
+                                                    <div class="progress-bar progress-bar-primary" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; float: left;">
+                                                        <span class="sr-only">Connected</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+    
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+    
+                    <button type="button" class="btn btn-success btn-block"><i class="icon-plus"></i><span>Create<span></button>
+                        <button type="button" class="btn btn-default btn-block btn-toggle" data-target="#newDatabase .modal-dialog" data-class="modal-sm modal-lg"><i class="icon-settings"></i><span>toggle size</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script type="text/javascript" src="./js/setup.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Faker/3.1.0/faker.min.js" ></script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.5/ace.js" type="text/javascript" charset="utf-8"></script>
     <script>
         var editor = ace.edit("docEditor");
         editor.setTheme("ace/theme/pastel_on_dark");
         editor.getSession().setMode("ace/mode/json");
+    
     </script>
-</body>
 
+</body>
 </html>

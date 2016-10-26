@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
             var pageSize = int.MaxValue;
             var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
-                            ? _configuration.MaxTimeForDocumentTransactionToRemainOpenInSec.AsTimeSpan
+                            ? _configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan
                             : TimeSpan.FromMinutes(15);
 
             var moreWorkFound = HandleDocuments(ActionType.Tombstone, databaseContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);

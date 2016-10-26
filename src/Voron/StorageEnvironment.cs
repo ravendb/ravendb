@@ -1,7 +1,6 @@
 ﻿using Sparrow;
 using Sparrow.Collections;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -23,7 +22,6 @@ using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
-using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
 using Voron.Util.Conversion;
@@ -32,20 +30,18 @@ namespace Voron
 {
     public class StorageEnvironment : IDisposable
     {
-        private static readonly Lazy<GlobalFlushingBehavior> GlobalFlusher = new Lazy<GlobalFlushingBehavior>(() =>
+        public void QueueForSyncDataFile()
         {
-            var flusher = new GlobalFlushingBehavior();
-            var thread = new Thread(flusher.VoronEnvironmentFlushing)
-            {
-                IsBackground = true,
-                Name = "Voron Global Flushing Thread"
-            };
-            thread.Start();
-            return flusher;
-        });
+            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeSyncEnvironment(this);
+        }
+
+        public void ForceSyncDataFile()
+        {
+            GlobalFlushingBehavior.GlobalFlusher.Value.ForceFlushAndSyncEnvironment(this);
+        }
 
         /// <summary>
-        /// This is the shared storage where we are going to store all the static constants for names. 
+        /// This is the shared storage where we are going to store all the static constants for names.
         /// WARNING: This context will never be released, so only static constants should be added here.
         /// </summary>
         public static readonly ByteStringContext LabelsContext = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes);
@@ -55,8 +51,8 @@ namespace Voron
         /// when we are flushing to the data file, there is a need to take the write tx lock to mutate
         /// some of our in memory data structures safely. However, if there is a thread, such as tx merger thread,
         /// that is doing high frequency transactions, the unfairness in the lock will automatically ensure that we'll
-        /// have very hard time actually getting the write lock in the flushing thread. 
-        /// 
+        /// have very hard time actually getting the write lock in the flushing thread.
+        ///
         /// When this value is set to a non negative number, we check if the current thread id equals to this number, and if not
         /// we'll yield the thread for 1 ms. The idea is that this will allow the flushing thread, which doesn't have this limitation
         /// to actually capture the lock, do its work, and then reset it.
@@ -72,10 +68,10 @@ namespace Voron
 
         private readonly StorageEnvironmentOptions _options;
 
-        private readonly ConcurrentSet<LowLevelTransaction> _activeTransactions = new ConcurrentSet<LowLevelTransaction>();
+        public readonly ActiveTransactions ActiveTransactions = new ActiveTransactions();
 
         private readonly AbstractPager _dataPager;
-        private ExceptionDispatchInfo _flushingTaskFailure;
+        internal ExceptionDispatchInfo FlushingTaskFailure;
         private readonly WriteAheadJournal _journal;
         private readonly object _txWriter = new object();
         internal readonly ReaderWriterLockSlim FlushInProgressLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
@@ -84,16 +80,15 @@ namespace Voron
         private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         private readonly HeaderAccessor _headerAccessor;
-        public bool IsFlushingScratchBuffer { get; set; }
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ScratchBufferPool _scratchBufferPool;
         private EndOfDiskSpaceEvent _endOfDiskSpace;
-        private int _sizeOfUnflushedTransactionsInJournalFile;
+        internal int SizeOfUnflushedTransactionsInJournalFile;
 
         private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
         public bool Disposed;
-        private Logger _log;
+        private readonly Logger _log;
         public static int MaxConcurrentFlushes = 10; // RavenDB-5221
 
         public Guid DbId { get; set; }
@@ -155,7 +150,8 @@ namespace Voron
                 {
                     return;
                 }
-                GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
+                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
             }
         }
 
@@ -183,7 +179,7 @@ namespace Voron
 
             _transactionsCounter = (header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
 
-            using (var tx = NewLowLevelTransaction(TransactionFlags.ReadWrite))
+            using (var tx = NewLowLevelTransaction(new TransactionPersistentContext(true), TransactionFlags.ReadWrite))
             {
                 var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root);
                 root.Name = Constants.RootTreeNameSlice;
@@ -232,7 +228,7 @@ namespace Voron
             {
                 Options = Options
             };
-            using (var tx = NewLowLevelTransaction(TransactionFlags.ReadWrite))
+            using (var tx = NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite))
             {
                 var root = Tree.Create(tx, null);
 
@@ -254,59 +250,16 @@ namespace Voron
 
         }
 
-        public IFreeSpaceHandling FreeSpaceHandling
-        {
-            get { return _freeSpaceHandling; }
-        }
+        public IFreeSpaceHandling FreeSpaceHandling => _freeSpaceHandling;
 
-        public HeaderAccessor HeaderAccessor
-        {
-            get { return _headerAccessor; }
-        }
+        public HeaderAccessor HeaderAccessor => _headerAccessor;
 
-        public long OldestTransaction
-        {
-            get
-            {
-                var largestTx = long.MaxValue;
-                // ReSharper disable once LoopCanBeConvertedToQuery
-                foreach (var activeTransaction in _activeTransactions)
-                {
-                    if (largestTx > activeTransaction.Id)
-                        largestTx = activeTransaction.Id;
-                }
-                if (largestTx == long.MaxValue)
-                    return 0;
-                return largestTx;
-            }
-        }
+        public long NextPageNumber => State.NextPageNumber;
 
-        public long NextPageNumber
-        {
-            get { return State.NextPageNumber; }
-        }
+        public StorageEnvironmentOptions Options => _options;
 
-        public StorageEnvironmentOptions Options
-        {
-            get { return _options; }
-        }
+        public WriteAheadJournal Journal => _journal;
 
-        public WriteAheadJournal Journal
-        {
-            get { return _journal; }
-        }
-
-        internal List<ActiveTransaction> ActiveTransactions
-        {
-            get
-            {
-                return _activeTransactions.Select(x => new ActiveTransaction()
-                {
-                    Id = x.Id,
-                    Flags = x.Flags
-                }).ToList();
-            }
-        }
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
@@ -318,27 +271,29 @@ namespace Voron
                     bool lockTaken = false;
                     using (_journal.Applicator.TryTakeFlushingLock(ref lockTaken))
                     {
-                        // note that we have to set the dispose flag when under the lock 
-                        // (either with TryTake or Take), to avoid data race between the 
+                        // note that we have to set the dispose flag when under the lock
+                        // (either with TryTake or Take), to avoid data race between the
                         // flusher & the dispose. The flusher will check the dispose status
                         // only after it successfully took the lock.
 
                         if (lockTaken == false)
                         {
                             // if we are here, then we didn't get the flush lock, so it is currently being run
-                            // we need to wait for it to complete (so we won't be shutting down the db while we 
+                            // we need to wait for it to complete (so we won't be shutting down the db while we
                             // are flushing and maybe access invalid memory.
                             using (_journal.Applicator.TakeFlushingLock())
                             {
-                                // when we are here, we know that we aren't flushing, and we can dispose, 
+                                // when we are here, we know that we aren't flushing, and we can dispose,
                                 // any future calls to flush will abort because we are marked as disposed
 
                                 Disposed = true;
+                                _journal.Applicator.WaitForSyncToCompleteOnDispose();
                             }
                         }
                         else
                         {
                             Disposed = true;
+                            _journal.Applicator.WaitForSyncToCompleteOnDispose();
                         }
                     }
                 }
@@ -369,17 +324,27 @@ namespace Voron
             }
         }
 
+        public Transaction ReadTransaction(TransactionPersistentContext transactionPersistentContext, ByteStringContext context = null)
+        {
+            return new Transaction(NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read, context));
+        }
+
         public Transaction ReadTransaction(ByteStringContext context = null)
         {
-            return new Transaction(NewLowLevelTransaction(TransactionFlags.Read, context));
+            return new Transaction(NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.Read, context));
+        }
+
+        public Transaction WriteTransaction(TransactionPersistentContext transactionPersistentContext, ByteStringContext context = null)
+        {
+            return new Transaction(NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null));
         }
 
         public Transaction WriteTransaction(ByteStringContext context = null)
         {
-            return new Transaction(NewLowLevelTransaction(TransactionFlags.ReadWrite, context, null));
+            return new Transaction(NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite, context, null));
         }
 
-        internal LowLevelTransaction NewLowLevelTransaction(TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)
+        internal LowLevelTransaction NewLowLevelTransaction(TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)
         {
             bool txLockTaken = false;
             bool flushInProgressReadLockTaken = false;
@@ -396,7 +361,7 @@ namespace Voron
                     Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
                     if (txLockTaken == false || (flushInProgressReadLockTaken == false && FlushInProgressLock.IsWriteLockHeld == false))
                     {
-                        GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                        GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         throw new TimeoutException("Waited for " + wait +
                                                     " for transaction write lock, but could not get it");
                     }
@@ -404,11 +369,11 @@ namespace Voron
                     {
                         if (_endOfDiskSpace.CanContinueWriting)
                         {
-                            _flushingTaskFailure = null;
+                            FlushingTaskFailure = null;
                             _endOfDiskSpace = null;
                             _cancellationTokenSource = new CancellationTokenSource();
                             Task.Run(IdleFlushTimer);
-                            GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         }
                     }
                 }
@@ -419,14 +384,14 @@ namespace Voron
                 try
                 {
                     long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-                    tx = new LowLevelTransaction(this, txId, flags, _freeSpaceHandling, context);
+                    tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling, context);
                 }
                 finally
                 {
                     _txCommit.ExitReadLock();
                 }
 
-                _activeTransactions.Add(tx);
+                ActiveTransactions.Add(tx);
                 var state = _dataPager.PagerState;
                 tx.EnsurePagerStateReference(state);
 
@@ -461,14 +426,11 @@ namespace Voron
         }
 
 
-        public long NextWriteTransactionId
-        {
-            get { return Volatile.Read(ref _transactionsCounter) + 1; }
-        }
+        public long NextWriteTransactionId => Volatile.Read(ref _transactionsCounter) + 1;
 
         internal void TransactionAfterCommit(LowLevelTransaction tx)
         {
-            if (_activeTransactions.Contains(tx) == false)
+            if (ActiveTransactions.Contains(tx) == false)
                 return;
 
             _txCommit.EnterWriteLock();
@@ -494,14 +456,14 @@ namespace Voron
                 totalPages += page.NumberOfPages;
             }
 
-            Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, totalPages);
+            Interlocked.Add(ref SizeOfUnflushedTransactionsInJournalFile, totalPages);
             if (tx.IsLazyTransaction == false)
-                GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
         }
 
         internal void TransactionCompleted(LowLevelTransaction tx)
         {
-            if (_activeTransactions.TryRemove(tx) == false)
+            if (ActiveTransactions.TryRemove(tx) == false)
                 return;
 
             if (tx.Flags != (TransactionFlags.ReadWrite))
@@ -562,7 +524,7 @@ namespace Voron
 
         public EnvironmentStats Stats()
         {
-            using (var tx = NewLowLevelTransaction(TransactionFlags.Read))
+            using (var tx = NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.Read))
             {
                 var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
 
@@ -574,97 +536,16 @@ namespace Voron
                     UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Options.PageSize,
                     AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Options.PageSize,
                     NextWriteTransactionId = NextWriteTransactionId,
-                    ActiveTransactions = ActiveTransactions
+                    ActiveTransactions = ActiveTransactions.AllTransactions
                 };
             }
         }
 
-        private class GlobalFlushingBehavior
-        {
-            private readonly ConcurrentQueue<StorageEnvironment> _maybeNeedToFlush = new ConcurrentQueue<StorageEnvironment>();
-            private readonly ManualResetEventSlim _flushWriterEvent = new ManualResetEventSlim();
-            private readonly SemaphoreSlim _concurrentFlushes = new SemaphoreSlim(MaxConcurrentFlushes);
-
-            public void VoronEnvironmentFlushing()
-            {
-                // We want this to always run, even if we dispose / create new storage env, this is 
-                // static for the life time of the process, and environments will register / unregister from
-                // it as needed
-                while (true)
-                {
-                    _flushWriterEvent.Wait();
-                    _flushWriterEvent.Reset();
-
-                    StorageEnvironment envToFlush;
-                    while (_maybeNeedToFlush.TryDequeue(out envToFlush))
-                    {
-                        if (envToFlush.Disposed || envToFlush.Options.ManualFlushing)
-                            continue;
-
-                        var sizeOfUnflushedTransactionsInJournalFile = Volatile.Read(ref envToFlush._sizeOfUnflushedTransactionsInJournalFile);
-
-                        if (sizeOfUnflushedTransactionsInJournalFile == 0)
-                            continue; // nothing to do
-
-
-                        if (sizeOfUnflushedTransactionsInJournalFile <
-                            envToFlush._options.MaxNumberOfPagesInJournalBeforeFlush)
-                        {
-                            // we haven't reached the point where we have to flush, but we might want to, if we have enough 
-                            // resources available, if we have more than half the flushing capacity, we can do it now, otherwise, we'll wait
-                            // until it is actually required.
-                            if (_concurrentFlushes.CurrentCount < MaxConcurrentFlushes / 2)
-                                continue;
-                        }
-
-                        Interlocked.Add(ref envToFlush._sizeOfUnflushedTransactionsInJournalFile, -sizeOfUnflushedTransactionsInJournalFile);
-
-                        _concurrentFlushes.Wait();
-
-                        if (ThreadPool.QueueUserWorkItem(env =>
-                        {
-                            var storageEnvironment = ((StorageEnvironment)env);
-                            try
-                            {
-                                if (storageEnvironment.Disposed)
-                                    return;
-                                storageEnvironment.BackgroundFlushWritesToDataFile();
-                            }
-                            catch (Exception e)
-                            {
-                                storageEnvironment._flushingTaskFailure = ExceptionDispatchInfo.Capture(e.InnerException);
-                            }
-                            finally
-                            {
-                                _concurrentFlushes.Release();
-                            }
-                        }, envToFlush) == false)
-                        {
-                            _concurrentFlushes.Release();
-                            MaybeFlushEnvironment(envToFlush);// re-register if the thread pool is full
-                            Thread.Sleep(0); // but let it give up the execution slice so we'll let the TP time to run
-                        }
-                    }
-                }
-
-            }
-
-
-            public void MaybeFlushEnvironment(StorageEnvironment env)
-            {
-                _maybeNeedToFlush.Enqueue(env);
-                _flushWriterEvent.Set();
-            }
-        }
-
-
-
-
-        private void BackgroundFlushWritesToDataFile()
+        internal void BackgroundFlushWritesToDataFile()
         {
             try
             {
-                _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token,
+                _journal.Applicator.ApplyLogsToDataFile(ActiveTransactions.OldestTransaction, _cancellationTokenSource.Token,
                     // we intentionally don't wait, if the flush lock is held, something else is flushing, so we don't need
                     // to hold the thread
                     TimeSpan.Zero);
@@ -695,14 +576,14 @@ namespace Voron
 
         public void ForceLogFlushToDataFile(LowLevelTransaction tx)
         {
-            _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token,
+            _journal.Applicator.ApplyLogsToDataFile(ActiveTransactions.OldestTransaction, _cancellationTokenSource.Token,
                 Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30),
                 tx);
         }
 
         internal void AssertFlushingNotFailed()
         {
-            _flushingTaskFailure?.Throw(); // force re-throw of error
+            FlushingTaskFailure?.Throw(); // force re-throw of error
         }
 
         internal void HandleDataDiskFullException(DiskFullException exception)
@@ -763,7 +644,7 @@ namespace Voron
 
         public TransactionsModeResult SetTransactionMode(TransactionsMode mode, TimeSpan duration)
         {
-            using (var tx = NewLowLevelTransaction(TransactionFlags.ReadWrite))
+            using (var tx = NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite))
             {
                 var oldMode = Options.TransactionsMode;
 
@@ -783,7 +664,7 @@ namespace Voron
                 {
 
                     tx.IsLazyTransaction = false;
-                    // we only commit here, the rest of the of the options are without 
+                    // we only commit here, the rest of the of the options are without
                     // commit and we use the tx lock
                     tx.Commit();
                 }

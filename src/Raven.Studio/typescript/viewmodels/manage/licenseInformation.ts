@@ -61,7 +61,7 @@ class licenseInformation extends viewModelBase {
 
     private showLicenseDialog() {
         var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage(), license.hotSpare());
-        app.showDialog(dialog);
+        app.showBootstrapDialog(dialog);
     }
 
     checkConnectivity(): JQueryPromise<boolean> {

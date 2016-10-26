@@ -166,6 +166,7 @@ namespace Raven.Server.Documents
         private UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
         private int _hasConflicts;
+        private static readonly Encoding Utf8 = Encoding.UTF8;
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {
@@ -416,7 +417,12 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 yield break;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, 
+                collectionName.GetTableName(CollectionTableType.Documents),
+                throwIfDoesNotExist: false);
+
+            if (table == null)
+                yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], long.MaxValue))
@@ -493,7 +499,12 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 yield break;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, 
+                collectionName.GetTableName(CollectionTableType.Documents),
+                throwIfDoesNotExist: false);
+
+            if (table == null)
+                yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], etag))
@@ -614,7 +625,12 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 yield break;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, 
+                collectionName.GetTableName(CollectionTableType.Tombstones),
+                throwIfDoesNotExist: false);
+
+            if (table == null)
+                yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag))
@@ -637,7 +653,14 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 return 0;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, 
+                collectionName.GetTableName(CollectionTableType.Documents), 
+                throwIfDoesNotExist: false
+                );
+
+            // ReSharper disable once UseNullPropagation
+            if (table == null)
+                return 0;
 
             var result = table
                         .SeekBackwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], long.MaxValue)
@@ -657,7 +680,13 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 return 0;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, 
+                collectionName.GetTableName(CollectionTableType.Tombstones),
+                throwIfDoesNotExist: false);
+
+            // ReSharper disable once UseNullPropagation
+            if (table == null)
+                return 0;
 
             var result = table
                 .SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], long.MaxValue)
@@ -677,7 +706,12 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 return 0;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, 
+                collectionName.GetTableName(CollectionTableType.Tombstones),
+                throwIfDoesNotExist: false);
+
+            if (table == null)
+                return 0;
 
             return table
                     .SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes[DeletedEtagsSlice], etag)
@@ -686,28 +720,56 @@ namespace Raven.Server.Documents
 
         public static ByteStringContext.ExternalScope GetSliceFromKey(DocumentsOperationContext context, string key, out Slice keySlice)
         {
-            var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
+            var byteCount = Utf8.GetMaxByteCount(key.Length);
 
             var buffer = context.GetNativeTempBuffer(
-                byteCount
-                + sizeof(char) * key.Length); // for the lower calls
+                byteCount // this buffer is allocated to also serve the GetSliceFromUnicodeKey
+                + sizeof(char) * key.Length);
 
+
+            if (key.Length > 512)
+                ThrowKeyTooBig(key);
+
+
+            for (int i = 0; i < key.Length; i++)
+            {
+                char ch = key[i];
+                if (ch > 127) // not ASCII, use slower mode
+                    goto UnlikelyUnicode;
+                if (ch >= 65 && ch <= 90)
+                    buffer[i] = (byte)(ch | 0x20);
+                else
+                    buffer[i] = (byte)ch;
+            }
+
+            return Slice.External(context.Allocator, buffer, (ushort)key.Length, out keySlice);
+
+          UnlikelyUnicode:
+            return GetSliceFromUnicodeKey(context, key, out keySlice, buffer, byteCount);
+        }
+
+        private static ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromUnicodeKey(
+            DocumentsOperationContext context, 
+            string key, 
+            out Slice keySlice,
+            byte* buffer, int byteCount)
+        {
             fixed (char* pChars = key)
             {
-                var destChars = (char*)buffer;
+                var destChars = (char*) buffer;
                 for (var i = 0; i < key.Length; i++)
                 {
                     destChars[i] = char.ToLowerInvariant(pChars[i]);
                 }
 
-                var keyBytes = buffer + key.Length * sizeof(char);
+                var keyBytes = buffer + key.Length*sizeof(char);
 
-                var size = Encoding.UTF8.GetBytes(destChars, key.Length, keyBytes, byteCount);
+                var size = Utf8.GetBytes(destChars, key.Length, keyBytes, byteCount);
 
                 if (size > 512)
-                    ThrowKeyTooBig(key, size);
+                    ThrowKeyTooBig(key);
 
-                return Slice.External(context.Allocator, keyBytes, (ushort)size, out keySlice);
+                return Slice.External(context.Allocator, keyBytes, (ushort) size, out keySlice);
             }
         }
 
@@ -727,7 +789,7 @@ namespace Raven.Server.Documents
             // The total length of the string is stored in the actual table (and include the var int size 
             // prefix.
 
-            var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
+            var byteCount = Utf8.GetMaxByteCount(str.Length);
             var jsonParserState = new JsonParserState();
             jsonParserState.FindEscapePositionsIn(str);
             var maxKeyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
@@ -749,14 +811,14 @@ namespace Raven.Server.Documents
 
                 lowerKey = buffer + str.Length * sizeof(char);
 
-                lowerSize = Encoding.UTF8.GetBytes(destChars, str.Length, lowerKey, byteCount);
+                lowerSize = Utf8.GetBytes(destChars, str.Length, lowerKey, byteCount);
 
                 if (lowerSize > 512)
-                    ThrowKeyTooBig(str, lowerSize);
+                    ThrowKeyTooBig(str);
 
                 key = buffer + str.Length * sizeof(char) + byteCount;
                 var writePos = key;
-                keySize = Encoding.UTF8.GetBytes(pChars, str.Length, writePos + maxKeyLenSize, byteCount);
+                keySize = Utf8.GetBytes(pChars, str.Length, writePos + maxKeyLenSize, byteCount);
 
                 var actualKeyLenSize = JsonParserState.VariableSizeIntSize(keySize);
                 if (actualKeyLenSize < maxKeyLenSize)
@@ -772,10 +834,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static void ThrowKeyTooBig(string str, int lowerSize)
+        private static void ThrowKeyTooBig(string str)
         {
             throw new ArgumentException(
-                $"Key cannot exceed 512 bytes, but the key was {lowerSize} bytes. The invalid key is '{str}'.",
+                $"Key cannot exceed 512 bytes, but the key was {Utf8.GetByteCount(str)} bytes. The invalid key is '{str}'.",
                 nameof(str));
         }
 
@@ -801,6 +863,8 @@ namespace Raven.Server.Documents
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
 
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 4);
+
+            result.LastModified = new DateTime(*(long*) tvr.Read(5, out size));
 
             return result;
         }
@@ -902,7 +966,11 @@ namespace Raven.Server.Documents
             if (expectedEtag != null && doc.Etag != expectedEtag)
             {
                 throw new ConcurrencyException(
-                    $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                    $"Document {loweredKey} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                {
+                    ActualETag = doc.Etag,
+                    ExpectedETag = (long)expectedEtag
+                };
             }
 
             EnsureLastEtagIsPersisted(context, doc.Etag);
@@ -1405,11 +1473,12 @@ namespace Raven.Server.Documents
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
-            TableValueReader oldValue;
+            var lastModifiedTicks = DateTime.UtcNow.Ticks;
+
             Slice keySlice;
             using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out keySlice))
             {
-                oldValue = table.ReadByKey(keySlice);
+                var oldValue = table.ReadByKey(keySlice);
 
                 if (changeVector == null)
                 {
@@ -1423,10 +1492,11 @@ namespace Raven.Server.Documents
                     var tbv = new TableValueBuilder
                     {
                         {lowerKey, lowerSize}, //0
-                        {(byte*) &newEtagBigEndian, sizeof(long)}, //1
+                        newEtagBigEndian, //1
                         {keyPtr, keySize}, //2
                         {document.BasePointer, document.Size}, //3
-                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length} //4
+                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length}, //4
+                        lastModifiedTicks // 5
                     };
 
                     if (oldValue == null)
@@ -1434,7 +1504,10 @@ namespace Raven.Server.Documents
                         if (expectedEtag != null && expectedEtag != 0)
                         {
                             throw new ConcurrencyException(
-                                $"Document {key} does not exists, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                                $"Document {key} does not exists, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                            {
+                                ExpectedETag = (long)expectedEtag
+                            };
                         }
                         table.Insert(tbv);
                     }
@@ -1442,10 +1515,15 @@ namespace Raven.Server.Documents
                     {
                         int size;
                         var pOldEtag = oldValue.Read(1, out size);
-                        var oldEtag = IPAddress.NetworkToHostOrder(*(long*)pOldEtag);
+                        var oldEtag = Bits.SwapBytes(*(long*)pOldEtag);
+                        //TODO
                         if (expectedEtag != null && oldEtag != expectedEtag)
                             throw new ConcurrencyException(
-                                $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                                $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                            {
+                                ActualETag = oldEtag,
+                                ExpectedETag = (long) expectedEtag
+                            };
 
                         int oldSize;
                         var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
@@ -1476,6 +1554,8 @@ namespace Raven.Server.Documents
                 Type = DocumentChangeTypes.Put,
                 IsSystemDocument = collectionName.IsSystem,
             });
+
+            _documentDatabase.Metrics.DocPutsPerSecond.Mark();
 
             return new PutResult
             {
@@ -1669,13 +1749,23 @@ namespace Raven.Server.Documents
             TableSchema.FixedSizeSchemaIndexDef indexDef;
             if (tombstones)
             {
-                table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+                table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, 
+                    collectionName.GetTableName(CollectionTableType.Tombstones),
+                    throwIfDoesNotExist: false);
+                
                 indexDef = TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice];
             }
             else
             {
-                table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, 
+                    collectionName.GetTableName(CollectionTableType.Documents),
+                    throwIfDoesNotExist: false);
                 indexDef = DocsSchema.FixedSizeIndexes[CollectionEtagsSlice];
+            }
+            if (table == null)
+            {
+                totalCount = 0;
+                return 0;
             }
 
             return table.GetNumberEntriesFor(indexDef, afterEtag, out totalCount);
@@ -1720,7 +1810,18 @@ namespace Raven.Server.Documents
                 };
             }
 
-            var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+            var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, 
+                collectionName.GetTableName(CollectionTableType.Documents),
+                throwIfDoesNotExist: false);
+
+            if (collectionTable == null)
+            {
+                return new CollectionStat
+                {
+                    Name = collection,
+                    Count = 0
+                };
+            }
 
             return new CollectionStat
             {
@@ -1735,7 +1836,12 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 return;
 
-            var table = transaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+            var table = transaction.OpenTable(TombstonesSchema, 
+                collectionName.GetTableName(CollectionTableType.Tombstones),
+                throwIfDoesNotExist: false);
+            if (table == null)
+                return;
+
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Deleting tombstones earlier than {etag} in {collection}");
             table.DeleteBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, long.MaxValue);

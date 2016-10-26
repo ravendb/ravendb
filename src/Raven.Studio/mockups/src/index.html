@@ -1,11 +1,9 @@
-﻿<!doctype html>
+<!doctype html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
 {{> head }}
+
 <body>
-    {{> spinner }}
-    {{> topbar }}
-    {{> menu }}
-    {{> notification-center }}
+    {{> spinner }} {{> topbar }} {{> menu }} {{> notification-center }}
 
     <div class="container-fluid content-container">
         <div class="content-container-margin">
@@ -98,6 +96,27 @@
                     </div>
                 </div>
             </div>
+
+            <hr/>
+            <h2>Panel state</h2>
+            <div class="row">
+                <div class="col-sm-3">
+                    <div class="panel panel-state">
+                        <div class="panel-body">
+                            <div class="state state-success" data-state-text="success"></div>
+                            <p>Panel state is defined by adding a class "<strong class="text-info">panel-state</strong>" and adding a "<strong class="text-info">state state-[color]</strong>" div inside</p>
+                            <p>Default color is gray available colors are: <strong>
+                                <span class="text-primary">primary</span>,
+                                    <span class="text-success">success</span>,
+                                        <span class="text-info">info</span>,
+                                            <span class="text-warning">warning</span>,
+                                                <span class="text-danger">danger</strong></p>
+                            <p>To add text add <strong class="text-info">"data-state"</strong> attibute</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <hr />
             <h2>Text styles</h2>
             <section class="panel">
@@ -119,12 +138,32 @@
                     <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
                         <div class="panel">
                             <div class="panel-body text-center">
+                                <div class="icon-magic-wand"></div>
+                                <hr />
+                                <span>.icon-magic-wand</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-empty-set"></div>
+                                <hr />
+                                <span>.icon-empty-set</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
                                 <div class="icon-drive"></div>
                                 <hr />
                                 <span>.icon-drive</span>
                             </div>
                         </div>
                     </div>
+
                     <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
                         <div class="panel">
                             <div class="panel-body text-center">
@@ -450,6 +489,15 @@
                                 <div class="icon-checkbox"></div>
                                 <hr />
                                 <span>.icon-checkbox</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6 col-sm-4 col-md-3 col-lg-2">
+                        <div class="panel">
+                            <div class="panel-body text-center">
+                                <div class="icon-checkbox-on"></div>
+                                <hr />
+                                <span>.icon-checkbox-on</span>
                             </div>
                         </div>
                     </div>
@@ -814,6 +862,62 @@
                                     </button>
                                 </p>
 
+                                <h5>Addons in btn-block:</h5>
+                                <div class="text-center">
+
+                                    <button class="btn btn-block btn-xs btn-default">
+                                        <i class="icon-info"></i>
+                                        <span>icon-info</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <button class="btn btn-block btn-sm btn-default">
+                                        <i class="icon-info"></i>
+                                        <span>icon-info</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <button class="btn btn-block btn-default">
+                                        <i class="icon-info"></i>
+                                        <span>icon-info</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <button class="btn btn-block btn-lg btn-default">
+                                        <i class="icon-info"></i>
+                                        <span>icon-info</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <button class="btn btn-block btn-default btn-spinner">
+                                        .btn-spinner
+                                        <span class="caret"></span>
+                                    </button>
+                                </div>
+                                <h5>Addons in btn-block with text-left:</h5>
+                                <div class="text-center">
+
+                                    <button class="btn btn-block text-left btn-xs btn-default">
+                                        <i class="icon-info"></i>
+                                        <span>icon-info</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <button class="btn btn-block text-left btn-sm btn-default">
+                                        <i class="icon-info"></i>
+                                        <span>icon-info</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <button class="btn btn-block text-left btn-default">
+                                        <i class="icon-info"></i>
+                                        <span>icon-info</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <button class="btn btn-block text-left btn-lg btn-default">
+                                        <i class="icon-info"></i>
+                                        <span>icon-info</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <button class="btn btn-block text-left btn-default btn-spinner">
+                                        .btn-spinner
+                                        <span class="caret"></span>
+                                    </button>
+                                </div>
                                 <hr />
                                 <h5>description:</h5>
                                 <p>Hilights interactive buttons and links</p>
@@ -879,7 +983,7 @@
                                     <label for="importFile" class="btn btn-default">
                                         <i class="icon-document"></i>
                                         <span>Browse</span>
-                                    </label>
+                                </label>
                                 </span>
                             </div>
                         </div>
@@ -895,7 +999,7 @@
                         <div class="editable-input-inline" id="editable-input-example">
                             <span class="value-container">
                                 <span class="static-name padding padding-xs">234758972348</span>
-                                <input type="text" class="form-control edit-inline padding padding-xs" value="234758972348">
+                            <input type="text" class="form-control edit-inline padding padding-xs" value="234758972348">
                             </span>
                             &nbsp;
                             <button class="edit-button btn-toggle btn btn-sm" data-target="#editable-input-example" data-class="edit">
@@ -905,8 +1009,10 @@
 
                         </div>
                     </p>
-                    <small class="bg-info padding padding-sm">
-                        <span class="icon-info"></span> If you want to add padding to the text please rememer to add padding classes (eg. ".padding.padding-sm") to both .statnic-name and .edit-inline.
+                    <div class="bg-info padding padding-sm">
+                        <small>
+                            <span class="icon-info"></span> If you want to add padding to the text please rememer to add padding classes (eg. ".padding.padding-sm") to both .statnic-name and .edit-inline.
+                        </small>
                     </small>
                 </div>
             </section>
@@ -1326,19 +1432,129 @@
                     <p class="bg-info padding padding-sm">.bg-info & .padding.padding-sm</p>
                     <p class="bg-warning padding padding-xs">.bg-warning & .padding.padding-xs</p>
                     <p class="bg-danger">.bg-danger</p>
+                    <hr>
+                    <span class="bg-info padding padding-sm">use on span for inline</span>
+                </div>
+            </section>
+            <h2>Global properties-item</h2>
+            <section class="panel">
+                <div class="panel-body">
+                    <div class="properties-container">
+                        <div class="properties-item">
+                            <span class="properties-label">Priority:</span>
+                            <div class="btn-group properties-value">
+                                <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                        <i class="icon-reset"></i><span>Super extra long name of action just to test the overflow</span> <span class="caret"></span>
+                                    </button>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#"><i class="icon-check"></i><span>Normal</span></a></li>
+                                    <li><a href="#"><i class="icon-coffee"></i><span>Idle</span></a></li>
+                                    <li><a href="#"><i class="icon-cancel"></i><span>Disabled</span></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="properties-item">
+                            <span class="properties-label">Some other property:</span>
+                            <div class="btn-group properties-value">
+                                <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                        <i class="icon-reset"></i><span>Disabled until restart</span> <span class="caret"></span>
+                                    </button>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#"><i class="icon-check"></i><span>Normal</span></a></li>
+                                    <li><a href="#"><i class="icon-coffee"></i><span>Idle</span></a></li>
+                                    <li><a href="#"><i class="icon-cancel"></i><span>Disabled</span></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="properties-item">
+                            <span class="properties-label">Status:</span>
+                            <div class="btn-group properties-value">
+                                <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                        <i class="icon-reset"></i><span>Disabled until restart</span> <span class="caret"></span>
+                                    </button>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#"><i class="icon-check"></i><span>Normal</span></a></li>
+                                    <li><a href="#"><i class="icon-coffee"></i><span>Idle</span></a></li>
+                                    <li><a href="#"><i class="icon-cancel"></i><span>Disabled</span></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="properties-item">
+                            <span class="properties-label">Priority:</span>
+                            <div class="btn-group properties-value">
+                                <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                        <i class="icon-reset"></i><span>Disabled until restart</span> <span class="caret"></span>
+                                    </button>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#"><i class="icon-check"></i><span>Normal</span></a></li>
+                                    <li><a href="#"><i class="icon-coffee"></i><span>Idle</span></a></li>
+                                    <li><a href="#"><i class="icon-cancel"></i><span>Disabled</span></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="properties-item">
+                            <span class="properties-label">label:</span>
+                            <div class="properties-value">
+                                <div class="set-size">
+                                    <i class="icon-info"></i><span>Value with label</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="properties-item value-only">
+                            <div class="properties-value">
+                                <div class="set-size">
+                                    <i class="icon-reset"></i><span>Stale</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="properties-item value-only">
+                            <div class="properties-value">
+                                <div class="set-size">
+                                    <i class="icon-reset"></i><span>Stale</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="properties-item value-only">
+                            <div class="properties-value">
+                                <div class="set-size">
+                                    <i class="icon-reset"></i><span>Stale</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
+            <h2>badges</h2>
+            <section div class="panel">
+                <div class="panel-body">
+                    <a href="#">Inbox <span class="badge">42</span></a>
+
+<button class="btn btn-primary" type="button">
+  Messages <span class="badge">4</span>
+</button>
+<span class="badge badge-primary">badge-primary</span>
+<span class="badge badge-success">badge-success</span>
+<span class="badge badge-info">badge-info</span>
+<span class="badge badge-warning">badge-warning</span>
+<span class="badge badge-danger">badge-danger</span>
+                </div>
+            </section>
+
+
+            </div>
         </div>
-    </div>
 
-    <script type="text/javascript">
-        function changeState(el) {
-            if (el.readOnly) el.checked = el.readOnly = false;
-            else if (!el.checked) el.readOnly = el.indeterminate = true;
-        }
-    </script>
 
-    {{> scripts }}
+        <script type="text/javascript">
+            function changeState(el) {
+                if (el.readOnly) el.checked = el.readOnly = false;
+                else if (!el.checked) el.readOnly = el.indeterminate = true;
+            }
+        </script>
+
+        {{> modals/includeAll }}
+        {{> scripts }}
+
 </body>
 </html>

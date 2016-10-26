@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using Sparrow;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Journal
@@ -34,7 +35,10 @@ namespace Voron.Impl.Journal
                 _firstPositionInJournalFile = position; // first lazy tx saves position to all lazy tx that comes afterwards
             }
 
-            _lazyTransactionPager.WriteDirect(pages.Base, _lastUsedPage, pages.NumberOfPages);
+            Memory.BulkCopy(
+                _lazyTransactionPager.PagerState.MapBase + (long) _lastUsedPage *_lazyTransactionPager.PageSize,
+                pages.Base, 
+                pages.NumberOfPages *_lazyTransactionPager.PageSize);
 
             _lastUsedPage += pages.NumberOfPages;
         }
@@ -43,10 +47,10 @@ namespace Voron.Impl.Journal
         {
             if (_readTransaction != null)
                 return;
-            // This transaction is required to prevent flushing of the data from the 
-            // scratch file to the data file before the lazy transaction buffers have 
+            // This transaction is required to prevent flushing of the data from the
+            // scratch file to the data file before the lazy transaction buffers have
             // actually been flushed to the journal file
-            _readTransaction = tx.Environment.NewLowLevelTransaction(TransactionFlags.Read);
+            _readTransaction = tx.Environment.NewLowLevelTransaction(new TransactionPersistentContext(true), TransactionFlags.Read);
         }
 
         public void WriteBufferToFile(JournalFile journalFile, LowLevelTransaction tx)

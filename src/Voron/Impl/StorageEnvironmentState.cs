@@ -23,7 +23,7 @@ namespace Voron.Impl
         {
             return new StorageEnvironmentState
                 {
-                    Root = Root != null ? Root.Clone() : null,
+                    Root = Root?.Clone(),
                     NextPageNumber = NextPageNumber,
                     Options = Options
                 };

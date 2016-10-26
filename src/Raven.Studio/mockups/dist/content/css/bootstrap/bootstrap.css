@@ -2732,7 +2732,7 @@ output {
   color: #e9eaea;
   background-color: transparent;
   background-image: none;
-  border: 1px solid #686f6f;
+  border: 1px solid #3a4242;
   border-radius: 0px;
   -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
   box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
@@ -5115,7 +5115,7 @@ a.label:focus {
   vertical-align: middle;
   white-space: nowrap;
   text-align: center;
-  background-color: #a9adad;
+  background-color: #686f6f;
   border-radius: 10px;
 }
 .badge:empty {
@@ -5149,6 +5149,26 @@ a.badge:focus {
 }
 .nav-pills > li > a > .badge {
   margin-left: 3px;
+}
+.badge.badge-primary {
+  color: #3a4242;
+  background-color: #ff5500;
+}
+.badge.badge-success {
+  color: #3a4242;
+  background-color: #58b36a;
+}
+.badge.badge-info {
+  color: #3a4242;
+  background-color: #4d90b3;
+}
+.badge.badge-warning {
+  color: #3a4242;
+  background-color: #f7d631;
+}
+.badge.badge-danger {
+  color: #3a4242;
+  background-color: #e55151;
 }
 .jumbotron {
   padding-top: 30px;
@@ -5313,7 +5333,8 @@ a.thumbnail.active {
 .progress {
   overflow: hidden;
   height: 13.5px;
-  margin-bottom: 27px;
+  margin-top: 12px;
+  margin-bottom: 12px;
   background-color: #1e2626;
   border-radius: 0px;
   -webkit-box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -5873,6 +5894,7 @@ button.list-group-item-danger.active:focus {
   color: #e9eaea;
   background-color: #1b1b1b;
   background-color: #2c3333;
+  color: #a9adad;
 }
 .panel-default > .panel-heading {
   color: #a9adad;
@@ -6042,18 +6064,18 @@ button.list-group-item-danger.active:focus {
   font-size: 22.5px;
   font-weight: bold;
   line-height: 1;
-  color: #000;
-  text-shadow: 0 1px 0 #fff;
-  opacity: 0.2;
-  filter: alpha(opacity=20);
+  color: #ff5500;
+  text-shadow: 0 1px 0 #1e2626;
+  opacity: 0.6;
+  filter: alpha(opacity=60);
 }
 .close:hover,
 .close:focus {
-  color: #000;
+  color: #ff5500;
   text-decoration: none;
   cursor: pointer;
-  opacity: 0.5;
-  filter: alpha(opacity=50);
+  opacity: 1;
+  filter: alpha(opacity=100);
 }
 button.close {
   padding: 0;
@@ -6104,12 +6126,11 @@ button.close {
 }
 .modal-content {
   position: relative;
-  background-color: #fff;
-  border: 1px solid #999;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  background-color: #272e2e;
+  border: 1px solid #1e2626;
   border-radius: 0px;
-  -webkit-box-shadow: 0 3px 9px rgba(0, 0, 0, 0.5);
-  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.5);
+  -webkit-box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
   background-clip: padding-box;
   outline: 0;
 }
@@ -6120,7 +6141,7 @@ button.close {
   bottom: 0;
   left: 0;
   z-index: 1040;
-  background-color: #000;
+  background-color: #1e2626;
 }
 .modal-backdrop.fade {
   opacity: 0;
@@ -6132,7 +6153,7 @@ button.close {
 }
 .modal-header {
   padding: 15px;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid #2c3333;
 }
 .modal-header .close {
   margin-top: -2px;
@@ -6148,7 +6169,7 @@ button.close {
 .modal-footer {
   padding: 15px;
   text-align: right;
-  border-top: 1px solid #e5e5e5;
+  border-top: 1px solid #2c3333;
 }
 .modal-footer .btn + .btn {
   margin-left: 5px;
@@ -6173,8 +6194,8 @@ button.close {
     margin: 30px auto;
   }
   .modal-content {
-    -webkit-box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    -webkit-box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
   }
   .modal-sm {
     width: 300px;

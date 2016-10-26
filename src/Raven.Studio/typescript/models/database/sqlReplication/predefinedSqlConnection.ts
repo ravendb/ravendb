@@ -52,11 +52,11 @@ class predefinedSqlConnection {
             .execute()
             .done(() => {
                 this.connectionTestState(this.CONNECTION_STATE_CONNECTED);
-                app.showMessage("Connection " + this.name() + " is valid", "SQL Connection test");
+                app.showBootstrapMessage("Connection " + this.name() + " is valid", "SQL Connection test");
             })
             .fail((request, status, error) => {
                 var errorText = !!request.responseJSON ? !!request.responseJSON.Exception ? request.responseJSON.Exception.Message : error : error;
-                app.showMessage("Connection " + this.name() + " is not valid, error: " + errorText, "SQL Connection test");
+                app.showBootstrapMessage("Connection " + this.name() + " is not valid, error: " + errorText, "SQL Connection test");
             }).
             always(() => setTimeout(this.connectionTestState, 500, this.CONNECTION_STATE_STAND_BY ));
     }

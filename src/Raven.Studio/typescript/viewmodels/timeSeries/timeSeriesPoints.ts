@@ -191,7 +191,7 @@ class timeSeriesPoints extends viewModelBase {
                 .execute()
                 .done(() => this.refresh());
         });
-        app.showDialog(changeVm);
+        app.showBootstrapDialog(changeVm);
     }
 
     refresh() {
@@ -219,7 +219,7 @@ class timeSeriesPoints extends viewModelBase {
                 .execute()
                 .done(() => this.refresh());
         });
-        app.showDialog(pointChangeVM);
+        app.showBootstrapDialog(pointChangeVM);
     }
 
     toggleSelectAll() {
@@ -264,7 +264,7 @@ class timeSeriesPoints extends viewModelBase {
         deleteKeyVm.deletionTask.done(() => {
             this.navigate(appUrl.forTimeSeriesType(this.type(), this.activeTimeSeries()));
         });
-        app.showDialog(deleteKeyVm);
+        app.showBootstrapDialog(deleteKeyVm);
     }
 
     selectType(type: timeSeriesType, event?: MouseEvent) {

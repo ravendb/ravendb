@@ -17,7 +17,6 @@ namespace Voron.Impl.Scratch
         private class PendingPage
         {
             public long Page;
-            public long NumberOfPages;
             public long ValidAfterTransactionId;
         }
 
@@ -42,6 +41,16 @@ namespace Voron.Impl.Scratch
             _scratchNumber = scratchNumber;
             _allocatedPagesUsedSize = 0;
             _pageSize = scratchPager.PageSize;
+        }
+
+        public void Reset()
+        {
+            _allocatedPages.Clear();
+            _freePagesBySizeAvailableImmediately.Clear();
+            _freePagesBySize.Clear();
+            _freePagesByTransaction.Clear();
+            _lastUsedPage = 0;
+            _allocatedPagesUsedSize = 0;
         }
 
         public PagerState PagerState => _scratchPager.PagerState;
@@ -98,7 +107,7 @@ namespace Voron.Impl.Scratch
                 return false;
 
             var val = list.Last.Value;
-            var oldestTransaction = tx.Environment.OldestTransaction;
+            var oldestTransaction = tx.Environment.ActiveTransactions.OldestTransaction;
             if (oldestTransaction != 0 && val.ValidAfterTransactionId >= oldestTransaction) // OldestTransaction can be 0 when there are none other transactions and we are in process of new transaction header allocation
                 return false;
 
@@ -108,6 +117,25 @@ namespace Voron.Impl.Scratch
             _allocatedPagesUsedSize += numberOfPages;
             _allocatedPages.Add(val.Page, result);
             return true;
+        }
+
+        public bool HasActivelyUsedBytes(long oldestActiveTransaction)
+        {
+            if (_allocatedPagesUsedSize > 0)
+                return true;
+
+            var keys = _freePagesByTransaction.Keys;
+            var values = _freePagesByTransaction.Values;
+            for (int i = 0; i < keys.Count; i++)
+            {
+                if (keys[i] < oldestActiveTransaction)
+                    break;
+
+                if (values[i] > 0)
+                    return true;
+            }
+
+            return false;
         }
 
         public void Free(long page, long asOfTxId)
@@ -148,7 +176,6 @@ namespace Voron.Impl.Scratch
                 list.AddFirst(new PendingPage
                 {
                     Page = value.PositionInScratchBuffer,
-                    NumberOfPages = value.NumberOfPages,
                     ValidAfterTransactionId = asOfTxId
                 });
 
@@ -171,7 +198,7 @@ namespace Voron.Impl.Scratch
             return _scratchPager.AcquirePagePointer(tx, p);
         }
 
-        public long ActivelyUsedBytes => _allocatedPagesUsedSize*_pageSize;
+        public long CurrentlyAllocatedBytes => _allocatedPagesUsedSize*_pageSize;
 
         internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
         {

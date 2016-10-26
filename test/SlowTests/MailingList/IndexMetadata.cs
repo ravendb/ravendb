@@ -27,7 +27,7 @@ namespace SlowTests.MailingList
         {
             var usersDeleteStatus = new Users_DeleteStatus { Conventions = new DocumentConvention() };
             var indexDefinition = usersDeleteStatus.CreateIndexDefinition();
-            Assert.Contains("Deleted = user[\"@metadata\"][\"Deleted\"]", indexDefinition.Maps.First());
+            Assert.Contains("Deleted = this.MetadataFor(user)[\"Deleted\"]", indexDefinition.Maps.First());
         }
 
         [Fact]

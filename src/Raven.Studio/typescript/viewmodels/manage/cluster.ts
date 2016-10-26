@@ -118,7 +118,7 @@ class cluster extends viewModelBase {
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
         });
-        app.showDialog(dialog);
+        app.showBootstrapDialog(dialog);
     }
 
     removeClustering() {
@@ -151,7 +151,7 @@ class cluster extends viewModelBase {
                 });
 
         });
-        app.showDialog(dialog);
+        app.showBootstrapDialog(dialog);
     }
 
     initializeNewCluster() {
@@ -172,7 +172,7 @@ class cluster extends viewModelBase {
                     .done(() => setTimeout(() => this.refresh(), 500));
             });
 
-        app.showDialog(dialog);
+        app.showBootstrapDialog(dialog);
     }
 
     leaveCluster(node: nodeConnectionInfo) {

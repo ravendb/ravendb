@@ -109,7 +109,7 @@ class databaseSettings extends viewModelBase {
             .done(() => {
                 this.isEditingEnabled(true);
             });
-        app.showDialog(editDbConfirm);
+        app.showBootstrapDialog(editDbConfirm);
     }
 
     refreshFromServer() {
@@ -156,7 +156,7 @@ class databaseSettings extends viewModelBase {
                     updatedDto['@metadata'] = meta;
                     updatedDto['@metadata']['@etag'] = (<any>this.document()).__metadata['@etag'];
                     var newDoc = new document(updatedDto);
-                    var saveCommand = new saveDatabaseSettingsCommand(appUrl.getDatabase(), newDoc);
+                    var saveCommand = new saveDatabaseSettingsCommand(this.activeDatabase(), newDoc);
                     var saveTask = saveCommand.execute();
                     saveTask.done((saveResult: databaseDocumentSaveDto) => {
                         (<any>this.document()).__metadata['@etag'] = saveResult.ETag;
@@ -181,7 +181,7 @@ class databaseSettings extends viewModelBase {
                 }
 
             });
-        app.showDialog(editDbConfirm);
+        app.showBootstrapDialog(editDbConfirm);
     }
 
     private fetchDatabaseSettings(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {

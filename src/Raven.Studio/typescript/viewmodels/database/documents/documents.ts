@@ -229,9 +229,9 @@ class documents extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            //TODO: changesContext.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
-            changesContext.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
-            //TODO: changesContext.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
+            //TODO: this.changesContext.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
+            this.changesContext.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
+            //TODO: this.changesContext.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
         ];
     }
 
@@ -271,7 +271,7 @@ class documents extends viewModelBase {
         var collections = collectionsStats.collections;
         // Create the "All Documents" pseudo collection.
         this.allDocumentsCollection(collection.createAllDocsCollection(db));
-        this.allDocumentsCollection().documentCount = ko.computed(() => !!db.statistics() ? db.statistics().countOfDocuments() : 0);
+        this.allDocumentsCollection().documentCount(collectionsStats.numberOfDocuments());
 
         // All systems a-go. Load them into the UI and select the first one.
         var allCollections = [this.allDocumentsCollection()].concat(collections);
@@ -317,7 +317,7 @@ class documents extends viewModelBase {
 
     deleteCollection(collection: collection) {
         if (collection) {
-            var viewModel = new deleteCollection(collection);
+            var viewModel = new deleteCollection(collection, this.activeDatabase());
             viewModel.deletionTask.done((result: operationIdDto) => {
                 if (!collection.isAllDocuments) {
                     this.collections.remove(collection);
@@ -332,7 +332,7 @@ class documents extends viewModelBase {
 
                 this.updateGridAfterOperationComplete(collection, result.OperationId);
             });
-            app.showDialog(viewModel);
+            app.showBootstrapDialog(viewModel);
         }
     }
 
@@ -419,7 +419,7 @@ class documents extends viewModelBase {
 
     selectCsvColumns() {
         var dialog = new selectCsvColumnsDialog(this.getDocumentsGrid().getColumnsNames());
-        app.showDialog(dialog);
+        app.showBootstrapDialog(dialog);
 
         dialog.onExit().done((cols: string[]) => {
             this.exportCsvInternal(cols);
@@ -441,7 +441,7 @@ class documents extends viewModelBase {
         });
 
         var selectColumnsViewModel = new selectColumns(this.currentColumnsParams().clone(), this.currentCustomFunctions(), this.contextName(), this.activeDatabase(), columnsNames);
-        app.showDialog(selectColumnsViewModel);
+        app.showBootstrapDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols) => {
             this.currentColumnsParams(cols);
             this.currentCollection().bindings(this.currentColumnsParams().getBindings());
@@ -540,7 +540,7 @@ class documents extends viewModelBase {
             var generate = new generateClassCommand(this.activeDatabase(), id, "csharp");
             var deffered = generate.execute();
             deffered.done((code: any) => {
-                app.showDialog(new showDataDialog("Generated Class", code["Code"]));
+                app.showBootstrapDialog(new showDataDialog("Generated Class", code["Code"]));
             });
         }
     }

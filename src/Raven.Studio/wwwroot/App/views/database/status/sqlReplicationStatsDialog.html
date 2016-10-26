@@ -1,112 +1,114 @@
-<div class="messageBox sqlReplication-Stats" tabindex="-1" >
-    <div class="modal-header">
-        <button type="button" class="close btn btn-default" data-bind="click: fetchSqlReplicationStats"><i class="fa fa-refresh"></i></button>
-        <h4 class="modal-title" data-bind="text:'SQL Replication Stats For: ' + sqlReplicationName"></h4>
-    </div>
-    <div class="modal-body replicationStatsData">
-        <div class="modal-body">
-            <!-- ko if: !!repData()  -->
-            <div class="form-horizontal" role="form" data-bind="with: repData">
-                <div class="form-group">
-                    <label class="col-lg-2 col-md-4 control-label">Last error time</label>
-                    <div class="col-lg-10 col-md-8">
-                        <p class="form-control-static" data-bind="text: LastErrorTime"></p>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="col-lg-2 col-md-4 control-label">Script error count</label>
-                    <div class="col-lg-10 col-md-8">
-                        <p class="form-control-static" data-bind="text: ScriptErrorCount"></p>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="col-lg-2 col-md-4 control-label">Script success count</label>
-                    <div class="col-lg-10 col-md-8">
-                        <p class="form-control-static" data-bind="text: ScriptSuccessCount"></p>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="col-lg-2 col-md-4 control-label">Write error count</label>
-                    <div class="col-lg-10 col-md-8">
-                        <p class="form-control-static" data-bind="text: WriteErrorCount"></p>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="col-lg-2 col-md-4 control-label">Success count</label>
-                    <div class="col-lg-10 col-md-8">
-                        <p class="form-control-static" data-bind="text: SuccessCount"></p>
-                    </div>
-                </div>
-
-                <!-- ko with: LastAlert -->
-                <div class="panel-group" id="statsAccordion">
-                    <div class="panel panel-warning">
-                        <div class="panel-heading">
-                            <a data-toggle="collapse" data-parent="#statsAccordion" href="#collapseLastError">
-                                <h3 class="panel-title">
-                                    Last Alert
-                                </h3>
-                            </a>
+<div class="modal-dialog" role="document">
+    <div class="modal-content sqlReplication-Stats" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close btn btn-default" data-bind="click: fetchSqlReplicationStats"><i class="fa fa-refresh"></i></button>
+            <h4 class="modal-title" data-bind="text:'SQL Replication Stats For: ' + sqlReplicationName"></h4>
+        </div>
+        <div class="modal-body replicationStatsData">
+            <div class="modal-body">
+                <!-- ko if: !!repData()  -->
+                <div class="form-horizontal" role="form" data-bind="with: repData">
+                    <div class="form-group">
+                        <label class="col-lg-2 col-md-4 control-label">Last error time</label>
+                        <div class="col-lg-10 col-md-8">
+                            <p class="form-control-static" data-bind="text: LastErrorTime"></p>
                         </div>
-                        <div id="collapseLastError" class="panel-collapse collapse">
-                            <div class="panel-body">
-                                <div class="form-group">
-                                    <label class="col-lg-2 control-label">Title</label>
-                                    <div class="col-lg-10">
-                                        <p class="form-control-static" data-bind="text: Title"></p>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-lg-2 col-md-4 control-label">Script error count</label>
+                        <div class="col-lg-10 col-md-8">
+                            <p class="form-control-static" data-bind="text: ScriptErrorCount"></p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-lg-2 col-md-4 control-label">Script success count</label>
+                        <div class="col-lg-10 col-md-8">
+                            <p class="form-control-static" data-bind="text: ScriptSuccessCount"></p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-lg-2 col-md-4 control-label">Write error count</label>
+                        <div class="col-lg-10 col-md-8">
+                            <p class="form-control-static" data-bind="text: WriteErrorCount"></p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-lg-2 col-md-4 control-label">Success count</label>
+                        <div class="col-lg-10 col-md-8">
+                            <p class="form-control-static" data-bind="text: SuccessCount"></p>
+                        </div>
+                    </div>
+
+                    <!-- ko with: LastAlert -->
+                    <div class="panel-group" id="statsAccordion">
+                        <div class="panel panel-warning">
+                            <div class="panel-heading">
+                                <a data-toggle="collapse" data-parent="#statsAccordion" href="#collapseLastError">
+                                    <h3 class="panel-title">
+                                        Last Alert
+                                    </h3>
+                                </a>
+                            </div>
+                            <div id="collapseLastError" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Title</label>
+                                        <div class="col-lg-10">
+                                            <p class="form-control-static" data-bind="text: Title"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-lg-2 control-label">Created at</label>
-                                    <div class="col-lg-10">
-                                        <p class="form-control-static" data-bind="text: CreatedAt"></p>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Created at</label>
+                                        <div class="col-lg-10">
+                                            <p class="form-control-static" data-bind="text: CreatedAt"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-lg-2 control-label">Observed</label>
-                                    <div class="col-lg-10">
-                                        <p class="form-control-static" data-bind="text: Observed"></p>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Observed</label>
+                                        <div class="col-lg-10">
+                                            <p class="form-control-static" data-bind="text: Observed"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-lg-2 control-label">Message</label>
-                                    <div class="col-lg-10">
-                                        <p class="form-control-static" data-bind="text: Message"></p>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Message</label>
+                                        <div class="col-lg-10">
+                                            <p class="form-control-static" data-bind="text: Message"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-lg-2 control-label">Alert level</label>
-                                    <div class="col-lg-10">
-                                        <p class="form-control-static" data-bind="text: AlertLevel"></p>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Alert level</label>
+                                        <div class="col-lg-10">
+                                            <p class="form-control-static" data-bind="text: AlertLevel"></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-lg-2 control-label">Exception</label>
-                                    <div class="col-lg-10">
-                                        <p class="form-control-static"><span class="exceptionText" data-bind="text: Exception"></span></p>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Exception</label>
+                                        <div class="col-lg-10">
+                                            <p class="form-control-static"><span class="exceptionText" data-bind="text: Exception"></span></p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-lg-2 control-label">Unique key</label>
-                                    <div class="col-lg-10">
-                                        <p class="form-control-static" data-bind="text: UniqueKey"></p>
+                                    <div class="form-group">
+                                        <label class="col-lg-2 control-label">Unique key</label>
+                                        <div class="col-lg-10">
+                                            <p class="form-control-static" data-bind="text: UniqueKey"></p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    <!-- /ko -->
                 </div>
                 <!-- /ko -->
-            </div>
-            <!-- /ko -->
-            <div class="alert alert-warning text-center" data-bind="visible: !repData()">
-                <h3>
-                    No stats available
-                </h3>
+                <div class="alert alert-warning text-center" data-bind="visible: !repData()">
+                    <h3>
+                        No stats available
+                    </h3>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-bind="click: $root.cancel">OK</button>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-bind="click: $root.cancel">OK</button>
+        </div>
     </div>
 </div>

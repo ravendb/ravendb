@@ -49,8 +49,11 @@ interface JQuery {
 
 
 interface JwertyStatic {
-    key(keyCombination: string, handler: (event: KeyboardEvent, keyCombination: string) => any): void;
-    key(keyCombination: string, handler: (event: KeyboardEvent, keyCombination: string) => any, context: any, selector: string): void;
+    key(keyCombination: string, handler: (event: KeyboardEvent, keyCombination: string) => any, context?: any, selector?: string): JwertySubscription;
+}
+
+interface JwertySubscription {
+    unbind(): void;
 }
 
 declare var jwerty: JwertyStatic;
@@ -166,7 +169,7 @@ declare var Spinner: {
 interface Array<T> {
     remove(item: T): number;
     removeAll(items: T[]): void;
-    first(filter?: (item: T) => boolean): T;
+    first(filter?: (item: T) => boolean): T; //TODO: use find instead!
     last(filter?: (item: T) => boolean): T;
     pushAll(items: T[]): void;
     contains(item: T): boolean;
@@ -215,5 +218,16 @@ declare module Dagre {
     interface Graph {
         setEdge(sourceId: string, targetId: string, label: any): Graph;
     }
+}
+
+
+interface DurandalAppModule {
+    showDialog(please_use_app_showBootstrapDialog_instead: any): void;
+
+    showMessage(please_use_app_showBootstrapMessage_instead: any): void;
+
+    showBootstrapDialog(obj: any, activationData?: any): JQueryPromise<any>;
+
+    showBootstrapMessage(message: string, title?: string, options?: string[], autoclose?: boolean, settings?: Object): DurandalPromise<string>;
 }
 

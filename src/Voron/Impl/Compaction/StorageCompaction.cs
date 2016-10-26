@@ -48,7 +48,7 @@ namespace Voron.Impl.Compaction
 
                 compactedEnv.FlushLogToDataFile();
 
-                compactedEnv.Journal.Applicator.SyncDataFile(compactedEnv.OldestTransaction);
+                compactedEnv.Journal.Applicator.SyncDataFile();
                 compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
 
                 minimalCompactedDataFileSize = compactedEnv.NextPageNumber * existingEnv.Options.PageSize;
@@ -62,7 +62,9 @@ namespace Voron.Impl.Compaction
 
         private static void CopyTrees(StorageEnvironment existingEnv, StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport = null)
         {
-            using (var txr = existingEnv.ReadTransaction())
+            TransactionPersistentContext context = new TransactionPersistentContext(true);
+
+            using (var txr = existingEnv.ReadTransaction(context))
             using (var rootIterator = txr.LowLevelTransaction.RootObjects.Iterate(false))
             {
                 if (rootIterator.Seek(Slices.BeforeAllKeys) == false)
@@ -80,7 +82,7 @@ namespace Voron.Impl.Compaction
                         case RootObjectType.None:
                             break;
                         case RootObjectType.VariableSizeTree:
-                            copiedTrees = CopyVariableSizeTree(compactedEnv, progressReport, txr, treeName, copiedTrees, totalTreesCount);
+                            copiedTrees = CopyVariableSizeTree(compactedEnv, progressReport, txr, treeName, copiedTrees, totalTreesCount, context);
                             break;
                         case RootObjectType.EmbeddedFixedSizeTree:
                         case RootObjectType.FixedSizeTree:
@@ -90,10 +92,10 @@ namespace Voron.Impl.Compaction
                                 continue;
                             }
 
-                            copiedTrees = CopyFixedSizeTrees(compactedEnv, progressReport, txr, rootIterator, treeName, copiedTrees, totalTreesCount, objectType);
+                            copiedTrees = CopyFixedSizeTrees(compactedEnv, progressReport, txr, rootIterator, treeName, copiedTrees, totalTreesCount, objectType, context);
                             break;
                         case RootObjectType.Table:
-                            copiedTrees = CopyTableTree(compactedEnv, progressReport, txr, treeName, copiedTrees, totalTreesCount);
+                            copiedTrees = CopyTableTree(compactedEnv, progressReport, txr, treeName, copiedTrees, totalTreesCount, context);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("Unknown " + objectType);
@@ -104,7 +106,7 @@ namespace Voron.Impl.Compaction
         }
 
         private static long CopyFixedSizeTrees(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr,
-            TreeIterator rootIterator, string treeName, long copiedTrees, long totalTreesCount, RootObjectType type)
+            TreeIterator rootIterator, string treeName, long copiedTrees, long totalTreesCount, RootObjectType type, TransactionPersistentContext context)
         {
             
             var fst = txr.FixedTreeFor(rootIterator.CurrentKey.Clone(txr.Allocator), 0);
@@ -119,7 +121,7 @@ namespace Voron.Impl.Compaction
 
                 do
                 {
-                    using (var txw = compactedEnv.WriteTransaction())
+                    using (var txw = compactedEnv.WriteTransaction(context))
                     {
                         var snd = txw.FixedTreeFor(rootIterator.CurrentKey.Clone(txr.Allocator));
                         var transactionSize = 0L;
@@ -144,8 +146,8 @@ namespace Voron.Impl.Compaction
             return copiedTrees;
         }
 
-        private static unsafe long CopyVariableSizeTree(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr,
-            string treeName, long copiedTrees, long totalTreesCount)
+        private static long CopyVariableSizeTree(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr,
+            string treeName, long copiedTrees, long totalTreesCount, TransactionPersistentContext context)
         {
             var existingTree = txr.ReadTree(treeName);
 
@@ -156,7 +158,7 @@ namespace Voron.Impl.Compaction
                 if (existingTreeIterator.Seek(Slices.BeforeAllKeys) == false)
                     return copiedTrees;
 
-                using (var txw = compactedEnv.WriteTransaction())
+                using (var txw = compactedEnv.WriteTransaction(context))
                 {
                     txw.CreateTree(treeName);
                     txw.Commit();
@@ -168,7 +170,7 @@ namespace Voron.Impl.Compaction
                 {
                     var transactionSize = 0L;
 
-                    using (var txw = compactedEnv.WriteTransaction())
+                    using (var txw = compactedEnv.WriteTransaction(context))
                     {
                         var newTree = txw.ReadTree(treeName);
 
@@ -218,7 +220,7 @@ namespace Voron.Impl.Compaction
         }
 
         private static long CopyTableTree(StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport, Transaction txr,
-            string treeName, long copiedTrees, long totalTreesCount)
+            string treeName, long copiedTrees, long totalTreesCount, TransactionPersistentContext context)
         {
             // Load table
             var tableTree = txr.ReadTree(treeName, RootObjectType.Table);
@@ -246,7 +248,7 @@ namespace Voron.Impl.Compaction
 
             while (copiedEntries < inputTable.NumberOfEntries)
             {
-                using (var txw = compactedEnv.WriteTransaction())
+                using (var txw = compactedEnv.WriteTransaction(context))
                 {
                     long transactionSize = 0L;
 

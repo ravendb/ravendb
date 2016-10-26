@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Sparrow.Json;
@@ -101,6 +102,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         public override bool Equals(IndexDefinition indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
         {
             return false;
+        }
+
+        protected override int ComputeRestOfHash(int hashCode)
+        {
+            return (hashCode * 397) ^ GroupByFields.GetDictionaryHashCode();
         }
 
         public static AutoMapReduceIndexDefinition Load(StorageEnvironment environment)

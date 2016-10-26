@@ -26,7 +26,7 @@ namespace SlowTests.SlowTests.Issues
             {
                 new EmailIndex().Execute(store);
 
-                Parallel.For(0, iterations, i =>
+                Parallel.For(0, iterations, RavenTestHelper.DefaultParallelOptions, i =>
                 {
                     using (var session = store.OpenSession())
                     {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries;
@@ -22,6 +23,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         internal readonly MapReduceIndexingContext _mapReduceWorkContext = new MapReduceIndexingContext();
         private FixedSizeTree _documentMapEntries;
+
+        private IndexingStatsScope _statsInstance;
+        private MapPhaseStats _stats = new MapPhaseStats();
 
         protected MapReduceIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
@@ -83,17 +87,24 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return tx.CreateTree(MapEntriesTreeName);
         }
 
-        protected unsafe int PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext)
+        protected unsafe int PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
+            EnsureValidStats(stats);
+
             Slice docKeyAsSlice;
             using (Slice.External(indexContext.Allocator, documentKey.Buffer, documentKey.Length, out docKeyAsSlice))
             {
-               _documentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
-                
                 Queue<MapEntry> existingEntries = null;
 
+                using (_stats.GetMapEntriesTree.Start())
+                    _documentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
+
+
                 if (_documentMapEntries.NumberOfEntries > 0)
-                    existingEntries = GetMapEntries(_documentMapEntries);
+                {
+                    using (_stats.GetMapEntries.Start())
+                        existingEntries = GetMapEntries(_documentMapEntries);
+                }
 
                 int resultsCount = 0;
 
@@ -123,21 +134,27 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         }
                         else
                         {
-                            _documentMapEntries.Delete(existing.Id);
-                            storeOfExisting.Delete(existing.Id);
+                            using (_stats.RemoveResult.Start())
+                            {
+                                _documentMapEntries.Delete(existing.Id);
+                                storeOfExisting.Delete(existing.Id);
+                            }
                         }
                     }
 
-                    if (id == -1)
+                    using (_stats.PutResult.Start())
                     {
-                        id = _mapReduceWorkContext.GetNextIdentifier();
+                        if (id == -1)
+                        {
+                            id = _mapReduceWorkContext.GetNextIdentifier();
 
-                        Slice val;
-                        using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))
-                            _documentMapEntries.Add(id, val);
+                            Slice val;
+                            using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))
+                                _documentMapEntries.Add(id, val);
+                        }
+
+                        GetResultsStore(reduceKeyHash, indexContext, create: true).Add(id, mapResult.Data);
                     }
-
-                    GetResultsStore(reduceKeyHash, indexContext, true).Add(id, mapResult.Data);
                 }
 
                 DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
@@ -150,8 +167,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     var oldState = GetResultsStore(oldResult.ReduceKeyHash, indexContext, create: false);
 
-                    oldState.Delete(oldResult.Id);
-                    _documentMapEntries.Delete(oldResult.Id);
+                    using (_stats.RemoveResult.Start())
+                    {
+                        oldState.Delete(oldResult.Id);
+                        _documentMapEntries.Delete(oldResult.Id);
+                    }
                 }
 
                 return resultsCount;
@@ -194,12 +214,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             if (_mapReduceWorkContext.StoreByReduceKeyHash.TryGetValue(reduceKeyHash, out store) == false)
             {
                 Slice read;
-                using (_mapReduceWorkContext.ResultsStoreTypes.Read((long) reduceKeyHash, out read))
+                using (_mapReduceWorkContext.ResultsStoreTypes.Read((long)reduceKeyHash, out read))
                 {
                     MapResultsStorageType type;
 
                     if (read.HasValue)
-                        type = (MapResultsStorageType) (*read.CreateReader().Base);
+                        type = (MapResultsStorageType)(*read.CreateReader().Base);
                     else
                         type = MapResultsStorageType.Nested;
 
@@ -227,6 +247,28 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 _mapReduceWorkContext.Initialize(mapEntries);
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureValidStats(IndexingStatsScope stats)
+        {
+            if (_statsInstance == stats)
+                return;
+
+            _statsInstance = stats;
+
+            _stats.GetMapEntriesTree = stats.For(IndexingOperation.Reduce.GetMapEntriesTree, start: false);
+            _stats.GetMapEntries = stats.For(IndexingOperation.Reduce.GetMapEntries, start: false);
+            _stats.RemoveResult = stats.For(IndexingOperation.Reduce.RemoveMapResult, start: false);
+            _stats.PutResult = stats.For(IndexingOperation.Reduce.PutMapResult, start: false);
+        }
+
+        private class MapPhaseStats
+        {
+            public IndexingStatsScope RemoveResult;
+            public IndexingStatsScope PutResult;
+            public IndexingStatsScope GetMapEntriesTree;
+            public IndexingStatsScope GetMapEntries;
         }
     }
 }

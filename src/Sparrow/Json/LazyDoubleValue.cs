@@ -33,7 +33,7 @@ namespace Sparrow.Json
             if (self._val != null)
                 return self._val.Value;
 
-            var val = double.Parse(self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
+            var val = double.Parse((string)self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
             self._val = val;
             return val;
         }
@@ -43,7 +43,7 @@ namespace Sparrow.Json
             if (self._decimalVal != null)
                 return self._decimalVal.Value;
 
-            var val = decimal.Parse(self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
+            var val = decimal.Parse((string)self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
             self._decimalVal = val;
             return val;
         }

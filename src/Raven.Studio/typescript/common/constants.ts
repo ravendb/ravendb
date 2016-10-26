@@ -23,13 +23,6 @@ const enum checkbox {
     Checked = 2
 }
 
-const enum TenantType {
-    Database = 0,
-    FileSystem = 1,
-    CounterStorage = 2,
-    TimeSeries = 3
-}
-
 const enum filesystemSynchronizationType {
     Unknown = 0,
     ContentUpdate = 1,

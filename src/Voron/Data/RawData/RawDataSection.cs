@@ -8,18 +8,18 @@ using Voron.Impl;
 
 namespace Voron.Data.RawData
 {
-    public unsafe class RawDataSection
+    public unsafe class RawDataSection : IDisposable
     {
         protected const ushort ReservedHeaderSpace = 96;
 
-        private readonly PageLocator _pageLocator;
+        private PageLocator _pageLocator;
 
         protected readonly LowLevelTransaction _tx;
         protected readonly int _pageSize;
 
         public readonly int MaxItemSize;
-                
-        protected RawDataSmallSectionPageHeader* _sectionHeader;        
+
+        protected RawDataSmallSectionPageHeader* _sectionHeader;
 
         [StructLayout(LayoutKind.Sequential)]
         public struct RawDataEntrySizes
@@ -31,9 +31,9 @@ namespace Voron.Data.RawData
         public RawDataSection(LowLevelTransaction tx, long pageNumber)
         {
             PageNumber = pageNumber;
-            _tx = tx;         
+            _tx = tx;
             _pageSize = _tx.DataPager.PageSize;
-            _pageLocator = new PageLocator(_tx, 8);
+            _pageLocator = tx.PersistentContext.AllocatePageLocator(tx);
 
             MaxItemSize = (_pageSize - sizeof(RawDataSmallPageHeader)) / 2;
 
@@ -94,7 +94,7 @@ namespace Voron.Data.RawData
                             break;
 
                         ids.Add(currentId);
-                        
+
                         if (ids.Count == _sectionHeader->NumberOfEntries)
                             break;
                     }
@@ -172,7 +172,7 @@ namespace Voron.Data.RawData
             writePos = ((byte*)pageHeader + posInPage + sizeof(short) /*allocated*/+ sizeof(short) /*used*/);
             // note that we have to do this calc again, pageHeader might have changed
             ((RawDataEntrySizes*)((byte*)pageHeader + posInPage))->UsedSize = (short)size;
-            
+
             return true;
         }
 
@@ -290,6 +290,15 @@ namespace Voron.Data.RawData
                    $"Entries: {NumberOfEntries:#,#;;0}; " +
                    $"Overhead: {OverheadSize:#,#;;0}; " +
                    $"Density: {Density:P}";
+        }
+
+        public void Dispose()
+        {
+            if (_pageLocator != null)
+            {
+                _tx.PersistentContext.FreePageLocator(_pageLocator);
+                _pageLocator = null;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

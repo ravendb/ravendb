@@ -1,26 +1,27 @@
-<div class="messageBox" tabindex="-1">
-    <div class="modal-header">
-        <button type="button" class="close" data-bind="click: close" aria-hidden="true">
-            <i class="fa fa-times"></i>
-        </button>
-        <h3 class="modal-title">Latest Build Reminder</h3>
-    </div>
-    <div class="modal-body" style="font-size: 1.3em">
-        <!-- ko if: !latestServerBuildResult.Exception -->
-        <div>
-            A new build (<span data-bind="text: latestServerBuildResult.LatestBuild"></span>) is available for <a href="http://ravendb.net/download" target="_blank">download</a>.
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="fa fa-times"></i>
+            </button>
+            <h3 class="modal-title">Latest Build Reminder</h3>
         </div>
-        <!-- /ko -->
+        <div class="modal-body" style="font-size: 1.3em">
+            <!-- ko if: !latestServerBuildResult.Exception -->
+            <div>
+                A new build (<span data-bind="text: latestServerBuildResult.LatestBuild"></span>) is available for <a href="http://ravendb.net/download" target="_blank">download</a>.
+            </div>
+            <!-- /ko -->
+            <!-- ko if: !!latestServerBuildResult.Exception -->
+            <div class="label label-danger">An error occured!</div>
+            <div data-bind="text: latestServerBuildResult.Exception"></div>
+            <!-- /ko -->
 
-        <!-- ko if: !!latestServerBuildResult.Exception -->
-        <div class="label label-danger">An error occured!</div>
-        <div data-bind="text: latestServerBuildResult.Exception"></div>
-        <!-- /ko -->
-
-        <div class="checkbox">
-            <input type="checkbox" class="styled" id="mute"
-                    data-bind="checked: mute">
-            <label for="mute">Mute for a week</label>
+            <div class="checkbox">
+                <input type="checkbox" class="styled" id="mute"
+                       data-bind="checked: mute">
+                <label for="mute">Mute for a week</label>
+            </div>
         </div>
     </div>
 </div>

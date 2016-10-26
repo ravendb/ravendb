@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Sparrow.Utils;
 using Voron.Impl.Paging;
 
 
@@ -13,21 +13,7 @@ namespace Voron.Impl
 {
     public unsafe class PagerState
     {
-        public sealed class Comparer : IEqualityComparer<PagerState>
-        {
-            public readonly static Comparer Instance = new Comparer();
-
-            public bool Equals(PagerState x, PagerState y)
-            {
-                return x == y;
-            }
-
-            public int GetHashCode(PagerState obj)
-            {
-                return obj._pager.GetHashCode();
-            }
-        }
-
+    
         private readonly AbstractPager _pager;
 
         public bool DisposeFilesOnDispose = true;
@@ -85,12 +71,16 @@ namespace Voron.Impl
             {
                 foreach (var allocationInfo in AllocationInfos)
                     _pager.ReleaseAllocationInfo(allocationInfo.BaseAddress, allocationInfo.Size);
+                AllocationInfos = null;
+            
             }
 
             if (Files != null && DisposeFilesOnDispose)
             {
                 foreach (var file in Files)
+                {
                     file.Dispose();
+                }
 
                 Files = null;
             }

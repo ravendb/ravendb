@@ -1,0 +1,44 @@
+{
+  "version": "1.0.0-*",
+  "buildOptions": {
+    "allowUnsafe": true,
+    "emitEntryPoint": true,
+    "warningsAsErrors": true,
+    "debugType": "portable",
+    "compile": {
+      "include": [ "**/*.cs" ]
+    }
+  },
+
+  
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
+  },
+
+  "dependencies": {
+    "BenchmarkDotNet": "0.9.9",
+    "Microsoft.NETCore.App": {
+      "type": "build",
+      "version": "1.0.1"
+    },
+    "Voron": "4.0.0-*",
+    "xunit": "2.2.0-beta3-build3402"
+  },
+
+  "frameworks": {
+    "netcoreapp1.0": {
+      "imports": "dnxcore50"
+    }
+  },
+
+  "runtimes": {
+    "win7-x64": {},
+    "win8-x64": {},
+    "win10-x64": {},
+    "ubuntu.14.04-x64": {} 
+  }
+}

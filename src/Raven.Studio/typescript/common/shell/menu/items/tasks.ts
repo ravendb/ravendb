@@ -1,4 +1,4 @@
-﻿import activeResourceTracker = require("viewmodels/resources/activeResourceTracker");
+﻿import activeResourceTracker = require("common/shell/activeResourceTracker");
 import appUrl = require("common/appUrl");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");

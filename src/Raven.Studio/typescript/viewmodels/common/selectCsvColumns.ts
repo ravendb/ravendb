@@ -14,9 +14,6 @@ class selectColumns extends dialogViewModelBase {
 
     private nextTask = $.Deferred<string[]>();
     nextTaskStarted = false;
-    lineHeight: number = 51;
-    isScrollNeeded: KnockoutComputed<boolean>;
-    maxTableHeight = ko.observable<number>();
     private csvColumns = ko.observableArray<csvColumn>([]);
     private activeInput: JQuery;
     private lastActiveInput: JQuery;
@@ -32,19 +29,6 @@ class selectColumns extends dialogViewModelBase {
         this.regenerateBindingSubscriptions();
         this.monitorForNewRows();
         this.autoCompleterSupport = new autoCompleterSupport(this.autoCompleteBase, this.autoCompleteResults, true);
-        this.maxTableHeight(Math.floor($(window).height() * 0.43));
-        
-        $(window).resize(() => {
-            this.maxTableHeight(Math.floor($(window).height() * 0.43));
-            this.alignBoxVertically();
-        });
-
-        this.isScrollNeeded = ko.computed(() => {
-            var currentColumnsCount = this.csvColumns().length;
-            var currentColumnHeight = currentColumnsCount * this.lineHeight;
-
-            return currentColumnHeight > this.maxTableHeight();
-        });
     }
 
     private generateCompletionBase() {
@@ -125,18 +109,10 @@ class selectColumns extends dialogViewModelBase {
 
     insertNewRow() {
         this.csvColumns.push(new csvColumn());
-
-        if (!this.isScrollNeeded()) {
-            this.alignBoxVertically();
-        }
     }
 
     private deleteRow(row: csvColumn) {
         this.csvColumns.remove(row);
-
-        if (!this.isScrollNeeded()) {
-             this.alignBoxVertically();
-        }
     }
 
     private moveUp(row: csvColumn) {

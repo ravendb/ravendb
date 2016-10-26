@@ -1,5 +1,6 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
+import app = require("durandal/app");
 import EVENTS = require("common/constants/events");
 import router = require("plugins/router");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
@@ -68,9 +69,21 @@ class menu {
         this.deepestOpenItem($data.item);
     }
 
-    navigate($data: { item: menuItem }, $event: JQueryEventObject) {
-        let a = $event.currentTarget as HTMLAnchorElement;
-        router.navigate(a.href);
+    navigate($data: menuItem, $event: JQueryEventObject) {
+        if (this.shouldOpenAsDialog($data)) {
+            const leafItem = $data as leafMenuItem;
+            require([leafItem.moduleId],
+                (viewModel: any) => {
+                    app.showBootstrapDialog(new viewModel);
+                });
+        } else {
+            let a = $event.currentTarget as HTMLAnchorElement;
+            router.navigate(a.href);        
+        }
+    }
+
+    private shouldOpenAsDialog($data: menuItem) {
+        return $data instanceof leafMenuItem && ($data as leafMenuItem).openAsDialog;
     }
 
     back($data: any, $event: JQueryEventObject) {

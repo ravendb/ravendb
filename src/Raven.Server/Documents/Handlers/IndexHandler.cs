@@ -16,6 +16,7 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -591,31 +592,65 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/indexes/total-time", "GET")]
+        public Task TotalTime()
+        {
+            var indexes = GetIndexesToReportOn();
+            DocumentsOperationContext context;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var dja = new DynamicJsonArray();
+
+                foreach (var index in indexes)
+                {
+                    DateTime baseLine = DateTime.MinValue;
+                    using (context.OpenReadTransaction())
+                    {
+                        foreach (var collection in index.Collections)
+                        {
+                            var etag = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
+                            var document = Database.DocumentsStorage.GetDocumentsFrom(context, collection, etag,0,1).FirstOrDefault();
+                            if (document != null)
+                            {
+                                if (document.LastModified > baseLine)
+                                    baseLine = document.LastModified;
+                            }
+                        }
+                    }
+                    var createdTimestamp = index.GetStats().CreatedTimestamp;
+                    if (createdTimestamp > baseLine)
+                        baseLine = createdTimestamp;
+
+                    var lastBatch = index.GetIndexingPerformance(0)
+                                    .LastOrDefault(x => x.Completed != null)
+                                    ?.Completed ?? DateTime.UtcNow;
+
+                    
+                    dja.Add(new DynamicJsonValue
+                    {
+                        ["Name"] = index.Name,
+                        ["TotalIndexingTime"] = index.TimeSpentIndexing.Elapsed.ToString("c"),
+                        ["LagTime"] = (lastBatch - baseLine).ToString("c")
+                    });
+                }
+
+                context.Write(writer, dja);
+            }
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/indexes/performance", "GET")]
         public Task Performance()
         {
-            var names = HttpContext.Request.Query["name"];
-            var froms = HttpContext.Request.Query["from"];
             var from = 0;
+            var froms = HttpContext.Request.Query["from"];
             if (froms.Count > 1)
                 throw new ArgumentException($"Query string value 'from' must appear exactly once");
             if (froms.Count > 0 && int.TryParse(froms[0], out from) == false)
                 throw new ArgumentException($"Query string value 'from' must be a number");
 
-            IEnumerable<Index> indexes;
-
-            if (names.Count == 0)
-                indexes = Database.IndexStore
-                    .GetIndexes()
-                    .OrderBy(x => x.IndexId);
-            else
-            {
-                indexes = Database.IndexStore
-                    .GetIndexes()
-                    .Where(x => names.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
-            }
-
-            var stats = indexes
+            var stats = GetIndexesToReportOn()
                 .Select(x => new IndexPerformanceStats
                 {
                     IndexName = x.Name,
@@ -640,15 +675,15 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName((nameof(stat.IndexName)));
+                    writer.WritePropertyName(nameof(stat.IndexName));
                     writer.WriteString((stat.IndexName));
                     writer.WriteComma();
 
-                    writer.WritePropertyName((nameof(stat.IndexId)));
+                    writer.WritePropertyName(nameof(stat.IndexId));
                     writer.WriteInteger(stat.IndexId);
                     writer.WriteComma();
 
-                    writer.WritePropertyName((nameof(stat.Performance)));
+                    writer.WritePropertyName(nameof(stat.Performance));
                     writer.WriteStartArray();
                     var isFirstInternal = true;
                     foreach (var performance in stat.Performance)
@@ -669,6 +704,24 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return Task.CompletedTask;
+        }
+
+        private IEnumerable<Index> GetIndexesToReportOn()
+        {
+            IEnumerable<Index> indexes;
+            var names = HttpContext.Request.Query["name"];
+
+            if (names.Count == 0)
+                indexes = Database.IndexStore
+                    .GetIndexes()
+                    .OrderBy(x => x.IndexId);
+            else
+            {
+                indexes = Database.IndexStore
+                    .GetIndexes()
+                    .Where(x => names.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
+            }
+            return indexes;
         }
     }
 }

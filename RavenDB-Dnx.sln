@@ -69,6 +69,8 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Voron.Recovery", "Tools\Vor
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "StressTests", "test\StressTests\StressTests.xproj", "{D8AB200A-6DF6-442E-85E0-9A906E0F7521}"
 EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Micro.Benchmark", "bench\Micro.Benchmark\Micro.Benchmark.xproj", "{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -225,6 +227,12 @@ Global
 		{D8AB200A-6DF6-442E-85E0-9A906E0F7521}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D8AB200A-6DF6-442E-85E0-9A906E0F7521}.Validate|Any CPU.ActiveCfg = Release|Any CPU
 		{D8AB200A-6DF6-442E-85E0-9A906E0F7521}.Validate|Any CPU.Build.0 = Release|Any CPU
+		{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83}.Validate|Any CPU.ActiveCfg = Debug|Any CPU
+		{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83}.Validate|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -255,6 +263,7 @@ Global
 		{EF58FEBA-36A3-4829-9073-DB1F0CE5396A} = {FAAED88A-1C25-4853-9A1B-C41BCF9BED1F}
 		{5885A9D7-FC66-4486-ACFF-2F882A3DD0E5} = {FAAED88A-1C25-4853-9A1B-C41BCF9BED1F}
 		{D8AB200A-6DF6-442E-85E0-9A906E0F7521} = {764C36EA-83A0-4BA3-BA36-53A6808C13A9}
+		{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83} = {C3388268-F662-4D76-A25D-FC4F31CE6AA1}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 6944aade-3195-477c-8aed-9ebe2902fc57
