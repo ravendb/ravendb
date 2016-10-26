@@ -13,6 +13,7 @@ import saveDocumentCommand = require("commands/database/documents/saveDocumentCo
 import document = require("models/database/documents/document");
 import downloader = require("common/downloader");
 import resourcesManager = require("common/shell/resourcesManager");
+import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active resource and providing a means to add keyboard shortcuts.
@@ -39,11 +40,14 @@ class viewModelBase {
     static showSplash = ko.observable<boolean>(false);
     private isAttached = false;
 
+    pluralize = pluralizeHelpers.pluralize;
+
     protected changesContext = changesContext.default;
     
     dirtyFlag = new ko.DirtyFlag([]);
 
     currentHelpLink = ko.observable<string>().subscribeTo('globalHelpLink', true);
+
 
     //holds full studio version eg. 4.0.40000
     static clientVersion = ko.observable<string>();
@@ -324,11 +328,6 @@ class viewModelBase {
         }
     }
 
-    pluralize(count: number, singular: string, plural: string) {
-        return count === 1 ? count + " " + singular : count + " " + plural;
-    }
-
-    
 }
 
 export = viewModelBase;

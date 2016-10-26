@@ -90,7 +90,6 @@ interface resourceCreatedEventArgs {
     name: string;
 }
 
-
 interface ioMetricsResponse {
     Environments: Array<ioMetricsEnvironment>
 }
@@ -128,3 +127,9 @@ interface ioMetricsHistoryStats {
 }
 
 type ioMetricsType = "JournalWrite" | "DataFlush" | "DataSync";
+
+interface availableBundle {
+    displayName: string;
+    name: string;
+    hasAdvancedConfiguration: boolean;
+}

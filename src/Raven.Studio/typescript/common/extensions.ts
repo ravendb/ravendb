@@ -12,9 +12,18 @@ class extensions {
         extensions.installStorageExtension();
         extensions.installBindingHandlers();
         extensions.installJqueryExtensions();
+        extensions.configureValidation();
 
         // Want Intellisense for your extensions?
         // Go to extensionInterfaces.ts and add the function signature there.
+    }
+
+    private static configureValidation() {
+        ko.validation.init({
+            errorElementClass: 'has-error',
+            errorMessageClass: 'help-block',
+            decorateInputElement: true
+        });
     }
 
     private static installDateExtensions() {

@@ -18,35 +18,13 @@ function getResourcesMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: [""],
             title: "New database",
-            moduleId: "viewmodels/resources/createResource",
+            moduleId: "viewmodels/resources/createDatabase",
             nav: true,
-            css: 'icon-resources',
-            openAsDialog: true
-        }),
-        new leafMenuItem({
-            route: [""],
-            title: "New filesystem",
-            moduleId: "viewmodels/resources/createResource",
-            nav: true,
-            css: 'icon-resources',
-            openAsDialog: true
-        }),
-        new leafMenuItem({
-            route: [""],
-            title: "New counter",
-            moduleId: "viewmodels/resources/createResource",
-            nav: true,
-            css: 'icon-resources',
-            openAsDialog: true
-        }),
-        new leafMenuItem({
-            route: [""],
-            title: "New time series",
-            moduleId: "viewmodels/resources/createResource",
-            nav: true,
-            css: 'icon-resources',
+            css: 'icon-database',
             openAsDialog: true
         })
+        //TODO: new fs, new cs, new ts
+       
     ];
 
     return new intermediateMenuItem("Resources", items, "icon-resources");
