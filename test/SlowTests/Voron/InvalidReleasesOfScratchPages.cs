@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using FastTests;
 using Voron;
 using Xunit;
 
@@ -9,7 +10,7 @@ namespace SlowTests.Voron
 {
     public class InvalidReleasesOfScratchPages : StorageTest
     {
-        
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.MaxScratchBufferSize *= 2;
@@ -36,6 +37,7 @@ namespace SlowTests.Voron
                     Parallel.For(
                         0,
                         numberOfWriteThreads,
+                        RavenTestHelper.DefaultParallelOptions,
                         i =>
                         {
                             var random = new Random(i ^ 1337);
@@ -67,6 +69,7 @@ namespace SlowTests.Voron
                         Parallel.For(
                             0,
                             numberOfReadThreads,
+                            RavenTestHelper.DefaultParallelOptions,
                             i =>
                                 {
                                     var random = new Random(i);

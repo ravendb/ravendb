@@ -569,7 +569,7 @@ namespace Voron.Impl.Journal
 
             private void QueueDataFileSync()
             {
-                if (_totalWrittenButUnsyncedBytes < 32 * Constants.Size.Megabyte)
+                if (_totalWrittenButUnsyncedBytes < 512 * Constants.Size.Megabyte)
                     return;
 
                 if (DateTime.UtcNow - _lastSyncTime < TimeSpan.FromMinutes(3))

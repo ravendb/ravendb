@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -119,6 +120,7 @@ namespace Raven.Server.Documents.Indexes
         private bool _allocationCleanupNeeded;
         private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
+        private string _errorPriorityReason;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -325,6 +327,9 @@ namespace Raven.Server.Documents.Indexes
 
                 if (DocumentDatabase.Configuration.Indexing.Disabled)
                     return;
+
+                if (Priority.HasFlag(IndexingPriority.Error))
+                    SetPriority(IndexingPriority.Normal);
 
                 _cancellationTokenSource = new CancellationTokenSource();
 
@@ -553,13 +558,11 @@ namespace Raven.Server.Documents.Indexes
                             }
                             catch (VoronUnrecoverableErrorException ide)
                             {
-                                HandleIndexCorruption(ide);
-                                return;
+                                HandleIndexCorruption(scope, ide);
                             }
                             catch (IndexCorruptionException ice)
                             {
-                                HandleIndexCorruption(ice);
-                                return;
+                                HandleIndexCorruption(scope, ice);
                             }
                             catch (IndexWriteException iwe)
                             {
@@ -584,9 +587,9 @@ namespace Raven.Server.Documents.Indexes
                                 var failureInformation = _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
                                 HandleIndexFailureInformation(failureInformation);
                             }
-                            catch (InvalidDataException ide)
+                            catch (VoronUnrecoverableErrorException vuee)
                             {
-                                HandleIndexCorruption(ide);
+                                HandleIndexCorruption(scope, vuee);
                             }
                             catch (Exception e)
                             {
@@ -676,17 +679,20 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             // TODO we should create notification here?
-
+            _errorPriorityReason = $"Priority was changed due to excessive number of write errors ({writeErrors}).";
             SetPriority(IndexingPriority.Error);
         }
 
-        private void HandleIndexCorruption(Exception e)
+        private void HandleIndexCorruption(IndexingStatsScope stats, Exception e)
         {
+            stats.AddCorruptionError(e);
+
             if (_logger.IsOperationsEnabled)
                 _logger.Operations($"Data corruption occured for '{Name}' ({IndexId}).", e);
 
             // TODO we should create notification here?
 
+            _errorPriorityReason = $"Priority was changed due to data corruption with message '{e.Message}'";
             SetPriority(IndexingPriority.Error);
         }
 
@@ -695,11 +701,14 @@ namespace Raven.Server.Documents.Indexes
             if (failureInformation.IsInvalidIndex == false)
                 return;
 
+            var message = failureInformation.GetErrorMessage();
+
             if (_logger.IsOperationsEnabled)
-                _logger.Operations(failureInformation.GetErrorMessage());
+                _logger.Operations(message);
 
             // TODO we should create notification here?
 
+            _errorPriorityReason = message;
             SetPriority(IndexingPriority.Error);
         }
 
@@ -824,6 +833,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (Priority == priority)
                     return;
+
+                if (priority.HasFlag(IndexingPriority.Error) == false)
+                    _errorPriorityReason = null;
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Changing priority for '{Name} ({IndexId})' from '{Priority}' to '{priority}'.");
@@ -1063,11 +1075,7 @@ namespace Raven.Server.Documents.Indexes
             DocumentsOperationContext documentsContext, OperationCancelToken token)
             where TQueryResult : QueryResultServerSide
         {
-            if (_disposed)
-                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
-
-            if (Priority.HasFlag(IndexingPriority.Error))
-                throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored.");
+            AssertIndexState();
 
             if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
                 SetPriority(IndexingPriority.Normal);
@@ -1099,6 +1107,8 @@ namespace Raven.Server.Documents.Indexes
 
                 while (true)
                 {
+                    AssertIndexState();
+
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
                         documentsContext.OpenReadTransaction();
@@ -1118,8 +1128,7 @@ namespace Raven.Server.Documents.Indexes
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 
                             if (wait == null)
-                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value,
-                                    _indexingBatchCompleted);
+                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, _indexingBatchCompleted);
 
                             await wait.WaitForIndexingAsync().ConfigureAwait(false);
                             continue;
@@ -1195,8 +1204,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task<FacetedQueryResult> FacetedQuery(FacetQuery query, long facetSetupEtag,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
-            if (_disposed)
-                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+            AssertIndexState();
 
             if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
                 SetPriority(IndexingPriority.Normal);
@@ -1206,6 +1214,7 @@ namespace Raven.Server.Documents.Indexes
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, null);
 
             TransactionOperationContext indexContext;
+
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
                 var result = new FacetedQueryResult();
@@ -1215,6 +1224,8 @@ namespace Raven.Server.Documents.Indexes
 
                 while (true)
                 {
+                    AssertIndexState();
+
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
                         documentsContext.OpenReadTransaction();
@@ -1261,6 +1272,8 @@ namespace Raven.Server.Documents.Indexes
         public virtual TermsQueryResult GetTerms(string field, string fromValue, int pageSize,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
+            AssertIndexState();
+
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenReadTransaction())
@@ -1274,7 +1287,7 @@ namespace Raven.Server.Documents.Indexes
 
                 using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                 {
-                    result.Terms = reader.Terms(field, fromValue, pageSize);
+                    result.Terms = reader.Terms(field, fromValue, pageSize, token.Token);
                 }
 
                 return result;
@@ -1284,6 +1297,8 @@ namespace Raven.Server.Documents.Indexes
         public virtual MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
+            AssertIndexState();
+
             Transformer transformer = null;
             if (string.IsNullOrEmpty(query.Transformer) == false)
             {
@@ -1351,6 +1366,22 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 return result;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AssertIndexState()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+
+            if (Priority.HasFlag(IndexingPriority.Error))
+            {
+                var errorPriorityReason = _errorPriorityReason;
+                if (string.IsNullOrWhiteSpace(errorPriorityReason) == false)
+                    throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored. {errorPriorityReason}");
+
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored. Please check index errors avaiable at '/databases/{DocumentDatabase.Name}/indexes/errors?name={Name}'.");
             }
         }
 
@@ -1455,13 +1486,13 @@ namespace Raven.Server.Documents.Indexes
 
             unchecked
             {
-                return (long) Hashing.XXHash64.Calculate(indexEtagBytes, (ulong)length);
+                return (long)Hashing.XXHash64.Calculate(indexEtagBytes, (ulong)length);
             }
         }
 
         protected int MinimumSizeForCalculateIndexEtagLength()
         {
-            var length = sizeof(long)*3*Collections.Count + // last document etag, last tombstone etag and last mapped etags per collection
+            var length = sizeof(long) * 4 * Collections.Count + // last document etag, last tombstone etag and last mapped etags per collection
                          sizeof(int) + // definition hash
                          1; // isStale
             return length;
@@ -1476,6 +1507,7 @@ namespace Raven.Server.Documents.Indexes
                 var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
                 var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection);
                 var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+                var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                 *(long*)indexEtagBytes = lastDocEtag;
                 indexEtagBytes += sizeof(long);
@@ -1483,8 +1515,9 @@ namespace Raven.Server.Documents.Indexes
                 indexEtagBytes += sizeof(long);
                 *(long*)indexEtagBytes = lastMappedEtag;
                 indexEtagBytes += sizeof(long);
+                *(long*)indexEtagBytes = lastProcessedTombstoneEtag;
+                indexEtagBytes += sizeof(long);
             }
-
 
             *(int*)indexEtagBytes = Definition.GetHashCode();
             indexEtagBytes += sizeof(int);
