@@ -108,7 +108,10 @@ namespace Raven.Server
             {
                 _webHost = new WebHostBuilder()
                     .CaptureStartupErrors(captureStartupErrors: true)
-                    .UseKestrel(options => { })
+                    .UseKestrel(options =>
+                    {
+                        options.ThreadCount = Environment.ProcessorCount;
+                    })
                     .UseUrls(Configuration.Core.ServerUrl)
                     .UseStartup<RavenServerStartup>()
                     .ConfigureServices(services =>
