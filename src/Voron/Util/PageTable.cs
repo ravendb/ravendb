@@ -28,7 +28,7 @@ namespace Voron.Util
             UpdateMaxSeenTxId(tx);
             lock (_transactionPages)
             {
-                _transactionPages.Add(tx.Id, items);
+                _transactionPages[tx.Id] = items;
             }
 
             foreach (var item in items)
