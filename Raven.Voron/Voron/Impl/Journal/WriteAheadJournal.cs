@@ -684,17 +684,22 @@ namespace Voron.Impl.Journal
 
             private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, Transaction txw)
             {
+                // we release up to the last read transaction, because there might be new read transactions that are currently
+                // running, that started after the flush
+                var lastSyncedTransactionId = Math.Min(_lastSyncedTransactionId, _waj._env.CurrentReadTransactionId - 1);
+
                 // we have to free pages of the unused journals before the remaining ones that are still in use
                 // to prevent reading from them by any read transaction (read transactions search journals from the newest
                 // to read the most updated version)
+
                 foreach (var journalFile in unusedJournalFiles.OrderBy(x => x.Number))
                 {
-                    journalFile.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId, forceToFreeAllPages: forcedFlushOfOldPages);
+                    journalFile.FreeScratchPagesOlderThan(txw, lastSyncedTransactionId, forceToFreeAllPages: forcedFlushOfOldPages);
                 }
 
                 foreach (var jrnl in _waj._files.OrderBy(x => x.Number))
                 {
-                    jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId, forceToFreeAllPages: forcedFlushOfOldPages);
+                    jrnl.FreeScratchPagesOlderThan(txw, lastSyncedTransactionId, forceToFreeAllPages: forcedFlushOfOldPages);
                 }
             }
 
