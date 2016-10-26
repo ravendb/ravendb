@@ -32,7 +32,7 @@ namespace Voron.Impl
 
         private readonly HashSet<long> _dirtyPages;
         private readonly Dictionary<long, long> _dirtyOverflowPages;
-
+        public List<IDisposable> AlsoDispose;
         readonly Stack<long> _pagesToFreeOnCommit;
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -437,6 +437,14 @@ namespace Voron.Impl
 
             if (_disposeAllocator)
                 _allocator.Dispose();
+
+            if (AlsoDispose != null)
+            {
+                foreach (var disposable in AlsoDispose)
+                {
+                    disposable.Dispose();
+                }
+            }
         }
 
         internal void FreePageOnCommit(long pageNumber)

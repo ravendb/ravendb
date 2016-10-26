@@ -179,7 +179,8 @@ namespace Voron
 
             _transactionsCounter = (header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
 
-            using (var tx = NewLowLevelTransaction(new TransactionPersistentContext(true), TransactionFlags.ReadWrite))
+            using (var transactionPersistentContext = new TransactionPersistentContext(true))
+            using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
                 var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root);
                 root.Name = Constants.RootTreeNameSlice;
@@ -228,7 +229,8 @@ namespace Voron
             {
                 Options = Options
             };
-            using (var tx = NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite))
+            using (var transactionPersistentContext = new TransactionPersistentContext())
+            using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
                 var root = Tree.Create(tx, null);
 
@@ -331,7 +333,10 @@ namespace Voron
 
         public Transaction ReadTransaction(ByteStringContext context = null)
         {
-            return new Transaction(NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.Read, context));
+            var transactionPersistentContext = new TransactionPersistentContext();
+            var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read, context);
+            newLowLevelTransaction.AlsoDispose = new List<IDisposable> {transactionPersistentContext};
+            return new Transaction(newLowLevelTransaction);
         }
 
         public Transaction WriteTransaction(TransactionPersistentContext transactionPersistentContext, ByteStringContext context = null)
@@ -341,7 +346,10 @@ namespace Voron
 
         public Transaction WriteTransaction(ByteStringContext context = null)
         {
-            return new Transaction(NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite, context, null));
+            var transactionPersistentContext = new TransactionPersistentContext();
+            var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null);
+            newLowLevelTransaction.AlsoDispose = new List<IDisposable> { transactionPersistentContext };
+            return new Transaction(newLowLevelTransaction);
         }
 
         internal LowLevelTransaction NewLowLevelTransaction(TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)
@@ -524,7 +532,8 @@ namespace Voron
 
         public EnvironmentStats Stats()
         {
-            using (var tx = NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.Read))
+            using (var transactionPersistentContext = new TransactionPersistentContext())
+            using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read))
             {
                 var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
 
@@ -644,7 +653,8 @@ namespace Voron
 
         public TransactionsModeResult SetTransactionMode(TransactionsMode mode, TimeSpan duration)
         {
-            using (var tx = NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite))
+            using (var transactionPersistentContext = new TransactionPersistentContext())
+            using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
                 var oldMode = Options.TransactionsMode;
 

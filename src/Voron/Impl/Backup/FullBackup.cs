@@ -98,9 +98,11 @@ namespace Voron.Impl.Backup
             try
             {
                 long allocatedPages;
-                using (var txw = env.NewLowLevelTransaction(new TransactionPersistentContext(true), TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
+                using (var writePesistentContext = new TransactionPersistentContext(true))
+                using (var readPesistentContext = new TransactionPersistentContext(true))
+                using (var txw = env.NewLowLevelTransaction(writePesistentContext, TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
                 {
-                    txr = env.NewLowLevelTransaction(new TransactionPersistentContext(true), TransactionFlags.Read);// now have snapshot view
+                    txr = env.NewLowLevelTransaction(readPesistentContext, TransactionFlags.Read);// now have snapshot view
                     allocatedPages = dataPager.NumberOfAllocatedPages;
 
                     Debug.Assert(HeaderAccessor.HeaderFileNames.Length == 2);
