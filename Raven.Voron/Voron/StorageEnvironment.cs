@@ -432,13 +432,14 @@ namespace Voron
                         RecordTransactionState(tx, DebugActionType.TransactionStart);
                         tx.RecordTransactionState = RecordTransactionState;
                     }
+
+                    _activeTransactions.Add(tx);
                 }
                 finally
                 {
                     _txCommit.ExitReadLock();
                 }
-
-                _activeTransactions.Add(tx);
+                
                 tx.EnsurePagerStateReference(_dataPager.PagerState);
 
                 if (flags == TransactionFlags.ReadWrite)
@@ -461,6 +462,32 @@ namespace Voron
             DebugJournal.RecordTransactionAction(tx, state);
         }
 
+        public long CurrentReadTransactionId
+        {
+            get { return Thread.VolatileRead(ref _transactionsCounter); }
+        }
+
+        internal ExitWriteLock PreventNewReadTransactions()
+        {
+            _txCommit.EnterWriteLock();
+            return new ExitWriteLock(_txCommit);
+        }
+
+        public struct ExitWriteLock : IDisposable
+        {
+            readonly ReaderWriterLockSlim _rwls;
+
+            public ExitWriteLock(ReaderWriterLockSlim rwls)
+            {
+                _rwls = rwls;
+            }
+
+            public void Dispose()
+            {
+                _rwls.ExitWriteLock();
+            }
+        }
+
         public long NextWriteTransactionId
         {
             get { return Thread.VolatileRead(ref _transactionsCounter) + 1; }
@@ -470,18 +497,13 @@ namespace Voron
         {
             if (_activeTransactions.Contains(tx) == false)
                 return;
-            
-            _txCommit.EnterWriteLock();
-            try
+
+            using (PreventNewReadTransactions())
             {
                 if (tx.Committed && tx.FlushedToJournal)
                     _transactionsCounter = tx.Id;
 
                 State = tx.State;
-            }
-            finally
-            {
-                _txCommit.ExitWriteLock();
             }
 
             if (tx.FlushedToJournal == false)
@@ -623,7 +645,7 @@ namespace Voron
 
                             try
                             {
-                                _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token);
+                                _journal.Applicator.ApplyLogsToDataFile(_cancellationTokenSource.Token);
                             }
                             catch (TimeoutException)
                             {
@@ -657,7 +679,7 @@ namespace Voron
                 _debugJournal.RecordFlushAction(DebugActionType.FlushStart, tx);
             }
 
-            _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx, allowToFlushOverwrittenPages);
+            _journal.Applicator.ApplyLogsToDataFile(_cancellationTokenSource.Token, tx, allowToFlushOverwrittenPages);
 
             if (IsDebugRecording)
             {
