@@ -102,6 +102,12 @@ namespace Sparrow.Json
         {
             switch (token)
             {
+                case BlittableJsonToken.String:
+                    WriteString((LazyStringValue)val);
+                    break;
+                case BlittableJsonToken.Integer:
+                    WriteInteger((long)val);
+                    break;
                 case BlittableJsonToken.StartArray:
                     WriteArrayToStream((BlittableJsonReaderArray)val, originalPropertyOrder);
                     break;
@@ -112,14 +118,8 @@ namespace Sparrow.Json
                     else
                         WriteObject(blittableJsonReaderObject);
                     break;
-                case BlittableJsonToken.String:
-                    WriteString((LazyStringValue)val);
-                    break;
                 case BlittableJsonToken.CompressedString:
                     WriteString((LazyCompressedStringValue)val);
-                    break;
-                case BlittableJsonToken.Integer:
-                    WriteInteger((long)val);
                     break;
                 case BlittableJsonToken.Float:
                     WriteDouble((LazyDoubleValue)val);
@@ -255,7 +255,7 @@ namespace Sparrow.Json
             {
                 EnsureBuffer(size);
                 fixed (byte* p = _buffer)
-                    Memory.Copy(p + _pos, buffer, size);
+                    Memory.CopyInline(p + _pos, buffer, size);
                 _pos += size;
                 return;
             }
