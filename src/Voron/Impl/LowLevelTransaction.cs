@@ -438,6 +438,8 @@ namespace Voron.Impl
             if (_disposeAllocator)
                 _allocator.Dispose();
 
+            _root?.Dispose();
+
             if (AlsoDispose != null)
             {
                 foreach (var disposable in AlsoDispose)

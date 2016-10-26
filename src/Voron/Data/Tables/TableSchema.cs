@@ -117,13 +117,13 @@ namespace Voron.Data.Tables
 
                 int currentSize;
                 byte* currentPtr = input.Read(0, out currentSize);
-                indexDef.Type = (TableIndexType) (*(ulong*) currentPtr);
+                indexDef.Type = (TableIndexType)(*(ulong*)currentPtr);
 
                 currentPtr = input.Read(1, out currentSize);
-                indexDef.StartIndex = *(int*) currentPtr;
+                indexDef.StartIndex = *(int*)currentPtr;
 
                 currentPtr = input.Read(2, out currentSize);
-                indexDef.Count = *(int*) currentPtr;
+                indexDef.Count = *(int*)currentPtr;
 
                 currentPtr = input.Read(3, out currentSize);
                 indexDef.IsGlobal = Convert.ToBoolean(*currentPtr);
@@ -205,7 +205,7 @@ namespace Voron.Data.Tables
 
                 int currentSize;
                 byte* currentPtr = input.Read(0, out currentSize);
-                output.StartIndex = *(int*) currentPtr;
+                output.StartIndex = *(int*)currentPtr;
 
                 currentPtr = input.Read(1, out currentSize);
                 output.IsGlobal = Convert.ToBoolean(*currentPtr);
@@ -236,7 +236,7 @@ namespace Voron.Data.Tables
                         $"Expected index {Name} to have IsGlobal='{IsGlobal}', got IsGlobal='{actual.IsGlobal}' instead",
                         nameof(actual));
             }
-        }        
+        }
 
         public TableSchema DefineIndex(SchemaIndexDef index)
         {
@@ -308,53 +308,60 @@ namespace Voron.Data.Tables
                 return; // this was already created
 
             // Create raw data. This is where we will actually store the documents
-            var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name);
-
-            long val = rawDataActiveSection.PageNumber;
-            Slice pageNumber;
-            using (Slice.External(tx.Allocator, (byte*)&val, sizeof(long), ByteStringType.Immutable, out pageNumber))
+            using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name))
             {
-            	tableTree.Add(ActiveSectionSlice, pageNumber);
-            }
-            
-            var stats = (TableSchemaStats*)tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats));
-            stats->NumberOfEntries = 0;
 
-            if (_primaryKey != null)
-            {
-                if (_primaryKey.IsGlobal == false)
-                {
-                    var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                    var treeHeader = tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader));
-                    indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
-                }
-                else
-                {
-                    tx.CreateTree(_primaryKey.Name.ToString());
-                }
-            }
 
-            foreach (var indexDef in _indexes.Values)
-            {
-                if (indexDef.IsGlobal == false)
+                long val = rawDataActiveSection.PageNumber;
+                Slice pageNumber;
+                using (Slice.External(tx.Allocator, (byte*)&val, sizeof(long), ByteStringType.Immutable, out pageNumber))
                 {
-                    var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                    var treeHeader = tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader));
-                    indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
+                    tableTree.Add(ActiveSectionSlice, pageNumber);
                 }
-                else
+
+                var stats = (TableSchemaStats*)tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats));
+                stats->NumberOfEntries = 0;
+
+                if (_primaryKey != null)
                 {
-                    tx.CreateTree(indexDef.Name.ToString());
+                    if (_primaryKey.IsGlobal == false)
+                    {
+                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx))
+                        {
+                            var treeHeader = tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader));
+                            indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
+                        }
+                    }
+                    else
+                    {
+                        tx.CreateTree(_primaryKey.Name.ToString());
+                    }
                 }
-            }
 
-            // Serialize the schema into the table's tree
-            var serializer = SerializeSchema();
-            var schemaRepresentation = tableTree.DirectAdd(SchemasSlice, serializer.Length);
+                foreach (var indexDef in _indexes.Values)
+                {
+                    if (indexDef.IsGlobal == false)
+                    {
+                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx))
+                        {
+                            var treeHeader = tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader));
+                            indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
+                        }
+                    }
+                    else
+                    {
+                        tx.CreateTree(indexDef.Name.ToString());
+                    }
+                }
 
-            fixed (byte* source = serializer)
-            {
-                Memory.Copy(schemaRepresentation, source, serializer.Length);
+                // Serialize the schema into the table's tree
+                var serializer = SerializeSchema();
+                var schemaRepresentation = tableTree.DirectAdd(SchemasSlice, serializer.Length);
+
+                fixed (byte* source = serializer)
+                {
+                    Memory.Copy(schemaRepresentation, source, serializer.Length);
+                }
             }
         }
 
@@ -434,7 +441,7 @@ namespace Voron.Data.Tables
 
             // Read common schema indexes
             currentPtr = input.Read(currentIndex++, out currentSize);
-            int indexCount = *(int*) currentPtr;
+            int indexCount = *(int*)currentPtr;
 
             while (indexCount > 0)
             {
@@ -447,7 +454,7 @@ namespace Voron.Data.Tables
 
             // Read fixed size schema indexes
             currentPtr = input.Read(currentIndex++, out currentSize);
-            indexCount = *(int*) currentPtr;
+            indexCount = *(int*)currentPtr;
 
             while (indexCount > 0)
             {

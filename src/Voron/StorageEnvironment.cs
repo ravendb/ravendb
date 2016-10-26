@@ -182,43 +182,51 @@ namespace Voron
             using (var transactionPersistentContext = new TransactionPersistentContext(true))
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
-                var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root);
-                root.Name = Constants.RootTreeNameSlice;
-
-                tx.UpdateRootsIfNeeded(root);
-
-                var treesTx = new Transaction(tx);
-
-                var metadataTree = treesTx.ReadTree(Constants.MetadataTreeNameSlice);
-                if (metadataTree == null)
-                    throw new VoronUnrecoverableErrorException("Could not find metadata tree in database, possible mismatch / corruption?");
-
-                var dbId = metadataTree.Read("db-id");
-                if (dbId == null)
-                    throw new VoronUnrecoverableErrorException("Could not find db id in metadata tree, possible mismatch / corruption?");
-
-                var buffer = new byte[16];
-                var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
-                if (dbIdBytes != 16)
-                    throw new VoronUnrecoverableErrorException("The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
-
-                DbId = new Guid(buffer);
-
-                var schemaVersion = metadataTree.Read("schema-version");
-                if (schemaVersion == null)
-                    throw new VoronUnrecoverableErrorException("Could not find schema version in metadata tree, possible mismatch / corruption?");
-
-                var schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
-                if (Options.SchemaVersion != 0 &&
-                    schemaVersionVal != Options.SchemaVersion)
+                using (var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root))
                 {
-                    throw new VoronUnrecoverableErrorException("The schema version of this database is expected to be " +
-                                                       Options.SchemaVersion + " but is actually " + schemaVersionVal +
-                                                       ". You need to upgrade the schema.");
+                    root.Name = Constants.RootTreeNameSlice;
+
+                    tx.UpdateRootsIfNeeded(root);
+
+                    using (var treesTx = new Transaction(tx))
+                    {
+
+                        var metadataTree = treesTx.ReadTree(Constants.MetadataTreeNameSlice);
+                        if (metadataTree == null)
+                            throw new VoronUnrecoverableErrorException(
+                                "Could not find metadata tree in database, possible mismatch / corruption?");
+
+                        var dbId = metadataTree.Read("db-id");
+                        if (dbId == null)
+                            throw new VoronUnrecoverableErrorException(
+                                "Could not find db id in metadata tree, possible mismatch / corruption?");
+
+                        var buffer = new byte[16];
+                        var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
+                        if (dbIdBytes != 16)
+                            throw new VoronUnrecoverableErrorException(
+                                "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
+
+                        DbId = new Guid(buffer);
+
+                        var schemaVersion = metadataTree.Read("schema-version");
+                        if (schemaVersion == null)
+                            throw new VoronUnrecoverableErrorException(
+                                "Could not find schema version in metadata tree, possible mismatch / corruption?");
+
+                        var schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
+                        if (Options.SchemaVersion != 0 &&
+                            schemaVersionVal != Options.SchemaVersion)
+                        {
+                            throw new VoronUnrecoverableErrorException(
+                                "The schema version of this database is expected to be " +
+                                Options.SchemaVersion + " but is actually " + schemaVersionVal +
+                                ". You need to upgrade the schema.");
+                        }
+
+                        tx.Commit();
+                    }
                 }
-
-                tx.Commit();
-
             }
         }
 
@@ -231,23 +239,25 @@ namespace Voron
             };
             using (var transactionPersistentContext = new TransactionPersistentContext())
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
+            using (var root = Tree.Create(tx, null))
             {
-                var root = Tree.Create(tx, null);
 
                 // important to first create the root trees, then set them on the env
                 tx.UpdateRootsIfNeeded(root);
 
-                var treesTx = new Transaction(tx);
+                using (var treesTx = new Transaction(tx))
+                {
 
-                DbId = Guid.NewGuid();
+                    DbId = Guid.NewGuid();
 
-                var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
-                metadataTree.Add("db-id", DbId.ToByteArray());
-                metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(Options.SchemaVersion));
+                    var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
+                    metadataTree.Add("db-id", DbId.ToByteArray());
+                    metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(Options.SchemaVersion));
 
-                treesTx.PrepareForCommit();
+                    treesTx.PrepareForCommit();
 
-                tx.Commit();
+                    tx.Commit();
+                }
             }
 
         }

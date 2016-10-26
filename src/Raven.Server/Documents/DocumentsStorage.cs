@@ -313,15 +313,18 @@ namespace Raven.Server.Documents
 
         public static long ReadLastDocumentEtag(Transaction tx)
         {
-            var fst = new FixedSizeTree(tx.LowLevelTransaction,
+            using (var fst = new FixedSizeTree(tx.LowLevelTransaction,
                 tx.LowLevelTransaction.RootObjects,
                 AllDocsEtagsSlice, sizeof(long),
-                clone: false);
-
-            using (var it = fst.Iterate())
+                clone: false))
             {
-                if (it.SeekToLast())
-                    return it.CurrentKey;
+
+                using (var it = fst.Iterate())
+                {
+                    if (it.SeekToLast())
+                        return it.CurrentKey;
+                }
+
             }
 
             return 0;
@@ -329,15 +332,18 @@ namespace Raven.Server.Documents
 
         public static long ReadLastTombstoneEtag(Transaction tx)
         {
-            var fst = new FixedSizeTree(tx.LowLevelTransaction,
+            using (var fst = new FixedSizeTree(tx.LowLevelTransaction,
                 tx.LowLevelTransaction.RootObjects,
                 AllTombstonesEtagsSlice, sizeof(long),
-                clone: false);
-
-            using (var it = fst.Iterate())
+                clone: false))
             {
-                if (it.SeekToLast())
-                    return it.CurrentKey;
+
+                using (var it = fst.Iterate())
+                {
+                    if (it.SeekToLast())
+                        return it.CurrentKey;
+                }
+
             }
 
             return 0;
