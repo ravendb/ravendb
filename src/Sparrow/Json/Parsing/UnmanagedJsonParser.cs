@@ -47,6 +47,7 @@ namespace Sparrow.Json.Parsing
 
         public void SetBuffer(byte[] inputBuffer, int size)
         {
+            //TODO: Change this to use a pointer, to avoid the bounds checks
             _inputBuffer = inputBuffer;
             _bufSize = size;
             _pos = 0;

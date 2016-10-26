@@ -37,8 +37,8 @@ namespace Sparrow.Json
 
             public ManagedPinnedBuffer()
             {
-                Buffer = new byte[1024*128]; // making sure that this is on the LOH
-                _handle = GCHandle.Alloc(Buffer,GCHandleType.Pinned);
+                Buffer = new byte[1024 * 128]; // making sure that this is on the LOH
+                _handle = GCHandle.Alloc(Buffer, GCHandleType.Pinned);
                 Pointer = (byte*)_handle.AddrOfPinnedObject();
             }
 
@@ -176,11 +176,15 @@ namespace Sparrow.Json
             _arenaAllocator.Dispose();
             _arenaAllocatorForLongLivedValues?.Dispose();
 
-            foreach (var managedPinnedBuffer in _managedBuffers)
+            if (_managedBuffers != null)
             {
-                managedPinnedBuffer.Dispose();
+                foreach (var managedPinnedBuffer in _managedBuffers)
+                {
+                    managedPinnedBuffer.Dispose();
+                }
+                _managedBuffers = null;
             }
-            _managedBuffers.Clear();
+
 
             _disposed = true;
         }
@@ -329,7 +333,7 @@ namespace Sparrow.Json
         {
             _jsonParserState.Reset();
             ManagedPinnedBuffer buffer;
-            using(GetManagedBuffer(out buffer))
+            using (GetManagedBuffer(out buffer))
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
             {
                 var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState);
@@ -400,7 +404,7 @@ namespace Sparrow.Json
         public async Task<BlittableJsonReaderArray> ParseArrayToMemoryAsync(Stream stream, string debugTag,
             BlittableJsonDocumentBuilder.UsageMode mode)
         {
-             _jsonParserState.Reset();
+            _jsonParserState.Reset();
             ManagedPinnedBuffer buffer;
             using (GetManagedBuffer(out buffer))
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
@@ -590,7 +594,7 @@ namespace Sparrow.Json
             _liveReaders.Clear();
             _arenaAllocator.ResetArena();
 
-            if(_tempBuffer != null)
+            if (_tempBuffer != null)
                 GetNativeTempBuffer(_tempBuffer.SizeInBytes);
 
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
