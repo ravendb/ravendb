@@ -461,6 +461,11 @@ namespace Voron
             DebugJournal.RecordTransactionAction(tx, state);
         }
 
+        public long CurrentReadTransactionId
+        {
+            get { return Thread.VolatileRead(ref _transactionsCounter); }
+        }
+
         public long NextWriteTransactionId
         {
             get { return Thread.VolatileRead(ref _transactionsCounter) + 1; }

@@ -160,7 +160,7 @@ namespace Voron.Tests.Bugs
 
                 env.FlushLogToDataFile(); // non read nor write transactions, so it should flush and release everything from scratch
 
-                Assert.Equal(0, env.ScratchBufferPool.GetNumberOfAllocations(0));
+                Assert.Equal(2, env.ScratchBufferPool.GetNumberOfAllocations(0));
             }
         }
     }
