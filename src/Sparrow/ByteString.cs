@@ -487,6 +487,7 @@ namespace Sparrow
 
         public ByteStringContext(int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base (allocationBlockSize)
         { }
+
     }
 
     public unsafe class ByteStringContext<TAllocator> : IDisposable where TAllocator : struct, IByteStringAllocator
@@ -561,6 +562,36 @@ namespace Sparrow
             this._externalStringPool = new Stack<IntPtr>(64);
 
             PrepareForValidation();
+        }
+
+        public void Reset()
+        {
+            if (_wholeSegments.Count == 2)
+                return; // nothing to do
+
+            Array.Clear(_internalReusableStringPoolCount, 0, _internalReusableStringPoolCount.Length);
+            foreach (var stack in _internalReusableStringPool)
+            {
+                stack?.Clear();
+            }
+            _internalReadyToUseMemorySegments.Clear();// memory here will be released from _wholeSegments
+
+            _externalStringPool.Clear();
+            _externalFastPoolCount = 0;
+            _externalCurrentLeft = 0;
+
+            for (int i = 0; i < _wholeSegments.Count; i++)
+            {
+                if (_wholeSegments[i] == _internalCurrent || _wholeSegments[i] == _externalCurrent)
+                    continue;
+
+                ReleaseSegment(_wholeSegments[i]);
+                _wholeSegments.RemoveAt(i);
+                i--;
+            }
+            _internalCurrent.Current = _internalCurrent.Start;
+            _externalCurrent.Current = _externalCurrent.Start;
+
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -718,8 +749,7 @@ namespace Sparrow
             }
         }
 
-        [ThreadStatic]
-        private static char[] _toLowerTempBuffer;
+        [ThreadStatic] public static char[] ToLowerTempBuffer;
 
         /// <summary>
         /// Mutate the string to lower case
@@ -733,16 +763,16 @@ namespace Sparrow
                 throw new InvalidOperationException("Cannot mutate an immutable ByteString");
 
             var charCount = Encoding.UTF8.GetCharCount(str._pointer->Ptr, str.Length);
-            if (_toLowerTempBuffer == null || _toLowerTempBuffer.Length < charCount)
+            if (ToLowerTempBuffer == null || ToLowerTempBuffer.Length < charCount)
             {
-                _toLowerTempBuffer = new char[Bits.NextPowerOf2(charCount)];
+                ToLowerTempBuffer = new char[Bits.NextPowerOf2(charCount)];
             }
-            fixed (char* pChars = _toLowerTempBuffer)
+            fixed (char* pChars = ToLowerTempBuffer)
             {
-                charCount = Encoding.UTF8.GetChars(str._pointer->Ptr, str.Length, pChars, _toLowerTempBuffer.Length);
+                charCount = Encoding.UTF8.GetChars(str._pointer->Ptr, str.Length, pChars, ToLowerTempBuffer.Length);
                 for (int i = 0; i < charCount; i++)
                 {
-                    _toLowerTempBuffer[i] = char.ToLowerInvariant(_toLowerTempBuffer[i]);
+                    ToLowerTempBuffer[i] = char.ToLowerInvariant(ToLowerTempBuffer[i]);
                 }
                 var byteCount = Encoding.UTF8.GetByteCount(pChars, charCount);
                 if (// we can't mutate external memory!
@@ -805,8 +835,8 @@ namespace Sparrow
 
             Debug.Assert(value.IsExternal, "Cannot release as external an internal pointer.");
 
-			value._pointer->Flags = ByteStringType.Disposed;
-			
+            value._pointer->Flags = ByteStringType.Disposed;
+            
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
 
@@ -1278,12 +1308,6 @@ namespace Sparrow
 
 #endif
 
-        public bool ShouldDisposeOnReset => 
-            // if we have more than internal/external segments, that meant that we grew
-            // so we are better releasing the memory back at the context end and recovering 
-            // anew with memory that wouldn't be fragmented
-            _wholeSegments.Count > 2;
-
         private bool _disposed; 
 
         ~ByteStringContext()
@@ -1311,22 +1335,27 @@ namespace Sparrow
 
             foreach (var segment in _wholeSegments)
             {
-                if (segment.CanDispose)
-                {
-                    // Check if we can release this memory segment back to the pool.
-                    if (segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes)
-                    {
-                        segment.Memory.Dispose();
-                    }
-                    else
-                    {
-                        Allocator.Free(segment.Memory);
-                    }
-                }
+                ReleaseSegment(segment);
             }
 
             _wholeSegments.Clear();
             _internalReadyToUseMemorySegments.Clear();
+        }
+
+        private static void ReleaseSegment(SegmentInformation segment)
+        {
+            if (segment.CanDispose)
+            {
+                // Check if we can release this memory segment back to the pool.
+                if (segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes)
+                {
+                    segment.Memory.Dispose();
+                }
+                else
+                {
+                    Allocator.Free(segment.Memory);
+                }
+            }
         }
     }
 
