@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using Raven.Tests.Raft.Client;
+using Raven.Tests.Smuggler;
 #if !DNXCORE50
 using Raven.Tests.Sorting;
 using Raven.SlowTests.RavenThreadPool;
@@ -19,16 +20,16 @@ namespace Raven.Tryouts
         {
 #if !DNXCORE50
             //TODO: finish checking this test, it seems to have race condition or sometihing
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
                 //using (var x = new RavenDB_5390())
                 //{
                 //    x.Frequent_updates_of_document_should_not_cause_deadlock_in_prefetcher();
                 //}
-                using (var x = new RavenDB_2516())
+                using (var x = new SmugglerExecutionTests())
                 {
-                    x.ReplicationTopologyDiscovererSimpleTestWithOAuth();
+                    x.CanExportImportIncrementalSmugglerMaxSplitExportFileSize().Wait();
                 }                
             }
 

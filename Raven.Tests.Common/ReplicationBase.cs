@@ -89,6 +89,7 @@ namespace Raven.Tests.Common
                 configureStore: configureStore,
                 fiddler: useFiddler,
                 databaseName: databaseName,
+                activeBundles: "Replication",
                 runInMemory: runInMemory);
 
             return documentStore;
@@ -396,11 +397,11 @@ namespace Raven.Tests.Common
                 new RavenJObject());
         }
 
-        protected TDocument WaitForDocument<TDocument>(IDocumentStore store2, string expectedId) where TDocument : class
+        protected TDocument WaitForDocument<TDocument>(IDocumentStore store2, string expectedId,int timeoutSeconds = 10) where TDocument : class
         {
             TDocument document = null;
 
-            for (int i = 0; i < RetriesCount; i++)
+            for (int i = 0; i < timeoutSeconds * 10; i++)
             {
                 using (var session = store2.OpenSession())
                 {
@@ -418,13 +419,14 @@ namespace Raven.Tests.Common
             {
                 using (var session = store2.OpenSession())
                 {
-                    Thread.Sleep(TimeSpan.FromSeconds(10));
+                    Thread.Sleep(TimeSpan.FromSeconds(timeoutSeconds));
 
                     document = session.Load<TDocument>(expectedId);
                     if (document == null)
                         throw;
 
-                    throw new Exception("WaitForDocument failed, but after waiting 10 seconds more, WaitForDocument succeed. Do we have a race condition here?", ex);
+                    throw new Exception(@"WaitForDocument failed, but after waiting 10 seconds more, 
+                        WaitForDocument succeed. Do we have a race condition here?", ex);
                 }
             }
             return document;
