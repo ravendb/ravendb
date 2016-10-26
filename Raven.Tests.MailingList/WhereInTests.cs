@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
@@ -8,13 +9,16 @@ using Raven.Database.Indexing;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.MailingList
 {
     public class WhereInTests : RavenTest
     {
-        [Fact]
-        public void WhereIn_using_index_notAnalyzed()
+        [Theory]
+        [InlineData(QueryOperator.And)]
+        [InlineData(QueryOperator.Or)]
+        public void WhereIn_using_index_notAnalyzed(QueryOperator op)
         {
             using (IDocumentStore documentStore = NewDocumentStore())
             {
@@ -30,7 +34,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var query = session.Advanced.DocumentQuery<Person, PersonsNotAnalyzed>().WhereIn(p => p.Name, names);
+                    var query = session.Advanced.DocumentQuery<Person, PersonsNotAnalyzed>().UsingDefaultOperator(op).WhereIn(p => p.Name, names);
                     Assert.Equal(2, query.ToList().Count());
                 }
             }
@@ -44,8 +48,10 @@ namespace Raven.Tests.MailingList
             Assert.True(perFieldAnalyzerComparer.Equals("Name","@in<Name>"));
         }
 
-        [Fact]
-        public void WhereIn_using_index_analyzed()
+        [Theory]
+        [InlineData(QueryOperator.And)]
+        [InlineData(QueryOperator.Or)]
+        public void WhereIn_using_index_analyzed(QueryOperator op)
         {
             using (IDocumentStore documentStore = NewDocumentStore())
             {
@@ -61,14 +67,16 @@ namespace Raven.Tests.MailingList
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var query = session.Advanced.DocumentQuery<Person, PersonsAnalyzed>().WhereIn(p => p.Name, names);
+                    var query = session.Advanced.DocumentQuery<Person, PersonsAnalyzed>().UsingDefaultOperator(op).WhereIn(p => p.Name, names);
                     Assert.Equal(2, query.ToList().Count());
                 }
             }
         }
 
-        [Fact]
-        public void WhereIn_not_using_index()
+        [Theory]
+        [InlineData(QueryOperator.And)]
+        [InlineData(QueryOperator.Or)]
+        public void WhereIn_not_using_index(QueryOperator op)
         {
             using (IDocumentStore documentStore = NewDocumentStore())
             {
@@ -83,7 +91,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var query = session.Advanced.DocumentQuery<Person>().WhereIn(p => p.Name, names);
+                    var query = session.Advanced.DocumentQuery<Person>().UsingDefaultOperator(op).WhereIn(p => p.Name, names);
                     Assert.Equal(2, query.ToList().Count());
                 }
             }
