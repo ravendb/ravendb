@@ -11,9 +11,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                using (var x = new FastTests.Voron.Bugs.Isolation())
+                using (var x = new FastTests.Voron.Compaction.StorageCompactionTests())
                 {
-                    x.MultiTreeIteratorShouldBeIsolated2();
+                    x.ShouldDeleteCurrentJournalEvenThoughItHasAvailableSpace();
                 }
                 Console.WriteLine(sp.Elapsed);
             }

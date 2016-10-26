@@ -403,13 +403,13 @@ namespace Voron
                 {
                     long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
                     tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling, context);
+                    ActiveTransactions.Add(tx);
                 }
                 finally
                 {
                     _txCommit.ExitReadLock();
                 }
 
-                ActiveTransactions.Add(tx);
                 var state = _dataPager.PagerState;
                 tx.EnsurePagerStateReference(state);
 
@@ -443,25 +443,41 @@ namespace Voron
                 Thread.Sleep(1);
         }
 
-
+        public long CurrentReadTransactionId => Volatile.Read(ref _transactionsCounter);
         public long NextWriteTransactionId => Volatile.Read(ref _transactionsCounter) + 1;
+
+        internal ExitWriteLock PreventNewReadTransactions()
+        {
+            _txCommit.EnterWriteLock();
+            return new ExitWriteLock(_txCommit);
+        }
+
+        public struct ExitWriteLock : IDisposable
+        {
+            readonly ReaderWriterLockSlim _rwls;
+
+            public ExitWriteLock(ReaderWriterLockSlim rwls)
+            {
+                _rwls = rwls;
+            }
+
+            public void Dispose()
+            {
+                _rwls.ExitWriteLock();
+            }
+        }
 
         internal void TransactionAfterCommit(LowLevelTransaction tx)
         {
             if (ActiveTransactions.Contains(tx) == false)
                 return;
 
-            _txCommit.EnterWriteLock();
-            try
+            using (PreventNewReadTransactions())
             {
                 if (tx.Committed && tx.FlushedToJournal)
                     _transactionsCounter = tx.Id;
 
                 State = tx.State;
-            }
-            finally
-            {
-                _txCommit.ExitWriteLock();
             }
 
             if (tx.FlushedToJournal == false)
@@ -564,7 +580,7 @@ namespace Voron
         {
             try
             {
-                _journal.Applicator.ApplyLogsToDataFile(ActiveTransactions.OldestTransaction, _cancellationTokenSource.Token,
+                _journal.Applicator.ApplyLogsToDataFile(_cancellationTokenSource.Token,
                     // we intentionally don't wait, if the flush lock is held, something else is flushing, so we don't need
                     // to hold the thread
                     TimeSpan.Zero);
@@ -595,7 +611,7 @@ namespace Voron
 
         public void ForceLogFlushToDataFile(LowLevelTransaction tx)
         {
-            _journal.Applicator.ApplyLogsToDataFile(ActiveTransactions.OldestTransaction, _cancellationTokenSource.Token,
+            _journal.Applicator.ApplyLogsToDataFile(_cancellationTokenSource.Token,
                 Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30),
                 tx);
         }

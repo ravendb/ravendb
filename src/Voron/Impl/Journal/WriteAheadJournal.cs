@@ -21,6 +21,7 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Util;
 using Voron.Global;
+using Voron.Platform.Win32;
 
 namespace Voron.Impl.Journal
 {
@@ -396,7 +397,6 @@ namespace Voron.Impl.Journal
 
             private long _lastFlushedTransactionId;
             private long _lastFlushedJournalId;
-            private long _oldestActiveTransactionWhenFlushed;
             private JournalFile _lastFlushedJournal;
             private bool _ignoreLockAlreadyTaken;
             private long _totalWrittenButUnsyncedBytes;
@@ -408,7 +408,7 @@ namespace Voron.Impl.Journal
             }
 
 
-            public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, TimeSpan timeToWait, LowLevelTransaction transaction = null)
+            public void ApplyLogsToDataFile(CancellationToken token, TimeSpan timeToWait, LowLevelTransaction transaction = null)
             {
                 if (token.IsCancellationRequested)
                     return;
@@ -428,7 +428,8 @@ namespace Voron.Impl.Journal
                             // so there is no point in throwing
                             return;
 
-                        throw new TimeoutException($"Could not acquire the write lock in {timeToWait.TotalSeconds} seconds");
+                        throw new TimeoutException(
+                            $"Could not acquire the write lock in {timeToWait.TotalSeconds} seconds");
                     }
 
                     if (_waj._env.Disposed)
@@ -450,6 +451,8 @@ namespace Voron.Impl.Journal
 
                     long lastFlushedTransactionId = -1;
 
+                    long oldestActiveTransaction = _waj._env.ActiveTransactions.OldestTransaction;
+
                     foreach (var journalFile in jrnls)
                     {
                         if (journalFile.Number < _lastFlushedJournalId)
@@ -460,7 +463,9 @@ namespace Voron.Impl.Journal
                         if (oldestActiveTransaction != 0)
                             maxTransactionId = Math.Min(oldestActiveTransaction - 1, maxTransactionId);
 
-                        foreach (var pagePosition in journalFile.PageTranslationTable.Iterate(_lastFlushedTransactionId, maxTransactionId))
+                        foreach (
+                            var pagePosition in
+                            journalFile.PageTranslationTable.Iterate(_lastFlushedTransactionId, maxTransactionId))
                         {
                             if (pagePosition.Value.IsFreedPageMarker)
                             {
@@ -469,15 +474,18 @@ namespace Voron.Impl.Journal
                                 continue;
                             }
 
-                            if (journalFile.Number == _lastFlushedJournalId && pagePosition.Value.TransactionId <= _lastFlushedTransactionId)
+                            if (journalFile.Number == _lastFlushedJournalId &&
+                                pagePosition.Value.TransactionId <= _lastFlushedTransactionId)
                                 continue;
 
-                            currentJournalMaxTransactionId = Math.Max(currentJournalMaxTransactionId, pagePosition.Value.TransactionId);
+                            currentJournalMaxTransactionId = Math.Max(currentJournalMaxTransactionId,
+                                pagePosition.Value.TransactionId);
 
                             if (currentJournalMaxTransactionId < previousJournalMaxTransactionId)
                                 throw new InvalidOperationException(
                                     "Journal applicator read beyond the oldest active transaction in the next journal file. " +
-                                    "This should never happen. Current journal max tx id: " + currentJournalMaxTransactionId +
+                                    "This should never happen. Current journal max tx id: " +
+                                    currentJournalMaxTransactionId +
                                     ", previous journal max ix id: " + previousJournalMaxTransactionId +
                                     ", oldest active transaction: " + oldestActiveTransaction);
 
@@ -511,7 +519,8 @@ namespace Voron.Impl.Journal
 
                     var unusedJournals = GetUnusedJournalFiles(jrnls, lastProcessedJournal, lastFlushedTransactionId);
 
-                    foreach (var unused in unusedJournals.Where(unused => !_journalsToDelete.ContainsKey(unused.Number)))
+                    foreach (var unused in unusedJournals.Where(unused => !_journalsToDelete.ContainsKey(unused.Number))
+                    )
                     {
                         _journalsToDelete.Add(unused.Number, unused);
                     }
@@ -524,11 +533,14 @@ namespace Voron.Impl.Journal
                     {
                         _waj._env.IncreaseTheChanceForGettingTheTransactionLock();
                         using (var transactionPersistentContext = new TransactionPersistentContext(true))
-                        using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite).JournalApplicatorTransaction())
+                        using (
+                            var txw = alreadyInWriteTx
+                                ? null
+                                : _waj._env.NewLowLevelTransaction(transactionPersistentContext,
+                                    TransactionFlags.ReadWrite).JournalApplicatorTransaction())
                         {
                             _lastFlushedJournalId = lastProcessedJournal;
                             _lastFlushedTransactionId = lastFlushedTransactionId;
-                            _oldestActiveTransactionWhenFlushed = oldestActiveTransaction;
                             _lastFlushedJournal = _waj._files.First(x => x.Number == lastProcessedJournal);
 
                             if (unusedJournals.Count > 0)
@@ -679,7 +691,7 @@ namespace Voron.Impl.Journal
                         currentTotalWrittenBytes = _totalWrittenButUnsyncedBytes;
                         lastSyncedJournal = _lastFlushedJournalId;
                         lastSyncedTransactionId = _lastFlushedTransactionId;
-                        SetLastReadTxHeader(_lastFlushedJournal, _oldestActiveTransactionWhenFlushed, lastReadTxHeader);
+                        SetLastReadTxHeader(_lastFlushedJournal, _lastFlushedTransactionId, lastReadTxHeader);
 
                         _lastFlushedJournal = null;
                         _lastSyncTime = DateTime.UtcNow;
@@ -808,17 +820,23 @@ namespace Voron.Impl.Journal
 
             private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, LowLevelTransaction txw)
             {
+                // we release up to the last read transaction, because there might be new read transactions that are currently
+                // running, that started after the flush
+                var lastSyncedTransactionId = Math.Min(_lastFlushedTransactionId, _waj._env.CurrentReadTransactionId - 1);
+
                 // we have to free pages of the unused journals before the remaining ones that are still in use
                 // to prevent reading from them by any read transaction (read transactions search journals from the newest
                 // to read the most updated version)
+
+
                 foreach (var journalFile in unusedJournalFiles.OrderBy(x => x.Number))
                 {
-                    journalFile.FreeScratchPagesOlderThan(txw, _lastFlushedTransactionId);
+                    journalFile.FreeScratchPagesOlderThan(txw, lastSyncedTransactionId);
                 }
 
                 foreach (var jrnl in _waj._files.OrderBy(x => x.Number))
                 {
-                    jrnl.FreeScratchPagesOlderThan(txw, _lastFlushedTransactionId);
+                    jrnl.FreeScratchPagesOlderThan(txw, lastSyncedTransactionId);
                 }
             }
 
@@ -860,7 +878,7 @@ namespace Voron.Impl.Journal
                 });
             }
 
-            private void SetLastReadTxHeader(JournalFile file, long oldestActiveTransaction, TransactionHeader* lastReadTxHeader)
+            private void SetLastReadTxHeader(JournalFile file, long maxTransactionId, TransactionHeader* lastReadTxHeader)
             {
                 var readTxHeader = stackalloc TransactionHeader[1];
 
@@ -871,7 +889,7 @@ namespace Voron.Impl.Journal
                         break;
                     if (readTxHeader->HeaderMarker != Constants.TransactionHeaderMarker)
                         break;
-                    if (readTxHeader->TransactionId + 1 == oldestActiveTransaction)
+                    if (readTxHeader->TransactionId > maxTransactionId)
                         break;
 
                     *lastReadTxHeader = *readTxHeader;
