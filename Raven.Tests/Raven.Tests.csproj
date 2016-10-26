@@ -843,6 +843,7 @@
     <Compile Include="Storage\Voron\QueueStorageActionsTests.cs" />
     <Compile Include="Storage\TasksStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
+    <Compile Include="Subscriptions\SubscriptionInitialEtagGap.cs" />
     <Compile Include="Suggestions\LegacySuggestionsHandling.cs" />
     <Compile Include="Subscriptions\SubscriptionsBasic.cs" />
     <Compile Include="Subscriptions\SubscriptionsPaths.cs" />

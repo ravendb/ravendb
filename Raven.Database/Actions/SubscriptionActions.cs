@@ -48,6 +48,16 @@ namespace Raven.Database.Actions
                 {
                     id = accessor.General.GetNextIdentityValue(Constants.RavenSubscriptionsPrefix);
 
+                    try
+                    {
+                        if (criteria.StartEtag == null || criteria.StartEtag == Etag.Empty)
+                            TryFigureOutFirstEtagForSubscription(criteria);
+                    }
+                    catch(Exception e)
+                    {
+                        Log.InfoException("Could not figure out start etag for subscription automatically", e);
+                    }
+
                     var config = new SubscriptionConfig
                     {
                         SubscriptionId = id,
@@ -60,6 +70,55 @@ namespace Raven.Database.Actions
             }
 
             return id;
+        }
+
+        private void TryFigureOutFirstEtagForSubscription(SubscriptionCriteria criteria)
+        {
+            if (criteria.KeyStartsWith != null || 
+                criteria.BelongsToAnyCollection == null || 
+                criteria.BelongsToAnyCollection.Length == 0)
+                return;
+
+
+            if (!Database.IndexStorage.HasIndex(Constants.DocumentsByEntityNameIndex))
+                return;
+
+            var indexDefinition = Database.IndexStorage.GetIndexInstance(Constants.DocumentsByEntityNameIndex);
+
+            var lastEtag = indexDefinition.GetLastEtagFromStats();
+
+            var results = Database.Queries.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery
+            {
+                SortedFields = new[] {new SortedField("LastModifiedTicks")},
+                Query = string.Join(" OR ", criteria.BelongsToAnyCollection.Select(collection => " Tag:[[" + collection + "]] ")),
+                PageSize = 128
+            }, CancellationToken.None);
+
+            var indexTimestamp = results.IndexTimestamp;
+
+            if (results.Results.Count == 0)
+            {
+                criteria.StartEtag = lastEtag;
+                return;
+            }
+
+            foreach (var document in results.Results)
+            {
+                var metadata = document.Value<RavenJObject>(Constants.Metadata);
+                var lastModified = metadata.Value<DateTime>(Constants.RavenLastModified);
+
+                if (lastModified > indexTimestamp)
+                    continue;
+
+                var earliestEtag = new Etag(metadata.Value<string>("@etag"));
+                
+                if (earliestEtag.Changes > 0)
+                {
+                    criteria.StartEtag = earliestEtag.DecrementBy(1);
+                }
+                return;
+            }
+            
         }
 
         private IDisposable LockSubscription(long  id)
