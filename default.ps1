@@ -539,13 +539,12 @@ task DoRelease -depends DoReleasePart1, `
     CopyInstaller, `
     SignInstaller,
     CreateNugetPackages,
-    CreateSymbolSources,
-    BumpVersion {
+    CreateSymbolSources {
 
     Write-Host "Done building RavenDB"
 }
 
-task UploadStable -depends Stable, DoRelease, Upload, UploadNuget
+task UploadStable -depends Stable, DoRelease, Upload, UploadNuget, BumpVersion
 
 task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 
@@ -974,7 +973,10 @@ function UpdateFileInGitRepo($repoOwner, $repoName, $filePath, $fileContent, $co
     }
 
     write-host "Calling $updateFileUri`?ref=$branch"
-    $contents = Invoke-RestMethod "$updateFileUri`?ref=$branch"
+    $contents = Invoke-RestMethod -TimeoutSec 120 "$updateFileUri`?ref=$branch"
+    
+    write-host "GET $updateFileUri`?ref=$branch"
+    
     $bodyJson = ConvertTo-Json @{
         path = $filePath
         branch = $branch
@@ -987,8 +989,10 @@ function UpdateFileInGitRepo($repoOwner, $repoName, $filePath, $fileContent, $co
     $headers = @{
         Authorization = "Basic $encodedCreds"
     }
+    
+    write-host "PUT $updateFileUri"
 
-    Invoke-RestMethod -Headers $headers -ContentType "application/json" -Method PUT -cred $cred -Body $bodyJson $updateFileUri
+    Invoke-RestMethod -TimeoutSec 120 -Headers $headers -ContentType "application/json" -Method PUT -cred $cred -Body $bodyJson $updateFileUri
 }
 
 function GetAssemblyInfoWithBumpedVersion {
