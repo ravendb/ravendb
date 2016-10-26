@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,7 +29,36 @@ namespace Sparrow.Json
 
         private bool _disposed;
 
-        private Stack<byte[]> _managedBuffers;
+        public unsafe class ManagedPinnedBuffer : IDisposable
+        {
+            public byte[] Buffer;
+            public byte* Pointer;
+            private GCHandle _handle;
+
+            public ManagedPinnedBuffer()
+            {
+                Buffer = new byte[1024*128]; // making sure that this is on the LOH
+                _handle = GCHandle.Alloc(Buffer,GCHandleType.Pinned);
+                Pointer = (byte*)_handle.AddrOfPinnedObject();
+            }
+
+            public void Dispose()
+            {
+                if (Pointer == null)
+                    return;
+                _handle.Free();
+                Pointer = null;
+                Buffer = null;
+                GC.SuppressFinalize(this);
+            }
+
+            ~ManagedPinnedBuffer()
+            {
+                Dispose();
+            }
+        }
+
+        private Stack<ManagedPinnedBuffer> _managedBuffers;
 
         private readonly LinkedList<BlittableJsonReaderObject> _liveReaders =
             new LinkedList<BlittableJsonReaderObject>();
@@ -63,22 +93,23 @@ namespace Sparrow.Json
             _writer = new BlittableJsonDocumentBuilder(this, _jsonParserState, _objectJsonParser);
         }
 
-        public ReturnBuffer GetManagedBuffer(out byte[] buffer)
+        public ReturnBuffer GetManagedBuffer(out ManagedPinnedBuffer buffer)
         {
             if (_managedBuffers == null)
-                _managedBuffers = new Stack<byte[]>();
-            buffer = _managedBuffers.Count == 0 ? 
-                new byte[1024 * 32] :  // 32 KB is the size that is used by Kestrel's buffers
-                _managedBuffers.Pop();
+                _managedBuffers = new Stack<ManagedPinnedBuffer>();
+            if (_managedBuffers.Count == 0)
+                buffer = new ManagedPinnedBuffer();
+            else
+                buffer = _managedBuffers.Pop();
             return new ReturnBuffer(buffer, this);
         }
 
         public struct ReturnBuffer : IDisposable
         {
-            private byte[] _buffer;
+            private ManagedPinnedBuffer _buffer;
             private readonly JsonOperationContext _parent;
 
-            public ReturnBuffer(byte[] buffer, JsonOperationContext parent)
+            public ReturnBuffer(ManagedPinnedBuffer buffer, JsonOperationContext parent)
             {
                 _buffer = buffer;
                 _parent = parent;
@@ -144,6 +175,12 @@ namespace Sparrow.Json
             _writer.Dispose();
             _arenaAllocator.Dispose();
             _arenaAllocatorForLongLivedValues?.Dispose();
+
+            foreach (var managedPinnedBuffer in _managedBuffers)
+            {
+                managedPinnedBuffer.Dispose();
+            }
+            _managedBuffers.Clear();
 
             _disposed = true;
         }
@@ -248,11 +285,11 @@ namespace Sparrow.Json
             CancellationToken cancellationToken)
         {
             _jsonParserState.Reset();
-            byte[] bytes;
+            ManagedPinnedBuffer bytes;
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
             using (GetManagedBuffer(out bytes))
             {
-                var buffer = new ArraySegment<byte>(bytes);
+                var buffer = new ArraySegment<byte>(bytes.Buffer);
 
                 var writer = new BlittableJsonDocumentBuilder(this,
                     BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, _jsonParserState);
@@ -291,7 +328,7 @@ namespace Sparrow.Json
         private BlittableJsonReaderObject ParseToMemory(Stream stream, string debugTag, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             _jsonParserState.Reset();
-            byte[] buffer;
+            ManagedPinnedBuffer buffer;
             using(GetManagedBuffer(out buffer))
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
             {
@@ -302,10 +339,10 @@ namespace Sparrow.Json
                     builder.ReadObject();
                     while (true)
                     {
-                        var read = stream.Read(buffer, 0, buffer.Length);
+                        var read = stream.Read(buffer.Buffer, 0, buffer.Buffer.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        parser.SetBuffer(buffer, read);
+                        parser.SetBuffer(buffer.Buffer, read);
                         if (builder.Read())
                             break;
                     }
@@ -326,7 +363,7 @@ namespace Sparrow.Json
         private async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             _jsonParserState.Reset();
-            byte[] buffer;
+            ManagedPinnedBuffer buffer;
             using (GetManagedBuffer(out buffer))
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, documentId))
             {
@@ -337,10 +374,10 @@ namespace Sparrow.Json
                     writer.ReadObject();
                     while (true)
                     {
-                        var read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                        var read = await stream.ReadAsync(buffer.Buffer, 0, buffer.Buffer.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        parser.SetBuffer(buffer, read);
+                        parser.SetBuffer(buffer.Buffer, read);
                         if (writer.Read())
                             break;
                     }
@@ -364,7 +401,7 @@ namespace Sparrow.Json
             BlittableJsonDocumentBuilder.UsageMode mode)
         {
              _jsonParserState.Reset();
-            byte[] buffer;
+            ManagedPinnedBuffer buffer;
             using (GetManagedBuffer(out buffer))
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
             {
@@ -375,10 +412,10 @@ namespace Sparrow.Json
                     writer.ReadArray();
                     while (true)
                     {
-                        var read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                        var read = await stream.ReadAsync(buffer.Buffer, 0, buffer.Buffer.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        parser.SetBuffer(buffer, read);
+                        parser.SetBuffer(buffer.Buffer, read);
                         if (writer.Read())
                             break;
                     }
@@ -404,7 +441,7 @@ namespace Sparrow.Json
         {
             private readonly JsonOperationContext _context;
             private readonly Stream _stream;
-            private readonly byte[] _buffer;
+            private readonly ManagedPinnedBuffer _buffer;
             private readonly UnmanagedJsonParser _parser;
             private readonly BlittableJsonDocumentBuilder _writer;
             private ReturnBuffer _returnManagedBuffer;
@@ -468,14 +505,14 @@ namespace Sparrow.Json
                 {
                     if (_parser.BufferOffset == _parser.BufferSize)
                     {
-                        var read = await _stream.ReadAsync(_buffer, 0, _buffer.Length);
+                        var read = await _stream.ReadAsync(_buffer.Buffer, 0, _buffer.Buffer.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        _parser.SetBuffer(_buffer, read);
+                        _parser.SetBuffer(_buffer.Buffer, read);
                     }
                     else
                     {
-                        _parser.SetBuffer(new ArraySegment<byte>(_buffer, _parser.BufferOffset, _parser.BufferSize));
+                        _parser.SetBuffer(new ArraySegment<byte>(_buffer.Buffer, _parser.BufferOffset, _parser.BufferSize));
                     }
                     if (_writer.Read())
                         break;
@@ -493,14 +530,14 @@ namespace Sparrow.Json
                 {
                     if (_parser.BufferOffset == _parser.BufferSize)
                     {
-                        var read = _stream.Read(_buffer, 0, _buffer.Length);
+                        var read = _stream.Read(_buffer.Buffer, 0, _buffer.Buffer.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        _parser.SetBuffer(_buffer, read);
+                        _parser.SetBuffer(_buffer.Buffer, read);
                     }
                     else
                     {
-                        _parser.SetBuffer(new ArraySegment<byte>(_buffer, _parser.BufferOffset, _parser.BufferSize));
+                        _parser.SetBuffer(new ArraySegment<byte>(_buffer.Buffer, _parser.BufferOffset, _parser.BufferSize));
                     }
                     if (_writer.Read())
                         break;

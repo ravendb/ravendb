@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Sparrow.Json
 {
-    public class BlittableJsonTextWriter : IDisposable
+    public unsafe class BlittableJsonTextWriter : IDisposable
     {
         private readonly JsonOperationContext _context;
         private readonly Stream _stream;
@@ -23,21 +23,25 @@ namespace Sparrow.Json
         public static readonly byte[] FalseBuffer = { (byte)'f', (byte)'a', (byte)'l', (byte)'s', (byte)'e', };
 
         private int _pos;
-        private readonly byte[] _buffer;
+        private readonly byte* _buffer;
+        private readonly int _bufferLen;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
+        private JsonOperationContext.ManagedPinnedBuffer _pinnedBuffer;
 
         public BlittableJsonTextWriter(JsonOperationContext context, Stream stream)
         {
             _context = context;
             _stream = stream;
-            _returnBuffer = context.GetManagedBuffer(out _buffer);
+            _returnBuffer = context.GetManagedBuffer(out _pinnedBuffer);
+            _buffer = _pinnedBuffer.Pointer;
+            _bufferLen = _pinnedBuffer.Buffer.Length;
         }
 
         public int Position => _pos;
 
         public override string ToString()
         {
-            return Encoding.UTF8.GetString(_buffer, 0, _pos);
+            return Encoding.UTF8.GetString(_pinnedBuffer.Buffer, 0, _pos);
         }
 
         public void WriteObjectOrdered(BlittableJsonReaderObject obj)
@@ -249,13 +253,12 @@ namespace Sparrow.Json
         }
 
 
-        private unsafe void WriteRawString(byte* buffer, int size)
+        private void WriteRawString(byte* buffer, int size)
         {
-            if (size < _buffer.Length)
+            if (size < _bufferLen)
             {
                 EnsureBuffer(size);
-                fixed (byte* p = _buffer)
-                    Memory.CopyInline(p + _pos, buffer, size);
+                Memory.CopyInline(_buffer + _pos, buffer, size);
                 _pos += size;
                 return;
             }
@@ -263,20 +266,17 @@ namespace Sparrow.Json
             UnlikelyWriteLargeRawString(buffer, size);
         }
 
-        private unsafe void UnlikelyWriteLargeRawString(byte* buffer, int size)
+        private void UnlikelyWriteLargeRawString(byte* buffer, int size)
         {
             // need to do this in pieces
             var posInStr = 0;
-            fixed (byte* p = _buffer)
+            while (posInStr < size)
             {
-                while (posInStr < size)
-                {
-                    var amountToCopy = Math.Min(size - posInStr, _buffer.Length);
-                    Flush();
-                    Memory.Copy(p, buffer + posInStr, amountToCopy);
-                    posInStr += amountToCopy;
-                    _pos = amountToCopy;
-                }
+                var amountToCopy = Math.Min(size - posInStr, _bufferLen);
+                Flush();
+                Memory.Copy(_buffer, buffer + posInStr, amountToCopy);
+                posInStr += amountToCopy;
+                _pos = amountToCopy;
             }
         }
 
@@ -313,9 +313,9 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureBuffer(int len)
         {
-            if (_pos + len < _buffer.Length)
+            if (_pos + len < _bufferLen)
                 return;
-            if (len >= _buffer.Length)
+            if (len >= _bufferLen)
                 ThrowValueTooBigForBuffer();
 
             Flush();
@@ -332,7 +332,7 @@ namespace Sparrow.Json
         {
             if (_pos == 0)
                 return;
-            _stream.Write(_buffer, 0, _pos);
+            _stream.Write(_pinnedBuffer.Buffer, 0, _pos);
             _pos = 0;
         }
 

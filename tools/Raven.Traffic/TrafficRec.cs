@@ -65,7 +65,7 @@ namespace Raven.Traffic
                         $"Trying to 'ReceiveAsync' WebSocket while not in Open state. State is {webSocket.State}");
 
                 var state = new JsonParserState();
-                byte[] buffer;
+                JsonOperationContext.ManagedPinnedBuffer buffer;
                 using (context.GetManagedBuffer(out buffer))
                 using (var parser = new UnmanagedJsonParser(context, state, "")) //TODO: FIXME
                 {
@@ -74,7 +74,7 @@ namespace Raven.Traffic
                     builder.ReadObject();
                     while (builder.Read() == false)
                     {
-                        var arraySegment = new ArraySegment<byte>(buffer, 0, buffer.Length);
+                        var arraySegment = new ArraySegment<byte>(buffer.Buffer, 0, buffer.Buffer.Length);
                         var result = await webSocket.ReceiveAsync(arraySegment, CancellationToken.None);
 
                         if (result.MessageType == WebSocketMessageType.Close)

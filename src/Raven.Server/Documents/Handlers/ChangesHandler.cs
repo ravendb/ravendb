@@ -101,15 +101,15 @@ namespace Raven.Server.Documents.Handlers
             Database.Notifications.Connect(connection);
             var sendTask = connection.StartSendingNotifications(sendStartTime);
             var debugTag = "changes/" + connection.Id;
-            byte[] buffer;
+            JsonOperationContext.ManagedPinnedBuffer buffer;
             using (context.GetManagedBuffer(out buffer))
             {
                 try
                 {
                     var segments = new[]
                     {
-                        new ArraySegment<byte>(buffer, 0, buffer.Length/2),
-                        new ArraySegment<byte>(buffer, buffer.Length/2, buffer.Length/2)
+                        new ArraySegment<byte>(buffer.Buffer, 0, buffer.Buffer.Length/2),
+                        new ArraySegment<byte>(buffer.Buffer, buffer.Buffer.Length/2, buffer.Buffer.Length/2)
                     };
                     int index = 0;
                     var receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);
