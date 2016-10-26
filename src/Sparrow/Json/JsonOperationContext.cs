@@ -5,7 +5,6 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
 
@@ -69,7 +68,7 @@ namespace Sparrow.Json
             if (_managedBuffers == null)
                 _managedBuffers = new Stack<byte[]>();
             buffer = _managedBuffers.Count == 0 ? 
-                new byte[4096] : 
+                new byte[1024 * 32] : 
                 _managedBuffers.Pop();
             return new ReturnBuffer(buffer, this);
         }
