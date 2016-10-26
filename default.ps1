@@ -544,7 +544,7 @@ task DoRelease -depends DoReleasePart1, `
     Write-Host "Done building RavenDB"
 }
 
-task UploadStable -depends Stable, DoRelease, Upload, UploadNuget, BumpVersion
+task UploadStable -depends Stable, DoRelease, Upload, UploadNuget
 
 task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 
