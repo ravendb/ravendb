@@ -630,9 +630,11 @@ namespace Raven.Tests.Smuggler
                         var periodicBackupSetup = new PeriodicExportSetup
                         {
                             LocalFolderName = backupPath,
-                            IntervalMilliseconds = 250
+                            IntervalMilliseconds = 2000,
+                            FullBackupIntervalMilliseconds = 5000
                         };
                         session.Store(periodicBackupSetup, PeriodicExportSetup.RavenDocumentKey);
+
 
                         session.SaveChanges();
                     }
@@ -649,10 +651,11 @@ namespace Raven.Tests.Smuggler
                     }
 
                     WaitForPeriodicExport(store.SystemDatabase, backupStatus);
-
+                    
                     var actualBackupPath = Directory.GetDirectories(backupPath)[0];
+
                     // one full export
-                    VerifyFilesCount(1, actualBackupPath);
+                    VerifyFullBackupExists(actualBackupPath);
 
                     store.DatabaseCommands.Delete("users/1", null);
                     store.DatabaseCommands.Delete("users/2", null);
@@ -674,28 +677,37 @@ namespace Raven.Tests.Smuggler
 
                     // status + two exports (one full, one incremental)
                     VerifyFilesCount(1 + 2, actualBackupPath);
+                    
 
                     store.SystemDatabase.TransactionalStorage.Batch(accessor =>
                     {
-                        Assert.Equal(1,
-                            accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, Etag.Empty, null, 20)
-                                .Count());
-                        Assert.Equal(1,
-                            accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, Etag.Empty, null, 20)
-                                .Count());
+                        Assert.True(accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, Etag.Empty, null, 20).Any());
+                        Assert.True(accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, Etag.Empty, null, 20).Any());
                     });
 
                 }
             }
             finally
             {
-                IOExtensions.DeleteDirectory(backupPath);
+                try
+                {
+                    IOExtensions.DeleteDirectory(backupPath);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
             }
         }
 
         private void VerifyFilesCount(int expectedFiles, string backupPath)
         {
             Assert.Equal(expectedFiles, Directory.GetFiles(backupPath).Count());
+        }
+
+        private void VerifyFullBackupExists(string backupPath)
+        {
+            Assert.True(Directory.GetFiles(backupPath).Any(x=>x.Contains(".ravendb-full-dump")));
         }
 
         /// <summary>
