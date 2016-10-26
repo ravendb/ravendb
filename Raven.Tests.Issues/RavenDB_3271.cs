@@ -30,8 +30,7 @@ namespace Raven.Tests.Issues
             const string roleId = "test-roleAuthorization-Roles-Doctors";            
      using (var session = store.OpenSession())
              {
-                 try
-                 {
+                
                      // Allow doctors to authorize hospitalizations
                      session.Store(
                          new AuthorizationRole
@@ -83,14 +82,9 @@ namespace Raven.Tests.Issues
                      //Test allowed operation
                      //WaitForUserToContinueTheTest(store);
                      session.SecureFor(drHowser.Id, "Patient/View");
-                     try
-                     {
+                     
                          maryMallon = session.Load<User>(maryMallon.Id);
-                     }
-                     catch (Exception)
-                     {
-                         Assert.True(false);
-                     }
+                    
 
 
                      //Clear session as second level cached documents bypass the cache
@@ -100,11 +94,7 @@ namespace Raven.Tests.Issues
                      Assert.Throws(typeof(ReadVetoException), () => session.Load<User>(maryMallon.Id));
 
 
-                 }
-                 catch (Exception)
-                 {
-                     Assert.True(false);
-                 }
+                 
              }     
         }
          public class User
