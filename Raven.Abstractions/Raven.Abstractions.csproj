@@ -278,6 +278,7 @@
     <Compile Include="Exceptions\InvalidSpatialShapeException.cs" />
     <Compile Include="Exceptions\SmugglerException.cs" />
     <Compile Include="Exceptions\SmugglerExportException.cs" />
+    <Compile Include="Exceptions\Subscriptions\SubscriptionAckTimeoutException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionClosedException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionDoesNotExistException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionInUseException.cs" />
