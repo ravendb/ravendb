@@ -109,50 +109,53 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 foreach (var mapResult in mappedResults)
                 {
-                    resultsCount++;
-
-                    var reduceKeyHash = mapResult.ReduceKeyHash;
-
-                    long id = -1;
-
-                    if (existingEntries?.Count > 0)
+                    using (mapResult.Data)
                     {
-                        var existing = existingEntries.Dequeue();
-                        var storeOfExisting = GetResultsStore(existing.ReduceKeyHash, indexContext, false);
+                        resultsCount++;
 
-                        if (reduceKeyHash == existing.ReduceKeyHash)
+                        var reduceKeyHash = mapResult.ReduceKeyHash;
+
+                        long id = -1;
+
+                        if (existingEntries?.Count > 0)
                         {
-                            var existingResult = storeOfExisting.Get(existing.Id);
+                            var existing = existingEntries.Dequeue();
+                            var storeOfExisting = GetResultsStore(existing.ReduceKeyHash, indexContext, false);
 
-                            if (ResultsBinaryEqual(mapResult.Data, existingResult))
+                            if (reduceKeyHash == existing.ReduceKeyHash)
                             {
-                                continue;
+                                var existingResult = storeOfExisting.Get(existing.Id);
+
+                                if (ResultsBinaryEqual(mapResult.Data, existingResult))
+                                {
+                                    continue;
+                                }
+
+                                id = existing.Id;
+                            }
+                            else
+                            {
+                                using (_oldValueDeleteStats?.Start() ?? (_oldValueDeleteStats = stats.For(IndexingOperation.Reduce.OldValueDelete)))
+                                {
+                                    _documentMapEntries.Delete(existing.Id);
+                                    storeOfExisting.Delete(existing.Id);
+                                }
+                            }
+                        }
+
+                        using (_newValueAddStats?.Start() ?? (_newValueAddStats = stats.For(IndexingOperation.Reduce.NewValueAdd)))
+                        {
+                            if (id == -1)
+                            {
+                                id = _mapReduceWorkContext.GetNextIdentifier();
+
+                                Slice val;
+                                using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))
+                                    _documentMapEntries.Add(id, val);
                             }
 
-                            id = existing.Id;
+                            GetResultsStore(reduceKeyHash, indexContext, create: true).Add(id, mapResult.Data);
                         }
-                        else
-                        {
-                            using (_oldValueDeleteStats?.Start() ?? (_oldValueDeleteStats = stats.For(IndexingOperation.Reduce.OldValueDelete)))
-                            {
-                                _documentMapEntries.Delete(existing.Id);
-                                storeOfExisting.Delete(existing.Id);
-                            }
-                        }
-                    }
-
-                    using (_newValueAddStats?.Start() ?? (_newValueAddStats = stats.For(IndexingOperation.Reduce.NewValueAdd)))
-                    {
-                        if (id == -1)
-                        {
-                            id = _mapReduceWorkContext.GetNextIdentifier();
-
-                            Slice val;
-                            using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))
-                                _documentMapEntries.Add(id, val);
-                        }
-
-                        GetResultsStore(reduceKeyHash, indexContext, create: true).Add(id, mapResult.Data);
                     }
                 }
 
