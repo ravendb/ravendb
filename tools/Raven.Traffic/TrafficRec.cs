@@ -91,7 +91,7 @@ namespace Raven.Traffic
                             throw new EndOfStreamException("Stream ended without reaching end of json content.");
                         }
 
-                        parser.SetBuffer(new ArraySegment<byte>(buffer.Buffer.Array, buffer.Buffer.Offset, result.Count));
+                        parser.SetBuffer(buffer, result.Count);
                     }
                     builder.FinalizeDocument();
 

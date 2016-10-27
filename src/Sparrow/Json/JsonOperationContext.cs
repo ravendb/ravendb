@@ -319,11 +319,11 @@ namespace Sparrow.Json
                     if (result.MessageType == WebSocketMessageType.Close)
                         return null;
 
-                    parser.SetBuffer(new ArraySegment<byte>(bytes.Buffer.Array, bytes.Buffer.Offset, result.Count));
+                    parser.SetBuffer(bytes, result.Count);
                     while (writer.Read() == false)
                     {
                         result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken);
-                        parser.SetBuffer(new ArraySegment<byte>(bytes.Buffer.Array, bytes.Buffer.Offset, result.Count));
+                        parser.SetBuffer(bytes, result.Count);
                     }
                     writer.FinalizeDocument();
                     return writer.CreateReader();
@@ -360,7 +360,7 @@ namespace Sparrow.Json
                         var read = stream.Read(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        parser.SetBuffer(new ArraySegment<byte>(bytes.Buffer.Array, bytes.Buffer.Offset, read));
+                        parser.SetBuffer(bytes, read);
                         if (builder.Read())
                             break;
                     }
@@ -395,7 +395,7 @@ namespace Sparrow.Json
                         var read = await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        parser.SetBuffer(new ArraySegment<byte>(bytes.Buffer.Array, bytes.Buffer.Offset, read));
+                        parser.SetBuffer(bytes, read);
                         if (writer.Read())
                             break;
                     }
@@ -433,7 +433,7 @@ namespace Sparrow.Json
                         var read = await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        parser.SetBuffer(new ArraySegment<byte>(bytes.Buffer.Array, bytes.Buffer.Offset, read));
+                        parser.SetBuffer(bytes, read);
                         if (writer.Read())
                             break;
                     }
@@ -526,11 +526,11 @@ namespace Sparrow.Json
                         var read = await _stream.ReadAsync(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        _parser.SetBuffer(new ArraySegment<byte>(_buffer.Buffer.Array, _buffer.Buffer.Offset, read));
+                        _parser.SetBuffer(_buffer, read);
                     }
                     else
                     {
-                        _parser.SetBuffer(new ArraySegment<byte>(_buffer.Buffer.Array, _buffer.Buffer.Offset + _parser.BufferOffset, _parser.BufferSize - _parser.BufferOffset));
+                        _parser.SetBuffer(_buffer, _parser.BufferOffset, _parser.BufferSize - _parser.BufferOffset);
                     }
                     if (_writer.Read())
                         break;
@@ -551,11 +551,11 @@ namespace Sparrow.Json
                         var read = _stream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        _parser.SetBuffer(new ArraySegment<byte>(_buffer.Buffer.Array, _buffer.Buffer.Offset, read));
+                        _parser.SetBuffer(_buffer, read);
                     }
                     else
                     {
-                        _parser.SetBuffer(new ArraySegment<byte>(_buffer.Buffer.Array, _buffer.Buffer.Offset + _parser.BufferOffset, _parser.BufferSize - _parser.BufferOffset));
+                        _parser.SetBuffer(_buffer, _parser.BufferOffset, _parser.BufferSize - _parser.BufferOffset);
                     }
                     if (_writer.Read())
                         break;

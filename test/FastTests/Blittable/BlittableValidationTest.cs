@@ -83,7 +83,7 @@ namespace FastTests.Blittable
                 Name = "Haifa",
                 RegionId = "2"
             };
-            var region = new Region {CountryId = "3123456789", Id = "24682468", Name = "North"};
+            var region = new Region { CountryId = "3123456789", Id = "24682468", Name = "North" };
             var address = new AddressClass
             {
                 City = city,
@@ -334,7 +334,7 @@ namespace FastTests.Blittable
                 {
                     var temp = basePointer[listStart + i];
 
-                    basePointer[listStart + i] = (byte) listStart;
+                    basePointer[listStart + i] = (byte)listStart;
                     message = Assert.Throws<InvalidDataException>(() => reader.BlittableValidation());
                     Assert.Equal(message.Message, "Properties names offset not valid");
 
@@ -467,7 +467,7 @@ namespace FastTests.Blittable
                     Bool = true,
                     Float = 123.4567F,
                     Int = 45679123,
-                    IntArray = new[] {1, 2, 3},
+                    IntArray = new[] { 1, 2, 3 },
                     Null = null,
                     Object = new Empty(),
                     String = "qwertyuio"
@@ -485,7 +485,7 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public void Valid_Compressed_String()
+        public unsafe void Valid_Compressed_String()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
@@ -512,22 +512,25 @@ namespace FastTests.Blittable
                     var obj = RavenJObject.FromObject(temp);
                     var objString = obj.ToString(Formatting.None);
                     var buffer = Encoding.UTF8.GetBytes(objString);
-                    parser.SetBuffer(buffer, buffer.Length);
-                    var writer = new BlittableJsonDocumentBuilder(ctx,
-                        BlittableJsonDocumentBuilder.UsageMode.CompressSmallStrings,
-                        "test", parser, state);
-                    writer.ReadObject();
-                    var x = writer.Read();
-                    writer.FinalizeDocument();
-                    var reader = writer.CreateReader();
+                    fixed (byte* pBuffer = buffer)
+                    {
+                        parser.SetBuffer(pBuffer, buffer.Length);
+                        var writer = new BlittableJsonDocumentBuilder(ctx,
+                            BlittableJsonDocumentBuilder.UsageMode.CompressSmallStrings,
+                            "test", parser, state);
+                        writer.ReadObject();
+                        var x = writer.Read();
+                        writer.FinalizeDocument();
+                        var reader = writer.CreateReader();
 
-                    reader.BlittableValidation();
+                        reader.BlittableValidation();
+                    }
                 }
             }
         }
 
         [Fact]
-        public void Valid_object_read_from_non_zero_offset()
+        public unsafe void Valid_object_read_from_non_zero_offset()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
@@ -555,20 +558,23 @@ namespace FastTests.Blittable
 
                     data.CopyTo(buffer, bufferOffset);
 
-                    using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "order/1", parser, jsonParserState))
+                    fixed (byte* pBuffer = buffer)
                     {
-                        parser.SetBuffer(new ArraySegment<byte>(buffer, bufferOffset, data.Length));
-
-                        builder.ReadObject();
-
-                        Assert.True(builder.Read());
-
-                        builder.FinalizeDocument();
-
-                        using (var reader = builder.CreateReader())
+                        using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "order/1", parser, jsonParserState))
                         {
-                            var value = reader.ToString();
-                            Assert.NotNull(value);
+                            parser.SetBuffer(pBuffer + bufferOffset, data.Length);
+
+                            builder.ReadObject();
+
+                            Assert.True(builder.Read());
+
+                            builder.FinalizeDocument();
+
+                            using (var reader = builder.CreateReader())
+                            {
+                                var value = reader.ToString();
+                                Assert.NotNull(value);
+                            }
                         }
                     }
                 }
@@ -576,7 +582,7 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public void Valid_String()
+        public unsafe void Valid_String()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
@@ -608,16 +614,19 @@ namespace FastTests.Blittable
                     var obj = RavenJObject.FromObject(temp);
                     var objString = obj.ToString(Formatting.None);
                     var buffer = Encoding.UTF8.GetBytes(objString);
-                    parser.SetBuffer(buffer, buffer.Length);
-                    var writer = new BlittableJsonDocumentBuilder(ctx,
-                        BlittableJsonDocumentBuilder.UsageMode.None,
-                        "test", parser, state);
-                    writer.ReadObject();
-                    var x = writer.Read();
-                    writer.FinalizeDocument();
-                    var reader = writer.CreateReader();
+                    fixed (byte* pBuffer = buffer)
+                    {
+                        parser.SetBuffer(pBuffer, buffer.Length);
+                        var writer = new BlittableJsonDocumentBuilder(ctx,
+                            BlittableJsonDocumentBuilder.UsageMode.None,
+                            "test", parser, state);
+                        writer.ReadObject();
+                        var x = writer.Read();
+                        writer.FinalizeDocument();
+                        var reader = writer.CreateReader();
 
-                    reader.BlittableValidation();
+                        reader.BlittableValidation();
+                    }
                 }
             }
         }
@@ -628,12 +637,12 @@ namespace FastTests.Blittable
             char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"', };
             return new string(Enumerable.Repeat(EscapeChars, length)
               .Select(s => s[random.Next(s.Length)]).ToArray());
-         }
+        }
 
         [Fact]
-        public void Valid_String_With_260_EscChar()
+        public unsafe void Valid_String_With_260_EscChar()
         {
-            using ( var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var state = new JsonParserState();
                 using (var parser = new UnmanagedJsonParser(ctx, state, "test"))
@@ -645,22 +654,25 @@ namespace FastTests.Blittable
                     var obj = RavenJObject.FromObject(temp);
                     var objString = obj.ToString(Formatting.None);
                     var buffer = Encoding.UTF8.GetBytes(objString);
-                    parser.SetBuffer(buffer, buffer.Length);
-                    var writer = new BlittableJsonDocumentBuilder(ctx,
-                        BlittableJsonDocumentBuilder.UsageMode.None,
-                        "test", parser, state);
-                    writer.ReadObject();
-                    var x = writer.Read();
-                    writer.FinalizeDocument();
-                    var reader = writer.CreateReader();
+                    fixed (byte* pBuffer = buffer)
+                    {
+                        parser.SetBuffer(pBuffer, buffer.Length);
+                        var writer = new BlittableJsonDocumentBuilder(ctx,
+                            BlittableJsonDocumentBuilder.UsageMode.None,
+                            "test", parser, state);
+                        writer.ReadObject();
+                        var x = writer.Read();
+                        writer.FinalizeDocument();
+                        var reader = writer.CreateReader();
 
-                    reader.BlittableValidation();
+                        reader.BlittableValidation();
+                    }
                 }
             }
         }
 
         [Fact]
-        public void Valid_String_With_66K_EscChar()
+        public unsafe void Valid_String_With_66K_EscChar()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
@@ -675,16 +687,19 @@ namespace FastTests.Blittable
                     var obj = RavenJObject.FromObject(temp);
                     var objString = obj.ToString(Formatting.None);
                     var buffer = Encoding.UTF8.GetBytes(objString);
-                    parser.SetBuffer(buffer, buffer.Length);
-                    var writer = new BlittableJsonDocumentBuilder(ctx,
-                        BlittableJsonDocumentBuilder.UsageMode.None,
-                        "test", parser, state);
-                    writer.ReadObject();
-                    var x = writer.Read();
-                    writer.FinalizeDocument();
-                    var reader = writer.CreateReader();
+                    fixed (byte* pBuffer = buffer)
+                    {
+                        parser.SetBuffer(pBuffer, buffer.Length);
+                        var writer = new BlittableJsonDocumentBuilder(ctx,
+                            BlittableJsonDocumentBuilder.UsageMode.None,
+                            "test", parser, state);
+                        writer.ReadObject();
+                        var x = writer.Read();
+                        writer.FinalizeDocument();
+                        var reader = writer.CreateReader();
 
-                    reader.BlittableValidation();
+                        reader.BlittableValidation();
+                    }
                 }
             }
         }
@@ -731,10 +746,10 @@ namespace FastTests.Blittable
             var resources = assembly.GetManifestResourceNames();
             var resourcePrefix = typeof(BlittableFormatTests).Namespace + ".Jsons.";
 
-            foreach (var name in resources.Where( x => x.StartsWith(resourcePrefix, StringComparison.Ordinal)))
+            foreach (var name in resources.Where(x => x.StartsWith(resourcePrefix, StringComparison.Ordinal)))
             {
                 using (var context = JsonOperationContext.ShortTermSingleUse())
-                {                    
+                {
                     using (var stream = assembly.GetManifestResourceStream(name))
                     {
                         using (var obj = context.Read(stream, "docs/1"))
