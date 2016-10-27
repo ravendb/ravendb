@@ -54,14 +54,14 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     if (parser.Read() == false)
                     {
-                        var read = await stream.ReadAsync(buffer.Buffer, 0, buffer.Buffer.Length);
+                        var read = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
                         if (read == 0)
                         {
                             if (state.CurrentTokenType != JsonParserToken.EndObject)
                                 throw new EndOfStreamException("Stream ended without reaching end of json content");
                             break;
                         }
-                        parser.SetBuffer(buffer.Buffer, read);
+                        parser.SetBuffer(new ArraySegment<byte>(buffer.Buffer.Array, buffer.Buffer.Offset, read));
                         continue;
                     }
 
@@ -93,10 +93,10 @@ namespace Raven.Server.Smuggler.Documents
                             builder.ReadNestedObject();
                             while (builder.Read() == false)
                             {
-                                var read = await stream.ReadAsync(buffer.Buffer, 0, buffer.Buffer.Length);
+                                var read = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
                                 if (read == 0)
                                     throw new EndOfStreamException("Stream ended without reaching end of json content");
-                                parser.SetBuffer(buffer.Buffer, read);
+                                parser.SetBuffer(new ArraySegment<byte>(buffer.Buffer.Array, buffer.Buffer.Offset, read));
                             }
                             builder.FinalizeDocument();
 

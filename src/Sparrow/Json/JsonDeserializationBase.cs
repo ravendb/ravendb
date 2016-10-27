@@ -131,7 +131,6 @@ namespace Sparrow.Json
             if (propertyType == typeof(string[]))
             {
                 var method = typeof(JsonDeserializationBase).GetMethod(nameof(ToArrayOfString), BindingFlags.NonPublic | BindingFlags.Static);
-                method = method.MakeGenericMethod(propertyType);
                 return Expression.Call(method, json, Expression.Constant(propertyName));
             }
             if (propertyType.IsArray)

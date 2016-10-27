@@ -108,8 +108,8 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var segments = new[]
                     {
-                        new ArraySegment<byte>(buffer.Buffer, 0, buffer.Buffer.Length/2),
-                        new ArraySegment<byte>(buffer.Buffer, buffer.Buffer.Length/2, buffer.Buffer.Length/2)
+                        new ArraySegment<byte>(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length/2),
+                        new ArraySegment<byte>(buffer.Buffer.Array, buffer.Buffer.Offset + buffer.Length/2, buffer.Length/2)
                     };
                     int index = 0;
                     var receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);

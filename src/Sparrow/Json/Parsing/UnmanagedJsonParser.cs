@@ -63,7 +63,7 @@ namespace Sparrow.Json.Parsing
         public int BufferOffset
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _pos; }
+            get { return _pos - _initialPos; }
         }
 
         public void SetBuffer(ArraySegment<byte> segment)
@@ -631,7 +631,7 @@ namespace Sparrow.Json.Parsing
         protected InvalidDataException CreateException(string message, Exception inner = null)
         {
             var start = Math.Max(0, _pos - 25);
-            var count = Math.Min(_pos, _bufSize) - start;  
+            var count = Math.Min(BufferOffset, _bufSize) - start;  
             var s = Encoding.UTF8.GetString(_inputBuffer, start, count);
             return new InvalidDataException(message + " at (" + _line + "," + _charPos + ") around: " + s, inner);
         }
@@ -643,7 +643,7 @@ namespace Sparrow.Json.Parsing
 
         public int ReadBuffer(byte[] buffer, int offset, int count)
         {
-            var toRead = Math.Min(_bufSize - _pos, count);
+            var toRead = Math.Min(_bufSize - BufferOffset, count);
             Buffer.BlockCopy(_inputBuffer, _pos, buffer, offset, toRead);
             _pos += toRead;
             return toRead;

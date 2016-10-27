@@ -34,14 +34,14 @@ namespace Sparrow.Json
             _stream = stream;
             _returnBuffer = context.GetManagedBuffer(out _pinnedBuffer);
             _buffer = _pinnedBuffer.Pointer;
-            _bufferLen = _pinnedBuffer.Buffer.Length;
+            _bufferLen = _pinnedBuffer.Length;
         }
 
         public int Position => _pos;
 
         public override string ToString()
         {
-            return Encoding.UTF8.GetString(_pinnedBuffer.Buffer, 0, _pos);
+            return Encoding.UTF8.GetString(_pinnedBuffer.Buffer.Array, _pinnedBuffer.Buffer.Offset, _pos);
         }
 
         public void WriteObjectOrdered(BlittableJsonReaderObject obj)
@@ -332,7 +332,7 @@ namespace Sparrow.Json
         {
             if (_pos == 0)
                 return;
-            _stream.Write(_pinnedBuffer.Buffer, 0, _pos);
+            _stream.Write(_pinnedBuffer.Buffer.Array, _pinnedBuffer.Buffer.Offset, _pos);
             _pos = 0;
         }
 

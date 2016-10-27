@@ -111,8 +111,8 @@ namespace Raven.Client.Document
                 Operation = TcpConnectionHeaderMessage.OperationTypes.BulkInsert
             }).ToString());
             streamNetworkBuffer.Write(header, 0, header.Length);
-            JsonOperationContext.ManagedPinnedBuffer buffer;
-            using (_jsonOperationContext.GetManagedBuffer(out buffer))
+            JsonOperationContext.ManagedPinnedBuffer bytes;
+            using (_jsonOperationContext.GetManagedBuffer(out bytes))
             {
                 while (_documents.IsCompleted == false)
                 {
@@ -141,10 +141,10 @@ namespace Raven.Client.Document
                         builder.ReadObject();
                         while (true)
                         {
-                            var read = jsonBuffer.Read(buffer.Buffer, 0, buffer.Buffer.Length);
+                            var read = jsonBuffer.Read(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
                             if (read == 0)
                                 throw new EndOfStreamException("Stream ended without reaching end of json content");
-                            jsonParser.SetBuffer(buffer.Buffer, read);
+                            jsonParser.SetBuffer(new ArraySegment<byte>(bytes.Buffer.Array, bytes.Buffer.Offset, read));
                             if (builder.Read())
                                 break;
                         }
@@ -209,16 +209,14 @@ namespace Raven.Client.Document
             using (context.GetManagedBuffer(out bytes))
             using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
             {
-                var buffer = new ArraySegment<byte>(bytes.Buffer);
-
                 var writer = new BlittableJsonDocumentBuilder(context,
                     BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState);
 
                 writer.ReadObject();
 
-                var result = await webSocket.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
+                var result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken).ConfigureAwait(false);
 
-                parser.SetBuffer(buffer.Array, result.Count);
+                parser.SetBuffer(new ArraySegment<byte>(bytes.Buffer.Array, bytes.Buffer.Offset, result.Count));
                 while (writer.Read() == false)
                 {
                     // we got incomplete json response.
@@ -226,9 +224,9 @@ namespace Raven.Client.Document
                     if (result.CloseStatus != null)
                         return null;
 
-                    result = await webSocket.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
+                    result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken).ConfigureAwait(false);
 
-                    parser.SetBuffer(buffer.Array, result.Count);
+                    parser.SetBuffer(new ArraySegment<byte>(bytes.Buffer.Array, bytes.Buffer.Offset, result.Count));
                 }
                 writer.FinalizeDocument();
                 return writer.CreateReader();

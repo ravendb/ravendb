@@ -74,8 +74,7 @@ namespace Raven.Traffic
                     builder.ReadObject();
                     while (builder.Read() == false)
                     {
-                        var arraySegment = new ArraySegment<byte>(buffer.Buffer, 0, buffer.Buffer.Length);
-                        var result = await webSocket.ReceiveAsync(arraySegment, CancellationToken.None);
+                        var result = await webSocket.ReceiveAsync(buffer.Buffer, CancellationToken.None);
 
                         if (result.MessageType == WebSocketMessageType.Close)
                         {
@@ -92,7 +91,7 @@ namespace Raven.Traffic
                             throw new EndOfStreamException("Stream ended without reaching end of json content.");
                         }
 
-                        parser.SetBuffer(arraySegment);
+                        parser.SetBuffer(new ArraySegment<byte>(buffer.Buffer.Array, buffer.Buffer.Offset, result.Count));
                     }
                     builder.FinalizeDocument();
 
