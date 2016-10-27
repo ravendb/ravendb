@@ -549,7 +549,7 @@ task DoRelease -depends DoReleasePart1, `
     Write-Host "Done building RavenDB"
 }
 
-task UploadStable -depends Stable, DoRelease, Upload, UploadNuget
+task UploadStable -depends Stable, DoRelease, Upload, UploadNuget, BumpVersion
 
 task UploadPatch -depends Patch, DoRelease, Upload, UploadNuget
 
@@ -798,10 +798,11 @@ function UpdateFileInGitRepo($repoOwner, $repoName, $filePath, $fileContent, $co
         $branch = exec { & "git" rev-parse --abbrev-ref HEAD }
     }
 
-    write-host "Calling $updateFileUri`?ref=$branch"
+
+    write-host "GET $updateFileUri`?ref=$branch"
+    
     $contents = Invoke-RestMethod -TimeoutSec 120 "$updateFileUri`?ref=$branch"
     
-    write-host "GET $updateFileUri`?ref=$branch"
     
     $bodyJson = ConvertTo-Json @{
         path = $filePath
@@ -811,14 +812,17 @@ function UpdateFileInGitRepo($repoOwner, $repoName, $filePath, $fileContent, $co
         sha = $contents.sha
     }
 
-    $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$env:GITHUB_USER:$env:GITHUB_ACCESS_TOKEN"))
+    $creds = "{0}:{1}" -f $env:GITHUB_USER,$env:GITHUB_ACCESS_TOKEN
+    $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($creds))
     $headers = @{
         Authorization = "Basic $encodedCreds"
     }
     
     write-host "PUT $updateFileUri"
 
-    Invoke-RestMethod -TimeoutSec 120 -Headers $headers -ContentType "application/json" -Method PUT -cred $cred -Body $bodyJson $updateFileUri
+    (Invoke-WebRequest -TimeoutSec 120 -Uri $updateFileUri -Method PUT -Headers $headers -ContentType "application/json" -Body $bodyJson).content | ConvertFrom-Json
+    
+    write-host "Updated content under $updateFileUri"
 }
 
 function GetAssemblyInfoWithBumpedVersion {
