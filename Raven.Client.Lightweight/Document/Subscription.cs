@@ -288,10 +288,15 @@ namespace Raven.Client.Document
                 {
                     acknowledgmentRequest.ExecuteRequest();
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     if (acknowledgmentRequest.ResponseStatusCode != HttpStatusCode.RequestTimeout) // ignore acknowledgment timeouts
                         throw;
+
+                    foreach (var subscriber in subscribers)
+                    {
+                        subscriber.OnError(new SubscriptionAckTimeoutException("Subscription Acknowledgement timeout received. Last Etag was not updated and current batch will be proccessed again",ex));
+                    }
                 }
             }
         }
