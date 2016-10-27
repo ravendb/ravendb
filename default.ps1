@@ -254,7 +254,7 @@ task Stable {
 
 task Patch {
     $global:uploadCategory = "RavenDB-Patch"
-    $global:uploadMode = "Stable"
+    $global:uploadMode = "Unstable"
     $global:configuration = "Release"
 }
 
