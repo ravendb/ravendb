@@ -78,7 +78,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             try
             {
-                //TODO: use optional onProgress parameter
                 return exporter.Export(context, ResponseBodyStream(), onProgress); 
             }
             finally

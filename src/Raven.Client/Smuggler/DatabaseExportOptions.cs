@@ -6,9 +6,9 @@ namespace Raven.Client.Smuggler
     {
         public DatabaseItemType OperateOnTypes { get; set; }
 
-        public int? BatchSize { get; set; }
+        public int BatchSize { get; set; }
 
-        public bool ExcludeExpired { get; set; }
+        public bool IncludeExpired { get; set; }
 
         public bool RemoveAnalyzers { get; set; }
 

@@ -113,8 +113,8 @@ class exportDatabase extends viewModelBase {
             var batchSize = model.batchSize();
             commandTokens.push("--batch-size=" + batchSize);
 
-            if (!model.includeExpiredDocuments()) {
-                commandTokens.push("--excludeexpired");
+            if (model.includeExpiredDocuments()) {
+                commandTokens.push("--includeexpired");
             }
 
             if (!model.includeAllCollections()) {

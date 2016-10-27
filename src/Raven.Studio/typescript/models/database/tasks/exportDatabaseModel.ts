@@ -36,7 +36,7 @@
             BatchSize: this.batchSize(),
             CollectionsToExport: this.includeAllCollections() ? null : this.includedCollections(),
             FileName: this.exportFileName(),
-            ExcludeExpired: !this.includeExpiredDocuments(),
+            IncludeExpired: this.includeExpiredDocuments(),
             TransformScript: this.transformScript(),
             RemoveAnalyzers: this.removeAnalyzers(),
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Smuggler.DatabaseItemType
