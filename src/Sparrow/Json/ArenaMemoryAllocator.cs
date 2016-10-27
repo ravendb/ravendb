@@ -19,7 +19,7 @@ namespace Sparrow.Json
         private List<Tuple<IntPtr,long, NativeMemory.ThreadStats>> _olderBuffers;
 
         private bool _isDisposed;
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
         private NativeMemory.ThreadStats _allocatingThread;
 
         public long Allocated
@@ -44,8 +44,8 @@ namespace Sparrow.Json
             _allocated = initialSize;
             _used = 0;
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"ArenaMemoryAllocator was created with initial capacity of {initialSize:#,#;;0} bytes");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"ArenaMemoryAllocator was created with initial capacity of {initialSize:#,#;;0} bytes");
         }
 
 
@@ -82,8 +82,8 @@ namespace Sparrow.Json
             _ptrCurrent += size;
             _used += size;
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"ArenaMemoryAllocator allocated {size:#,#;;0} bytes");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"ArenaMemoryAllocator allocated {size:#,#;;0} bytes");
             return allocation;
         }
 
@@ -104,12 +104,12 @@ namespace Sparrow.Json
             if (newSize > MaxArenaSize)
                 newSize = MaxArenaSize;
            
-            if (_logger.IsInfoEnabled)
+            if (Logger.IsInfoEnabled)
             {
                 if (newSize > 512 * 1024 * 1024)
-                    _logger.Info(
+                    Logger.Info(
                         $"Arena main buffer reached size of {newSize:#,#;0} bytes (previously {_allocated:#,#;0} bytes), check if you forgot to reset the context. From now on we grow this arena in 1GB chunks.");
-                _logger.Info(
+                Logger.Info(
                     $"Increased size of buffer from {_allocated:#,#;0} to {newSize:#,#;0} because we need {requestedSize:#,#;0}. _used={_used:#,#;0}");
             }
             
@@ -172,8 +172,8 @@ namespace Sparrow.Json
 
         ~ArenaMemoryAllocator()
         {
-            if (_logger.IsInfoEnabled)
-                _logger.Info("ArenaMemoryAllocator wasn't properly disposed");
+            if (Logger.IsInfoEnabled)
+                Logger.Info("ArenaMemoryAllocator wasn't properly disposed");
 
             Dispose();
         }
