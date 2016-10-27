@@ -37,7 +37,7 @@ namespace Voron.Tests.ScratchBuffer
             // also in the meanwhile the free space handling is doing its job so it needs some pages too
             // and we allocate not the exact size but the nearest power of two e.g. we write 257 pages but in scratch we request 512 ones
             int i = 0;
-            while (size < 128 * AbstractPager.PageSize) 
+            while (size < 256 * AbstractPager.PageSize) 
             {
                 using (Env.NewTransaction(TransactionFlags.Read))
                 {
@@ -53,7 +53,7 @@ namespace Voron.Tests.ScratchBuffer
                 if (i++ % 4 == 0)
                     Env.FlushLogToDataFile();
 
-                size += 1024;
+                size += 512;
             }
         }
 
