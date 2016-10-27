@@ -348,7 +348,7 @@ namespace Voron
         {
             var transactionPersistentContext = new TransactionPersistentContext();
             var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read, context);
-            newLowLevelTransaction.AlsoDispose = new List<IDisposable> {transactionPersistentContext};
+            newLowLevelTransaction.AlsoDispose = new List<IDisposable>(1) {transactionPersistentContext};
             return new Transaction(newLowLevelTransaction);
         }
 
@@ -361,7 +361,7 @@ namespace Voron
         {
             var transactionPersistentContext = new TransactionPersistentContext();
             var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null);
-            newLowLevelTransaction.AlsoDispose = new List<IDisposable> { transactionPersistentContext };
+            newLowLevelTransaction.AlsoDispose = new List<IDisposable>(1) { transactionPersistentContext };
             return new Transaction(newLowLevelTransaction);
         }
 
