@@ -514,6 +514,19 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                     case WebExceptionStatus.ConnectionClosed:
                     case WebExceptionStatus.ConnectFailure:
                     case WebExceptionStatus.SendFailure:
+                    case WebExceptionStatus.KeepAliveFailure:
+                    case WebExceptionStatus.ProtocolError:
+                    case WebExceptionStatus.RequestCanceled:
+                    case WebExceptionStatus.TrustFailure:
+                    case WebExceptionStatus.SecureChannelFailure:
+                    case WebExceptionStatus.ServerProtocolViolation:
+                    case WebExceptionStatus.Pending:
+                    case WebExceptionStatus.ProxyNameResolutionFailure:
+                    case WebExceptionStatus.UnknownError:
+                    case WebExceptionStatus.MessageLengthLimitExceeded:
+                    case WebExceptionStatus.CacheEntryNotFound:
+                    case WebExceptionStatus.RequestProhibitedByCachePolicy:
+                    case WebExceptionStatus.RequestProhibitedByProxy:
                         return true;
                 }
 
