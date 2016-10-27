@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 
 using Voron.Util;
@@ -17,6 +18,7 @@ namespace Voron.Impl.Journal
 {
     public unsafe class JournalFile : IDisposable
     {
+        private readonly StorageEnvironment _env;
         private IJournalWriter _journalWriter;
         private long _writePage;
         private bool _disposed;
@@ -25,9 +27,10 @@ namespace Voron.Impl.Journal
         private readonly List<PagePosition> _unusedPages = new List<PagePosition>();
         private readonly object _locker = new object();
 
-        public JournalFile(IJournalWriter journalWriter, long journalNumber)
+        public JournalFile(StorageEnvironment env, IJournalWriter journalWriter, long journalNumber)
         {
             Number = journalNumber;
+            _env = env;
             _journalWriter = journalWriter;
             _writePage = 0;
         }
@@ -37,12 +40,7 @@ namespace Voron.Impl.Journal
             return string.Format("Number: {0}", Number);
         }
 
-        public JournalFile(IJournalWriter journalWriter, long journalNumber, long lastSyncedPage)
-            : this(journalWriter, journalNumber)
-        {
-            _writePage = lastSyncedPage + 1;
-        }
-
+     
 
         ~JournalFile()
         {
@@ -55,28 +53,16 @@ namespace Voron.Impl.Journal
 #endif
         }
 
-        internal long WritePagePosition
-        {
-            get { return _writePage; }
-        }
+        internal long WritePagePosition => _writePage;
 
         public long Number { get; private set; }
 
 
-        public long AvailablePages
-        {
-            get { return _journalWriter.NumberOfAllocatedPages - _writePage; }
-        }
+        public long AvailablePages => _journalWriter.NumberOfAllocatedPages - _writePage;
 
-        internal IJournalWriter JournalWriter
-        {
-            get { return _journalWriter; }
-        }
+        internal IJournalWriter JournalWriter => _journalWriter;
 
-        public PageTable PageTranslationTable
-        {
-            get { return _pageTranslationTable; }
-        }
+        public PageTable PageTranslationTable => _pageTranslationTable;
 
         public void Release()
         {
@@ -139,7 +125,6 @@ namespace Voron.Impl.Journal
             lock (_locker)
             {
                 _writePage += pages.NumberOfPages;
-                _pageTranslationTable.SetItems(tx, ptt);
 
                 Debug.Assert(!_unusedPages.Any(unused.Contains));
                 _unusedPages.AddRange(unused);
@@ -149,7 +134,15 @@ namespace Voron.Impl.Journal
 
             if (tx.IsLazyTransaction == false && (lazyTransactionScratch == null || lazyTransactionScratch.HasDataInBuffer() == false))
             {
-                _journalWriter.WritePages(position, pages.Base, pages.NumberOfPages);
+                try
+                {
+                    _journalWriter.WritePages(position, pages.Base, pages.NumberOfPages);
+                }
+                catch (Exception e)
+                {
+                    _env.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
+                    throw;
+                }
             }
             else
             {
@@ -162,13 +155,27 @@ namespace Voron.Impl.Journal
                 if (tx.IsLazyTransaction == false ||
                     lazyTransactionScratch.NumberOfPages > tx.Environment.ScratchBufferPool.GetAvailablePagesCount()/2)
                 {
-                    lazyTransactionScratch.WriteBufferToFile(this, tx);
+                    try
+                    {
+                        lazyTransactionScratch.WriteBufferToFile(this, tx);
+                    }
+                    catch (Exception e)
+                    {
+                        _env.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
+                        throw;
+                    }
                 }
                 else 
                 {
                     lazyTransactionScratch.EnsureHasExistingReadTransaction(tx);
                 }
             }
+
+            lock (_locker)
+            {
+                _pageTranslationTable.SetItems(tx, ptt);
+            }
+
         }
 
         private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)

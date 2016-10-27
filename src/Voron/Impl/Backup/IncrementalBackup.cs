@@ -232,7 +232,7 @@ namespace Voron.Impl.Backup
                 using (var pager = env.Options.OpenJournalPager(journalNum))
                 {
                     long journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * env.Options.PageSize);
-                    journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
+                    journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
                     journalFile.AddRef();
                     return journalFile;
                 }

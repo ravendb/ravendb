@@ -71,7 +71,7 @@ namespace Voron
         public readonly ActiveTransactions ActiveTransactions = new ActiveTransactions();
 
         private readonly AbstractPager _dataPager;
-        internal ExceptionDispatchInfo FlushingTaskFailure;
+        internal ExceptionDispatchInfo CatastrophicFailure;
         private readonly WriteAheadJournal _journal;
         private readonly object _txWriter = new object();
         internal readonly ReaderWriterLockSlim FlushInProgressLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
@@ -390,7 +390,7 @@ namespace Voron
                     {
                         if (_endOfDiskSpace.CanContinueWriting)
                         {
-                            FlushingTaskFailure = null;
+                            CatastrophicFailure = null;
                             _endOfDiskSpace = null;
                             _cancellationTokenSource = new CancellationTokenSource();
                             Task.Run(IdleFlushTimer);
@@ -619,9 +619,9 @@ namespace Voron
                 tx);
         }
 
-        internal void AssertFlushingNotFailed()
+        internal void AssertNoCatastrophicFailure()
         {
-            FlushingTaskFailure?.Throw(); // force re-throw of error
+            CatastrophicFailure?.Throw(); // force re-throw of error
         }
 
         internal void HandleDataDiskFullException(DiskFullException exception)

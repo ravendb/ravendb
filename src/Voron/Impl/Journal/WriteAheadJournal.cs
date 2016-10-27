@@ -101,7 +101,7 @@ namespace Voron.Impl.Journal
 
             var journalPager = _env.Options.CreateJournalWriter(_journalIndex, actualLogSize);
 
-            var journal = new JournalFile(journalPager, _journalIndex);
+            var journal = new JournalFile(_env,journalPager, _journalIndex);
             journal.AddRef(); // one reference added by a creator - write ahead log
 
             _files = _files.Append(journal);
@@ -170,7 +170,7 @@ namespace Voron.Impl.Journal
                     if (lastSyncedTxId != -1 && (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal))
                     {
                         var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * _dataPager.PageSize);
-                        var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
+                        var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
                         jrnlFile.InitFrom(journalReader);
                         jrnlFile.AddRef(); // creator reference - write ahead log
 
@@ -693,7 +693,8 @@ namespace Voron.Impl.Journal
                         currentTotalWrittenBytes = _totalWrittenButUnsyncedBytes;
                         lastSyncedJournal = _lastFlushedJournalId;
                         lastSyncedTransactionId = _lastFlushedTransactionId;
-                        SetLastReadTxHeader(_lastFlushedJournal, _lastFlushedTransactionId, lastReadTxHeader);
+                        SetLastReadTxHeader(_lastFlushedJournal, lastSyncedTransactionId, lastReadTxHeader);
+                        Debug.Assert(lastSyncedTransactionId == lastReadTxHeader->TransactionId);
 
                         _lastFlushedJournal = null;
                         _lastSyncTime = DateTime.UtcNow;

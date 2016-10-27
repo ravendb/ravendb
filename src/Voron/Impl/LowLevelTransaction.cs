@@ -208,7 +208,7 @@ namespace Voron.Impl
 
         internal Page ModifyPage(long num)
         {
-            _env.AssertFlushingNotFailed();
+            _env.AssertNoCatastrophicFailure();
 
             // Check if we can hit the lowest level locality cache.
             Page currentPage = GetPage(num);
@@ -321,12 +321,7 @@ namespace Voron.Impl
                 var maxAvailablePageNumber = _env.Options.MaxStorageSize / Environment.Options.PageSize;
 
                 if (pageNumber > maxAvailablePageNumber)
-                    throw new QuotaException(
-                        string.Format(
-                            "The maximum storage size quota ({0} bytes) has been reached. " +
-                            "Currently configured storage quota is allowing to allocate the following maximum page number {1}, while the requested page number is {2}. " +
-                            "To increase the quota, use the MaxStorageSize property on the storage environment options.",
-                            _env.Options.MaxStorageSize, maxAvailablePageNumber, pageNumber));
+                    ThrowQuotaExceededException(pageNumber, maxAvailablePageNumber);
             }
 
 
@@ -368,6 +363,16 @@ namespace Voron.Impl
 #endif
 
             return newPage;
+        }
+
+        private void ThrowQuotaExceededException(long pageNumber, long? maxAvailablePageNumber)
+        {
+            throw new QuotaException(
+                string.Format(
+                    "The maximum storage size quota ({0} bytes) has been reached. " +
+                    "Currently configured storage quota is allowing to allocate the following maximum page number {1}, while the requested page number is {2}. " +
+                    "To increase the quota, use the MaxStorageSize property on the storage environment options.",
+                    _env.Options.MaxStorageSize, maxAvailablePageNumber, pageNumber));
         }
 
         internal void BreakLargeAllocationToSeparatePages(long pageNumber)
