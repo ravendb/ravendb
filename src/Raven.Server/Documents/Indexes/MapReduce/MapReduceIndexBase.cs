@@ -23,10 +23,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         internal readonly MapReduceIndexingContext MapReduceWorkContext = new MapReduceIndexingContext();
 
-        private IndexingStatsScope _stats;
-        private IndexingStatsScope _oldValueDeleteStats;
-        private IndexingStatsScope _newValueAddStats;
-        private IndexingStatsScope _mapPreparationStats;
+        private IndexingStatsScope _statsInstance;
+        private MapPhaseStats _stats = new MapPhaseStats();
 
         protected MapReduceIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
@@ -36,7 +34,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             MapReduceWorkContext.MapEntries = GetMapEntriesTree(indexContext.Transaction.InnerTransaction);
             MapReduceWorkContext.ResultsStoreTypes = MapReduceWorkContext.MapEntries.FixedTreeFor(ResultsStoreTypesTreeName, sizeof(byte));
-
 
             MapReduceWorkContext.DocumentMapEntries = new FixedSizeTree(
                    indexContext.Transaction.InnerTransaction.LowLevelTransaction,
@@ -97,11 +94,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             using (Slice.External(indexContext.Allocator, documentKey.Buffer, documentKey.Length, out docKeyAsSlice))
             {
                 Queue<MapEntry> existingEntries = null;
-                using (_mapPreparationStats?.Start() ?? (_mapPreparationStats = stats.For(IndexingOperation.Reduce.MapPreparation)))
-                {
+
+                using (_stats.GetMapEntriesTree.Start())
                     MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
 
-                    if (MapReduceWorkContext.DocumentMapEntries.NumberOfEntries > 0)
+
+                if (MapReduceWorkContext.DocumentMapEntries.NumberOfEntries > 0)
+                {
+                    using (_stats.GetMapEntries.Start())
                         existingEntries = GetMapEntries(MapReduceWorkContext.DocumentMapEntries);
                 }
 
@@ -109,53 +109,50 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 foreach (var mapResult in mappedResults)
                 {
-                    using (mapResult.Data)
+                    resultsCount++;
+
+                    var reduceKeyHash = mapResult.ReduceKeyHash;
+
+                    long id = -1;
+
+                    if (existingEntries?.Count > 0)
                     {
-                        resultsCount++;
+                        var existing = existingEntries.Dequeue();
+                        var storeOfExisting = GetResultsStore(existing.ReduceKeyHash, indexContext, false);
 
-                        var reduceKeyHash = mapResult.ReduceKeyHash;
-
-                        long id = -1;
-
-                        if (existingEntries?.Count > 0)
+                        if (reduceKeyHash == existing.ReduceKeyHash)
                         {
-                            var existing = existingEntries.Dequeue();
-                            var storeOfExisting = GetResultsStore(existing.ReduceKeyHash, indexContext, false);
+                            var existingResult = storeOfExisting.Get(existing.Id);
 
-                            if (reduceKeyHash == existing.ReduceKeyHash)
+                            if (ResultsBinaryEqual(mapResult.Data, existingResult))
                             {
-                                var existingResult = storeOfExisting.Get(existing.Id);
-
-                                if (ResultsBinaryEqual(mapResult.Data, existingResult))
-                                {
-                                    continue;
-                                }
-
-                                id = existing.Id;
+                                continue;
                             }
-                            else
+
+                            id = existing.Id;
+                        }
+                        else
+                        {
+                            using (_stats.RemoveResult.Start())
                             {
-                                using (_oldValueDeleteStats?.Start() ?? (_oldValueDeleteStats = stats.For(IndexingOperation.Reduce.OldValueDelete)))
-                                {
-                                    MapReduceWorkContext.DocumentMapEntries.Delete(existing.Id);
-                                    storeOfExisting.Delete(existing.Id);
-                                }
+                                MapReduceWorkContext.DocumentMapEntries.Delete(existing.Id);
+                                storeOfExisting.Delete(existing.Id);
                             }
                         }
+                    }
 
-                        using (_newValueAddStats?.Start() ?? (_newValueAddStats = stats.For(IndexingOperation.Reduce.NewValueAdd)))
+                    using (_stats.PutResult.Start())
+                    {
+                        if (id == -1)
                         {
-                            if (id == -1)
-                            {
-                                id = MapReduceWorkContext.GetNextIdentifier();
+                            id = MapReduceWorkContext.GetNextIdentifier();
 
-                                Slice val;
-                                using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))
-                                    MapReduceWorkContext.DocumentMapEntries.Add(id, val);
-                            }
-
-                            GetResultsStore(reduceKeyHash, indexContext, create: true).Add(id, mapResult.Data);
+                            Slice val;
+                            using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))
+                                MapReduceWorkContext.DocumentMapEntries.Add(id, val);
                         }
+
+                        GetResultsStore(reduceKeyHash, indexContext, create: true).Add(id, mapResult.Data);
                     }
                 }
 
@@ -169,7 +166,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     var oldState = GetResultsStore(oldResult.ReduceKeyHash, indexContext, create: false);
 
-                    using (_oldValueDeleteStats?.Start() ?? (_oldValueDeleteStats = stats.For(IndexingOperation.Reduce.OldValueDelete)))
+                    using (_stats.RemoveResult.Start())
                     {
                         oldState.Delete(oldResult.Id);
                         MapReduceWorkContext.DocumentMapEntries.Delete(oldResult.Id);
@@ -254,13 +251,23 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureValidStats(IndexingStatsScope stats)
         {
-            if (_stats == stats)
+            if (_statsInstance == stats)
                 return;
 
-            _stats = stats;
-            _newValueAddStats = null;
-            _oldValueDeleteStats = null;
-            _mapPreparationStats = null;
+            _statsInstance = stats;
+
+            _stats.GetMapEntriesTree = stats.For(IndexingOperation.Reduce.GetMapEntriesTree, start: false);
+            _stats.GetMapEntries = stats.For(IndexingOperation.Reduce.GetMapEntries, start: false);
+            _stats.RemoveResult = stats.For(IndexingOperation.Reduce.RemoveMapResult, start: false);
+            _stats.PutResult = stats.For(IndexingOperation.Reduce.PutMapResult, start: false);
+        }
+
+        private class MapPhaseStats
+        {
+            public IndexingStatsScope RemoveResult;
+            public IndexingStatsScope PutResult;
+            public IndexingStatsScope GetMapEntriesTree;
+            public IndexingStatsScope GetMapEntries;
         }
     }
 }

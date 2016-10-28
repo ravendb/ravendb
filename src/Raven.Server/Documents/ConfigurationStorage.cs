@@ -8,10 +8,12 @@ namespace Raven.Server.Documents
     public class ConfigurationStorage : IDisposable
     {
         private readonly DocumentDatabase _db;
-        private readonly StorageEnvironment _environment;
+
         private TransactionContextPool _contextPool;
 
         public AlertsStorage AlertsStorage { get; private set; }
+
+        public StorageEnvironment Environment { get; private set; }
 
         public ConfigurationStorage(DocumentDatabase db)
         {
@@ -23,21 +25,21 @@ namespace Raven.Server.Documents
 
             options.SchemaVersion = 1;
             options.TransactionsMode = TransactionsMode.Lazy;
-            _environment = new StorageEnvironment(options);
+            Environment = new StorageEnvironment(options);
 
             AlertsStorage = new AlertsStorage(_db.Name);
         }
 
         public void Initialize()
         {
-            _contextPool = new TransactionContextPool(_environment);
-            AlertsStorage.Initialize(_environment, _contextPool);
+            _contextPool = new TransactionContextPool(Environment);
+            AlertsStorage.Initialize(Environment, _contextPool);
         }
 
         public void Dispose()
         {
             _contextPool?.Dispose();
-            _environment.Dispose();
+            Environment.Dispose();
         }
     }
 }
