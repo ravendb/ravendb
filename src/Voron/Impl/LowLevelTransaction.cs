@@ -94,6 +94,8 @@ namespace Voron.Impl
 
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null )
         {
+            env.AssertNoCatastrophicFailure();
+
             DataPager = env.Options.DataPager;
             _env = env;
             _journal = env.Journal;
@@ -129,7 +131,24 @@ namespace Voron.Impl
                 return;
             }
 
-#if DEBUG
+            EnsureNoDuplicateTransactionId(id);
+
+            _dirtyOverflowPages = new Dictionary<long, long>(NumericEqualityComparer.Instance);
+            _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
+            _dirtyPages = new HashSet<long>(NumericEqualityComparer.Instance);
+            _freedPages = new HashSet<long>();
+            _unusedScratchPages = new List<PageFromScratchBuffer>();
+            _transactionPages = new HashSet<PageFromScratchBuffer>();
+            _pagesToFreeOnCommit = new Stack<long>();
+
+            _state = env.State.Clone();
+            InitializeRoots();
+            InitTransactionHeader();
+        }
+
+        [Conditional("DEBUG")]
+        private void EnsureNoDuplicateTransactionId(long id)
+        {
             foreach (var journalFile in _journal.Files)
             {
                 var lastSeenTxIdByJournal = journalFile.PageTranslationTable.GetLastSeenTransactionId();
@@ -149,20 +168,8 @@ namespace Voron.Impl
                         $"PTT of journal {journalFile.Number} already contains records for a new write tx. " +
                         $"Tx id = {id}, max id in journal = {maxTxIdInJournal}");
             }
-#endif
-
-            _dirtyOverflowPages = new Dictionary<long, long>(NumericEqualityComparer.Instance);
-            _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
-            _dirtyPages = new HashSet<long>(NumericEqualityComparer.Instance);
-            _freedPages = new HashSet<long>();
-            _unusedScratchPages = new List<PageFromScratchBuffer>();
-            _transactionPages = new HashSet<PageFromScratchBuffer>();
-            _pagesToFreeOnCommit = new Stack<long>();
-
-            _state = env.State.Clone();
-            InitializeRoots();
-            InitTransactionHeader();
         }
+
         internal void UpdateRootsIfNeeded(Tree root)
         {
             //can only happen during initial transaction that creates Root and FreeSpaceRoot trees
