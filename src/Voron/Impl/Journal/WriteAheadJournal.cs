@@ -101,7 +101,7 @@ namespace Voron.Impl.Journal
 
             var journalPager = _env.Options.CreateJournalWriter(_journalIndex, actualLogSize);
 
-            var journal = new JournalFile(_env,journalPager, _journalIndex);
+            var journal = new JournalFile(_env, journalPager, _journalIndex);
             journal.AddRef(); // one reference added by a creator - write ahead log
 
             _files = _files.Append(journal);
@@ -343,11 +343,20 @@ namespace Voron.Impl.Journal
         public void UpdateCacheForJournalSnapshots()
         {
             var items = new List<JournalSnapshot>(_files.Count);
+            // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var journalFile in _files)
             {
                 items.Add(journalFile.GetSnapshot());
             }
-#if DEBUG
+
+            ValidateNoDuplicateJournals(items);
+
+            _snapshotCache = items;
+        }
+
+        [Conditional("DEBUG")]
+        private static void ValidateNoDuplicateJournals(List<JournalSnapshot> items)
+        {
             for (int i = 0; i < items.Count; i++)
             {
                 for (int j = i + 1; j < items.Count; j++)
@@ -359,8 +368,6 @@ namespace Voron.Impl.Journal
                     }
                 }
             }
-#endif
-            _snapshotCache = items;
         }
 
         public void Clear(LowLevelTransaction tx)
@@ -440,7 +447,8 @@ namespace Voron.Impl.Journal
 
                     var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
 
-                    var jrnls = _waj._files.Select(x => x.GetSnapshot()).OrderBy(x => x.Number).ToList();
+                    var jrnls = GetJournalSnapshots();
+
                     if (jrnls.Count == 0)
                         return; // nothing to do
 
@@ -521,40 +529,37 @@ namespace Voron.Impl.Journal
 
                     var unusedJournals = GetUnusedJournalFiles(jrnls, lastProcessedJournal, lastFlushedTransactionId);
 
-                    foreach (var unused in unusedJournals.Where(unused => !_journalsToDelete.ContainsKey(unused.Number))
-                    )
-                    {
-                        _journalsToDelete.Add(unused.Number, unused);
-                    }
-
                     var timeout = TimeSpan.FromSeconds(3);
                     bool tryEnterReadLock = false;
                     if (alreadyInWriteTx == false)
                         tryEnterReadLock = _waj._env.FlushInProgressLock.TryEnterWriteLock(timeout);
                     try
                     {
+                        if (alreadyInWriteTx == false && tryEnterReadLock == false)
+                        {
+                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(_waj._env);//retry
+                            return;
+                        }
+
                         _waj._env.IncreaseTheChanceForGettingTheTransactionLock();
                         using (var transactionPersistentContext = new TransactionPersistentContext(true))
-                        using (
-                            var txw = alreadyInWriteTx
-                                ? null
-                                : _waj._env.NewLowLevelTransaction(transactionPersistentContext,
-                                    TransactionFlags.ReadWrite).JournalApplicatorTransaction())
+                        using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
                         {
-                            _lastFlushedJournalId = lastProcessedJournal;
-                            _lastFlushedTransactionId = lastFlushedTransactionId;
-                            _lastFlushedJournal = _waj._files.First(x => x.Number == lastProcessedJournal);
+                            if (alreadyInWriteTx == false)
+                                txw.JournalApplicatorTransaction();
+
+                           
 
                             if (unusedJournals.Count > 0)
                             {
-                                var lastUnusedJournalNumber = unusedJournals.Last().Number;
+                                var lastUnusedJournalNumber = unusedJournals[unusedJournals.Count - 1].Number;
                                 _waj._files = _waj._files.RemoveWhile(x => x.Number <= lastUnusedJournalNumber);
                             }
 
                             if (_waj._files.Count == 0)
                                 _waj.CurrentFile = null;
 
-                            FreeScratchPages(unusedJournals, txw ?? transaction);
+                            FreeScratchPages(unusedJournals, txw ?? transaction, lastFlushedTransactionId);
 
                             if (txw != null)
                             {
@@ -565,6 +570,15 @@ namespace Voron.Impl.Journal
 
                                 txw.Commit();
                             }
+
+                            _lastFlushedJournalId = lastProcessedJournal;
+                            _lastFlushedTransactionId = lastFlushedTransactionId;
+                            _lastFlushedJournal = _waj._files.First(x => x.Number == lastProcessedJournal);
+
+                            foreach (var unused in unusedJournals)
+                            {
+                                _journalsToDelete[unused.Number] = unused;
+                            }
                         }
                     }
                     finally
@@ -573,6 +587,8 @@ namespace Voron.Impl.Journal
                         if (tryEnterReadLock)
                             _waj._env.FlushInProgressLock.ExitWriteLock();
                     }
+
+
                     QueueDataFileSync();
                 }
                 finally
@@ -580,6 +596,18 @@ namespace Voron.Impl.Journal
                     if (lockTaken)
                         Monitor.Exit(_flushingLock);
                 }
+            }
+
+            private List<JournalSnapshot> GetJournalSnapshots()
+            {
+                var files = _waj._files;
+                var jrnls = new List<JournalSnapshot>(files.Count);
+                foreach (var file in files)
+                {
+                    jrnls.Add(file.GetSnapshot());
+                }
+                jrnls.Sort();
+                return jrnls;
             }
 
             private void QueueDataFileSync()
@@ -821,11 +849,11 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, LowLevelTransaction txw)
+            private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, LowLevelTransaction txw, long lastFlushedTransactionId)
             {
                 // we release up to the last read transaction, because there might be new read transactions that are currently
                 // running, that started after the flush
-                var lastSyncedTransactionId = Math.Min(_lastFlushedTransactionId, _waj._env.CurrentReadTransactionId - 1);
+                var lastSyncedTransactionId = Math.Min(lastFlushedTransactionId, _waj._env.CurrentReadTransactionId - 1);
 
                 // we have to free pages of the unused journals before the remaining ones that are still in use
                 // to prevent reading from them by any read transaction (read transactions search journals from the newest

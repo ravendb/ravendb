@@ -55,10 +55,10 @@ namespace Voron.Impl.Journal
 
         internal long WritePagePosition => _writePage;
 
-        public long Number { get; private set; }
+        public long Number { get; }
 
 
-        public long AvailablePages => _journalWriter.NumberOfAllocatedPages - _writePage;
+        public long AvailablePages => _journalWriter?.NumberOfAllocatedPages - _writePage ?? 0;
 
         internal IJournalWriter JournalWriter => _journalWriter;
 
