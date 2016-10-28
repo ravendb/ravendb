@@ -582,6 +582,8 @@ namespace Sparrow
             _externalFastPoolCount = 0;
             _externalCurrentLeft = 0;
 
+            _currentlyAllocated = 0;
+
             for (int i = 0; i < _wholeSegments.Count; i++)
             {
                 if (_wholeSegments[i] == _internalCurrent || _wholeSegments[i] == _externalCurrent)
