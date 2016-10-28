@@ -38,7 +38,7 @@ namespace Voron.Exceptions
             }
         }
 
-        private VoronUnrecoverableErrorException(string message)
+        protected VoronUnrecoverableErrorException(string message)
             : base(message)
         {
         }
