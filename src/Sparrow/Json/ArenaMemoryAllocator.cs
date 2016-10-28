@@ -178,6 +178,11 @@ namespace Sparrow.Json
             Dispose();
         }
 
+        public override string ToString()
+        {
+            return $"Allocated {Sizes.Humane(_allocated)}, Used {Sizes.Humane(_used)}";
+        }
+
         public void Dispose()
         {
             if (_isDisposed)
