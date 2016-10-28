@@ -4,21 +4,25 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Runtime.ExceptionServices;
 
 namespace Voron.Exceptions
 {
     public class VoronUnrecoverableErrorException : Exception
     {
-         public VoronUnrecoverableErrorException()
-        {
-        }
-
-        public VoronUnrecoverableErrorException(string message) 
+        public VoronUnrecoverableErrorException(StorageEnvironment env, string message) 
             : base(message)
         {
+            env.CatastrophicFailure = ExceptionDispatchInfo.Capture(this);
         }
 
-        public VoronUnrecoverableErrorException(string message, Exception inner) 
+        public VoronUnrecoverableErrorException(StorageEnvironment env, string message, Exception inner) 
+            : base(message, inner)
+        {
+            env.CatastrophicFailure = ExceptionDispatchInfo.Capture(this);
+        }
+
+        public VoronUnrecoverableErrorException(string message, Exception inner)
             : base(message, inner)
         {
         }

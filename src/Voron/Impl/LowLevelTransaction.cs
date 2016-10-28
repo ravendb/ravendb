@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.ExceptionServices;
 using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -124,10 +125,31 @@ namespace Voron.Impl
                 InitializeRoots();
 
                 JournalSnapshots = _journal.GetSnapshots();
-
-
+                
                 return;
             }
+
+#if DEBUG
+            foreach (var journalFile in _journal.Files)
+            {
+                var lastSeenTxIdByJournal = journalFile.PageTranslationTable.GetLastSeenTransactionId();
+
+                if (id <= lastSeenTxIdByJournal)
+                    throw new VoronUnrecoverableErrorException(_env,
+                        $"PTT of journal {journalFile.Number} already contains records for a new write tx. " +
+                        $"Tx id = {id}, last seen by journal = {lastSeenTxIdByJournal}");
+
+                if (journalFile.PageTranslationTable.IsEmpty)
+                    continue;
+
+                var maxTxIdInJournal = journalFile.PageTranslationTable.MaxTransactionId();
+
+                if (id <= maxTxIdInJournal)
+                    throw new VoronUnrecoverableErrorException(_env,
+                        $"PTT of journal {journalFile.Number} already contains records for a new write tx. " +
+                        $"Tx id = {id}, max id in journal = {maxTxIdInJournal}");
+            }
+#endif
 
             _dirtyOverflowPages = new Dictionary<long, long>(NumericEqualityComparer.Instance);
             _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
