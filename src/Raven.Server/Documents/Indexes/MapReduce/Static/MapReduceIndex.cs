@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
     {
         private readonly HashSet<CollectionName> _referencedCollections = new HashSet<CollectionName>();
 
-        internal readonly StaticIndexBase _compiled;
+        internal readonly StaticIndexBase Compiled;
 
         private HandleReferences _handleReferences;
 
@@ -31,19 +31,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private MapReduceIndex(int indexId, MapReduceIndexDefinition definition, StaticIndexBase compiled)
             : base(indexId, IndexType.MapReduce, definition)
         {
-            _compiled = compiled;
+            Compiled = compiled;
 
-            if (_compiled.ReferencedCollections == null)
+            if (Compiled.ReferencedCollections == null)
                 return;
 
-            foreach (var collection in _compiled.ReferencedCollections)
+            foreach (var collection in Compiled.ReferencedCollections)
             {
                 foreach (var referencedCollection in collection.Value)
                     _referencedCollections.Add(referencedCollection);
             }
         }
 
-        public override bool HasBoostedFields => _compiled.HasBoostedFields;
+        public override bool HasBoostedFields => Compiled.HasBoostedFields;
 
         protected override void InitializeInternal()
         {
@@ -81,13 +81,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
             var workers = new List<IIndexingWork>();
-            workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext));
+            workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, MapReduceWorkContext));
 
             if (_referencedCollections.Count > 0)
-                workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
+                workers.Add(_handleReferences = new HandleReferences(this, Compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
 
-            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, _mapReduceWorkContext, DocumentDatabase.Configuration.Indexing));
-            workers.Add(new ReduceMapResultsOfStaticIndex(this, _compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext));
+            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, MapReduceWorkContext, DocumentDatabase.Configuration.Indexing));
+            workers.Add(new ReduceMapResultsOfStaticIndex(this, Compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, MapReduceWorkContext));
 
             return workers.ToArray();
         }
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats, StaticIndexDocsEnumerator.EnumerationType.Index);
+            return new StaticIndexDocsEnumerator(documents, Compiled.Maps[collection], collection, stats, StaticIndexDocsEnumerator.EnumerationType.Index);
         }
 
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
         {
-            return _compiled.ReferencedCollections;
+            return Compiled.ReferencedCollections;
         }
 
         private class AnonymousObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>
