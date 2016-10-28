@@ -14,10 +14,6 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IoMetricsHandler : DatabaseRequestHandler
     {
-        private static long FrequencyInMs = Stopwatch.Frequency / 1000;
-        private static long StartTicks = Stopwatch.GetTimestamp();
-        private static DateTime StartTime = DateTime.UtcNow;
-
         [RavenAction("/databases/*/debug/io-metrics", "GET")]
         public Task IoMetrics()
         {
@@ -73,31 +69,28 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var recentMetric in fileMetric.GetRecentMetrics())
             {
-                var start = StartTime.Add(TimeSpan.FromTicks(recentMetric.Start - StartTicks));
                 recent.Add(new DynamicJsonValue
                 {
-                    ["Start"] = start.GetDefaultRavenFormat(),
+                    ["Start"] = recentMetric.Start.GetDefaultRavenFormat(),
                     ["Size"] = recentMetric.Size,
                     ["HumaneSize"] = Sizes.Humane(recentMetric.Size),
-                    ["Duration"] = recentMetric.Duration / FrequencyInMs,
+                    ["Duration"] = Math.Round(recentMetric.Duration.TotalMilliseconds, 2),
                     ["Type"] = recentMetric.Type.ToString()
                 });
             }
 
             foreach (var historyMetric in fileMetric.GetSummaryMetrics())
             {
-                var start = StartTime.Add(TimeSpan.FromTicks(historyMetric.TotalTimeStart - StartTicks));
-                var end = StartTime.Add(TimeSpan.FromTicks(historyMetric.TotalTimeEnd - StartTicks));
                 history.Add(new DynamicJsonValue
                 {
-                    ["Start"] = start.GetDefaultRavenFormat(),
-                    ["End"] = end.GetDefaultRavenFormat(),
+                    ["Start"] = historyMetric.TotalTimeStart.GetDefaultRavenFormat(),
+                    ["End"] = historyMetric.TotalTimeEnd.GetDefaultRavenFormat(),
                     ["Size"] = historyMetric.TotalSize,
                     ["HumaneSize"] = Sizes.Humane(historyMetric.TotalSize),
-                    ["Duration"] = (historyMetric.TotalTimeEnd - historyMetric.TotalTimeStart) / FrequencyInMs,
-                    ["ActiveDuration"] = historyMetric.TotalTime / FrequencyInMs,
-                    ["MaxDuration"] = historyMetric.MaxTime / FrequencyInMs,
-                    ["MinDuration"] = historyMetric.MinTime / FrequencyInMs,
+                    ["Duration"] = Math.Round((historyMetric.TotalTimeEnd - historyMetric.TotalTimeStart).TotalMilliseconds, 2),
+                    ["ActiveDuration"] = Math.Round(historyMetric.TotalTime.TotalMilliseconds, 2),
+                    ["MaxDuration"] = Math.Round(historyMetric.MaxTime.TotalMilliseconds, 2),
+                    ["MinDuration"] = Math.Round(historyMetric.MinTime.TotalMilliseconds, 2),
                     ["Type"] = historyMetric.Type.ToString()
                 });
             }
