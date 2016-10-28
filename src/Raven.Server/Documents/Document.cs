@@ -82,5 +82,20 @@ namespace Raven.Server.Documents
 
             _hash = null;
         }
+
+        public bool Expired()
+        {
+            string expirationDate;
+            BlittableJsonReaderObject metadata;
+            if (Data.TryGet(Constants.Metadata.Key, out metadata) &&
+                metadata.TryGet(Constants.Expiration.RavenExpirationDate, out expirationDate))
+            {
+                DateTime expirationDateTime = DateTime.Parse(expirationDate);
+                if (expirationDateTime - DateTime.Now < TimeSpan.Zero)
+                    return true;
+            }
+            return false;
+        }
+
     }
 }

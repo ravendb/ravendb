@@ -6,18 +6,18 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Raven.Client.Data;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -42,29 +42,28 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/smuggler/export", "POST")]
         public async Task PostExport()
         {
-            DocumentsOperationContext context;
+            DocumentsOperationContext context;            
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
                 var operationId = GetIntValueQueryString("operationId", required: false);
 
-                var exporter = new SmugglerExporter(Database)
-                {
-                    DocumentsLimit = GetIntValueQueryString("documentsLimit", required: false),
-                    RevisionDocumentsLimit = GetIntValueQueryString("RevisionDocumentsLimit", required: false),
-                };
+                var blittableJson = await context.ReadForMemoryAsync(RequestFormStream("DownloadOptions"), "DownloadOptions");
+                var options = JsonDeserializationServer.DatabaseExportOptions(blittableJson);
 
-                var operateOnTypes = GetStringQueryString("operateOnTypes", required: false);
-                DatabaseItemType databaseItemType;
-                if (Enum.TryParse(operateOnTypes, true, out databaseItemType))
-                {
-                    exporter.OperateOnTypes = databaseItemType;
-                }
-
+                var exporter = new SmugglerExporter(Database, options);
                 var token = CreateOperationToken();
+
+                var fileName = string.IsNullOrEmpty(exporter.Options.FileName) ?
+                        $"Dump of {context.DocumentDatabase.Name}, {DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}" :
+                        exporter.Options.FileName;
+
+                var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(fileName);
+                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
 
                 if (operationId.HasValue)
                 {
+                   
                     await Database.Operations.AddOperation("Export database: " + Database.Name, DatabaseOperations.PendingOperationType.DatabaseExport,
                         onProgress => Task.Run(() => ExportDatabaseInternal(context, exporter, onProgress, token), token.Token), operationId.Value, token);
                 }
@@ -79,12 +78,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             try
             {
-
-
-
-                //TODO: use optional onProgress parameter
-                exporter.Export(context, ResponseBodyStream());
-                return null; //TODO: pass operation result to operation status
+                return exporter.Export(context, ResponseBodyStream(), onProgress); 
             }
             finally
             {
