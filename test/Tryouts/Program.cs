@@ -11,9 +11,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                using (var x = new SlowTests.Tests.Sorting.AlphaNumericSorting())
+                using (var x = new FastTests.Voron.Backups.BackupToOneZipFile())
                 {
-                    x.random_words_using_document_query_async().Wait();
+                    x.IncrementalBackupToOneZipFile();
                 }
                 Console.WriteLine(sp.Elapsed);
             }

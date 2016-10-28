@@ -72,6 +72,7 @@ namespace Voron.Impl.Journal
                 buffer += actualCount;
                 count -= actualCount;
                 pageNumber += pagesAvailableToRead;
+                currentPage += pagesAvailableToRead;
                 if (count <= 0)
                     return true;
             }
