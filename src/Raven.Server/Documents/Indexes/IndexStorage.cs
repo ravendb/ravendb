@@ -322,7 +322,7 @@ namespace Raven.Server.Documents.Indexes
         private unsafe void WriteLastEtag(RavenTransaction tx, string tree, Slice collection, long etag)
         {
             if (_simulateCorruption)
-                throw new VoronUnrecoverableErrorException("Simulated corruption.", new Exception());
+                VoronUnrecoverableErrorException.Raise(null, "Simulated corruption.", new Exception());
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Writing last etag for '{_index.Name} ({_index.IndexId})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");

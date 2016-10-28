@@ -265,7 +265,7 @@ namespace Voron.Impl.Paging
         {
             // this is a separate method because we don't want to have an exception throwing in the hot path
 
-            throw new VoronUnrecoverableErrorException(env,
+            VoronUnrecoverableErrorException.Raise(env,
                 "The page " + pageNumber + " was not allocated, allocated pages: " + NumberOfAllocatedPages + " in " +
                 GetSourceName());
         }

@@ -196,32 +196,32 @@ namespace Voron
 
                         var metadataTree = treesTx.ReadTree(Constants.MetadataTreeNameSlice);
                         if (metadataTree == null)
-                            throw new VoronUnrecoverableErrorException(this,
+                            VoronUnrecoverableErrorException.Raise(this,
                                 "Could not find metadata tree in database, possible mismatch / corruption?");
 
                         var dbId = metadataTree.Read("db-id");
                         if (dbId == null)
-                            throw new VoronUnrecoverableErrorException(this,
+                            VoronUnrecoverableErrorException.Raise(this,
                                 "Could not find db id in metadata tree, possible mismatch / corruption?");
 
                         var buffer = new byte[16];
                         var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
                         if (dbIdBytes != 16)
-                            throw new VoronUnrecoverableErrorException(this,
+                            VoronUnrecoverableErrorException.Raise(this,
                                 "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
 
                         DbId = new Guid(buffer);
 
                         var schemaVersion = metadataTree.Read("schema-version");
                         if (schemaVersion == null)
-                            throw new VoronUnrecoverableErrorException(this,
+                            VoronUnrecoverableErrorException.Raise(this,
                                 "Could not find schema version in metadata tree, possible mismatch / corruption?");
 
                         var schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
                         if (Options.SchemaVersion != 0 &&
                             schemaVersionVal != Options.SchemaVersion)
                         {
-                            throw new VoronUnrecoverableErrorException(this,
+                            VoronUnrecoverableErrorException.Raise(this,
                                 "The schema version of this database is expected to be " +
                                 Options.SchemaVersion + " but is actually " + schemaVersionVal +
                                 ". You need to upgrade the schema.");
@@ -594,12 +594,12 @@ namespace Voron
             }
             catch (SEHException sehException)
             {
-                throw new VoronUnrecoverableErrorException(this, "Error occurred during flushing journals to the data file",
+                VoronUnrecoverableErrorException.Raise(this, "Error occurred during flushing journals to the data file",
                     new Win32Exception(sehException.HResult));
             }
             catch (Exception e)
             {
-                throw new VoronUnrecoverableErrorException(this, "Error occurred during flushing journals to the data file", e);
+                VoronUnrecoverableErrorException.Raise(this, "Error occurred during flushing journals to the data file", e);
             }
         }
 

@@ -188,7 +188,7 @@ namespace Voron.Impl.Journal
             _files = _files.AppendRange(journalFiles);
 
             if (lastSyncedTxId == -1 && requireHeaderUpdate)
-                throw new VoronUnrecoverableErrorException(_env,
+                VoronUnrecoverableErrorException.Raise(_env,
                     "First transaction initializing the structure of Voron database is corrupted. Cannot access internal database metadata. Create a new database to recover.");
 
             Debug.Assert(lastSyncedTxId >= 0);
@@ -548,7 +548,14 @@ namespace Voron.Impl.Journal
                             if (alreadyInWriteTx == false)
                                 txw.JournalApplicatorTransaction();
 
-                           
+                            _lastFlushedJournalId = lastProcessedJournal;
+                            _lastFlushedTransactionId = lastFlushedTransactionId;
+                            _lastFlushedJournal = _waj._files.First(x => x.Number == lastProcessedJournal);
+
+                            foreach (var unused in unusedJournals)
+                            {
+                                _journalsToDelete[unused.Number] = unused;
+                            }
 
                             if (unusedJournals.Count > 0)
                             {
@@ -559,7 +566,7 @@ namespace Voron.Impl.Journal
                             if (_waj._files.Count == 0)
                                 _waj.CurrentFile = null;
 
-                            FreeScratchPages(unusedJournals, txw ?? transaction, lastFlushedTransactionId);
+                            FreeScratchPages(unusedJournals, txw ?? transaction);
 
                             if (txw != null)
                             {
@@ -569,15 +576,6 @@ namespace Voron.Impl.Journal
                                 _waj.HasLazyTransactions = false;
 
                                 txw.Commit();
-                            }
-
-                            _lastFlushedJournalId = lastProcessedJournal;
-                            _lastFlushedTransactionId = lastFlushedTransactionId;
-                            _lastFlushedJournal = _waj._files.First(x => x.Number == lastProcessedJournal);
-
-                            foreach (var unused in unusedJournals)
-                            {
-                                _journalsToDelete[unused.Number] = unused;
                             }
                         }
                     }
@@ -849,11 +847,11 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, LowLevelTransaction txw, long lastFlushedTransactionId)
+            private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, LowLevelTransaction txw)
             {
                 // we release up to the last read transaction, because there might be new read transactions that are currently
                 // running, that started after the flush
-                var lastSyncedTransactionId = Math.Min(lastFlushedTransactionId, _waj._env.CurrentReadTransactionId - 1);
+                var lastSyncedTransactionId = Math.Min(_lastFlushedTransactionId, _waj._env.CurrentReadTransactionId - 1);
 
                 // we have to free pages of the unused journals before the remaining ones that are still in use
                 // to prevent reading from them by any read transaction (read transactions search journals from the newest

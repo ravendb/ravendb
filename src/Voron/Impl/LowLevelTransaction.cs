@@ -154,7 +154,7 @@ namespace Voron.Impl
                 var lastSeenTxIdByJournal = journalFile.PageTranslationTable.GetLastSeenTransactionId();
 
                 if (id <= lastSeenTxIdByJournal)
-                    throw new VoronUnrecoverableErrorException(_env,
+                    VoronUnrecoverableErrorException.Raise(_env,
                         $"PTT of journal {journalFile.Number} already contains records for a new write tx. " +
                         $"Tx id = {id}, last seen by journal = {lastSeenTxIdByJournal}");
 
@@ -164,7 +164,7 @@ namespace Voron.Impl
                 var maxTxIdInJournal = journalFile.PageTranslationTable.MaxTransactionId();
 
                 if (id <= maxTxIdInJournal)
-                    throw new VoronUnrecoverableErrorException(_env,
+                    VoronUnrecoverableErrorException.Raise(_env,
                         $"PTT of journal {journalFile.Number} already contains records for a new write tx. " +
                         $"Tx id = {id}, max id in journal = {maxTxIdInJournal}");
             }
@@ -683,13 +683,13 @@ namespace Voron.Impl
             {
                 long pageNumber = readOnlyKey.Key;
                 if (_dirtyPages.Contains(pageNumber))
-                    throw new VoronUnrecoverableErrorException("Read only page is dirty (which means you are modifying a page directly in the data -- non transactionally -- ).");
+                    VoronUnrecoverableErrorException.Raise("Read only page is dirty (which means you are modifying a page directly in the data -- non transactionally -- ).");
 
                 var page = this.GetPage(pageNumber);
 
                 ulong pageHash = Hashing.XXHash64.Calculate(page.Pointer, (ulong)Environment.Options.PageSize);
                 if (pageHash != readOnlyKey.Value)
-                    throw new VoronUnrecoverableErrorException("Read only page content is different (which means you are modifying a page directly in the data -- non transactionally -- ).");
+                    VoronUnrecoverableErrorException.Raise("Read only page content is different (which means you are modifying a page directly in the data -- non transactionally -- ).");
             }
         }
 
@@ -699,7 +699,7 @@ namespace Voron.Impl
             {
                 long pageNumber = writableKey.Key;
                 if (!_dirtyPages.Contains(pageNumber))
-                    throw new VoronUnrecoverableErrorException("Writable key is not dirty (which means you are asking for a page modification for no reason).");
+                    VoronUnrecoverableErrorException.Raise("Writable key is not dirty (which means you are asking for a page modification for no reason).");
             }
         }
 
@@ -732,7 +732,7 @@ namespace Voron.Impl
             if ( readOnlyPages.TryGetValue(page.PageNumber, out storedHash) )
             {
                 if (pageHash != storedHash)
-                    throw new VoronUnrecoverableErrorException("Read Only Page has change between tracking requests. Page #" + page.PageNumber);
+                    VoronUnrecoverableErrorException.Raise("Read Only Page has change between tracking requests. Page #" + page.PageNumber);
             }
             else
             {
