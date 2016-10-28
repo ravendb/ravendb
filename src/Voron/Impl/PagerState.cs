@@ -6,6 +6,7 @@ using System.IO.MemoryMappedFiles;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Utils;
+using Voron.Exceptions;
 using Voron.Impl.Paging;
 
 
@@ -94,6 +95,9 @@ namespace Voron.Impl
 
         public void AddRef()
         {
+            if (Released)
+                ThrowInvalidPagerState();
+
             Interlocked.Increment(ref _refs);
 #if DEBUG_PAGER_STATE
             AddedRefs.Enqueue(Environment.StackTrace);
@@ -103,6 +107,11 @@ namespace Voron.Impl
                 AddedRefs.TryDequeue(out trace);
             }
 #endif
+        }
+
+        private void ThrowInvalidPagerState()
+        {
+            throw new ObjectDisposedException("Cannot add reference to a disposed pager state for " + _pager.FileName);
         }
 
         [Conditional("VALIDATE")]
