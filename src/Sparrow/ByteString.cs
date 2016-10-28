@@ -580,7 +580,7 @@ namespace Sparrow
 
             _externalStringPool.Clear();
             _externalFastPoolCount = 0;
-            _externalCurrentLeft = 0;
+            _externalCurrentLeft = (int)(_externalCurrent.End - _externalCurrent.Start) / _externalAlignedSize;
 
             _currentlyAllocated = 0;
 
