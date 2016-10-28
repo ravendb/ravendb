@@ -210,7 +210,7 @@ namespace Raven.Server.Documents
                     "<memory>" : _documentDatabase.Configuration.Core.DataDirectory));
 
             var options = _documentDatabase.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly()
+                ? StorageEnvironmentOptions.CreateMemoryOnly(_documentDatabase.Configuration.Core.DataDirectory)
                 : StorageEnvironmentOptions.ForPath(_documentDatabase.Configuration.Core.DataDirectory);
 
             try

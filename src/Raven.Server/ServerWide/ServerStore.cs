@@ -78,7 +78,7 @@ namespace Raven.Server.ServerWide
                 _logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory));
 
             var options = Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly()
+                ? StorageEnvironmentOptions.CreateMemoryOnly(Configuration.Core.DataDirectory)
                 : StorageEnvironmentOptions.ForPath(Configuration.Core.DataDirectory);
 
             options.SchemaVersion = 1;

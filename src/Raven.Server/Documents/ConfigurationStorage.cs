@@ -18,7 +18,7 @@ namespace Raven.Server.Documents
             _db = db;
 
             var options = _db.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly()
+                ? StorageEnvironmentOptions.CreateMemoryOnly(Path.Combine(_db.Configuration.Core.DataDirectory, "Configuration"))
                 : StorageEnvironmentOptions.ForPath(Path.Combine(_db.Configuration.Core.DataDirectory, "Configuration"));
 
             options.SchemaVersion = 1;

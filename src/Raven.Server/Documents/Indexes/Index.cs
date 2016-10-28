@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.Indexes
                 var indexPath = Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath,
                     GetIndexNameSafeForFileSystem());
                 var options = documentDatabase.Configuration.Indexing.RunInMemory
-                    ? StorageEnvironmentOptions.CreateMemoryOnly()
+                    ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath)
                     : StorageEnvironmentOptions.ForPath(indexPath);
 
                 options.SchemaVersion = 1;

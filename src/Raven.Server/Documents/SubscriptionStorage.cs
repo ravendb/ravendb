@@ -37,7 +37,7 @@ namespace Raven.Server.Documents
         public SubscriptionStorage(DocumentDatabase db)
         {
             var options = db.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly()
+                ? StorageEnvironmentOptions.CreateMemoryOnly(Path.Combine(db.Configuration.Core.DataDirectory, "Subscriptions"))
                 : StorageEnvironmentOptions.ForPath(Path.Combine(db.Configuration.Core.DataDirectory, "Subscriptions"));
             
 
