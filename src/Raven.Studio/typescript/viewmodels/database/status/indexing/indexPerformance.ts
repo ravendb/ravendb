@@ -252,7 +252,7 @@ class metrics extends viewModelBase {
 
     private dataImported(result: string) {
         const json = JSON.parse(result) as {
-            data: Raven.Client.Data.Indexes.IndexPerformanceStats[]
+            data: Raven.Client.Data.Indexes.IndexPerformanceStats[];
         };
 
         this.data = json.data;
