@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using Sparrow;
 using Voron.Data.BTrees;
+using Voron.Data.Fixed;
 using Voron.Exceptions;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
@@ -24,6 +25,8 @@ namespace Voron.Impl
         private readonly ByteStringContext _allocator;
         private readonly bool _disposeAllocator;
         private Tree _root;
+
+        internal FixedSizeTree _freeSpaceTree;
 
         public bool FlushedToJournal;
         public Tree RootObjects => _root;
@@ -444,6 +447,7 @@ namespace Voron.Impl
                 _allocator.Dispose();
 
             _root?.Dispose();
+            _freeSpaceTree?.Dispose();
 
             if (AlsoDispose != null)
             {

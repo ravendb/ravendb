@@ -43,8 +43,8 @@ namespace Voron.Impl.FreeSpace
                 return null;
 
             using (_guard.Enter(tx))
-            using (var freeSpaceTree = GetFreeSpaceTree(tx))
             {
+                var freeSpaceTree = GetFreeSpaceTree(tx);
 
                 if (freeSpaceTree.NumberOfEntries == 0)
                     return null;
@@ -316,34 +316,32 @@ namespace Voron.Impl.FreeSpace
 
         public List<long> AllPages(LowLevelTransaction tx)
         {
-            using (var freeSpaceTree = GetFreeSpaceTree(tx))
+            var freeSpaceTree = GetFreeSpaceTree(tx);
+            if (freeSpaceTree.NumberOfEntries == 0)
+                return new List<long>();
+
+            using (var it = freeSpaceTree.Iterate())
             {
-                if (freeSpaceTree.NumberOfEntries == 0)
+                if (it.Seek(0) == false)
                     return new List<long>();
 
-                using (var it = freeSpaceTree.Iterate())
+                var freePages = new List<long>();
+
+                do
                 {
-                    if (it.Seek(0) == false)
-                        return new List<long>();
+                    var stream = it.CreateReaderForCurrent();
 
-                    var freePages = new List<long>();
+                    var current = new StreamBitArray(stream);
+                    var currentSectionId = it.CurrentKey;
 
-                    do
+                    for (var i = 0; i < NumberOfPagesInSection; i++)
                     {
-                        var stream = it.CreateReaderForCurrent();
+                        if (current.Get(i))
+                            freePages.Add(currentSectionId*NumberOfPagesInSection + i);
+                    }
+                } while (it.MoveNext());
 
-                        var current = new StreamBitArray(stream);
-                        var currentSectionId = it.CurrentKey;
-
-                        for (var i = 0; i < NumberOfPagesInSection; i++)
-                        {
-                            if (current.Get(i))
-                                freePages.Add(currentSectionId * NumberOfPagesInSection + i);
-                        }
-                    } while (it.MoveNext());
-
-                    return freePages;
-                }
+                return freePages;
             }
         }
 
@@ -355,8 +353,8 @@ namespace Voron.Impl.FreeSpace
                 return;
             }
             using (_guard.Enter(tx))
-            using (var freeSpaceTree = GetFreeSpaceTree(tx))
             {
+                var freeSpaceTree = GetFreeSpaceTree(tx);
                 StreamBitArray sba;
                 var section = pageNumber / NumberOfPagesInSection;
                 Slice result;
@@ -377,18 +375,16 @@ namespace Voron.Impl.FreeSpace
 
         public long GetFreePagesOverhead(LowLevelTransaction tx)
         {
-            using (var fst = GetFreeSpaceTree(tx))
-                return fst.PageCount;
+            var fst = GetFreeSpaceTree(tx);
+            return fst.PageCount;
         }
 
         public IEnumerable<long> GetFreePagesOverheadPages(LowLevelTransaction tx)
         {
-            using (var fst = GetFreeSpaceTree(tx))
+            var fst = GetFreeSpaceTree(tx);
+            foreach (var page in fst.AllPages())
             {
-                foreach (var page in fst.AllPages())
-                {
-                    yield return page;
-                }
+                yield return page;
             }
         }
 
@@ -400,7 +396,11 @@ namespace Voron.Impl.FreeSpace
 
         private static FixedSizeTree GetFreeSpaceTree(LowLevelTransaction tx)
         {
-            return new FixedSizeTree(tx, tx.RootObjects, FreeSpaceKey, 260, clone: false)
+            if (tx._freeSpaceTree != null)
+            {
+                return tx._freeSpaceTree;
+            }
+            return tx._freeSpaceTree = new FixedSizeTree(tx, tx.RootObjects, FreeSpaceKey, 260, clone: false)
             {
                 FreeSpaceTree = true
             };
