@@ -51,22 +51,27 @@ namespace Voron.Impl.Journal
 
         public bool Read(long pageNumber, byte* buffer, int count)
         {
-            long pos = 0;
+            long currentPage = 0;
             foreach (var current in _buffers)
             {
-                if (pos != pageNumber)
+                long offsetInPages = 0;
+                if (currentPage != pageNumber)
                 {
-                    pos += current.SizeInPages;
-                    
-                    continue;
+                    if (currentPage + current.SizeInPages <= pageNumber)
+                    {
+                        currentPage += current.SizeInPages;
+                        continue;
+                    }
+                    offsetInPages = pageNumber - currentPage;
                 }
-                pos += current.SizeInPages;
-                var actualCount = Math.Min(count, (int)(current.SizeInPages*_options.PageSize));
-               
-                Memory.Copy(buffer, current.Pointer, actualCount);
+
+                var pagesAvailableToRead = (current.SizeInPages - offsetInPages);
+                var actualCount = Math.Min(count, (int)(pagesAvailableToRead * _options.PageSize));
+
+                Memory.Copy(buffer, current.Pointer + (offsetInPages * _options.PageSize), actualCount);
                 buffer += actualCount;
                 count -= actualCount;
-                pageNumber += current.SizeInPages;
+                pageNumber += pagesAvailableToRead;
                 if (count <= 0)
                     return true;
             }
