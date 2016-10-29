@@ -346,12 +346,24 @@ namespace Voron.Impl.Journal
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var journalFile in _files)
             {
-                items.Add(journalFile.GetSnapshot());
+                var journalSnapshot = journalFile.GetSnapshot();
+                // we have to hold a reference to the journals for the lifetime of the cache
+                // this call is prevented from running concurrently with GetSnapshots()
+                journalSnapshot.FileInstance.AddRef();
+                items.Add(journalSnapshot);
             }
 
             ValidateNoDuplicateJournals(items);
 
+            var old = _snapshotCache;
             _snapshotCache = items;
+            if (old == null)
+                return;
+
+            foreach (var journalSnapshot in old)
+            {
+                journalSnapshot.FileInstance.Release();// free the old cache reference
+            }
         }
 
         [Conditional("DEBUG")]

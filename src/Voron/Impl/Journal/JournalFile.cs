@@ -89,6 +89,7 @@ namespace Voron.Impl.Journal
             var lastTxId = _pageTranslationTable.GetLastSeenTransactionId();
             return new JournalSnapshot
             {
+                FileInstance = this,
                 Number = Number,
                 AvailablePages = AvailablePages,
                 PageTranslationTable = _pageTranslationTable,

@@ -477,9 +477,12 @@ namespace Voron
 
             using (PreventNewReadTransactions())
             {
+                ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
+                Journal.UpdateCacheForJournalSnapshots();
+
                 if (tx.Committed && tx.FlushedToJournal)
                     _transactionsCounter = tx.Id;
-
+                
                 State = tx.State;
             }
 

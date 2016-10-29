@@ -10,6 +10,7 @@ namespace Voron.Impl.Journal
         public PageTable PageTranslationTable;
         public long AvailablePages;
         public long LastTransaction;
+        public JournalFile FileInstance;
 
         public int CompareTo(JournalSnapshot other)
         {

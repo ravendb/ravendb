@@ -594,9 +594,6 @@ namespace Voron.Impl
                 // release scratch file page allocated for the transaction header
                 _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);
 
-                _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
-                _env.Journal.UpdateCacheForJournalSnapshots();
-
                 Committed = true;
                 _env.TransactionAfterCommit(this);
             }
