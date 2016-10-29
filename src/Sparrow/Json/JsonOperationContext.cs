@@ -295,7 +295,7 @@ namespace Sparrow.Json
                 throw new InvalidOperationException("Partial content in object json parser shouldn't happen");
             _writer.FinalizeDocument();
             var reader = _writer.CreateReader();
-            reader.DisposeTrackingReference = _liveReaders.AddFirst(reader);
+            RegisterLiveReader(reader);
             return reader;
         }
 
@@ -367,7 +367,7 @@ namespace Sparrow.Json
                     builder.FinalizeDocument();
 
                     var reader = builder.CreateReader();
-                    reader.DisposeTrackingReference = _liveReaders.AddFirst(reader);
+                    RegisterLiveReader(reader);
                     return reader;
                 }
                 catch (Exception)
@@ -375,6 +375,15 @@ namespace Sparrow.Json
                     builder.Dispose();
                     throw;
                 }
+            }
+        }
+
+        private void RegisterLiveReader(BlittableJsonReaderObject reader)
+        {
+            reader.DisposeTrackingReference = _liveReaders.AddFirst(reader);
+            if (_liveReaders.Count > 10000)
+            {
+                reader._allocation = Environment.StackTrace;
             }
         }
 
@@ -402,7 +411,7 @@ namespace Sparrow.Json
                     writer.FinalizeDocument();
 
                     var reader = writer.CreateReader();
-                    reader.DisposeTrackingReference = _liveReaders.AddFirst(reader);
+                    RegisterLiveReader(reader);
 
                     return reader;
                 }
