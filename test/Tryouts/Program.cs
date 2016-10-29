@@ -11,9 +11,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                using (var x = new FastTests.Voron.Backups.BackupToOneZipFile())
+                using (var x = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
                 {
-                    x.IncrementalBackupToOneZipFile();
+                    x.IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert();
                 }
                 Console.WriteLine(sp.Elapsed);
             }
