@@ -138,7 +138,17 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     }
 
                                     if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
-                                        break;
+                                    {
+                                        if (databaseContext.ShouldRenewTransactionsToAllowFlushing())
+                                            break;
+                                        
+                                        // if we haven't had writes in the meantime, there is no point
+                                        // in replacing the database transaction, and it will probably cost more
+                                        // let us check again later to see if we need to
+                                        maxTimeForDocumentTransactionToRemainOpen =
+                                            maxTimeForDocumentTransactionToRemainOpen.Add(
+                                                _configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan);
+                                    }
                                 }
                             }
                         }
