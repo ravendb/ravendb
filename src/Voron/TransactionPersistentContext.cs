@@ -51,6 +51,11 @@ namespace Voron
         public void FreePageLocator(PageLocator locator)
         {
             Debug.Assert(locator != null);
+            if (_pageLocators.Count > 128)
+            {
+                locator.Dispose();
+                return;
+            }
             _pageLocators.Push(locator);
         }
 
