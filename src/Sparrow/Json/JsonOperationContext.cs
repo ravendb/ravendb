@@ -381,10 +381,6 @@ namespace Sparrow.Json
         private void RegisterLiveReader(BlittableJsonReaderObject reader)
         {
             reader.DisposeTrackingReference = _liveReaders.AddFirst(reader);
-            if (_liveReaders.Count > 10000)
-            {
-                reader._allocation = Environment.StackTrace;
-            }
         }
 
         private async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)

@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     break;
                                 }
 
-                                if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
+                                if (MapDocuments.MaybeRenewTransaction(databaseContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
                                     break;
                             }
 
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
         {
-            if (currentEtag >= maxEtag)
+            if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
                 return false;
 
             if (_index.CanContinueBatch(stats) == false)
