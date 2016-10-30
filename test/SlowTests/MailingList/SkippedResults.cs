@@ -27,6 +27,8 @@ namespace SlowTests.MailingList
 
                 new NestedPropertyIndex1().Execute(store);
 
+                WaitForIndexing(store);
+
                 // Retrieves all 10 providers in a single result set.
                 using (var session = store.OpenSession())
                 {
