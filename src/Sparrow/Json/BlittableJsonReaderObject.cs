@@ -161,12 +161,12 @@ namespace Sparrow.Json
             }
 
             // sort according to offsets
-            Array.Sort(ids, propertyNames);
+            Array.Sort(ids, propertyNames, NumericDescendingComparer.Instance);
 
             return propertyNames;
         }
 
-        private unsafe LazyStringValue GetPropertyName(int propertyId)
+        private LazyStringValue GetPropertyName(int propertyId)
         {
             var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId*_propNamesDataOffsetSize;
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
@@ -369,9 +369,10 @@ namespace Sparrow.Json
         private void GetPropertyTypeAndPosition(int index, long metadataSize, out BlittableJsonToken token, out int position)
         {
             var propPos = _metadataPtr + index * metadataSize;
-            position  = ReadNumber(propPos + _currentOffsetSize, _currentPropertyIdSize);
+            position  = ReadNumber(propPos, _currentOffsetSize);
             token = (BlittableJsonToken) (*(propPos + _currentOffsetSize + _currentPropertyIdSize));
         }
+
 
         public struct PropertyDetails
         {
@@ -383,7 +384,7 @@ namespace Sparrow.Json
         public void GetPropertyByIndex(int index, ref PropertyDetails prop)
         {
             if (index < 0 || index >= _propCount)
-                throw new ArgumentOutOfRangeException(nameof(index));
+                ThrowOutOfRangeException();
 
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
             BlittableJsonToken token;
@@ -391,9 +392,8 @@ namespace Sparrow.Json
             GetPropertyTypeAndPosition(index, metadataSize, out token, out position);
 
             var stringValue = GetPropertyName(index);
-            var blittableJsonToken = (BlittableJsonToken)token;
 
-            prop.Token = blittableJsonToken;
+            prop.Token = token;
             prop.Name = stringValue;
             object result;
             if (_objectsPathCacheByIndex != null && _objectsPathCacheByIndex.TryGetValue(index, out result))
@@ -402,10 +402,16 @@ namespace Sparrow.Json
                 return;
             }
 
-            var value = GetObject(blittableJsonToken, (int)(_objStart - _mem - position));
+            var value = GetObject((BlittableJsonToken)token, (int)(_objStart - _mem - position));
             // we explicitly don't add it to the cache here, we don't need to.
             // users will always access the props by name, not by id.
             prop.Value = value;
+        }
+
+        private static void ThrowOutOfRangeException()
+        {
+            // ReSharper disable once NotResolvedInText
+            throw new ArgumentOutOfRangeException("index");
         }
 
         public int GetPropertyIndex(string name)
