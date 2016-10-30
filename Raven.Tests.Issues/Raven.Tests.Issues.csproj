@@ -625,6 +625,7 @@
     <Compile Include="RavenDB_3113.cs" />
     <Compile Include="RavenDB_3106.cs" />
     <Compile Include="RavenDB-3225.cs" />
+    <Compile Include="TestingClientQuery.cs" />
     <Compile Include="ThorMigrationIssues.cs" />
     <Compile Include="WaitForStaleOnAbandonedIndexShouldWork.cs" />
   </ItemGroup>

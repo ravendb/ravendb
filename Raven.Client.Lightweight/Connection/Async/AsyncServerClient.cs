@@ -1463,6 +1463,7 @@ namespace Raven.Client.Connection.Async
                 includes.ForEach(include => stringBuilder.Append("&include=").Append(include));
             }
 
+            GetResponse res = null;
             try
             {
                 var operationMetadataRef = new Reference<OperationMetadata>();
@@ -1475,7 +1476,7 @@ namespace Raven.Client.Connection.Async
                         Url = "/indexes/" + index
                     }
                 }, token, operationMetadataRef, requestTimeMetricRef).ConfigureAwait(false);
-
+                res = result[0];
                 var json = (RavenJObject)result[0].Result;
                 var queryResult = SerializationHelper.ToQueryResult(json, result[0].GetEtagHeader(), result[0].Headers["Temp-Request-Time"], -1);
 
@@ -1506,7 +1507,12 @@ namespace Raven.Client.Connection.Async
 
                     if (HandleException(errorResponseException)) return null;
                 }
-
+                //this happens when result[0].GetEtagHeader() throws key not found exception
+                if (res != null && res.RequestHasErrors())
+                {
+                    throw new InvalidOperationException("Got an error from server, status code: " + res.Status +
+                                                       Environment.NewLine + res.Result);
+                }
                 throw;
             }
         }
