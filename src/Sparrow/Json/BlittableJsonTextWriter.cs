@@ -48,6 +48,7 @@ namespace Sparrow.Json
         {
             WriteStartObject();
             var props = obj.GetPropertiesByInsertionOrder();
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
             for (int i = 0; i < props.Length; i++)
             {
                 if (i != 0)
@@ -55,10 +56,10 @@ namespace Sparrow.Json
                     WriteComma();
                 }
 
-                var prop = obj.GetPropertyByIndex(props[i]);
-                WritePropertyName(prop.Item1);
+                obj.GetPropertyByIndex(props[i], ref prop);
+                WritePropertyName(prop.Name);
 
-                WriteValue(prop.Item3 & BlittableJsonReaderBase.TypesMask, prop.Item2, originalPropertyOrder: true);
+                WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value, originalPropertyOrder: true);
             }
 
             WriteEndObject();
@@ -67,16 +68,17 @@ namespace Sparrow.Json
         public void WriteObject(BlittableJsonReaderObject obj)
         {
             WriteStartObject();
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
             for (int i = 0; i < obj.Count; i++)
             {
                 if (i != 0)
                 {
                     WriteComma();
                 }
-                var prop = obj.GetPropertyByIndex(i);
-                WritePropertyName(prop.Item1);
+                obj.GetPropertyByIndex(i, ref prop);
+                WritePropertyName(prop.Name);
 
-                WriteValue(prop.Item3 & BlittableJsonReaderObject.TypesMask, prop.Item2, originalPropertyOrder: false);
+                WriteValue(prop.Token & BlittableJsonReaderObject.TypesMask, prop.Value, originalPropertyOrder: false);
             }
 
             WriteEndObject();

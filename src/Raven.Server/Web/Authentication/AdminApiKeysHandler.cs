@@ -201,15 +201,17 @@ namespace Raven.Server.Web.Authentication
                 return HttpContext.Response.WriteAsync("'ApiKey' must include 'ResourcesAccessMode' property");
             }
 
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+
             for (var i = 0; i < accessMode.Count; i++)
             {
-                var dbName = accessMode.GetPropertyByIndex(i);
+                accessMode.GetPropertyByIndex(i, ref prop);
 
                 string accessValue;
-                if (accessMode.TryGet(dbName.Item1, out accessValue) == false)
+                if (accessMode.TryGet(prop.Name, out accessValue) == false)
                 {
                     HttpContext.Response.StatusCode = 400;
-                    return HttpContext.Response.WriteAsync($"Missing value of dbName -'{dbName.Item1}' property");
+                    return HttpContext.Response.WriteAsync($"Missing value of dbName -'{prop.Name}' property");
                 }
 
                 if (string.IsNullOrEmpty(accessValue))
@@ -224,7 +226,7 @@ namespace Raven.Server.Web.Authentication
                     HttpContext.Response.StatusCode = 400;
                     return
                         HttpContext.Response.WriteAsync(
-                            $"Invalid value of dbName -'{dbName.Item1}' property, cannot understand: {accessValue}");
+                            $"Invalid value of dbName -'{prop.Name}' property, cannot understand: {accessValue}");
                 }
             }
             return null;

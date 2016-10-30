@@ -67,46 +67,49 @@ namespace Raven.Client.Documents
                 NewChange(field, null, null, docChanges, DocumentsChanges.ChangeType.RemovedField);
             }
 
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            var oldProp = new BlittableJsonReaderObject.PropertyDetails();
+
             foreach (var propId in propertiesIds)
             {
-                var newPropInfo = newBlittable.GetPropertyByIndex(propId);
+                newBlittable.GetPropertyByIndex(propId, ref prop);
 
                 //TODO - Efrat - mybe?
-                if (newPropInfo.Item1.Equals(Constants.Headers.RavenLastModified))
+                if (prop.Name.Equals(Constants.Headers.RavenLastModified))
                     continue;
 
-                if (newFields.Contains(newPropInfo.Item1))
+                if (newFields.Contains(prop.Name))
                 {
                     if (changes == null)
                         return true;
-                    NewChange(newPropInfo.Item1, newPropInfo.Item2, null, docChanges, DocumentsChanges.ChangeType.NewField);
+                    NewChange(prop.Name, prop.Value, null, docChanges, DocumentsChanges.ChangeType.NewField);
                     continue;
                 }
 
 
-                var oldPropId = originalBlittable.GetPropertyIndex(newPropInfo.Item1);
-                var oldPropInfo = originalBlittable.GetPropertyByIndex(oldPropId);
+                var oldPropId = originalBlittable.GetPropertyIndex(prop.Name);
+                originalBlittable.GetPropertyByIndex(oldPropId, ref oldProp);
 
-                switch ((newPropInfo.Item3 & TypesMask))
+                switch ((prop.Token & TypesMask))
                 {
                     case BlittableJsonToken.Integer:
                     case BlittableJsonToken.Boolean:
                     case BlittableJsonToken.Float:
                     case BlittableJsonToken.CompressedString:
                     case BlittableJsonToken.String:
-                        if (newPropInfo.Item2.Equals(oldPropInfo.Item2))
+                        if (prop.Value.Equals(prop.Value))
                             break;
 
                         if (changes == null)
                             return true;
-                        NewChange(newPropInfo.Item1, newPropInfo.Item2, oldPropInfo.Item2, docChanges,
+                        NewChange(prop.Name, prop.Value, oldProp.Value, docChanges,
                             DocumentsChanges.ChangeType.FieldChanged);
                         break;
                     case BlittableJsonToken.Null:
                         break;
                     case BlittableJsonToken.StartArray:
-                        var newArray = newPropInfo.Item2 as BlittableJsonReaderArray;
-                        var oldArray = oldPropInfo.Item2 as BlittableJsonReaderArray;
+                        var newArray = prop.Value as BlittableJsonReaderArray;
+                        var oldArray = oldProp.Value as BlittableJsonReaderArray;
 
                         if ((newArray == null) || (oldArray == null))
                             throw new InvalidDataException("Invalid blittable");
@@ -116,13 +119,13 @@ namespace Raven.Client.Documents
 
                         if (changes == null)
                             return true;
-                        NewChange(newPropInfo.Item1, newPropInfo.Item2, oldPropInfo.Item2, docChanges,
+                        NewChange(prop.Name, prop.Value, oldProp.Value, docChanges,
                             DocumentsChanges.ChangeType.FieldChanged);
                         break;
                     case BlittableJsonToken.StartObject:
                     {
-                        var changed = CompareBlittable(id, oldPropInfo.Item2 as BlittableJsonReaderObject,
-                            newPropInfo.Item2 as BlittableJsonReaderObject, changes, docChanges);
+                        var changed = CompareBlittable(id, oldProp.Value as BlittableJsonReaderObject,
+                            prop.Value as BlittableJsonReaderObject, changes, docChanges);
                         if (changes == null)
                             return changed;
                         break;

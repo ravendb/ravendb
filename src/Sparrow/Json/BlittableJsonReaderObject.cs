@@ -18,7 +18,6 @@ namespace Sparrow.Json
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
         private byte* _objStart;
-        private LazyStringValue[] _propertyNames;
 
         public DynamicJsonValue Modifications;
         internal LinkedListNode<BlittableJsonReaderObject> DisposeTrackingReference;
@@ -149,67 +148,42 @@ namespace Sparrow.Json
         /// <returns></returns>
         public string[] GetPropertyNames()
         {
-            var idsAndOffsets = new BlittableJsonDocumentBuilder.PropertyTag[_propCount];
-            var sortedNames = new string[_propCount];
+            var ids = new int[_propCount];
+            var propertyNames = new string[_propCount];
 
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
 
-            // Prepare an array of all offsets and property ids
-            for (var i = 0; i < _propCount; i++)
+            for (int propertyId = 0; propertyId < _propCount; propertyId++)
             {
-                idsAndOffsets[i] = GetPropertyTag(i, metadataSize);
+                ids[propertyId] = GetPropertyOffset(propertyId, metadataSize);
+
+                propertyNames[propertyId] = GetPropertyName(propertyId);
             }
 
             // sort according to offsets
-            Array.Sort(idsAndOffsets, (tag1, tag2) => tag2.Position - tag1.Position);
+            Array.Sort(ids, propertyNames);
 
-            // generate string array, sorted according to it's offsets
-            for (int i = 0; i < _propCount; i++)
-            {
-                sortedNames[i] = GetPropertyName(idsAndOffsets[i].PropertyId);
-            }
-            return sortedNames;
+            return propertyNames;
         }
 
-        private BlittableJsonDocumentBuilder.PropertyTag GetPropertyTag(int index, long metadataSize)
+        private unsafe LazyStringValue GetPropertyName(int propertyId)
         {
-            var propPos = _metadataPtr + index * metadataSize;
-            var propertyOffset = ReadNumber(propPos, _currentOffsetSize);
-            var propertyId = ReadNumber(propPos + _currentOffsetSize, _currentPropertyIdSize);
-            var type = *(propPos + _currentOffsetSize + _currentPropertyIdSize);
-            return new BlittableJsonDocumentBuilder.PropertyTag
-            {
-                Position = propertyOffset,
-                PropertyId = propertyId,
-                Type = type
-            };
-        }
+            var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId*_propNamesDataOffsetSize;
+            var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
-        private LazyStringValue GetPropertyName(int propertyId)
-        {
-            if (_parent != null)
-                return _parent.GetPropertyName(propertyId);
+            // Get the relative "In Document" position of the property Name
+            var propRelativePos = _propNames - propertyNameOffset - _mem;
 
-            if (_propertyNames == null)
-            {
-                var totalNumberOfProps = (_size - (_propNames - _mem) - 1) / _propNamesDataOffsetSize;
-                _propertyNames = new LazyStringValue[totalNumberOfProps];
-            }
-
-            LazyStringValue propertyName = _propertyNames[propertyId];
-            if (propertyName == (LazyStringValue)null) 
-            {
-                var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId * _propNamesDataOffsetSize;
-                var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
-
-                // Get the relative "In Document" position of the property Name
-                var propRelativePos = _propNames - propertyNameOffset - _mem;
-
-                _propertyNames[propertyId] = propertyName = ReadStringLazily((int)propRelativePos);
-            }
-
+            var propertyName = ReadStringLazily((int) propRelativePos);
             return propertyName;
         }
+
+        private int GetPropertyOffset(int index, long metadataSize)
+        {
+            var propPos = _metadataPtr + index * metadataSize;
+            return ReadNumber(propPos, _currentOffsetSize);
+        }
+        
 
         public object this[string name]
         {
@@ -374,8 +348,10 @@ namespace Sparrow.Json
                 return false;
             }
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
-            var propertyTag = GetPropertyTag(index, metadataSize);
-            result = GetObject((BlittableJsonToken)propertyTag.Type, (int)(_objStart - _mem - propertyTag.Position));
+            BlittableJsonToken token;
+            int position;
+            GetPropertyTypeAndPosition(index, metadataSize, out token, out position);
+            result = GetObject(token, (int)(_objStart - _mem - position));
             if (result is BlittableJsonReaderBase)
             {
                 if (_objectsPathCache == null)
@@ -389,26 +365,47 @@ namespace Sparrow.Json
             return true;
         }
 
-        public Tuple<LazyStringValue, object, BlittableJsonToken> GetPropertyByIndex(int index)
+
+        private void GetPropertyTypeAndPosition(int index, long metadataSize, out BlittableJsonToken token, out int position)
+        {
+            var propPos = _metadataPtr + index * metadataSize;
+            position  = ReadNumber(propPos + _currentOffsetSize, _currentPropertyIdSize);
+            token = (BlittableJsonToken) (*(propPos + _currentOffsetSize + _currentPropertyIdSize));
+        }
+
+        public struct PropertyDetails
+        {
+            public LazyStringValue Name;
+            public object Value;
+            public BlittableJsonToken Token;
+        }
+
+        public void GetPropertyByIndex(int index, ref PropertyDetails prop)
         {
             if (index < 0 || index >= _propCount)
                 throw new ArgumentOutOfRangeException(nameof(index));
 
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
-            var propertyTag = GetPropertyTag(index, metadataSize);
-            var stringValue = GetPropertyName(propertyTag.PropertyId);
-            var blittableJsonToken = (BlittableJsonToken)propertyTag.Type;
+            BlittableJsonToken token;
+            int position;
+            GetPropertyTypeAndPosition(index, metadataSize, out token, out position);
 
+            var stringValue = GetPropertyName(index);
+            var blittableJsonToken = (BlittableJsonToken)token;
+
+            prop.Token = blittableJsonToken;
+            prop.Name = stringValue;
             object result;
             if (_objectsPathCacheByIndex != null && _objectsPathCacheByIndex.TryGetValue(index, out result))
             {
-                return Tuple.Create(stringValue, result, blittableJsonToken);
+                prop.Value = result;
+                return;
             }
 
-            var value = GetObject(blittableJsonToken, (int)(_objStart - _mem - propertyTag.Position));
+            var value = GetObject(blittableJsonToken, (int)(_objStart - _mem - position));
             // we explicitly don't add it to the cache here, we don't need to.
             // users will always access the props by name, not by id.
-            return Tuple.Create(stringValue, value, blittableJsonToken);
+            prop.Value = value;
         }
 
         public int GetPropertyIndex(string name)

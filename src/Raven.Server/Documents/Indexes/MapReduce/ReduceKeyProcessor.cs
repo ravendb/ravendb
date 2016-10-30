@@ -225,12 +225,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 if (_buffer == null)
                     _buffer = _buffersPool.Allocate(16);
 
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
+
                 for (int i = 0; i < json.Count; i++)
                 {
                     // this call ensures properties to be returned in the same order, regardless their storing order
-                    var property = json.GetPropertyByIndex(i);
+                    json.GetPropertyByIndex(i, ref prop);
 
-                    Process(context, property.Item2, true);
+                    Process(context, prop.Value, true);
                 }
 
                 return;
