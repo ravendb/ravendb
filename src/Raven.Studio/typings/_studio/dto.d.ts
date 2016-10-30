@@ -132,4 +132,5 @@ interface availableBundle {
     displayName: string;
     name: string;
     hasAdvancedConfiguration: boolean;
+    validationGroup?: KnockoutValidationGroup;
 }

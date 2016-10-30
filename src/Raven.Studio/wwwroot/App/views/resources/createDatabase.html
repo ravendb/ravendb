@@ -18,13 +18,14 @@
                                 <input class="styled" type="checkbox" data-bind="checked: $root.resourceModel.activeBundles, checkedValue: name, attr: { id: 'bundle_' + $index() }">
                                 <label data-bind="text: displayName, attr: { 'for': 'bundle_' + $index() }"></label>
                                 <button type="button" class="btn pull-right btn-toggle"
-                                        data-bind="visible: hasAdvancedConfiguration, click: $root.showAdvancedConfigurationFor.bind($root, name)">
-                                    <i class="icon-settings"></i>
+                                        data-bind="visible: hasAdvancedConfiguration, click: $root.showAdvancedConfigurationFor.bind($root, name), css: { 'btn-danger': validationGroup && !validationGroup.isValid() }">
+                                    <i data-bind="attr: { 'class' : validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
                                 </button>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-block btn-toggle btn-info" data-bind="click: showAdvancedConfiguration">
-                            <i class="icon-settings"></i><span>Advanced</span>
+                        <button type="button"
+                                data-bind="click: showAdvancedConfiguration, attr: { 'class': 'btn btn-block btn-toggle ' + (resourceModel.advancedValidationGroup.isValid() ? 'btn-info' : 'btn-danger')  }">
+                            <i data-bind="attr: { 'class': resourceModel.advancedValidationGroup.isValid() ? 'icon-settings' : 'icon-danger' }"></i><span>Advanced</span>
                         </button>
                     </div>
                     <div class="modal-settings-panel-slideout">
@@ -63,7 +64,7 @@
     <h3>ADVANCED</h3>
     <div class="form-group row" data-bind="validationElement: resourceModel.dataPath">
         <div class="col-md-4">
-            <label>Path</label>
+            <label class="control-label">Path</label>
         </div>
         <div class="col-md-8">
             <input type="text" class="form-control" data-bind="textInput: resourceModel.dataPath, attr: { placeholder: '~/' + resourceModel.name() }" />
@@ -71,7 +72,7 @@
     </div>
     <div class="form-group row" data-bind="validationElement: resourceModel.journalsPath">
         <div class="col-md-4">
-            <label>Journals</label>
+            <label class="control-label">Journals</label>
         </div>
         <div class="col-md-8">
             <input type="text" class="form-control" data-bind="textInput: resourceModel.journalsPath, attr: { placeholder: '~/' + resourceModel.name() }" />
@@ -79,7 +80,7 @@
     </div>
     <div class="form-group row" data-bind="validationElement: resourceModel.indexesPath">
         <div class="col-md-4">
-            <label>Indexes</label>
+            <label class="control-label">Indexes</label>
         </div>
         <div class="col-md-8">
             <input type="text" class="form-control" data-bind="textInput: resourceModel.indexesPath, attr: { placeholder: indexesPathPlaceholder() }" />
@@ -87,7 +88,7 @@
     </div>
     <div class="form-group row" data-bind="validationElement: resourceModel.tempPath">
         <div class="col-md-4">
-            <label>Temp</label>
+            <label class="control-label">Temp</label>
         </div>
         <div class="col-md-8">
             <input type="text" class="form-control" data-bind="textInput: resourceModel.tempPath, attr: { placeholder: '~/' + resourceModel.name() }" />
@@ -180,7 +181,7 @@
 </script>
 
 <script type="text/html" id="create-db-encryption">
-    <div class="form-group row">
+    <div class="form-group row" data-bind="validationElement: resourceModel.encryption.key">
         <div class="col-md-6">
             <label class="control-label">
                 Select Key <small class="text-muted">(Base64 Encoding)</small>
@@ -188,7 +189,7 @@
         </div>
         <div class="col-md-6">
             <div class="input-group">
-                <input required="" pattern="^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})([=]{1,2})?$" type="text" class="form-control" placeholder="Key" autocomplete="off"
+                <input type="text" class="form-control" placeholder="Key" autocomplete="off"
                        data-bind="textInput: resourceModel.encryption.key">
                 <span class="input-group-btn">
                     <button class="btn btn-default" type="button" data-bind="click: resetEncryptionKey">

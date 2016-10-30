@@ -17,7 +17,7 @@ import databaseCreationModel = require("models/resources/creation/databaseCreati
 
 class createDatabase extends createResourceBase {
 
-    static readonly databaseBundles: Array<availableBundle> = [
+    readonly databaseBundles: Array<availableBundle> = [
         {
             displayName: "Compression",
             name: "Compression",
@@ -96,6 +96,15 @@ class createDatabase extends createResourceBase {
             const name = this.resourceModel.name();
             return `~/${name || "{Database Name}"}/Indexes/`;
         });
+
+        this.databaseBundles.forEach(bundle => {
+            if (!bundle.hasOwnProperty('validationGroup')) {
+                bundle.validationGroup = undefined;
+            }
+        });
+
+        const encryptionConfig = this.databaseBundles.find(x => x.name === "Encryption");
+        encryptionConfig.validationGroup = this.resourceModel.encryptionValidationGroup;
     }
 
     advancedVisibility = {
@@ -107,31 +116,49 @@ class createDatabase extends createResourceBase {
 
     getAvailableBundles() {
         //TODO: concat with custom bundles 
-        return createDatabase.databaseBundles;
+        return this.databaseBundles;
     }
 
     createResource() {
         const globalValid = this.isValid(this.resourceModel.globalValidationGroup);
         const advancedValid = this.isValid(this.resourceModel.advancedValidationGroup);
+        const encryptionValid = this.bundlesEnabled.encryption() && this.isValid(this.resourceModel.encryptionValidationGroup);
 
-        if (globalValid && advancedValid) {
-            const databaseDocument = this.resourceModel.toDto();
-            new createDatabaseCommand(databaseDocument)
-                .execute()
-                .done(() => {
-                    ko.postbox.publish(EVENTS.Resource
-                        .Created,
-                        //TODO: it might be temporary event as we use changes api for notifications about newly created resources. 
-                        {
-                            qualifier: database.qualifier,
-                            name: this.resourceModel.name()
-                        } as resourceCreatedEventArgs);
+        const allValid = globalValid && advancedValid && encryptionValid;
 
-                })
-                .always(() => {
-                    dialog.close(this);
-                });
+        if (allValid) {
+            this.createResourceInternal();
+        } else {
+            if (!advancedValid) {
+                if (!this.advancedConfigurationVisible()) {
+                    this.showAdvancedConfiguration();
+                }
+            } else if (!encryptionValid) {
+                if (!this.advancedVisibility.encryption()) {
+                    this.showAdvancedConfigurationFor("Encryption");   
+                }
+            }
+            //TODO: iterate on invalid sections
         }
+    }
+
+    private createResourceInternal() {
+        const databaseDocument = this.resourceModel.toDto();
+        new createDatabaseCommand(databaseDocument)
+            .execute()
+            .done(() => {
+                ko.postbox.publish(EVENTS.Resource
+                    .Created,
+                    //TODO: it might be temporary event as we use changes api for notifications about newly created resources. 
+                    {
+                        qualifier: database.qualifier,
+                        name: this.resourceModel.name()
+                    } as resourceCreatedEventArgs);
+
+            })
+            .always(() => {
+                dialog.close(this);
+            });
 
         //TODO: issue requests for additional bundles configuration + show dialog about encryption configuration so user can save this 
     }

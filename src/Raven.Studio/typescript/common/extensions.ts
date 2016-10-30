@@ -19,6 +19,15 @@ class extensions {
     }
 
     private static configureValidation() {
+
+        (ko.validation.rules as any)['base64'] = {
+            validator: (val: string) => {
+                const base64regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+                return !val || base64regex.test(val);
+            }, 
+            message: 'Invaild base64 string.'
+        }
+
         ko.validation.init({
             errorElementClass: 'has-error',
             errorMessageClass: 'help-block',

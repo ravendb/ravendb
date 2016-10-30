@@ -16,7 +16,7 @@ abstract class resourceCreationModel {
     tempPath = ko.observable<string>();
 
     encryption = {
-        key: ko.observable<string>(), //TODO: validate base64
+        key: ko.observable<string>(),
         algorithm: ko.observable<string>("Rijndael"),
         keyBitsPreference: ko.observable<number>(256),
         encryptIndexes: ko.observable<boolean>(true)
@@ -27,6 +27,10 @@ abstract class resourceCreationModel {
 
     globalValidationGroup = ko.validatedObservable({
         name: this.name
+    });
+
+    encryptionValidationGroup = ko.validatedObservable({
+        key: this.encryption.key
     });
 
     setupValidation(resourceDoesntExist: (name: string) => boolean) {
@@ -59,6 +63,12 @@ abstract class resourceCreationModel {
                     message: `The name {0} is forbidden for use!`,
                     params: this.name
                 }]
+        });
+
+
+        this.encryption.key.extend({
+            required: true,
+            base64: true
         });
     }
 
