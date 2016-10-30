@@ -148,20 +148,23 @@ namespace Sparrow.Json
         /// <returns></returns>
         public string[] GetPropertyNames()
         {
-            var ids = new int[_propCount];
+            var offsets = new int[_propCount];
             var propertyNames = new string[_propCount];
 
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
 
-            for (int propertyId = 0; propertyId < _propCount; propertyId++)
+            for (int i = 0; i < _propCount; i++)
             {
-                ids[propertyId] = GetPropertyOffset(propertyId, metadataSize);
-
-                propertyNames[propertyId] = GetPropertyName(propertyId);
+                BlittableJsonToken token;
+                int position;
+                int id;
+                GetPropertyTypeAndPosition(i, metadataSize,out token, out position, out id);
+                offsets[i] = position;
+                propertyNames[i] = GetPropertyName(id);
             }
 
             // sort according to offsets
-            Array.Sort(ids, propertyNames, NumericDescendingComparer.Instance);
+            Array.Sort(offsets, propertyNames, NumericDescendingComparer.Instance);
 
             return propertyNames;
         }
@@ -178,12 +181,6 @@ namespace Sparrow.Json
             return propertyName;
         }
 
-        private int GetPropertyOffset(int index, long metadataSize)
-        {
-            var propPos = _metadataPtr + index * metadataSize;
-            return ReadNumber(propPos, _currentOffsetSize);
-        }
-        
 
         public object this[string name]
         {
@@ -350,7 +347,8 @@ namespace Sparrow.Json
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
             BlittableJsonToken token;
             int position;
-            GetPropertyTypeAndPosition(index, metadataSize, out token, out position);
+            int propertyId;
+            GetPropertyTypeAndPosition(index, metadataSize, out token, out position,out propertyId);
             result = GetObject(token, (int)(_objStart - _mem - position));
             if (result is BlittableJsonReaderBase)
             {
@@ -366,10 +364,11 @@ namespace Sparrow.Json
         }
 
 
-        private void GetPropertyTypeAndPosition(int index, long metadataSize, out BlittableJsonToken token, out int position)
+        private void GetPropertyTypeAndPosition(int index, long metadataSize, out BlittableJsonToken token, out int position, out int propertyId)
         {
             var propPos = _metadataPtr + index * metadataSize;
             position  = ReadNumber(propPos, _currentOffsetSize);
+            propertyId = ReadNumber(propPos + _currentOffsetSize, _currentPropertyIdSize);
             token = (BlittableJsonToken) (*(propPos + _currentOffsetSize + _currentPropertyIdSize));
         }
 
@@ -389,9 +388,10 @@ namespace Sparrow.Json
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
             BlittableJsonToken token;
             int position;
-            GetPropertyTypeAndPosition(index, metadataSize, out token, out position);
+            int propertyId;
+            GetPropertyTypeAndPosition(index, metadataSize, out token, out position,out propertyId);
 
-            var stringValue = GetPropertyName(index);
+            var stringValue = GetPropertyName(propertyId);
 
             prop.Token = token;
             prop.Name = stringValue;

@@ -11,9 +11,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                using (var x = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
+                var x = new FastTests.Blittable.BlittableJsonEqualityTests();
                 {
-                    x.IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert();
+                    x.Equals_even_though_order_of_properties_is_different();
                 }
                 Console.WriteLine(sp.Elapsed);
             }

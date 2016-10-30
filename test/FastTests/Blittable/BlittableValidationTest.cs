@@ -325,7 +325,7 @@ namespace FastTests.Blittable
 
                 *(basePointer + size - 7) = 0x00;
                 var messageArg = Assert.Throws<ArgumentException>(() => reader.BlittableValidation());
-                Assert.Equal(messageArg.Message, "Illegal offset size");
+                Assert.Equal(messageArg.Message, "Illegal offset size 0");
 
                 *(basePointer + size - 7) = 0x10;
                 var listStart = size - 6;
@@ -421,11 +421,11 @@ namespace FastTests.Blittable
 
                 *(basePointer + size - 1) = 0x41;
                 var messageArg = Assert.Throws<ArgumentException>(() => reader.BlittableValidation());
-                Assert.Equal(messageArg.Message, "Illegal offset size");
+                Assert.Equal(messageArg.Message, "Illegal offset size StartObject, PropertyIdSizeByte");
 
                 *(basePointer + size - 1) = 0x11;
                 messageArg = Assert.Throws<ArgumentException>(() => reader.BlittableValidation());
-                Assert.Equal(messageArg.Message, "Illegal offset size");
+                Assert.Equal(messageArg.Message, "Illegal offset size StartObject, OffsetSizeByte");
             }
         }
 

@@ -67,48 +67,48 @@ namespace Raven.Client.Documents
                 NewChange(field, null, null, docChanges, DocumentsChanges.ChangeType.RemovedField);
             }
 
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            var newProp = new BlittableJsonReaderObject.PropertyDetails();
             var oldProp = new BlittableJsonReaderObject.PropertyDetails();
 
             foreach (var propId in propertiesIds)
             {
-                newBlittable.GetPropertyByIndex(propId, ref prop);
+                newBlittable.GetPropertyByIndex(propId, ref newProp);
 
                 //TODO - Efrat - mybe?
-                if (prop.Name.Equals(Constants.Headers.RavenLastModified))
+                if (newProp.Name.Equals(Constants.Headers.RavenLastModified))
                     continue;
 
-                if (newFields.Contains(prop.Name))
+                if (newFields.Contains(newProp.Name))
                 {
                     if (changes == null)
                         return true;
-                    NewChange(prop.Name, prop.Value, null, docChanges, DocumentsChanges.ChangeType.NewField);
+                    NewChange(newProp.Name, newProp.Value, null, docChanges, DocumentsChanges.ChangeType.NewField);
                     continue;
                 }
 
 
-                var oldPropId = originalBlittable.GetPropertyIndex(prop.Name);
+                var oldPropId = originalBlittable.GetPropertyIndex(newProp.Name);
                 originalBlittable.GetPropertyByIndex(oldPropId, ref oldProp);
 
-                switch ((prop.Token & TypesMask))
+                switch ((newProp.Token & TypesMask))
                 {
                     case BlittableJsonToken.Integer:
                     case BlittableJsonToken.Boolean:
                     case BlittableJsonToken.Float:
                     case BlittableJsonToken.CompressedString:
                     case BlittableJsonToken.String:
-                        if (prop.Value.Equals(prop.Value))
+                        if (newProp.Value.Equals(oldProp.Value))
                             break;
 
                         if (changes == null)
                             return true;
-                        NewChange(prop.Name, prop.Value, oldProp.Value, docChanges,
+                        NewChange(newProp.Name, newProp.Value, oldProp.Value, docChanges,
                             DocumentsChanges.ChangeType.FieldChanged);
                         break;
                     case BlittableJsonToken.Null:
                         break;
                     case BlittableJsonToken.StartArray:
-                        var newArray = prop.Value as BlittableJsonReaderArray;
+                        var newArray = newProp.Value as BlittableJsonReaderArray;
                         var oldArray = oldProp.Value as BlittableJsonReaderArray;
 
                         if ((newArray == null) || (oldArray == null))
@@ -119,13 +119,13 @@ namespace Raven.Client.Documents
 
                         if (changes == null)
                             return true;
-                        NewChange(prop.Name, prop.Value, oldProp.Value, docChanges,
+                        NewChange(newProp.Name, newProp.Value, oldProp.Value, docChanges,
                             DocumentsChanges.ChangeType.FieldChanged);
                         break;
                     case BlittableJsonToken.StartObject:
                     {
                         var changed = CompareBlittable(id, oldProp.Value as BlittableJsonReaderObject,
-                            prop.Value as BlittableJsonReaderObject, changes, docChanges);
+                            newProp.Value as BlittableJsonReaderObject, changes, docChanges);
                         if (changes == null)
                             return changed;
                         break;

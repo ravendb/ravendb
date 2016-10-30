@@ -41,7 +41,7 @@ namespace Raven.Server.Web.System
             var names = HttpContext.Request.Query["name"];
             if (names.Count == 0)
                 throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
-            var disableRequested = GetBoolValueQueryString("disable").Value;
+            var disableRequested = GetBoolValueQueryString("disable") ?? true;
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -92,9 +92,9 @@ namespace Raven.Server.Web.System
                         continue;
                     }
 
-                    var newDoc = new DynamicJsonValue(dbDoc);
-                    newDoc.Properties.Enqueue(Tuple.Create("Disabled", (object) disableRequested));
-                    var newDoc2 = context.ReadObject(newDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    dbDoc.Modifications = new DynamicJsonValue(dbDoc);
+                    dbDoc.Modifications.Properties.Enqueue(Tuple.Create("Disabled", (object) disableRequested));
+                    var newDoc2 = context.ReadObject(dbDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     /* Right now only database resource is supported */
                     ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
