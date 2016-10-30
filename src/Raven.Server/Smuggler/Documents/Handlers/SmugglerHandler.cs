@@ -15,6 +15,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Jint;
 using Raven.Client.Data;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents;
@@ -31,12 +32,37 @@ namespace Raven.Server.Smuggler.Documents.Handlers
     {
 
         [RavenAction("/databases/*/smuggler/validateOptions", "POST")]
-        public Task PostValidateOptions()
+        public async  Task PostValidateOptions()
         {
-            //TODO: implement me!
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                var blittableJson = await context.ReadForMemoryAsync(RequestBodyStream(),"");
+                var options = JsonDeserializationServer.DatabaseExportOptions(blittableJson);
 
+                if (string.IsNullOrEmpty(options?.TransformScript))
+                    return;
 
-            return Task.CompletedTask;
+                try
+                {
+                    var jint = new Engine(cfg =>
+                    {
+                        cfg.AllowDebuggerStatement(false);
+                        cfg.MaxStatements(options.MaxStepsForTransformScript);
+                        cfg.NullPropagation();
+                    });
+
+                    jint.Execute(string.Format(@"
+                    function Transform(docInner){{
+                        return ({0}).apply(this, [docInner]);
+                    }};", options.TransformScript));
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidDataException("Incorrect transform script", e);
+                }
+            }
         }
 
         [RavenAction("/databases/*/smuggler/export", "POST")]
