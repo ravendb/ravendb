@@ -56,6 +56,9 @@ namespace Raven.Abstractions.Data
     public enum MetricType
     {
         Meter = 1,
-        Histogram = 2
+        Histogram = 2,
+
+        //backwards compatibility for https://github.com/ravendb/ravendb/commit/57a7a5cbab615f5aaf125b816f2f9c29078ed93e#diff-b8c45e35a3b38ccf9dcccca40f6ac0e9
+        Historgram = 2             
     }
 }
