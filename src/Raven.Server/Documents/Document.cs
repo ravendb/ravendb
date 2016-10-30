@@ -90,7 +90,7 @@ namespace Raven.Server.Documents
                 metadata.TryGet(Constants.Expiration.RavenExpirationDate, out expirationDate))
             {
                 DateTime expirationDateTime = DateTime.Parse(expirationDate);
-                if (expirationDateTime - DateTime.Now < TimeSpan.Zero)
+                if (expirationDateTime - DateTime.UtcNow < TimeSpan.Zero)
                     return true;
             }
             return false;

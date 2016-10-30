@@ -7,14 +7,14 @@ namespace Raven.Server.Smuggler.Documents.Data
     {
         public long LastDocsEtag;
         public long LastRevisionDocumentsEtag;
-        public int DocumentExported { get; set; }
+        public int DocumentCount { get; set; }
 
-        public string Message => $"Exported {DocumentExported} documents.";
+        public string Message => $"Exported {DocumentCount} documents.";
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue(GetType())
             {
-                ["documentExported"] = DocumentExported,
+                [nameof(DocumentCount)] = DocumentCount,
                 ["Message"] = Message
             };
         }

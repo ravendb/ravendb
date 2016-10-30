@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Threading;
 using Raven.Client.Data;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents;
@@ -17,22 +20,19 @@ namespace Raven.Server.Smuggler.Documents
     public class SmugglerExporter
     {
         private readonly DocumentDatabase _database;
-
+        private Timer _timer;
         public long? StartDocsEtag;
-        public int? DocumentsLimit;
-
+       
         public long? StartRevisionDocumentsEtag;
         public int? RevisionDocumentsLimit;
 
         public DatabaseExportOptions Options;
-        public DatabaseItemType OperateOnTypes;
+        private int _documentExported;
 
         public SmugglerExporter(DocumentDatabase database, DatabaseExportOptions options = null)
         {
             _database = database;
-            OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers
-                | DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Identities;
-            Options = options;
+            Options = options ?? new DatabaseExportOptions();
         }
 
         public ExportResult Export(DocumentsOperationContext context, string destinationFilePath, Action<IOperationProgress> onProgress = null)
@@ -48,7 +48,6 @@ namespace Raven.Server.Smuggler.Documents
             var result = new ExportResult();
             var progress = new IndeterminateProgress();
 
-            int documentExported = 0;
             using (var gZipStream = new GZipStream(destinationStream, CompressionMode.Compress, leaveOpen: true))
             using (var writer = new BlittableJsonTextWriter(context, gZipStream))
             {
@@ -57,17 +56,16 @@ namespace Raven.Server.Smuggler.Documents
                 writer.WritePropertyName(("BuildVersion"));
                 writer.WriteInteger(40000);
 
-                if (OperateOnTypes.HasFlag(DatabaseItemType.Documents))
+                if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Documents))
                 {
                     progress.Progress = "Exporting Documents";
                     onProgress?.Invoke(progress);
                     writer.WriteComma();
                     writer.WritePropertyName(("Docs"));
 
-                    var batchSize = DocumentsLimit.HasValue ? Math.Min(Options.BatchSize, DocumentsLimit.Value) : Options.BatchSize;
                     IEnumerable<Document> documents = Options.CollectionsToExport.Count != 0 ? 
-                        _database.DocumentsStorage.GetDocumentsFrom(context, Options.CollectionsToExport, StartDocsEtag ?? 0, 0, batchSize) : 
-                        _database.DocumentsStorage.GetDocumentsFrom(context, StartDocsEtag ?? 0, 0, batchSize);
+                        _database.DocumentsStorage.GetDocumentsFrom(context, Options.CollectionsToExport, StartDocsEtag ?? 0, Options.BatchSize) : 
+                        _database.DocumentsStorage.GetDocumentsFrom(context, StartDocsEtag ?? 0, 0, Options.BatchSize);
 
                     writer.WriteStartArray();
 
@@ -83,6 +81,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     bool first = true;
+                    _timer = new Timer(TimerCallback, onProgress, TimeSpan.FromSeconds(3),Timeout.InfiniteTimeSpan);
                     foreach (var document in documents)
                     {
                         if (document == null)
@@ -94,6 +93,8 @@ namespace Raven.Server.Smuggler.Documents
                         if (patch != null)
                         {
                             var patchResult = patch.Apply(context, document, patchRequest);
+                            if(patchResult == null || patchResult.ModifiedDocument.Equals(document.Data))
+                                continue;
                             document.Data = patchResult.ModifiedDocument;
                         }
 
@@ -107,14 +108,15 @@ namespace Raven.Server.Smuggler.Documents
                             context.Write(writer, document.Data);
                             result.LastDocsEtag = document.Etag;
                         }
-                        documentExported++;
+                        _documentExported++;
                     }
 
-                    result.DocumentExported = documentExported;
+                    result.DocumentCount = _documentExported;
+                    _timer.Dispose();
                     writer.WriteEndArray();
                 }
                 
-                if (OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
+                if (Options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
                 {
                     var versioningStorage = _database.BundleLoader.VersioningStorage;
                     if (versioningStorage != null)
@@ -146,7 +148,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                if (OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
+                if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
                 {
                     progress.Progress = "Exporting Indexes";
                     onProgress?.Invoke(progress);
@@ -156,22 +158,15 @@ namespace Raven.Server.Smuggler.Documents
                     var isFirst = true;
                     foreach (var index in _database.IndexStore.GetIndexes())
                     {
-                        if (Options.RemoveAnalyzers)
-                        {
-                            foreach (var indexField in index.Definition.MapFields.Values)
-                            {
-                                indexField.Analyzer = null;
-                            }
-                        }
                         if (isFirst == false)
                             writer.WriteComma();
                         isFirst = false;
-                        IndexProcessor.Export(writer, index, context);
+                        IndexProcessor.Export(writer, index, context, Options.RemoveAnalyzers);
                     }
                     writer.WriteEndArray();
                 }
 
-                if (OperateOnTypes.HasFlag(DatabaseItemType.Transformers))
+                if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Transformers))
                 {
                     progress.Progress = "Exporting Transformers";
                     onProgress?.Invoke(progress);
@@ -191,7 +186,7 @@ namespace Raven.Server.Smuggler.Documents
                     writer.WriteEndArray();
                 }
 
-                if (OperateOnTypes.HasFlag(DatabaseItemType.Identities))
+                if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Identities))
                 {
                     progress.Progress = "Exporting Identities";
                     onProgress?.Invoke(progress);
@@ -222,6 +217,22 @@ namespace Raven.Server.Smuggler.Documents
                 onProgress?.Invoke(progress);
             }
             return result;
+        }
+
+        private void TimerCallback(object state)
+        {
+            Action<IOperationProgress> onProgress = state as Action<IOperationProgress>;
+
+            if (onProgress != null)
+            {
+                var progres = new IndeterminateProgress
+                {
+                    Progress = $"{_documentExported} documents has exported."
+                };
+
+                onProgress?.Invoke(progres);
+            }
+            
         }
     }
 }

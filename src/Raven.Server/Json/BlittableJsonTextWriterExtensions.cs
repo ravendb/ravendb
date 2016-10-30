@@ -639,7 +639,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteIndexDefinition(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition)
+        public static void WriteIndexDefinition(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition, bool removeAnalyzers = false)
         {
             writer.WriteStartObject();
 
@@ -713,7 +713,7 @@ namespace Raven.Server.Json
                 isFirstInternal = false;
                 writer.WritePropertyName((kvp.Key));
                 if (kvp.Value != null)
-                    writer.WriteIndexFieldOptions(context, kvp.Value);
+                    writer.WriteIndexFieldOptions(context, kvp.Value, removeAnalyzers);
                 else
                     writer.WriteNull();
             }
@@ -797,12 +797,12 @@ namespace Raven.Server.Json
             writer.WriteObject(context.ReadObject(djv, "index/stats"));
         }
 
-        private static void WriteIndexFieldOptions(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexFieldOptions options)
+        private static void WriteIndexFieldOptions(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexFieldOptions options , bool removeAnalyzers)
         {
             writer.WriteStartObject();
 
             writer.WritePropertyName((nameof(options.Analyzer)));
-            if (string.IsNullOrWhiteSpace(options.Analyzer) == false)
+            if (string.IsNullOrWhiteSpace(options.Analyzer) == false && !removeAnalyzers)
                 writer.WriteString((options.Analyzer));
             else
                 writer.WriteNull();

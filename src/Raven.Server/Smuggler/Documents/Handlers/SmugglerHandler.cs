@@ -54,7 +54,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var exporter = new SmugglerExporter(Database, options);
                 var token = CreateOperationToken();
 
-                var fileName = string.IsNullOrEmpty(exporter.Options.FileName) ?
+                var fileName = string.IsNullOrEmpty(exporter.Options.FileName) || exporter.Options.FileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ?
                         $"Dump of {context.DocumentDatabase.Name}, {DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}" :
                         exporter.Options.FileName;
 

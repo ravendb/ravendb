@@ -235,7 +235,6 @@ namespace Raven.Server.Documents.PeriodicExport
 
                         var dataExporter = new SmugglerExporter(_database)
                         {
-                            DocumentsLimit = _exportLimit,
                             RevisionDocumentsLimit = _exportLimit,
                         };
 

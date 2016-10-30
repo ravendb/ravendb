@@ -510,11 +510,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, List<string> collections, long etag, int start, int take)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, List<string> collections, long etag, int take)
         {
             foreach (var collection in collections)
             {
-                foreach (var document in GetDocumentsFrom(context, collection, etag, start, take))
+                foreach (var document in GetDocumentsFrom(context, collection, etag, 0, take))
                 {
                     yield return document;
                 }
