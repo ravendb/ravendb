@@ -1,12 +1,7 @@
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
-using System.Threading.Tasks;
-using Sparrow.Utils;
-using Voron.Exceptions;
 using Voron.Impl.Paging;
 
 
@@ -14,7 +9,6 @@ namespace Voron.Impl
 {
     public unsafe class PagerState
     {
-    
         private readonly AbstractPager _pager;
 
         public bool DisposeFilesOnDispose = true;

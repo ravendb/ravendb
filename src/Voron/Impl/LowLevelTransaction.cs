@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.ExceptionServices;
 using Sparrow;
+using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Exceptions;
@@ -52,7 +53,7 @@ namespace Voron.Impl
 
         private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable;
 
-        private readonly List<PagerState> _pagerStates = new List<PagerState>(4);
+        private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
         internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
         private readonly StorageEnvironmentState _state;
@@ -657,9 +658,10 @@ namespace Voron.Impl
             if (state == _lastState || state == null)
                 return;
 
-            _pagerStates.Add(state);
-            state.AddRef();
             _lastState = state;
+            if (_pagerStates.Add(state) == false)
+                return;
+            state.AddRef();
         }
 
 
