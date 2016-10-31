@@ -36,7 +36,7 @@ namespace Voron.Platform.Posix
             if (_fd == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                PosixHelper.ThrowLastError(err, "when opening " + filename);
             }
 
             var result = Syscall.posix_fallocate(_fd, 0, (ulong)journalSize);
