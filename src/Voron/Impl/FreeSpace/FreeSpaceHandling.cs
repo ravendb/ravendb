@@ -317,7 +317,6 @@ namespace Voron.Impl.FreeSpace
         public List<long> AllPages(LowLevelTransaction tx)
         {
             var freeSpaceTree = GetFreeSpaceTree(tx);
-
             if (freeSpaceTree.NumberOfEntries == 0)
                 return new List<long>();
 
@@ -338,7 +337,7 @@ namespace Voron.Impl.FreeSpace
                     for (var i = 0; i < NumberOfPagesInSection; i++)
                     {
                         if (current.Get(i))
-                            freePages.Add(currentSectionId * NumberOfPagesInSection + i);
+                            freePages.Add(currentSectionId*NumberOfPagesInSection + i);
                     }
                 } while (it.MoveNext());
 
@@ -356,7 +355,6 @@ namespace Voron.Impl.FreeSpace
             using (_guard.Enter(tx))
             {
                 var freeSpaceTree = GetFreeSpaceTree(tx);
-
                 StreamBitArray sba;
                 var section = pageNumber / NumberOfPagesInSection;
                 Slice result;
@@ -377,12 +375,17 @@ namespace Voron.Impl.FreeSpace
 
         public long GetFreePagesOverhead(LowLevelTransaction tx)
         {
-            return GetFreeSpaceTree(tx).PageCount;
+            var fst = GetFreeSpaceTree(tx);
+            return fst.PageCount;
         }
 
         public IEnumerable<long> GetFreePagesOverheadPages(LowLevelTransaction tx)
         {
-            return GetFreeSpaceTree(tx).AllPages();
+            var fst = GetFreeSpaceTree(tx);
+            foreach (var page in fst.AllPages())
+            {
+                yield return page;
+            }
         }
 
         public FreeSpaceHandlingDisabler Disable()
@@ -393,7 +396,11 @@ namespace Voron.Impl.FreeSpace
 
         private static FixedSizeTree GetFreeSpaceTree(LowLevelTransaction tx)
         {
-            return new FixedSizeTree(tx, tx.RootObjects, FreeSpaceKey, 260, clone: false)
+            if (tx._freeSpaceTree != null)
+            {
+                return tx._freeSpaceTree;
+            }
+            return tx._freeSpaceTree = new FixedSizeTree(tx, tx.RootObjects, FreeSpaceKey, 260, clone: false)
             {
                 FreeSpaceTree = true
             };

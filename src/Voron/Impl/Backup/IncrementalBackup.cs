@@ -48,7 +48,7 @@ namespace Voron.Impl.Backup
                 long numberOfBackedUpPages;
                 using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
                 {
-                    numberOfBackedUpPages = Incremental_Backup(env, compression, infoNotify, 
+                    numberOfBackedUpPages = Incremental_Backup(env, compression, infoNotify,
                         backupStarted,  package, string.Empty, copier);
                 }
                 file.Flush(true); // make sure that this is actually persisted fully to disk
@@ -97,116 +97,124 @@ namespace Voron.Impl.Backup
             long lastWrittenLogPage = -1;
             bool backupSuccess = true;
             IncrementalBackupInfo backupInfo;
-            using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite))
+            using (var transactionPersistentContext = new TransactionPersistentContext(true))
             {
-                backupInfo = env.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
-
-                if (env.Journal.CurrentFile != null)
+                using (var txw = env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
                 {
-                    lastWrittenLogFile = env.Journal.CurrentFile.Number;
-                    lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition;
-                }
+                    backupInfo = env.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
 
-                // txw.Commit(); intentionally not committing
-            }
-
-            using (env.NewLowLevelTransaction(TransactionFlags.Read))
-            {
-                backupStarted?.Invoke(); // we let call know that we have started the backup 
-
-                var usedJournals = new List<JournalFile>();
-
-                try
-                {
-                    long lastBackedUpPage = -1;
-                    long lastBackedUpFile = -1;
-
-                    var firstJournalToBackup = backupInfo.LastBackedUpJournal;
-
-                    if (firstJournalToBackup == -1)
-                        firstJournalToBackup = 0; // first time that we do incremental backup
-
-                    for (var journalNum = firstJournalToBackup; journalNum <= backupInfo.LastCreatedJournal; journalNum++)
+                    if (env.Journal.CurrentFile != null)
                     {
-                        var num = journalNum;
-
-                        var journalFile = GetJournalFile(env, journalNum, backupInfo);
-
-                        journalFile.AddRef();
-
-                        usedJournals.Add(journalFile);
-
-                        var startBackupAt = 0L;
-                        long pagesToCopy = journalFile.JournalWriter.NumberOfAllocatedPages;
-                        if (journalFile.Number == backupInfo.LastBackedUpJournal)
-                        {
-                            startBackupAt = backupInfo.LastBackedUpJournalPage + 1;
-                            pagesToCopy -= startBackupAt;
-                        }
-
-                        if (startBackupAt >= journalFile.JournalWriter.NumberOfAllocatedPages) // nothing to do here
-                            continue;
-
-                        var part = package.CreateEntry(Path.Combine(basePath, StorageEnvironmentOptions.JournalName(journalNum))
-                                                        , compression);
-                        Debug.Assert(part != null);
-
-                        if (journalFile.Number == lastWrittenLogFile)
-                            pagesToCopy -= (journalFile.JournalWriter.NumberOfAllocatedPages - lastWrittenLogPage);
-
-                        using (var stream = part.Open())
-                        {
-                            copier.ToStream(env, journalFile, startBackupAt, pagesToCopy, stream);
-                            infoNotify(string.Format("Voron Incr copy journal number {0}", num));
-                        }
-
-                        lastBackedUpFile = journalFile.Number;
-                        if (journalFile.Number == backupInfo.LastCreatedJournal)
-                        {
-                            lastBackedUpPage = startBackupAt + pagesToCopy - 1;
-                            // we used all of this file, so the next backup should start in the next file
-                            if (lastBackedUpPage == (journalFile.JournalWriter.NumberOfAllocatedPages - 1))
-                            {
-                                lastBackedUpPage = -1;
-                                lastBackedUpFile++;
-                            }
-                        }
-
-                        numberOfBackedUpPages += pagesToCopy;
+                        lastWrittenLogFile = env.Journal.CurrentFile.Number;
+                        lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition;
                     }
 
-                    env.HeaderAccessor.Modify(header =>
-                    {
-                        header->IncrementalBackup.LastBackedUpJournal = lastBackedUpFile;
-                        header->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpPage;
-                    });
+                    // txw.Commit(); intentionally not committing
                 }
-                catch (Exception)
-                {
-                    backupSuccess = false;
-                    throw;
-                }
-                finally
-                {
-                    var lastSyncedJournal = env.HeaderAccessor.Get(header => header->Journal).LastSyncedJournal;
 
-                    foreach (var jrnl in usedJournals)
+
+                using (env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read))
+                {
+                    backupStarted?.Invoke(); // we let call know that we have started the backup
+
+                    var usedJournals = new List<JournalFile>();
+
+                    try
                     {
-                        if (backupSuccess) // if backup succeeded we can remove journals
+                        long lastBackedUpPage = -1;
+                        long lastBackedUpFile = -1;
+
+                        var firstJournalToBackup = backupInfo.LastBackedUpJournal;
+
+                        if (firstJournalToBackup == -1)
+                            firstJournalToBackup = 0; // first time that we do incremental backup
+
+                        for (var journalNum = firstJournalToBackup;
+                            journalNum <= backupInfo.LastCreatedJournal;
+                            journalNum++)
                         {
-                            if (jrnl.Number < lastWrittenLogFile &&
-                                // prevent deletion of the current journal and journals with a greater number
-                                jrnl.Number < lastSyncedJournal)
-                            // prevent deletion of journals that aren't synced with the data file
+                            var num = journalNum;
+
+                            var journalFile = GetJournalFile(env, journalNum, backupInfo);
+
+                            journalFile.AddRef();
+
+                            usedJournals.Add(journalFile);
+
+                            var startBackupAt = 0L;
+                            long pagesToCopy = journalFile.JournalWriter.NumberOfAllocatedPages;
+                            if (journalFile.Number == backupInfo.LastBackedUpJournal)
                             {
-                                jrnl.DeleteOnClose = true;
+                                startBackupAt = backupInfo.LastBackedUpJournalPage + 1;
+                                pagesToCopy -= startBackupAt;
                             }
+
+                            if (startBackupAt >= journalFile.JournalWriter.NumberOfAllocatedPages) // nothing to do here
+                                continue;
+
+                            var part =
+                                package.CreateEntry(
+                                    Path.Combine(basePath, StorageEnvironmentOptions.JournalName(journalNum))
+                                    , compression);
+                            Debug.Assert(part != null);
+
+                            if (journalFile.Number == lastWrittenLogFile)
+                                pagesToCopy -= (journalFile.JournalWriter.NumberOfAllocatedPages - lastWrittenLogPage);
+
+                            using (var stream = part.Open())
+                            {
+                                copier.ToStream(env, journalFile, startBackupAt, pagesToCopy, stream);
+                                infoNotify(string.Format("Voron Incr copy journal number {0}", num));
+                            }
+
+                            lastBackedUpFile = journalFile.Number;
+                            if (journalFile.Number == backupInfo.LastCreatedJournal)
+                            {
+                                lastBackedUpPage = startBackupAt + pagesToCopy - 1;
+                                // we used all of this file, so the next backup should start in the next file
+                                if (lastBackedUpPage == (journalFile.JournalWriter.NumberOfAllocatedPages - 1))
+                                {
+                                    lastBackedUpPage = -1;
+                                    lastBackedUpFile++;
+                                }
+                            }
+
+                            numberOfBackedUpPages += pagesToCopy;
                         }
 
-                        jrnl.Release();
+                        env.HeaderAccessor.Modify(header =>
+                        {
+                            header->IncrementalBackup.LastBackedUpJournal = lastBackedUpFile;
+                            header->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpPage;
+                        });
                     }
+                    catch (Exception)
+                    {
+                        backupSuccess = false;
+                        throw;
+                    }
+                    finally
+                    {
+                        var lastSyncedJournal = env.HeaderAccessor.Get(header => header->Journal).LastSyncedJournal;
+
+                        foreach (var jrnl in usedJournals)
+                        {
+                            if (backupSuccess) // if backup succeeded we can remove journals
+                            {
+                                if (jrnl.Number < lastWrittenLogFile &&
+                                    // prevent deletion of the current journal and journals with a greater number
+                                    jrnl.Number < lastSyncedJournal)
+                                    // prevent deletion of journals that aren't synced with the data file
+                                {
+                                    jrnl.DeleteOnClose = true;
+                                }
+                            }
+
+                            jrnl.Release();
+                        }
+                    }
+                    infoNotify(string.Format("Voron Incr Backup total {0} pages", numberOfBackedUpPages));
                 }
-                infoNotify(string.Format("Voron Incr Backup total {0} pages", numberOfBackedUpPages));
             }
             return numberOfBackedUpPages;
         }
@@ -224,7 +232,7 @@ namespace Voron.Impl.Backup
                 using (var pager = env.Options.OpenJournalPager(journalNum))
                 {
                     long journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * env.Options.PageSize);
-                    journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
+                    journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
                     journalFile.AddRef();
                     return journalFile;
                 }
@@ -292,7 +300,8 @@ namespace Voron.Impl.Backup
         {
             using (env.Journal.Applicator.TakeFlushingLock())
             {
-                using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite))
+                using (var transactionPersistentContext = new TransactionPersistentContext(true))
+                using (var txw = env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
                 {
                     env.FlushLogToDataFile(txw);
 
@@ -315,7 +324,8 @@ namespace Voron.Impl.Backup
         {
             using (env.Journal.Applicator.TakeFlushingLock())
             {
-                using (var txw = env.NewLowLevelTransaction(TransactionFlags.ReadWrite))
+                using (var transactionPersistentContext = new TransactionPersistentContext(true))
+                using (var txw = env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
                 {
                     env.FlushLogToDataFile(txw);
 
@@ -418,7 +428,7 @@ namespace Voron.Impl.Backup
                 }
                 catch
                 {
-                    // this is just a temporary directory, the worst case scenario is that we dont reclaim the space from the OS temp directory 
+                    // this is just a temporary directory, the worst case scenario is that we dont reclaim the space from the OS temp directory
                     // if for some reason we cannot delete it we are safe to ignore it.
                 }
             }

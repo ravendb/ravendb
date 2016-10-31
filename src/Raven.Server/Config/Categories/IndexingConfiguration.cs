@@ -50,7 +50,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Indexing/MaxTimeForDocumentTransactionToRemainOpenInSec")]
-        public TimeSetting MaxTimeForDocumentTransactionToRemainOpenInSec { get; set; }
+        public TimeSetting MaxTimeForDocumentTransactionToRemainOpen { get; set; }
 
         [Description("How long the database should wait before marking an auto index with the idle flag")]
         [DefaultValue(30)]
@@ -78,5 +78,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(16)]
         [ConfigurationEntry("Raven/Indexing/MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory")]
         public int MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory { get; set; }
+
+        [Description("Number of minutes after which mapping will end even if there is more to map. This will only be applied if we pass the last etag in collection that we saw when batch was started.")]
+        [DefaultValue(15)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Raven/Indexing/MapTimeoutInMin")]
+        public TimeSetting MapTimeout { get; set; }
     }
 }

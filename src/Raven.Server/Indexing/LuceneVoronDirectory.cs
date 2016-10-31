@@ -77,7 +77,7 @@ namespace Raven.Server.Indexing
             var filesTree = _currentTransaction.Value.ReadTree("Files");
             var readResult = filesTree.Read(name);
             if (readResult == null)
-                throw new FileNotFoundException("Could not find file", name);
+                return 0;
 
             return readResult.Reader.ReadLittleEndianInt64();
         }

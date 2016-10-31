@@ -14,7 +14,7 @@ using Voron.Util.Conversion;
 
 namespace Voron.Data.Tables
 {
-    public unsafe class Table
+    public unsafe class Table : IDisposable
     {
         private readonly TableSchema _schema;
         private readonly Transaction _tx;
@@ -24,7 +24,7 @@ namespace Voron.Data.Tables
         private FixedSizeTree _fstKey;
         private FixedSizeTree _inactiveSections;
         private FixedSizeTree _activeCandidateSection;
-        private readonly int _pageSize;      
+        private readonly int _pageSize;
 
         private readonly Dictionary<Slice, Tree> _treesBySliceCache = new Dictionary<Slice, Tree>(SliceComparer.Instance);
         private readonly Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache = new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>(SliceComparer.Instance);
@@ -98,7 +98,7 @@ namespace Voron.Data.Tables
         /// Using this constructor WILL NOT register the Table for commit in
         /// the Transaction, and hence changes WILL NOT be commited.
         /// </summary>
-        public Table(TableSchema schema, Slice name, Transaction tx, int tag, bool doSchemaValidation = false)
+        public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree,  bool doSchemaValidation = false)
         {
             Name = name;
 
@@ -106,9 +106,9 @@ namespace Voron.Data.Tables
             _tx = tx;
             _pageSize = _tx.LowLevelTransaction.DataPager.PageSize;
 
-            _tableTree = _tx.ReadTree(name, RootObjectType.Table);
+            _tableTree = tableTree;
             if (_tableTree == null)
-                throw new InvalidDataException($"Cannot find collection name {name}");
+                throw new ArgumentNullException(nameof(tableTree),"Cannot open table " + Name);
 
             var stats = (TableSchemaStats*)_tableTree.DirectRead(TableSchema.StatsSlice);
             if (stats == null)
@@ -159,7 +159,7 @@ namespace Voron.Data.Tables
 
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
-            id = -1;		
+            id = -1;
             var pkTree = GetTree(_schema.Key);
             var readResult = pkTree?.Read(key);
             if (readResult == null)
@@ -180,7 +180,7 @@ namespace Voron.Data.Tables
                 return page.Pointer + sizeof(PageHeader);
             }
 
-            // here we rely on the fact that RawDataSmallSection can 
+            // here we rely on the fact that RawDataSmallSection can
             // read any RawDataSmallSection piece of data, not just something that
             // it exists in its own section, but anything from other sections as well
             return RawDataSection.DirectRead(_tx.LowLevelTransaction, id, out size);
@@ -276,7 +276,7 @@ namespace Voron.Data.Tables
                 return;
             }
 
-            // move all the data to the current active section (maybe creating a new one 
+            // move all the data to the current active section (maybe creating a new one
             // if this is busy)
 
             // if this is in the active candidate list, remove it so it cannot be reused if the current
@@ -370,7 +370,7 @@ namespace Voron.Data.Tables
                 page.OverflowSize = size;
 
                 pos = page.Pointer + sizeof(PageHeader);
-                
+
                 builder.CopyTo(pos);
                 id = page.PageNumber * _pageSize;
             }
@@ -476,7 +476,7 @@ namespace Voron.Data.Tables
                 cache = new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
                 _fixedSizeTreeCache[parent.Name] = cache;
             }
-            
+
             FixedSizeTree tree;
             if (cache.TryGetValue(name, out tree) == false)
             {
@@ -564,7 +564,7 @@ namespace Voron.Data.Tables
             // This is an implementation detail. We read the absolute location pointer (absolute offset on the file)
             long id = readResult.Reader.ReadLittleEndianInt64();
 
-            // And delete the element accordingly. 
+            // And delete the element accordingly.
             Delete(id);
         }
 
@@ -658,7 +658,7 @@ namespace Voron.Data.Tables
 
                 if (it.Seek(value) == false)
                     yield break;
-                
+
                 do
                 {
                     yield return new SeekResult
@@ -812,7 +812,7 @@ namespace Voron.Data.Tables
                 throw new ArgumentOutOfRangeException(nameof(numberOfEntriesToDelete), "Number of entries should not be negative");
 
             if (numberOfEntriesToDelete == 0)
-                return 0;            
+                return 0;
 
             var toDelete = new List<long>();
             var tree = GetTree(index);
@@ -850,16 +850,38 @@ namespace Voron.Data.Tables
             if (_treesBySliceCache == null)
                 return;
 
-            foreach( var item in _treesBySliceCache)
+            foreach (var item in _treesBySliceCache)
             {
                 var tree = item.Value;
                 if (!tree.State.IsModified)
                     continue;
 
-                var treeName = item.Key;               
+                var treeName = item.Key;
                 var header = (TreeRootHeader*) _tableTree.DirectAdd(treeName, sizeof(TreeRootHeader));
                 tree.State.CopyTo(header);
             }
+        }
+
+        public void Dispose()
+        {
+            foreach (var item in _treesBySliceCache)
+            {
+                item.Value.Dispose();
+            }
+
+            foreach (var item in _fixedSizeTreeCache)
+            {
+                foreach (var item2 in item.Value)
+                {
+                    item2.Value.Dispose();
+                }
+            }
+
+            _activeCandidateSection?.Dispose();
+            _activeDataSmallSection?.Dispose();
+            _fstKey?.Dispose();
+            _inactiveSections?.Dispose();
+            _tableTree?.Dispose();
         }
     }
 }

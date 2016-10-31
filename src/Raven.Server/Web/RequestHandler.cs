@@ -121,9 +121,14 @@ namespace Raven.Server.Web
 
             long etag;
             if (long.TryParse(etags[0], out etag) == false)
-                throw new ArgumentException("Could not parse header '" + name + "' header as int64, value was: " + etags[0]);
+                ThrowInvalidInteger(name, etags[0]);
 
             return etag;
+        }
+
+        private void ThrowInvalidInteger(string name, string etag)
+        {
+            throw new ArgumentException("Could not parse header '" + name + "' header as int, value was: " + etag);
         }
 
         protected int GetStart(int defaultValue = 0)
@@ -144,7 +149,7 @@ namespace Raven.Server.Web
 
             int result;
             if (int.TryParse(intAsString, out result) == false)
-                throw new ArgumentException(string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, intAsString));
+                ThrowInvalidInteger(name, intAsString);
 
             return result;
         }
@@ -157,7 +162,7 @@ namespace Raven.Server.Web
 
             long result;
             if (long.TryParse(longAsString, out result) == false)
-                throw new ArgumentException(string.Format("Could not parse query string '{0}' header as int64, value was: {1}", name, longAsString));
+                ThrowInvalidInteger(name, longAsString);
 
             return result;
         }
@@ -170,9 +175,14 @@ namespace Raven.Server.Web
 
             float result;
             if (float.TryParse(floatAsString, out result) == false)
-                throw new ArgumentException($"Could not parse query string '{name}' as float");
+                ThrowInvalidFloat(name, result);
 
             return result;
+        }
+
+        private static void ThrowInvalidFloat(string name, float result)
+        {
+            throw new ArgumentException($"Could not parse query string '{name}' as float, value was: {result}");
         }
 
         protected string GetStringQueryString(string name, bool required = true)
@@ -181,12 +191,17 @@ namespace Raven.Server.Web
             if (val.Count == 0 || string.IsNullOrWhiteSpace(val[0]))
             {
                 if (required)
-                    throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
+                    ThrowRequiredMembery(name);
 
                 return null;
             }
 
             return val[0];
+        }
+
+        private static void ThrowRequiredMembery(string name)
+        {
+            throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
         }
 
         protected StringValues GetStringValuesQueryString(string name, bool required = true)
@@ -195,7 +210,7 @@ namespace Raven.Server.Web
             if (val.Count == 0)
             {
                 if (required)
-                    throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
+                    ThrowRequiredMembery(name);
 
                 return default(StringValues);
             }
@@ -211,9 +226,14 @@ namespace Raven.Server.Web
 
             bool result;
             if (bool.TryParse(boolAsString, out result) == false)
-                throw new ArgumentException($"Could not parse query string '{name}' as bool");
+                ThrowInvalidBoolean(name, boolAsString);
 
             return result;
+        }
+
+        private static void ThrowInvalidBoolean(string name, string val)
+        {
+            throw new ArgumentException($"Could not parse query string '{name}' as bool, val {val}");
         }
 
         protected DateTime? GetDateTimeQueryString(string name)
@@ -228,7 +248,13 @@ namespace Raven.Server.Web
             if (DateTime.TryParseExact(dataAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
                 return result;
 
-            throw new ArgumentException($"Could not parse query string '{name}' as date");
+            ThrowInvalidDateTime(name, dataAsString);
+            return null; //unreacahble
+        }
+
+        private static void ThrowInvalidDateTime(string name, string dataAsString)
+        {
+            throw new ArgumentException($"Could not parse query string '{name}' as date, val {dataAsString}");
         }
 
         protected TimeSpan? GetTimeSpanQueryString(string name, bool required = true)
@@ -243,18 +269,34 @@ namespace Raven.Server.Web
             if (TimeSpan.TryParse(timeSpanAsString, out result))
                 return result;
 
-            throw new ArgumentException($"Could not parse query string '{name}' as date");
+            ThrowInvalidTimeSpan(name, timeSpanAsString);
+            return null;// unreachable
+        }
+
+        private static void ThrowInvalidTimeSpan(string name, string timeSpanAsString)
+        {
+            throw new ArgumentException($"Could not parse query string '{name}' as timespan val {timeSpanAsString}");
         }
 
         protected string GetQueryStringValueAndAssertIfSingleAndNotEmpty(string name)
         {
             var values = HttpContext.Request.Query[name];
             if (values.Count != 1)
-                throw new ArgumentException($"Query string value '{name}' must appear exactly once");
+                InvalidCountOfValues(name);
             if (string.IsNullOrWhiteSpace(values[0]))
-                throw new ArgumentException($"Query string value '{name}' must have a non empty value");
+                InvalidEmptyValue(name);
 
             return values[0];
+        }
+
+        private static void InvalidEmptyValue(string name)
+        {
+            throw new ArgumentException($"Query string value '{name}' must have a non empty value");
+        }
+
+        private static void InvalidCountOfValues(string name)
+        {
+            throw new ArgumentException($"Query string value '{name}' must appear exactly once");
         }
 
         protected DisposableAction TrackRequestTime()

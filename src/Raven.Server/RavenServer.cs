@@ -108,7 +108,9 @@ namespace Raven.Server
             {
                 _webHost = new WebHostBuilder()
                     .CaptureStartupErrors(captureStartupErrors: true)
-                    .UseKestrel(options => { })
+                    .UseKestrel(options =>
+                    {
+                    })
                     .UseUrls(Configuration.Core.ServerUrl)
                     .UseStartup<RavenServerStartup>()
                     .ConfigureServices(services =>
@@ -339,8 +341,13 @@ namespace Raven.Server
         public RequestRouter Router { get; private set; }
         public MetricsCountersManager Metrics { get; private set; }
 
+        private bool _disposed;
+
         public void Dispose()
         {
+            if (_disposed)
+                return;
+            _disposed = true;
             Metrics?.Dispose();
             _webHost?.Dispose();
             if (_tcpListenerTask != null)

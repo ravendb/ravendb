@@ -33,5 +33,10 @@ namespace Raven.Server.Documents.Indexes.Errors
         {
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }
+
+        protected override int ComputeRestOfHash(int hashCode)
+        {
+            return (hashCode*397) ^ -1337;
+        }
     }
 }

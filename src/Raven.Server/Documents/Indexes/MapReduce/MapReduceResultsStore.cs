@@ -97,36 +97,33 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Add(long id, BlittableJsonReaderObject result)
         {
-            using (result)
+            switch (Type)
             {
-                switch (Type)
-                {
-                    case MapResultsStorageType.Tree:
-                        Slice entrySlice;
-                        using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
-                        {
-                            var pos = Tree.DirectAdd(entrySlice, result.Size);
-                            result.CopyTo(pos);
-                        }
+                case MapResultsStorageType.Tree:
+                    Slice entrySlice;
+                    using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
+                    {
+                        var pos = Tree.DirectAdd(entrySlice, result.Size);
+                        result.CopyTo(pos);
+                    }
 
-                        break;
-                    case MapResultsStorageType.Nested:
-                        var section = GetNestedResultsSection();
+                    break;
+                case MapResultsStorageType.Nested:
+                    var section = GetNestedResultsSection();
 
-                        if (_mapReduceContext.MapEntries.ShouldGoToOverflowPage(_nestedSection.SizeAfterAdding(result)))
-                        {
-                            // would result in an overflow, that would be a space waste anyway, let's move to tree mode
-                            MoveExistingResultsToTree(section);
-                            Add(id, result);// now re-add the value
-                        }
-                        else
-                        {
-                            section.Add(id, result);
-                        }
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(Type.ToString());
-                }
+                    if (_mapReduceContext.MapEntries.ShouldGoToOverflowPage(_nestedSection.SizeAfterAdding(result)))
+                    {
+                        // would result in an overflow, that would be a space waste anyway, let's move to tree mode
+                        MoveExistingResultsToTree(section);
+                        Add(id, result); // now re-add the value
+                    }
+                    else
+                    {
+                        section.Add(id, result);
+                    }
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(Type.ToString());
             }
         }
 

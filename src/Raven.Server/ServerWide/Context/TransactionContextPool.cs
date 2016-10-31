@@ -36,7 +36,9 @@ namespace Raven.Server.ServerWide.Context
                 // if this is a context pool dedicated for a thread (like for indexes), we probably won't do a lot of 
                 // work on that outside of its thread, so let not allocate a lot of memory for that. We just need enough
                 // there process simple stuff like IsStale, etc, so let us start small
-                initialSize = _mostlyThreadDedicatedWork.Value ? 32*1024*1024 : 32*1024;
+                initialSize = _mostlyThreadDedicatedWork.Value ? 
+                    16*1024*1024 : // the initial budget is 32 MB, so let us now blow through that all at once
+                    32*1024;
             }
             return new TransactionOperationContext(_storageEnvironment,
                 initialSize, 

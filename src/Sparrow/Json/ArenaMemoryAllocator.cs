@@ -16,10 +16,11 @@ namespace Sparrow.Json
         private long _allocated;
         private long _used;
 
-        private List<Tuple<IntPtr,long, NativeMemory.ThreadStats>> _olderBuffers;
+        private List<Tuple<IntPtr, long, NativeMemory.ThreadStats>> _olderBuffers;
+        private SortedList<long, AllocatedMemoryData> _fragements;
 
         private bool _isDisposed;
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
         private NativeMemory.ThreadStats _allocatingThread;
 
         public long Allocated
@@ -35,7 +36,7 @@ namespace Sparrow.Json
                     }
                 }
                 return totalAllocation;
-            }    
+            }
         }
 
         public ArenaMemoryAllocator(int initialSize = 1024 * 1024)
@@ -44,8 +45,8 @@ namespace Sparrow.Json
             _allocated = initialSize;
             _used = 0;
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"ArenaMemoryAllocator was created with initial capacity of {initialSize:#,#;;0} bytes");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"ArenaMemoryAllocator was created with initial capacity of {initialSize:#,#;;0} bytes");
         }
 
 
@@ -82,8 +83,8 @@ namespace Sparrow.Json
             _ptrCurrent += size;
             _used += size;
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"ArenaMemoryAllocator allocated {size:#,#;;0} bytes");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"ArenaMemoryAllocator allocated {size:#,#;;0} bytes");
             return allocation;
         }
 
@@ -100,19 +101,19 @@ namespace Sparrow.Json
             // we need the next allocation to cover at least the next expansion (also doubling)
             // so we'll allocate 3 times as much as was requested, or twice as much as we already have
             // the idea is that a single allocation can server for multiple (increasing in size) calls
-            long newSize = Math.Max(Bits.NextPowerOf2(requestedSize)*3, _allocated);
+            long newSize = Math.Max(Bits.NextPowerOf2(requestedSize) * 3, _allocated);
             if (newSize > MaxArenaSize)
                 newSize = MaxArenaSize;
-           
-            if (_logger.IsInfoEnabled)
+
+            if (Logger.IsInfoEnabled)
             {
                 if (newSize > 512 * 1024 * 1024)
-                    _logger.Info(
+                    Logger.Info(
                         $"Arena main buffer reached size of {newSize:#,#;0} bytes (previously {_allocated:#,#;0} bytes), check if you forgot to reset the context. From now on we grow this arena in 1GB chunks.");
-                _logger.Info(
+                Logger.Info(
                     $"Increased size of buffer from {_allocated:#,#;0} to {newSize:#,#;0} because we need {requestedSize:#,#;0}. _used={_used:#,#;0}");
             }
-            
+
             NativeMemory.ThreadStats thread;
             var newBuffer = NativeMemory.AllocateMemory(newSize, out thread);
 
@@ -142,40 +143,52 @@ namespace Sparrow.Json
         {
             // Reset current arena buffer
             _ptrCurrent = _ptrStart;
+            _fragements?.Clear();
+
             // Free old buffers not being used anymore
-            if (_olderBuffers != null)
+            if (_olderBuffers == null)
             {
-                foreach (var unusedBuffer in _olderBuffers)
-                {
-                    _used += unusedBuffer.Item2;
-                    NativeMemory.Free((byte*)unusedBuffer.Item1, unusedBuffer.Item2, unusedBuffer.Item3);
-                }
-                _olderBuffers = null;
-                if (_used > _allocated)  // we'll likely need more memory in the next round, let us increase the size we hold on to
-                {
-                    NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
-
-                    // we'll allocate some multiple of the currently allocated amount, that will prevent big spikes in memory 
-                    // consumption and has the worst case usage of doubling memory utilization
-
-                    var newSize = (_used/_allocated + (_used%_allocated == 0 ? 0 : 1))*_allocated;
-
-                    _allocated = newSize;
-
-                    if (_allocated > MaxArenaSize)
-                        _allocated = MaxArenaSize;
-                    _ptrCurrent = _ptrStart = null;
-                }
+                _used = 0;
+                return;
             }
+            foreach (var unusedBuffer in _olderBuffers)
+            {
+                _used += unusedBuffer.Item2;
+                NativeMemory.Free((byte*)unusedBuffer.Item1, unusedBuffer.Item2, unusedBuffer.Item3);
+            }
+            _olderBuffers = null;
+            if (_used <= _allocated)
+            {
+                _used = 0;
+                return;
+            }
+            // we'll likely need more memory in the next round, let us increase the size we hold on to
+
+            NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
+
+            // we'll allocate some multiple of the currently allocated amount, that will prevent big spikes in memory 
+            // consumption and has the worst case usage of doubling memory utilization
+
+            var newSize = (_used / _allocated + (_used % _allocated == 0 ? 0 : 1)) * _allocated;
+
+            _allocated = newSize;
             _used = 0;
+            if (_allocated > MaxArenaSize)
+                _allocated = MaxArenaSize;
+            _ptrCurrent = _ptrStart = null;
         }
 
         ~ArenaMemoryAllocator()
         {
-            if (_logger.IsInfoEnabled)
-                _logger.Info("ArenaMemoryAllocator wasn't properly disposed");
+            if (Logger.IsInfoEnabled)
+                Logger.Info("ArenaMemoryAllocator wasn't properly disposed");
 
             Dispose();
+        }
+
+        public override string ToString()
+        {
+            return $"Allocated {Sizes.Humane(_allocated)}, Used {Sizes.Humane(_used)}";
         }
 
         public void Dispose()
@@ -205,11 +218,40 @@ namespace Sparrow.Json
         {
             if (allocation.Address != _ptrCurrent - allocation.SizeInBytes ||
                 allocation.Address < _ptrStart)
+            {
+                if (_fragements == null)
+                {
+                    _fragements = new SortedList<long, AllocatedMemoryData>();
+                }
+                // we have fragmentation, let us try to heal it 
+                _fragements.Add((long)allocation.Address, allocation);
                 return;
+            }
             // since the returned allocation is at the end of the arena, we can just move
             // the pointer back
             _used -= allocation.SizeInBytes;
             _ptrCurrent -= allocation.SizeInBytes;
+
+            if (_fragements == null)
+                return;
+
+            // let us try to heal fragmentation at this point
+            while (_fragements.Count > 0)
+            {
+                var highest = _fragements.Values[_fragements.Count - 1];
+                if (highest.Address != _ptrCurrent - allocation.SizeInBytes)
+                    break;
+                _fragements.RemoveAt(_fragements.Count - 1);
+                if (highest.Address < _ptrStart)
+                {
+                    // this is from another segment, probably, currently we'll just ignore it,
+                    // we might want to track if all the memory from a previous segment has been
+                    // released, and then free it, but not for now
+                    continue;
+                }
+                _used -= highest.SizeInBytes;
+                _ptrCurrent -= highest.SizeInBytes;
+            }
         }
     }
 

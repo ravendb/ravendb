@@ -60,9 +60,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             return new IIndexingWork[]
             {
-                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, _mapReduceWorkContext, DocumentDatabase.Configuration.Indexing),
-                new ReduceMapResultsOfAutoIndex(this, Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext),
+                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, MapReduceWorkContext),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, MapReduceWorkContext, DocumentDatabase.Configuration.Indexing),
+                new ReduceMapResultsOfAutoIndex(this, Definition, _indexStorage, DocumentDatabase.Metrics, MapReduceWorkContext),
             };
         }
 
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             var mappedResult = new DynamicJsonValue();
 
-            using (stats.For(IndexingOperation.Reduce.Aggregation))
+            using (stats.For(IndexingOperation.Reduce.BlittableJsonAggregation))
             {
                 var document = ((Document[])mapResults)[0];
                 Debug.Assert(key == document.LoweredKey);
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             }
 
             BlittableJsonReaderObject mr;
-            using (stats.For(IndexingOperation.Reduce.AggregationConversion))
+            using (stats.For(IndexingOperation.Reduce.CreateBlittableJson))
                 mr = indexContext.ReadObject(mappedResult, key);
 
             var mapResult = _singleOutputList[0];

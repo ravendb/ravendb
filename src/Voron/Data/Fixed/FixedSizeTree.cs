@@ -17,7 +17,7 @@ using Voron.Impl.Paging;
 
 namespace Voron.Data.Fixed
 {
-    public unsafe partial class FixedSizeTree
+    public unsafe partial class FixedSizeTree : IDisposable
     {
         internal const int BranchEntrySize = sizeof(long) + sizeof(long);
         private readonly LowLevelTransaction _tx;
@@ -26,7 +26,7 @@ namespace Voron.Data.Fixed
         private readonly ushort _valSize;
         private readonly int _entrySize;
         private readonly int _maxEmbeddedEntries;
-        private readonly PageLocator _pageLocator;
+        private PageLocator _pageLocator;
         private RootObjectType? _type;
         private Stack<FixedSizeTreePage> _cursor;
         private int _changes;
@@ -102,7 +102,7 @@ namespace Voron.Data.Fixed
             _tx = tx;
             _parent = parent;
             _valSize = valSize;
-            _pageLocator = new PageLocator(tx, 16);
+            _pageLocator = tx.PersistentContext.AllocatePageLocator(tx);
 
             _entrySize = sizeof(long) + _valSize;
             _maxEmbeddedEntries = 512 / _entrySize;
@@ -202,7 +202,7 @@ namespace Voron.Data.Fixed
                 isNew = false;
                 return page.Pointer + page.StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long);
             }
-            
+
 
             if (page.LastMatch > 0)
                 page.LastSearchPosition++; // after the last one
@@ -218,7 +218,7 @@ namespace Voron.Data.Fixed
                 return addLargeEntry;
             }
 
-            var headerToWrite = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large)); 
+            var headerToWrite = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
 
             ResetStartPosition(page);
 
@@ -332,12 +332,12 @@ namespace Voron.Data.Fixed
 
             using (FreeSpaceTree ? _tx.Environment.FreeSpaceHandling.Disable() : null)
             {
-                // we cannot recursively call free space handling to ensure that we won't modify a section 
+                // we cannot recursively call free space handling to ensure that we won't modify a section
                 // relevant for a page which is currently being changed allocated
 
                 allocatePage = _tx.AllocatePage(1).ToFixedSizeTreePage();
             }
-            
+
             allocatePage.Dirty = true;
             allocatePage.FixedTreeFlags = flags;
             allocatePage.Flags = PageFlags.Single | PageFlags.FixedSizeTreePage;
@@ -348,7 +348,7 @@ namespace Voron.Data.Fixed
         {
             if (FreeSpaceTree)
             {
-                // we cannot recursively call free space handling to ensure that we won't modify a section 
+                // we cannot recursively call free space handling to ensure that we won't modify a section
                 // relevant for a page which is currently being freed, so we will free it on tx commit
 
                 _tx.FreePageOnCommit(pageNumber);
@@ -516,7 +516,7 @@ namespace Voron.Data.Fixed
                     _type = RootObjectType.FixedSizeTree;
 
                     var allocatePage = NewPage(FixedSizeTreePageFlags.Leaf);
-                    
+
                     var largeHeader =
                         (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
                     largeHeader->NumberOfEntries = newEntriesCount;
@@ -841,8 +841,8 @@ namespace Voron.Data.Fixed
              * We use the following logic here:
              * - Find the start page, then find the next page to its right.
              * - If the next page's last value is smaller than the end, remove the page
-             * - Now we have to rebalance the tree. Doing so may cause the structure of the tree to change, 
-             *   so we need to find the start page again. 
+             * - Now we have to rebalance the tree. Doing so may cause the structure of the tree to change,
+             *   so we need to find the start page again.
              * - We need special handling for the end node and for the start node only.
              */
             long entriesDeleted = 0;
@@ -878,7 +878,7 @@ namespace Voron.Data.Fixed
             }
 
             // we now know that the tree contains a maximum of 2 pages with the range
-            // now remove the start range from the start page, we do this twice to cover the case 
+            // now remove the start range from the start page, we do this twice to cover the case
             // where the start & end are on separate pages
             largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
             int rangeRemoved = 1;
@@ -903,7 +903,7 @@ namespace Voron.Data.Fixed
                 }
 
                 rangeRemoved = RemoveRangeFromPage(page, end, largeHeader);
-                
+
                 entriesDeleted += rangeRemoved;
             }
             if (_type == RootObjectType.EmbeddedFixedSizeTree)
@@ -1040,7 +1040,7 @@ namespace Voron.Data.Fixed
             var page = FindPageFor(key);
             if (page.LastMatch != 0)
                 return new DeletionResult();
-           
+
             var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
             largeHeader->NumberOfEntries--;
 
@@ -1441,6 +1441,15 @@ namespace Voron.Data.Fixed
         public void DebugRenderAndShow()
         {
             DebugStuff.RenderAndShow_FixedSizeTree(_tx, this);
+        }
+
+        public void Dispose()
+        {
+            if (_pageLocator != null)
+            {
+                _tx.PersistentContext.FreePageLocator(_pageLocator);
+                _pageLocator = null;
+            }
         }
     }
 }

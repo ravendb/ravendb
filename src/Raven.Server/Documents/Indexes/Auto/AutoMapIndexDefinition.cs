@@ -61,6 +61,11 @@ namespace Raven.Server.Documents.Indexes.Auto
             return false;
         }
 
+        protected override int ComputeRestOfHash(int hashCode)
+        {
+            return hashCode;// nothing else here
+        }
+
         public static AutoMapIndexDefinition Load(StorageEnvironment environment)
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())

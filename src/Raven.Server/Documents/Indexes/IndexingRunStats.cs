@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 using Raven.Abstractions;
 using Raven.Client.Data;
@@ -43,6 +44,11 @@ namespace Raven.Server.Documents.Indexes
             AddError(null, message, "Reduce");
         }
 
+        public void AddCorruptionError(Exception exception)
+        {
+            AddError(null, $"Index corruption occurred: {exception}", "Corruption");
+        }
+
         public void AddWriteError(IndexWriteException exception)
         {
             AddError(null, $"Write exception occurred: {exception.Message}", "Write");
@@ -51,6 +57,16 @@ namespace Raven.Server.Documents.Indexes
         public void AddAnalyzerError(IndexAnalyzerException exception)
         {
             AddError(null, $"Could not create analyzer: {exception.Message}", "Analyzer");
+        }
+
+        public void AddGenericError(Exception exception)
+        {
+            AddError(null, $"Generic exception occured: {exception}", "Generic");
+        }
+
+        public void AddMemoryError(OutOfMemoryException oome)
+        {
+            AddError(null, $"Memory exception occured: {oome}", "Memory");
         }
 
         private void AddError(string key, string message, string action)

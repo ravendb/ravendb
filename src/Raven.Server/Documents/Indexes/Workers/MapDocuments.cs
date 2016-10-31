@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
-                            ? _configuration.MaxTimeForDocumentTransactionToRemainOpenInSec.AsTimeSpan
+                            ? _configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan
                             : TimeSpan.FromMinutes(15);
 
             var moreWorkFound = false;
@@ -113,6 +113,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     }
                                     catch (Exception e)
                                     {
+                                        _index.HandleError(e);
+
                                         collectionStats.RecordMapError();
                                         if (_logger.IsInfoEnabled)
                                             _logger.Info(
@@ -135,7 +137,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         break;
                                     }
 
-                                    if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
+                                    if (MaybeRenewTransaction(databaseContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
                                         break;
                                 }
                             }
@@ -164,10 +166,33 @@ namespace Raven.Server.Documents.Indexes.Workers
             return moreWorkFound;
         }
 
+        public static bool MaybeRenewTransaction(
+            DocumentsOperationContext databaseContext, Stopwatch sw,
+            IndexingConfiguration configuration,
+            ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
+        {
+            if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
+            {
+                if (databaseContext.ShouldRenewTransactionsToAllowFlushing())
+                    return true;
+
+                // if we haven't had writes in the meantime, there is no point
+                // in replacing the database transaction, and it will probably cost more
+                // let us check again later to see if we need to
+                maxTimeForDocumentTransactionToRemainOpen =
+                    maxTimeForDocumentTransactionToRemainOpen.Add(
+                        configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan);
+            }
+            return false;
+        }
+
         public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
         {
-            if (currentEtag >= maxEtag)
+            if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
+            {
+                stats.RecordMapCompletedReason($"Reached maximum etag that was seen when batch started ({maxEtag}) and batch duration ({stats.Duration}) exceeded configured limit ({_configuration.MapTimeout.AsTimeSpan})");
                 return false;
+            }
 
             if (_index.CanContinueBatch(stats) == false)
                 return false;

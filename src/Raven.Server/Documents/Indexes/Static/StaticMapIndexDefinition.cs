@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class StaticMapIndexDefinition : IndexDefinitionBase
     {
-        private bool _hasDynamicFields;
+        private readonly bool _hasDynamicFields;
         public readonly IndexDefinition IndexDefinition;
 
         public StaticMapIndexDefinition(IndexDefinition definition, string[] collections, string[] outputFields, bool hasDynamicFields)
@@ -68,6 +68,11 @@ namespace Raven.Server.Documents.Indexes.Static
         public override bool Equals(IndexDefinition indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
         {
             return IndexDefinition.Equals(indexDefinition, compareIndexIds: false, ignoreFormatting: ignoreFormatting, ignoreMaxIndexOutput: ignoreMaxIndexOutputs);
+        }
+
+        protected override int ComputeRestOfHash(int hashCode)
+        {
+            return hashCode*397 ^ IndexDefinition.GetHashCode();
         }
 
         public static IndexDefinition Load(StorageEnvironment environment)

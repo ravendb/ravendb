@@ -107,7 +107,7 @@ namespace SlowTests.SlowTests.Bugs
                 CreateEntities(store, 0);
 
                 const string content = "This is doable";
-
+                WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     RavenQueryStatistics stats;
