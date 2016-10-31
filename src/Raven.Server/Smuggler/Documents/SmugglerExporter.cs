@@ -24,15 +24,14 @@ namespace Raven.Server.Smuggler.Documents
         public long? StartDocsEtag;
        
         public long? StartRevisionDocumentsEtag;
-        public int? RevisionDocumentsLimit;
 
-        public DatabaseExportOptions Options;
-        private int _documentExported;
+        public DatabaseSmugglerOptions Options;
+        private int _exportedDocuments;
 
-        public SmugglerExporter(DocumentDatabase database, DatabaseExportOptions options = null)
+        public SmugglerExporter(DocumentDatabase database, DatabaseSmugglerOptions options = null)
         {
             _database = database;
-            Options = options ?? new DatabaseExportOptions();
+            Options = options ?? new DatabaseSmugglerOptions();
         }
 
         public ExportResult Export(DocumentsOperationContext context, string destinationFilePath, Action<IOperationProgress> onProgress = null)
@@ -108,10 +107,10 @@ namespace Raven.Server.Smuggler.Documents
                             context.Write(writer, document.Data);
                             result.LastDocsEtag = document.Etag;
                         }
-                        _documentExported++;
+                        _exportedDocuments++;
                     }
 
-                    result.DocumentCount = _documentExported;
+                    result.DocumentCount = _exportedDocuments;
                     _timer.Dispose();
                     writer.WriteEndArray();
                 }
@@ -125,8 +124,8 @@ namespace Raven.Server.Smuggler.Documents
                         writer.WritePropertyName("RevisionDocuments");
                         writer.WriteStartArray();
                         var first = true;
-                        var revisionDocuments = RevisionDocumentsLimit.HasValue
-                            ? versioningStorage.GetRevisionsAfter(context, StartRevisionDocumentsEtag ?? 0, RevisionDocumentsLimit.Value)
+                        var revisionDocuments = Options.RevisionDocumentsLimit.HasValue
+                            ? versioningStorage.GetRevisionsAfter(context, StartRevisionDocumentsEtag ?? 0, Options.RevisionDocumentsLimit.Value)
                             : versioningStorage.GetRevisionsAfter(context, StartRevisionDocumentsEtag ?? 0);
                         foreach (var revisionDocument in revisionDocuments)
                         {
@@ -227,7 +226,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var progres = new IndeterminateProgress
                 {
-                    Progress = $"{_documentExported} documents has exported."
+                    Progress = $"{_exportedDocuments} documents has exported."
                 };
 
                 onProgress?.Invoke(progres);

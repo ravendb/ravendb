@@ -530,8 +530,14 @@ namespace Raven.Server.Documents
         {
             foreach (var collection in collections)
             {
-                foreach (var document in GetDocumentsFrom(context, collection, etag, 0, take))
+                if(take <=0)
+                    yield break;
+
+                foreach (var document in GetDocumentsFrom(context, collection, etag, 0, int.MaxValue))
                 {
+                    if (take-- <= 0)
+                        yield break;
+
                     yield return document;
                 }
             }

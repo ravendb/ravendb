@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Smuggler;
 using Raven.Server.Documents.PeriodicExport.Aws;
 using Raven.Server.Documents.PeriodicExport.Azure;
 using Raven.Server.Json;
@@ -235,7 +236,10 @@ namespace Raven.Server.Documents.PeriodicExport
 
                         var dataExporter = new SmugglerExporter(_database)
                         {
-                            RevisionDocumentsLimit = _exportLimit,
+                            Options = new DatabaseSmugglerOptions
+                            {
+                                RevisionDocumentsLimit = _exportLimit
+                            }
                         };
 
                         string exportFilePath;

@@ -54,8 +54,14 @@ namespace Raven.Server.Web
 
         protected Stream RequestFormStream(string itemName)
         {
-            //TODO Handle exceptions
-            return new MemoryStream(Encoding.UTF8.GetBytes(HttpContext.Request.Form[itemName]));
+            try
+            {
+                return new MemoryStream(Encoding.UTF8.GetBytes(HttpContext.Request.Form[itemName]));
+            }
+            catch (Exception)
+            {
+               return RequestBodyStream();
+            }
         }
 
         protected Stream RequestBodyStream()

@@ -17,7 +17,7 @@ namespace Raven.Server.Json
 {
     public class JsonDeserializationServer : JsonDeserializationBase
     {
-        public static readonly Func<BlittableJsonReaderObject, DatabaseExportOptions> DatabaseExportOptions = GenerateJsonDeserializationRoutine<DatabaseExportOptions>();
+        public static readonly Func<BlittableJsonReaderObject, DatabaseSmugglerOptions> DatabaseExportOptions = GenerateJsonDeserializationRoutine<DatabaseSmugglerOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationMessageReply> ReplicationMessageReply = GenerateJsonDeserializationRoutine<ReplicationMessageReply>();
 

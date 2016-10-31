@@ -90,7 +90,7 @@ namespace TypingsGenerator
 
 
             // smuggler
-            scripter.AddType(typeof(DatabaseExportOptions));
+            scripter.AddType(typeof(DatabaseSmugglerOptions));
 
             return scripter;
         }
