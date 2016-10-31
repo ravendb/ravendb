@@ -29,7 +29,7 @@ namespace Raven.Database.Storage.Voron.Schema
 
         private readonly ILog log;
 
-        public const string SchemaVersion = "1.4";
+        public const string SchemaVersion = "1.5";
 
         [ImportMany]
         public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }
