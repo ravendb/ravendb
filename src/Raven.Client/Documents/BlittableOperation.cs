@@ -9,16 +9,6 @@ namespace Raven.Client.Documents
 {
     public class BlittableOperation
     {
-        private const BlittableJsonToken TypesMask =
-            BlittableJsonToken.Boolean |
-            BlittableJsonToken.Float |
-            BlittableJsonToken.Integer |
-            BlittableJsonToken.Null |
-            BlittableJsonToken.StartArray |
-            BlittableJsonToken.StartObject |
-            BlittableJsonToken.String |
-            BlittableJsonToken.CompressedString;
-
         public BlittableOperation()
         {
         }
@@ -71,7 +61,6 @@ namespace Raven.Client.Documents
             {
                 var newPropInfo = newBlittable.GetPropertyByIndex(propId);
 
-                //TODO - Efrat - mybe?
                 if (newPropInfo.Item1.Equals(Constants.Headers.RavenLastModified))
                     continue;
 
@@ -87,7 +76,7 @@ namespace Raven.Client.Documents
                 var oldPropId = originalBlittable.GetPropertyIndex(newPropInfo.Item1);
                 var oldPropInfo = originalBlittable.GetPropertyByIndex(oldPropId);
 
-                switch ((newPropInfo.Item3 & TypesMask))
+                switch ((newPropInfo.Item3 & BlittableJsonReaderBase.TypesMask))
                 {
                     case BlittableJsonToken.Integer:
                     case BlittableJsonToken.Boolean:

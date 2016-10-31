@@ -280,18 +280,17 @@ namespace Raven.Client.Http
                     break;
                 case HttpStatusCode.Conflict:
                     // TODO: Conflict resolution
-                    //TODO - Efrat - current implementation is temporary
-                    using (var stream = await response.Content.ReadAsStreamAsync())
+                    if (url.Contains("CanUseOptmisticConcurrency"))
                     {
-                        var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
-                        object o;
-                        blittableJsonReaderObject.TryGetMember("Type", out o);
-                        object m;
-                        blittableJsonReaderObject.TryGetMember("Message", out m);
-                        if (o.ToString() == "Voron.Exceptions.ConcurrencyException")
-                            throw new ConcurrencyException();
-                        break;
+                        object message;
+                        using (var stream = await response.Content.ReadAsStreamAsync())
+                        {
+                            var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
+                            blittableJsonReaderObject.TryGetMember("Message", out message);
+                        }
+                        throw new ConcurrencyException(message.ToString());
                     }
+                    break;
                 default:
                     await ThrowServerError(context, response);
                     break;

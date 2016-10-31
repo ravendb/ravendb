@@ -108,7 +108,7 @@ namespace Raven.Client.Documents
         ///     and associate the current state of the entity with the metadata from the server.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        Dictionary<string, string> GetMetadataFor<T>(T instance);
+        IDictionary<string, string> GetMetadataFor<T>(T instance);
 
         /// <summary>
         ///     Determines whether the specified entity has changed.

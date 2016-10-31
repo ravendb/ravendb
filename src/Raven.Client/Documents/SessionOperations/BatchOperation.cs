@@ -85,13 +85,7 @@ namespace Raven.Client.Documents.SessionOperations
                     documentInfo.Id = key;
                     _session.DocumentsById[key] = documentInfo;
                 }
-                //TODO - Efrat
-                /*GenerateEntityIdOnTheClient.TrySetIdentity(entity, batchResult.Key);*/
-                //TODO - Efrat - after listeners
-                foreach (var documentStoreListener in _session.Listeners.StoreListeners)
-                {
-                    documentStoreListener.AfterStore(key, entity, metadata);
-                }
+                _session.OnAfterStore(key, entity, _session.GetMetadataFor(entity));
             }
         }
     }
