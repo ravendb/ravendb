@@ -79,7 +79,7 @@ namespace Raven.Client.Documents
                 var oldPropId = originalBlittable.GetPropertyIndex(newProp.Name);
                 originalBlittable.GetPropertyByIndex(oldPropId, ref oldProp);
 
-                switch ((newProp.Token & TypesMask))
+                switch ((newProp.Token & BlittableJsonReaderBase.TypesMask))
                 {
                     case BlittableJsonToken.Integer:
                     case BlittableJsonToken.Boolean:

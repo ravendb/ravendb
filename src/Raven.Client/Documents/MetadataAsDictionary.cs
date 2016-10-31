@@ -22,8 +22,9 @@ namespace Raven.Client.Documents
             var indexes = _source.GetPropertiesByInsertionOrder();
             foreach (var index in indexes)
             {
-                var prop = _source.GetPropertyByIndex(index);
-                metadataAsDictionary[prop.Item1] = prop.Item2.ToString();
+                var propDetails = new BlittableJsonReaderObject.PropertyDetails();
+                _source.GetPropertyByIndex(index, ref propDetails);
+                metadataAsDictionary[propDetails.Name] = propDetails.Value.ToString();
             };
             return metadataAsDictionary;
         }
@@ -63,7 +64,9 @@ namespace Raven.Client.Documents
                 var values = new List<string>();
                 foreach (var prop in _source.GetPropertiesByInsertionOrder())
                 {
-                    values.Add(_source.GetPropertyByIndex(prop).Item2.ToString());
+                    var propDetails = new BlittableJsonReaderObject.PropertyDetails();
+                    _source.GetPropertyByIndex(prop, ref propDetails);
+                    values.Add(propDetails.Value.ToString());
                 }
                 return values;
             }
