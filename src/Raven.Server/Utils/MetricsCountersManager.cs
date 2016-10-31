@@ -9,6 +9,7 @@ using System;
 using Raven.Server.Utils.Metrics;
 
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Utils
 {
@@ -68,7 +69,7 @@ namespace Raven.Server.Utils
         {
             var metricsStatsJsonValue = new DynamicJsonValue
             {
-                ["DocsPerSecond"] = self.DocPutsPerSecond.CreateMeterData(),
+                ["DocPutsPerSecond"] = self.DocPutsPerSecond.CreateMeterData(),
                 ["IndexedPerSecond"] = self.IndexedPerSecond.CreateMeterData(),
 
                 ["RequestsMeter "] = self.RequestsMeter.CreateMeterData(),

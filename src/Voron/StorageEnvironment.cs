@@ -41,7 +41,7 @@ namespace Voron
         }
 
         /// <summary>
-        /// This is the shared storage where we are going to store all the static constants for names. 
+        /// This is the shared storage where we are going to store all the static constants for names.
         /// WARNING: This context will never be released, so only static constants should be added here.
         /// </summary>
         public static readonly ByteStringContext LabelsContext = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes);
@@ -51,8 +51,8 @@ namespace Voron
         /// when we are flushing to the data file, there is a need to take the write tx lock to mutate
         /// some of our in memory data structures safely. However, if there is a thread, such as tx merger thread,
         /// that is doing high frequency transactions, the unfairness in the lock will automatically ensure that we'll
-        /// have very hard time actually getting the write lock in the flushing thread. 
-        /// 
+        /// have very hard time actually getting the write lock in the flushing thread.
+        ///
         /// When this value is set to a non negative number, we check if the current thread id equals to this number, and if not
         /// we'll yield the thread for 1 ms. The idea is that this will allow the flushing thread, which doesn't have this limitation
         /// to actually capture the lock, do its work, and then reset it.
@@ -71,7 +71,7 @@ namespace Voron
         public readonly ActiveTransactions ActiveTransactions = new ActiveTransactions();
 
         private readonly AbstractPager _dataPager;
-        internal ExceptionDispatchInfo FlushingTaskFailure;
+        internal ExceptionDispatchInfo CatastrophicFailure;
         private readonly WriteAheadJournal _journal;
         private readonly object _txWriter = new object();
         internal readonly ReaderWriterLockSlim FlushInProgressLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
@@ -150,7 +150,11 @@ namespace Voron
                 {
                     return;
                 }
-                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
+                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
+                    QueueForSyncDataFile();
+
             }
         }
 
@@ -178,45 +182,54 @@ namespace Voron
 
             _transactionsCounter = (header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
 
-            using (var tx = NewLowLevelTransaction(TransactionFlags.ReadWrite))
+            using (var transactionPersistentContext = new TransactionPersistentContext(true))
+            using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
-                var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root);
-                root.Name = Constants.RootTreeNameSlice;
-
-                tx.UpdateRootsIfNeeded(root);
-
-                var treesTx = new Transaction(tx);
-
-                var metadataTree = treesTx.ReadTree(Constants.MetadataTreeNameSlice);
-                if (metadataTree == null)
-                    throw new VoronUnrecoverableErrorException("Could not find metadata tree in database, possible mismatch / corruption?");
-
-                var dbId = metadataTree.Read("db-id");
-                if (dbId == null)
-                    throw new VoronUnrecoverableErrorException("Could not find db id in metadata tree, possible mismatch / corruption?");
-
-                var buffer = new byte[16];
-                var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
-                if (dbIdBytes != 16)
-                    throw new VoronUnrecoverableErrorException("The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
-
-                DbId = new Guid(buffer);
-
-                var schemaVersion = metadataTree.Read("schema-version");
-                if (schemaVersion == null)
-                    throw new VoronUnrecoverableErrorException("Could not find schema version in metadata tree, possible mismatch / corruption?");
-
-                var schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
-                if (Options.SchemaVersion != 0 &&
-                    schemaVersionVal != Options.SchemaVersion)
+                using (var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root))
                 {
-                    throw new VoronUnrecoverableErrorException("The schema version of this database is expected to be " +
-                                                       Options.SchemaVersion + " but is actually " + schemaVersionVal +
-                                                       ". You need to upgrade the schema.");
+                    root.Name = Constants.RootTreeNameSlice;
+
+                    tx.UpdateRootsIfNeeded(root);
+
+                    using (var treesTx = new Transaction(tx))
+                    {
+
+                        var metadataTree = treesTx.ReadTree(Constants.MetadataTreeNameSlice);
+                        if (metadataTree == null)
+                            VoronUnrecoverableErrorException.Raise(this,
+                                "Could not find metadata tree in database, possible mismatch / corruption?");
+
+                        var dbId = metadataTree.Read("db-id");
+                        if (dbId == null)
+                            VoronUnrecoverableErrorException.Raise(this,
+                                "Could not find db id in metadata tree, possible mismatch / corruption?");
+
+                        var buffer = new byte[16];
+                        var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
+                        if (dbIdBytes != 16)
+                            VoronUnrecoverableErrorException.Raise(this,
+                                "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
+
+                        DbId = new Guid(buffer);
+
+                        var schemaVersion = metadataTree.Read("schema-version");
+                        if (schemaVersion == null)
+                            VoronUnrecoverableErrorException.Raise(this,
+                                "Could not find schema version in metadata tree, possible mismatch / corruption?");
+
+                        var schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
+                        if (Options.SchemaVersion != 0 &&
+                            schemaVersionVal != Options.SchemaVersion)
+                        {
+                            VoronUnrecoverableErrorException.Raise(this,
+                                "The schema version of this database is expected to be " +
+                                Options.SchemaVersion + " but is actually " + schemaVersionVal +
+                                ". You need to upgrade the schema.");
+                        }
+
+                        tx.Commit();
+                    }
                 }
-
-                tx.Commit();
-
             }
         }
 
@@ -227,24 +240,27 @@ namespace Voron
             {
                 Options = Options
             };
-            using (var tx = NewLowLevelTransaction(TransactionFlags.ReadWrite))
+            using (var transactionPersistentContext = new TransactionPersistentContext())
+            using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
+            using (var root = Tree.Create(tx, null))
             {
-                var root = Tree.Create(tx, null);
 
                 // important to first create the root trees, then set them on the env
                 tx.UpdateRootsIfNeeded(root);
 
-                var treesTx = new Transaction(tx);
+                using (var treesTx = new Transaction(tx))
+                {
 
-                DbId = Guid.NewGuid();
+                    DbId = Guid.NewGuid();
 
-                var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
-                metadataTree.Add("db-id", DbId.ToByteArray());
-                metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(Options.SchemaVersion));
+                    var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
+                    metadataTree.Add("db-id", DbId.ToByteArray());
+                    metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(Options.SchemaVersion));
 
-                treesTx.PrepareForCommit();
+                    treesTx.PrepareForCommit();
 
-                tx.Commit();
+                    tx.Commit();
+                }
             }
 
         }
@@ -270,27 +286,29 @@ namespace Voron
                     bool lockTaken = false;
                     using (_journal.Applicator.TryTakeFlushingLock(ref lockTaken))
                     {
-                        // note that we have to set the dispose flag when under the lock 
-                        // (either with TryTake or Take), to avoid data race between the 
+                        // note that we have to set the dispose flag when under the lock
+                        // (either with TryTake or Take), to avoid data race between the
                         // flusher & the dispose. The flusher will check the dispose status
                         // only after it successfully took the lock.
 
                         if (lockTaken == false)
                         {
                             // if we are here, then we didn't get the flush lock, so it is currently being run
-                            // we need to wait for it to complete (so we won't be shutting down the db while we 
+                            // we need to wait for it to complete (so we won't be shutting down the db while we
                             // are flushing and maybe access invalid memory.
                             using (_journal.Applicator.TakeFlushingLock())
                             {
-                                // when we are here, we know that we aren't flushing, and we can dispose, 
+                                // when we are here, we know that we aren't flushing, and we can dispose,
                                 // any future calls to flush will abort because we are marked as disposed
 
                                 Disposed = true;
+                                _journal.Applicator.WaitForSyncToCompleteOnDispose();
                             }
                         }
                         else
                         {
                             Disposed = true;
+                            _journal.Applicator.WaitForSyncToCompleteOnDispose();
                         }
                     }
                 }
@@ -321,17 +339,33 @@ namespace Voron
             }
         }
 
+        public Transaction ReadTransaction(TransactionPersistentContext transactionPersistentContext, ByteStringContext context = null)
+        {
+            return new Transaction(NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read, context));
+        }
+
         public Transaction ReadTransaction(ByteStringContext context = null)
         {
-            return new Transaction(NewLowLevelTransaction(TransactionFlags.Read, context));
+            var transactionPersistentContext = new TransactionPersistentContext();
+            var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read, context);
+            newLowLevelTransaction.AlsoDispose = new List<IDisposable>(1) {transactionPersistentContext};
+            return new Transaction(newLowLevelTransaction);
+        }
+
+        public Transaction WriteTransaction(TransactionPersistentContext transactionPersistentContext, ByteStringContext context = null)
+        {
+            return new Transaction(NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null));
         }
 
         public Transaction WriteTransaction(ByteStringContext context = null)
         {
-            return new Transaction(NewLowLevelTransaction(TransactionFlags.ReadWrite, context, null));
+            var transactionPersistentContext = new TransactionPersistentContext();
+            var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null);
+            newLowLevelTransaction.AlsoDispose = new List<IDisposable>(1) { transactionPersistentContext };
+            return new Transaction(newLowLevelTransaction);
         }
 
-        internal LowLevelTransaction NewLowLevelTransaction(TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)
+        internal LowLevelTransaction NewLowLevelTransaction(TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)
         {
             bool txLockTaken = false;
             bool flushInProgressReadLockTaken = false;
@@ -356,7 +390,7 @@ namespace Voron
                     {
                         if (_endOfDiskSpace.CanContinueWriting)
                         {
-                            FlushingTaskFailure = null;
+                            CatastrophicFailure = null;
                             _endOfDiskSpace = null;
                             _cancellationTokenSource = new CancellationTokenSource();
                             Task.Run(IdleFlushTimer);
@@ -371,14 +405,14 @@ namespace Voron
                 try
                 {
                     long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-                    tx = new LowLevelTransaction(this, txId, flags, _freeSpaceHandling, context);
+                    tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling, context);
+                    ActiveTransactions.Add(tx);
                 }
                 finally
                 {
                     _txCommit.ExitReadLock();
                 }
 
-                ActiveTransactions.Add(tx);
                 var state = _dataPager.PagerState;
                 tx.EnsurePagerStateReference(state);
 
@@ -412,27 +446,44 @@ namespace Voron
                 Thread.Sleep(1);
         }
 
-
+        public long CurrentReadTransactionId => Volatile.Read(ref _transactionsCounter);
         public long NextWriteTransactionId => Volatile.Read(ref _transactionsCounter) + 1;
 
-        public bool IsDataFileEnqueuedToSync { get; set; }
+        internal ExitWriteLock PreventNewReadTransactions()
+        {
+            _txCommit.EnterWriteLock();
+            return new ExitWriteLock(_txCommit);
+        }
+
+        public struct ExitWriteLock : IDisposable
+        {
+            readonly ReaderWriterLockSlim _rwls;
+
+            public ExitWriteLock(ReaderWriterLockSlim rwls)
+            {
+                _rwls = rwls;
+            }
+
+            public void Dispose()
+            {
+                _rwls.ExitWriteLock();
+            }
+        }
 
         internal void TransactionAfterCommit(LowLevelTransaction tx)
         {
             if (ActiveTransactions.Contains(tx) == false)
                 return;
 
-            _txCommit.EnterWriteLock();
-            try
+            using (PreventNewReadTransactions())
             {
+                ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
+                Journal.UpdateCacheForJournalSnapshots();
+
                 if (tx.Committed && tx.FlushedToJournal)
                     _transactionsCounter = tx.Id;
-
+                
                 State = tx.State;
-            }
-            finally
-            {
-                _txCommit.ExitWriteLock();
             }
 
             if (tx.FlushedToJournal == false)
@@ -513,7 +564,8 @@ namespace Voron
 
         public EnvironmentStats Stats()
         {
-            using (var tx = NewLowLevelTransaction(TransactionFlags.Read))
+            using (var transactionPersistentContext = new TransactionPersistentContext())
+            using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read))
             {
                 var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
 
@@ -534,7 +586,7 @@ namespace Voron
         {
             try
             {
-                _journal.Applicator.ApplyLogsToDataFile(ActiveTransactions.OldestTransaction, _cancellationTokenSource.Token,
+                _journal.Applicator.ApplyLogsToDataFile(_cancellationTokenSource.Token,
                     // we intentionally don't wait, if the flush lock is held, something else is flushing, so we don't need
                     // to hold the thread
                     TimeSpan.Zero);
@@ -545,13 +597,12 @@ namespace Voron
             }
             catch (SEHException sehException)
             {
-                throw new VoronUnrecoverableErrorException("Error occurred during flushing journals to the data file",
+                VoronUnrecoverableErrorException.Raise(this, "Error occurred during flushing journals to the data file",
                     new Win32Exception(sehException.HResult));
             }
             catch (Exception e)
             {
-                throw new VoronUnrecoverableErrorException("Error occurred during flushing journals to the data file",
-                    e);
+                VoronUnrecoverableErrorException.Raise(this, "Error occurred during flushing journals to the data file", e);
             }
         }
 
@@ -565,14 +616,14 @@ namespace Voron
 
         public void ForceLogFlushToDataFile(LowLevelTransaction tx)
         {
-            _journal.Applicator.ApplyLogsToDataFile(ActiveTransactions.OldestTransaction, _cancellationTokenSource.Token,
+            _journal.Applicator.ApplyLogsToDataFile(_cancellationTokenSource.Token,
                 Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30),
                 tx);
         }
 
-        internal void AssertFlushingNotFailed()
+        internal void AssertNoCatastrophicFailure()
         {
-            FlushingTaskFailure?.Throw(); // force re-throw of error
+            CatastrophicFailure?.Throw(); // force re-throw of error
         }
 
         internal void HandleDataDiskFullException(DiskFullException exception)
@@ -633,7 +684,8 @@ namespace Voron
 
         public TransactionsModeResult SetTransactionMode(TransactionsMode mode, TimeSpan duration)
         {
-            using (var tx = NewLowLevelTransaction(TransactionFlags.ReadWrite))
+            using (var transactionPersistentContext = new TransactionPersistentContext())
+            using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
                 var oldMode = Options.TransactionsMode;
 
@@ -653,7 +705,7 @@ namespace Voron
                 {
 
                     tx.IsLazyTransaction = false;
-                    // we only commit here, the rest of the of the options are without 
+                    // we only commit here, the rest of the of the options are without
                     // commit and we use the tx lock
                     tx.Commit();
                 }

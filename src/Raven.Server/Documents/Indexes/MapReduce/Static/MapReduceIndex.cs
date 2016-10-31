@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
     {
         private readonly HashSet<CollectionName> _referencedCollections = new HashSet<CollectionName>();
 
-        internal readonly StaticIndexBase _compiled;
+        internal readonly StaticIndexBase Compiled;
 
         private HandleReferences _handleReferences;
 
@@ -31,19 +31,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private MapReduceIndex(int indexId, MapReduceIndexDefinition definition, StaticIndexBase compiled)
             : base(indexId, IndexType.MapReduce, definition)
         {
-            _compiled = compiled;
+            Compiled = compiled;
 
-            if (_compiled.ReferencedCollections == null)
+            if (Compiled.ReferencedCollections == null)
                 return;
 
-            foreach (var collection in _compiled.ReferencedCollections)
+            foreach (var collection in Compiled.ReferencedCollections)
             {
                 foreach (var referencedCollection in collection.Value)
                     _referencedCollections.Add(referencedCollection);
             }
         }
 
-        public override bool HasBoostedFields => _compiled.HasBoostedFields;
+        public override bool HasBoostedFields => Compiled.HasBoostedFields;
 
         protected override void InitializeInternal()
         {
@@ -81,13 +81,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
             var workers = new List<IIndexingWork>();
-            workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext));
+            workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, MapReduceWorkContext));
 
             if (_referencedCollections.Count > 0)
-                workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
+                workers.Add(_handleReferences = new HandleReferences(this, Compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
 
-            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, _mapReduceWorkContext, DocumentDatabase.Configuration.Indexing));
-            workers.Add(new ReduceMapResultsOfStaticIndex(this, _compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext));
+            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, MapReduceWorkContext, DocumentDatabase.Configuration.Indexing));
+            workers.Add(new ReduceMapResultsOfStaticIndex(this, Compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, MapReduceWorkContext));
 
             return workers.ToArray();
         }
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats, StaticIndexDocsEnumerator.EnumerationType.Index);
+            return new StaticIndexDocsEnumerator(documents, Compiled.Maps[collection], collection, stats, StaticIndexDocsEnumerator.EnumerationType.Index);
         }
 
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
         {
-            return _compiled.ReferencedCollections;
+            return Compiled.ReferencedCollections;
         }
 
         private class AnonymousObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private TransactionOperationContext _indexContext;
             private PropertyAccessor _propertyAccessor;
             private IndexingStatsScope _stats;
-            private IndexingStatsScope _buildNewReduceResultStats;
+            private IndexingStatsScope _createBlittableResultStats;
             private readonly ReduceKeyProcessor _reduceKeyProcessor;
             private readonly HashSet<string> _fields;
             private readonly HashSet<string> _groupByFields;
@@ -178,12 +178,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     return;
 
                 _stats = stats;
-                _buildNewReduceResultStats = _stats.For(IndexingOperation.Reduce.BuildNewReduceResult, start: false);
+                _createBlittableResultStats = _stats.For(IndexingOperation.Reduce.CreateBlittableJson, start: false);
             }
 
             public IEnumerator<MapResult> GetEnumerator()
             {
-                return new Enumerator(_items.GetEnumerator(), this, _buildNewReduceResultStats);
+                return new Enumerator(_items.GetEnumerator(), this, _createBlittableResultStats);
             }
 
             IEnumerator IEnumerable.GetEnumerator()
@@ -196,16 +196,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             {
                 private readonly IEnumerator _enumerator;
                 private readonly AnonymousObjectToBlittableMapResultsEnumerableWrapper _parent;
-                private readonly IndexingStatsScope _stats;
+                private readonly IndexingStatsScope _createBlittableResult;
                 private readonly HashSet<string> _fields;
                 private readonly HashSet<string> _groupByFields;
                 private readonly ReduceKeyProcessor _reduceKeyProcessor;
 
-                public Enumerator(IEnumerator enumerator, AnonymousObjectToBlittableMapResultsEnumerableWrapper parent, IndexingStatsScope stats)
+                public Enumerator(IEnumerator enumerator, AnonymousObjectToBlittableMapResultsEnumerableWrapper parent, IndexingStatsScope createBlittableResult)
                 {
                     _enumerator = enumerator;
                     _parent = parent;
-                    _stats = stats;
+                    _createBlittableResult = createBlittableResult;
                     _groupByFields = _parent._groupByFields;
                     _fields = _parent._fields;
                     _reduceKeyProcessor = _parent._reduceKeyProcessor;
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     var document = _enumerator.Current;
 
-                    using (_stats.Start())
+                    using (_createBlittableResult.Start())
                     {
                         var accessor = _parent._propertyAccessor ?? (_parent._propertyAccessor = PropertyAccessor.Create(document.GetType()));
 

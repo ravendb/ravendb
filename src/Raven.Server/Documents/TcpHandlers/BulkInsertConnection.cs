@@ -219,6 +219,11 @@ namespace Raven.Server.Documents.TcpHandlers
                     }
                 }
                 FlushDocuments(context, docsToWrite, ref totalSize);
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    // this empty tx forces the journal to flush all pending lazy transactions
+                    tx.Commit();
+                }
             }
         }
 
@@ -226,108 +231,46 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             if (docsToWrite.Count == 0)
                 return;
-
-            // Three retries : 
-            // 1st - if scratch buff full, 2nd - after asking for new flush, 3rd - waiting for the new flush to end
-            int retry = 3;
-            while (true)
+            if (_logger.IsInfoEnabled)
+                _logger.Info(
+                    $"Writing {docsToWrite.Count:#,#} documents to disk using bulk insert, total {totalSize/1024:#,#} kb to write");
+            Stopwatch sp = Stopwatch.StartNew();
+            using (var tx = context.OpenWriteTransaction())
             {
-                try
+                tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = true;
+
+                foreach (var bulkInsertDoc in docsToWrite)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Writing {docsToWrite.Count:#,#} documents to disk using bulk insert, total {totalSize / 1024:#,#} kb to write");
-                    Stopwatch sp = Stopwatch.StartNew();
-                    using (var tx = context.OpenWriteTransaction())
+                    var reader = new BlittableJsonReaderObject(bulkInsertDoc.Pointer, bulkInsertDoc.Used,
+                        context);
+                    reader.BlittableValidation();
+
+                    string docKey;
+                    BlittableJsonReaderObject metadata;
+                    if (reader.TryGet(Constants.Metadata.Key, out metadata) == false)
                     {
-                        tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = true;
-
-                        foreach (var bulkInsertDoc in docsToWrite)
-                        {
-                            var reader = new BlittableJsonReaderObject(bulkInsertDoc.Pointer, bulkInsertDoc.Used,
-                                context);
-                            reader.BlittableValidation();
-
-                            string docKey;
-                            BlittableJsonReaderObject metadata;
-                            if (reader.TryGet(Constants.Metadata.Key, out metadata) == false)
-                            {
-                                const string message = "'@metadata' is missing in received document for bulk insert";
-                                throw new InvalidDataException(message);
-                            }
-                            if (metadata.TryGet(Constants.Metadata.Id, out docKey) == false)
-                            {
-                                const string message = "'@id' is missing in received document for bulk insert";
-                                throw new InvalidDataException(message);
-                            }
-
-                            TcpConnection.DocumentDatabase.DocumentsStorage.Put(context, docKey, null, reader);
-
-                        }
-                        tx.Commit();
+                        const string message = "'@metadata' is missing in received document for bulk insert";
+                        throw new InvalidDataException(message);
                     }
-                    foreach (var bulkInsertDoc in docsToWrite)
+                    if (metadata.TryGet(Constants.Metadata.Id, out docKey) == false)
                     {
-                        _docsToRelease.Add(bulkInsertDoc);
+                        const string message = "'@id' is missing in received document for bulk insert";
+                        throw new InvalidDataException(message);
                     }
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Writing {docsToWrite.Count:#,#} documents in bulk insert took {sp.ElapsedMilliseconds:#,#l;0} ms");
-                    docsToWrite.Clear();
-                    totalSize = 0;
-                    return;
+
+                    TcpConnection.DocumentDatabase.DocumentsStorage.Put(context, docKey, null, reader);
                 }
-                catch (ScratchBufferSizeLimitException e)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Tried to lazy commit to finish scratch buffer size usage", e);
-                    retry--;
-                    if (retry == 0)
-                        throw;
-                    try
-                    {
-                        using (var tx = context.OpenWriteTransaction())
-                        {
-                            // this non lazy transaction forces the journal to actually
-                            // flush everything
-                            tx.Commit();
-                        }
-                        bool lockTaken = false;
-                        var journal = TcpConnection.DocumentDatabase.DocumentsStorage.Environment.Journal;
-                        Debug.Assert(journal != null);
-                        using (journal.Applicator.TryTakeFlushingLock(ref lockTaken))
-                        {
-                            if (lockTaken == false)
-                            {
-                                var sp = Stopwatch.StartNew();
-
-                                // lets wait for the flush to end and retry put doc
-                                using (journal.Applicator.TryTakeFlushingLock(ref lockTaken, TimeSpan.FromSeconds(30)))
-                                {
-                                    if (_logger.IsInfoEnabled)
-                                    {
-                                        _logger.Info($"Waiting for flush to complete for {sp.ElapsedMilliseconds:#,#} ms, flush completed: {lockTaken}");
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                if (_logger.IsInfoEnabled)
-                                {
-                                    _logger.Info($"Forcing flush to data file to cleanup the scratch buffer in bulk insert");
-                                }
-                                // there's no flushing but scratch buffer full - let's flush and retry put doc
-                                context.Environment.ForceLogFlushToDataFile(null);
-                            }
-                        }
-                    }
-                    catch (TimeoutException)
-                    {
-                        // the flush thread is currently running... ?
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info(
-                                "Timed-out while trying to commit non lazy transaction on a retry to commit lazy transaction during scratch buffer flash. Will continue to retry");
-                    }
-                }
+                tx.Commit();
             }
+            foreach (var bulkInsertDoc in docsToWrite)
+            {
+                _docsToRelease.Add(bulkInsertDoc);
+            }
+            if (_logger.IsInfoEnabled)
+                _logger.Info(
+                    $"Writing {docsToWrite.Count:#,#} documents in bulk insert took {sp.ElapsedMilliseconds:#,#l;0} ms");
+            docsToWrite.Clear();
+            totalSize = 0;
         }
 
         private void ReadBulkInsert()

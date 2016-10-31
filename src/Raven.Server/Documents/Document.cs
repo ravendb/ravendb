@@ -21,6 +21,7 @@ namespace Raven.Server.Documents
         public BlittableJsonReaderObject Data;
         public float? IndexScore;
         public ChangeVectorEntry[] ChangeVector;
+        public DateTime LastModified;
 
         public unsafe ulong DataHash
         {

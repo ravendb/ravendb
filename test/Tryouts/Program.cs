@@ -1,21 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Json;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
-using FastTests;
-using StressTests;
-using Voron;
 
 namespace Tryouts
 {
@@ -23,13 +7,15 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var x = new SlowTests.MailingList.IndexMetadata())
+                var sp = Stopwatch.StartNew();
+                var x = new FastTests.Blittable.BlittableJsonEqualityTests();
                 {
-                    x.WillGenerateProperIndex();
+                    x.Equals_even_though_order_of_properties_is_different();
                 }
+                Console.WriteLine(sp.Elapsed);
             }
         }
     }

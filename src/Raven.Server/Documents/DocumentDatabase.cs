@@ -304,6 +304,7 @@ namespace Raven.Server.Documents
             // TODO :: more storage environments ?
             yield return DocumentsStorage.Environment;
             yield return SubscriptionStorage.Environment();
+            yield return _configurationStorage.Environment;
             foreach (var index in IndexStore.GetIndexes())
             {
                 var env = index._indexStorage.Environment();

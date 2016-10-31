@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
@@ -16,6 +18,7 @@ using Voron.Data.Tables;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
+using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -36,6 +39,8 @@ namespace Raven.Server.Documents.Indexes
         private StorageEnvironment _environment;
 
         public const int MaxNumberOfKeptErrors = 500;
+
+        internal bool _simulateCorruption;
 
         public IndexStorage(Index index, TransactionContextPool contextPool, DocumentDatabase database)
         {
@@ -316,6 +321,9 @@ namespace Raven.Server.Documents.Indexes
 
         private unsafe void WriteLastEtag(RavenTransaction tx, string tree, Slice collection, long etag)
         {
+            if (_simulateCorruption)
+                throw new SimulatedVoronUnrecoverableErrorException("Simulated corruption.");
+
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Writing last etag for '{_index.Name} ({_index.IndexId})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
 
@@ -323,6 +331,13 @@ namespace Raven.Server.Documents.Indexes
             Slice etagSlice;
             using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
                 statsTree.Add(collection, etagSlice);
+        }
+
+        public class SimulatedVoronUnrecoverableErrorException : VoronUnrecoverableErrorException
+        {
+            public SimulatedVoronUnrecoverableErrorException(string message) : base(message)
+            {
+            }
         }
 
         private static long ReadLastEtag(RavenTransaction tx, string tree, Slice collection)
@@ -336,7 +351,7 @@ namespace Raven.Server.Documents.Indexes
             return lastEtag;
         }
 
-        public unsafe void UpdateStats(DateTime indexingTime, IndexingRunStats stats)
+        public unsafe IndexFailureInformation UpdateStats(DateTime indexingTime, IndexingRunStats stats)
         {
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Updating statistics for '{_index.Name} ({_index.IndexId})'. Stats: {stats}.");
@@ -345,19 +360,25 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
+                var result = new IndexFailureInformation
+                {
+                    IndexId = _index.IndexId,
+                    Name = _index.Name
+                };
+
                 var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
                 var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
 
-                statsTree.Increment(IndexSchema.MapAttemptsSlice, stats.MapAttempts);
-                statsTree.Increment(IndexSchema.MapSuccessesSlice, stats.MapSuccesses);
-                statsTree.Increment(IndexSchema.MapErrorsSlice, stats.MapErrors);
+                result.MapAttempts = statsTree.Increment(IndexSchema.MapAttemptsSlice, stats.MapAttempts);
+                result.MapSuccesses = statsTree.Increment(IndexSchema.MapSuccessesSlice, stats.MapSuccesses);
+                result.MapErrors = statsTree.Increment(IndexSchema.MapErrorsSlice, stats.MapErrors);
 
                 if (_index.Type.IsMapReduce())
                 {
-                    statsTree.Increment(IndexSchema.ReduceAttemptsSlice, stats.ReduceAttempts);
-                    statsTree.Increment(IndexSchema.ReduceSuccessesSlice, stats.ReduceSuccesses);
-                    statsTree.Increment(IndexSchema.ReduceErrorsSlice, stats.ReduceErrors);
+                    result.ReduceAttempts = statsTree.Increment(IndexSchema.ReduceAttemptsSlice, stats.ReduceAttempts);
+                    result.ReduceSuccesses = statsTree.Increment(IndexSchema.ReduceSuccessesSlice, stats.ReduceSuccesses);
+                    result.ReduceErrors = statsTree.Increment(IndexSchema.ReduceErrorsSlice, stats.ReduceErrors);
                 }
 
                 var binaryDate = indexingTime.ToBinary();
@@ -367,8 +388,9 @@ namespace Raven.Server.Documents.Indexes
 
                 if (stats.Errors != null)
                 {
-                    foreach (var error in stats.Errors)
+                    for (var i = Math.Max(stats.Errors.Count - MaxNumberOfKeptErrors, 0); i < stats.Errors.Count; i++)
                     {
+                        var error = stats.Errors[i];
                         var ticksBigEndian = Bits.SwapBytes(error.Timestamp.Ticks);
                         using (var document = context.GetLazyString(error.Document))
                         using (var action = context.GetLazyString(error.Action))
@@ -389,6 +411,8 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 tx.Commit();
+
+                return result;
             }
         }
 

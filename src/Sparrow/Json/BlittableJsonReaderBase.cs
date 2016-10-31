@@ -27,7 +27,8 @@ namespace Sparrow.Json
                 case BlittableJsonToken.PropertyIdSizeInt:
                     return sizeof(int);
                 default:
-                    throw new ArgumentException("Illegal offset size");
+                    ThrowInvalidOfsetSize(currentType);
+                    return -1;//will never happen
             }
         }
 
@@ -48,8 +49,14 @@ namespace Sparrow.Json
                 case BlittableJsonToken.OffsetSizeInt:
                     return sizeof (int);
                 default:
-                    throw new ArgumentException("Illegal offset size");
+                    ThrowInvalidOfsetSize(currentType);
+                    return -1;// will never happen
             }
+        }
+
+        private static void ThrowInvalidOfsetSize(BlittableJsonToken currentType)
+        {
+            throw new ArgumentException($"Illegal offset size {currentType}");
         }
 
         public const BlittableJsonToken TypesMask =
@@ -76,8 +83,14 @@ namespace Sparrow.Json
                 case BlittableJsonToken.Null:
                     return currentType & TypesMask;
                 default:
-                    throw new ArgumentException("Illegal type");
+                    ThrowInvalidType(currentType);
+                    return default(BlittableJsonToken);// will never happen
             }
+        }
+
+        private static void ThrowInvalidType(BlittableJsonToken currentType)
+        {
+            throw new ArgumentException($"Illegal type {currentType}");
         }
 
         public int ReadNumber(byte* value, long sizeOfValue)
@@ -85,22 +98,31 @@ namespace Sparrow.Json
             int returnValue;
             switch (sizeOfValue)
             {
+                case sizeof(byte):
+                    returnValue = *value;
+                    return returnValue;
+
+                case sizeof(short):
+                    returnValue = *value;
+                    returnValue |= *(value + 1) << 8;
+                    return returnValue;
+
                 case sizeof (int):
                     returnValue = *value;
                     returnValue |= *(value + 1) << 8;
                     returnValue |= *(value + 2) << 16;
                     returnValue |= *(value + 3) << 24;
                     return returnValue;
-                case sizeof (short):
-                    returnValue = *value;
-                    returnValue |= *(value + 1) << 8;
-                    return returnValue;
-                case sizeof (byte):
-                    returnValue = *value;
-                    return returnValue;
+     
                 default:
-                    throw new ArgumentException($"Unsupported size {sizeOfValue}");
+                    ThrowInvalidSizeForNumber(sizeOfValue);
+                    return -1;// will never happen
             }
+        }
+
+        private static void ThrowInvalidSizeForNumber(long sizeOfValue)
+        {
+            throw new ArgumentException($"Unsupported size {sizeOfValue}");
         }
 
         public LazyStringValue ReadStringLazily(int pos)
@@ -137,7 +159,8 @@ namespace Sparrow.Json
         public static int ReadVariableSizeInt(byte* buffer, int pos, out byte offset)
         {
             if (pos < 0)
-                throw new ArgumentOutOfRangeException(nameof(pos), "Position cannot be negative, but was " + pos);
+                ThrowInvalidPosition(pos);
+
             // Read out an Int32 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
             // we assume that the value shouldn't be zero very often
@@ -149,13 +172,23 @@ namespace Sparrow.Json
             do
             {
                 if (shift == 35)
-                    throw new FormatException("Bad variable size int");
+                    ThrowInvalidShift();
                 b = buffer[pos++];
                 count |= (b & 0x7F) << shift;
                 shift += 7;
                 offset++;
             } while ((b & 0x80) != 0);
             return count;
+        }
+
+        private static void ThrowInvalidShift()
+        {
+            throw new FormatException("Bad variable size int");
+        }
+
+        private static void ThrowInvalidPosition(int pos)
+        {
+            throw new ArgumentOutOfRangeException(nameof(pos), "Position cannot be negative, but was " + pos);
         }
 
         public static int ReadVariableSizeIntInReverse(byte* buffer, int pos, out byte offset)
@@ -171,7 +204,7 @@ namespace Sparrow.Json
             do
             {
                 if (shift == 35)
-                    throw new FormatException("Bad variable size int");
+                    ThrowInvalidShift();
                 b = buffer[pos--];
                 count |= (b & 0x7F) << shift;
                 shift += 7;
@@ -191,7 +224,7 @@ namespace Sparrow.Json
             do
             {
                 if (shift == 70)
-                    throw new FormatException("Bad variable size int");
+                    ThrowInvalidShift();
                 b = _mem[pos++];
                 count |= (ulong)(b & 0x7F) << shift;
                 shift += 7;

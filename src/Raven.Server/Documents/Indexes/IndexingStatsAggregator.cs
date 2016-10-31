@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 
 using Raven.Abstractions;
+using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Exceptions;
 
@@ -129,6 +130,8 @@ namespace Raven.Server.Documents.Indexes
 
         public int MapAttempts => _stats.MapAttempts;
 
+        public int ErrorsCount => _stats.Errors?.Count ?? 0;
+
         public IndexingStatsScope For(string name, bool start = true)
         {
             if (_scopes == null)
@@ -155,9 +158,24 @@ namespace Raven.Server.Documents.Indexes
             _sw?.Stop();
         }
 
+        public void AddCorruptionError(Exception e)
+        {
+            _stats.AddCorruptionError(e);
+        }
+
         public void AddWriteError(IndexWriteException iwe)
         {
             _stats.AddWriteError(iwe);
+        }
+
+        public void AddGenericError(Exception e)
+        {
+            _stats.AddGenericError(e);
+        }
+
+        public void AddMemoryError(OutOfMemoryException oome)
+        {
+            _stats.AddMemoryError(oome);
         }
 
         public void AddAnalyzerError(IndexAnalyzerException iae)

@@ -3,16 +3,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
+using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -23,6 +27,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Xunit;
+using JsonTextWriter = Raven.Imports.Newtonsoft.Json.JsonTextWriter;
 
 namespace FastTests
 {
@@ -248,14 +253,50 @@ namespace FastTests
                           ? TimeSpan.FromMinutes(15)
                           : TimeSpan.FromMinutes(1));
 
-            var spinUntil = SpinWait.SpinUntil(() =>
-                        databaseCommands.GetStatistics().Indexes.All(x => x.IsStale == false),
-                timeout.Value);
 
-            if (spinUntil)
-                return;
+            var sp = Stopwatch.StartNew();
+            while (sp.Elapsed < timeout.Value)
+            {
+                var databaseStatistics = databaseCommands.GetStatistics();
+                if (databaseStatistics.Indexes.All(x => x.IsStale == false))
+                    return;
 
-            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value);
+                if (databaseStatistics.Indexes.Any(x => x.Priority == IndexingPriority.Error))
+                {
+                    break;
+                }
+                Thread.Sleep(32);
+            }
+
+            var request = databaseCommands.CreateRequest("/indexes/performance", HttpMethod.Get);
+            var perf = request.ReadResponseJson();
+            request = databaseCommands.CreateRequest("/indexes/errors", HttpMethod.Get);
+            var errors = request.ReadResponseJson();
+
+            var total = new RavenJObject
+            {
+                ["Errors"] = errors,
+                ["Performance"] = perf
+            };
+
+            var file = Path.GetTempFileName() + ".json";
+            using (var writer = File.CreateText(file))
+            {
+                var jsonTextWriter = new JsonTextWriter(writer);
+                total.WriteTo(jsonTextWriter);
+                jsonTextWriter.Flush();
+            }
+
+            var stats = databaseCommands.GetStatistics();
+
+            var corrupted = stats.Indexes.Where(x => x.Priority == IndexingPriority.Error).ToList();
+            if (corrupted.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"The following indexes are with error state: {string.Join(",", corrupted.Select(x => x.Name))} - details at " + file);
+            }
+
+            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
         }
 
         public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)
@@ -269,12 +310,30 @@ namespace FastTests
             var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded +
                                 "&withStop=true";
 
-            Process.Start(documentsPage); // start the server
+            OpenBrowser(documentsPage);// start the server
 
             do
             {
                 Thread.Sleep(100);
             } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+        }
+
+        public static void OpenBrowser(string url)
+        {
+            Console.WriteLine(url);
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{url}\"")); // Works ok on windows
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                Process.Start("xdg-open", url); // Works ok on linux
+            }
+            else
+            {
+                Console.WriteLine("Do it yourself!");
+            }
         }
 
         protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null,

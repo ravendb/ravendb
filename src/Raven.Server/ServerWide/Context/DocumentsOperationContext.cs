@@ -22,14 +22,14 @@ namespace Raven.Server.ServerWide.Context
             _documentDatabase = documentDatabase;
         }
 
-        protected override DocumentsTransaction CreateReadTransaction(ByteStringContext context)
+        protected override DocumentsTransaction CreateReadTransaction()
         {
-            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(context), _documentDatabase.Notifications);
+            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(PersistentContext, Allocator), _documentDatabase.Notifications);
         }
 
-        protected override DocumentsTransaction CreateWriteTransaction(ByteStringContext context)
+        protected override DocumentsTransaction CreateWriteTransaction()
         {
-            var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(context), _documentDatabase.Notifications);
+            var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(PersistentContext, Allocator), _documentDatabase.Notifications);
 
             var options = _documentDatabase.DocumentsStorage.Environment.Options;
 
@@ -49,5 +49,16 @@ namespace Raven.Server.ServerWide.Context
         public StorageEnvironment Environment => _documentDatabase.DocumentsStorage.Environment;
 
         public DocumentDatabase DocumentDatabase => _documentDatabase;
+
+        public bool ShouldRenewTransactionsToAllowFlushing()
+        {
+            // if we have the same transaction id right now, there hasn't been write since we started the transaction
+            // so there isn't really a major point in renewing the transaction, since we wouldn't be releasing any 
+            // resources (scratch space, mostly) back to the system, let us continue with the current one.
+
+            return Transaction?.InnerTransaction.LowLevelTransaction.Id !=
+                   _documentDatabase.DocumentsStorage.Environment.CurrentReadTransactionId ;
+
+        }
     }
 }

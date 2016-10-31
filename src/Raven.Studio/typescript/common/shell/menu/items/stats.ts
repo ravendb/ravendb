@@ -183,6 +183,14 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             })
         ], 'icon-plus'),
         new leafMenuItem({
+            route: 'databases/status/ioStats',
+            moduleId: 'viewmodels/database/status/ioStats',
+            title: 'IO Stats',
+            tooltip: "Displays IO metrics statatus",
+            nav: true,
+            dynamicHash: appUrls.ioStats
+        }),
+        new leafMenuItem({
             route: 'databases/status/requests',
             moduleId: 'viewmodels/database/status/requests/requestsCount',
             title: 'Requests count',

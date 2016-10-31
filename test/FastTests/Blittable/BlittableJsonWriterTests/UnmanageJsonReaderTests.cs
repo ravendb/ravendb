@@ -22,13 +22,16 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             using (var parser = new UnmanagedJsonParser(ctx, new JsonParserState(), "test"))
             {
                 var buffer = new byte[4096];
-                while (stream.Position != stream.Length)
+                fixed (byte* pBuffer = buffer)
                 {
-                    var read = stream.Read(buffer, 0, buffer.Length);
-                    parser.SetBuffer(buffer, read);
-                    while (parser.Read())
+                    while (stream.Position != stream.Length)
                     {
-                        
+                        var read = stream.Read(buffer, 0, buffer.Length);
+                        parser.SetBuffer(pBuffer, read);
+                        while (parser.Read())
+                        {
+
+                        }
                     }
                 }
             }
@@ -55,13 +58,16 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             {
                 var buffer = Encoding.UTF8.GetBytes(invalidJson);
                 var state = new JsonParserState();
-                using (var parser = new UnmanagedJsonParser(ctx, state, "test"))
+                fixed (byte* pBuffer = buffer)
                 {
-                    parser.SetBuffer(buffer, buffer.Length);
-                    var writer = new BlittableJsonDocumentBuilder(ctx, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "test", parser, state);
+                    using (var parser = new UnmanagedJsonParser(ctx, state, "test"))
+                    {
+                        parser.SetBuffer(pBuffer, buffer.Length);
+                        var writer = new BlittableJsonDocumentBuilder(ctx, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "test", parser, state);
 
-                    writer.ReadObject();
-                    Assert.Throws<InvalidDataException>(() => writer.Read());
+                        writer.ReadObject();
+                        Assert.Throws<InvalidDataException>(() => writer.Read());
+                    }
                 }
             }
         }

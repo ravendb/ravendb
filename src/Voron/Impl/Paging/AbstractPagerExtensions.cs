@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using Sparrow;
 using Voron.Global;
 using Voron.Data.BTrees;
@@ -7,7 +8,7 @@ namespace Voron.Impl.Paging
 {
     public static unsafe class VirtualPagerLegacyExtensions
     {
-         public static Page ReadPage(this AbstractPager pager, LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
+        public static Page ReadPage(this AbstractPager pager, LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
         {
             return new Page(pager.AcquirePagePointer(tx, pageNumber, pagerState), pager);
         }
@@ -22,23 +23,28 @@ namespace Voron.Impl.Paging
             return requestedPageNumber + numberOfPages > pager.NumberOfAllocatedPages;
         }
 
-       public static long Write(this AbstractPager pager, TreePage page, long? pageNumber = null)
+        public static long Write(this AbstractPager pager, List<Page> pages)
         {
-            var startPage = pageNumber ?? page.PageNumber;
+            var pagerState = pager.GetPagerStateAndAddRefAtomically();
+            try
+            {
+                long total = 0;
+                foreach (var page in pages)
+                {
+                    var startPage = page.PageNumber;
 
-            var toWrite = page.IsOverflow ? pager.GetNumberOfOverflowPages(page.OverflowSize) : 1;
-
-            return pager.WriteDirect(page.Base, startPage, toWrite);
-        }
-
-
-
-        public static long WritePage(this AbstractPager pager, Page page, long? pageNumber = null)
-        {
-            var startPage = pageNumber ?? page.PageNumber;
-
-            var toWrite = pager.GetNumberOfPages(page);
-            return pager.WriteDirect(page.Pointer, startPage, toWrite);
+                    var toWrite = pager.GetNumberOfPages(page) * pager.PageSize;
+                    total += toWrite;
+                    Memory.BulkCopy(pagerState.MapBase + startPage*pager.PageSize,
+                        page.Pointer,
+                        toWrite);
+                }
+                return total;
+            }
+            finally
+            {
+                pagerState.Release();
+            }
         }
 
         public static int GetNumberOfPages(this AbstractPager pager, Page page)

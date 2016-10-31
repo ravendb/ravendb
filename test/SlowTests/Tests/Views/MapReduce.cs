@@ -106,21 +106,15 @@ select new {
             }
         }
 
-        private static QueryResult GetUnstableQueryResult(IDocumentStore store, string query)
+        private QueryResult GetUnstableQueryResult(IDocumentStore store, string query)
         {
-            int count = 0;
-            QueryResult q;
-            do
+            WaitForIndexing(store);
+            var q = store.DatabaseCommands.Query("CommentsCountPerBlog", new IndexQuery
             {
-                q = store.DatabaseCommands.Query("CommentsCountPerBlog", new IndexQuery
-                {
-                    Query = query,
-                    Start = 0,
-                    PageSize = 10
-                });
-                if (q.IsStale)
-                    Thread.Sleep(100);
-            } while (q.IsStale && count++ < 100);
+                Query = query,
+                Start = 0,
+                PageSize = 10
+            });
             foreach (var result in q.Results)
             {
                 result.Remove("@metadata");

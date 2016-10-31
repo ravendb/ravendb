@@ -21,13 +21,13 @@ namespace Voron.Util
         private readonly SortedList<long, Dictionary<long, PagePosition>> _transactionPages = new SortedList<long, Dictionary<long, PagePosition>>();
         private long _maxSeenTransaction;
 
-        public bool IsEmpty => _values.Count != 0;
+        public bool IsEmpty => _values.Count == 0;
 
         public void SetItems(LowLevelTransaction tx, Dictionary<long, PagePosition> items)
         {
-            UpdateMaxSeenTxId(tx);
             lock (_transactionPages)
             {
+                UpdateMaxSeenTxId(tx);
                 _transactionPages.Add(tx.Id, items);
             }
 

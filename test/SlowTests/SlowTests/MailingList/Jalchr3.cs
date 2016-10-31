@@ -47,6 +47,8 @@ namespace SlowTests.SlowTests.MailingList
                     }
                 }
 
+                WaitForIndexing(store);
+
                 int count;
                 // Warm-up
                 using (var session = store.OpenSession())

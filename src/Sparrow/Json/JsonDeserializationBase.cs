@@ -93,7 +93,17 @@ namespace Sparrow.Json
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfString), BindingFlags.NonPublic | BindingFlags.Static);
                         return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
                     }
-                    else if (valueType.GetTypeInfo().IsEnum)
+                    if (valueType == typeof(Dictionary<string, string[]>))
+                    {
+                        var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfDictionaryOfStringArray), BindingFlags.NonPublic | BindingFlags.Static);
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                    }
+                    if (valueType == typeof(string[]))
+                    {
+                        var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfStringArray), BindingFlags.NonPublic | BindingFlags.Static);
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                    }
+                    if (valueType.GetTypeInfo().IsEnum)
                     {
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfEnum), BindingFlags.NonPublic | BindingFlags.Static);
                         methodToCall = methodToCall.MakeGenericMethod(valueType);
@@ -128,7 +138,11 @@ namespace Sparrow.Json
             {
                 return Expression.Default(type);
             }*/
-
+            if (propertyType == typeof(string[]))
+            {
+                var method = typeof(JsonDeserializationBase).GetMethod(nameof(ToArrayOfString), BindingFlags.NonPublic | BindingFlags.Static);
+                return Expression.Call(method, json, Expression.Constant(propertyName));
+            }
             if (propertyType.IsArray)
             {
                 var valueType = propertyType.GetElementType();
@@ -230,6 +244,67 @@ namespace Sparrow.Json
             return dic;
         }
 
+        private static Dictionary<string, string[]> ToDictionaryOfStringArray(BlittableJsonReaderObject json, string name)
+        {
+            var dic = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+
+            BlittableJsonReaderObject obj;
+            //should a "null" exist in json? -> not sure that "null" can exist there
+            if (json.TryGet(name, out obj) == false || obj == null)
+                return dic;
+
+            foreach (var propertyName in obj.GetPropertyNames())
+            {
+                BlittableJsonReaderArray val;
+                if (obj.TryGet(propertyName, out val))
+                {
+                    var array = new string[val.Length];
+                    for (int i = 0; i < val.Length; i++)
+                    {
+                        array[i] = val[i]?.ToString();
+                    }
+                    dic[propertyName] = array;
+                }
+            }
+            return dic;
+        }
+
+        private static Dictionary<string, Dictionary<string, string[]>> ToDictionaryOfDictionaryOfStringArray(BlittableJsonReaderObject json, string name)
+        {
+            var dic = new Dictionary<string, Dictionary<string, string[]>>(StringComparer.OrdinalIgnoreCase);
+
+            BlittableJsonReaderObject obj;
+            //should a "null" exist in json? -> not sure that "null" can exist there
+            if (json.TryGet(name, out obj) == false || obj == null)
+                return dic;
+
+            foreach (var propertyName in obj.GetPropertyNames())
+            {
+                BlittableJsonReaderObject result;
+                if (obj.TryGet(propertyName, out result))
+                {
+                    var prop = new Dictionary<string, string[]>();
+                    dic[propertyName] = prop;
+                    foreach (var innerPropName in result.GetPropertyNames())
+                    {
+                        BlittableJsonReaderArray val;
+                        if (result.TryGet(innerPropName, out val))
+                        {
+                            var array = new string[val.Length];
+                            for (int i = 0; i < val.Length; i++)
+                            {
+                                array[i] = val[i]?.ToString();
+                            }
+                            prop[innerPropName] = array;
+                        }
+                    }
+
+                }
+
+            }
+            return dic;
+        }
+
         private static TCollection ToCollectionOfString<TCollection>(BlittableJsonReaderObject json, string name)
             where TCollection : ICollection<string>, new()
         {
@@ -244,6 +319,21 @@ namespace Sparrow.Json
 
             return collection;
         }
+
+        private static string[] ToArrayOfString(BlittableJsonReaderObject json, string name)
+        {
+            var collection = new List<string>();
+
+            BlittableJsonReaderArray jsonArray;
+            if (json.TryGet(name, out jsonArray) == false || jsonArray == null)
+                return collection.ToArray();
+
+            foreach (var value in jsonArray)
+                collection.Add(value.ToString());
+
+            return collection.ToArray();
+        }
+
 
         private static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()
         {

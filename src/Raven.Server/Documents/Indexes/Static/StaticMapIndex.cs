@@ -122,14 +122,15 @@ namespace Raven.Server.Documents.Indexes.Static
             if (_referencedCollections.Count == 0)
                 return base.CalculateIndexEtag(isStale, documentsContext, indexContext);
 
-            var indexEtagBytes = new long[
-                 1 + // definition hash
-                 1 + // isStale
-                 2 * Collections.Count + // last document etags and last mapped etags per collection
-                 2 * (Collections.Count * _referencedCollections.Count) // last referenced collection etags and last processed reference collection etags
-                 ];
+            var minLength = MinimumSizeForCalculateIndexEtagLength();
+            var length = minLength +
+                         sizeof(long)*2*(Collections.Count*_referencedCollections.Count); // last referenced collection etags and last processed reference collection etags
 
-            var index = CalculateIndexEtagInternal(indexEtagBytes, isStale, documentsContext, indexContext);
+            var indexEtagBytes = stackalloc byte[length];
+
+            CalculateIndexEtagInternal(indexEtagBytes, isStale, documentsContext, indexContext);
+
+            var writePos = indexEtagBytes + minLength;
 
             foreach (var collection in Collections)
             {
@@ -142,17 +143,15 @@ namespace Raven.Server.Documents.Indexes.Static
                     var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, referencedCollection.Name);
                     var lastMappedEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
 
-                    indexEtagBytes[index++] = lastDocEtag;
-                    indexEtagBytes[index++] = lastMappedEtag;
+                    *(long*) writePos = lastDocEtag;
+                    writePos += sizeof(long);
+                    *(long*)writePos = lastMappedEtag;
                 }
             }
 
             unchecked
             {
-                fixed (long* buffer = indexEtagBytes)
-                {
-                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, (ulong)(indexEtagBytes.Length * sizeof(long)));
-                }
+                return (long) Hashing.XXHash64.Calculate(indexEtagBytes, (ulong) length);
             }
         }
 

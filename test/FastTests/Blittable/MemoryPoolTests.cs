@@ -33,7 +33,7 @@ namespace FastTests.Blittable
             using (var pool = new UnmanagedBuffersPoolWithLowMemoryHandling(string.Empty))
             {
                 var allocatedMemory = new global::Sparrow.Collections.ConcurrentSet<AllocatedMemoryData>();
-                Parallel.For(0, 100, x =>
+                Parallel.For(0, 100, RavenTestHelper.DefaultParallelOptions, x =>
                 {
                     for (var i = 0; i < 10; i++)
                     {
@@ -41,7 +41,7 @@ namespace FastTests.Blittable
                     }
                 });
 
-                Parallel.ForEach(allocatedMemory, item =>
+                Parallel.ForEach(allocatedMemory, RavenTestHelper.DefaultParallelOptions, item =>
                 {
                     pool.Return(item);
                 });
@@ -62,7 +62,7 @@ namespace FastTests.Blittable
                     }
                     allocatedMemory.CompleteAdding();
                 });
-                
+
                 while (allocatedMemory.IsCompleted == false)
                 {
                     AllocatedMemoryData tuple;
