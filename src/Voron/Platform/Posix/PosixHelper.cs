@@ -31,12 +31,12 @@ namespace Voron.Platform.Posix
                 ThrowLastError(result);
         }
 
-        public static void ThrowLastError(int lastError)
+        public static void ThrowLastError(int lastError, string msg = null)
         {
             if (Enum.IsDefined(typeof(Errno), lastError) == false)
                 throw new InvalidOperationException("Unknown errror " + lastError);
             var error = (Errno)lastError;
-            throw new InvalidOperationException(error.ToString());
+            throw new InvalidOperationException(error + " " + msg);
         }
 
         public static unsafe void WriteFileHeader(FileHeader* header, string path)
