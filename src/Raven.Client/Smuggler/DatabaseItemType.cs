@@ -12,7 +12,5 @@ namespace Raven.Client.Smuggler
         Indexes = 1 << 2,
         Transformers = 1 << 3,
         Identities = 1 << 4,
-
-        RemoveAnalyzers = 1 << 7,
     }
 }

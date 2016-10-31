@@ -526,6 +526,17 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, List<string> collections, long etag, int take)
+        {
+            foreach (var collection in collections)
+            {
+                foreach (var document in GetDocumentsFrom(context, collection, etag, 0, take))
+                {
+                    yield return document;
+                }
+            }
+        }
+
         public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, string key, bool throwOnConflict = true)
         {
             if (string.IsNullOrWhiteSpace(key))

@@ -708,15 +708,6 @@ interface ICollectionBase {
     colorClass: string;
 }
 
-interface smugglerOptionsDto {
-    OperateOnTypes: number;
-    BatchSize: number;
-    ShouldExcludeExpired: boolean;
-    TransformScript: string;
-    NoneDefaultFileName: string;
-    OperationId: number;
-}
-
 interface customColumnParamsDto {
     Header?: string;
     Binding: string;
