@@ -168,7 +168,7 @@ namespace Raven.Client.Http
                         $"Trying to 'ReceiveAsync' WebSocket while not in Open state. State is {webSocket.State}");
 
                 var state = new JsonParserState();
-                byte[] buffer;
+                JsonOperationContext.ManagedPinnedBuffer buffer;
                 using (context.GetManagedBuffer(out buffer))
                 using (var parser = new UnmanagedJsonParser(context, state, "")) //TODO: FIXME
                 {
@@ -176,8 +176,7 @@ namespace Raven.Client.Http
                     builder.ReadObject();
                     while (builder.Read() == false)
                     {
-                        var arraySegment = new ArraySegment<byte>(buffer, 0, buffer.Length);
-                        var result = await webSocket.ReceiveAsync(arraySegment, _disposedToken.Token);
+                        var result = await webSocket.ReceiveAsync(buffer.Buffer, _disposedToken.Token);
 
                         if (result.MessageType == WebSocketMessageType.Close)
                         {
@@ -194,7 +193,7 @@ namespace Raven.Client.Http
                              throw new EndOfStreamException("Stream ended without reaching end of json content.");
                         }
 
-                        parser.SetBuffer(arraySegment);
+                        parser.SetBuffer(buffer, result.Count);
                     }
                     builder.FinalizeDocument();
 

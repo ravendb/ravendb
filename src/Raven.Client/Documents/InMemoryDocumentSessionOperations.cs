@@ -203,10 +203,12 @@ namespace Raven.Client.Documents
             var metadataAsBlittable = documentInfo.Metadata;
             Dictionary<string, string> metadata = new Dictionary<string, string>();
             var indexes = metadataAsBlittable.GetPropertiesByInsertionOrder();
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+
             foreach (var index in indexes)
             {
-                var prop = metadataAsBlittable.GetPropertyByIndex(index);
-                metadata[prop.Item1] = prop.Item2.ToString();
+                metadataAsBlittable.GetPropertyByIndex(index, ref prop);
+                metadata[prop.Name] = prop.Value?.ToString();
             }
             ;
             _entitiesWithMetadataInstance.Add(documentInfo.Entity);

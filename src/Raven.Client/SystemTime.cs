@@ -12,8 +12,6 @@ namespace Raven.Abstractions
     {
         private static readonly SystemTime Instance = new SystemTime();
 
-        private static readonly double MicroSecPerTick = 1000000D / System.Diagnostics.Stopwatch.Frequency;
-
         /// <summary>
         /// Tests now run in parallel so this is no longer static to mitigate the possibility of getting incorrent results. Use DocumentDatabase.Time instead.
         /// </summary>

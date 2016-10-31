@@ -12,6 +12,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
     {
         internal static Slice LastMapResultIdKey;
 
+        public FixedSizeTree DocumentMapEntries;
+
         private readonly Queue<long> _idsOfDeletedEntries = new Queue<long>();
 
         public Tree MapEntries;
@@ -30,7 +32,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public void Dispose()
         {
             StoreLastMapResultId();
-
+            DocumentMapEntries?.Dispose();
+            DocumentMapEntries = null;
             MapEntries = null;
             ProcessedDocEtags.Clear();
             ProcessedTombstoneEtags.Clear();

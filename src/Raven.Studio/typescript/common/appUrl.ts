@@ -55,6 +55,8 @@ class appUrl {
         replicationPerfStats: ko.computed(() => appUrl.forReplicationPerfStats(appUrl.currentDatabase())),
         sqlReplicationPerfStats: ko.computed(() => appUrl.forSqlReplicationPerfStats(appUrl.currentDatabase())),
 
+        ioStats: ko.computed(() => appUrl.forIoStats(appUrl.currentDatabase())),
+
         requestsCount: ko.computed(() => appUrl.forRequestsCount(appUrl.currentDatabase())),
         requestsTracing: ko.computed(() => appUrl.forRequestsTracing(appUrl.currentDatabase())),
         indexPerformance: ko.computed(() => appUrl.forIndexPerformance(appUrl.currentDatabase())),
@@ -392,6 +394,10 @@ class appUrl {
 
     static forSqlReplicationPerfStats(db: database): string {
         return "#databases/status/sqlReplicationPerfStats?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forIoStats(db: database): string {
+        return "#databases/status/ioStats?" + appUrl.getEncodedDbPart(db);
     }
 
     static forRequestsCount(db: database): string {

@@ -73,15 +73,17 @@ namespace Raven.Server.Documents.SqlReplication
             var itemToReplicates = scriptResult.Data.GetOrAdd(tableName);
             var dynamicJsonValue = scope.ToBlittable(colsAsObject.AsObject());
             var blittableJsonReaderObject = _context.ReadObject(dynamicJsonValue, tableName);
-            var columns = new List<SqlReplicationColumn>();
+            var columns = new List<SqlReplicationColumn>(blittableJsonReaderObject.Count);
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+
             for (var i = 0; i < blittableJsonReaderObject.Count; i++)
             {
-                var property = blittableJsonReaderObject.GetPropertyByIndex(i);
+                blittableJsonReaderObject.GetPropertyByIndex(i, ref prop);
                 columns.Add(new SqlReplicationColumn
                 {
-                    Key = property.Item1,
-                    Value = property.Item2,
-                    Type = property.Item3,
+                    Key = prop.Name,
+                    Value = prop.Value,
+                    Type = prop.Token,
                 });
             }
             itemToReplicates.Add(new ItemToReplicate

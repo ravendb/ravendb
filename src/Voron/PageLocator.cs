@@ -5,15 +5,20 @@ using Voron.Impl;
 
 namespace Voron
 {
-    public unsafe class PageLocator
+    public unsafe class PageLocator : IDisposable
     {
         private const ushort Invalid = 0;
         private LowLevelTransaction _tx;
-        private readonly ushort* _fingerprints; // we use pointer here to avoid bound checking
+        private ushort* _fingerprints; // we use pointer here to avoid bound checking
         private readonly PageHandlePtr[] _cache;
 
         private int _cacheSize;
         private int _current;
+
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+        }
 
         public void Renew(LowLevelTransaction tx, int cacheSize)
         {
@@ -37,13 +42,14 @@ namespace Voron
             _current = -1;
             _tx = tx;
 
+            _fingerprints = (ushort*)tx.Allocator.Allocate(_cacheSize * sizeof(ushort)).Ptr;
+
             Memory.Set((byte*) _fingerprints, 0, _cacheSize*sizeof(ushort));
         }
 
-        public PageLocator(ByteStringContext allocator, LowLevelTransaction tx, int cacheSize = 8)
+        public PageLocator(LowLevelTransaction tx, int cacheSize = 8)
         {
             _cache = new PageHandlePtr[512];
-            _fingerprints = (ushort*)allocator.Allocate(512 * sizeof(ushort)).Ptr;
             Renew(tx, cacheSize);
         }
 
