@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Commands
         public string[] Includes;
 
         public string Transformer;
-        public Dictionary<string, BlittableJsonReaderBase> TransformerParameters;
+        public Dictionary<string, object> TransformerParameters;
 
         public bool MetadataOnly;
 

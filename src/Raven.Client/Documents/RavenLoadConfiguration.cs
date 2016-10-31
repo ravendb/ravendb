@@ -1,23 +1,23 @@
 ﻿using System.Collections.Generic;
-using Raven.Json.Linq;
+
 
 namespace Raven.Client.Documents
 {
     public class RavenLoadConfiguration : ILoadConfiguration
     {
-        public Dictionary<string, RavenJToken> TransformerParameters { get; set; }
+        public Dictionary<string, object> TransformerParameters { get; set; }
 
         public RavenLoadConfiguration()
         {
-            TransformerParameters = new Dictionary<string, RavenJToken>();
+            TransformerParameters = new Dictionary<string, object>();
         }
 
-        public void AddQueryParam(string name, RavenJToken value)
+        public void AddQueryParam(string name, object value)
         {
             AddTransformerParameter(name, value);
         }
 
-        public void AddTransformerParameter(string name, RavenJToken value)
+        public void AddTransformerParameter(string name, object value)
         {
             TransformerParameters[name] = value;
         }
