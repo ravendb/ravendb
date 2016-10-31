@@ -4,6 +4,8 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices.ComTypes;
+using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
@@ -48,6 +50,18 @@ namespace Raven.Server.Web
         public virtual void Init(RequestHandlerContext context)
         {
             _context = context;
+        }
+
+        protected Stream RequestFormStream(string itemName)
+        {
+            try
+            {
+                return new MemoryStream(Encoding.UTF8.GetBytes(HttpContext.Request.Form[itemName]));
+            }
+            catch (Exception)
+            {
+               return RequestBodyStream();
+            }
         }
 
         protected Stream RequestBodyStream()

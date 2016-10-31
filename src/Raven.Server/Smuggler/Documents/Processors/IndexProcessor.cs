@@ -54,7 +54,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
             }
         }
 
-        public static void Export(BlittableJsonTextWriter writer, Index index, JsonOperationContext context)
+        public static void Export(BlittableJsonTextWriter writer, Index index, JsonOperationContext context, bool removeAnalyzers)
         {
             if (index.Type == IndexType.Faulty)
                 return;
@@ -70,7 +70,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
             if (index.Type == IndexType.Map || index.Type == IndexType.MapReduce)
             {
                 var indexDefinition = index.GetIndexDefinition();
-                writer.WriteIndexDefinition(context, indexDefinition);
+                writer.WriteIndexDefinition(context, indexDefinition, removeAnalyzers);
             }
             else if (index.Type == IndexType.AutoMap || index.Type == IndexType.AutoMapReduce)
             {
