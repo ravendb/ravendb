@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.Server.Utils
+namespace Sparrow.Utils
 {
     public static class Sizes
     {
@@ -14,13 +14,13 @@ namespace Raven.Server.Utils
             const double MB = 1024 * 1024;
             const double KB = 1024;
 
-            if (absSize > GB) // GB
+            if (absSize >= GB) // GB
                 return string.Format("{0:#,#.##} GBytes", size / GB);
-            if (absSize > MB)
+            if (absSize >= MB)
                 return string.Format("{0:#,#.##} MBytes", size / MB);
-            if (absSize > KB)
+            if (absSize >= KB)
                 return string.Format("{0:#,#.##} KBytes", size / KB);
-            return string.Format("{0:#,0} Bytes", size);
+            return string.Format("{0:#,#} Bytes", size);
         }
     }
 }

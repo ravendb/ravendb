@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Sparrow.Json
 {
-    public class BlittableJsonTextWriter : IDisposable
+    public unsafe class BlittableJsonTextWriter : IDisposable
     {
         private readonly JsonOperationContext _context;
         private readonly Stream _stream;
@@ -23,27 +23,32 @@ namespace Sparrow.Json
         public static readonly byte[] FalseBuffer = { (byte)'f', (byte)'a', (byte)'l', (byte)'s', (byte)'e', };
 
         private int _pos;
-        private readonly byte[] _buffer;
+        private readonly byte* _buffer;
+        private readonly int _bufferLen;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
+        private JsonOperationContext.ManagedPinnedBuffer _pinnedBuffer;
 
         public BlittableJsonTextWriter(JsonOperationContext context, Stream stream)
         {
             _context = context;
             _stream = stream;
-            _returnBuffer = context.GetManagedBuffer(out _buffer);
+            _returnBuffer = context.GetManagedBuffer(out _pinnedBuffer);
+            _buffer = _pinnedBuffer.Pointer;
+            _bufferLen = _pinnedBuffer.Length;
         }
 
         public int Position => _pos;
 
         public override string ToString()
         {
-            return Encoding.UTF8.GetString(_buffer, 0, _pos);
+            return Encoding.UTF8.GetString(_pinnedBuffer.Buffer.Array, _pinnedBuffer.Buffer.Offset, _pos);
         }
 
         public void WriteObjectOrdered(BlittableJsonReaderObject obj)
         {
             WriteStartObject();
             var props = obj.GetPropertiesByInsertionOrder();
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
             for (int i = 0; i < props.Length; i++)
             {
                 if (i != 0)
@@ -51,10 +56,10 @@ namespace Sparrow.Json
                     WriteComma();
                 }
 
-                var prop = obj.GetPropertyByIndex(props[i]);
-                WritePropertyName(prop.Item1);
+                obj.GetPropertyByIndex(props[i], ref prop);
+                WritePropertyName(prop.Name);
 
-                WriteValue(prop.Item3 & BlittableJsonReaderBase.TypesMask, prop.Item2, originalPropertyOrder: true);
+                WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value, originalPropertyOrder: true);
             }
 
             WriteEndObject();
@@ -63,16 +68,17 @@ namespace Sparrow.Json
         public void WriteObject(BlittableJsonReaderObject obj)
         {
             WriteStartObject();
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
             for (int i = 0; i < obj.Count; i++)
             {
                 if (i != 0)
                 {
                     WriteComma();
                 }
-                var prop = obj.GetPropertyByIndex(i);
-                WritePropertyName(prop.Item1);
+                obj.GetPropertyByIndex(i, ref prop);
+                WritePropertyName(prop.Name);
 
-                WriteValue(prop.Item3 & BlittableJsonReaderObject.TypesMask, prop.Item2, originalPropertyOrder: false);
+                WriteValue(prop.Token & BlittableJsonReaderObject.TypesMask, prop.Value, originalPropertyOrder: false);
             }
 
             WriteEndObject();
@@ -102,6 +108,12 @@ namespace Sparrow.Json
         {
             switch (token)
             {
+                case BlittableJsonToken.String:
+                    WriteString((LazyStringValue)val);
+                    break;
+                case BlittableJsonToken.Integer:
+                    WriteInteger((long)val);
+                    break;
                 case BlittableJsonToken.StartArray:
                     WriteArrayToStream((BlittableJsonReaderArray)val, originalPropertyOrder);
                     break;
@@ -112,14 +124,8 @@ namespace Sparrow.Json
                     else
                         WriteObject(blittableJsonReaderObject);
                     break;
-                case BlittableJsonToken.String:
-                    WriteString((LazyStringValue)val);
-                    break;
                 case BlittableJsonToken.CompressedString:
                     WriteString((LazyCompressedStringValue)val);
-                    break;
-                case BlittableJsonToken.Integer:
-                    WriteInteger((long)val);
                     break;
                 case BlittableJsonToken.Float:
                     WriteDouble((LazyDoubleValue)val);
@@ -146,7 +152,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void WriteString(LazyStringValue str)
         {
-            if (str == (LazyStringValue)null)
+            if (str == null)
             {
                 WriteNull();
                 return;
@@ -159,6 +165,21 @@ namespace Sparrow.Json
             _buffer[_pos++] = Quote;
             var escapeSequencePos = size;
             var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+            if (numberOfEscapeSequences == 0)
+            {
+                WriteRawString(strBuffer, size);
+
+                EnsureBuffer(1);
+                _buffer[_pos++] = Quote;
+                return;
+            }
+
+            UnlikedlyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
+        }
+
+        private unsafe void UnlikedlyWriteEscapeSequences(LazyStringValue str, int numberOfEscapeSequences, int escapeSequencePos,
+            byte* strBuffer, int size)
+        {
             while (numberOfEscapeSequences > 0)
             {
                 numberOfEscapeSequences--;
@@ -168,7 +189,7 @@ namespace Sparrow.Json
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
                 var b = *(strBuffer++);
                 EnsureBuffer(2);
-                _buffer[_pos++] = (byte)'\\';
+                _buffer[_pos++] = (byte) '\\';
                 _buffer[_pos++] = GetEscapeCharacter(b);
             }
             // write remaining (or full string) to the buffer in one shot
@@ -234,29 +255,30 @@ namespace Sparrow.Json
         }
 
 
-        private unsafe void WriteRawString(byte* buffer, int size)
+        private void WriteRawString(byte* buffer, int size)
         {
-            if (size < _buffer.Length)
+            if (size < _bufferLen)
             {
                 EnsureBuffer(size);
-                fixed (byte* p = _buffer)
-                    Memory.Copy(p + _pos, buffer, size);
+                Memory.CopyInline(_buffer + _pos, buffer, size);
                 _pos += size;
                 return;
             }
 
+            UnlikelyWriteLargeRawString(buffer, size);
+        }
+
+        private void UnlikelyWriteLargeRawString(byte* buffer, int size)
+        {
             // need to do this in pieces
             var posInStr = 0;
-            fixed (byte* p = _buffer)
+            while (posInStr < size)
             {
-                while (posInStr < size)
-                {
-                    var amountToCopy = Math.Min(size - posInStr, _buffer.Length);
-                    Flush();
-                    Memory.Copy(p, buffer + posInStr, amountToCopy);
-                    posInStr += amountToCopy;
-                    _pos = amountToCopy;
-                }
+                var amountToCopy = Math.Min(size - posInStr, _bufferLen);
+                Flush();
+                Memory.Copy(_buffer, buffer + posInStr, amountToCopy);
+                posInStr += amountToCopy;
+                _pos = amountToCopy;
             }
         }
 
@@ -293,12 +315,18 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureBuffer(int len)
         {
-            if (_pos + len < _buffer.Length)
+            if (_pos + len < _bufferLen)
                 return;
-            if (len >= _buffer.Length)
-                throw new ArgumentOutOfRangeException(nameof(len));
+            if (len >= _bufferLen)
+                ThrowValueTooBigForBuffer();
 
             Flush();
+        }
+
+        private static void ThrowValueTooBigForBuffer()
+        {
+            // ReSharper disable once NotResolvedInText
+            throw new ArgumentOutOfRangeException("len");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -306,7 +334,7 @@ namespace Sparrow.Json
         {
             if (_pos == 0)
                 return;
-            _stream.Write(_buffer, 0, _pos);
+            _stream.Write(_pinnedBuffer.Buffer.Array, _pinnedBuffer.Buffer.Offset, _pos);
             _pos = 0;
         }
 

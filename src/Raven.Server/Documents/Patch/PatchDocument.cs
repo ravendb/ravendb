@@ -275,10 +275,12 @@ namespace Raven.Server.Documents.Patch
 
             if (patch.Values != null)
             {
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
+
                 for (int i = 0; i < patch.Values.Count; i++)
                 {
-                    var property = patch.Values.GetPropertyByIndex(i);
-                    jintEngine.SetValue(property.Item1, scope.ToJsValue(jintEngine, property.Item2, property.Item3));
+                    patch.Values.GetPropertyByIndex(i, ref prop);
+                    jintEngine.SetValue(prop.Name, scope.ToJsValue(jintEngine, prop.Value, prop.Token));
                 }
             }
             

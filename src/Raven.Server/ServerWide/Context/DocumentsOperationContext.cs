@@ -49,5 +49,16 @@ namespace Raven.Server.ServerWide.Context
         public StorageEnvironment Environment => _documentDatabase.DocumentsStorage.Environment;
 
         public DocumentDatabase DocumentDatabase => _documentDatabase;
+
+        public bool ShouldRenewTransactionsToAllowFlushing()
+        {
+            // if we have the same transaction id right now, there hasn't been write since we started the transaction
+            // so there isn't really a major point in renewing the transaction, since we wouldn't be releasing any 
+            // resources (scratch space, mostly) back to the system, let us continue with the current one.
+
+            return Transaction?.InnerTransaction.LowLevelTransaction.Id !=
+                   _documentDatabase.DocumentsStorage.Environment.CurrentReadTransactionId ;
+
+        }
     }
 }

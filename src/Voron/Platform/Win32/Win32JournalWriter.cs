@@ -89,7 +89,7 @@ namespace Voron.Platform.Win32
             }
 
             if (writeSuccess == false)
-                throw new VoronUnrecoverableErrorException("Could not write to journal " + _filename,
+                throw new IOException("Could not write to journal " + _filename,
                     new Win32Exception(Marshal.GetLastWin32Error()));
         }
 

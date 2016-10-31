@@ -31,13 +31,15 @@ namespace Raven.Client.Documents.Blit
                 var blitResult = result as BlittableJsonReaderObject;
                 blitResult.TryGetMember("$values", out result);
 
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
+
                 for (var i = 0; i < blitResult.Count; i++)
                 {
-                    var item = blitResult.GetPropertyByIndex(i);
+                    blitResult.GetPropertyByIndex(i, ref prop);
 
-                    if (item.Item2 is BlittableJsonReaderBase)
+                    if (prop.Value is BlittableJsonReaderBase)
                     {
-                        var itemAsBlittable = item.Item2 as BlittableJsonReaderBase;
+                        var itemAsBlittable = prop.Value as BlittableJsonReaderBase;
                         foreach (var subItem in itemAsBlittable.SelectTokenWithRavenSyntaxReturningFlatStructure(string.Join(",", pathParts.Skip(1).ToArray())))
                         {
                             yield return subItem;
@@ -45,7 +47,7 @@ namespace Raven.Client.Documents.Blit
                     }
                     else
                     {
-                        yield return Tuple.Create((object)item, result);
+                        yield return Tuple.Create((object)prop.Value , result);
                     }
                 }
             }

@@ -160,7 +160,7 @@ namespace Voron
             {
                 if (_log.IsOperationsEnabled)
                     _log.Operations($"Failed to sync data file for {env.Options.BasePath}", e);
-                env.FlushingTaskFailure = ExceptionDispatchInfo.Capture(e);
+                env.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
             }
         }
 
@@ -213,7 +213,7 @@ namespace Voron
                     }
                     catch (Exception e)
                     {
-                        storageEnvironment.FlushingTaskFailure = ExceptionDispatchInfo.Capture(e);
+                        storageEnvironment.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
                     }
                     finally
                     {

@@ -96,7 +96,9 @@ namespace Raven.Server.ServerWide.Context
             base.Dispose();
 
             Allocator?.Dispose();
+            Allocator = null;
             PersistentContext?.Dispose();
+            PersistentContext = null;
 
             if (_pinnedObjects != null)
             {
@@ -130,11 +132,7 @@ namespace Raven.Server.ServerWide.Context
 
             CloseTransaction();
 
-            if (Allocator?.ShouldDisposeOnReset != true)
-                return;
-
-            Allocator?.Dispose();
-            Allocator = null;
+            Allocator?.Reset();
         }
     }
 }
