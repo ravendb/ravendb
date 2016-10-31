@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net;
 using System.Threading.Tasks;
-using Raven.Abstractions.TimeSeries;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -18,7 +14,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
             TransactionsMode mode;
-            if (Enum.TryParse(modeStr, true,  out mode) == false)
+            if (Enum.TryParse(modeStr, true, out mode) == false)
                 throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + modeStr);
 
             var configDuration = TimeSpan.FromMinutes(Database.Configuration.Storage.TransactionsModeDuration);
@@ -42,14 +38,14 @@ namespace Raven.Server.Documents.Handlers.Admin
                     }
                     first = false;
 
-                    var result = storageEnvironment.SetTransactionMode(mode, duration);
+                    var result = storageEnvironment.Environment.SetTransactionMode(mode, duration);
                     switch (result)
                     {
                         case TransactionsModeResult.ModeAlreadySet:
                             context.Write(writer, new DynamicJsonValue
                             {
                                 ["Type"] = mode.ToString(),
-                                ["Path"] = storageEnvironment.Options.BasePath,
+                                ["Path"] = storageEnvironment.Environment.Options.BasePath,
                                 ["Result"] = "Mode Already Set"
                             });
                             break;
@@ -57,7 +53,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             context.Write(writer, new DynamicJsonValue
                             {
                                 ["Type"] = mode.ToString(),
-                                ["Path"] = storageEnvironment.Options.BasePath,
+                                ["Path"] = storageEnvironment.Environment.Options.BasePath,
                                 ["Result"] = "Mode Set Successfully"
                             });
                             break;

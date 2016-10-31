@@ -13,6 +13,7 @@ using Sparrow.Logging;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
+using Voron.Data.Tables;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Global;
@@ -514,13 +515,14 @@ namespace Voron
                 FlushInProgressLock.ExitReadLock();
         }
 
-        public StorageReport GenerateReport(Transaction tx, bool computeExactSizes = false)
+        public unsafe StorageReport GenerateReport(Transaction tx, bool computeExactSizes = false)
         {
             var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
             var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
 
             var trees = new List<Tree>();
             var fixedSizeTrees = new List<FixedSizeTree>();
+            var tables = new List<Table>();
             using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate(false))
             {
                 if (rootIterator.Seek(Slices.BeforeAllKeys))
@@ -532,13 +534,22 @@ namespace Voron
                         switch (type)
                         {
                             case RootObjectType.VariableSizeTree:
-                                var tree = tx.ReadTree(currentKey.ToString());
+                                var tree = tx.ReadTree(currentKey);
                                 trees.Add(tree);
                                 break;
                             case RootObjectType.EmbeddedFixedSizeTree:
                                 break;
                             case RootObjectType.FixedSizeTree:
-                                fixedSizeTrees.Add(tx.FixedTreeFor(currentKey, 0));
+                                fixedSizeTrees.Add(tx.FixedTreeFor(currentKey));
+                                break;
+                            case RootObjectType.Table:
+                                var tableTree = tx.ReadTree(currentKey, RootObjectType.Table);
+                                var writtenSchemaData = tableTree.DirectRead(TableSchema.SchemasSlice);
+                                var writtenSchemaDataSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+                                var tableSchema = TableSchema.ReadFrom(tx.Allocator, writtenSchemaData, writtenSchemaDataSize);
+
+                                var table = tx.OpenTable(tableSchema, currentKey);
+                                tables.Add(table);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
@@ -558,6 +569,7 @@ namespace Voron
                 Journals = Journal.Files.ToList(),
                 Trees = trees,
                 FixedSizeTrees = fixedSizeTrees,
+                Tables = tables,
                 IsLightReport = !computeExactSizes
             });
         }

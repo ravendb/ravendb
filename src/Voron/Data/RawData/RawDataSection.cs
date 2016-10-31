@@ -47,6 +47,7 @@ namespace Voron.Data.RawData
 
         public int Size => _sectionHeader->NumberOfPages * _pageSize;
 
+        public int NumberOfPages => _sectionHeader->NumberOfPages;
 
         public ushort* AvailableSpace
         {

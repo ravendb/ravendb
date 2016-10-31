@@ -11,6 +11,11 @@ namespace Raven.Client.Data
             HumaneSize = ZeroHumaneSize;
         }
 
+        public Size(long sizeInBytes)
+        {
+            SizeInBytes = sizeInBytes;
+        }
+
         private long _sizeInBytes;
 
         public long SizeInBytes
