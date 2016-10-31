@@ -24,14 +24,13 @@ namespace Voron.Impl.Scratch
         private readonly int _pageSize;
         private readonly int _scratchNumber;
 
-        private readonly SortedList<long, long> _freePagesByTransaction = new SortedList<long, long>(NumericDescendingComparer.Instance);
         private readonly Dictionary<long, LinkedList<PendingPage>> _freePagesBySize = new Dictionary<long, LinkedList<PendingPage>>(NumericEqualityComparer.Instance);
         private readonly Dictionary<long, LinkedList<long>> _freePagesBySizeAvailableImmediately = new Dictionary<long, LinkedList<long>>(NumericEqualityComparer.Instance);
         private readonly Dictionary<long, PageFromScratchBuffer> _allocatedPages = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
-
-
+        
         private long _allocatedPagesUsedSize;
         private long _lastUsedPage;
+        private long _latestFreePagesAvailableAfterTransaction = -1;
 
         public long LastUsedPage => _lastUsedPage;
 
@@ -48,7 +47,7 @@ namespace Voron.Impl.Scratch
             _allocatedPages.Clear();
             _freePagesBySizeAvailableImmediately.Clear();
             _freePagesBySize.Clear();
-            _freePagesByTransaction.Clear();
+            _latestFreePagesAvailableAfterTransaction = -1;
             _lastUsedPage = 0;
             _allocatedPagesUsedSize = 0;
         }
@@ -73,7 +72,7 @@ namespace Voron.Impl.Scratch
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate)
         {
             var pagerState = _scratchPager.EnsureContinuous(_lastUsedPage, sizeToAllocate);
-            tx.EnsurePagerStateReference(pagerState);
+            tx?.EnsurePagerStateReference(pagerState);
 
             var result = new PageFromScratchBuffer(_scratchNumber, _lastUsedPage, sizeToAllocate, numberOfPages);
 
@@ -124,18 +123,10 @@ namespace Voron.Impl.Scratch
             if (_allocatedPagesUsedSize > 0)
                 return true;
 
-            var keys = _freePagesByTransaction.Keys;
-            var values = _freePagesByTransaction.Values;
-            for (int i = 0; i < keys.Count; i++)
-            {
-                if (keys[i] < oldestActiveTransaction)
-                    break;
+            if (oldestActiveTransaction > _latestFreePagesAvailableAfterTransaction)
+                return false;
 
-                if (values[i] > 0)
-                    return true;
-            }
-
-            return false;
+            return true;
         }
 
         public void Free(long page, long asOfTxId)
@@ -179,12 +170,8 @@ namespace Voron.Impl.Scratch
                     ValidAfterTransactionId = asOfTxId
                 });
 
-                // If it is already there we address by position
-                int position =  _freePagesByTransaction.IndexOfKey(asOfTxId);
-                if (position == -1)
-                    _freePagesByTransaction.Add(asOfTxId, value.NumberOfPages);
-                else
-                    _freePagesByTransaction[asOfTxId] = _freePagesByTransaction.Values[position] + value.NumberOfPages;
+                if (asOfTxId > _latestFreePagesAvailableAfterTransaction)
+                    _latestFreePagesAvailableAfterTransaction = asOfTxId;
             }
         }
 
