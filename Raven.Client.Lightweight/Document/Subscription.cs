@@ -34,6 +34,8 @@ namespace Raven.Client.Document
 
     public delegate void AfterAcknowledgment(Etag lastProcessedEtag);
 
+    public delegate void AckTimedOut();
+
     public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class
     {
 #if !DNXCORE50
@@ -67,6 +69,7 @@ namespace Raven.Client.Document
         public event AfterBatch AfterBatch = delegate { };
         public event BeforeAcknowledgment BeforeAcknowledgment = () => true;
         public event AfterAcknowledgment AfterAcknowledgment = delegate { };
+        public event AckTimedOut AckTimedOut = delegate { };
 
         internal Subscription(long id, string database, SubscriptionConnectionOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes, DocumentConvention conventions, bool open, Func<Task> ensureOpenSubscription)
         {
@@ -178,6 +181,7 @@ namespace Raven.Client.Document
                                                                 {
                                                                     // can happen if a subscriber doesn't have an onError handler - just ignore it
                                                                 }
+                                                                
                                                                 break;
                                                             }
                                                         }
@@ -235,7 +239,14 @@ namespace Raven.Client.Document
                                 // This is an acknowledge when the server returns documents to the subscriber.
                                 if (BeforeAcknowledgment())
                                 {
-                                    AcknowledgeBatchToServer(lastProcessedEtagOnServer);
+                                    try
+                                    {
+                                        AcknowledgeBatchToServer(lastProcessedEtagOnServer);
+                                    }
+                                    catch (SubscriptionAckTimeoutException ex)
+                                    {
+                                        AckTimedOut();
+                                    }
 
                                     AfterAcknowledgment(lastProcessedEtagOnServer);
                                 }
@@ -251,7 +262,14 @@ namespace Raven.Client.Document
                                     // This is a silent acknowledge, this can happen because there was no documents in range
                                     // to be accessible in the time available. This condition can happen when documents must match
                                     // a set of conditions to be eligible.
-                                    AcknowledgeBatchToServer(lastProcessedEtagOnServer);
+                                    try
+                                    {
+                                        AcknowledgeBatchToServer(lastProcessedEtagOnServer);
+                                    }
+                                    catch (SubscriptionAckTimeoutException ex)
+                                    {
+                                        AckTimedOut();
+                                    }
 
                                     lastProcessedEtagOnClient = lastProcessedEtagOnServer;
 
@@ -293,10 +311,7 @@ namespace Raven.Client.Document
                     if (acknowledgmentRequest.ResponseStatusCode != HttpStatusCode.RequestTimeout) // ignore acknowledgment timeouts
                         throw;
 
-                    foreach (var subscriber in subscribers)
-                    {
-                        subscriber.OnError(new SubscriptionAckTimeoutException("Subscription Acknowledgement timeout received. Last Etag was not updated and current batch will be proccessed again",ex));
-                    }
+                    throw new SubscriptionAckTimeoutException("Subscription Acknowledgement timeout received. Last Etag was not updated and current batch will be proccessed again", ex);
                 }
             }
         }
