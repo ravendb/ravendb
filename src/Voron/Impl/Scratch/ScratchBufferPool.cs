@@ -47,7 +47,6 @@ namespace Voron.Impl.Scratch
 
         public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
         {
-            //the caller must understand this is a monotonically incrementing snapshot.  
             return _pagerStatesAllScratchesCache;
         }
 
@@ -58,7 +57,26 @@ namespace Voron.Impl.Scratch
             {
                 dic[scratchBufferItem.Key] = scratchBufferItem.Value.File.PagerState;
             }
+
+            // for the lifetime of this cache, we have to hold a reference to the 
+            // pager state, to avoid handing out garbage to transactions
+            // note that this call is protected from running concurrently with the 
+            // call to GetPagerStatesOfAllScratches()
+
+            foreach (var pagerState in dic)
+            {
+                pagerState.Value.AddRef();
+            }
+            var old = _pagerStatesAllScratchesCache;
             _pagerStatesAllScratchesCache = dic;
+            if (old == null)
+                return;
+
+            // release the references for the previous instance
+            foreach (var pagerState in old)
+            {
+                pagerState.Value.Release();
+            }
         }
 
         internal long GetNumberOfAllocations(int scratchNumber)

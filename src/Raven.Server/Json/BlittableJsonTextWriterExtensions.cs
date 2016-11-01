@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -950,6 +951,8 @@ namespace Raven.Server.Json
             if (metadata != null)
             {
                 var size = metadata.Count;
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
+
                 for (int i = 0; i < size; i++)
                 {
                     if (first == false)
@@ -957,9 +960,9 @@ namespace Raven.Server.Json
                         writer.WriteComma();
                     }
                     first = false;
-                    var property = metadata.GetPropertyByIndex(i);
-                    writer.WritePropertyName(property.Item1);
-                    writer.WriteValue(property.Item3 & BlittableJsonReaderBase.TypesMask, property.Item2);
+                    metadata.GetPropertyByIndex(i,ref prop);
+                    writer.WritePropertyName(prop.Name);
+                    writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                 }
             }
             if (document.Etag != 0)
@@ -997,12 +1000,14 @@ namespace Raven.Server.Json
             bool first = true;
             BlittableJsonReaderObject metadata = null;
             var size = document.Data.GetPropertiesByInsertionOrder(_buffers);
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+
             for (int i = 0; i < size; i++)
             {
-                var property = document.Data.GetPropertyByIndex(_buffers.Properties[i]);
-                if (metadataField.Equals(property.Item1))
+                document.Data.GetPropertyByIndex(_buffers.Properties[i], ref prop);
+                if (metadataField.Equals(prop.Name))
                 {
-                    metadata = (BlittableJsonReaderObject) property.Item2;
+                    metadata = (BlittableJsonReaderObject)prop.Value;
                     continue;
                 }
                 if (first == false)
@@ -1010,8 +1015,8 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 }
                 first = false;
-                writer.WritePropertyName(property.Item1);
-                writer.WriteValue(property.Item3 & BlittableJsonReaderBase.TypesMask, property.Item2);
+                writer.WritePropertyName(prop.Name);
+                writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
             }
             if (first == false)
                 writer.WriteComma();

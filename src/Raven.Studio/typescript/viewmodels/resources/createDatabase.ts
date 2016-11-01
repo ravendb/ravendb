@@ -1,6 +1,7 @@
 import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
+import EVENTS = require("common/constants/events");
 import createResourceBase = require("viewmodels/resources/createResourceBase");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import getPluginsInfoCommand = require("commands/database/debug/getPluginsInfoCommand");
@@ -10,186 +11,162 @@ import getClusterTopologyCommand = require("commands/database/cluster/getCluster
 import topology = require("models/database/replication/topology");
 import shell = require("viewmodels/shell");
 import resourcesManager = require("common/shell/resourcesManager");
+import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
+
+import databaseCreationModel = require("models/resources/creation/databaseCreationModel");
 
 class createDatabase extends createResourceBase {
 
-    resourceNameCapitalString = "Database";
-    resourceNameString = "database";
-
-    databaseIndexesPath = ko.observable("");
-    indexesCustomValidityError: KnockoutComputed<string>;
-    
-    isCompressionBundleEnabled = ko.observable(false);
-    isEncryptionBundleEnabled = ko.observable(false);
-    isExpirationBundleEnabled = ko.observable(false);
-    isQuotasBundleEnabled = ko.observable(false);
-    isReplicationBundleEnabled = ko.observable(false);
-    isSqlReplicationBundleEnabled = ko.observable(false);
-    isVersioningBundleEnabled = ko.observable(false);
-    isPeriodicExportBundleEnabled = ko.observable(false); // Old Raven Studio has this enabled by default
-    isScriptedIndexBundleEnabled = ko.observable(false);
-    isIncrementalBackupChecked = ko.observable(false);
-    isClusterWideVisible = ko.observable(false);
-    isClusterWideChecked = ko.observable(true);
-    alertTimeout = ko.observable("");
-    alertRecurringTimeout = ko.observable("");
-
-    customBundles = ko.observableArray<string>();
-    selectedCustomBundles = ko.observableArray<string>([]);
-
-    replicationBundleChangeDisabled = ko.computed(() => {
-        var clusterMode = shell.clusterMode();
-        var clusterWide = this.isClusterWideChecked();
-        return clusterMode && clusterWide;
-    });
-
-    constructor(parent: dialogViewModelBase) {
-        super(resourcesManager.default.databases, parent);
-
-        if (!!this.licenseStatus() && this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true") {
-            this.isPeriodicExportBundleEnabled(false);
+    readonly databaseBundles: Array<availableBundle> = [
+        {
+            displayName: "Compression",
+            name: "Compression",
+            hasAdvancedConfiguration: false
+        },
+        {
+            displayName: "Encryption",
+            name: "Encryption",
+            hasAdvancedConfiguration: true
+        },
+        {
+            displayName: "Expiration",
+            name: "DocumentExpiration",
+            hasAdvancedConfiguration: false
+        },
+        {
+            displayName: "Periodic Export",
+            name: "PeriodicExport",
+            hasAdvancedConfiguration: false
+        },
+        {
+            displayName: "Quotas",
+            name: "Quotas",
+            hasAdvancedConfiguration: true
+        },
+        {
+            displayName: "Replication",
+            name: "Replication",
+            hasAdvancedConfiguration: false
+        },
+        {
+            displayName: "Scripted Index",
+            name: "ScriptedIndexResults",
+            hasAdvancedConfiguration: false
+        },
+        {
+            displayName: "SQL Replication",
+            name: "SqlReplication",
+            hasAdvancedConfiguration: true
+        },
+        {
+            displayName: "Versioning",
+            name: "Versioning", 
+            hasAdvancedConfiguration: true
         }
+    ];
 
-        if (shell.clusterMode()) {
-            this.isReplicationBundleEnabled(true);
-        }
+    bundlesEnabled = {
+        quotas: this.isBundleActiveComputed("Quotas"),
+        encryption: this.isBundleActiveComputed("Encryption"),
+        sqlReplication: this.isBundleActiveComputed("SqlReplication"),
+        versioning: this.isBundleActiveComputed("Versioning")
+    }
 
-        this.indexesCustomValidityError = ko.computed(() => {
-            var newPath = this.databaseIndexesPath();
-            var errorMessage: string = this.isPathLegal(newPath, "Indexes");
-            return errorMessage;
+    resourceModel = new databaseCreationModel();
+
+    indexesPathPlaceholder: KnockoutComputed<string>;
+
+    getResourceByName(name: string): database {
+        return resourcesManager.default.getDatabaseByName(name);
+    }
+
+    activate() {
+        super.activate();
+
+        //TODO: if cluster mode preselect replication bundle
+        //TODO: if !!this.licenseStatus() && this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true" preselect periodic export
+        //TODO: fetchClusterWideConfig
+        //TODO: fetchCustomBundles
+    }
+
+    protected initObservables() {
+        super.initObservables();
+
+        this.indexesPathPlaceholder = ko.pureComputed(() => {
+            const name = this.resourceModel.name();
+            return `~/${name || "{Database Name}"}/Indexes/`;
         });
 
-        this.fetchCustomBundles();
-        this.fetchClusterWideConfig();
-    }
-
-    fetchClusterWideConfig() {
-        /*
-        new getClusterTopologyCommand(appUrl.getSystemDatabase())
-            .execute()
-            .done((topology: topology) => {
-                this.isClusterWideVisible(topology && topology.allNodes().length > 0);
-            });*/
-    }
-
-    fetchCustomBundles() {
-        /*
-        new getPluginsInfoCommand(appUrl.getSystemDatabase())
-            .execute()
-            .done((result: pluginsInfoDto) => {
-            this.customBundles(result.CustomBundles);
-        });*/
-    }
-
-    nextOrCreate() {
-        this.creationTaskStarted = true;
-        dialog.close(this.parent);
-        this.creationTask.resolve(this.resourceName(), this.getActiveBundles(), this.resourcePath(), this.logsPath(), this.databaseIndexesPath(), this.resourceTempPath(), this.storageEngine(),
-            this.isIncrementalBackupChecked(), this.alertTimeout(), this.alertRecurringTimeout(), this.isClusterWideChecked());
-        this.clearResourceName();
-    }
-
-    private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {
-        databaseName = databaseName.toLowerCase();
-        for (var i = 0; i < databases.length; i++) {
-            if (databaseName === databases[i].name.toLowerCase()) {
-                return true;
+        this.databaseBundles.forEach(bundle => {
+            if (!bundle.hasOwnProperty('validationGroup')) {
+                bundle.validationGroup = undefined;
             }
-        }
-        return false;
+        });
+
+        const encryptionConfig = this.databaseBundles.find(x => x.name === "Encryption");
+        encryptionConfig.validationGroup = this.resourceModel.encryptionValidationGroup;
     }
 
-    toggleCompressionBundle() {
-        this.isCompressionBundleEnabled.toggle();
+    advancedVisibility = {
+        quotas: ko.pureComputed(() => this.advancedBundleConfigurationVisible() === "Quotas"),
+        encryption: ko.pureComputed(() => this.advancedBundleConfigurationVisible() === "Encryption"),
+        versioning: ko.pureComputed(() => this.advancedBundleConfigurationVisible() === "Versioning"),
+        sqlReplication: ko.pureComputed(() => this.advancedBundleConfigurationVisible() === "SqlReplication")
     }
 
-    toggleEncryptionBundle() {
-        this.isEncryptionBundleEnabled.toggle();
+    getAvailableBundles() {
+        //TODO: concat with custom bundles 
+        return this.databaseBundles;
     }
 
-    toggleExpirationBundle() {
-        this.isExpirationBundleEnabled.toggle();
-    }
+    createResource() {
+        const globalValid = this.isValid(this.resourceModel.globalValidationGroup);
+        const advancedValid = this.isValid(this.resourceModel.advancedValidationGroup);
+        const encryptionValid = this.bundlesEnabled.encryption() && this.isValid(this.resourceModel.encryptionValidationGroup);
 
-    toggleQuotasBundle() {
-        this.isQuotasBundleEnabled.toggle();
-    }
+        const allValid = globalValid && advancedValid && encryptionValid;
 
-    toggleReplicationBundle() {
-        this.isReplicationBundleEnabled.toggle();
-    }
-
-    toggleSqlReplicationBundle() {
-        this.isSqlReplicationBundleEnabled.toggle();
-    }
-
-    toggleVersioningBundle() {
-        this.isVersioningBundleEnabled.toggle();
-    }
-
-    togglePeriodicExportBundle() {
-        this.isPeriodicExportBundleEnabled.toggle();
-    }
-
-    toggleScriptedIndexBundle() {
-        this.isScriptedIndexBundleEnabled.toggle();
-    }
-
-    toggleCustomBundle(name: string) {
-        if (this.selectedCustomBundles.contains(name)) {
-            this.selectedCustomBundles.remove(name);
+        if (allValid) {
+            this.createResourceInternal();
         } else {
-            this.selectedCustomBundles.push(name);
+            if (!advancedValid) {
+                if (!this.advancedConfigurationVisible()) {
+                    this.showAdvancedConfiguration();
+                }
+            } else if (!encryptionValid) {
+                if (!this.advancedVisibility.encryption()) {
+                    this.showAdvancedConfigurationFor("Encryption");   
+                }
+            }
+            //TODO: iterate on invalid sections
         }
     }
 
-    isCustomBundleEnabled(name: string) {
-        return this.selectedCustomBundles().contains(name);
+    private createResourceInternal() {
+        const databaseDocument = this.resourceModel.toDto();
+        new createDatabaseCommand(databaseDocument)
+            .execute()
+            .done(() => {
+                ko.postbox.publish(EVENTS.Resource
+                    .Created,
+                    //TODO: it might be temporary event as we use changes api for notifications about newly created resources. 
+                    {
+                        qualifier: database.qualifier,
+                        name: this.resourceModel.name()
+                    } as resourceCreatedEventArgs);
+
+            })
+            .always(() => {
+                dialog.close(this);
+            });
+
+        //TODO: issue requests for additional bundles configuration + show dialog about encryption configuration so user can save this 
     }
 
-    private getActiveBundles(): string[] {
-        var activeBundles: string[] = [];
-        if (this.isCompressionBundleEnabled()) {
-            activeBundles.push("Compression");
-        }
-
-        if (this.isEncryptionBundleEnabled()) {
-            activeBundles.push("Encryption");
-        }
-
-        if (this.isExpirationBundleEnabled()) {
-            activeBundles.push("DocumentExpiration");
-        }
-
-        if (this.isQuotasBundleEnabled()) {
-            activeBundles.push("Quotas");
-        }
-
-        if (this.isReplicationBundleEnabled()) {
-            activeBundles.push("Replication"); // TODO: Replication also needs to store 2 documents containing information about replication. See http://ravendb.net/docs/2.5/server/scaling-out/replication?version=2.5
-        }
-
-        if (this.isSqlReplicationBundleEnabled()) {
-            activeBundles.push("SqlReplication");
-        }
-
-        if (this.isVersioningBundleEnabled()) {
-            activeBundles.push("Versioning");
-        }
-
-        if (this.isPeriodicExportBundleEnabled()) {
-            activeBundles.push("PeriodicExport");
-        }
-
-        if (this.isScriptedIndexBundleEnabled()) {
-            activeBundles.push("ScriptedIndexResults");
-        }
-
-        activeBundles.pushAll(this.selectedCustomBundles());
-
-        return activeBundles;
+    private isBundleActiveComputed(bundleName: string) {
+        return ko.pureComputed(() => this.resourceModel.activeBundles().contains(bundleName));
     }
+
 }
 
 export = createDatabase;

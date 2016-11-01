@@ -62,8 +62,7 @@ namespace Voron.Impl.Compaction
 
         private static void CopyTrees(StorageEnvironment existingEnv, StorageEnvironment compactedEnv, Action<CompactionProgress> progressReport = null)
         {
-            TransactionPersistentContext context = new TransactionPersistentContext(true);
-
+            using (var context = new TransactionPersistentContext(true))
             using (var txr = existingEnv.ReadTransaction(context))
             using (var rootIterator = txr.LowLevelTransaction.RootObjects.Iterate(false))
             {

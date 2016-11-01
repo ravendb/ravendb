@@ -108,7 +108,9 @@ namespace Raven.Server
             {
                 _webHost = new WebHostBuilder()
                     .CaptureStartupErrors(captureStartupErrors: true)
-                    .UseKestrel(options => { })
+                    .UseKestrel(options =>
+                    {
+                    })
                     .UseUrls(Configuration.Core.ServerUrl)
                     .UseStartup<RavenServerStartup>()
                     .ConfigureServices(services =>

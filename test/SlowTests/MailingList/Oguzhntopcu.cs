@@ -186,6 +186,8 @@ namespace SlowTests.MailingList
 
                 PopulateData(store);
 
+                WaitForIndexing(store);
+
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Result, SearchIndex>()

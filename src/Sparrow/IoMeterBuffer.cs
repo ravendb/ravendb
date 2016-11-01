@@ -10,20 +10,20 @@ namespace Sparrow
         public class MeterItem
         {
             public long Size;
-            public long Start;
-            public long End;
+            public DateTime Start;
+            public DateTime End;
             public IoMetrics.MeterType Type;
-            public long Duration => End - Start;
+            public TimeSpan Duration => End - Start;
         }
 
         public class SummerizedItem
         {
             public long TotalSize;
-            public long TotalTime;
-            public long MinTime;
-            public long MaxTime; 
-            public long TotalTimeStart;
-            public long TotalTimeEnd;
+            public TimeSpan TotalTime;
+            public TimeSpan MinTime;
+            public TimeSpan MaxTime; 
+            public DateTime TotalTimeStart;
+            public DateTime TotalTimeEnd;
             public long Count;
             public IoMetrics.MeterType Type;
         }
@@ -36,8 +36,8 @@ namespace Sparrow
 
         private readonly MeterItem[] _buffer;
         private readonly SummerizedItem[] _summerizedBuffer;
-        private int _bufferPos;
-        private int _summerizedPos;
+        private int _bufferPos = -1;
+        private int _summerizedPos = -1;
 
         public IEnumerable<SummerizedItem> GetSummerizedItems()
         {
@@ -66,14 +66,14 @@ namespace Sparrow
             private readonly IoMeterBuffer _parent;
             private readonly IoMetrics.MeterType _type;
             public long Size;
-            private readonly long _start;
+            private readonly DateTime _start;
 
             public DurationMeasurement(IoMeterBuffer parent, IoMetrics.MeterType type, long size)
             {
                 _parent = parent;
                 _type = type;
                 Size = size;
-                _start = Stopwatch.GetTimestamp();
+                _start = DateTime.UtcNow;
             }
 
             public void IncrementSize(long size)
@@ -87,19 +87,19 @@ namespace Sparrow
             }
         }
 
-        private void Mark(long size, long start, IoMetrics.MeterType type)
+        private void Mark(long size, DateTime start, IoMetrics.MeterType type)
         {
             var meterItem = new MeterItem
             {
                 Start = start,
                 Size = size,
                 Type = type,
-                End = Stopwatch.GetTimestamp()
+                End = DateTime.UtcNow
             };
 
             var pos = Interlocked.Increment(ref _bufferPos);
             var adjustedTail = pos%_buffer.Length;
-            
+
             if (Interlocked.CompareExchange(ref _buffer[adjustedTail], meterItem, null) == null)
                 return;
 
@@ -111,19 +111,20 @@ namespace Sparrow
                 MaxTime = meterItem.Duration,
                 MinTime = meterItem.Duration,
                 TotalTime = meterItem.Duration,
-                TotalSize = size,
-                Type = type
+                TotalSize = meterItem.Size,
+                Type = meterItem.Type
             };
+
             for (int i = 0; i < _buffer.Length; i++)
             {
-                var oldVal = Interlocked.Exchange(ref _buffer[adjustedTail], null);
+                var oldVal = Interlocked.Exchange(ref _buffer[(adjustedTail + i) % _buffer.Length], null);
                 if (oldVal != null)
                 {
-                    newSummary.TotalTimeStart = Math.Min(newSummary.TotalTimeStart, oldVal.Start);
-                    newSummary.TotalTimeEnd = Math.Max(newSummary.TotalTimeEnd, oldVal.End);
+                    newSummary.TotalTimeStart = newSummary.TotalTimeStart > oldVal.Start ? oldVal.Start : newSummary.TotalTimeStart;
+                    newSummary.TotalTimeEnd = newSummary.TotalTimeEnd > oldVal.End ? newSummary.TotalTimeEnd : oldVal.End;
                     newSummary.Count++;
-                    newSummary.MaxTime = Math.Max(newSummary.MaxTime, oldVal.Duration);
-                    newSummary.MinTime = Math.Min(newSummary.MinTime, oldVal.Duration);
+                    newSummary.MaxTime = newSummary.MaxTime > oldVal.Duration ? newSummary.MaxTime : oldVal.Duration;
+                    newSummary.MinTime = newSummary.MinTime > oldVal.Duration ? oldVal.Duration : newSummary.MinTime;
                     newSummary.TotalSize += oldVal.Size;
                     newSummary.TotalTime += oldVal.Duration;
                 }

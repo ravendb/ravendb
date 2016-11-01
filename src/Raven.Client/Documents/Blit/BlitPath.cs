@@ -197,7 +197,11 @@ namespace Raven.Client.Documents.Blit
                             return null;
                         }
                         var trueIndex = b.GetPropertiesByInsertionOrder()[index];
-                        current = b.GetPropertyByIndex(trueIndex).Item2;
+                        var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+                        b.GetPropertyByIndex(trueIndex, ref prop);
+
+                        current = prop.Value;
                     }
                 }
             }

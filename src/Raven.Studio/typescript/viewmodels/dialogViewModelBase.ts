@@ -1,5 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
+import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
+
 type dialogViewModelBaseOptions = {
     elementToFocusOnDismissal?: string;
     dialogSelectorName?: string;
@@ -11,6 +13,8 @@ abstract class dialogViewModelBase {
     private onEnterBinding: JwertySubscription;
     private readonly elementToFocusOnDismissal: string;
     private readonly dialogSelector: string;
+
+    pluralize = pluralizeHelpers.pluralize;
 
     constructor(options?: dialogViewModelBaseOptions) {
         if (options) {
@@ -60,6 +64,17 @@ abstract class dialogViewModelBase {
 
     protected getCofirmButton(): HTMLElement {
         return $(".modal-footer:visible .btn-primary")[0] as HTMLElement;
+    }
+
+    protected isValid(context: KnockoutValidationGroup, showErrors = true): boolean {
+        if (context.isValid()) {
+            return true;
+        } else {
+            if (showErrors) {
+                context.errors.showAllMessages();
+            }
+            return false;
+        }
     }
 
 }

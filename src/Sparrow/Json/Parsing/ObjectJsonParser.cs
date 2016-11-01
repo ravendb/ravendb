@@ -225,6 +225,7 @@ namespace Sparrow.Json.Parsing
 
                     var modifications = bjro.Modifications;
                     modifications.SourceIndex++;
+                    var propDetails = new BlittableJsonReaderObject.PropertyDetails();
                     if (modifications.SourceIndex < modifications.SourceProperties.Length)
                     {
                         var propIndex = modifications.SourceProperties[modifications.SourceIndex];
@@ -232,10 +233,10 @@ namespace Sparrow.Json.Parsing
                         {
                             continue;
                         }
-                        var property = bjro.GetPropertyByIndex(propIndex);
+                        bjro.GetPropertyByIndex(propIndex, ref propDetails);
                         _elements.Push(bjro);
-                        _elements.Push(property.Item2);
-                        current = property.Item1;
+                        _elements.Push(propDetails.Value);
+                        current = propDetails.Name;
                         continue;
                     }
                     current = modifications;

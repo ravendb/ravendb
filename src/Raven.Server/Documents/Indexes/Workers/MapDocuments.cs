@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         break;
                                     }
 
-                                    if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
+                                    if (MaybeRenewTransaction(databaseContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
                                         break;
                                 }
                             }
@@ -164,6 +164,26 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
 
             return moreWorkFound;
+        }
+
+        public static bool MaybeRenewTransaction(
+            DocumentsOperationContext databaseContext, Stopwatch sw,
+            IndexingConfiguration configuration,
+            ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
+        {
+            if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
+            {
+                if (databaseContext.ShouldRenewTransactionsToAllowFlushing())
+                    return true;
+
+                // if we haven't had writes in the meantime, there is no point
+                // in replacing the database transaction, and it will probably cost more
+                // let us check again later to see if we need to
+                maxTimeForDocumentTransactionToRemainOpen =
+                    maxTimeForDocumentTransactionToRemainOpen.Add(
+                        configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan);
+            }
+            return false;
         }
 
         public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)

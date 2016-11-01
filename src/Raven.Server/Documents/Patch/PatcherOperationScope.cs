@@ -77,13 +77,15 @@ namespace Raven.Server.Documents.Patch
         public ObjectInstance ToJsObject(Engine engine, BlittableJsonReaderObject json, string propertyName = null)
         {
             var jsObject = engine.Object.Construct(Arguments.Empty);
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+
             for (int i = 0; i < json.Count; i++)
             {
-                var property = json.GetPropertyByIndex(i);
-                var name = property.Item1.ToString();
+                json.GetPropertyByIndex(i, ref prop);
+                var name = prop.Name.ToString();
                 var propertyKey = CreatePropertyKey(name, propertyName);
-                var value = property.Item2;
-                JsValue jsValue = ToJsValue(engine, value, property.Item3, propertyKey);
+                var value = prop.Value;
+                JsValue jsValue = ToJsValue(engine, value, prop.Token, propertyKey);
                 _propertiesByValue[propertyKey] = new KeyValuePair<object, JsValue>(value, jsValue);
                 jsObject.FastAddProperty(name, jsValue, true, true, true);
             }

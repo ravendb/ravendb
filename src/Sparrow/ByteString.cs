@@ -487,6 +487,7 @@ namespace Sparrow
 
         public ByteStringContext(int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base (allocationBlockSize)
         { }
+
     }
 
     public unsafe class ByteStringContext<TAllocator> : IDisposable where TAllocator : struct, IByteStringAllocator
@@ -523,6 +524,8 @@ namespace Sparrow
         /// </summary>
         private readonly List<SegmentInformation> _wholeSegments;
         private int _allocationBlockSize;
+
+        private long _totalAllocated, _currentlyAllocated;
 
         /// <summary>
         /// This list keeps the hot segments released for use. It is important to note that we will never put into this list
@@ -563,6 +566,38 @@ namespace Sparrow
             PrepareForValidation();
         }
 
+        public void Reset()
+        {
+            if (_wholeSegments.Count == 2)
+                return; // nothing to do
+
+            Array.Clear(_internalReusableStringPoolCount, 0, _internalReusableStringPoolCount.Length);
+            foreach (var stack in _internalReusableStringPool)
+            {
+                stack?.Clear();
+            }
+            _internalReadyToUseMemorySegments.Clear();// memory here will be released from _wholeSegments
+
+            _externalStringPool.Clear();
+            _externalFastPoolCount = 0;
+            _externalCurrentLeft = (int)(_externalCurrent.End - _externalCurrent.Start) / _externalAlignedSize;
+
+            _currentlyAllocated = 0;
+
+            for (int i = 0; i < _wholeSegments.Count; i++)
+            {
+                if (_wholeSegments[i] == _internalCurrent || _wholeSegments[i] == _externalCurrent)
+                    continue;
+
+                ReleaseSegment(_wholeSegments[i]);
+                _wholeSegments.RemoveAt(i);
+                i--;
+            }
+            _internalCurrent.Current = _internalCurrent.Start;
+            _externalCurrent.Current = _externalCurrent.Start;
+
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ByteString Allocate(int length)
         {
@@ -581,9 +616,16 @@ namespace Sparrow
             return Bits.MostSignificantBit(size) - 1; // x^0 = 1 therefore we start counting at 1 instead.
         }
 
+        public override string ToString()
+        {
+            return $"Allocated {Sizes.Humane(_currentlyAllocated)} / {Sizes.Humane(_totalAllocated)}";
+        }
+
         private ByteString AllocateExternal(byte* valuePtr, int size, ByteStringType type)
         {
             Debug.Assert((type & ByteStringType.External) != 0, "This allocation routine is only for use with external storage byte strings.");
+
+            _currentlyAllocated += _externalAlignedSize;
 
             ByteStringStorage* storagePtr;
             if (_externalFastPoolCount > 0)
@@ -623,6 +665,8 @@ namespace Sparrow
             type &= ~ByteStringType.External; // We are allocating internal, so we will force it (even if we are checking for it in debug).
 
             int allocationSize = length + sizeof(ByteStringStorage);
+
+            _currentlyAllocated += allocationSize;
 
             // This is even bigger than the configured allocation block size. There is no reason why we shouldn't
             // allocate it directly. When released (if released) this will be reused as a segment, ensuring that the context
@@ -718,8 +762,7 @@ namespace Sparrow
             }
         }
 
-        [ThreadStatic]
-        private static char[] _toLowerTempBuffer;
+        [ThreadStatic] public static char[] ToLowerTempBuffer;
 
         /// <summary>
         /// Mutate the string to lower case
@@ -733,16 +776,16 @@ namespace Sparrow
                 throw new InvalidOperationException("Cannot mutate an immutable ByteString");
 
             var charCount = Encoding.UTF8.GetCharCount(str._pointer->Ptr, str.Length);
-            if (_toLowerTempBuffer == null || _toLowerTempBuffer.Length < charCount)
+            if (ToLowerTempBuffer == null || ToLowerTempBuffer.Length < charCount)
             {
-                _toLowerTempBuffer = new char[Bits.NextPowerOf2(charCount)];
+                ToLowerTempBuffer = new char[Bits.NextPowerOf2(charCount)];
             }
-            fixed (char* pChars = _toLowerTempBuffer)
+            fixed (char* pChars = ToLowerTempBuffer)
             {
-                charCount = Encoding.UTF8.GetChars(str._pointer->Ptr, str.Length, pChars, _toLowerTempBuffer.Length);
+                charCount = Encoding.UTF8.GetChars(str._pointer->Ptr, str.Length, pChars, ToLowerTempBuffer.Length);
                 for (int i = 0; i < charCount; i++)
                 {
-                    _toLowerTempBuffer[i] = char.ToLowerInvariant(_toLowerTempBuffer[i]);
+                    ToLowerTempBuffer[i] = char.ToLowerInvariant(ToLowerTempBuffer[i]);
                 }
                 var byteCount = Encoding.UTF8.GetByteCount(pChars, charCount);
                 if (// we can't mutate external memory!
@@ -785,17 +828,6 @@ namespace Sparrow
             return byteString;
         }
 
-        /// <summary>
-        /// This method is intended to be used to release read-only properties in disposing patterns implementations.
-        /// WARNING: Other uses are discouraged because the resulting ByteString will be a dangling pointer that will fail
-        /// when compiled in VALIDATE mode and have an undefined behavior on normal mode of operation. 
-        /// </summary>
-        /// <param name="value"></param>
-        public void ReleaseReadonly(ByteString value)
-        {
-            Release(ref value);
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ReleaseExternal(ref ByteString value)
         {
@@ -803,10 +835,12 @@ namespace Sparrow
             if (value._pointer == null)
                 return;
 
+            _currentlyAllocated -= _externalAlignedSize;
+
             Debug.Assert(value.IsExternal, "Cannot release as external an internal pointer.");
 
-			value._pointer->Flags = ByteStringType.Disposed;
-			
+            value._pointer->Flags = ByteStringType.Disposed;
+            
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
 
@@ -842,6 +876,8 @@ namespace Sparrow
                 return;
             Debug.Assert(value._pointer->Flags != ByteStringType.Disposed, "Double free");
             Debug.Assert(!value.IsExternal, "Cannot release as internal an external pointer.");
+
+            _currentlyAllocated -= value._pointer->Size;
 
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
@@ -888,6 +924,8 @@ namespace Sparrow
         {
             var memorySegment = Allocator.Allocate(size);
 
+            _totalAllocated += memorySegment.Size;
+
             byte* start = memorySegment.Segment;
             byte* end = start + memorySegment.Size;
 
@@ -901,6 +939,8 @@ namespace Sparrow
         private void AllocateExternalSegment(int size)
         {
             var memorySegment = Allocator.Allocate(size);
+
+            _totalAllocated += memorySegment.Size;
 
             byte* start = memorySegment.Segment;
             byte* end = start + memorySegment.Size;
@@ -1278,12 +1318,6 @@ namespace Sparrow
 
 #endif
 
-        public bool ShouldDisposeOnReset => 
-            // if we have more than internal/external segments, that meant that we grew
-            // so we are better releasing the memory back at the context end and recovering 
-            // anew with memory that wouldn't be fragmented
-            _wholeSegments.Count > 2;
-
         private bool _disposed; 
 
         ~ByteStringContext()
@@ -1311,22 +1345,29 @@ namespace Sparrow
 
             foreach (var segment in _wholeSegments)
             {
-                if (segment.CanDispose)
-                {
-                    // Check if we can release this memory segment back to the pool.
-                    if (segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes)
-                    {
-                        segment.Memory.Dispose();
-                    }
-                    else
-                    {
-                        Allocator.Free(segment.Memory);
-                    }
-                }
+                ReleaseSegment(segment);
             }
 
             _wholeSegments.Clear();
             _internalReadyToUseMemorySegments.Clear();
+        }
+
+        private void ReleaseSegment(SegmentInformation segment)
+        {
+            if (!segment.CanDispose)
+                return;
+
+            _totalAllocated -= segment.Size;
+
+            // Check if we can release this memory segment back to the pool.
+            if (segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes)
+            {
+                segment.Memory.Dispose();
+            }
+            else
+            {
+                Allocator.Free(segment.Memory);
+            }
         }
     }
 

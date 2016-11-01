@@ -148,8 +148,9 @@ namespace Voron.Platform.Win32
 
                 var exception = new Win32Exception(lastError);
 
-                if (lastError == (int) Win32NativeFileErrors.ERROR_NOT_READY || lastError == (int) Win32NativeFileErrors.ERROR_FILE_NOT_FOUND)
-                    throw new VoronUnrecoverableErrorException("Could not set the file size because it is inaccessible", exception);
+                if (lastError == (int) Win32NativeFileErrors.ERROR_NOT_READY || 
+                    lastError == (int) Win32NativeFileErrors.ERROR_FILE_NOT_FOUND)
+                    throw new IOException("Could not set the file size because it is inaccessible", exception);
 
                 throw exception;
             }

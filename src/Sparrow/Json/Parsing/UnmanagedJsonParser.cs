@@ -22,7 +22,7 @@ namespace Sparrow.Json.Parsing
         private int _line = 1;
         private int _charPos = 1;
 
-        private byte[] _inputBuffer;
+        private byte* _inputBuffer;
         private int _prevEscapePosition;
         private byte _currentQuote;
 
@@ -34,7 +34,6 @@ namespace Sparrow.Json.Parsing
         private bool _isDouble;
         private bool _isExponent;
         private bool _escapeMode;
-        private int _initialPos;
         private bool _maybeBeforePreamble = true;
 
         public UnmanagedJsonParser(JsonOperationContext ctx, JsonParserState state, string debugTag)
@@ -45,12 +44,21 @@ namespace Sparrow.Json.Parsing
             _stringBuffer = ctx.GetStream();
         }
 
-        public void SetBuffer(byte[] inputBuffer, int size)
+        public void SetBuffer(JsonOperationContext.ManagedPinnedBuffer inputBuffer, int size)
         {
+            SetBuffer(inputBuffer.Pointer, size);
+        }
+
+        public void SetBuffer(JsonOperationContext.ManagedPinnedBuffer inputBuffer, int offset, int size)
+        {
+            SetBuffer(inputBuffer.Pointer + offset, size);
+        }
+        public void SetBuffer(byte* inputBuffer, int size)
+        {
+            //TODO: Change this to use a pointer, to avoid the bounds checks
             _inputBuffer = inputBuffer;
             _bufSize = size;
             _pos = 0;
-            _initialPos = 0;
         }
 
         public int BufferSize
@@ -65,13 +73,6 @@ namespace Sparrow.Json.Parsing
             get { return _pos; }
         }
 
-        public void SetBuffer(ArraySegment<byte> segment)
-        {
-            _inputBuffer = segment.Array;
-            _bufSize = segment.Count;
-            _initialPos = segment.Offset;
-            _pos = segment.Offset;
-        }
 
         public void NewDocument()
         {
@@ -92,7 +93,7 @@ namespace Sparrow.Json.Parsing
             _state.Continuation = JsonParserTokenContinuation.None;
             if (_maybeBeforePreamble)
             {
-                if (_pos >= _initialPos + _bufSize)
+                if (_pos >= _bufSize)
                 {
                     return false;
                 }
@@ -117,7 +118,7 @@ namespace Sparrow.Json.Parsing
 
             while (true)
             {
-                if (_pos >= _initialPos + _bufSize)
+                if (_pos >=  _bufSize)
                     return false;
 
                 var b = _inputBuffer[_pos++];
@@ -125,7 +126,7 @@ namespace Sparrow.Json.Parsing
                 switch (b)
                 {
                     case (byte)'\r':
-                        if (_pos >= _initialPos + _bufSize)
+                        if (_pos >=  _bufSize)
                             return false;
                         if (_inputBuffer[_pos] == (byte)'\n')
                             continue;
@@ -362,7 +363,7 @@ namespace Sparrow.Json.Parsing
         {
             while (true)
             {
-                if (_pos >= _initialPos + _bufSize)
+                if (_pos >= _bufSize)
                     return false;
                 _charPos++;
                 var b = _inputBuffer[_pos++];
@@ -437,7 +438,7 @@ namespace Sparrow.Json.Parsing
         {
             for (int i = _expectedTokenBufferPosition; i < _expectedTokenBuffer.Length; i++)
             {
-                if (_pos >= _initialPos + _bufSize)
+                if (_pos >= _bufSize)
                     return false;
                 if (_inputBuffer[_pos++] != _expectedTokenBuffer[i])
                     throw CreateException("Invalid token found, expected: " + _expectedTokenString);
@@ -449,96 +450,93 @@ namespace Sparrow.Json.Parsing
 
         private bool ParseString()
         {
-            fixed (byte* inputBufferPtr = _inputBuffer)
+            while (true)
             {
-                while (true)
+                _currentStrStart = _pos;
+                while (_pos < _bufSize)
                 {
-                    _currentStrStart = _pos;
-                    while (_pos < _initialPos + _bufSize)
+                    var b = _inputBuffer[_pos++];
+                    _charPos++;
+                    if (_escapeMode == false)
                     {
-                        var b = inputBufferPtr[_pos++];
-                        _charPos++;
-                        if (_escapeMode == false)
+                        if (b == _currentQuote)
                         {
-                            if (b == _currentQuote)
-                            {
-                                _stringBuffer.Write(inputBufferPtr + _currentStrStart, _pos - _currentStrStart - 1
-                                    /*don't include the last quote*/);
-                                return true;
-                            }
-                            if (b == (byte)'\\')
-                            {
-                                _escapeMode = true;
-                                _stringBuffer.Write(inputBufferPtr + _currentStrStart, _pos - _currentStrStart - 1
-                                    /*don't include the escape */);
-                                _currentStrStart = _pos;
-                            }
+                            _stringBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart - 1
+                                /*don't include the last quote*/);
+                            return true;
                         }
-                        else
+                        if (b == (byte) '\\')
                         {
-                            _currentStrStart++;
-                            _escapeMode = false;
-                            _charPos++;
-                            if (b != (byte)'u' && b != (byte)'/')
-                            {
-                                _state.EscapePositions.Add(_stringBuffer.SizeInBytes - _prevEscapePosition);
-                                _prevEscapePosition = _stringBuffer.SizeInBytes + 1;
-                            }
-
-                            switch (b)
-                            {
-                                case (byte)'r':
-                                    _stringBuffer.WriteByte((byte)'\r');
-                                    break;
-                                case (byte)'n':
-                                    _stringBuffer.WriteByte((byte)'\n');
-                                    break;
-                                case (byte)'b':
-                                    _stringBuffer.WriteByte((byte)'\b');
-                                    break;
-                                case (byte)'f':
-                                    _stringBuffer.WriteByte((byte)'\f');
-                                    break;
-                                case (byte)'t':
-                                    _stringBuffer.WriteByte((byte)'\t');
-                                    break;
-                                case (byte)'"':
-                                case (byte)'\\':
-                                case (byte)'/':
-                                    _stringBuffer.WriteByte(b);
-                                    break;
-                                case (byte)'\r':// line continuation, skip
-                                                // flush the buffer, but skip the \,\r chars
-                                    if (_pos >= _initialPos + _bufSize)
-                                        return false;
-
-                                    _line++;
-                                    _charPos = 1;
-                                    if (_pos >= _initialPos + _bufSize)
-                                        return false;
-
-                                    if (inputBufferPtr[_pos] == (byte)'\n')
-                                        _pos++; // consume the \,\r,\n
-                                    break;
-                                case (byte)'\n':
-                                    _line++;
-                                    _charPos = 1;
-                                    break;// line continuation, skip
-                                case (byte)'u':// unicode value
-                                    if (ParseUnicodeValue() == false)
-                                        return false;
-
-                                    break;
-                                default:
-                                    throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
-                            }
+                            _escapeMode = true;
+                            _stringBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart - 1
+                                /*don't include the escape */);
+                            _currentStrStart = _pos;
                         }
                     }
-                    // copy the buffer to the native code, then refill
-                    _stringBuffer.Write(inputBufferPtr + _currentStrStart, _pos - _currentStrStart);
-                    if (_pos >= _initialPos + _bufSize)
-                        return false;
+                    else
+                    {
+                        _currentStrStart++;
+                        _escapeMode = false;
+                        _charPos++;
+                        if (b != (byte) 'u' && b != (byte) '/')
+                        {
+                            _state.EscapePositions.Add(_stringBuffer.SizeInBytes - _prevEscapePosition);
+                            _prevEscapePosition = _stringBuffer.SizeInBytes + 1;
+                        }
+
+                        switch (b)
+                        {
+                            case (byte) 'r':
+                                _stringBuffer.WriteByte((byte) '\r');
+                                break;
+                            case (byte) 'n':
+                                _stringBuffer.WriteByte((byte) '\n');
+                                break;
+                            case (byte) 'b':
+                                _stringBuffer.WriteByte((byte) '\b');
+                                break;
+                            case (byte) 'f':
+                                _stringBuffer.WriteByte((byte) '\f');
+                                break;
+                            case (byte) 't':
+                                _stringBuffer.WriteByte((byte) '\t');
+                                break;
+                            case (byte) '"':
+                            case (byte) '\\':
+                            case (byte) '/':
+                                _stringBuffer.WriteByte(b);
+                                break;
+                            case (byte) '\r': // line continuation, skip
+                                // flush the buffer, but skip the \,\r chars
+                                if (_pos >= _bufSize)
+                                    return false;
+
+                                _line++;
+                                _charPos = 1;
+                                if (_pos >= _bufSize)
+                                    return false;
+
+                                if (_inputBuffer[_pos] == (byte) '\n')
+                                    _pos++; // consume the \,\r,\n
+                                break;
+                            case (byte) '\n':
+                                _line++;
+                                _charPos = 1;
+                                break; // line continuation, skip
+                            case (byte) 'u': // unicode value
+                                if (ParseUnicodeValue() == false)
+                                    return false;
+
+                                break;
+                            default:
+                                throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
+                        }
+                    }
                 }
+                // copy the buffer to the native code, then refill
+                _stringBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart);
+                if (_pos >= _bufSize)
+                    return false;
             }
         }
 
@@ -549,7 +547,7 @@ namespace Sparrow.Json.Parsing
             int val = 0;
             for (int i = 0; i < 4; i++)
             {
-                if (_pos >= _initialPos + _bufSize)
+                if (_pos >= _bufSize)
                     return false;
 
                 b = _inputBuffer[_pos++];
@@ -630,8 +628,8 @@ namespace Sparrow.Json.Parsing
         protected InvalidDataException CreateException(string message, Exception inner = null)
         {
             var start = Math.Max(0, _pos - 25);
-            var count = Math.Min(_pos, _bufSize) - start;  
-            var s = Encoding.UTF8.GetString(_inputBuffer, start, count);
+            var count = Math.Min(BufferOffset, _bufSize) - start;  
+            var s = Encoding.UTF8.GetString(_inputBuffer + start, count);
             return new InvalidDataException(message + " at (" + _line + "," + _charPos + ") around: " + s, inner);
         }
 
@@ -642,10 +640,21 @@ namespace Sparrow.Json.Parsing
 
         public int ReadBuffer(byte[] buffer, int offset, int count)
         {
-            var toRead = Math.Min(_bufSize - _pos, count);
-            Buffer.BlockCopy(_inputBuffer, _pos, buffer, offset, toRead);
+            if(offset+count > buffer.Length)
+                ThrowInvalidBufferSizeAndOffset(buffer, offset, count);
+            var toRead = Math.Min(_bufSize - BufferOffset, count);
+            fixed (byte* pBuffer = buffer)
+            {
+                Memory.Copy(pBuffer + offset, _inputBuffer + _pos, toRead);
+            }
             _pos += toRead;
             return toRead;
+        }
+
+        private static void ThrowInvalidBufferSizeAndOffset(byte[] buffer, int offset, int count)
+        {
+            throw new ArgumentOutOfRangeException(
+                $"Buffer is size {buffer.Length} but was asked to read offset: {offset}, count: {count}");
         }
 
         public byte ReadByte()

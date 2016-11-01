@@ -25,7 +25,6 @@ namespace Voron
         }
 
         private readonly Stack<PageLocator> _pageLocators = new Stack<PageLocator>();
-        private readonly ByteStringContext _allocator = new ByteStringContext();
 
         public TransactionPersistentContext(bool longLivedTransactions = false)
         {
@@ -35,7 +34,7 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PageLocator AllocatePageLocator(LowLevelTransaction tx)
         {
-            PageLocator locator = null;
+            PageLocator locator;
             if (_pageLocators.Count != 0)
             {
                 locator = _pageLocators.Pop();
@@ -43,9 +42,8 @@ namespace Voron
             }
             else
             {
-                locator = new PageLocator(_allocator, tx, _cacheSize);
+                locator = new PageLocator(tx, _cacheSize);
             }
-
             return locator;
 
         }
@@ -53,12 +51,20 @@ namespace Voron
         public void FreePageLocator(PageLocator locator)
         {
             Debug.Assert(locator != null);
+            if (_pageLocators.Count > 128)
+            {
+                locator.Dispose();
+                return;
+            }
             _pageLocators.Push(locator);
         }
 
         public void Dispose()
         {
-            _allocator?.Dispose();
+            foreach (var pageLocator in _pageLocators)
+            {
+                pageLocator.Dispose();
+            }
         }
     }
 }
