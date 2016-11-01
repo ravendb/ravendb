@@ -12,10 +12,8 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                var x = new IoMetric();
-                {
-                    x.CanProperlyReportIoMetrics();
-                }
+                var x = new SlowTests.Voron.MultiAdds();
+                x.MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail(500);
                 Console.WriteLine(sp.Elapsed);
             }
         }

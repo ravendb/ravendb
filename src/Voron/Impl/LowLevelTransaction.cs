@@ -484,11 +484,12 @@ namespace Voron.Impl
                 pagerState.Release();
             }
 
+            _root?.Dispose();
+            _freeSpaceTree?.Dispose();
+
             if (_disposeAllocator)
                 _allocator.Dispose();
 
-            _root?.Dispose();
-            _freeSpaceTree?.Dispose();
 
             if (AlsoDispose != null)
             {
