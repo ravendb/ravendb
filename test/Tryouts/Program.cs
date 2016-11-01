@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using FastTests.Sparrow;
 
 namespace Tryouts
 {
@@ -11,9 +12,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                var x = new FastTests.Voron.Trees.CanDefrag();
+                var x = new IoMetric();
                 {
-                    x.CanDeleteAtRoot();
+                    x.CanProperlyReportIoMetrics();
                 }
                 Console.WriteLine(sp.Elapsed);
             }
