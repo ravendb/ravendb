@@ -1297,5 +1297,45 @@ namespace Raven.Tests.Subscriptions
                 Assert.Equal(subscriptionStatus.AckEtag, lastDoc.Etag);
             }
         }
+
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void ShouldFireAcknowledgementTimeoutEvent(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage))
+            {
+                var id = store.Subscriptions.Create(new SubscriptionCriteria());
+                var subscriptionZeroTimeout = store.Subscriptions.Open(id, new SubscriptionConnectionOptions
+                {
+                    BatchOptions = new SubscriptionBatchOptions()
+                    {
+                        AcknowledgmentTimeout = TimeSpan.FromMilliseconds(-10) // the client won't be able to acknowledge in negative time
+                    }
+                });
+                store.Changes().WaitForAllPendingSubscriptions();
+                var mre = new ManualResetEvent(false);
+                var docs = new BlockingCollection<RavenJObject>();
+                subscriptionZeroTimeout.AckTimedOut += () =>
+                {
+                    mre.Set();
+                };
+                subscriptionZeroTimeout.Subscribe(docs.Add);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Raven" });
+                    session.SaveChanges();
+                }
+
+                RavenJObject document;
+
+                Assert.True(docs.TryTake(out document, waitForDocTimeout));
+                Assert.Equal("Raven", document.Value<string>("Name"));
+                Assert.True(mre.WaitOne(waitForDocTimeout));
+
+                subscriptionZeroTimeout.Dispose();
+            }
+        }
     }
 }
