@@ -82,7 +82,7 @@ namespace FastTests.NewClient.ResultsTransformer
         }
 
         [Fact]
-        public void CanUseResultsTransformerOnLoadWithRemoteDatabase()
+        public void CanUseResultsTransformerOnLoad()
         {
             using (var store = GetDocumentStore())
             {
@@ -91,16 +91,7 @@ namespace FastTests.NewClient.ResultsTransformer
         }
 
         [Fact]
-        public void CanUseResultsTransformerOnLoadWithLocalDatabase()
-        {
-            using (var store = GetDocumentStore())
-            {
-                PerformLoadingTest(store);
-            }
-        }
-
-        [Fact]
-        public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithRemoteDatabase()
+        public void CanUseResultsTransformerOnLoadWithMultipleReturns()
         {
             using (var store = GetDocumentStore())
             {
@@ -109,50 +100,19 @@ namespace FastTests.NewClient.ResultsTransformer
         }
 
         [Fact]
-        public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithLocalDatabase()
-        {
-            using (var store = GetDocumentStore())
-            {
-                PerformLoadingTestArray(store);
-            }
-        }
-
-        [Fact]
-        public void CannotUseResultsTransformerOnLoadWithMultipleReturnsWithRemoteDatabaseWithSingleExpectation()
+        public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithSingleException()
         {
             using (var store = GetDocumentStore())
             {
                 Assert.Throws<InvalidOperationException>(() =>
                 {
-                    PerformLoadingTestArrayWithSingleExpectation(store);
+                    PerformLoadingTestArrayWithSingleException(store);
                 });
             }
         }
 
         [Fact]
-        public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithLocalDatabaseWithSingleExpectation()
-        {
-            using (var store = GetDocumentStore())
-            {
-                Assert.Throws<InvalidOperationException>(() =>
-                {
-                    PerformLoadingTestArrayWithSingleExpectation(store);
-                });
-            }
-        }
-
-
-        [Fact]
-        public void CanUseResultsTransformerOnDynamicQueryWithRemoteDatabase()
-        {
-            using (var store = GetDocumentStore())
-            {
-                PerformBasicTestWithDynamicQuery(store);
-            }
-        }
-
-        [Fact]
-        public void CanUseResultsTransformerOnDynamicQueryWithInMemoryDatabase()
+        public void CanUseResultsTransformerOnDynamicQuery()
         {
             using (var store = GetDocumentStore())
             {
@@ -161,7 +121,7 @@ namespace FastTests.NewClient.ResultsTransformer
         }
 
         // TODO, iftah change DocumentStore to IDocumentStore once IDocumentStore implements the new session
-        private void PerformLoadingTestArrayWithSingleExpectation(DocumentStore store)
+        private void PerformLoadingTestArrayWithSingleException(DocumentStore store)
         {
             new OrderWithProductInformationMultipleReturns().Execute(store);
 
