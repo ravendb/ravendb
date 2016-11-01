@@ -95,6 +95,25 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
+        public void StoreWithSpacesInDocumentId()
+        {
+            using (var store = NewRemoteDocumentStore(fiddler: true))
+            {
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    bulkInsert.Store(new UserNoId { Name = "Idan" }, "users/12     ");
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<UserNoId>("users/12     ");
+                    Assert.NotNull(user);
+                    Assert.Equal("Idan", user.Name);
+                }
+            }
+        }
+
+        [Fact]
         public void CanInsertSeveralDocuments()
         {
             using (var store = NewRemoteDocumentStore())
