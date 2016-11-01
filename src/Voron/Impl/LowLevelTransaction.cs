@@ -300,12 +300,22 @@ namespace Voron.Impl
                 }
 
                 p = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state);
-                Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
+                Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from scratch", pageNumber, p?.PageNumber));
             }
             else
             {
-                p = _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? DataPager.ReadPage(this, pageNumber);
-                Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
+                if (_journal.ReadPage(this, pageNumber, _scratchPagerStates) != null)
+                {
+                    p = _journal.ReadPage(this, pageNumber, _scratchPagerStates);
+                    Debug.Assert(p != null && p.PageNumber == pageNumber,
+                        string.Format("Requested ReadOnly page #{0}. Got #{1} from journal", pageNumber, p?.PageNumber));
+                }
+                else
+                {
+                    p = DataPager.ReadPage(this, pageNumber);
+                    Debug.Assert(p != null && p.PageNumber == pageNumber,
+                        string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p?.PageNumber));
+                }
             }
 
             TrackReadOnlyPage(p);

@@ -300,7 +300,10 @@ namespace Voron.Data.Fixed
 
         internal FixedSizeTreePage GetReadOnlyPage(long pageNumber)
         {
-            return _pageLocator.GetReadOnlyPage(pageNumber).ToFixedSizeTreePage();
+            var readOnlyPage = _pageLocator.GetReadOnlyPage(pageNumber);
+            if (readOnlyPage == null)
+                return null;
+            return new FixedSizeTreePage(readOnlyPage.Pointer, _tx.PageSize);
         }
 
         private FixedSizeTreePage FindPageFor(long key)
@@ -335,7 +338,8 @@ namespace Voron.Data.Fixed
                 // we cannot recursively call free space handling to ensure that we won't modify a section
                 // relevant for a page which is currently being changed allocated
 
-                allocatePage = _tx.AllocatePage(1).ToFixedSizeTreePage();
+                var page = _tx.AllocatePage(1);
+                allocatePage = new FixedSizeTreePage(page.Pointer, _tx.PageSize);
             }
 
             allocatePage.Dirty = true;
@@ -366,9 +370,12 @@ namespace Voron.Data.Fixed
             if (page.Dirty)
                 return page;
 
-            var newPage = _pageLocator.GetWritablePage(page.PageNumber).ToFixedSizeTreePage();
-            newPage.LastSearchPosition = page.LastSearchPosition;
-            newPage.LastMatch = page.LastMatch;
+            var writablePage = _pageLocator.GetWritablePage(page.PageNumber);
+            var newPage = new FixedSizeTreePage(writablePage.Pointer, _tx.PageSize)
+            {
+                LastSearchPosition = page.LastSearchPosition,
+                LastMatch = page.LastMatch
+            };
 
             return newPage;
         }

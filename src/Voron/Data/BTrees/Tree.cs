@@ -411,7 +411,10 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal TreePage GetReadOnlyTreePage(long pageNumber)
         {
-            return _pageLocator.GetReadOnlyPage(pageNumber).ToTreePage();
+            var page = _pageLocator.GetReadOnlyPage(pageNumber);
+            if (page == null)
+                return null;
+            return new TreePage(page.Pointer, _pageLocator.PageSize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -423,7 +426,8 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal TreePage GetWriteableTreePage(long pageNumber)
         {
-            return _pageLocator.GetWritablePage(pageNumber).ToTreePage();
+            var page = _pageLocator.GetWritablePage(pageNumber);
+            return new TreePage(page.Pointer, _pageLocator.PageSize);
         }
 
         internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node)
@@ -674,7 +678,7 @@ namespace Voron.Data.BTrees
             {
                 // we can't share the same instance, Page instance may be modified by
                 // concurrently run iterators
-                page = new TreePage(foundPage.Page.Base, foundPage.Page.Source, foundPage.Page.PageSize);
+                page = new TreePage(foundPage.Page.Base, foundPage.Page.PageSize);
             }
             else
             {
@@ -707,7 +711,7 @@ namespace Voron.Data.BTrees
             {
                 // we can't share the same instance, Page instance may be modified by
                 // concurrently run iterators
-                page = new TreePage(foundPage.Page.Base, foundPage.Page.Source, foundPage.Page.PageSize);
+                page = new TreePage(foundPage.Page.Base, foundPage.Page.PageSize);
             }
             else
             {
@@ -772,13 +776,15 @@ namespace Voron.Data.BTrees
 
         private static TreePage AllocateNewPage(LowLevelTransaction tx, TreePageFlags flags, int num, long? pageNumber = null)
         {
-            var page = tx.AllocatePage(num, pageNumber).ToTreePage();
-            page.Flags = PageFlags.VariableSizeTreePage | (num == 1 ? PageFlags.Single : PageFlags.Overflow);
-            page.Lower = (ushort)Constants.TreePageHeaderSize;
-            page.TreeFlags = flags;
-            page.Upper = (ushort)page.PageSize;
-            page.Dirty = true;
-
+            var newPage = tx.AllocatePage(num, pageNumber);
+            var page = new TreePage(newPage.Pointer, tx.PageSize)
+            {
+                Flags = PageFlags.VariableSizeTreePage | (num == 1 ? PageFlags.Single : PageFlags.Overflow),
+                Lower = (ushort) Constants.TreePageHeaderSize,
+                TreeFlags = flags,
+                Upper = (ushort)tx.PageSize,
+                Dirty = true
+            };
             return page;
         }
 

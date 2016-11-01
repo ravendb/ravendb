@@ -7,16 +7,14 @@ namespace Voron.Data.Fixed
     {
         private readonly byte* _ptr;
         private readonly int _pageSize;
-        private readonly string _source;
 
         public int LastMatch;
         public int LastSearchPosition;
         public bool Dirty;
 
-        public FixedSizeTreePage(byte* b, string source, int pageSize)
+        public FixedSizeTreePage(byte* b, int pageSize)
         {
             _ptr = b;
-            _source = source;
             _pageSize = pageSize;
         }
 
@@ -24,12 +22,6 @@ namespace Voron.Data.Fixed
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return (FixedSizeTreePageHeader*)_ptr; }
-        }
-
-        public string Source
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _source; }
         }
 
         public long PageNumber

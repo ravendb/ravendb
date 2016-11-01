@@ -10,12 +10,12 @@ namespace Voron.Impl.Paging
     {
         public static Page ReadPage(this AbstractPager pager, LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
         {
-            return new Page(pager.AcquirePagePointer(tx, pageNumber, pagerState), pager);
+            return new Page(pager.AcquirePagePointer(tx, pageNumber, pagerState));
         }
 
         public static TreePage Read(this AbstractPager pager, LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
         {
-            return new TreePage(pager.AcquirePagePointer(tx, pageNumber, pagerState), pager.DebugInfo, pager.PageSize);
+            return new TreePage(pager.AcquirePagePointer(tx, pageNumber, pagerState), pager.PageSize);
         }
 
         public static bool WillRequireExtension(this AbstractPager pager, long requestedPageNumber, int numberOfPages)

@@ -177,7 +177,7 @@ namespace Voron.Impl.Scratch
 
         public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null)
         {
-            return new Page(_scratchPager.AcquirePagePointer(tx, p, pagerState), _scratchPager);
+            return new Page(_scratchPager.AcquirePagePointer(tx, p, pagerState));
         }
 
         public byte* AcquirePagePointer(LowLevelTransaction tx, long p)
