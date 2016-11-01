@@ -137,7 +137,7 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        private string defaultFileSystem = "DefaultFileSystem";
+        private string defaultFileSystem;
 
         private bool disableReplicationInformerGeneration = false;
         public IFilesReplicationInformer GetReplicationInformerForFileSystem(string fsName = null)
