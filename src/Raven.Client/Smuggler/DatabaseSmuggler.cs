@@ -41,6 +41,8 @@ namespace Raven.Client.Smuggler
             var json = RavenJObject.FromObject(options);
 
             var response = await httpClient.PostAsync(url, new StringContent(json.ToString()), token).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode == false)
+                throw new InvalidOperationException(await response.Content.ReadAsStringAsync());
             var stream = await response.Content.ReadAsStreamAsync();
             return stream;
         }
