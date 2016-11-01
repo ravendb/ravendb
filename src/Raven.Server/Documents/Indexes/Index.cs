@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.Indexes
                 var indexPath = Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath,
                     GetIndexNameSafeForFileSystem());
                 var options = documentDatabase.Configuration.Indexing.RunInMemory
-                    ? StorageEnvironmentOptions.CreateMemoryOnly()
+                    ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath)
                     : StorageEnvironmentOptions.ForPath(indexPath);
 
                 options.SchemaVersion = 1;
@@ -555,6 +555,8 @@ namespace Raven.Server.Documents.Indexes
                                 if (_logger.IsInfoEnabled)
                                     _logger.Info($"Out of memory occurred for '{Name} ({IndexId})'.", oome);
                                 // TODO [ppekrol] GC?
+
+                                scope.AddMemoryError(oome);
                             }
                             catch (VoronUnrecoverableErrorException ide)
                             {
@@ -580,6 +582,8 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 if (_logger.IsInfoEnabled)
                                     _logger.Info($"Exception occurred for '{Name} ({IndexId})'.", e);
+                                
+                                scope.AddGenericError(e);
                             }
 
                             try

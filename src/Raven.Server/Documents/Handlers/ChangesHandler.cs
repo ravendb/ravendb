@@ -101,25 +101,22 @@ namespace Raven.Server.Documents.Handlers
             Database.Notifications.Connect(connection);
             var sendTask = connection.StartSendingNotifications(sendStartTime);
             var debugTag = "changes/" + connection.Id;
-            byte[] buffer;
-            using (context.GetManagedBuffer(out buffer))
+            JsonOperationContext.ManagedPinnedBuffer segment1,segment2;
+            using (context.GetManagedBuffer(out segment1))
+            using (context.GetManagedBuffer(out segment2))
             {
                 try
                 {
-                    var segments = new[]
-                    {
-                        new ArraySegment<byte>(buffer, 0, buffer.Length/2),
-                        new ArraySegment<byte>(buffer, buffer.Length/2, buffer.Length/2)
-                    };
+                    var segments = new[]{segment1,segment2};
                     int index = 0;
-                    var receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);
+                    var receiveAsync = webSocket.ReceiveAsync(segments[index].Buffer, Database.DatabaseShutdown);
                     var jsonParserState = new JsonParserState();
                     using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
                     {
                         var result = await receiveAsync;
-                        parser.SetBuffer(new ArraySegment<byte>(segments[index].Array, segments[index].Offset, result.Count));
+                        parser.SetBuffer(segments[index], result.Count);
                         index++;
-                        receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);
+                        receiveAsync = webSocket.ReceiveAsync(segments[index].Buffer, Database.DatabaseShutdown);
 
                         while (true)
                         {
@@ -132,10 +129,10 @@ namespace Raven.Server.Documents.Handlers
                                 {
                                     result = await receiveAsync;
 
-                                    parser.SetBuffer(new ArraySegment<byte>(segments[index].Array, segments[index].Offset, result.Count));
+                                    parser.SetBuffer(segments[index], result.Count);
                                     if (++index >= segments.Length)
                                         index = 0;
-                                    receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);
+                                    receiveAsync = webSocket.ReceiveAsync(segments[index].Buffer, Database.DatabaseShutdown);
                                 }
 
                                 builder.FinalizeDocument();

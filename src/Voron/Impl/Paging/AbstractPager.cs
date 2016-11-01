@@ -153,7 +153,7 @@ namespace Voron.Impl.Paging
                 ThrowAlreadyDisposedException();
 
             if (pageNumber > NumberOfAllocatedPages || pageNumber < 0)
-                ThrowOnInvalidPageNumber(pageNumber);
+                ThrowOnInvalidPageNumber(pageNumber, tx.Environment);
 
             var state = pagerState ?? _pagerState;
 
@@ -261,11 +261,11 @@ namespace Voron.Impl.Paging
         }
 
 
-        protected void ThrowOnInvalidPageNumber(long pageNumber)
+        protected void ThrowOnInvalidPageNumber(long pageNumber, StorageEnvironment env)
         {
             // this is a separate method because we don't want to have an exception throwing in the hot path
 
-            throw new VoronUnrecoverableErrorException(
+            VoronUnrecoverableErrorException.Raise(env,
                 "The page " + pageNumber + " was not allocated, allocated pages: " + NumberOfAllocatedPages + " in " +
                 GetSourceName());
         }

@@ -59,6 +59,16 @@ namespace Raven.Server.Documents.Indexes
             AddError(null, $"Could not create analyzer: {exception.Message}", "Analyzer");
         }
 
+        public void AddGenericError(Exception exception)
+        {
+            AddError(null, $"Generic exception occured: {exception}", "Generic");
+        }
+
+        public void AddMemoryError(OutOfMemoryException oome)
+        {
+            AddError(null, $"Memory exception occured: {oome}", "Memory");
+        }
+
         private void AddError(string key, string message, string action)
         {
             if (Errors == null)

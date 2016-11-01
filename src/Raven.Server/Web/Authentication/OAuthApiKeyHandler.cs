@@ -263,23 +263,24 @@ namespace Raven.Server.Web.Authentication
                 {
                     throw new InvalidOperationException($"Missing 'ResourcesAccessMode' property in api key: {apiKeyName}");
                 }
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
 
                 for (var i = 0; i < accessMode.Count; i++)
                 {
-                    var dbName = accessMode.GetPropertyByIndex(i);
+                    accessMode.GetPropertyByIndex(i, ref prop);
 
                     string accessValue;
-                    if (accessMode.TryGet(dbName.Item1, out accessValue) == false)
+                    if (accessMode.TryGet(prop.Name, out accessValue) == false)
                     {
-                        throw new InvalidOperationException($"Missing value of dbName -'{dbName.Item1}' property in api key: {apiKeyName}");
+                        throw new InvalidOperationException($"Missing value of dbName -'{prop.Name}' property in api key: {apiKeyName}");
                     }
                     AccessModes mode;
                     if (Enum.TryParse(accessValue, out mode) == false)
                     {
                         throw new InvalidOperationException(
-                            $"Invalid value of dbName -'{dbName.Item1}' property in api key: {apiKeyName}, cannot understand: {accessValue}");
+                            $"Invalid value of dbName -'{prop.Name}' property in api key: {apiKeyName}, cannot understand: {accessValue}");
                     }
-                    databases[dbName.Item1] = mode;
+                    databases[prop.Name] = mode;
                 }
 
                 return new AccessToken

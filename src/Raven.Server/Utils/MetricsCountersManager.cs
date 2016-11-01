@@ -9,6 +9,7 @@ using System;
 using Raven.Server.Utils.Metrics;
 
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Utils
 {

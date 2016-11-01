@@ -168,6 +168,16 @@ namespace Raven.Server.Documents.Indexes
             _stats.AddWriteError(iwe);
         }
 
+        public void AddGenericError(Exception e)
+        {
+            _stats.AddGenericError(e);
+        }
+
+        public void AddMemoryError(OutOfMemoryException oome)
+        {
+            _stats.AddMemoryError(oome);
+        }
+
         public void AddAnalyzerError(IndexAnalyzerException iae)
         {
             _stats.AddAnalyzerError(iae);

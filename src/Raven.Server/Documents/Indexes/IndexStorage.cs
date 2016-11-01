@@ -322,7 +322,7 @@ namespace Raven.Server.Documents.Indexes
         private unsafe void WriteLastEtag(RavenTransaction tx, string tree, Slice collection, long etag)
         {
             if (_simulateCorruption)
-                throw new VoronUnrecoverableErrorException("Simulated corruption.");
+                throw new SimulatedVoronUnrecoverableErrorException("Simulated corruption.");
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Writing last etag for '{_index.Name} ({_index.IndexId})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
@@ -331,6 +331,13 @@ namespace Raven.Server.Documents.Indexes
             Slice etagSlice;
             using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
                 statsTree.Add(collection, etagSlice);
+        }
+
+        public class SimulatedVoronUnrecoverableErrorException : VoronUnrecoverableErrorException
+        {
+            public SimulatedVoronUnrecoverableErrorException(string message) : base(message)
+            {
+            }
         }
 
         private static long ReadLastEtag(RavenTransaction tx, string tree, Slice collection)

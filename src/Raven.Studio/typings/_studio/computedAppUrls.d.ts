@@ -67,6 +67,8 @@ interface computedAppUrls {
     statusDebugExplainReplication: KnockoutComputed<string>;
     infoPackage: KnockoutComputed<string>;
 
+    ioStats: KnockoutComputed<string>;
+
     statusStorageOnDisk: KnockoutComputed<string>;
     statusStorageBreakdown: KnockoutComputed<string>;
     statusStorageCollections: KnockoutComputed<string>;

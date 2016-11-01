@@ -143,12 +143,12 @@ namespace Voron
         public int ScratchBufferOverflowTimeout { get; set; }
 
 
-        public static StorageEnvironmentOptions CreateMemoryOnly(string configTempPath = null)
+        public static StorageEnvironmentOptions CreateMemoryOnly(string name = null,string configTempPath = null)
         {
             if (configTempPath == null)
                 configTempPath = Path.GetTempPath();
 
-            return new PureMemoryStorageEnvironmentOptions(configTempPath);
+            return new PureMemoryStorageEnvironmentOptions(name, configTempPath);
         }
 
         public static StorageEnvironmentOptions ForPath(string path, string tempPath = null, string journalPath = null)
@@ -337,6 +337,7 @@ namespace Voron
 
         public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
+            private readonly string _name;
             private static int _counter;
 
             private readonly Lazy<AbstractPager> _dataPager;            
@@ -346,10 +347,11 @@ namespace Voron
 
             private readonly Dictionary<string, IntPtr> _headers =
                 new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
-            private int _instanceId;
+            private readonly int _instanceId;
 
-            public PureMemoryStorageEnvironmentOptions(string configTempPath) : base(configTempPath)
+            public PureMemoryStorageEnvironmentOptions(string name, string configTempPath) : base(configTempPath)
             {
+                _name = name;
                 _instanceId = Interlocked.Increment(ref _counter);
                 var guid = Guid.NewGuid();
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-data.pager-{guid}";
@@ -364,18 +366,12 @@ namespace Voron
 
             public override string ToString()
             {
-                return "mem #" + _instanceId;
+                return "mem #" + _instanceId + " " + _name;
             }
 
-            public override AbstractPager DataPager
-            {
-                get { return _dataPager.Value; }
-            }
+            public override AbstractPager DataPager => _dataPager.Value;
 
-            public override string BasePath
-            {
-                get { return ":memory:"; }
-            }
+            public override string BasePath => ":memory:";
 
             public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
             {

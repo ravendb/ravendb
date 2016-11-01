@@ -1,0 +1,66 @@
+<style>
+    svg {
+        background-color: white;
+    }
+
+     .axis path {
+         fill: none;
+         stroke: #000;
+         shape-rendering: crispEdges;
+     }
+
+     .type_JournalWrite {
+         fill: #31a354;
+         stroke: #31a354;
+     }
+
+     .type_DataFlush {
+         fill: #fd8d3c;
+         stroke: #e6550d;
+     }
+
+     .type_DataSync {
+         fill: #6baed6;
+         stroke: #3182bd;
+     }
+
+     .type_fg_JournalWrite {
+         fill: #31a354;
+     }
+
+     .type_fg_DataFlush {
+         fill: #e6550d;
+     }
+
+     .type_fg_DataSync {
+         fill: #6baed6;
+     }
+
+     .type_bg_JournalWrite {
+         stroke: #c7e9c0;
+         fill: none;
+     }
+
+     .type_bg_DataFlush {
+         stroke: #fd8d3c;
+         fill: none;
+     }
+
+     .type_bg_DataSync {
+         stroke: #6baed6;
+         fill: none;
+     }
+</style>
+
+<button class="btn btn-default" data-bind="click: exportAsJson">Export</button>
+
+<span style="margin-left: 30px">
+    Import: <input style="display: inline" id="importFilePicker" type="file" data-bind="event: { change: fileSelected }" />
+</span>
+
+
+<section id="ioStats" style="position: relative">
+    <section data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+        <svg id="ioStatsGraph" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
+    </section>
+</section>
