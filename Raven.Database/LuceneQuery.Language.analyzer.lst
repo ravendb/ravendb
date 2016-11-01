@@ -4,7 +4,7 @@
 // ==========================================================================
 //  Version:  1.2.2
 //  Machine:  TAL-PC
-//  DateTime: 6/21/2016 1:57:57 PM
+//  DateTime: 11/1/2016 5:18:09 PM
 //  UserName: Tal
 // ==========================================================================
 
@@ -28,7 +28,7 @@ Decimal    [+-]?{Number}\.{Number}
 // Warning: No upper bound to range, "'+','-'" included as set class members
 // -------------------------------------------------------------------------
 EscapeChar \\[^]
-TermStartChar [^ :\t\r\n\f\+\-!\{\}()"^\*\?\\~\[\],]|{EscapeChar}
+TermStartChar [^ :\t\r\n\f\+\-!\{\}()"^\*\?\\~\[\]]|{EscapeChar}
 TermChar {TermStartChar}|[,\-\+]
 WildCardStartChar {TermStartChar}|[\*\?]
 WildCardChar [\*\?]|{TermChar}
@@ -49,7 +49,6 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 %}
 
 %%
-","								{return (int)Token.COMMA;}
 "^"								{return (int)Token.BOOST;}
 "~"								{return (int)Token.TILDA;}
 "{"								{return (int)Token.OPEN_CURLY_BRACKET;}
@@ -96,6 +95,8 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 								{
 									yylval.s = DiscardEscapeChar(yytext, true);
 								}
+                                if(InMethod && yylval.s.Equals(","))
+                                    return (int)Token.COMMA;
 								return (int)Token.UNQUOTED_TERM;
 								}
 {PrefixTerm}					{ yylval.s = DiscardEscapeChar(yytext);  return (int)Token.PREFIX_TERM;}
