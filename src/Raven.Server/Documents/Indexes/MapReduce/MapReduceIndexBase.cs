@@ -21,6 +21,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         internal const string MapEntriesTreeName = "MapEntries";
         internal const string ResultsStoreTypesTreeName = "ResultsStoreTypes";
 
+        private PageLocator _pageLocator;
         internal readonly MapReduceIndexingContext MapReduceWorkContext = new MapReduceIndexingContext();
 
         private IndexingStatsScope _statsInstance;
@@ -35,12 +36,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             MapReduceWorkContext.MapEntries = GetMapEntriesTree(indexContext.Transaction.InnerTransaction);
             MapReduceWorkContext.ResultsStoreTypes = MapReduceWorkContext.MapEntries.FixedTreeFor(ResultsStoreTypesTreeName, sizeof(byte));
 
+            _pageLocator = new PageLocator(indexContext.Transaction.InnerTransaction.LowLevelTransaction, 128);
+
             MapReduceWorkContext.DocumentMapEntries = new FixedSizeTree(
                    indexContext.Transaction.InnerTransaction.LowLevelTransaction,
                    MapReduceWorkContext.MapEntries,
                    Slices.Empty,
                    sizeof(ulong),
-                   clone: false);
+                   clone: false, 
+                   pageLocator: _pageLocator);
 
             return MapReduceWorkContext;
         }
@@ -48,7 +52,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public override unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            Slice docKeyAsSlice;
+            _pageLocator.Renew(indexContext.Transaction.InnerTransaction.LowLevelTransaction, 128);
+
+            Slice docKeyAsSlice;            
             using (Slice.External(indexContext.Allocator, tombstone.LoweredKey.Buffer, tombstone.LoweredKey.Length, out docKeyAsSlice))
             {
                 MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
@@ -58,13 +64,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 foreach (var mapEntry in GetMapEntries(MapReduceWorkContext.DocumentMapEntries))
                 {
-                    var store = GetResultsStore(mapEntry.ReduceKeyHash, indexContext, create: false);
+                    var store = GetResultsStore(mapEntry.ReduceKeyHash, indexContext, create: false, pageLocator: _pageLocator);
 
                     store.Delete(mapEntry.Id);
                 }
 
                 MapReduceWorkContext.MapEntries.DeleteFixedTreeFor(tombstone.LoweredKey, sizeof(ulong));
             }
+
+            
         }
 
         public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch)
@@ -90,7 +98,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             EnsureValidStats(stats);
 
-            Slice docKeyAsSlice;
+            _pageLocator.Renew(indexContext.Transaction.InnerTransaction.LowLevelTransaction, 128);
+
+            Slice docKeyAsSlice;            
             using (Slice.External(indexContext.Allocator, documentKey.Buffer, documentKey.Length, out docKeyAsSlice))
             {
                 Queue<MapEntry> existingEntries = null;
@@ -120,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         if (existingEntries?.Count > 0)
                         {
                             var existing = existingEntries.Dequeue();
-                            var storeOfExisting = GetResultsStore(existing.ReduceKeyHash, indexContext, false);
+                            var storeOfExisting = GetResultsStore(existing.ReduceKeyHash, indexContext, false, _pageLocator);
 
                             if (reduceKeyHash == existing.ReduceKeyHash)
                             {
@@ -154,7 +164,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                     MapReduceWorkContext.DocumentMapEntries.Add(id, val);
                             }
 
-                            GetResultsStore(reduceKeyHash, indexContext, create: true).Add(id, mapResult.Data);
+                            GetResultsStore(reduceKeyHash, indexContext, create: true, pageLocator: _pageLocator).Add(id, mapResult.Data);
                         }
                     }
                 }
@@ -167,7 +177,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     var oldResult = existingEntries.Dequeue();
 
-                    var oldState = GetResultsStore(oldResult.ReduceKeyHash, indexContext, create: false);
+                    var oldState = GetResultsStore(oldResult.ReduceKeyHash, indexContext, create: false, pageLocator: _pageLocator);
 
                     using (_stats.RemoveResult.Start())
                     {
@@ -177,7 +187,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
 
                 return resultsCount;
-            }
+            }            
         }
 
         private static unsafe bool ResultsBinaryEqual(BlittableJsonReaderObject newResult, PtrSize existingData)
@@ -210,7 +220,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return entries;
         }
 
-        public unsafe MapReduceResultsStore GetResultsStore(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create)
+        public unsafe MapReduceResultsStore GetResultsStore(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create, PageLocator pageLocator = null)
         {
             MapReduceResultsStore store;
             if (MapReduceWorkContext.StoreByReduceKeyHash.TryGetValue(reduceKeyHash, out store) == false)
@@ -225,7 +235,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     else
                         type = MapResultsStorageType.Nested;
 
-                    store = new MapReduceResultsStore(reduceKeyHash, type, indexContext, MapReduceWorkContext, create);
+                    store = new MapReduceResultsStore(reduceKeyHash, type, indexContext, MapReduceWorkContext, create, pageLocator);
 
                     MapReduceWorkContext.StoreByReduceKeyHash[reduceKeyHash] = store;
                 }
