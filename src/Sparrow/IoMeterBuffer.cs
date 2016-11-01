@@ -35,8 +35,9 @@ namespace Sparrow
         }
 
         private readonly MeterItem[] _buffer;
-        private readonly SummerizedItem[] _summerizedBuffer;
         private int _bufferPos = -1;
+
+        private readonly SummerizedItem[] _summerizedBuffer;
         private int _summerizedPos = -1;
 
         public IEnumerable<SummerizedItem> GetSummerizedItems()
@@ -63,14 +64,14 @@ namespace Sparrow
 
         public struct DurationMeasurement : IDisposable
         {
-            private readonly IoMeterBuffer _parent;
+            public readonly IoMeterBuffer Parent;
             private readonly IoMetrics.MeterType _type;
             public long Size;
             private readonly DateTime _start;
 
             public DurationMeasurement(IoMeterBuffer parent, IoMetrics.MeterType type, long size)
             {
-                _parent = parent;
+                Parent = parent;
                 _type = type;
                 Size = size;
                 _start = DateTime.UtcNow;
@@ -83,18 +84,18 @@ namespace Sparrow
 
             public void Dispose()
             {
-                _parent.Mark(Size, _start, _type);
+                Parent.Mark(Size, _start, DateTime.UtcNow, _type);
             }
         }
 
-        private void Mark(long size, DateTime start, IoMetrics.MeterType type)
+        internal void Mark(long size, DateTime start, DateTime end, IoMetrics.MeterType type)
         {
             var meterItem = new MeterItem
             {
                 Start = start,
                 Size = size,
                 Type = type,
-                End = DateTime.UtcNow
+                End = end
             };
 
             var pos = Interlocked.Increment(ref _bufferPos);
