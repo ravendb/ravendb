@@ -64,9 +64,23 @@ namespace Raven.Database.Client
             }
         }
 
+        private bool embeddedFileStoreInitiated;
         public IFilesStore FilesStore
         {
-            get { return server.FilesStore; }
+            get
+            {
+                //Making sure FileStore has a DefaultFileSystem selected so not to throw when acessing it.
+                if (embeddedFileStoreInitiated == false && server.FilesStore.DefaultFileSystem == null)
+                    lock(this)
+                    {
+                        if (embeddedFileStoreInitiated == false && server.FilesStore.DefaultFileSystem == null)
+                        {
+                            server.FilesStore.DefaultFileSystem = "DefaultFileSystem";
+                        }
+                        embeddedFileStoreInitiated = true;
+                    }                
+                return server.FilesStore;
+            }
         }
 
         public string ConnectionStringName
