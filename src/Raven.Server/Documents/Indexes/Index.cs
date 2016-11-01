@@ -582,7 +582,7 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 if (_logger.IsInfoEnabled)
                                     _logger.Info($"Exception occurred for '{Name} ({IndexId})'.", e);
-                                
+
                                 scope.AddGenericError(e);
                             }
 
@@ -742,59 +742,64 @@ namespace Raven.Server.Documents.Indexes
             using (CultureHelper.EnsureInvariantCulture())
             using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
-            using (var tx = indexContext.OpenWriteTransaction())
-            using (CurrentIndexingScope.Current = new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, indexContext))
             {
-                var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction));
+                indexContext.PersistentContext.LongLivedTransactions = true;
+                databaseContext.PersistentContext.LongLivedTransactions = true;
 
-                using (InitializeIndexingWork(indexContext))
+                using (var tx = indexContext.OpenWriteTransaction())
+                using (CurrentIndexingScope.Current = new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, indexContext))
                 {
-                    try
-                    {
-                        foreach (var work in _indexWorkers)
-                        {
-                            using (var scope = stats.For(work.Name))
-                            {
-                                mightBeMore |= work.Execute(databaseContext, indexContext, writeOperation, scope,
-                                    cancellationToken);
+                    var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction));
 
-                                if (mightBeMore)
-                                    _mre.Set();
+                    using (InitializeIndexingWork(indexContext))
+                    {
+                        try
+                        {
+                            foreach (var work in _indexWorkers)
+                            {
+                                using (var scope = stats.For(work.Name))
+                                {
+                                    mightBeMore |= work.Execute(databaseContext, indexContext, writeOperation, scope,
+                                        cancellationToken);
+
+                                    if (mightBeMore)
+                                        _mre.Set();
+                                }
                             }
                         }
-                    }
-                    finally
-                    {
-                        if (writeOperation.IsValueCreated)
+                        finally
                         {
-                            using (stats.For(IndexingOperation.Lucene.FlushToDisk))
-                                writeOperation.Value.Dispose();
+                            if (writeOperation.IsValueCreated)
+                            {
+                                using (stats.For(IndexingOperation.Lucene.FlushToDisk))
+                                    writeOperation.Value.Dispose();
+                            }
+                        }
+
+                        _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
+                    }
+
+                    using (stats.For(IndexingOperation.Storage.Commit))
+                    {
+                        CommitStats commitStats;
+                        tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
+
+                        tx.Commit();
+
+                        stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOfPagesWrittenToDisk);
+                    }
+
+                    if (writeOperation.IsValueCreated)
+                    {
+                        using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
+                        {
+                            IndexPersistence.RecreateSearcher();
+                            // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
                         }
                     }
 
-                    _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
+                    return mightBeMore;
                 }
-
-                using (stats.For(IndexingOperation.Storage.Commit))
-                {
-                    CommitStats commitStats;
-                    tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
-
-                    tx.Commit();
-
-                    stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOfPagesWrittenToDisk);
-                }
-
-                if (writeOperation.IsValueCreated)
-                {
-                    using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
-                    {
-                        IndexPersistence.RecreateSearcher();
-                        // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
-                    }
-                }
-
-                return mightBeMore;
             }
         }
 
