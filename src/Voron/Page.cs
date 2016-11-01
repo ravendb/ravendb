@@ -1,12 +1,9 @@
 ﻿using System.Runtime.CompilerServices;
 using Voron.Data;
-using Voron.Data.BTrees;
-using Voron.Data.Fixed;
-using Voron.Impl.Paging;
 
 namespace Voron
 {
-    public sealed unsafe class Page
+    public unsafe struct Page
     {
         public readonly byte* Pointer;
 

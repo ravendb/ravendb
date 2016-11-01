@@ -301,8 +301,6 @@ namespace Voron.Data.Fixed
         internal FixedSizeTreePage GetReadOnlyPage(long pageNumber)
         {
             var readOnlyPage = _pageLocator.GetReadOnlyPage(pageNumber);
-            if (readOnlyPage == null)
-                return null;
             return new FixedSizeTreePage(readOnlyPage.Pointer, _tx.PageSize);
         }
 
