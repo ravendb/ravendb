@@ -300,12 +300,23 @@ namespace Voron.Impl
                 }
 
                 p = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state);
-                Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
+                Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from scratch", pageNumber, p.PageNumber));
             }
             else
             {
-                p = _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? DataPager.ReadPage(this, pageNumber);
-                Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
+                var pageFromJournal = _journal.ReadPage(this, pageNumber, _scratchPagerStates);
+                if (pageFromJournal != null)
+                {
+                    p = pageFromJournal.Value;
+                    Debug.Assert(p.PageNumber == pageNumber,
+                        string.Format("Requested ReadOnly page #{0}. Got #{1} from journal", pageNumber, p.PageNumber));
+                }
+                else
+                {
+                    p = DataPager.ReadPage(this, pageNumber);
+                    Debug.Assert(p.PageNumber == pageNumber,
+                        string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
+                }
             }
 
             TrackReadOnlyPage(p);
@@ -313,7 +324,7 @@ namespace Voron.Impl
             return p;
         }
 
-        public Page AllocatePage(int numberOfPages, long? pageNumber = null, Page previousPage = null, bool zeroPage = true)
+        public Page AllocatePage(int numberOfPages, long? pageNumber = null, Page? previousPage = null, bool zeroPage = true)
         {
             if (pageNumber == null)
             {
@@ -327,7 +338,7 @@ namespace Voron.Impl
             return AllocatePage(numberOfPages, pageNumber.Value, previousPage, zeroPage);
         }
 
-        public Page AllocateOverflowRawPage(long pageSize, long? pageNumber = null, Page previousPage = null, bool zeroPage = true)
+        public Page AllocateOverflowRawPage(long pageSize, long? pageNumber = null, Page? previousPage = null, bool zeroPage = true)
         {
             long overflowSize = 0 + pageSize;
             if (overflowSize > int.MaxValue - 1)
@@ -344,7 +355,7 @@ namespace Voron.Impl
             return overflowPage;
         }
 
-        private Page AllocatePage(int numberOfPages, long pageNumber, Page previousVersion, bool zeroPage)
+        private Page AllocatePage(int numberOfPages, long pageNumber, Page? previousVersion, bool zeroPage)
         {
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");

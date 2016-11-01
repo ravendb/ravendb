@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly Slice _nestedValueKey;
         private ByteStringContext.InternalScope _nestedValueKeyScope;
         private readonly Transaction _tx;
+        private readonly PageLocator _pageLocator;
 
         private NestedMapResultsSection _nestedSection;
 
@@ -27,13 +28,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public HashSet<long> ModifiedPages;
         public HashSet<long> FreedPages;
 
-        public MapReduceResultsStore(ulong reduceKeyHash, MapResultsStorageType type, TransactionOperationContext indexContext, MapReduceIndexingContext mapReduceContext, bool create)
+        public MapReduceResultsStore(ulong reduceKeyHash, MapResultsStorageType type, TransactionOperationContext indexContext, MapReduceIndexingContext mapReduceContext, bool create, PageLocator pageLocator = null)
         {
             _reduceKeyHash = reduceKeyHash;
             Type = type;
             _indexContext = indexContext;
             _mapReduceContext = mapReduceContext;
             _tx = indexContext.Transaction.InnerTransaction;
+            _pageLocator = pageLocator;
 
             switch (Type)
             {
@@ -53,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             //TODO: Need better way to handle tree names
 
             var treeName = "#reduceTree-" + _reduceKeyHash;
-            Tree = create ? _tx.CreateTree(treeName) : _tx.ReadTree(treeName);
+            Tree = create ? _tx.CreateTree(treeName, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
 
             ModifiedPages = new HashSet<long>();
             FreedPages = new HashSet<long>();

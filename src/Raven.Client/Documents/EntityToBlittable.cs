@@ -45,31 +45,31 @@ namespace Raven.Client.Documents
         
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentInfo documentInfo)
         {
-            //TODO - Efrat - add Listeners and SetClrType
             _stream.Position = 0;
-            try
-            {
-                _session.Conventions.SerializeEntityToJsonStream(entity, _streamWriter);
-                _stream.Position = 0;
-            
-                var json = _session.Context.ReadForMemory(_stream, "convention.Serialize");
+            _session.Conventions.SerializeEntityToJsonStream(entity, _streamWriter);
+            InsertMetadataToStream(documentInfo);
+            return _session.Context.ReadForMemory(_stream, "convention.Serialize");
+        }
 
-                if ( (documentInfo.Metadata.Modifications != null) && (documentInfo.Metadata.Modifications.Properties.Count == 0))
-                    documentInfo.Metadata.Modifications = null;
-
-                if (json.Modifications == null)
-                {
-                    json.Modifications = new DynamicJsonValue(documentInfo.Metadata)
-                    {
-                        [Constants.Metadata.Key] = documentInfo.Metadata
-                    };
-                }
-                return _session.Context.ReadObject(json, documentInfo.Id);
-            }
-            finally
+        private void InsertMetadataToStream(DocumentInfo documentInfo)
+        {
+            _stream.Position--;
+            var writer = new BlittableJsonTextWriter(_session.Context, _stream);
+            writer.WriteComma();
+            writer.WritePropertyName(Constants.Metadata.Key);
+            if ((documentInfo.Metadata.Modifications != null) &&
+                (documentInfo.Metadata.Modifications.Properties.Count > 0))
             {
-                _stream.Position = 0;
+                writer.WriteObject(_session.Context.ReadObject(documentInfo.Metadata.Modifications, documentInfo.Id));
+                documentInfo.Metadata.Modifications = null;
             }
+            else
+            {
+                writer.WriteObject(documentInfo.Metadata);
+            }
+            writer.WriteEndObject();
+            writer.Flush();
+            _stream.Position = 0;
         }
 
         /// <summary>

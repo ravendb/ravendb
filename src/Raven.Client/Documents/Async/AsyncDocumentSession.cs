@@ -25,11 +25,11 @@ using Raven.Abstractions.Commands;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Client.Document;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.SessionOperations;
 using Raven.Client.Http;
 using Sparrow.Json;
 using LoadOperation = Raven.Client.Documents.SessionOperations.LoadOperation;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Async
 {
@@ -43,8 +43,8 @@ namespace Raven.Client.Documents.Async
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
         /// </summary>
-        public AsyncDocumentSession(string dbName, DocumentStore documentStore, IAsyncDatabaseCommands asyncDatabaseCommands, DocumentSessionListeners listeners, RequestExecuter requestExecuter, Guid id)
-            : base(dbName, documentStore, listeners, requestExecuter, id)
+        public AsyncDocumentSession(string dbName, DocumentStore documentStore, IAsyncDatabaseCommands asyncDatabaseCommands, RequestExecuter requestExecuter, Guid id)
+            : base(dbName, documentStore, requestExecuter, id)
         {
             AsyncDatabaseCommands = asyncDatabaseCommands;
             GenerateDocumentKeysOnStore = false;
@@ -284,7 +284,7 @@ namespace Raven.Client.Documents.Async
         /// <summary>
         /// Get the json document by key from the store
         /// </summary>
-        protected override JsonDocument GetJsonDocument(string documentKey)
+        protected override DocumentInfo GetDocumentInfo(string documentId)
         {
             throw new NotSupportedException("Cannot get a document in a synchronous manner using async document session");
         }
@@ -304,45 +304,62 @@ namespace Raven.Client.Documents.Async
             return Conventions.GenerateDocumentKeyAsync(DatabaseName, AsyncDatabaseCommands, entity);
         }
 
-        public async Task<BlittableJsonReaderObject> GetMetadataForAsync<T>(T instance)
+        private readonly List<object> _entitiesWithMetadataInstance = new List<object>();
+
+        public async Task<IDictionary<string, string>> GetMetadataForAsync<T>(T instance)
         {
-            var metadata = await GetDocumentMetadataAsync(instance).ConfigureAwait(false);
-            return metadata.Metadata;
+            var documentInfo = await GetDocumentInfo(instance).ConfigureAwait(false);
+
+            if (documentInfo.MetadataInstance != null)
+                return documentInfo.MetadataInstance;
+
+            var metadataAsBlittable = documentInfo.Metadata;
+            var metadata = new MetadataAsDictionary(metadataAsBlittable);
+            _entitiesWithMetadataInstance.Add(documentInfo.Entity);
+            documentInfo.MetadataInstance = metadata;
+            return metadata;
         }
 
-        private async Task<DocumentInfo> GetDocumentMetadataAsync<T>(T instance)
+        private async Task<DocumentInfo> GetDocumentInfo<T>(T instance)
         {
             DocumentInfo value;
-            if (DocumentsByEntity.TryGetValue(instance, out value) == false)
+            string id;
+            if (DocumentsByEntity.TryGetValue(instance, out value) ||
+                (!GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id) &&
+                 (!(instance is IDynamicMetaObjectProvider) ||
+                  !GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))) return value;
+            AssertNoNonUniqueInstance(instance, id);
+            var documentInfo = new DocumentInfo
             {
-                string id;
-                if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id)
-                    || (instance is IDynamicMetaObjectProvider &&
-                       GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))
-                {
-                    AssertNoNonUniqueInstance(instance, id);
-
-                    var jsonDocument = await GetJsonDocumentAsync(id).ConfigureAwait(false);
-
-                    value = GetDocumentMetadataValue(instance, id, jsonDocument);
-                }
-                else
-                {
-                    throw new InvalidOperationException("Could not find the document key for " + instance);
-                }
-            }
-            return value;
+                Id = id,
+                Entity = instance
+            };
+            await TempAsyncDatabaseCommandGet(documentInfo);
+            return documentInfo;
         }
 
-        /// <summary>
-        /// Get the json document by key from the store
-        /// </summary>
-        private async Task<JsonDocument> GetJsonDocumentAsync(string documentKey)
+        private async Task<BlittableJsonReaderObject> TempAsyncDatabaseCommandGet(DocumentInfo documentInfo)
         {
-            var jsonDocument = await AsyncDatabaseCommands.GetAsync(documentKey).ConfigureAwait(false);
-            if (jsonDocument == null)
-                throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
-            return jsonDocument;
+            var command = new GetDocumentCommand
+            {
+                Ids = new[] { documentInfo.Id }
+            };
+            await RequestExecuter.ExecuteAsync(command, Context);
+            var document = (BlittableJsonReaderObject)command.Result.Results[0];
+            if (document == null)
+                throw new InvalidOperationException("Document '" + documentInfo.Id +
+                                                    "' no longer exists and was probably deleted");
+
+            object metadata;
+            document.TryGetMember(Constants.Metadata.Key, out metadata);
+            documentInfo.Metadata = metadata as BlittableJsonReaderObject;
+
+            object etag;
+            document.TryGetMember(Constants.Metadata.Etag, out etag);
+            documentInfo.ETag = etag as long?;
+
+            documentInfo.Document = document;
+            return document;
         }
 
         /// <summary>
@@ -387,7 +404,7 @@ namespace Raven.Client.Documents.Async
         /// </summary>
         public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce)
         {
-            return new AsyncDocumentQuery<T>(this, null, AsyncDatabaseCommands, index, new string[0], new string[0], TheListeners.QueryListeners, isMapReduce);
+            return new AsyncDocumentQuery<T>(this, null, AsyncDatabaseCommands, index, new string[0], new string[0], isMapReduce);
         }
 
         public RavenQueryInspector<S> CreateRavenQueryInspector<S>()
@@ -418,35 +435,23 @@ namespace Raven.Client.Documents.Async
             throw new NotSupportedException("You can't query sync from an async session");
         }
 
-        public bool HasChanges { get; }
         public void Defer(params ICommandData[] commands)
         {
             throw new NotImplementedException();
         }
 
-        public RavenJObject GetMetadataFor<T>(T instance)
+        /// <summary>
+        /// Get the accessor for advanced operations
+        /// </summary>
+        /// <remarks>
+        /// Those operations are rarely needed, and have been moved to a separate 
+        /// property to avoid cluttering the API
+        /// </remarks>
+        public IAdvancedDocumentSessionOperations Advanced
         {
-            throw new NotImplementedException();
+            get { return this; }
         }
 
-        public bool HasChanged(object entity)
-        {
-            throw new NotImplementedException();
-        }
 
-        public void MarkReadOnly(object entity)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IDictionary<string, DocumentsChanges[]> WhatChanged()
-        {
-            throw new NotImplementedException();
-        }
-
-        Dictionary<string, string> IAdvancedDocumentSessionOperations.GetMetadataFor<T>(T instance)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

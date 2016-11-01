@@ -198,11 +198,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             var parentPagesToAggregate = new HashSet<long>();
 
+            var page = new TreePage(null, lowLevelTransaction.PageSize);
+
             foreach (var modifiedPage in modifiedStore.ModifiedPages)
             {
                 token.ThrowIfCancellationRequested();
 
-                var page = lowLevelTransaction.GetPage(modifiedPage).ToTreePage();
+                page.Base = lowLevelTransaction.GetPage(modifiedPage).Pointer;
 
                 stats.RecordReduceTreePageModified(page.IsLeaf);
 
@@ -298,7 +300,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 foreach (var pageNumber in branchPages)
                 {
-                    var page = lowLevelTransaction.GetPage(pageNumber).ToTreePage();
+                    page.Base = lowLevelTransaction.GetPage(pageNumber).Pointer;
 
                     try
                     {
@@ -401,11 +403,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                                 try
                                 {
-                                    var unaggregatedPage = indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber).ToTreePage();
+                                    page.Base = indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber).Pointer;
 
-                                    using (var result = AggregateBranchPage(unaggregatedPage, table, indexContext, remainingBranchesToAggregate, stats, token))
+                                    using (var result = AggregateBranchPage(page, table, indexContext, remainingBranchesToAggregate, stats, token))
                                     {
-                                        StoreAggregationResult(unaggregatedPage.PageNumber, page.NumberOfEntries, table, result, stats);
+                                        StoreAggregationResult(page.PageNumber, page.NumberOfEntries, table, result, stats);
                                     }
                                 }
                                 finally

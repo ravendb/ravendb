@@ -13,7 +13,6 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Data;
 using Raven.Client.Document;
-using Raven.Client.Documents.Listeners;
 using Raven.Client.Indexes;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
@@ -30,10 +29,10 @@ namespace Raven.Client.Documents
         /// </summary>
         public DocumentQuery(InMemoryDocumentSessionOperations session
             , IDatabaseCommands databaseCommands
-            , IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool isMapReduce)
+            , IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, bool isMapReduce)
             : base(session
             , databaseCommands
-            , asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
+            , asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, isMapReduce)
         {
         }
 
@@ -86,7 +85,6 @@ namespace Raven.Client.Documents
                                                                      indexName,
                                                                      fieldsToFetch,
                                                                      projectionFields,
-                                                                     queryListeners,
                                                                      isMapReduce)
             {
                 pageSize = pageSize,
@@ -180,7 +178,6 @@ namespace Raven.Client.Documents
                                                                indexName,
                                                                fields,
                                                                projections,
-                                                               queryListeners,
                                                                isMapReduce)
             {
                 pageSize = pageSize,

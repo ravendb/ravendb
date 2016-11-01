@@ -18,7 +18,6 @@ using Raven.Client.Document.Async;
 using Raven.Client.Document.Batches;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
-using Raven.Client.Documents.Listeners;
 
 namespace Raven.Client.Documents
 {
@@ -31,8 +30,8 @@ namespace Raven.Client.Documents
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
         /// </summary>
         public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, IDatabaseCommands databaseCommands,
-            IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool  isMapReduce)
-            : base(session, databaseCommands, asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
+            IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, bool  isMapReduce)
+            : base(session, databaseCommands, asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, isMapReduce)
         {
         }
 
@@ -749,7 +748,7 @@ namespace Raven.Client.Documents
             var asyncDocumentQuery = new AsyncDocumentQuery<TProjection>(theSession,
                                                                          theDatabaseCommands,
                                                                          theAsyncDatabaseCommands,
-                                                                         indexName, fields, projections, queryListeners,
+                                                                         indexName, fields, projections,
                                                                          isMapReduce)
                                         {
                                             pageSize = pageSize,

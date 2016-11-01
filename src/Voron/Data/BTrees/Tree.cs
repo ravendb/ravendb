@@ -23,6 +23,7 @@ namespace Voron.Data.BTrees
 
         private readonly RecentlyFoundTreePages _recentlyFoundPages;
         private PageLocator _pageLocator;
+        private readonly bool _isPageLocatorOwned;
 
         public Slice Name { get; set; }
 
@@ -39,12 +40,14 @@ namespace Voron.Data.BTrees
             get { return _llt; }
         }
 
-        private Tree(LowLevelTransaction llt, Transaction tx, long root)
+        private Tree(LowLevelTransaction llt, Transaction tx, long root, PageLocator pageLocator = null)
         {
             _llt = llt;
             _tx = tx;
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2);
-            _pageLocator = llt.PersistentContext.AllocatePageLocator(llt);
+            _isPageLocatorOwned = pageLocator == null;
+            _pageLocator = pageLocator ?? llt.PersistentContext.AllocatePageLocator(llt);
+
             _state = new TreeMutableState(llt)
             {
                 RootPageNumber = root
@@ -56,14 +59,15 @@ namespace Voron.Data.BTrees
             _llt = llt;
             _tx = tx;
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2);
+            _isPageLocatorOwned = true;
             _pageLocator = llt.PersistentContext.AllocatePageLocator(llt);
             _state = new TreeMutableState(llt);
             _state = state;
         }
 
-        public static Tree Open(LowLevelTransaction llt, Transaction tx, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree)
+        public static Tree Open(LowLevelTransaction llt, Transaction tx, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
         {
-            return new Tree(llt, tx, header->RootPageNumber)
+            return new Tree(llt, tx, header->RootPageNumber, pageLocator)
             {
                 _state =
                 {
@@ -80,13 +84,13 @@ namespace Voron.Data.BTrees
             };
         }
 
-        public static Tree Create(LowLevelTransaction llt, Transaction tx, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree)
+        public static Tree Create(LowLevelTransaction llt, Transaction tx, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
         {
             if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table )
                 throw new ArgumentException($"Only valid types are {nameof(RootObjectType.VariableSizeTree)} or {nameof(RootObjectType.Table)}.", nameof(type));
 
             var newRootPage = AllocateNewPage(llt, TreePageFlags.Leaf, 1);
-            var tree = new Tree(llt, tx, newRootPage.PageNumber)
+            var tree = new Tree(llt, tx, newRootPage.PageNumber, pageLocator)
             {
                 _state =
                 {
@@ -411,7 +415,8 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal TreePage GetReadOnlyTreePage(long pageNumber)
         {
-            return _pageLocator.GetReadOnlyPage(pageNumber).ToTreePage();
+            var page = _pageLocator.GetReadOnlyPage(pageNumber);
+            return new TreePage(page.Pointer, _pageLocator.PageSize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -423,7 +428,8 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal TreePage GetWriteableTreePage(long pageNumber)
         {
-            return _pageLocator.GetWritablePage(pageNumber).ToTreePage();
+            var page = _pageLocator.GetWritablePage(pageNumber);
+            return new TreePage(page.Pointer, _pageLocator.PageSize);
         }
 
         internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node)
@@ -674,7 +680,7 @@ namespace Voron.Data.BTrees
             {
                 // we can't share the same instance, Page instance may be modified by
                 // concurrently run iterators
-                page = new TreePage(foundPage.Page.Base, foundPage.Page.Source, foundPage.Page.PageSize);
+                page = new TreePage(foundPage.Page.Base, foundPage.Page.PageSize);
             }
             else
             {
@@ -707,7 +713,7 @@ namespace Voron.Data.BTrees
             {
                 // we can't share the same instance, Page instance may be modified by
                 // concurrently run iterators
-                page = new TreePage(foundPage.Page.Base, foundPage.Page.Source, foundPage.Page.PageSize);
+                page = new TreePage(foundPage.Page.Base, foundPage.Page.PageSize);
             }
             else
             {
@@ -772,13 +778,15 @@ namespace Voron.Data.BTrees
 
         private static TreePage AllocateNewPage(LowLevelTransaction tx, TreePageFlags flags, int num, long? pageNumber = null)
         {
-            var page = tx.AllocatePage(num, pageNumber).ToTreePage();
-            page.Flags = PageFlags.VariableSizeTreePage | (num == 1 ? PageFlags.Single : PageFlags.Overflow);
-            page.Lower = (ushort)Constants.TreePageHeaderSize;
-            page.TreeFlags = flags;
-            page.Upper = (ushort)page.PageSize;
-            page.Dirty = true;
-
+            var newPage = tx.AllocatePage(num, pageNumber);
+            var page = new TreePage(newPage.Pointer, tx.PageSize)
+            {
+                Flags = PageFlags.VariableSizeTreePage | (num == 1 ? PageFlags.Single : PageFlags.Overflow),
+                Lower = (ushort) Constants.TreePageHeaderSize,
+                TreeFlags = flags,
+                Upper = (ushort)tx.PageSize,
+                Dirty = true
+            };
             return page;
         }
 
@@ -1025,7 +1033,7 @@ namespace Voron.Data.BTrees
                 }
             }
 
-            if (_pageLocator != null)
+            if (_pageLocator != null && _isPageLocatorOwned )
             {
                 _llt.PersistentContext.FreePageLocator(_pageLocator);
                 _pageLocator = null;

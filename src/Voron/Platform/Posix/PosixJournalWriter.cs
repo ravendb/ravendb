@@ -36,17 +36,17 @@ namespace Voron.Platform.Posix
             if (_fd == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                PosixHelper.ThrowLastError(err, "when opening " + filename);
             }
 
             var result = Syscall.posix_fallocate(_fd, 0, (ulong)journalSize);
             if (result != 0)
-                PosixHelper.ThrowLastError(result);
+                PosixHelper.ThrowLastError(result, "when allocating " + filename);
 
             if (PosixHelper.CheckSyncDirectoryAllowed(_filename) && PosixHelper.SyncDirectory(filename) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                PosixHelper.ThrowLastError(err, "when syncing dir for on " + filename);
             }
 
             NumberOfAllocatedPages = (int)(journalSize / _options.PageSize);
@@ -121,17 +121,17 @@ namespace Voron.Platform.Posix
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                PosixHelper.ThrowLastError(err, "when writing to " + _filename);
             }
             else if (result == 0)
             {
                 var err = Marshal.GetLastWin32Error();
-                throw new IOException($"pwrite reported zero bytes written, after write of {actuallyWritten} bytes out of {nNumberOfBytesToWrite}. lastErrNo={err}");
+                throw new IOException($"pwrite reported zero bytes written, after write of {actuallyWritten} bytes out of {nNumberOfBytesToWrite}. lastErrNo={err} on {_filename}");
             }
             else if ((ulong) actuallyWritten != nNumberOfBytesToWrite)
             {
                 var err = Marshal.GetLastWin32Error();
-                throw new IOException($"pwrite couln't write {nNumberOfBytesToWrite} to file. only {actuallyWritten} written. lastErrNo={err}");
+                throw new IOException($"pwrite couln't write {nNumberOfBytesToWrite} to file. only {actuallyWritten} written. lastErrNo={err} on {_filename}");
             }
         }
 
@@ -154,7 +154,7 @@ namespace Voron.Platform.Posix
                 if (_fdReads == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
-                    PosixHelper.ThrowLastError(err);
+                    PosixHelper.ThrowLastError(err, "when opening " + _filename);
                 }
             }
             long position = pageNumber * _options.PageSize;
@@ -177,19 +177,19 @@ namespace Voron.Platform.Posix
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                PosixHelper.ThrowLastError(err, "when truncating " + _filename);
             }
             result = Syscall.fsync(_fd);
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                PosixHelper.ThrowLastError(err, "when fsycning " + _filename);
             }
 
             if (PosixHelper.CheckSyncDirectoryAllowed(_filename) && PosixHelper.SyncDirectory(_filename) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                PosixHelper.ThrowLastError(err, "when syncing dir for " + _filename);
             }
         }
     }

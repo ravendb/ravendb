@@ -1,23 +1,39 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Impl;
 
 namespace Voron
 {
-    public unsafe class PageLocator : IDisposable
+    public unsafe class PageLocator
     {
         private const ushort Invalid = 0;
         private LowLevelTransaction _tx;
         private ushort* _fingerprints; // we use pointer here to avoid bound checking
-        private readonly PageHandlePtr[] _cache;
+        private PageHandlePtr* _cache;
 
         private int _cacheSize;
         private int _current;
+        private ByteString _fingerprintsMemory;
+        private ByteString _cacheMemory;
 
-        public void Dispose()
+        public int PageSize
         {
-            GC.SuppressFinalize(this);
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _tx.PageSize; }
+        }
+
+        public void Release()
+        {
+            if (_tx == null)
+                return;
+
+            _tx.Allocator.Release(ref _cacheMemory);
+            _tx.Allocator.Release(ref _fingerprintsMemory);
+            _tx = null;
+            _cache = null;
+            _fingerprints = null;
         }
 
         public void Renew(LowLevelTransaction tx, int cacheSize)
@@ -28,8 +44,6 @@ namespace Voron
 
             if (cacheSize > 512)
                 cacheSize = 512;
-
-            Array.Clear(_cache, 0, _cacheSize);
 
             // Align cache size to 8 for loop unrolling
             _cacheSize = cacheSize;
@@ -42,14 +56,16 @@ namespace Voron
             _current = -1;
             _tx = tx;
 
-            _fingerprints = (ushort*)tx.Allocator.Allocate(_cacheSize * sizeof(ushort)).Ptr;
+            _fingerprintsMemory = tx.Allocator.Allocate(_cacheSize * sizeof(ushort));
+            _cacheMemory = tx.Allocator.Allocate(_cacheSize * sizeof(PageHandlePtr));
+            _fingerprints = (ushort*)_fingerprintsMemory.Ptr;
+            _cache = (PageHandlePtr*)_cacheMemory.Ptr;
 
-            Memory.Set((byte*) _fingerprints, 0, _cacheSize*sizeof(ushort));
+            Memory.Set((byte*)_fingerprints, 0, _cacheSize * sizeof(ushort));
         }
 
         public PageLocator(LowLevelTransaction tx, int cacheSize = 8)
         {
-            _cache = new PageHandlePtr[512];
             Renew(tx, cacheSize);
         }
 

@@ -1,20 +1,15 @@
 ﻿using System.Runtime.CompilerServices;
 using Voron.Data;
-using Voron.Data.BTrees;
-using Voron.Data.Fixed;
-using Voron.Impl.Paging;
 
 namespace Voron
 {
-    public sealed unsafe class Page
+    public unsafe struct Page
     {
         public readonly byte* Pointer;
-        public readonly AbstractPager Source;
 
-        public Page(byte* pointer, AbstractPager source)
+        public Page(byte* pointer)
         {
             Pointer = pointer;
-            Source = source;
         }
 
         public byte* DataPointer
@@ -50,17 +45,6 @@ namespace Voron
             get { return ((PageHeader*)Pointer)->Flags; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set { ((PageHeader*)Pointer)->Flags = value; }
-        }
-
-        // TODO: Convert all these methods in explicit casting operators. 
-        public TreePage ToTreePage()
-        {
-            return new TreePage(Pointer, Source.DebugInfo, Source.PageSize);
-        }
-
-        public FixedSizeTreePage ToFixedSizeTreePage()
-        {
-            return new FixedSizeTreePage(Pointer, Source.DebugInfo, Source.PageSize);
         }
     }
 }

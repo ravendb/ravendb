@@ -104,7 +104,7 @@ namespace Sparrow.Json
             }
         }
 
-        public JsonContextPoolBase()
+        protected JsonContextPoolBase()
         {
             _timer = new Timer(TimerCallback, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }

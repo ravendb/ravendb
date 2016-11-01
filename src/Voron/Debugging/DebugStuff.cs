@@ -199,8 +199,8 @@ namespace Voron.Debugging
         private unsafe static void RenderFixedSizeTreePage(LowLevelTransaction tx, FixedSizeTreePage page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)
         {
             sw.WriteLine(
-                "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries from {5}</label><ul>",
-                page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.NumberOfEntries, open ? "checked" : "", text, page.Source);
+                "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries</label><ul>",
+                page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.NumberOfEntries, open ? "checked" : "", text);
 
             for (int i = 0; i < page.NumberOfEntries; i++)
             {
@@ -220,7 +220,8 @@ namespace Voron.Debugging
                     if (i == 0)
                         s = "[smallest]";
 
-                    RenderFixedSizeTreePage(tx, tx.GetPage(pageNum).ToFixedSizeTreePage(), sw, header, s, false);
+                    var fstPage = tx.GetPage(pageNum);
+                    RenderFixedSizeTreePage(tx, new FixedSizeTreePage(fstPage.Pointer, tx.PageSize), sw, header, s, false);
                 }
             }
 
@@ -282,8 +283,8 @@ namespace Voron.Debugging
             for (int i = 0; i < page.NumberOfEntries; i++)
             {
                 var nodeHeader = page.GetNode(i);
-				
-				string key;
+                
+                string key;
                 Slice keySlice;
                 using (TreeNodeHeader.ToSlicePtr(tree.Llt.Allocator, nodeHeader, out keySlice))
                 {

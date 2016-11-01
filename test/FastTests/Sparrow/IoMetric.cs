@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,12 +17,9 @@ namespace FastTests.Sparrow
 
             for (var i = 0; i < 6; i++)
             {
-                using (metrics.MeterIoRate("file1.txt", IoMetrics.MeterType.JournalWrite, i + 1))
-                {
-                    Thread.Sleep(2);
-                }
-
-                Thread.Sleep(3);
+                var now = DateTime.UtcNow;
+                metrics.MeterIoRate("file1.txt", IoMetrics.MeterType.JournalWrite, i + 1)
+                    .Parent.Mark(i + 1, now, now.AddMilliseconds(2),IoMetrics.MeterType.JournalWrite);
             }
 
             int filesCount = 0;
@@ -35,7 +33,7 @@ namespace FastTests.Sparrow
                 foreach (var currentItem in currentItems)
                 {
                     var durationInMs = currentItem.Duration.TotalMilliseconds;
-                    Assert.InRange(durationInMs, 0, 2 + 50); // ~around 2ms BUT we might have context switching during execution!
+                    Assert.InRange(durationInMs, 0, 2); 
                 }
 
                 Assert.Equal(1, historyItems.Count);
