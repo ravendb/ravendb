@@ -11,7 +11,7 @@ Digit      [0-9]
 Number     [+-]?{Digit}+
 Decimal    [+-]?{Number}\.{Number}
 EscapeChar \\[^]
-TermStartChar [^ :\t\r\n\f\+\-!\{\}()"^\*\?\\~\[\],]|{EscapeChar}
+TermStartChar [^ :\t\r\n\f\+\-!\{\}()"^\*\?\\~\[\]]|{EscapeChar}
 TermChar {TermStartChar}|[,\-\+]
 WildCardStartChar {TermStartChar}|[\*\?]
 WildCardChar [\*\?]|{TermChar}
@@ -32,7 +32,6 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 %}
 
 %%
-","								{return (int)Token.COMMA;}
 "^"								{return (int)Token.BOOST;}
 "~"								{return (int)Token.TILDA;}
 "{"								{return (int)Token.OPEN_CURLY_BRACKET;}
@@ -58,7 +57,7 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 {Method}						{ yylval.s = yytext; return (int)Token.METHOD;}
 {UnanalizedTerm}				{ yylval.s = DiscardEscapeChar(yytext); return (int)Token.UNANALIZED_TERM;}
 {QuotedTerm}					{ 
-                                    yylval.s = DiscardEscapeChar(yytext);
+                                    yylval.s = DiscardEscapeChar(yytext); 
                                     return (int)Token.QUOTED_TERM;
                                 }
 {QuotedWildcardTerm}			{ yylval.s = yytext; return (int)Token.QUOTED_WILDCARD_TERM;}
@@ -79,6 +78,8 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 								{
 									yylval.s = DiscardEscapeChar(yytext, true);
 								}
+                                if(InMethod && yylval.s.Equals(","))
+                                    return (int)Token.COMMA;
 								return (int)Token.UNQUOTED_TERM;
 								}
 {PrefixTerm}					{ yylval.s = DiscardEscapeChar(yytext);  return (int)Token.PREFIX_TERM;}
