@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Client.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Smuggler
 {
@@ -33,21 +35,12 @@ namespace Raven.Client.Smuggler
         {
             var httpClient = GetHttpClient();
             ShowProgress("Starting to export file");
+
             var database = options.Database ?? _store.DefaultDatabase;
-
             var url = $"{_store.Url}/databases/{database}/smuggler/export";
-            var query = new Dictionary<string, object>
-            {
-                {"operateOnTypes", options.OperateOnTypes},
-            };
-            if (options.DocumentsLimit.HasValue)
-                query.Add("documentsLimit", options.DocumentsLimit.Value);
-            if (options.RevisionDocumentsLimit.HasValue)
-                query.Add("RevisionDocumentsLimit", options.RevisionDocumentsLimit.Value);
-            // todo: send more options here
-            url = UrlHelper.BuildUrl(url, query);
+            var json = RavenJObject.FromObject(options);
 
-            var response = await httpClient.PostAsync(url, new StringContent(""), token).ConfigureAwait(false);
+            var response = await httpClient.PostAsync(url, new StringContent(json.ToString()), token).ConfigureAwait(false);
             var stream = await response.Content.ReadAsStreamAsync();
             return stream;
         }

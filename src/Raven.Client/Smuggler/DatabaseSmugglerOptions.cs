@@ -1,28 +1,37 @@
+﻿using System.Collections.Generic;
+
 namespace Raven.Client.Smuggler
 {
     public class DatabaseSmugglerOptions
     {
         public DatabaseSmugglerOptions()
         {
-            OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers 
+            OperateOnTypes = OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers
                 | DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Identities;
+            BatchSize = 1024;
+            MaxStepsForTransformScript = 10 * 1000;
+            CollectionsToExport = new List<string>();
         }
-
-        public long? StartDocsEtag { get; set; }
 
         public DatabaseItemType OperateOnTypes { get; set; }
 
-        public bool IgnoreErrorsAndContinue { get; set; }
+        public int BatchSize { get; set; }
 
-        public int? DocumentsLimit { get; set; }
         public int? RevisionDocumentsLimit { get; set; }
+
+        public bool IncludeExpired { get; set; }
+
+        public bool RemoveAnalyzers { get; set; }
 
         public string TransformScript { get; set; }
 
-        public bool SkipConflicted { get; set; }
+        public string FileName { get; set; }
 
-        public bool StripReplicationInformation { get; set; }
+        public List<string> CollectionsToExport { get; set; }
 
+        /// <summary>
+        /// Maximum number of steps that transform script can have
+        /// </summary>
         public int MaxStepsForTransformScript { get; set; }
 
         public string Database { get; set; }

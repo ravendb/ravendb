@@ -6,18 +6,23 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
+using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Jint;
+using Jint.Parser.Ast;
+using Microsoft.Extensions.Primitives;
+using Raven.Abstractions;
 using Raven.Client.Data;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -31,37 +36,70 @@ namespace Raven.Server.Smuggler.Documents.Handlers
     {
 
         [RavenAction("/databases/*/smuggler/validateOptions", "POST")]
-        public Task PostValidateOptions()
-        {
-            //TODO: implement me!
-
-
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/databases/*/smuggler/export", "POST")]
-        public async Task PostExport()
+        public async Task PostValidateOptions()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
+                var blittableJson = await context.ReadForMemoryAsync(RequestBodyStream(), "");
+                var options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
+
+                if (string.IsNullOrEmpty(options?.TransformScript))
+                    return;
+
+                try
+                {
+                    var jint = new Engine(cfg =>
+                    {
+                        cfg.AllowDebuggerStatement(false);
+                        cfg.MaxStatements(options.MaxStepsForTransformScript);
+                        cfg.NullPropagation();
+                    });
+
+                    jint.Execute(string.Format(@"
+                    function Transform(docInner){{
+                        return ({0}).apply(this, [docInner]);
+                    }};", options.TransformScript));
+                }
+                catch (Exception)
+                {
+                    throw new ArgumentException("sssd");
+                }
+            }
+        }
+
+        [RavenAction("/databases/*/smuggler/export", "POST")]
+        public async Task PostExport()
+        {
+            DocumentsOperationContext context;            
+            using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
                 var operationId = GetIntValueQueryString("operationId", required: false);
 
-                var exporter = new SmugglerExporter(Database)
-                {
-                    DocumentsLimit = GetIntValueQueryString("documentsLimit", required: false),
-                    RevisionDocumentsLimit = GetIntValueQueryString("RevisionDocumentsLimit", required: false),
-                };
+                var stream = TryGetRequestFormStream("DownloadOptions") ?? RequestBodyStream();
 
-                var operateOnTypes = GetStringQueryString("operateOnTypes", required: false);
-                DatabaseItemType databaseItemType;
-                if (Enum.TryParse(operateOnTypes, true, out databaseItemType))
+                var blittableJson = await context.ReadForMemoryAsync(stream, "DownloadOptions");
+                var options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
+
+                var exporter = new SmugglerExporter(Database, options);
+                var token = CreateOperationToken();
+
+                var fileName = exporter.Options.FileName;
+                if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) < 0)
                 {
-                    exporter.OperateOnTypes = databaseItemType;
+                    fileName = string.IsNullOrEmpty(exporter.Options.FileName)
+                        ? $"Dump of {context.DocumentDatabase.Name}, {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}"
+                        : exporter.Options.FileName;
+                }
+                else
+                {
+                    throw new InvalidOperationException($"{fileName} is Invalid File Name");
                 }
 
-                var token = CreateOperationToken();
+                var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(fileName)+ ".ravendbdump";
+                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
 
                 if (operationId.HasValue)
                 {
@@ -75,16 +113,23 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
+        private Stream TryGetRequestFormStream(string itemName)
+        {
+            StringValues value;
+            if (HttpContext.Request.Form.TryGetValue(itemName, out value) == false)
+                return null;
+
+            if (value.Count == 0)
+                return null;
+
+            return new MemoryStream(Encoding.UTF8.GetBytes(value[0]));
+        }
+
         private IOperationResult ExportDatabaseInternal(DocumentsOperationContext context, SmugglerExporter exporter, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             try
             {
-
-
-
-                //TODO: use optional onProgress parameter
-                exporter.Export(context, ResponseBodyStream());
-                return null; //TODO: pass operation result to operation status
+                return exporter.Export(context, ResponseBodyStream(), onProgress); 
             }
             finally
             {

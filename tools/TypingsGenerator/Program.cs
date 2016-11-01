@@ -6,8 +6,10 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
+using Raven.Client.Smuggler;
 using Raven.Json.Linq;
 using Raven.Server.Documents;
+using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web.Operations;
 using Sparrow.Json;
 using TypeScripter;
@@ -88,6 +90,9 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(ResourcesInfo));
 
+
+            // smuggler
+            scripter.AddType(typeof(DatabaseSmugglerOptions));
 
             return scripter;
         }

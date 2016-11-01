@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -9,10 +8,9 @@ using Microsoft.Extensions.Primitives;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
-using Sparrow.Logging;
+
 namespace Raven.Server.Web
 {
     public abstract class RequestHandler

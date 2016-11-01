@@ -3,13 +3,13 @@
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);
     includeTransformers = ko.observable(true);
-    removeAnalyzers = ko.observable(false);
-    //TODO: Identities
-
+    includeIdentities = ko.observable(true);
+    
     exportFileName = ko.observable<string>();
 
     batchSize = ko.observable(1024);
     includeExpiredDocuments = ko.observable(false);
+    removeAnalyzers = ko.observable(false);
 
     includeAllCollections = ko.observable(true);
     includedCollections = ko.observableArray<string>([]);
@@ -17,30 +17,30 @@
     transformScript = ko.observable<string>();
 
 
-    toDto(): smugglerOptionsDto { //TODO: do we use smuggler options of type generated on server side?
-        let operateOnTypes = 0;
+    toDto(): Raven.Client.Smuggler.DatabaseSmugglerOptions {
+        const operateOnTypes: Array<Raven.Client.Smuggler.DatabaseItemType> = [];
         if (this.includeDocuments()) {
-            operateOnTypes += 1;
+            operateOnTypes.push("Documents");
         }
         if (this.includeIndexes()) {
-            operateOnTypes += 2;
+            operateOnTypes.push("Indexes");
         }
         if (this.includeTransformers()) {
-            operateOnTypes += 8;
+            operateOnTypes.push("Transformers");
         }
-        if (this.removeAnalyzers()) {
-            operateOnTypes += 8000;
+        if (this.includeIdentities()) {
+            operateOnTypes.push("Identities");
         }
-
-        //TOOD: if (!this.includeAllCollections()) - prepend js code to script? - looks like to we have support for filters in v4.0
 
         return {
-            OperateOnTypes: operateOnTypes,
             BatchSize: this.batchSize(),
-            ShouldExcludeExpired: !this.includeExpiredDocuments(),
+            CollectionsToExport: this.includeAllCollections() ? null : this.includedCollections(),
+            FileName: this.exportFileName(),
+            IncludeExpired: this.includeExpiredDocuments(),
             TransformScript: this.transformScript(),
-            NoneDefaultFileName: this.exportFileName()
-        } as smugglerOptionsDto;
+            RemoveAnalyzers: this.removeAnalyzers(),
+            OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Smuggler.DatabaseItemType
+        } as Raven.Client.Smuggler.DatabaseSmugglerOptions;
     }
 }
 

@@ -526,6 +526,23 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, List<string> collections, long etag, int take)
+        {
+            foreach (var collection in collections)
+            {
+                if(take <=0)
+                    yield break;
+
+                foreach (var document in GetDocumentsFrom(context, collection, etag, 0, int.MaxValue))
+                {
+                    if (take-- <= 0)
+                        yield break;
+
+                    yield return document;
+                }
+            }
+        }
+
         public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, string key, bool throwOnConflict = true)
         {
             if (string.IsNullOrWhiteSpace(key))
@@ -871,7 +888,7 @@ namespace Raven.Server.Documents
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 4);
 
             result.LastModified = new DateTime(*(long*) tvr.Read(5, out size));
-
+     
             return result;
         }
 
