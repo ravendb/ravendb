@@ -52,8 +52,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public override unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            _pageLocator.Renew(indexContext.Transaction.InnerTransaction.LowLevelTransaction, 128);
-
             Slice docKeyAsSlice;            
             using (Slice.External(indexContext.Allocator, tombstone.LoweredKey.Buffer, tombstone.LoweredKey.Length, out docKeyAsSlice))
             {
@@ -97,8 +95,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         protected unsafe int PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
-
-            _pageLocator.Renew(indexContext.Transaction.InnerTransaction.LowLevelTransaction, 128);
 
             Slice docKeyAsSlice;            
             using (Slice.External(indexContext.Allocator, documentKey.Buffer, documentKey.Length, out docKeyAsSlice))
