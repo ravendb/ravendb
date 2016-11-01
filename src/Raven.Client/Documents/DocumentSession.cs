@@ -115,7 +115,23 @@ namespace Raven.Client.Documents
             throw new NotImplementedException();
         }
 
-        public Lazy<TResult> Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null) where TTransformer : AbstractTransformerCreationTask, new()
+        //Todo iftah, when implementing lazy, replace with Raven.Client.Documents.ILoadConfiguration
+        Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<Raven.Client.ILoadConfiguration> configure, Action<TResult> onEval)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Lazy<TResult> Load<TResult>(string id, Type transformerType, Action<Client.ILoadConfiguration> configure = null, Action<TResult> onEval = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Lazy<TResult[]> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<Client.ILoadConfiguration> configure = null, Action<TResult> onEval = null) where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<Client.ILoadConfiguration> configure = null, Action<TResult> onEval = null)
         {
             throw new NotImplementedException();
         }
@@ -152,14 +168,35 @@ namespace Raven.Client.Documents
             throw new NotImplementedException();
         }
 
+        public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, object> transformerParameters = null)
+        {
+            throw new NotImplementedException();
+        }
+
         public Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
         {
             throw new NotImplementedException();
         }
 
-        public T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
+        public T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, object> transformerParameters = null)
         {
-            throw new NotImplementedException();
+            if (transformer == null)
+                throw new ArgumentNullException("transformer");
+            if (ids.Length == 0)
+                return new T[0];
+
+            var loadTransformerOeration = new LoadTransformerOperation(this);
+            loadTransformerOeration.ByIds(ids);
+            loadTransformerOeration.WithTransformer(transformer, transformerParameters);
+
+            var command = loadTransformerOeration.CreateRequest();
+            if (command != null)
+            {
+                RequestExecuter.Execute(command, Context);
+                loadTransformerOeration.SetResult(command.Result);
+            }
+
+            return loadTransformerOeration.GetTransformedDocuments<T>(command.Result);
         }
 
         public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
