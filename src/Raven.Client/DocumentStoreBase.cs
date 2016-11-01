@@ -34,6 +34,35 @@ namespace Raven.Client
             Subscriptions = new DocumentSubscriptions(this);
         }
 
+        public virtual void OnBeforeStore(Documents.InMemoryDocumentSessionOperations session, string id, object entityinstance, IDictionary<string, string> metadata)
+        {
+            BeforeStoreEvent?.Invoke(session, id, entityinstance, metadata);
+        }
+
+        public virtual void OnAfterStore(Documents.InMemoryDocumentSessionOperations session, string id, object entityinstance, IDictionary<string, string> metadata)
+        {
+            AfterStoreEvent?.Invoke(session, id, entityinstance, metadata);
+        }
+
+        public bool BeforeStoreEmpty => (BeforeStoreEvent == null);
+
+        public bool AfterStoreEmpty => (AfterStoreEvent == null);
+
+
+        public virtual void OnBeforeDelete(Documents.InMemoryDocumentSessionOperations session, string id, object entityinstance, IDictionary<string, string> metadata)
+        {
+            BeforeDeleteEvent?.Invoke(session, id, entityinstance, metadata);
+        }
+
+        public virtual void OnBeforeQueryExecutedEvent(Documents.IDocumentQueryCustomization queryCustomization)
+        {
+            BeforeQueryExecutedEvent?.Invoke(queryCustomization);
+        }
+
+        public bool BeforeDeleteEmpty => (BeforeDeleteEvent == null);
+
+        public bool BeforeQueryExecutedEventEmpty => (BeforeQueryExecutedEvent == null);
+
         public DocumentSessionListeners Listeners
         {
             get { return listeners; }
@@ -341,6 +370,10 @@ namespace Raven.Client
         /// Internal notification for integration tools, mainly
         ///</summary>
         public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
+        public event BeforeStoreDelegate BeforeStoreEvent;
+        public event AfterStoreDelegate AfterStoreEvent;
+        public event BeforeDeleteDelegate BeforeDeleteEvent;
+        public event BeforeQueryExecutedDelegate BeforeQueryExecutedEvent;
 
         protected readonly ProfilingContext profilingContext = new ProfilingContext();
 
@@ -374,56 +407,5 @@ namespace Raven.Client
         }
 
         public abstract void InitializeProfiling();
-
-        /// <summary>
-        /// NEW Client Listeners
-        /// </summary>
-        private Raven.Client.Documents.DocumentSessionListeners newClientlisteners = new Raven.Client.Documents.DocumentSessionListeners();
-
-        public Raven.Client.Documents.DocumentSessionListeners NewClientListeners
-        {
-            get { return newClientlisteners; }
-        }
-
-        public void SetNewClientListeners(Raven.Client.Documents.DocumentSessionListeners newListeners)
-        {
-            newClientlisteners = newListeners;
-        }
-
-        /// <summary>
-        /// Registers the store listener.
-        /// </summary>
-        /// <param name="documentStoreListener">The document store listener.</param>
-        public IDocumentStore RegisterNewListener(Raven.Client.Documents.Listeners.IDocumentStoreListener documentStoreListener)
-        {
-            newClientlisteners.StoreListeners = newClientlisteners.StoreListeners.Concat(new[] { documentStoreListener }).ToArray();
-            return this;
-        }
-
-        /// <summary>
-        /// Registers the delete listener.
-        /// </summary>
-        /// <param name="deleteListener">The delete listener.</param>
-        public DocumentStoreBase RegisterNewListener(Raven.Client.Documents.Listeners.IDocumentDeleteListener deleteListener)
-        {
-            newClientlisteners.DeleteListeners = newClientlisteners.DeleteListeners.Concat(new[] { deleteListener }).ToArray();
-            return this;
-        }
-
-        /// <summary>
-        /// Gets a read-only collection of the registered store listeners.
-        /// </summary>
-        public ReadOnlyCollection<Raven.Client.Documents.Listeners.IDocumentStoreListener> RegisteredNewStoreListeners
-        {
-            get { return new ReadOnlyCollection<Raven.Client.Documents.Listeners.IDocumentStoreListener>(newClientlisteners.StoreListeners); }
-        }
-
-        /// <summary>
-        /// Gets a read-only collection of the registered delete listeners.
-        /// </summary>
-        public ReadOnlyCollection<Raven.Client.Documents.Listeners.IDocumentDeleteListener> RegisteredNewDeleteListeners
-        {
-            get { return new ReadOnlyCollection<Raven.Client.Documents.Listeners.IDocumentDeleteListener>(newClientlisteners.DeleteListeners); }
-        }
     }
 }

@@ -57,8 +57,8 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
         /// </summary>
-        public DocumentSession(string dbName, DocumentStore documentStore, DocumentSessionListeners listeners, Guid id, IDatabaseCommands databaseCommands, RequestExecuter requestExecuter)
-            : base(dbName, documentStore, listeners, requestExecuter, id)
+        public DocumentSession(string dbName, DocumentStore documentStore, Guid id, IDatabaseCommands databaseCommands, RequestExecuter requestExecuter)
+            : base(dbName, documentStore, requestExecuter, id)
         {
             DatabaseCommands = databaseCommands;
         }
@@ -423,7 +423,7 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public IDocumentQuery<T> DocumentQuery<T>(string indexName, bool isMapReduce = false)
         {
-            return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, TheListeners.QueryListeners, isMapReduce);
+            return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, isMapReduce);
         }
 
         public IDocumentQuery<T> DocumentQuery<T>()
@@ -581,13 +581,13 @@ namespace Raven.Client.Documents
                 throw new InvalidOperationException("Cannot refresh a transient instance");
             IncrementRequestCount();
 
-            //TODO - Efrat - Change when we have new DatabaseCommands.Get
-            var document = TempDatabaseCommandGet<T>(documentInfo);
+            //TODO - Change when we have new DatabaseCommands.Get
+            var document = TempDatabaseCommandGet(documentInfo);
 
             RefreshInternal(entity, document, documentInfo);
         }
 
-        private BlittableJsonReaderObject TempDatabaseCommandGet<T>(DocumentInfo documentInfo)
+        private BlittableJsonReaderObject TempDatabaseCommandGet(DocumentInfo documentInfo)
         {
             var command = new GetDocumentCommand
             {
@@ -621,9 +621,13 @@ namespace Raven.Client.Documents
             throw new NotImplementedException();
         }
 
-        protected override JsonDocument GetJsonDocument(string documentKey)
+        protected override DocumentInfo GetDocumentInfo(string documentId)
         {
-            throw new NotImplementedException();
+            var documentInfo = new DocumentInfo {Id = documentId};
+            DocumentsById.Add(documentId, documentInfo);
+            //TODO - Change when we have new DatabaseCommands.Get
+            TempDatabaseCommandGet(documentInfo);
+            return documentInfo;
         }
 
         protected override string GenerateKey(object entity)

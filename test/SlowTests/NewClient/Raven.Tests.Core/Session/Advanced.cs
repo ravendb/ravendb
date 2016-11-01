@@ -1,14 +1,9 @@
 using System;
-using System.Threading.Tasks;
-
 using FastTests;
-using Microsoft.AspNetCore.Hosting.Internal;
-using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
-using Raven.Client.Http;
 using Raven.Json.Linq;
 using Sparrow.Json;
 using Xunit;
@@ -16,7 +11,7 @@ using Xunit;
 using Company = SlowTests.Core.Utils.Entities.Company;
 using User = SlowTests.Core.Utils.Entities.User;
 
-namespace SlowTests.NewClient
+namespace SlowTests.NewClient.Raven.Tests.Core.Session
 {
     public class Advanced : RavenTestBase
     {
@@ -269,7 +264,6 @@ namespace SlowTests.NewClient
                     user.Name = "Name";
                     session.Store(user);
                     var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
-                    //Assert.Equal("PUT attempted on document '" + entityId + "' using a non current etag", e.Message);
                 }
             }
         }
@@ -328,5 +322,247 @@ namespace SlowTests.NewClient
                 }
             }
         }
+
+        [Fact]
+        public void CanUseNumberOfRequests()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenNewSession())
+                {
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                    var company = new Company();
+                    company.Name = "NumberOfRequestsTest";
+
+                    session.Store(company);
+                    session.SaveChanges();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    var company2 = session.Load<Company>(company.Id);
+                    company2.Name = "NumberOfRequestsTest2";
+                    session.Store(company2);
+                    session.SaveChanges();
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseMaxNumberOfRequestsPerSession()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenNewSession())
+                {
+                    session.Advanced.MaxNumberOfRequestsPerSession = 2;
+
+                    var company = new Company();
+                    session.Store(company);
+                    session.SaveChanges();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    company.Name = "1";
+                    session.Store(company);
+                    session.SaveChanges();
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                    try
+                    {
+                        company.Name = "2";
+                        session.Store(company);
+                        session.SaveChanges();
+                        Assert.False(true, "I expected InvalidOperationException to be thrown here.");
+                    }
+                    catch (InvalidOperationException)
+                    {
+                    }
+                }
+            }
+        }
+
+        //TODO - Efrat
+        /*[Fact]
+        public void CanGetEtagFor()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.Put(
+                    "companies/1",
+                    null,
+                    RavenJObject.FromObject(new Company { Id = "companies/1" }),
+                    new RavenJObject()
+                    );
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    Assert.Equal("01000000-0000-0001-0000-000000000001", session.Advanced.GetEtagFor<Company>(company).ToString());
+                }
+            }
+        }*/
+
+        //TODO - Efrat
+        /*[Fact]
+        public void CanLazilyLoadEntity()
+        {
+            const string COMPANY1_ID = "companies/1";
+            const string COMPANY2_ID = "companies/2";
+
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.Put(
+                    COMPANY1_ID,
+                    null,
+                    RavenJObject.FromObject(new Company { Id = COMPANY1_ID }),
+                    new RavenJObject()
+                    );
+                store.DatabaseCommands.Put(
+                    COMPANY2_ID,
+                    null,
+                    RavenJObject.FromObject(new Company { Id = COMPANY2_ID }),
+                    new RavenJObject()
+                    );
+
+                using (var session = store.OpenSession())
+                {
+                    Lazy<Company> lazyOrder = session.Advanced.Lazily.Load<Company>(COMPANY1_ID);
+                    Assert.False(lazyOrder.IsValueCreated);
+                    var order = lazyOrder.Value;
+                    Assert.Equal(COMPANY1_ID, order.Id);
+
+                    Lazy<Company[]> lazyOrders = session.Advanced.Lazily.Load<Company>(new String[] { COMPANY1_ID, COMPANY2_ID });
+                    Assert.False(lazyOrders.IsValueCreated);
+                    Company[] orders = lazyOrders.Value;
+                    Assert.Equal(2, orders.Length);
+                    Assert.Equal(COMPANY1_ID, orders[0].Id);
+                    Assert.Equal(COMPANY2_ID, orders[1].Id);
+                }
+            }
+        }*/
+
+        //TODO - Efrat
+        /*[Fact]
+        public void CanExecuteAllPendingLazyOperations()
+        {
+            const string COMPANY1_ID = "companies/1";
+            const string COMPANY2_ID = "companies/2";
+
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.Put(
+                    COMPANY1_ID,
+                    null,
+                    RavenJObject.FromObject(new Company { Id = COMPANY1_ID }),
+                    new RavenJObject()
+                    );
+                store.DatabaseCommands.Put(
+                    COMPANY2_ID,
+                    null,
+                    RavenJObject.FromObject(new Company { Id = COMPANY2_ID }),
+                    new RavenJObject()
+                    );
+
+                using (var session = store.OpenSession())
+                {
+                    Company company1 = null;
+                    Company company2 = null;
+
+                    session.Advanced.Lazily.Load<Company>(COMPANY1_ID, x => company1 = x);
+                    session.Advanced.Lazily.Load<Company>(COMPANY2_ID, x => company2 = x);
+                    Assert.Null(company1);
+                    Assert.Null(company2);
+
+                    session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
+                    Assert.NotNull(company1);
+                    Assert.NotNull(company2);
+                    Assert.Equal(COMPANY1_ID, company1.Id);
+                    Assert.Equal(COMPANY2_ID, company2.Id);
+                }
+            }
+        }*/
+
+
+        //TODO - Efrat
+        /*[Fact]
+        public void CanUseDefer()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenNewSession())
+                {
+                    var commands = new ICommandData[]
+                    {
+                        new PutCommandData
+                        {
+                            Document =
+                                RavenJObject.FromObject(new Company {Name = "company 1"}),
+                            Etag = null,
+                            Key = "company1",
+                            Metadata = new RavenJObject(),
+                        },
+                        new PutCommandData
+                        {
+                            Document =
+                                RavenJObject.FromObject(new Company {Name = "company 2"}),
+                            Etag = null,
+                            Key = "company2",
+                            Metadata = new RavenJObject(),
+                        }
+                    };
+
+                    session.Advanced.Defer(commands);
+                    session.Advanced.Defer(new DeleteCommandData { Key = "company1" });
+
+                    session.SaveChanges();
+
+                    Assert.Null(session.Load<Company>("company1"));
+                    Assert.NotNull(session.Load<Company>("company2"));
+                }
+            }
+        }*/
+
+        //TODO - Efrat
+        /*[Fact]
+        public void CanAggressivelyCacheFor()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenNewSession())
+                {
+                    session.Store(new User { Id = "users/1", Name = "Name" });
+                    session.SaveChanges();
+                }
+
+#if !DNXCORE50
+                Server.Server.ResetNumberOfRequests();
+#endif
+
+                using (var session = store.OpenSession())
+                {
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
+                    session.Load<User>("users/1");
+                    Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<User>("users/1");
+                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    for (var i = 0; i <= 20; i++)
+                    {
+                        using (store.AggressivelyCacheFor(TimeSpan.FromSeconds(30)))
+                        {
+                            session.Load<User>("users/1");
+                        }
+                    }
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }*/
     }
 }
