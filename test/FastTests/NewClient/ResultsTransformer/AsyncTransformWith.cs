@@ -7,7 +7,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Indexes;
 using Xunit;
 
