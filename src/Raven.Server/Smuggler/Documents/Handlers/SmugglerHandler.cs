@@ -87,13 +87,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var token = CreateOperationToken();
 
                 var fileName = exporter.Options.FileName;
-                if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) < 0)
+                if (string.IsNullOrEmpty(fileName))
                 {
-                    fileName = string.IsNullOrEmpty(exporter.Options.FileName)
-                        ? $"Dump of {context.DocumentDatabase.Name}, {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}"
-                        : exporter.Options.FileName;
+                    fileName = $"Dump of {context.DocumentDatabase.Name}, {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}";
                 }
-                else
+                else if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
                 {
                     throw new InvalidOperationException($"{fileName} is Invalid File Name");
                 }
@@ -115,6 +113,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
         private Stream TryGetRequestFormStream(string itemName)
         {
+            if (HttpContext.Request.HasFormContentType == false)
+                return null;
+
             StringValues value;
             if (HttpContext.Request.Form.TryGetValue(itemName, out value) == false)
                 return null;
