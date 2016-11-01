@@ -23,6 +23,7 @@ namespace Voron.Data.BTrees
 
         private readonly RecentlyFoundTreePages _recentlyFoundPages;
         private PageLocator _pageLocator;
+        private readonly bool _isPageLocatorOwned;
 
         public Slice Name { get; set; }
 
@@ -39,12 +40,14 @@ namespace Voron.Data.BTrees
             get { return _llt; }
         }
 
-        private Tree(LowLevelTransaction llt, Transaction tx, long root)
+        private Tree(LowLevelTransaction llt, Transaction tx, long root, PageLocator pageLocator = null)
         {
             _llt = llt;
             _tx = tx;
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2);
-            _pageLocator = llt.PersistentContext.AllocatePageLocator(llt);
+            _isPageLocatorOwned = pageLocator == null;
+            _pageLocator = pageLocator ?? llt.PersistentContext.AllocatePageLocator(llt);
+
             _state = new TreeMutableState(llt)
             {
                 RootPageNumber = root
@@ -56,14 +59,15 @@ namespace Voron.Data.BTrees
             _llt = llt;
             _tx = tx;
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2);
+            _isPageLocatorOwned = true;
             _pageLocator = llt.PersistentContext.AllocatePageLocator(llt);
             _state = new TreeMutableState(llt);
             _state = state;
         }
 
-        public static Tree Open(LowLevelTransaction llt, Transaction tx, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree)
+        public static Tree Open(LowLevelTransaction llt, Transaction tx, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
         {
-            return new Tree(llt, tx, header->RootPageNumber)
+            return new Tree(llt, tx, header->RootPageNumber, pageLocator)
             {
                 _state =
                 {
@@ -80,13 +84,13 @@ namespace Voron.Data.BTrees
             };
         }
 
-        public static Tree Create(LowLevelTransaction llt, Transaction tx, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree)
+        public static Tree Create(LowLevelTransaction llt, Transaction tx, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
         {
             if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table )
                 throw new ArgumentException($"Only valid types are {nameof(RootObjectType.VariableSizeTree)} or {nameof(RootObjectType.Table)}.", nameof(type));
 
             var newRootPage = AllocateNewPage(llt, TreePageFlags.Leaf, 1);
-            var tree = new Tree(llt, tx, newRootPage.PageNumber)
+            var tree = new Tree(llt, tx, newRootPage.PageNumber, pageLocator)
             {
                 _state =
                 {
@@ -1029,7 +1033,7 @@ namespace Voron.Data.BTrees
                 }
             }
 
-            if (_pageLocator != null)
+            if (_pageLocator != null && _isPageLocatorOwned )
             {
                 _llt.PersistentContext.FreePageLocator(_pageLocator);
                 _pageLocator = null;

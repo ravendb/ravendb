@@ -46,14 +46,14 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Tree ReadTree(string treeName, RootObjectType type = RootObjectType.VariableSizeTree)
+        public Tree ReadTree(string treeName, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
         {
             Slice treeNameSlice;
             Slice.From(Allocator, treeName, ByteStringType.Immutable, out treeNameSlice);
-            return ReadTree(treeNameSlice, type);
+            return ReadTree(treeNameSlice, type, pageLocator);
         }
 
-        public Tree ReadTree(Slice treeName, RootObjectType type = RootObjectType.VariableSizeTree)
+        public Tree ReadTree(Slice treeName, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
         {
             EnsureTrees();
 
@@ -67,7 +67,7 @@ namespace Voron.Impl
                 if (header->RootObjectType != type)
                     throw new InvalidOperationException($"Tried to opened {treeName} as a {type}, but it is actually a " + header->RootObjectType);
 
-                tree = Tree.Open(_lowLevelTransaction, this, header, type);
+                tree = Tree.Open(_lowLevelTransaction, this, header, type, pageLocator);
                 tree.Name = treeName;
                 _trees.Add(treeName, tree);
                 return tree;
@@ -288,16 +288,16 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree)
+        public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
         {
             Slice treeNameSlice;
             Slice.From(Allocator, name, ByteStringType.Immutable, out treeNameSlice);
-            return CreateTree(treeNameSlice, type);
+            return CreateTree(treeNameSlice, type, pageLocator);
         }
 
-        public Tree CreateTree(Slice name, RootObjectType type = RootObjectType.VariableSizeTree)
+        public Tree CreateTree(Slice name, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
         {
-            Tree tree = ReadTree(name, type);
+            Tree tree = ReadTree(name, type, pageLocator);
             if (tree != null)
                 return tree;
 
@@ -305,7 +305,7 @@ namespace Voron.Impl
                 throw new InvalidOperationException("No such tree: '" + name +
                                                     "' and cannot create trees in read transactions");
 
-            tree = Tree.Create(_lowLevelTransaction, this);
+            tree = Tree.Create(_lowLevelTransaction, this, pageLocator: pageLocator);
             tree.Name = name;
             tree.State.RootObjectType = type;
 

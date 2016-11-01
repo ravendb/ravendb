@@ -26,7 +26,10 @@ namespace Voron.Data.Fixed
         private readonly ushort _valSize;
         private readonly int _entrySize;
         private readonly int _maxEmbeddedEntries;
+
         private PageLocator _pageLocator;
+        private readonly bool _isPageLocatorOwned;
+
         private RootObjectType? _type;
         private Stack<FixedSizeTreePage> _cursor;
         private int _changes;
@@ -97,12 +100,14 @@ namespace Voron.Data.Fixed
                                                   header->RootObjectType);
         }
 
-        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true)
+        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true, PageLocator pageLocator = null)
         {
             _tx = tx;
             _parent = parent;
             _valSize = valSize;
-            _pageLocator = tx.PersistentContext.AllocatePageLocator(tx);
+
+            _isPageLocatorOwned = pageLocator == null;
+            _pageLocator = pageLocator ?? tx.PersistentContext.AllocatePageLocator(tx);
 
             _entrySize = sizeof(long) + _valSize;
             _maxEmbeddedEntries = 512 / _entrySize;
@@ -1450,7 +1455,7 @@ namespace Voron.Data.Fixed
 
         public void Dispose()
         {
-            if (_pageLocator != null)
+            if (_pageLocator != null && _isPageLocatorOwned)
             {
                 _tx.PersistentContext.FreePageLocator(_pageLocator);
                 _pageLocator = null;
