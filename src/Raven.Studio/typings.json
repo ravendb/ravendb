@@ -17,6 +17,7 @@
     "jszip": "github:DefinitelyTyped/DefinitelyTyped/jszip/jszip.d.ts#56295f5058cac7ae458540423c50ac2dcf9fc711",
     "knockout": "registry:dt/knockout#0.0.0+20160512130947",
     "knockout-postbox": "registry:dt/knockout-postbox#0.0.0+20160316155526",
+    "knockout.validation": "registry:dt/knockout.validation#0.0.0+20160501154149",
     "mocha": "registry:dt/mocha#2.2.5+20160720003353",
     "moment": "registry:dt/moment#2.8.0+20160316155526",
     "moment-node": "registry:dt/moment-node#2.11.1+20160511043338",
