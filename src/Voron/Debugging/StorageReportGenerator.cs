@@ -205,14 +205,14 @@ namespace Voron.Debugging
                 {
                     if ((page.Flags & PageFlags.FixedSizeTreePage) == PageFlags.FixedSizeTreePage)
                     {
-                        var fstp = page.ToFixedSizeTreePage();
+                        var fstp = new FixedSizeTreePage(page.Pointer, _tx.PageSize);
                         var sizeUsed = Constants.FixedSizeTreePageHeaderSize + 
                             (fstp.NumberOfEntries * (fstp.IsLeaf ? fstp.ValueSize : FixedSizeTree.BranchEntrySize));
                         densities.Add(((double)sizeUsed) / pageSize);
                     }
                     else
                     {
-                        densities.Add(((double)page.ToTreePage().SizeUsed) / pageSize);
+                        densities.Add(((double)new TreePage(page.Pointer, pageSize).SizeUsed) / pageSize);
                     }
                 }
             }
@@ -227,7 +227,8 @@ namespace Voron.Debugging
 
             for (var i = 0; i < allPages.Count; i++)
             {
-                var fstp = _tx.GetPage(allPages[i]).ToFixedSizeTreePage();
+                var page = _tx.GetPage(allPages[i]);
+                var fstp = new FixedSizeTreePage(page.Pointer, _tx.PageSize);
                 var sizeUsed = Constants.FixedSizeTreePageHeaderSize +
                                (fstp.NumberOfEntries * (fstp.IsLeaf ? fstp.ValueSize : FixedSizeTree.BranchEntrySize));
                 densities.Add(((double)sizeUsed) / pageSize);
@@ -237,7 +238,7 @@ namespace Voron.Debugging
 
         private TreePage GetNestedMultiValuePage(Tree tree, byte* nestedPagePtr, TreeNodeHeader* currentNode)
         {
-            var nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort) tree.GetDataSize(currentNode));
+            var nestedPage = new TreePage(nestedPagePtr, (ushort) tree.GetDataSize(currentNode));
 
             Debug.Assert(nestedPage.PageNumber == -1); // nested page marker
             return nestedPage;

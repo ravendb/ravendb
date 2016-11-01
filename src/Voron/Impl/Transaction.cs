@@ -17,7 +17,11 @@ namespace Voron.Impl
 
         private readonly LowLevelTransaction _lowLevelTransaction;
 
-        public LowLevelTransaction LowLevelTransaction => _lowLevelTransaction;
+        public LowLevelTransaction LowLevelTransaction
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _lowLevelTransaction; }
+        }
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 

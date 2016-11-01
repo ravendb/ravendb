@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Impl;
 
@@ -11,9 +12,14 @@ namespace Voron
         private LowLevelTransaction _tx;
         private ushort* _fingerprints; // we use pointer here to avoid bound checking
         private readonly PageHandlePtr[] _cache;
-
+        
         private int _cacheSize;
         private int _current;
+
+        public int PageSize
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return _tx.PageSize; }
+        }
 
         public void Dispose()
         {

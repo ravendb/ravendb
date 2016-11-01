@@ -14,17 +14,15 @@ namespace Voron.Data.BTrees
     public unsafe class TreePage
     {
         public readonly int PageSize;
-        public readonly string Source;
-        public readonly byte* Base;
+        public byte* Base;
 
         public int LastMatch;
         public int LastSearchPosition;
         public bool Dirty;
 
-        public TreePage(byte* basePtr, string source, int pageSize)
+        public TreePage(byte* basePtr, int pageSize)
         {
             Base = basePtr;
-            Source = source;
             PageSize = pageSize;
         }
 
@@ -125,9 +123,9 @@ namespace Voron.Data.BTrees
 
                             Slice pageKey;
                             using (TreeNodeHeader.ToSlicePtr(allocator, node, out pageKey))
-							{
-								LastMatch = SliceComparer.CompareInline(key, pageKey);
-							}
+                            {
+                                LastMatch = SliceComparer.CompareInline(key, pageKey);
+                            }
 
 
                             if (LastMatch == 0)
