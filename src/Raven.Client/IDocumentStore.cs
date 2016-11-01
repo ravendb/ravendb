@@ -18,10 +18,41 @@ using Raven.Client.Indexes;
 namespace Raven.Client
 {
     /// <summary>
+    /// Store delegate
+    /// </summary>
+    public delegate void BeforeStoreDelegate(Documents.InMemoryDocumentSessionOperations session, string id, object entityInstance, IDictionary<string, string> metadata);
+    public delegate void AfterStoreDelegate(Documents.InMemoryDocumentSessionOperations session, string id, object entityInstance, IDictionary<string, string> metadata);
+    /// <summary>
+    /// Delete delegate
+    /// </summary>
+    public delegate void BeforeDeleteDelegate(Documents.InMemoryDocumentSessionOperations session, string id, object entityInstance, IDictionary<string, string> metadata);
+
+    /// <summary>
+    /// Query delegate
+    /// </summary>
+    public delegate void BeforeQueryExecutedDelegate(Documents.IDocumentQueryCustomization queryCustomization);
+
+    /// <summary>
     /// Interface for managing access to RavenDB and open sessions.
     /// </summary>
     public interface IDocumentStore : IDisposalNotification
     {
+        /// <summary>
+        /// Store events
+        /// </summary>
+        event BeforeStoreDelegate BeforeStoreEvent;
+        event AfterStoreDelegate AfterStoreEvent;
+
+        /// <summary>
+        /// Delete event
+        /// </summary>
+        event BeforeDeleteDelegate BeforeDeleteEvent;
+
+        /// <summary>
+        /// Query event
+        /// </summary>
+        event BeforeQueryExecutedDelegate BeforeQueryExecutedEvent;
+
         /// <summary>
         /// Subscribe to change notifications from the server
         /// </summary>
@@ -211,5 +242,6 @@ namespace Raven.Client
         void InitializeProfiling();
 
         ProfilingInformation GetProfilingInformationFor(Guid id);
+
     }
 }

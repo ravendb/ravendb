@@ -1,20 +1,19 @@
-﻿using Raven.Abstractions.Data;
-using Raven.Client.Documents.Listeners;
-using System;
+﻿using System;
+using System.Collections.Generic;
+using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.NewClient
 {
-    public class Listeners : RavenTestBase
+    public class Events : RavenTestBase
     {
         [Fact]
         public void Before_Store_Listerner()
         {
             using (var store = GetDocumentStore())
             {
-                store.RegisterNewListener(new AuditListener());
                 using (var newSession = store.OpenNewSession())
                 {
                     newSession.Store(new User()
@@ -23,7 +22,10 @@ namespace FastTests.NewClient
                         Count = 1
                     } 
                     , "users/1");
-                  
+
+                    store.BeforeStoreEvent += eventTest1;
+                    newSession.DocumentStore.BeforeStoreEvent += eventTest2;
+
                     Assert.Equal(newSession.WhatChanged().Count, 1);
                     newSession.SaveChanges();
                 }
@@ -31,27 +33,28 @@ namespace FastTests.NewClient
                 {
                     var user = newSession.Load<User>("users/1");
                     Assert.Equal(user.Count, 1000);
+                    Assert.Equal(user.LastName, "ravendb");
+                    user.Age = 3;
+                    newSession.SaveChanges();
                 }
             }
         }
 
-        private class AuditListener : Raven.Client.Documents.Listeners.IDocumentStoreListener
+        private void eventTest1(InMemoryDocumentSessionOperations session, string id, object entityInstance, IDictionary<string, string> metadata)
         {
-            public bool BeforeStore(string key, object entityInstance, BlittableJsonReaderObject metadata,
-                BlittableJsonReaderObject original)
+            if (entityInstance is User)
             {
-                if (entityInstance is User)
-                {
-                    ((User) entityInstance).Count = 1000;
-                    return true; //to indicate we changed something
-                }
-                return false;
-            }
-
-            public void AfterStore(string key, object entityInstance, BlittableJsonReaderObject metadata)
-            {
-                
+                ((User)entityInstance).Count = 1000;
             }
         }
+
+        private void eventTest2(InMemoryDocumentSessionOperations session, string id, object entityInstance, IDictionary<string, string> metadata)
+        {
+            if (entityInstance is User)
+            {
+                ((User)entityInstance).LastName = "ravendb";
+            }
+        }
+
     }
 }
