@@ -3,10 +3,10 @@
 // (see accompanying GPPGcopyright.rtf)
 
 // GPPG version 1.5.2
-// Machine:  TALWEISS-PC
-// DateTime: 8/2/2015 10:00:56 AM
+// Machine:  TAL-PC
+// DateTime: 11/1/2016 5:18:09 PM
 // UserName: Tal
-// Input file <Indexing\LuceneQuery.Language.grammar.y - 8/2/2015 9:25:05 AM>
+// Input file <Indexing\LuceneQuery.Language.grammar.y - 10/31/2016 6:29:57 PM>
 
 // options: no-lines gplex
 
@@ -25,18 +25,18 @@ internal enum Token {error=2,EOF=3,NOT=4,OR=5,AND=6,
 
 internal partial struct ValueType
 { 
-            public string s; 
-            public FieldLuceneASTNode fn;
-            public ParenthesistLuceneASTNode pn;
-            public PostfixModifiers pm;
-            public LuceneASTNodeBase nb;
-            public OperatorLuceneASTNode.Operator o;
-            public RangeLuceneASTNode rn;
-            public TermLuceneASTNode tn;
-            public MethodLuceneASTNode mn;
-            public List<TermLuceneASTNode> ltn;
-            public LuceneASTNodeBase.PrefixOperator npo;
-       }
+			public string s; 
+			public FieldLuceneASTNode fn;
+			public ParenthesistLuceneASTNode pn;
+			public PostfixModifiers pm;
+			public LuceneASTNodeBase nb;
+			public OperatorLuceneASTNode.Operator o;
+			public RangeLuceneASTNode rn;
+			public TermLuceneASTNode tn;
+			public MethodLuceneASTNode mn;
+			public List<TermLuceneASTNode> ltn;
+			public LuceneASTNodeBase.PrefixOperator npo;
+	   }
 // Abstract base class for GPLEX scanners
 [GeneratedCode( "Gardens Point Parser Generator", "1.5.2")]
 internal abstract class ScanBase : AbstractScanner<ValueType,LexLocation> {
@@ -59,9 +59,9 @@ internal class ScanObj {
 [GeneratedCode( "Gardens Point Parser Generator", "1.5.2")]
 internal partial class LuceneQueryParser: ShiftReduceParser<ValueType, LexLocation>
 {
-  // Verbatim content from Indexing\LuceneQuery.Language.grammar.y - 8/2/2015 9:25:05 AM
-    public LuceneASTNodeBase LuceneAST {get; set;}
-  // End verbatim content from Indexing\LuceneQuery.Language.grammar.y - 8/2/2015 9:25:05 AM
+  // Verbatim content from Indexing\LuceneQuery.Language.grammar.y - 10/31/2016 6:29:57 PM
+	public LuceneASTNodeBase LuceneAST {get; set;}
+  // End verbatim content from Indexing\LuceneQuery.Language.grammar.y - 10/31/2016 6:29:57 PM
 
 #pragma warning disable 649
   private static Dictionary<int, string> aliases;
@@ -250,394 +250,394 @@ internal partial class LuceneQueryParser: ShiftReduceParser<ValueType, LexLocati
     {
       case 2: // main -> node, EOF
 {
-    //Console.WriteLine("Found rule main -> node EOF");
-    CurrentSemanticValue.nb = ValueStack[ValueStack.Depth-2].nb;
-    LuceneAST = CurrentSemanticValue.nb;
-    }
+	//Console.WriteLine("Found rule main -> node EOF");
+	CurrentSemanticValue.nb = ValueStack[ValueStack.Depth-2].nb;
+	LuceneAST = CurrentSemanticValue.nb;
+	}
         break;
       case 3: // node -> NOT, node
 {
-        //Console.WriteLine("Found rule node -> NOT node");
-        CurrentSemanticValue.nb = new OperatorLuceneASTNode(ValueStack[ValueStack.Depth-1].nb,null,OperatorLuceneASTNode.Operator.NOT);
-    }
+		//Console.WriteLine("Found rule node -> NOT node");
+		CurrentSemanticValue.nb = new OperatorLuceneASTNode(ValueStack[ValueStack.Depth-1].nb,null,OperatorLuceneASTNode.Operator.NOT);
+	}
         break;
       case 4: // node -> node, operator, node
 {
-        //Console.WriteLine("Found rule node -> node operator node");
-        var res =  new OperatorLuceneASTNode(ValueStack[ValueStack.Depth-3].nb,ValueStack[ValueStack.Depth-1].nb,ValueStack[ValueStack.Depth-2].o);
-        CurrentSemanticValue.nb = res;
-    }
+		//Console.WriteLine("Found rule node -> node operator node");
+		var res =  new OperatorLuceneASTNode(ValueStack[ValueStack.Depth-3].nb,ValueStack[ValueStack.Depth-1].nb,ValueStack[ValueStack.Depth-2].o);
+		CurrentSemanticValue.nb = res;
+	}
         break;
       case 5: // node -> node, node
 {
-        //Console.WriteLine("Found rule node -> node node");
-        CurrentSemanticValue.nb = new OperatorLuceneASTNode(ValueStack[ValueStack.Depth-2].nb,ValueStack[ValueStack.Depth-1].nb,OperatorLuceneASTNode.Operator.Implicit);
-    }
+		//Console.WriteLine("Found rule node -> node node");
+		CurrentSemanticValue.nb = new OperatorLuceneASTNode(ValueStack[ValueStack.Depth-2].nb,ValueStack[ValueStack.Depth-1].nb,OperatorLuceneASTNode.Operator.Implicit);
+	}
         break;
       case 6: // node -> field_exp
 {
-        //Console.WriteLine("Found rule node -> field_exp");
-        CurrentSemanticValue.nb =ValueStack[ValueStack.Depth-1].fn;
-    }
+		//Console.WriteLine("Found rule node -> field_exp");
+		CurrentSemanticValue.nb =ValueStack[ValueStack.Depth-1].fn;
+	}
         break;
       case 7: // node -> paren_exp
 {
-        //Console.WriteLine("Found rule node -> paren_exp");
-        CurrentSemanticValue.nb =ValueStack[ValueStack.Depth-1].pn;
-    }
+		//Console.WriteLine("Found rule node -> paren_exp");
+		CurrentSemanticValue.nb =ValueStack[ValueStack.Depth-1].pn;
+	}
         break;
       case 8: // node -> term_exp
 {
-    //Console.WriteLine("Found rule node -> term_exp");
-        CurrentSemanticValue.nb = ValueStack[ValueStack.Depth-1].tn;
-    }
+	//Console.WriteLine("Found rule node -> term_exp");
+		CurrentSemanticValue.nb = ValueStack[ValueStack.Depth-1].tn;
+	}
         break;
       case 9: // node -> method_exp
 {
-        //Console.WriteLine("Found rule node -> method_exp");
-        CurrentSemanticValue.nb = ValueStack[ValueStack.Depth-1].mn;
-    }
+		//Console.WriteLine("Found rule node -> method_exp");
+		CurrentSemanticValue.nb = ValueStack[ValueStack.Depth-1].mn;
+	}
         break;
       case 10: // node -> prefix_operator, field_exp
 {
-        //Console.WriteLine("Found rule node -> prefix_operator field_exp");
-        CurrentSemanticValue.nb =ValueStack[ValueStack.Depth-1].fn;
-        CurrentSemanticValue.nb.Prefix = ValueStack[ValueStack.Depth-2].npo;
-    }
+		//Console.WriteLine("Found rule node -> prefix_operator field_exp");
+		CurrentSemanticValue.nb =ValueStack[ValueStack.Depth-1].fn;
+		CurrentSemanticValue.nb.Prefix = ValueStack[ValueStack.Depth-2].npo;
+	}
         break;
       case 11: // node -> prefix_operator, paren_exp
 {
-        //Console.WriteLine("Found rule node -> prefix_operator paren_exp");
-        CurrentSemanticValue.nb =ValueStack[ValueStack.Depth-1].pn;
-        CurrentSemanticValue.nb.Prefix = ValueStack[ValueStack.Depth-2].npo;
-    }
+		//Console.WriteLine("Found rule node -> prefix_operator paren_exp");
+		CurrentSemanticValue.nb =ValueStack[ValueStack.Depth-1].pn;
+		CurrentSemanticValue.nb.Prefix = ValueStack[ValueStack.Depth-2].npo;
+	}
         break;
       case 12: // node -> prefix_operator, term_exp
 {
-    //Console.WriteLine("Found rule node -> prefix_operator term_exp");
-        CurrentSemanticValue.nb = ValueStack[ValueStack.Depth-1].tn;
-        CurrentSemanticValue.nb.Prefix = ValueStack[ValueStack.Depth-2].npo;
-    }
+	//Console.WriteLine("Found rule node -> prefix_operator term_exp");
+		CurrentSemanticValue.nb = ValueStack[ValueStack.Depth-1].tn;
+		CurrentSemanticValue.nb.Prefix = ValueStack[ValueStack.Depth-2].npo;
+	}
         break;
       case 13: // node -> prefix_operator, method_exp
 {
-        //Console.WriteLine("Found rule node -> prefix_operator method_exp");
-        CurrentSemanticValue.nb = ValueStack[ValueStack.Depth-1].mn;
-        CurrentSemanticValue.nb.Prefix = ValueStack[ValueStack.Depth-2].npo;
-    }
+		//Console.WriteLine("Found rule node -> prefix_operator method_exp");
+		CurrentSemanticValue.nb = ValueStack[ValueStack.Depth-1].mn;
+		CurrentSemanticValue.nb.Prefix = ValueStack[ValueStack.Depth-2].npo;
+	}
         break;
       case 14: // node -> prefix_operator, ALL_DOC
 {
-        //Console.WriteLine("Found rule node -> prefix_operator ALL_DOC");
-        CurrentSemanticValue.nb = new AllDocumentsLuceneASTNode();
-        CurrentSemanticValue.nb.Prefix = ValueStack[ValueStack.Depth-2].npo;
-    }
+		//Console.WriteLine("Found rule node -> prefix_operator ALL_DOC");
+		CurrentSemanticValue.nb = new AllDocumentsLuceneASTNode();
+		CurrentSemanticValue.nb.Prefix = ValueStack[ValueStack.Depth-2].npo;
+	}
         break;
       case 15: // node -> ALL_DOC
 {
-        CurrentSemanticValue.nb = new AllDocumentsLuceneASTNode();
-    }
+		CurrentSemanticValue.nb = new AllDocumentsLuceneASTNode();
+	}
         break;
       case 16: // field_exp -> fieldname, range_operator_exp
 {
-        //Console.WriteLine("Found rule field_exp -> fieldname range_operator_exp");		
-        CurrentSemanticValue.fn = new FieldLuceneASTNode(){FieldName = ValueStack[ValueStack.Depth-2].s, Node = ValueStack[ValueStack.Depth-1].rn};
-        }
+		//Console.WriteLine("Found rule field_exp -> fieldname range_operator_exp");		
+		CurrentSemanticValue.fn = new FieldLuceneASTNode(){FieldName = ValueStack[ValueStack.Depth-2].s, Node = ValueStack[ValueStack.Depth-1].rn};
+		}
         break;
       case 17: // field_exp -> fieldname, term_exp
 {
-        //Console.WriteLine("Found rule field_exp -> fieldname term_exp");
-        CurrentSemanticValue.fn = new FieldLuceneASTNode(){FieldName = ValueStack[ValueStack.Depth-2].s, Node = ValueStack[ValueStack.Depth-1].tn};
-        }
+		//Console.WriteLine("Found rule field_exp -> fieldname term_exp");
+		CurrentSemanticValue.fn = new FieldLuceneASTNode(){FieldName = ValueStack[ValueStack.Depth-2].s, Node = ValueStack[ValueStack.Depth-1].tn};
+		}
         break;
       case 18: // field_exp -> fieldname, paren_exp
 {
-        //Console.WriteLine("Found rule field_exp -> fieldname paren_exp");
-        CurrentSemanticValue.fn = new FieldLuceneASTNode(){FieldName = ValueStack[ValueStack.Depth-2].s, Node = ValueStack[ValueStack.Depth-1].pn};
-    }
+		//Console.WriteLine("Found rule field_exp -> fieldname paren_exp");
+		CurrentSemanticValue.fn = new FieldLuceneASTNode(){FieldName = ValueStack[ValueStack.Depth-2].s, Node = ValueStack[ValueStack.Depth-1].pn};
+	}
         break;
       case 19: // method_exp -> methodName, OPEN_PAREN, term_match_list, CLOSE_PAREN
 {
-        //Console.WriteLine("Found rule method_exp -> methodName OPEN_PAREN term_match_list CLOSE_PAREN");
-        CurrentSemanticValue.mn = new MethodLuceneASTNode(ValueStack[ValueStack.Depth-4].s,ValueStack[ValueStack.Depth-2].ltn);
-        InMethod = false;
+		//Console.WriteLine("Found rule method_exp -> methodName OPEN_PAREN term_match_list CLOSE_PAREN");
+		CurrentSemanticValue.mn = new MethodLuceneASTNode(ValueStack[ValueStack.Depth-4].s,ValueStack[ValueStack.Depth-2].ltn);
+		InMethod = false;
 }
         break;
       case 20: // method_exp -> methodName, OPEN_PAREN, term_exp, CLOSE_PAREN
 {
-        //Console.WriteLine("Found rule method_exp -> methodName OPEN_PAREN term_exp CLOSE_PAREN");
-        CurrentSemanticValue.mn = new MethodLuceneASTNode(ValueStack[ValueStack.Depth-4].s,ValueStack[ValueStack.Depth-2].tn);
-        InMethod = false;
+		//Console.WriteLine("Found rule method_exp -> methodName OPEN_PAREN term_exp CLOSE_PAREN");
+		CurrentSemanticValue.mn = new MethodLuceneASTNode(ValueStack[ValueStack.Depth-4].s,ValueStack[ValueStack.Depth-2].tn);
+		InMethod = false;
 }
         break;
       case 21: // term_match_list -> term_exp, COMMA, term_exp
 {
-    //Console.WriteLine("Found rule term_match_list -> term_exp COMMA term_exp");
-    CurrentSemanticValue.ltn = new List<TermLuceneASTNode>(){ValueStack[ValueStack.Depth-3].tn,ValueStack[ValueStack.Depth-1].tn};
+	//Console.WriteLine("Found rule term_match_list -> term_exp COMMA term_exp");
+	CurrentSemanticValue.ltn = new List<TermLuceneASTNode>(){ValueStack[ValueStack.Depth-3].tn,ValueStack[ValueStack.Depth-1].tn};
 }
         break;
       case 22: // term_match_list -> term_exp, COMMA, term_match_list
 {
-    //Console.WriteLine("Found rule term_match_list -> term_exp COMMA term_match_list");
-    ValueStack[ValueStack.Depth-1].ltn.Add(ValueStack[ValueStack.Depth-3].tn);
-    CurrentSemanticValue.ltn = ValueStack[ValueStack.Depth-1].ltn;
+	//Console.WriteLine("Found rule term_match_list -> term_exp COMMA term_match_list");
+	ValueStack[ValueStack.Depth-1].ltn.Add(ValueStack[ValueStack.Depth-3].tn);
+	CurrentSemanticValue.ltn = ValueStack[ValueStack.Depth-1].ltn;
 }
         break;
       case 23: // term_match_list -> term_exp, term_exp
 {
-    //Console.WriteLine("Found rule term_match_list -> term_exp term_exp");
-    CurrentSemanticValue.ltn = new List<TermLuceneASTNode>(){ValueStack[ValueStack.Depth-2].tn,ValueStack[ValueStack.Depth-1].tn};
+	//Console.WriteLine("Found rule term_match_list -> term_exp term_exp");
+	CurrentSemanticValue.ltn = new List<TermLuceneASTNode>(){ValueStack[ValueStack.Depth-2].tn,ValueStack[ValueStack.Depth-1].tn};
 }
         break;
       case 24: // term_match_list -> term_exp, term_match_list
 {
-    //Console.WriteLine("Found rule term_match_list -> term_exp term_match_list");
-    ValueStack[ValueStack.Depth-1].ltn.Add(ValueStack[ValueStack.Depth-2].tn);
-    CurrentSemanticValue.ltn = ValueStack[ValueStack.Depth-1].ltn;
+	//Console.WriteLine("Found rule term_match_list -> term_exp term_match_list");
+	ValueStack[ValueStack.Depth-1].ltn.Add(ValueStack[ValueStack.Depth-2].tn);
+	CurrentSemanticValue.ltn = ValueStack[ValueStack.Depth-1].ltn;
 }
         break;
       case 25: // paren_exp -> OPEN_PAREN, node, CLOSE_PAREN
 {
-        //Console.WriteLine("Found rule paren_exp -> OPEN_PAREN node CLOSE_PAREN");
-        CurrentSemanticValue.pn = new ParenthesistLuceneASTNode();
-        CurrentSemanticValue.pn.Node = ValueStack[ValueStack.Depth-2].nb;
-        }
+		//Console.WriteLine("Found rule paren_exp -> OPEN_PAREN node CLOSE_PAREN");
+		CurrentSemanticValue.pn = new ParenthesistLuceneASTNode();
+		CurrentSemanticValue.pn.Node = ValueStack[ValueStack.Depth-2].nb;
+		}
         break;
       case 26: // paren_exp -> OPEN_PAREN, node, CLOSE_PAREN, boost_modifier
 {
-        //Console.WriteLine("Found rule paren_exp -> OPEN_PAREN node CLOSE_PAREN boost_modifier");
-        CurrentSemanticValue.pn = new ParenthesistLuceneASTNode();
-        CurrentSemanticValue.pn.Node = ValueStack[ValueStack.Depth-3].nb;
-        CurrentSemanticValue.pn.Boost = ValueStack[ValueStack.Depth-1].s;
-        }
+		//Console.WriteLine("Found rule paren_exp -> OPEN_PAREN node CLOSE_PAREN boost_modifier");
+		CurrentSemanticValue.pn = new ParenthesistLuceneASTNode();
+		CurrentSemanticValue.pn.Node = ValueStack[ValueStack.Depth-3].nb;
+		CurrentSemanticValue.pn.Boost = ValueStack[ValueStack.Depth-1].s;
+		}
         break;
       case 27: // methodName -> METHOD, COLON
 {
-        //Console.WriteLine("Found rule methodName -> METHOD COLON");
-        CurrentSemanticValue.s = ValueStack[ValueStack.Depth-2].s;
-        InMethod = true;
+		//Console.WriteLine("Found rule methodName -> METHOD COLON");
+		CurrentSemanticValue.s = ValueStack[ValueStack.Depth-2].s;
+		InMethod = true;
 }
         break;
       case 28: // fieldname -> UNQUOTED_TERM, COLON
 {
-        //Console.WriteLine("Found rule fieldname -> UNQUOTED_TERM COLON");
-        CurrentSemanticValue.s = ValueStack[ValueStack.Depth-2].s;
-    }
+		//Console.WriteLine("Found rule fieldname -> UNQUOTED_TERM COLON");
+		CurrentSemanticValue.s = ValueStack[ValueStack.Depth-2].s;
+	}
         break;
       case 29: // term_exp -> prefix_operator, term, postfix_modifier
 {
-        //Console.WriteLine("Found rule term_exp -> prefix_operator term postfix_modifier");
-        CurrentSemanticValue.tn = ValueStack[ValueStack.Depth-2].tn;
-        CurrentSemanticValue.tn.Prefix =ValueStack[ValueStack.Depth-3].npo;
-        CurrentSemanticValue.tn.SetPostfixOperators(ValueStack[ValueStack.Depth-1].pm);
-    }
+		//Console.WriteLine("Found rule term_exp -> prefix_operator term postfix_modifier");
+		CurrentSemanticValue.tn = ValueStack[ValueStack.Depth-2].tn;
+		CurrentSemanticValue.tn.Prefix =ValueStack[ValueStack.Depth-3].npo;
+		CurrentSemanticValue.tn.SetPostfixOperators(ValueStack[ValueStack.Depth-1].pm);
+	}
         break;
       case 30: // term_exp -> term, postfix_modifier
 {
-        //Console.WriteLine("Found rule term_exp -> postfix_modifier");
-        CurrentSemanticValue.tn = ValueStack[ValueStack.Depth-2].tn;
-        CurrentSemanticValue.tn.SetPostfixOperators(ValueStack[ValueStack.Depth-1].pm);
-    }
+		//Console.WriteLine("Found rule term_exp -> postfix_modifier");
+		CurrentSemanticValue.tn = ValueStack[ValueStack.Depth-2].tn;
+		CurrentSemanticValue.tn.SetPostfixOperators(ValueStack[ValueStack.Depth-1].pm);
+	}
         break;
       case 31: // term_exp -> prefix_operator, term
 {
-        //Console.WriteLine("Found rule term_exp -> prefix_operator term");
-        CurrentSemanticValue.tn = ValueStack[ValueStack.Depth-1].tn;
-        CurrentSemanticValue.tn.Prefix = ValueStack[ValueStack.Depth-2].npo;
-    }
+		//Console.WriteLine("Found rule term_exp -> prefix_operator term");
+		CurrentSemanticValue.tn = ValueStack[ValueStack.Depth-1].tn;
+		CurrentSemanticValue.tn.Prefix = ValueStack[ValueStack.Depth-2].npo;
+	}
         break;
       case 32: // term_exp -> term
 {
-        //Console.WriteLine("Found rule term_exp -> term");
-        CurrentSemanticValue.tn = ValueStack[ValueStack.Depth-1].tn;
-    }
+		//Console.WriteLine("Found rule term_exp -> term");
+		CurrentSemanticValue.tn = ValueStack[ValueStack.Depth-1].tn;
+	}
         break;
       case 33: // term -> QUOTED_TERM
 {
-        //Console.WriteLine("Found rule term -> QUOTED_TERM");
-        CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s.Substring(1,ValueStack[ValueStack.Depth-1].s.Length-2), Type=TermLuceneASTNode.TermType.Quoted};
-    }
+		//Console.WriteLine("Found rule term -> QUOTED_TERM");
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s.Substring(1,ValueStack[ValueStack.Depth-1].s.Length-2), Type=TermLuceneASTNode.TermType.Quoted};
+	}
         break;
       case 34: // term -> UNQUOTED_TERM
 {
-        //Console.WriteLine("Found rule term -> UNQUOTED_TERM");
-        CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s,Type=TermLuceneASTNode.TermType.UnQuoted};
-        }
+		//Console.WriteLine("Found rule term -> UNQUOTED_TERM");
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s,Type=TermLuceneASTNode.TermType.UnQuoted};
+		}
         break;
       case 35: // term -> INT_NUMBER
 {
-        //Console.WriteLine("Found rule term -> INT_NUMBER");
-        CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.Int};
-        }
+		//Console.WriteLine("Found rule term -> INT_NUMBER");
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.Int};
+		}
         break;
       case 36: // term -> FLOAT_NUMBER
 {
-        //Console.WriteLine("Found rule term -> FLOAT_NUMBER");
-        CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.Float};
-    }
+		//Console.WriteLine("Found rule term -> FLOAT_NUMBER");
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.Float};
+	}
         break;
       case 37: // term -> HEX_NUMBER
 {
-        //Console.WriteLine("Found rule term -> HEX_NUMBER");
-        CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.Hex};
-    }
+		//Console.WriteLine("Found rule term -> HEX_NUMBER");
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.Hex};
+	}
         break;
       case 38: // term -> LONG_NUMBER
 {
-        //Console.WriteLine("Found rule term -> INT_NUMBER");
-        CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.Long};
-        }
+		//Console.WriteLine("Found rule term -> INT_NUMBER");
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.Long};
+		}
         break;
       case 39: // term -> DOUBLE_NUMBER
 {
-        //Console.WriteLine("Found rule term -> FLOAT_NUMBER");
-        CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.Double};
-    }
+		//Console.WriteLine("Found rule term -> FLOAT_NUMBER");
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.Double};
+	}
         break;
       case 40: // term -> UNANALIZED_TERM
 {
-        //Console.WriteLine("Found rule term -> UNANALIZED_TERM");
-        CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.UnAnalyzed};
-    }
+		//Console.WriteLine("Found rule term -> UNANALIZED_TERM");
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.UnAnalyzed};
+	}
         break;
       case 41: // term -> DATETIME
 {
-        //Console.WriteLine("Found rule term -> DATETIME");
-        CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.DateTime};
-    }
+		//Console.WriteLine("Found rule term -> DATETIME");
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.DateTime};
+	}
         break;
       case 42: // term -> NULL
 {
-        //Console.WriteLine("Found rule term -> NULL");
-        CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.Null};
-    }
+		//Console.WriteLine("Found rule term -> NULL");
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.Null};
+	}
         break;
       case 43: // term -> QUOTED_WILDCARD_TERM
 {
-        //Console.WriteLine("Found rule term -> QUOTED_WILDCARD_TERM");
-        CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.QuotedWildcard};
-    }
+		//Console.WriteLine("Found rule term -> QUOTED_WILDCARD_TERM");
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.QuotedWildcard};
+	}
         break;
       case 44: // term -> WILDCARD_TERM
 {
-        //Console.WriteLine("Found rule term -> WILDCARD_TERM");
-        CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.WildCardTerm};
-    }
+		//Console.WriteLine("Found rule term -> WILDCARD_TERM");
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.WildCardTerm};
+	}
         break;
       case 45: // term -> PREFIX_TERM
 {
-        //Console.WriteLine("Found rule term -> PREFIX_TERM");
-        CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.PrefixTerm};
-    }
+		//Console.WriteLine("Found rule term -> PREFIX_TERM");
+		CurrentSemanticValue.tn = new TermLuceneASTNode(){Term=ValueStack[ValueStack.Depth-1].s, Type=TermLuceneASTNode.TermType.PrefixTerm};
+	}
         break;
       case 46: // postfix_modifier -> proximity_modifier, boost_modifier
 {
-        CurrentSemanticValue.pm = new PostfixModifiers(){Boost = ValueStack[ValueStack.Depth-1].s, Similerity = null, Proximity = ValueStack[ValueStack.Depth-2].s};
-    }
+		CurrentSemanticValue.pm = new PostfixModifiers(){Boost = ValueStack[ValueStack.Depth-1].s, Similerity = null, Proximity = ValueStack[ValueStack.Depth-2].s};
+	}
         break;
       case 47: // postfix_modifier -> fuzzy_modifier, boost_modifier
 {
-        CurrentSemanticValue.pm = new PostfixModifiers(){Boost = ValueStack[ValueStack.Depth-1].s, Similerity = ValueStack[ValueStack.Depth-2].s, Proximity = null};
-    }
+		CurrentSemanticValue.pm = new PostfixModifiers(){Boost = ValueStack[ValueStack.Depth-1].s, Similerity = ValueStack[ValueStack.Depth-2].s, Proximity = null};
+	}
         break;
       case 48: // postfix_modifier -> boost_modifier
 {
-        CurrentSemanticValue.pm = new PostfixModifiers(){Boost = ValueStack[ValueStack.Depth-1].s,Similerity = null, Proximity = null};
-    }
+		CurrentSemanticValue.pm = new PostfixModifiers(){Boost = ValueStack[ValueStack.Depth-1].s,Similerity = null, Proximity = null};
+	}
         break;
       case 49: // postfix_modifier -> fuzzy_modifier
 {
-        CurrentSemanticValue.pm = new PostfixModifiers(){Boost = null, Similerity = ValueStack[ValueStack.Depth-1].s, Proximity = null};
-    }
+		CurrentSemanticValue.pm = new PostfixModifiers(){Boost = null, Similerity = ValueStack[ValueStack.Depth-1].s, Proximity = null};
+	}
         break;
       case 50: // postfix_modifier -> proximity_modifier
 {
-        CurrentSemanticValue.pm = new PostfixModifiers(){Boost = null, Similerity = null, Proximity = ValueStack[ValueStack.Depth-1].s};
-    }
+		CurrentSemanticValue.pm = new PostfixModifiers(){Boost = null, Similerity = null, Proximity = ValueStack[ValueStack.Depth-1].s};
+	}
         break;
       case 51: // proximity_modifier -> TILDA, INT_NUMBER
 {
-    //Console.WriteLine("Found rule proximity_modifier -> TILDA INT_NUMBER");
-    CurrentSemanticValue.s = ValueStack[ValueStack.Depth-1].s;
-    }
+	//Console.WriteLine("Found rule proximity_modifier -> TILDA INT_NUMBER");
+	CurrentSemanticValue.s = ValueStack[ValueStack.Depth-1].s;
+	}
         break;
       case 52: // boost_modifier -> BOOST, INT_NUMBER
 {
-    //Console.WriteLine("Found rule boost_modifier -> BOOST INT_NUMBER");
-    CurrentSemanticValue.s = ValueStack[ValueStack.Depth-1].s;
-    }
+	//Console.WriteLine("Found rule boost_modifier -> BOOST INT_NUMBER");
+	CurrentSemanticValue.s = ValueStack[ValueStack.Depth-1].s;
+	}
         break;
       case 53: // boost_modifier -> BOOST, FLOAT_NUMBER
 {
-    //Console.WriteLine("Found rule boost_modifier -> BOOST FLOAT_NUMBER");
-    CurrentSemanticValue.s = ValueStack[ValueStack.Depth-1].s;
-    }
+	//Console.WriteLine("Found rule boost_modifier -> BOOST FLOAT_NUMBER");
+	CurrentSemanticValue.s = ValueStack[ValueStack.Depth-1].s;
+	}
         break;
       case 54: // fuzzy_modifier -> TILDA, FLOAT_NUMBER
 {
-    //Console.WriteLine("Found rule fuzzy_modifier ->  TILDA FLOAT_NUMBER");
-    CurrentSemanticValue.s = ValueStack[ValueStack.Depth-1].s;
-    }
+	//Console.WriteLine("Found rule fuzzy_modifier ->  TILDA FLOAT_NUMBER");
+	CurrentSemanticValue.s = ValueStack[ValueStack.Depth-1].s;
+	}
         break;
       case 55: // fuzzy_modifier -> TILDA
 {
-        //Console.WriteLine("Found rule fuzzy_modifier ->  TILDA");
-        CurrentSemanticValue.s = "0.5";
-    }
+		//Console.WriteLine("Found rule fuzzy_modifier ->  TILDA");
+		CurrentSemanticValue.s = "0.5";
+	}
         break;
       case 56: // range_operator_exp -> OPEN_CURLY_BRACKET, term, TO, term, CLOSE_CURLY_BRACKET
 {
-        //Console.WriteLine("Found rule range_operator_exp -> OPEN_CURLY_BRACKET term TO term CLOSE_CURLY_BRACKET");
-        CurrentSemanticValue.rn = new RangeLuceneASTNode(){RangeMin = ValueStack[ValueStack.Depth-4].tn, RangeMax = ValueStack[ValueStack.Depth-2].tn, InclusiveMin = false, InclusiveMax = false};
-        }
+		//Console.WriteLine("Found rule range_operator_exp -> OPEN_CURLY_BRACKET term TO term CLOSE_CURLY_BRACKET");
+		CurrentSemanticValue.rn = new RangeLuceneASTNode(){RangeMin = ValueStack[ValueStack.Depth-4].tn, RangeMax = ValueStack[ValueStack.Depth-2].tn, InclusiveMin = false, InclusiveMax = false};
+		}
         break;
       case 57: // range_operator_exp -> OPEN_SQUARE_BRACKET, term, TO, term, CLOSE_CURLY_BRACKET
 {
-        //Console.WriteLine("Found rule range_operator_exp -> OPEN_SQUARE_BRACKET term TO term CLOSE_CURLY_BRACKET");
-        CurrentSemanticValue.rn = new RangeLuceneASTNode(){RangeMin = ValueStack[ValueStack.Depth-4].tn, RangeMax = ValueStack[ValueStack.Depth-2].tn, InclusiveMin = true, InclusiveMax = false};
-        }
+		//Console.WriteLine("Found rule range_operator_exp -> OPEN_SQUARE_BRACKET term TO term CLOSE_CURLY_BRACKET");
+		CurrentSemanticValue.rn = new RangeLuceneASTNode(){RangeMin = ValueStack[ValueStack.Depth-4].tn, RangeMax = ValueStack[ValueStack.Depth-2].tn, InclusiveMin = true, InclusiveMax = false};
+		}
         break;
       case 58: // range_operator_exp -> OPEN_CURLY_BRACKET, term, TO, term, CLOSE_SQUARE_BRACKET
 {
-        //Console.WriteLine("Found rule range_operator_exp -> OPEN_CURLY_BRACKET term TO term CLOSE_SQUARE_BRACKET");
-        CurrentSemanticValue.rn = new RangeLuceneASTNode(){RangeMin = ValueStack[ValueStack.Depth-4].tn, RangeMax = ValueStack[ValueStack.Depth-2].tn, InclusiveMin = false, InclusiveMax = true};
-        }
+		//Console.WriteLine("Found rule range_operator_exp -> OPEN_CURLY_BRACKET term TO term CLOSE_SQUARE_BRACKET");
+		CurrentSemanticValue.rn = new RangeLuceneASTNode(){RangeMin = ValueStack[ValueStack.Depth-4].tn, RangeMax = ValueStack[ValueStack.Depth-2].tn, InclusiveMin = false, InclusiveMax = true};
+		}
         break;
       case 59: // range_operator_exp -> OPEN_SQUARE_BRACKET, term, TO, term, CLOSE_SQUARE_BRACKET
 {
-        //Console.WriteLine("Found rule range_operator_exp -> OPEN_SQUARE_BRACKET term TO term CLOSE_SQUARE_BRACKET");
-        CurrentSemanticValue.rn = new RangeLuceneASTNode(){RangeMin = ValueStack[ValueStack.Depth-4].tn, RangeMax = ValueStack[ValueStack.Depth-2].tn, InclusiveMin = true, InclusiveMax = true};
-        }
+		//Console.WriteLine("Found rule range_operator_exp -> OPEN_SQUARE_BRACKET term TO term CLOSE_SQUARE_BRACKET");
+		CurrentSemanticValue.rn = new RangeLuceneASTNode(){RangeMin = ValueStack[ValueStack.Depth-4].tn, RangeMax = ValueStack[ValueStack.Depth-2].tn, InclusiveMin = true, InclusiveMax = true};
+		}
         break;
       case 60: // operator -> OR
 {
-        //Console.WriteLine("Found rule operator -> OR");
-        CurrentSemanticValue.o = OperatorLuceneASTNode.Operator.OR;
-        }
+		//Console.WriteLine("Found rule operator -> OR");
+		CurrentSemanticValue.o = OperatorLuceneASTNode.Operator.OR;
+		}
         break;
       case 61: // operator -> AND
 {
-        //Console.WriteLine("Found rule operator -> AND");
-        CurrentSemanticValue.o = OperatorLuceneASTNode.Operator.AND;
-        }
+		//Console.WriteLine("Found rule operator -> AND");
+		CurrentSemanticValue.o = OperatorLuceneASTNode.Operator.AND;
+		}
         break;
       case 62: // operator -> INTERSECT
 {
-        //Console.WriteLine("Found rule operator -> INTERSECT");
-        CurrentSemanticValue.o = OperatorLuceneASTNode.Operator.INTERSECT;
-    }
+		//Console.WriteLine("Found rule operator -> INTERSECT");
+		CurrentSemanticValue.o = OperatorLuceneASTNode.Operator.INTERSECT;
+	}
         break;
       case 63: // prefix_operator -> PLUS
 {
-        //Console.WriteLine("Found rule prefix_operator -> PLUS");
-        CurrentSemanticValue.npo = LuceneASTNodeBase.PrefixOperator.Plus;
-        }
+		//Console.WriteLine("Found rule prefix_operator -> PLUS");
+		CurrentSemanticValue.npo = LuceneASTNodeBase.PrefixOperator.Plus;
+		}
         break;
       case 64: // prefix_operator -> MINUS
 {
-        //Console.WriteLine("Found rule prefix_operator -> MINUS");
-        CurrentSemanticValue.npo = LuceneASTNodeBase.PrefixOperator.Minus;
-        }
+		//Console.WriteLine("Found rule prefix_operator -> MINUS");
+		CurrentSemanticValue.npo = LuceneASTNodeBase.PrefixOperator.Minus;
+		}
         break;
     }
 #pragma warning restore 162, 1522
