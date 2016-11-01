@@ -62,24 +62,36 @@ class resourcesManager {
     }
 
     getDatabaseByName(name: string): database {
+        if (!name) {
+            return null;
+        }
         return this
             .resources()
             .find(x => x instanceof database && name.toLowerCase() === x.name.toLowerCase()) as database;
     }
 
     getFileSystemByName(name: string): filesystem {
+        if (!name) {
+            return null;
+        }
         return this
             .resources()
             .find(x => x instanceof filesystem && name.toLowerCase() === x.name.toLowerCase()) as filesystem;
     }
 
     getCounterStorageByName(name: string): counterStorage {
+        if (!name) {
+            return null;
+        }
         return this
             .resources()
             .find(x => x instanceof counterStorage && name.toLowerCase() === x.name.toLowerCase()) as counterStorage;
     }
 
     getTimeSeriesByName(name: string): timeSeries {
+        if (!name) {
+            return null;
+        }
         return this
             .resources()
             .find(x => x instanceof timeSeries && name.toLowerCase() === x.name.toLowerCase()) as timeSeries;
