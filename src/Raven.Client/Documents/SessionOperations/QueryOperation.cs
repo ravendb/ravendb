@@ -133,14 +133,17 @@ namespace Raven.Client.Documents.SessionOperations
             var list = new List<T>();
             foreach (BlittableJsonReaderObject document in queryResult.Results)
             {
-                /*if (usedTransformer)
+                if (usedTransformer)
                 {
-                    var values = result.Value<RavenJArray>("$values");
-                    foreach (RavenJObject value in values)
-                        list.Add(Deserialize<T>(value));
+                    BlittableJsonReaderArray values;
+                    if (document.TryGet("$values", out values) == false)
+                        throw new InvalidOperationException("Transformed document must have a $values property");
+                    
+                    foreach (BlittableJsonReaderObject value in values)
+                        list.Add((T)_session.EntityToBlittable.ConvertToEntity(typeof(T), null, value));
 
                     continue;
-                }*/
+                }
 
                 BlittableJsonReaderObject metadata;
                 string id;
