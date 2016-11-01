@@ -33,7 +33,6 @@ using Raven.Json.Linq;
 using Raven.Client.Documents.SessionOperations;
 using Raven.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json.Utilities;
-using Raven.Client.Documents.Listeners;
 
 namespace Raven.Client.Documents
 {
@@ -96,11 +95,6 @@ namespace Raven.Client.Documents
         ///   The list of fields to project directly from the index on the server
         /// </summary>
         protected readonly string[] fieldsToFetch;
-
-        /// <summary>
-        /// The query listeners for this query
-        /// </summary>
-        protected readonly IDocumentQueryListener[] queryListeners;
 
         protected bool isMapReduce;
         /// <summary>
@@ -291,9 +285,8 @@ namespace Raven.Client.Documents
                                      string indexName,
                                      string[] fieldsToFetch,
                                      string[] projectionFields,
-                                     IDocumentQueryListener[] queryListeners,
                                      bool isMapReduce)
-            : this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
+            : this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, isMapReduce)
         {
         }
 
@@ -306,13 +299,12 @@ namespace Raven.Client.Documents
                                      string indexName,
                                      string[] fieldsToFetch,
                                      string[] projectionFields,
-                                     IDocumentQueryListener[] queryListeners,
                                      bool isMapReduce)
         {
             theDatabaseCommands = databaseCommands;
             this.projectionFields = projectionFields;
             this.fieldsToFetch = fieldsToFetch;
-            this.queryListeners = queryListeners;
+            //this.queryListeners = queryListeners;
             this.isMapReduce = isMapReduce;
             this.indexName = indexName;
             this.theSession = theSession;
@@ -360,7 +352,6 @@ namespace Raven.Client.Documents
             theWaitForNonStaleResults = other.theWaitForNonStaleResults;
             theWaitForNonStaleResultsAsOfNow = other.theWaitForNonStaleResultsAsOfNow;
             includes = other.includes;
-            queryListeners = other.queryListeners;
             queryStats = other.queryStats;
             defaultOperator = other.defaultOperator;
             defaultField = other.defaultField;
@@ -671,7 +662,7 @@ namespace Raven.Client.Documents
             if (queryOperation != null)
                 return;
             ClearSortHints(DatabaseCommands);
-            ExecuteBeforeQueryListeners();
+            theSession.OnBeforeQueryExecuted(this);
             queryOperation = InitializeQueryOperation();
             ExecuteActualQuery();
         }
@@ -797,18 +788,10 @@ namespace Raven.Client.Documents
             if (queryOperation != null)
                 return queryOperation;
             ClearSortHints(AsyncDatabaseCommands);
-            ExecuteBeforeQueryListeners();
+            theSession.OnBeforeQueryExecuted(this);
 
             queryOperation = InitializeQueryOperation(isAsync: true);
             return await ExecuteActualQueryAsync().ConfigureAwait(false);
-        }
-
-        protected void ExecuteBeforeQueryListeners()
-        {
-            foreach (var documentQueryListener in queryListeners)
-            {
-                //documentQueryListener.BeforeQueryExecuted(this);
-            }
         }
 
         /// <summary>
