@@ -11,9 +11,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                var x = new FastTests.Voron.Tables.BasicUsage();
+                var x = new FastTests.Voron.Trees.CanDefrag();
                 {
-                    x.CanInsertThenUpdateThenRead();
+                    x.CanDeleteAtRoot();
                 }
                 Console.WriteLine(sp.Elapsed);
             }

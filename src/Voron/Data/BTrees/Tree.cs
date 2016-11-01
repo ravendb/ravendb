@@ -412,8 +412,6 @@ namespace Voron.Data.BTrees
         internal TreePage GetReadOnlyTreePage(long pageNumber)
         {
             var page = _pageLocator.GetReadOnlyPage(pageNumber);
-            if (page == null)
-                return null;
             return new TreePage(page.Pointer, _pageLocator.PageSize);
         }
 

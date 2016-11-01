@@ -254,7 +254,7 @@ namespace Voron.Impl.Journal
         }
 
 
-        public Page ReadPage(LowLevelTransaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates)
+        public Page? ReadPage(LowLevelTransaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates)
         {
             // read transactions have to read from journal snapshots
             if (tx.Flags == TransactionFlags.Read)
@@ -787,7 +787,7 @@ namespace Voron.Impl.Journal
                 try
                 {
                     var totalPages = 0L;
-                    Page last = null;
+                    Page? last = null;
                     var sortedPages = new List<Page>();
                     foreach (var pagePosition in pagesToWrite.Values)
                     {
@@ -806,15 +806,15 @@ namespace Voron.Impl.Journal
                         sortedPages.Add(readPage);
                         if (last == null)
                             last = readPage;
-                        if (last.PageNumber < readPage.PageNumber)
+                        if (last.Value.PageNumber < readPage.PageNumber)
                             last = readPage;
                     }
                     Debug.Assert(last != null);
 
-                    var numberOfPagesInLastPage = last.IsOverflow == false ? 1 :
-                        _waj._env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
+                    var numberOfPagesInLastPage = last.Value.IsOverflow == false ? 1 :
+                        _waj._env.Options.DataPager.GetNumberOfOverflowPages(last.Value.OverflowSize);
 
-                    EnsureDataPagerSpacing(transaction, last, numberOfPagesInLastPage, alreadyInWriteTx);
+                    EnsureDataPagerSpacing(transaction, last.Value, numberOfPagesInLastPage, alreadyInWriteTx);
 
                     long written = 0;
                     using (_waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.DataFlush,
@@ -1113,7 +1113,7 @@ namespace Voron.Impl.Journal
                 _diffPage.Size = txPage.NumberOfPages * pageSize;
                 if (txPage.PreviousVersion != null)
                 {
-                    _diffPage.Original = txPage.PreviousVersion.Pointer;
+                    _diffPage.Original = txPage.PreviousVersion.Value.Pointer;
                     _diffPage.ComputeDiff();
                 }
                 else
