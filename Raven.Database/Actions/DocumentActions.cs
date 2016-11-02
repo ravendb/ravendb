@@ -300,6 +300,11 @@ namespace Raven.Database.Actions
                                         throw new InvalidOperationException("Cannot try to bulk insert a document without a key");
 
                                     doc.Key = doc.Key.Trim();
+                                    if (doc.Key[doc.Key.Length - 1] == '/')
+                                    {
+                                        doc.Key += GetNextIdentityValueWithoutOverwritingOnExistingDocuments(doc.Key, accessor);
+                                    }
+
                                     RemoveReservedProperties(doc.DataAsJson);
                                     RemoveMetadataReservedProperties(doc.Metadata);
 
