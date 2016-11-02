@@ -30,13 +30,14 @@ using Raven.Client.Documents.SessionOperations;
 using Raven.Client.Http;
 using Sparrow.Json;
 using LoadOperation = Raven.Client.Documents.SessionOperations.LoadOperation;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Async
 {
     /// <summary>
     /// Implementation for async document session 
     /// </summary>
-    public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, IAdvancedDocumentSessionOperations
+    public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
     {
         private readonly AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
 
@@ -57,6 +58,11 @@ namespace Raven.Client.Documents.Async
         /// <value>The async database commands.</value>
         public IAsyncDatabaseCommands AsyncDatabaseCommands { get; private set; }
 
+        public Task<FacetedQueryResult[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
+        {
+            throw new NotImplementedException();
+        }
+
         public string GetDocumentUrl(object entity)
         {
             DocumentInfo value;
@@ -64,6 +70,78 @@ namespace Raven.Client.Documents.Async
                 throw new InvalidOperationException("Could not figure out identifier for transient instance");
 
             return AsyncDatabaseCommands.UrlFor(value.Id);
+        }
+
+        public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default(CancellationToken))
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
+            int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null,
+            string skipAfter = null, CancellationToken token = new CancellationToken()) where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task RefreshAsync<T>(T entity, CancellationToken token = default(CancellationToken))
+        {
+            DocumentInfo documentInfo;
+            if (DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
+                throw new InvalidOperationException("Cannot refresh a transient instance");
+            IncrementRequestCount();
+
+            //TODO - Efrat - Change when we have new DatabaseCommands.Get
+            //TODO - Efrat - fix after pull
+            var document = await TempAsyncDatabaseCommandGet(documentInfo);
+
+            RefreshInternal(entity, document, documentInfo);
+        }
+
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation,
+            CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation,
+            CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, int start = 0, int pageSize = Int32.MaxValue,
+            RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null,
+            CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue,
+            RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null,
+            Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression)
+        {
+            throw new NotImplementedException();
         }
 
         internal Lazy<Task<T>> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval, CancellationToken token = default(CancellationToken))
@@ -173,7 +251,61 @@ namespace Raven.Client.Documents.Async
                 }
             }
         }
-        
+
+        public Lazy<Task<TResult>> LoadAsync<TResult>(string id, Action<TResult> onEval, CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(ValueType id, CancellationToken token)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Lazy<Task<TResult>> LoadAsync<TResult>(ValueType id, Action<TResult> onEval, CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(CancellationToken token, params ValueType[] ids)
+        {
+            throw new NotImplementedException();
+        }
+
+        Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<ValueType> ids, CancellationToken token)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<ValueType> ids, Action<TResult[]> onEval, CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        public Lazy<Task<TResult>> LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null,
+            CancellationToken token = new CancellationToken()) where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Lazy<Task<TResult>> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null,
+            CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize,
+            string exclude, RavenPagingInformation pagingInformation, string skipAfter,
+            CancellationToken token)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Begins the async load operation, with the specified id after applying
         /// conventions on the provided id to get the real document id.
@@ -243,6 +375,84 @@ namespace Raven.Client.Documents.Async
         {
             var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return LoadAsync<T>(documentKeys, token);
+        }
+
+        public Task<TResult> LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null,
+            CancellationToken token = new CancellationToken()) where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null,
+            CancellationToken token = new CancellationToken()) where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TResult> LoadAsync<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null,
+            CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null,
+            CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TResult> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null,
+            CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null,
+            CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        public IAsyncAdvancedSessionOperations Advanced { get; }
+
+        IAsyncLoaderWithInclude<object> IAsyncDocumentSession.Include(string path)
+        {
+            throw new NotImplementedException();
+        }
+
+        IAsyncLazyLoaderWithInclude<TResult> IAsyncLazySessionOperations.Include<TResult>(Expression<Func<TResult, object>> path)
+        {
+            throw new NotImplementedException();
+        }
+
+        Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<string> ids, CancellationToken token)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval, CancellationToken token = new CancellationToken())
+        {
+            throw new NotImplementedException();
+        }
+
+        Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, CancellationToken token)
+        {
+            throw new NotImplementedException();
+        }
+
+        IAsyncLazyLoaderWithInclude<object> IAsyncLazySessionOperations.Include(string path)
+        {
+            throw new NotImplementedException();
+        }
+
+        IAsyncLoaderWithInclude<T> IAsyncDocumentSession.Include<T>(Expression<Func<T, object>> path)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -399,12 +609,40 @@ namespace Raven.Client.Documents.Async
             return AsyncDocumentQuery<T>(indexName, isMapReduce);
         }
 
+        public IAsyncEagerSessionOperations Eagerly { get; }
+        public IAsyncLazySessionOperations Lazily { get; }
+
+        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Query the specified index using Lucene syntax
         /// </summary>
         public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce)
         {
             return new AsyncDocumentQuery<T>(this, null, AsyncDatabaseCommands, index, new string[0], new string[0], isMapReduce);
+        }
+
+        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>()
+        {
+            throw new NotImplementedException();
+        }
+
+        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            throw new NotImplementedException();
+        }
+
+        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
+        {
+            throw new NotImplementedException();
         }
 
         public RavenQueryInspector<S> CreateRavenQueryInspector<S>()
@@ -435,23 +673,19 @@ namespace Raven.Client.Documents.Async
             throw new NotSupportedException("You can't query sync from an async session");
         }
 
-        public void Defer(params ICommandData[] commands)
+        public Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, CancellationToken token = new CancellationToken())
         {
             throw new NotImplementedException();
         }
 
-        /// <summary>
-        /// Get the accessor for advanced operations
-        /// </summary>
-        /// <remarks>
-        /// Those operations are rarely needed, and have been moved to a separate 
-        /// property to avoid cluttering the API
-        /// </remarks>
-        public IAdvancedDocumentSessionOperations Advanced
+        public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default(CancellationToken))
         {
-            get { return this; }
+            throw new NotImplementedException();
         }
 
-
+        public Lazy<Task<T[]>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval, CancellationToken token = default (CancellationToken))
+        {
+            throw new NotImplementedException();
+        }
     }
 }
