@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         foreach (var field in accessor.PropertiesInOrder)
                         {
                             var value = field.Value.GetValue(document);
-                            var blittableValue = TypeConverter.ToBlittableSupportedType(value, _parent._indexContext);
+                            var blittableValue = TypeConverter.ToBlittableSupportedType(value);
                             mapResult[field.Key] = blittableValue;
 
                             if (_groupByFields.Contains(field.Key))
