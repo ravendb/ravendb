@@ -9,7 +9,7 @@ namespace Raven.Server.Documents
 {
     public class AlertsStorage
     {
-        protected readonly Logger _logger;
+        protected readonly Logger Logger;
 
         private StorageEnvironment _environment;
 
@@ -19,7 +19,7 @@ namespace Raven.Server.Documents
 
         public AlertsStorage(string resourceName)
         {
-            _logger = LoggingSource.Instance.GetLogger<AlertsStorage>(resourceName);
+            Logger = LoggingSource.Instance.GetLogger<AlertsStorage>(resourceName);
             _alertsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
@@ -49,8 +49,8 @@ namespace Raven.Server.Documents
 
             //TODO: send notification
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Saving alert '{alert.Id}'.");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Saving alert '{alert.Id}'.");
 
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -127,8 +127,8 @@ namespace Raven.Server.Documents
 
         public void DeleteAlert(AlertType type, string key)
         {
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Deleteing alert '{type}'.");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Deleteing alert '{type}'.");
 
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))

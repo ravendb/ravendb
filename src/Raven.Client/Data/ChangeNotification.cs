@@ -128,11 +128,7 @@ namespace Raven.Abstractions.Data
         public string Name { get; set; }
 
         /// <summary>
-        /// The index version that changed
-        /// </summary>
-        public int? Version { get; set; }
-        /// <summary>
-        /// TODO [ppekrol]
+        /// The index etag
         /// </summary>
         public long? Etag { get; set; }
 
