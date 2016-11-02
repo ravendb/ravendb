@@ -15,13 +15,30 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.indexes
         }),
         new leafMenuItem({
+            route: 'databases/status/indexing',
+            moduleId: 'viewmodels/database/status/indexing/indexPerformance',  //TODO: move viewmodel/view to proper directory
+            title: 'Indexing performance',
+            tooltip: "Shows details about indexing peformance",
+            nav: true,
+            dynamicHash: appUrls.indexPerformance
+        }),
+        new leafMenuItem({
+            route: 'databases/status/indexing/stats',
+            moduleId: 'viewmodels/database/status/indexing/indexStats', //TODO: move viewmodel/view to proper directory
+            title: 'Index stats',
+            tooltip: "Show details about indexing in/out counts",
+            nav: true,
+            dynamicHash: appUrls.indexStats
+        }),
+        /* TODO
+        new leafMenuItem({
             title: "Merge suggestions",
             nav: true,
             route: "databases/indexes/mergeSuggestions",
             moduleId: "viewmodels/database/indexes/indexMergeSuggestions",
             css: 'icon-merge',
             dynamicHash: appUrls.megeSuggestions
-        }),
+        }),*/
         new leafMenuItem({
             title: 'Edit Index',
             route: 'databases/indexes/edit(/:indexName)',

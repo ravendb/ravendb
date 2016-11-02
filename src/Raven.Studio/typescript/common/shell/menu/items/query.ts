@@ -13,6 +13,7 @@ function getQueryMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: appUrls.query('')
         }),
+        /* TODO
         new leafMenuItem({
             route: 'databases/query/reporting(/:indexName)',
             moduleId: 'viewmodels/database/reporting/reporting',
@@ -28,7 +29,7 @@ function getQueryMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-plus',
             dynamicHash: appUrls.exploration
-        })
+        })*/
     ];
 
     return new intermediateMenuItem("Query", routes, 'icon-query');
