@@ -64,6 +64,8 @@ class appUrl {
         indexBatchSize: ko.computed(() => appUrl.forIndexBatchSize(appUrl.currentDatabase())),
         indexPrefetches: ko.computed(() => appUrl.forIndexPrefetches(appUrl.currentDatabase())),
 
+        about: ko.computed(() => appUrl.forAbout()),
+
         settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase())),
         logs: ko.computed(() => appUrl.forLogs(appUrl.currentDatabase())),
         runningTasks: ko.computed(() => appUrl.forRunningTasks(appUrl.currentDatabase())),
@@ -103,6 +105,7 @@ class appUrl {
         infoPackage: ko.computed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
         dataSubscriptions: ko.computed(() => appUrl.forDataSubscriptions(appUrl.currentDatabase())),
 
+        statusStorageStats: ko.computed(() => appUrl.forStatusStorageStats(appUrl.currentDatabase())),
         statusStorageOnDisk: ko.computed(() => appUrl.forStatusStorageOnDisk(appUrl.currentDatabase())),
         statusStorageBreakdown: ko.computed(() => appUrl.forStatusStorageBreakdown(appUrl.currentDatabase())),
         statusStorageCollections: ko.computed(() => appUrl.forStatusStorageCollections(appUrl.currentDatabase())),
@@ -279,6 +282,10 @@ class appUrl {
         return "#admin/settings/hotSpare";
     }
 
+    static forTempManageServer(): string {
+        return "#admin/settings/manage";
+    }
+
     static forCompact(): string {
         return "#admin/settings/compact";
     }
@@ -325,6 +332,10 @@ class appUrl {
 
     static forResources(): string {
         return "#resources";
+    }
+
+    static forAbout(): string {
+        return "#about";
     }
 
     static forHasApiKey(): string {
@@ -490,6 +501,10 @@ class appUrl {
 
     static forStatusStorageOnDisk(db: database): string {
         return '#databases/status/storage?' + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusStorageStats(db: database): string {
+        return '#databases/status/storage/stats?' + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusStorageBreakdown(db: database): string {

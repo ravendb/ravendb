@@ -197,6 +197,15 @@ function getManageServerMenuItem() {
         })
     ];
 
-    return new intermediateMenuItem('Manage server', items, 'icon-settings');
+
+    return new leafMenuItem({
+        route: 'admin/settings/manage',
+        moduleId: 'viewmodels/manage/underDevelopment',
+        title: 'Manage server',
+        nav: true,
+        dynamicHash: appUrl.forTempManageServer,
+        css: 'icon-settings'
+    });
+    //TODO: return new intermediateMenuItem('Manage server', items, 'icon-settings');
 }
 

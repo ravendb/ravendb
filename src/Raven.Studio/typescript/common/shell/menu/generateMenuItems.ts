@@ -28,6 +28,18 @@ function generateMenuItems(resource: resource) {
     }
 }
 
+function aboutItem() {
+    return new leafMenuItem({
+        route: 'about',
+        moduleId: 'viewmodels/shell/about',
+        title: 'About',
+        tooltip: "About",
+        nav: true,
+        css: 'fa fa-question-mark',
+        dynamicHash: appUrl.forAbout
+    });
+}
+
 function generateNoActiveResourceMenuItems() {
     let appUrls = appUrl.forCurrentDatabase();
     return [
@@ -38,15 +50,7 @@ function generateNoActiveResourceMenuItems() {
         new separatorMenuItem('Server'),
         getResourcesMenuItem(appUrls),
         getManageServerMenuItem(),
-        new leafMenuItem({
-            route: '',
-            moduleId: '',
-            title: 'About',
-            tooltip: "About",
-            nav: true,
-            css: 'fa fa-question-mark',
-            dynamicHash: ko.computed(() => 'TODO')
-        })
+        aboutItem()
     ];
     
 }
@@ -66,15 +70,7 @@ function generateActiveDatabaseMenuItems() {
         new separatorMenuItem('Server'),
         getResourcesMenuItem(appUrls),
         getManageServerMenuItem(),
-        new leafMenuItem({
-            route: '',
-            moduleId: '',
-            title: 'About',
-            tooltip: "About",
-            nav: true,
-            css: 'fa fa-question-mark',
-            dynamicHash: ko.computed(() => 'TODO')
-        })
+        aboutItem()
     ];
 }
 

@@ -69,13 +69,13 @@ function generateAllMenuItems() {
         getResourcesMenuItem(appUrls),
         getManageServerMenuItem(),
         new leafMenuItem({
-            route: '',
-            moduleId: '',
+            route: 'about',
+            moduleId: 'viewmodels/shell/about',
             title: 'About',
             tooltip: "About",
             nav: true,
             css: 'fa fa-question-mark',
-            dynamicHash: ko.computed(() => 'TODO')
+            dynamicHash: appUrl.forAbout
         })
     ];
 }

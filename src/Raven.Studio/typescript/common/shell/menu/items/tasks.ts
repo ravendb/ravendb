@@ -33,6 +33,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: exportDatabaseUrl
         }),
+        /* TODO:
         new leafMenuItem({
             route: 'databases/tasks/subscriptionsTask',
             moduleId: 'viewmodels/database/tasks/subscriptionsTask',
@@ -40,7 +41,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: activeDatabase() && activeDatabase().isAdminCurrentTenant(),
             css: 'icon-plus',
             dynamicHash: setAcknowledgedEtagUrl
-        }),
+        }),*/
         new leafMenuItem({
             route: 'databases/tasks/sampleData',
             moduleId: 'viewmodels/database/tasks/createSampleData',
@@ -49,6 +50,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: sampleDataUrl
         }),
+        /* TODO:
         new leafMenuItem({
             route: 'databases/tasks/csvImport',
             moduleId: 'viewmodels/database/tasks/csvImport',
@@ -56,7 +58,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-plus',
             dynamicHash: csvImportUrl
-        })
+        })*/
     ];
 
     return new intermediateMenuItem('Tasks', submenu, 'icon-tasks');

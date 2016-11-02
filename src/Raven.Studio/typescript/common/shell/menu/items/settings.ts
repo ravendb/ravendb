@@ -13,6 +13,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: appUrls.databaseSettings
         }),
+        /* TODO
         new leafMenuItem({
             route: 'databases/settings/quotas',
             moduleId: 'viewmodels/database/settings/quotas',
@@ -20,7 +21,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-plus',
             dynamicHash: appUrls.quotas
-        }),
+        }),*/
         new leafMenuItem({
             route: 'databases/settings/replication',
             moduleId: 'viewmodels/database/settings/replications',
@@ -29,6 +30,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: appUrls.replications
         }),
+        /* TODO
         new leafMenuItem({
             route: 'databases/settings/etl',
             moduleId: 'viewmodels/database/settings/etl',
@@ -36,7 +38,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-plus',
             dynamicHash: appUrls.etl
-        }),
+        }),*/
         new leafMenuItem({
             route: 'databases/settings/sqlReplication',
             moduleId: 'viewmodels/database/settings/sqlReplications',
@@ -77,6 +79,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: appUrls.periodicExport
         }),
+        /* TODO
         new leafMenuItem({
             route: 'databases/settings/customFunctionsEditor',
             moduleId: 'viewmodels/database/settings/customFunctionsEditor',
@@ -84,7 +87,8 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-plus',
             dynamicHash: appUrls.customFunctionsEditor
-        }),
+        }),*/
+        /*TODO
         new leafMenuItem({
             route: 'databases/settings/databaseStudioConfig',
             moduleId: 'viewmodels/databaseStudioConfig',
@@ -92,7 +96,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-plus',
             dynamicHash: appUrls.databaseStudioConfig
-        })
+        })*/
     ];
 
     return new intermediateMenuItem('Settings', items, 'icon-settings');
