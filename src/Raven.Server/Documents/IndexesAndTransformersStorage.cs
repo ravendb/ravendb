@@ -169,7 +169,8 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ByteStringContext.ExternalScope GetStartingSliceForTombstonesSeek(TransactionOperationContext context,long etag, out Slice slice)
+        private static ByteStringContext.ExternalScope GetStartingSliceForTombstonesSeek(
+            TransactionOperationContext context,long etag, out Slice slice)
         {
             const int PrefixSize = sizeof(int) + sizeof(long);
             var buffer = context.GetNativeTempBuffer(PrefixSize);
@@ -180,7 +181,9 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void MergeEntryVectorWithGlobal(Transaction tx, TransactionOperationContext context, ChangeVectorEntry[] changeVectorForWrite)
+        private void MergeEntryVectorWithGlobal(Transaction tx, 
+            TransactionOperationContext context, 
+            ChangeVectorEntry[] changeVectorForWrite)
         {
             var globalChangeVectorTree = tx.ReadTree(SchemaNameConstants.GlobalChangeVectorTree);
             var globalChangeVector = ReplicationUtil.ReadChangeVectorFrom(globalChangeVectorTree);
