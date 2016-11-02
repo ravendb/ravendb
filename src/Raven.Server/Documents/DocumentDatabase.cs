@@ -94,8 +94,9 @@ namespace Raven.Server.Documents
 
         public IndexStore IndexStore { get; private set; }
 
-        public TransformerStore TransformerStore { get; private set; }
+        public TransformerStore TransformerStore { get; }
 
+        public IndexesAndTransformersStorage IndexesPersistence => _configurationStorage.IndexesAndTransformersStorage;
 
         public AlertsStorage Alerts => _configurationStorage.AlertsStorage;
 
