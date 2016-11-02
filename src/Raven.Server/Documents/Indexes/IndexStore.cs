@@ -196,10 +196,15 @@ namespace Raven.Server.Documents.Indexes
 
             _indexes.Add(index);
 
-            _documentDatabase.IndexesPersistence.OnIndexCreated(index);
+            var etag = _documentDatabase.IndexesPersistence.OnIndexCreated(index);
 
             _documentDatabase.Notifications.RaiseNotifications(
-                new IndexChangeNotification { Name = index.Name, Type = IndexChangeTypes.IndexAdded });
+                new IndexChangeNotification
+                {
+                    Name = index.Name,
+                    Type = IndexChangeTypes.IndexAdded,
+                    Etag = etag
+                });
 
             return indexId;
         }
