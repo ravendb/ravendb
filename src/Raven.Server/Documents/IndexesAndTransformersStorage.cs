@@ -24,27 +24,38 @@ namespace Raven.Server.Documents
 
         private TransactionContextPool _contextPool;
 
-        private readonly TableSchema _indexesSchema = new TableSchema();
+        private static readonly TableSchema IndexesTableSchema;
 
-        public IndexesAndTransformersStorage(string resourceName)
+        static IndexesAndTransformersStorage()
         {
-            Logger = LoggingSource.Instance.GetLogger<IndexesAndTransformersStorage>(resourceName);
-            _indexesSchema.DefineKey(new TableSchema.SchemaIndexDef
+            Slice etagsIndexName;
+            Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out etagsIndexName);
+
+            // table
+            // index name, index id (-1 if deleted), etag, change vector
+
+            // Table schema is:
+            //  - index id - int
+            //  - etag - long
+            //  - change vector
+            IndexesTableSchema = new TableSchema();
+
+            IndexesTableSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
                 Count = 1
             });
 
-            //not sure if this needs to be disposed
-            Slice etagsIndexName;
-            Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out etagsIndexName);
-
-            _indexesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            IndexesTableSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
                 Name = etagsIndexName
             });
+        }
 
+        public IndexesAndTransformersStorage(string resourceName)
+        {
+            Logger = LoggingSource.Instance.GetLogger<IndexesAndTransformersStorage>(resourceName);
         }
 
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
@@ -56,20 +67,20 @@ namespace Raven.Server.Documents
             using (contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.WriteTransaction(context.PersistentContext))
             {
-                _indexesSchema.Create(tx, IndexesSchema.IndexesTree);
+                IndexesTableSchema.Create(tx, IndexesSchema.IndexesTree);
                 tx.CreateTree(IndexesSchema.GlobalChangeVectorTree);
 
                 tx.Commit();
             }
         }
 
-        public void OnIndexCreated(Index index)
+        public long OnIndexCreated(Index index)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.WriteTransaction())
             {
-                var table = tx.OpenTable(_indexesSchema, IndexesSchema.IndexesTree);
+                var table = tx.OpenTable(IndexesTableSchema, IndexesSchema.IndexesTree);
                
                 var lastEtag = ReadLastEtag(table);
 
@@ -83,6 +94,8 @@ namespace Raven.Server.Documents
 
                 var newGlobalChangeVector = MergeVectors(globalChangeVector, changeVector);
                 WriteChangeVectorTo(context, newGlobalChangeVector, globalChangeVectorTree);
+                
+                tx.Commit();
             }
         }
 
@@ -92,7 +105,7 @@ namespace Raven.Server.Documents
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.WriteTransaction())
             {
-                var table = tx.OpenTable(_indexesSchema, IndexesSchema.IndexesTree);
+                var table = tx.OpenTable(IndexesTableSchema, IndexesSchema.IndexesTree);
 
                 Slice indexIdAsSlice;
                 var indexId = index.IndexId;
@@ -257,12 +270,12 @@ namespace Raven.Server.Documents
                 return 0;
 
             //the primary key will be always etag because it is unique per record
-            var result = table.SeekLastByPrimaryKey();
+            var result = table.SeekLastByPrimaryKey(); // TODO: read etags index
             if (result == null)
                 return 0;
 
             int size;
-            return IPAddress.NetworkToHostOrder(*(long*) result.Read((int) MetadataFields.Etag, out size));
+            return Bits.SwapBytes(*(long*) result.Read((int) MetadataFields.Etag, out size));
         }
 
         public struct Metadata
