@@ -160,7 +160,7 @@ namespace Raven.Server.Documents
                                 if (taken++ >= take)
                                     break;
 
-                                yield return TableValueToMetadata(tvr);
+                                yield return TableValueToMetadata(tvr, context);
                             }
                         }
                     }
@@ -235,15 +235,16 @@ namespace Raven.Server.Documents
             if (tvr == null)
                 return null;
 
-            return TableValueToMetadata(tvr);
+            return TableValueToMetadata(tvr, context);
         }
 
-        private Metadata TableValueToMetadata(TableValueReader tvr)
+        private Metadata TableValueToMetadata(TableValueReader tvr, JsonOperationContext context)
         {
             var metadata = new Metadata();
 
             int size;
             metadata.Id = IPAddress.NetworkToHostOrder(*(int*)tvr.Read((int)MetadataFields.Id, out size));
+            metadata.Name = new LazyStringValue(null, tvr.Read((int)MetadataFields.Name, out size),size,context);
             metadata.ChangeVector = ReplicationUtil.GetChangeVectorEntriesFromTableValueReader(tvr, (int)MetadataFields.ChangeVector);
             metadata.Etag = IPAddress.NetworkToHostOrder(*(long*)tvr.Read((int)MetadataFields.Etag, out size));
 
@@ -272,8 +273,13 @@ namespace Raven.Server.Documents
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
                 var bitSwappedEtag = Bits.SwapBytes(etag);
-                var bitSwappedId = Bits.SwapBytes(id);
 
+                //using Bits.SwapBytes() won't work for int values,
+                //since it returns long and not int -> it cut's off bits,
+                //so when later reversing a zero is returned
+                //TODO : see how Bits.SwapBytes() can be refactored to return int values when parameter is int
+                var bitSwappedId = IPAddress.HostToNetworkOrder(id);
+                
                 table.Set(new TableValueBuilder
                 {
                     {(byte*) &bitSwappedId, sizeof(int)},
@@ -302,7 +308,7 @@ namespace Raven.Server.Documents
         public class Metadata
         {
             public int Id;
-            public string Name; //PK
+            public LazyStringValue Name; //PK
             public long Etag;
             public ChangeVectorEntry[] ChangeVector;
         }             

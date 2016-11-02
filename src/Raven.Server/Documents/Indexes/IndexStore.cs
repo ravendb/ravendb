@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Indexes
 
             _indexes.Add(index);
 
-            var etag = _documentDatabase.IndexesPersistence.OnIndexCreated(index);
+            var etag = _documentDatabase.IndexMetadataPersistence.OnIndexCreated(index);
 
             _documentDatabase.Notifications.RaiseNotifications(
                 new IndexChangeNotification
@@ -336,7 +336,7 @@ namespace Raven.Server.Documents.Indexes
                         _logger.Info($"Could not dispose index '{index.Name}' ({id}).", e);
                 }
 
-                var tombstoneEtag = _documentDatabase.IndexesPersistence.OnIndexDeleted(index);
+                var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnIndexDeleted(index);
                 _documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
                 {
                     Name = index.Name,
