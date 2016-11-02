@@ -15,7 +15,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents
 {
-    public unsafe class IndexesAndTransformersStorage
+    public unsafe class IndexesEtagsStorage
     {
         protected readonly Logger Logger;
 
@@ -27,18 +27,16 @@ namespace Raven.Server.Documents
         private static readonly Slice EtagIndexName;
         private static readonly Slice MetadataIdAndEtagIndexName;
 
-        static IndexesAndTransformersStorage()
+        static IndexesEtagsStorage()
         {
             Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out EtagIndexName);
             Slice.From(StorageEnvironment.LabelsContext, "MetadataIdAndEtagIndexName", out MetadataIdAndEtagIndexName);
 
-            // table
-            // index name, index id (-1 if tombstone), etag, change vector
-
             // Table schema is:
-            //  - index id - int
+            //  - index id - int (-1 if null)
             //  - etag - long
-            //  - index name - string, lowercase
+            //  - name - string, lowercase
+            //  - type - enum (index / transformer)
             //  - change vector
             IndexesTableSchema = new TableSchema();
 
@@ -53,21 +51,11 @@ namespace Raven.Server.Documents
                 StartIndex = (int)MetadataFields.Etag,
                 Name = EtagIndexName
             });
-
-
-            //index that encompasses two fields --> id and etag
-            //this is useful to be able to seek over tombstones --> by doing SeekForwardStartingWith("-1")
-            IndexesTableSchema.DefineIndex(new TableSchema.SchemaIndexDef
-            {
-                StartIndex = (int)MetadataFields.Id,
-                Count = 2,
-                Name = MetadataIdAndEtagIndexName
-            });
         }
 
-        public IndexesAndTransformersStorage(string resourceName)
+        public IndexesEtagsStorage(string resourceName)
         {
-            Logger = LoggingSource.Instance.GetLogger<IndexesAndTransformersStorage>(resourceName);
+            Logger = LoggingSource.Instance.GetLogger<IndexesEtagsStorage>(resourceName);
         }
 
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
@@ -88,15 +76,15 @@ namespace Raven.Server.Documents
 
         public long OnIndexCreated(Index index)
         {
-            return WriteEntry(index.Name, index.IndexId);
+            return WriteEntry(index.Name, IndexEntryType.Index, index.IndexId);
         }
 
         public long OnIndexDeleted(Index index)
         {
-            return WriteEntry(index.Name, -1);
+            return WriteEntry(index.Name, IndexEntryType.Index, -1);
         }
 
-        private long WriteEntry(string indexName, int indexIndexId)
+        private long WriteEntry(string indexName, IndexEntryType type, int indexIndexId)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -127,6 +115,7 @@ namespace Raven.Server.Documents
                             {(byte*) &bitSwappedId, sizeof(int)},
                             {(byte*) &bitSwappedEtag, sizeof(long)},
                             indexNameAsSlice,
+                            {(byte*)&type,1},
                             {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVectorForWrite.Length},
                         });
                     }
@@ -139,7 +128,13 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<IndexEntryMetadata> GetTombstonesFrom(long etag, int start, int take)
+        public enum IndexEntryType : byte
+        {
+            Index = 1,
+            Transformer = 2
+        }
+
+        public IEnumerable<IndexEntryMetadata> GetAfter(long etag, int start, int take)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -149,32 +144,33 @@ namespace Raven.Server.Documents
                 int skipped = 0;
                 var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
 
-                var buffer = stackalloc byte[sizeof(int) + sizeof(long)];
+                var swapped = Bits.SwapBytes(etag);
 
-                *(int*) buffer = Bits.SwapBytes(-1);
-                *(long*) (buffer + sizeof(int)) = Bits.SwapBytes(etag);
-
-                var list = new List<IndexEntryMetadata>();
                 Slice slice;
-                using (Slice.External(tx.Allocator, buffer, sizeof(int) + sizeof(long), out slice))
+                using (Slice.External(tx.Allocator, (byte*)&swapped, sizeof(long), out slice))
                 {
-                    foreach (var seekResult in table.SeekForwardFrom(IndexesTableSchema.Indexes[MetadataIdAndEtagIndexName], slice))
+                    return YieldResults(start, take, table, slice, skipped, taken, context);
+                }
+            }
+        }
+
+        private IEnumerable<IndexEntryMetadata> YieldResults(int start, int take, Table table, Slice slice, int skipped, int taken,
+            TransactionOperationContext context)
+        {
+            foreach (var seekResult in table.SeekForwardFrom(IndexesTableSchema.Indexes[MetadataIdAndEtagIndexName], slice))
+            {
+                foreach (var tvr in seekResult.Results)
+                {
+                    if (start > skipped)
                     {
-                        foreach (var tvr in seekResult.Results)
-                        {
-                            if (start > skipped)
-                            {
-                                skipped++;
-                                continue;
-                            }
-
-                            if (taken++ >= take)
-                                break;
-
-                            list.Add(TableValueToMetadata(tvr, context));
-                        }
+                        skipped++;
+                        continue;
                     }
-                    return list;
+
+                    if (taken++ >= take)
+                        break;
+
+                    yield return TableValueToMetadata(tvr, context);
                 }
             }
         }
@@ -232,6 +228,7 @@ namespace Raven.Server.Documents
             metadata.Id = Bits.SwapBytes(*(int*)tvr.Read((int)MetadataFields.Id, out size));
             metadata.Name = new LazyStringValue(null, tvr.Read((int)MetadataFields.Name, out size), size, context);
             metadata.ChangeVector = ReplicationUtil.GetChangeVectorEntriesFromTableValueReader(tvr, (int)MetadataFields.ChangeVector);
+            metadata.Type = (IndexEntryType) (*tvr.Read((int) MetadataFields.Type, out size));
             metadata.Etag = Bits.SwapBytes(*(long*)tvr.Read((int)MetadataFields.Etag, out size));
 
             return metadata;
@@ -259,8 +256,9 @@ namespace Raven.Server.Documents
         public class IndexEntryMetadata
         {
             public int Id;
-            public LazyStringValue Name; //PK
+            public LazyStringValue Name; 
             public long Etag;
+            public IndexEntryType Type;
             public ChangeVectorEntry[] ChangeVector;
         }
 
@@ -269,7 +267,8 @@ namespace Raven.Server.Documents
             Id = 0,
             Etag = 1,
             Name = 2,
-            ChangeVector = 3
+            Type = 3,
+            ChangeVector = 4
         }
 
         public static class SchemaNameConstants

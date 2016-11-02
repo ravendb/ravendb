@@ -96,7 +96,7 @@ namespace Raven.Server.Documents
 
         public TransformerStore TransformerStore { get; }
 
-        public IndexesAndTransformersStorage IndexMetadataPersistence => _configurationStorage.IndexesAndTransformersStorage;
+        public IndexesEtagsStorage IndexMetadataPersistence => _configurationStorage.IndexesEtagsStorage;
 
         public AlertsStorage Alerts => _configurationStorage.AlertsStorage;
 
