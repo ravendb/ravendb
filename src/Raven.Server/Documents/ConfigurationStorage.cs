@@ -7,27 +7,23 @@ namespace Raven.Server.Documents
 {
     public class ConfigurationStorage : IDisposable
     {
-        private readonly DocumentDatabase _db;
-
         private TransactionContextPool _contextPool;
 
-        public AlertsStorage AlertsStorage { get; private set; }
+        public AlertsStorage AlertsStorage { get; }
 
-        public StorageEnvironment Environment { get; private set; }
+        public StorageEnvironment Environment { get; }
 
         public ConfigurationStorage(DocumentDatabase db)
         {
-            _db = db;
-
-            var options = _db.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(Path.Combine(_db.Configuration.Core.DataDirectory, "Configuration"))
-                : StorageEnvironmentOptions.ForPath(Path.Combine(_db.Configuration.Core.DataDirectory, "Configuration"));
+            var options = db.Configuration.Core.RunInMemory
+                ? StorageEnvironmentOptions.CreateMemoryOnly(Path.Combine(db.Configuration.Core.DataDirectory, "Configuration"))
+                : StorageEnvironmentOptions.ForPath(Path.Combine(db.Configuration.Core.DataDirectory, "Configuration"));
 
             options.SchemaVersion = 1;
-            options.TransactionsMode = TransactionsMode.Lazy;
+
             Environment = new StorageEnvironment(options);
 
-            AlertsStorage = new AlertsStorage(_db.Name);
+            AlertsStorage = new AlertsStorage(db.Name);
         }
 
         public void Initialize()
