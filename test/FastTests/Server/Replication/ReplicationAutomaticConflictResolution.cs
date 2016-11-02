@@ -6,6 +6,7 @@
 
 using System;
 using System.Threading;
+using FastTests.Server.Replication;
 using Raven.Abstractions.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

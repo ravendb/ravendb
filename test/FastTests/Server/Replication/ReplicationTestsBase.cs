@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -15,7 +16,7 @@ using Raven.Json.Linq;
 using Raven.Server.Extensions;
 using Xunit;
 
-namespace FastTests.Server.Documents.Replication
+namespace FastTests.Server.Replication
 {
     public class ReplicationTestsBase : RavenTestBase
     {
@@ -140,6 +141,25 @@ namespace FastTests.Server.Documents.Replication
 
             return default(T);
         }
+
+        protected bool WaitForIndexToReplicate(DocumentStore store, string indexName, int timeout)
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds <= timeout)
+            {
+                var indexInformation = store.DatabaseCommands.GetStatistics()
+                                          .Indexes.FirstOrDefault(x => 
+                                                x.Name.Equals(indexName, StringComparison.CurrentCultureIgnoreCase));
+
+                if (indexInformation != null)
+                    return true;
+
+                Thread.Sleep(25);
+            }
+
+            return false;
+        }
+
 
         protected static void SetReplicationConflictResolution(DocumentStore store,
             StraightforwardConflictResolution conflictResolution)

@@ -6,14 +6,12 @@ using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Replication.Messages;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
@@ -381,11 +379,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IEnumerable<IndexTransformerTombstone> GetTombstonesAfter(long etag, MetadataStorageType storageType, int start = 0, int take = 1024)
+        public IEnumerable<IndexTransformerTombstone> GetTombstonesAfter(Transaction tx, long etag, int start = 0,
+            int take = 1024)
         {
             JsonOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
-            using (var tx = Environment.ReadTransaction())
             {
                 var table = tx.OpenTable(_tombstoneSchema, TombstonesTableName);
                 foreach (var tvr in table.SeekForwardFrom(
@@ -407,11 +405,17 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IEnumerable<IndexTransformerTombstone> GetTombstonesAfter(long etag, int start = 0, int take = 1024)
+        {
+            using (var tx = Environment.ReadTransaction())
+                return GetTombstonesAfter(tx, etag, start, take);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromEtag(long etag, JsonOperationContext context, out Slice etagSlice)
         {
             return Slice.External(context.Allocator,(byte*)&etag,sizeof(long),out etagSlice);
         }
-
 
         public IEnumerable<IndexTransformerMetadata> GetMetadataAfter(long etag, MetadataStorageType storageType, int start = 0, int take = 1024)
         {
@@ -436,6 +440,7 @@ namespace Raven.Server.Documents.Indexes
                     start--;
                     continue;
                 }
+
                 if (take-- <= 0)
                 {
                     yield break;

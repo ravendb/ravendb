@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using FastTests.Server.Documents.Replication;
 using Xunit;
 
-namespace FastTests.Server.Documents.Replication
+namespace FastTests.Server.Replication
 {
     public class ReplicationTombstoneTests : ReplicationTestsBase
     {

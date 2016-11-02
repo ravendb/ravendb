@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -36,17 +37,29 @@ namespace Raven.Server.Documents.Indexes
         private readonly object _locker = new object();
 
         private bool _initialized;
-
+        private readonly ManualResetEventSlim _finishedInitializingEvent;
         private string _path;
         private bool _run = true;
 
         public readonly IndexIdentities Identities = new IndexIdentities();
+
+        public int Count
+        {
+            get
+            {
+                _finishedInitializingEvent.Wait(_documentDatabase.DatabaseShutdown);
+                return _indexes.Count;
+            }
+        }
+
+        public bool IsInitialized => _finishedInitializingEvent.IsSet;
 
         public IndexStore(DocumentDatabase documentDatabase, MetadataStorage metadataStorage)
         {
             _documentDatabase = documentDatabase;
             _logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
             _metadataStorage = metadataStorage;
+            _finishedInitializingEvent = new ManualResetEventSlim();
         }
 
         public Task InitializeAsync()
@@ -512,6 +525,8 @@ namespace Raven.Server.Documents.Indexes
                     if (exceptions != null && exceptions.Count > 0)
                         throw new AggregateException("Could not load some of the indexes", exceptions);
                 }
+
+                _finishedInitializingEvent.Set();
             }
         }
 

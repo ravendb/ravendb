@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using FastTests.Server.Replication;
 using Raven.Abstractions.Connection;
 using Raven.Client.Data;
 using Raven.Client.Exceptions;

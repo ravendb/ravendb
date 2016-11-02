@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -21,10 +22,21 @@ namespace Raven.Server.Documents.Transformers
         private readonly CollectionOfTransformers _transformers = new CollectionOfTransformers();
         
         private readonly object _locker = new object();
-
+        private readonly ManualResetEventSlim _finishedInitializingEvent = new ManualResetEventSlim();
         private bool _initialized;
 
         private string _path;
+
+        public int Count
+        {
+            get
+            {
+                _finishedInitializingEvent.Wait(_documentDatabase.DatabaseShutdown);
+                return _transformers.Count;
+            }
+        }
+
+        public bool IsInitialized => _finishedInitializingEvent.IsSet;
 
         public TransformerStore(DocumentDatabase documentDatabase, MetadataStorage metadataStorage)
         {
@@ -103,6 +115,8 @@ namespace Raven.Server.Documents.Transformers
                     if (exceptions != null && exceptions.Count > 0)
                         throw new AggregateException("Could not load some of the transformers", exceptions);
                 }
+
+                _finishedInitializingEvent.Set();
             }
         }
 

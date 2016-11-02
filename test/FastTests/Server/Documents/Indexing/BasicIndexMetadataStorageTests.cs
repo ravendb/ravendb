@@ -106,7 +106,7 @@ namespace FastTests.Server.Documents.Indexing
                 var fetchedTombstones = 
                     documentDatabase.
                         IndexTransformerMetadataStorage.
-                            GetTombstonesAfter(0,MetadataStorageType.Index).ToList();
+                            GetTombstonesAfter(0).ToList();
 
                 Assert.Equal(3,fetchedTombstones.Count);
                 Assert.Equal(new[] {1L,2L,3L}, fetchedTombstones.Select(x => x.DeletedEtag));

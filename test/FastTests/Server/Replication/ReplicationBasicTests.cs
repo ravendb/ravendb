@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Xunit;
 
 namespace FastTests.Server.Documents.Replication

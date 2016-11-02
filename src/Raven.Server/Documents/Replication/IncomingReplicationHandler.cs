@@ -31,6 +31,7 @@ namespace Raven.Server.Documents.Replication
         private ReplicationDocument _replicationDocument;
         public event Action<IncomingReplicationHandler, Exception> Failed;
         public event Action<IncomingReplicationHandler> DocumentsReceived;
+        public event Action<IncomingReplicationHandler> IndexOrTransformerReceived;
 
         public IncomingReplicationHandler(
             JsonOperationContext.MultiDocumentParser multiDocumentParser, 
@@ -96,22 +97,41 @@ namespace Raven.Server.Documents.Replication
                             {
                                 ValidateReplicationBatchAndGetDocsCount(message);
 
-                                long lastEtag;
-                                if (message.TryGet("LastEtag", out lastEtag) == false)
-                                    throw new InvalidDataException("The property 'LastEtag' wasn't found in replication batch, invalid data");
+                                long lastDocumentEtag;
+                                if (message.TryGet("LastDocumentEtag", out lastDocumentEtag) == false)
+                                    throw new InvalidDataException("The property 'LastDocumentEtag' wasn't found in replication batch, invalid data");
+
+                                long lastIndexEtag;
+                                if (message.TryGet("LastIndexEtag", out lastIndexEtag) == false)
+                                    throw new InvalidDataException("The property 'LastIndexEtag' wasn't found in replication batch, invalid data");
+
+                                long lastTransformerEtag;
+                                if (message.TryGet("LastTransformerEtag", out lastTransformerEtag) == false)
+                                    throw new InvalidDataException("The property 'LastTransformerEtag' wasn't found in replication batch, invalid data");
 
                                 int replicatedDocsCount;
                                 if (!message.TryGet("Documents", out replicatedDocsCount))
-                                    throw new InvalidDataException($"Expected the 'Documents' field, but had no numeric field of this value, this is likely a bug");
+                                    throw new InvalidDataException("Expected the 'Documents' field, but had no numeric field of this value, this is likely a bug");
 
+                                int replicatedIndexAndTransformerCount;
+                                if (!message.TryGet("IndexesAndTransformers", out replicatedIndexAndTransformerCount))
+                                    throw new InvalidDataException("Expected the 'IndexesAndTransformers' field, but had no numeric field of this value, this is likely a bug");
+                              
                                 //replicatedDocsCount == 0 --> this is heartbeat message
                                 if (replicatedDocsCount > 0)
                                 {
-                                    ReceiveSingleBatch(replicatedDocsCount, lastEtag);
+                                    ReceiveSingleDocumentBatch(replicatedDocsCount, lastDocumentEtag);
                                     OnDocumentsReceived(this);
                                 }
+
+                                if (replicatedIndexAndTransformerCount > 0)
+                                {
+                                    //TODO : finish code that receives replicated indexes & transformers
+                                    OnIndexOrTransformerReceived(this);
+                                }
+
                                 //return positive ack
-                                SendStatusToSource(writer, lastEtag);
+                                SendStatusToSource(writer, lastDocumentEtag);
                             }
                             catch (Exception e)
                             {
@@ -150,7 +170,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void ReceiveSingleBatch(int replicatedDocsCount, long lastEtag)
+        private unsafe void ReceiveSingleDocumentBatch(int replicatedDocsCount, long lastEtag)
         {
             var sw = Stopwatch.StartNew();
             using (var writeBuffer = _context.GetStream())
@@ -499,6 +519,7 @@ namespace Raven.Server.Documents.Replication
 
         protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(instance, exception);
         protected void OnDocumentsReceived(IncomingReplicationHandler instance) => DocumentsReceived?.Invoke(instance);
+        protected void OnIndexOrTransformerReceived(IncomingReplicationHandler instance) => IndexOrTransformerReceived?.Invoke(instance);
 
         private ConflictStatus GetConflictStatus(DocumentsOperationContext context, string key, ChangeVectorEntry[] remote,out ChangeVectorEntry[] conflictingVector)
         {

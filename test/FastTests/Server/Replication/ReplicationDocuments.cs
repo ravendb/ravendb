@@ -6,6 +6,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;

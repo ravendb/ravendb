@@ -5,6 +5,7 @@ using System.Net;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Lucene.Net.Analysis;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Indexing;
