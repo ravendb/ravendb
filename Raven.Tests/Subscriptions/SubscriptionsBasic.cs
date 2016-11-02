@@ -1316,8 +1316,10 @@ namespace Raven.Tests.Subscriptions
                 store.Changes().WaitForAllPendingSubscriptions();
                 var mre = new ManualResetEvent(false);
                 var docs = new BlockingCollection<RavenJObject>();
-                subscriptionZeroTimeout.AckTimedOut += () =>
+                subscriptionZeroTimeout.SubscriptionConnectionInterrupted += (ex,willReconnect) =>
                 {
+                    Assert.True(ex is SubscriptionAckTimeoutException);
+                    Assert.True(willReconnect);
                     mre.Set();
                 };
                 subscriptionZeroTimeout.Subscribe(docs.Add);

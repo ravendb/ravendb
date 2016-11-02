@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using Raven.Tests.Raft.Client;
 using Raven.Tests.Smuggler;
+using Raven.Tests.Subscriptions;
 #if !DNXCORE50
 using Raven.Tests.Sorting;
 using Raven.SlowTests.RavenThreadPool;
@@ -27,9 +28,24 @@ namespace Raven.Tryouts
                 //{
                 //    x.Frequent_updates_of_document_should_not_cause_deadlock_in_prefetcher();
                 //}
-                using (var x = new SmugglerExecutionTests())
+                using (var x = new SubscriptionsBasic())
                 {
-                    x.CanExportImportIncrementalSmugglerMaxSplitExportFileSize().Wait();
+                    try
+                    {
+                        x.ShouldNotOverrideSubscriptionAckEtag("voron");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex);
+                    }
+                    try
+                    {
+                        x.ShouldNotOverrideSubscriptionAckEtag("esent");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex);
+                    }
                 }                
             }
 
