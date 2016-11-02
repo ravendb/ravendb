@@ -63,7 +63,7 @@ namespace FastTests.Server.Replication
                 var metadataByAge = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByAge.IndexName);
                 Assert.NotNull(metadataByAge);
 
-                serversideIndexMetadata = databaseStore.IndexStore.GetIndex(userByName.IndexName);
+                serversideIndexMetadata = databaseStore.IndexStore.GetIndex(userByAge.IndexName);
                 Assert.Equal(serversideIndexMetadata.IndexId, metadataByAge.Id);
             }
         }
