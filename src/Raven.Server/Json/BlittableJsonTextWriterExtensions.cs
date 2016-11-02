@@ -260,7 +260,7 @@ namespace Raven.Server.Json
 
         public static void WriteIndexingPerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexingPerformanceStats stats)
         {
-            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats, context);
+            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
             writer.WriteObject(context.ReadObject(djv, "index/performance"));
         }
 
@@ -794,7 +794,7 @@ namespace Raven.Server.Json
 
         public static void WriteIndexStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexStats stats)
         {
-            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats, context);
+            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
             writer.WriteObject(context.ReadObject(djv, "index/stats"));
         }
 
