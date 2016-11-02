@@ -11,8 +11,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
     {
         private readonly List<object> _outputs;
         private readonly List<BlittableJsonReaderObject> _jsons;
-        private PropertyAccessor _propertyAccessor;
-        private JsonOperationContext _indexContext;
+        private readonly PropertyAccessor _propertyAccessor;
+        private readonly JsonOperationContext _indexContext;
 
         public AggregatedAnonymousObjects(List<object> results, PropertyAccessor propertyAccessor, TransactionOperationContext indexContext)
         {
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 foreach (var property in _propertyAccessor.PropertiesInOrder)
                 {
                     var value = property.Value.GetValue(output);
-                    djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, _indexContext);
+                    djv[property.Key] = TypeConverter.ToBlittableSupportedType(value);
                 }
 
                 var item = _indexContext.ReadObject(djv, "map/reduce result to store");
