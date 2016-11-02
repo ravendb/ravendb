@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -74,15 +75,15 @@ namespace Raven.Server.Documents
                 var lastEtag = ReadLastEtag(table);
 
                 var globalChangeVectorTree = tx.ReadTree(IndexesSchema.GlobalChangeVectorTree);
-                var globalChangeVector = ReadChangeVectorFrom(globalChangeVectorTree);
+                var globalChangeVector = ReplicationUtil.ReadChangeVectorFrom(globalChangeVectorTree);
 
                 var newEtag = lastEtag + 1;
-                var changeVector = UpdateChangeVectorWithNewEtag(_environment.DbId, newEtag, globalChangeVector);
+                var changeVector = ReplicationUtil.UpdateChangeVectorWithNewEtag(_environment.DbId, newEtag, globalChangeVector);
 
                 WriteMetadataInternal(table, index.IndexId, newEtag, changeVector);
 
-                var newGlobalChangeVector = MergeVectors(globalChangeVector, changeVector);
-                WriteChangeVectorTo(context, newGlobalChangeVector, globalChangeVectorTree);
+                var newGlobalChangeVector = ReplicationUtil.MergeVectors(globalChangeVector, changeVector);
+                ReplicationUtil.WriteChangeVectorTo(context, newGlobalChangeVector, globalChangeVectorTree);
             }
         }
 
@@ -96,51 +97,21 @@ namespace Raven.Server.Documents
 
                 Slice indexIdAsSlice;
                 var indexId = index.IndexId;
-
+                Metadata indexMetadata;
                 using (Slice.External(context.Allocator, (byte*) &indexId, sizeof(int), out indexIdAsSlice))
                 {
+                    var tvr = table.ReadByKey(indexIdAsSlice);
+                    indexMetadata = TableValueToMetadata(tvr);
                     table.DeleteByKey(indexIdAsSlice);
                 }
 
-                WriteTombstoneInternal();
+                WriteTombstoneInternal(indexMetadata.Id,indexMetadata.Etag);
             }
         }
 
-        private void WriteTombstoneInternal()
+        private void WriteTombstoneInternal(int id, long etag)
         {
 
-        }
-
-        private static void WriteChangeVectorTo(TransactionOperationContext context, ChangeVectorEntry[] changeVector, Tree tree)
-        {
-            foreach (var item in changeVector)
-            {
-                var dbId = item.DbId;
-                var etagBigEndian = IPAddress.HostToNetworkOrder(item.Etag);
-                Slice key;
-                Slice value;
-                using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out key))
-                using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out value))
-                    tree.Add(key, value);
-            }
-
-        }
-
-        private static ChangeVectorEntry[] UpdateChangeVectorWithNewEtag(Guid dbId, long newEtag, ChangeVectorEntry[] changeVector)
-        {
-            var length = changeVector.Length;
-            for (int i = 0; i < length; i++)
-            {
-                if (changeVector[i].DbId == dbId)
-                {
-                    changeVector[i].Etag = newEtag;
-                    return changeVector;
-                }
-            }
-            Array.Resize(ref changeVector, length + 1);
-            changeVector[length].DbId = dbId;
-            changeVector[length].Etag = newEtag;
-            return changeVector;
         }
 
         private Metadata TableValueToMetadata(TableValueReader tvr)
@@ -149,83 +120,11 @@ namespace Raven.Server.Documents
 
             int size;
             metadata.Id = IPAddress.NetworkToHostOrder(*(int*)tvr.Read((int)MetadataFields.Id, out size));
-            metadata.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, (int)MetadataFields.ChangeVector);
+            metadata.ChangeVector = ReplicationUtil.GetChangeVectorEntriesFromTableValueReader(tvr, (int)MetadataFields.ChangeVector);
             metadata.Etag = IPAddress.NetworkToHostOrder(*(long*)tvr.Read((int)MetadataFields.Etag, out size));
 
             return metadata;
         }
-
-        private static TEnum GetEnumFromTableValueReader<TEnum>(TableValueReader tvr, int index)
-        {
-            int size;
-            var storageTypeNum = *(int*)tvr.Read(index, out size);
-            return (TEnum)Enum.ToObject(typeof(TEnum), storageTypeNum);
-        }
-
-        private static ChangeVectorEntry[] GetChangeVectorEntriesFromTableValueReader(TableValueReader tvr, int index)
-        {
-            int size;
-            var pChangeVector = (ChangeVectorEntry*)tvr.Read(index, out size);
-            var changeVector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
-            for (int i = 0; i < changeVector.Length; i++)
-            {
-                changeVector[i] = pChangeVector[i];
-            }
-            return changeVector;
-        }
-
-        private static ChangeVectorEntry[] ReadChangeVectorFrom(Tree tree)
-        {
-            var changeVector = new ChangeVectorEntry[tree.State.NumberOfEntries];
-            using (var iter = tree.Iterate(false))
-            {
-                if (iter.Seek(Slices.BeforeAllKeys) == false)
-                    return changeVector;
-                var buffer = new byte[sizeof(Guid)];
-                int index = 0;
-                do
-                {
-                    var read = iter.CurrentKey.CreateReader().Read(buffer, 0, sizeof(Guid));
-                    if (read != sizeof(Guid))
-                        throw new InvalidDataException($"Expected guid, but got {read} bytes back for change vector");
-
-                    changeVector[index].DbId = new Guid(buffer);
-                    changeVector[index].Etag = iter.CreateReaderForCurrent().ReadBigEndianInt64();
-                    index++;
-                } while (iter.MoveNext());
-            }
-            return changeVector;
-        }
-
-        private static ChangeVectorEntry[] MergeVectors(ChangeVectorEntry[] vectorA, ChangeVectorEntry[] vectorB)
-        {
-            var merged = new ChangeVectorEntry[Math.Max(vectorA.Length, vectorB.Length)];
-            var inx = 0;
-            var largerVector = (vectorA.Length >= vectorB.Length) ? vectorA : vectorB;
-            var smallerVector = (largerVector == vectorA) ? vectorB : vectorA;
-            foreach (var entryA in largerVector)
-            {
-                var etagA = entryA.Etag;
-                var first = new ChangeVectorEntry();
-                foreach (var e in smallerVector)
-                {
-                    if (e.DbId == entryA.DbId)
-                    {
-                        first = e;
-                        break;
-                    }
-                }
-                var etagB = first.Etag;
-
-                merged[inx++] = new ChangeVectorEntry
-                {
-                    DbId = entryA.DbId,
-                    Etag = Math.Max(etagA, etagB)
-                };
-            }
-            return merged;
-        }
-
 
         //since both transformers and indexes need to store the same information,
         //this can be used for both
@@ -270,7 +169,22 @@ namespace Raven.Server.Documents
             public int Id;
             public long Etag;
             public ChangeVectorEntry[] ChangeVector;
-        }    
+        }
+
+        public struct Tombstone
+        {
+            public int Id;
+            public long Etag;
+            public long DeletedEtag;
+        }
+
+        public enum TombstoneFields
+        {
+            Id = 1,
+            Etag = 2,
+            DeletedEtag = 3
+        }
+
 
         public enum MetadataFields
         {
