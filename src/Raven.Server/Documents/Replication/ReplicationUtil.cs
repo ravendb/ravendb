@@ -55,48 +55,21 @@ namespace Raven.Server.Documents.Replication
             return changeVector;
         }
 
-        public static ChangeVectorEntry[] MergeVectors(ChangeVectorEntry[] vectorA, ChangeVectorEntry[] vectorB)
+        public static ChangeVectorEntry[] GetChangeVectorForWrite(ChangeVectorEntry[] existingChangeVector, Guid dbid, long etag)
         {
-            var merged = new ChangeVectorEntry[Math.Max(vectorA.Length, vectorB.Length)];
-            var inx = 0;
-            var largerVector = (vectorA.Length >= vectorB.Length) ? vectorA : vectorB;
-            var smallerVector = (largerVector == vectorA) ? vectorB : vectorA;
-            foreach (var entryA in largerVector)
+            if (existingChangeVector == null || existingChangeVector.Length == 0)
             {
-                var etagA = entryA.Etag;
-                var first = new ChangeVectorEntry();
-                foreach (var e in smallerVector)
+                return new[]
                 {
-                    if (e.DbId == entryA.DbId)
+                    new ChangeVectorEntry
                     {
-                        first = e;
-                        break;
+                        DbId = dbid,
+                        Etag = etag
                     }
-                }
-                var etagB = first.Etag;
-
-                merged[inx++] = new ChangeVectorEntry
-                {
-                    DbId = entryA.DbId,
-                    Etag = Math.Max(etagA, etagB)
                 };
             }
-            return merged;
-        }
 
-        public static void WriteChangeVectorTo(TransactionOperationContext context, ChangeVectorEntry[] changeVector, Tree tree)
-        {
-            foreach (var item in changeVector)
-            {
-                var dbId = item.DbId;
-                var etagBigEndian = IPAddress.HostToNetworkOrder(item.Etag);
-                Slice key;
-                Slice value;
-                using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out key))
-                using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out value))
-                    tree.Add(key, value);
-            }
-
+            return UpdateChangeVectorWithNewEtag(dbid, etag, existingChangeVector);
         }
 
         public static ChangeVectorEntry[] UpdateChangeVectorWithNewEtag(Guid dbId, long newEtag, ChangeVectorEntry[] changeVector)
@@ -115,57 +88,5 @@ namespace Raven.Server.Documents.Replication
             changeVector[length].Etag = newEtag;
             return changeVector;
         }
-
-        public static void GetLowerCaseStringBytes(
-          JsonOperationContext context,
-          string str,
-          out byte* lowerKey,
-          out int size)
-        {
-            var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
-            var buffer = context.GetNativeTempBuffer(byteCount);
-
-            fixed (char* pChars = str)
-            {
-                var lowerCaseChars = (char*)buffer;
-                for (var i = 0; i < str.Length; i++)
-                {
-                    lowerCaseChars[i] = char.ToLowerInvariant(pChars[i]);
-                }
-                lowerKey = (byte*)lowerCaseChars;
-                size = Encoding.UTF8.GetBytes(lowerCaseChars, str.Length, lowerKey, byteCount);
-            }
-        }
-
-        public static void GetLowerCaseStringBytesWithOriginalCase(
-          JsonOperationContext context,
-          string str,
-          out byte* key,
-          out byte* lowerKey,
-          out int size)
-        {
-            var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
-            var buffer = context.GetNativeTempBuffer(byteCount * 2);
-
-            fixed (char* pChars = str)
-            {
-                var lowerCaseChars = (char*)buffer;
-                for (var i = 0; i < str.Length; i++)
-                {
-                    lowerCaseChars[i] = char.ToLowerInvariant(pChars[i]);
-                }
-                lowerKey = (byte*)lowerCaseChars;
-                size = Encoding.UTF8.GetBytes(lowerCaseChars, str.Length, lowerKey, byteCount);
-
-                var originalCaseChars = (char*)(buffer + size);
-                for (var i = 0; i < str.Length; i++)
-                {
-                    originalCaseChars[i] = pChars[i];
-                }
-                key = (byte*)originalCaseChars;
-                Encoding.UTF8.GetBytes(originalCaseChars, str.Length, key, byteCount);
-            }
-        }
-
     }
 }

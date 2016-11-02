@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Runtime.CompilerServices;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
+using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
-using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 
@@ -51,7 +47,7 @@ namespace Raven.Server.Documents
                 StartIndex = (int)MetadataFields.Name,
                 Count = 1
             });
-            
+
             IndexesTableSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)MetadataFields.Etag,
@@ -92,97 +88,99 @@ namespace Raven.Server.Documents
 
         public long OnIndexCreated(Index index)
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
-            using (var tx = _environment.WriteTransaction())
-            {
-                var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
-                var existing = GetIndexMetadataByNameInternal(tx, context, index.Name);
-                var lastEtag = ReadLastEtag(table);
-                var newEtag = lastEtag + 1;
-
-                var changeVectorForWrite = GetChangeVectorForWrite(existing?.ChangeVector,newEtag);
-
-                Slice indexNameAsSlice;
-                using (GetLowerCaseSliceFrom(context, index.Name, out indexNameAsSlice))
-                    WriteMetadataInternal(table, index.IndexId, indexNameAsSlice, newEtag, changeVectorForWrite);
-
-                MergeEntryVectorWithGlobal(tx, context, changeVectorForWrite);
-
-                tx.Commit();
-                return newEtag;                
-            }
+            return WriteEntry(index.Name, index.IndexId);
         }
 
         public long OnIndexDeleted(Index index)
+        {
+            return WriteEntry(index.Name, -1);
+        }
+
+        private long WriteEntry(string indexName, int indexIndexId)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.WriteTransaction())
             {
                 var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
-                var existing = GetIndexMetadataByNameInternal(tx, context, index.Name);
+                var existing = GetIndexMetadataByNameInternal(tx, context, indexName);
                 var lastEtag = ReadLastEtag(table);
                 var newEtag = lastEtag + 1;
 
-                //note : id == -1 in metadata means it is a tombstone
+                var changeVectorForWrite = ReplicationUtil.GetChangeVectorForWrite(existing?.ChangeVector, _environment.DbId, newEtag);
+
                 Slice indexNameAsSlice;
-                using (GetLowerCaseSliceFrom(context, index.Name, out indexNameAsSlice))
+                using (DocumentsStorage.GetSliceFromKey(context, indexName, out indexNameAsSlice))
                 {
-                    var changeVectorForWrite = GetChangeVectorForWrite(existing?.ChangeVector, newEtag);
-                    WriteMetadataInternal(table, -1, indexNameAsSlice, newEtag, changeVectorForWrite);
+                    //precautions
+                    if (newEtag < 0) throw new ArgumentException("etag must not be negative");
+                    if (changeVectorForWrite == null) throw new ArgumentException("changeVector == null, should not be so");
+
+                    fixed (ChangeVectorEntry* pChangeVector = changeVectorForWrite)
+                    {
+                        var bitSwappedEtag = Bits.SwapBytes(newEtag);
+
+                        var bitSwappedId = Bits.SwapBytes(indexIndexId);
+
+                        table.Set(new TableValueBuilder
+                        {
+                            {(byte*) &bitSwappedId, sizeof(int)},
+                            {(byte*) &bitSwappedEtag, sizeof(long)},
+                            indexNameAsSlice,
+                            {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVectorForWrite.Length},
+                        });
+                    }
                 }
+
+                MergeEntryVectorWithGlobal(tx, context, changeVectorForWrite);
 
                 tx.Commit();
                 return newEtag;
             }
         }
-        
-        public IEnumerable<Metadata> GetTombstonesFrom(long etag,int start,int take)
+
+        public IEnumerable<IndexEntryMetadata> GetTombstonesFrom(long etag, int start, int take)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.WriteTransaction())
-            {                
+            {
                 int taken = 0;
                 int skipped = 0;
                 var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
 
+                var buffer = stackalloc byte[sizeof(int) + sizeof(long)];
+
+                *(int*) buffer = Bits.SwapBytes(-1);
+                *(long*) (buffer + sizeof(int)) = Bits.SwapBytes(etag);
+
+                var list = new List<IndexEntryMetadata>();
                 Slice slice;
-                using (GetStartingSliceForTombstonesSeek(context, etag, out slice))
+                using (Slice.External(tx.Allocator, buffer, sizeof(int) + sizeof(long), out slice))
                 {
                     foreach (var seekResult in table.SeekForwardFrom(IndexesTableSchema.Indexes[MetadataIdAndEtagIndexName], slice))
                     {
                         foreach (var tvr in seekResult.Results)
                         {
-                            if (skipped++ >= start)
+                            if (start > skipped)
                             {
-                                if (taken++ >= take)
-                                    break;
-
-                                yield return TableValueToMetadata(tvr, context);
+                                skipped++;
+                                continue;
                             }
+
+                            if (taken++ >= take)
+                                break;
+
+                            list.Add(TableValueToMetadata(tvr, context));
                         }
                     }
+                    return list;
                 }
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ByteStringContext.ExternalScope GetStartingSliceForTombstonesSeek(
-            TransactionOperationContext context,long etag, out Slice slice)
-        {
-            const int PrefixSize = sizeof(int) + sizeof(long);
-            var buffer = context.GetNativeTempBuffer(PrefixSize);
-            *(int*) buffer = -1; //if IndexId/TransformerId == -1 is a tombstone
-            *(long*) (buffer + sizeof(int)) = etag;
-
-            return Slice.External(context.Allocator, buffer, PrefixSize, out slice);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void MergeEntryVectorWithGlobal(Transaction tx, 
-            TransactionOperationContext context, 
+        private void MergeEntryVectorWithGlobal(Transaction tx,
+            TransactionOperationContext context,
             ChangeVectorEntry[] changeVectorForWrite)
         {
             var globalChangeVectorTree = tx.ReadTree(SchemaNameConstants.GlobalChangeVectorTree);
@@ -191,31 +189,19 @@ namespace Raven.Server.Documents
             // merge metadata change vector into global change vector
             // --> if we have any entry in global vector smaller than in metadata vector,
             // update the entry in global vector to a larger one
-            ReplicationUtil.WriteChangeVectorTo(context, 
-                ReplicationUtil.MergeVectors(globalChangeVector, changeVectorForWrite), 
-                    globalChangeVectorTree);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ChangeVectorEntry[] GetChangeVectorForWrite(ChangeVectorEntry[] existingChangeVector, long etag)
-        {            
-            if (existingChangeVector == null || existingChangeVector.Length == 0)
+            foreach (var item in ReplicationUtils.MergeVectors(globalChangeVector, changeVectorForWrite))
             {
-                return new[]
-                {
-                    new ChangeVectorEntry
-                    {
-                        DbId = _environment.DbId,
-                        Etag = etag
-                    }
-                };
+                var dbId = item.DbId;
+                var etagBigEndian = Bits.SwapBytes(item.Etag);
+                Slice key;
+                Slice value;
+                using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out key))
+                using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out value))
+                    globalChangeVectorTree.Add(key, value);
             }
-
-            var changeVectorWithNewEtag = ReplicationUtil.UpdateChangeVectorWithNewEtag(_environment.DbId, etag, existingChangeVector);            
-            return changeVectorWithNewEtag;            
         }
 
-        public Metadata GetIndexMetadataByName(string name)
+        public IndexEntryMetadata GetIndexMetadataByName(string name)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -223,13 +209,13 @@ namespace Raven.Server.Documents
                 return GetIndexMetadataByNameInternal(tx, context, name);
         }
 
-        private Metadata GetIndexMetadataByNameInternal(Transaction tx, TransactionOperationContext context, string name)
+        private IndexEntryMetadata GetIndexMetadataByNameInternal(Transaction tx, TransactionOperationContext context, string name)
         {
             var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
 
             Slice nameAsSlice;
             TableValueReader tvr;
-            using (GetLowerCaseSliceFrom(context, name, out nameAsSlice))
+            using (DocumentsStorage.GetSliceFromKey(context, name, out nameAsSlice))
                 tvr = table.ReadByKey(nameAsSlice);
 
             if (tvr == null)
@@ -238,57 +224,22 @@ namespace Raven.Server.Documents
             return TableValueToMetadata(tvr, context);
         }
 
-        private Metadata TableValueToMetadata(TableValueReader tvr, JsonOperationContext context)
+        private IndexEntryMetadata TableValueToMetadata(TableValueReader tvr, JsonOperationContext context)
         {
-            var metadata = new Metadata();
+            var metadata = new IndexEntryMetadata();
 
             int size;
-            metadata.Id = IPAddress.NetworkToHostOrder(*(int*)tvr.Read((int)MetadataFields.Id, out size));
-            metadata.Name = new LazyStringValue(null, tvr.Read((int)MetadataFields.Name, out size),size,context);
+            metadata.Id = Bits.SwapBytes(*(int*)tvr.Read((int)MetadataFields.Id, out size));
+            metadata.Name = new LazyStringValue(null, tvr.Read((int)MetadataFields.Name, out size), size, context);
             metadata.ChangeVector = ReplicationUtil.GetChangeVectorEntriesFromTableValueReader(tvr, (int)MetadataFields.ChangeVector);
-            metadata.Etag = IPAddress.NetworkToHostOrder(*(long*)tvr.Read((int)MetadataFields.Etag, out size));
+            metadata.Etag = Bits.SwapBytes(*(long*)tvr.Read((int)MetadataFields.Etag, out size));
 
             return metadata;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ByteStringContext.ExternalScope GetLowerCaseSliceFrom(TransactionOperationContext context, string str, out Slice slice)
-        {
-            int size;
-            byte* lowerCaseIndexNameBytes;
-            ReplicationUtil.GetLowerCaseStringBytes(context, str, out lowerCaseIndexNameBytes, out size);
-
-            return Slice.External(context.Allocator, lowerCaseIndexNameBytes, size, ByteStringType.Immutable, out slice);
         }
 
 
         //since both transformers and indexes need to store the same information,
         //this can be used for both
-        private void WriteMetadataInternal(Table table, int id, Slice indexName, long etag, ChangeVectorEntry[] changeVector)
-        {
-            //precautions
-            if (etag < 0) throw new ArgumentException("etag must not be negative");
-            if (changeVector == null) throw new ArgumentException("changeVector == null, should not be so");
-
-            fixed (ChangeVectorEntry* pChangeVector = changeVector)
-            {
-                var bitSwappedEtag = Bits.SwapBytes(etag);
-
-                //using Bits.SwapBytes() won't work for int values,
-                //since it returns long and not int -> it cut's off bits,
-                //so when later reversing a zero is returned
-                //TODO : see how Bits.SwapBytes() can be refactored to return int values when parameter is int
-                var bitSwappedId = IPAddress.HostToNetworkOrder(id);
-                
-                table.Set(new TableValueBuilder
-                {
-                    {(byte*) &bitSwappedId, sizeof(int)},
-                    {(byte*) &bitSwappedEtag, sizeof(long)},
-                    indexName,
-                    {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
-                });
-            }
-        }
 
         private long ReadLastEtag(Table table)
         {
@@ -300,18 +251,18 @@ namespace Raven.Server.Documents
             var tvr = result.FirstOrDefault();
             if (tvr == null)
                 return 0;
-            
+
             int size;
-            return Bits.SwapBytes(*(long*)tvr.Read((int) MetadataFields.Etag, out size));
+            return Bits.SwapBytes(*(long*)tvr.Read((int)MetadataFields.Etag, out size));
         }
 
-        public class Metadata
+        public class IndexEntryMetadata
         {
             public int Id;
             public LazyStringValue Name; //PK
             public long Etag;
             public ChangeVectorEntry[] ChangeVector;
-        }             
+        }
 
         public enum MetadataFields
         {
@@ -327,6 +278,6 @@ namespace Raven.Server.Documents
             public const string GlobalChangeVectorTree = "GlobalChangeVectorTree";
         }
 
-        
+
     }
 }
