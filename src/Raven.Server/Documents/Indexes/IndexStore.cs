@@ -196,8 +196,15 @@ namespace Raven.Server.Documents.Indexes
 
             _indexes.Add(index);
 
+            var etag = _documentDatabase.IndexMetadataPersistence.OnIndexCreated(index);
+
             _documentDatabase.Notifications.RaiseNotifications(
-                new IndexChangeNotification { Name = index.Name, Type = IndexChangeTypes.IndexAdded });
+                new IndexChangeNotification
+                {
+                    Name = index.Name,
+                    Type = IndexChangeTypes.IndexAdded,
+                    Etag = etag
+                });
 
             return indexId;
         }
@@ -329,10 +336,12 @@ namespace Raven.Server.Documents.Indexes
                         _logger.Info($"Could not dispose index '{index.Name}' ({id}).", e);
                 }
 
+                var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnIndexDeleted(index);
                 _documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
                 {
                     Name = index.Name,
-                    Type = IndexChangeTypes.IndexRemoved
+                    Type = IndexChangeTypes.IndexRemoved,
+                    Etag = tombstoneEtag
                 });
 
                 if (_documentDatabase.Configuration.Indexing.RunInMemory)
