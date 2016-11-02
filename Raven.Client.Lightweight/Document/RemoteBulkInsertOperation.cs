@@ -248,6 +248,7 @@ namespace Raven.Client.Document
 
                 var batch = new List<RavenJObject>();
                 RavenJObject document;
+                var sp = Stopwatch.StartNew();
                 while (queue.TryTake(out document, millisecondsTimeout: 200))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -269,6 +270,10 @@ namespace Raven.Client.Document
                     batch.Add(document);
 
                     if (batch.Count >= options.BatchSize)
+                        break;
+
+                    // force flush if we didn't do that in 10 seconds in a row
+                    if (sp.ElapsedMilliseconds > 10*1000)
                         break;
                 }
 
