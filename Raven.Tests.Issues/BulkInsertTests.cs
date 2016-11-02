@@ -2,6 +2,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Linq;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
@@ -109,6 +110,32 @@ namespace Raven.Tests.Issues
                     var user = session.Load<UserNoId>("users/12     ");
                     Assert.NotNull(user);
                     Assert.Equal("Idan", user.Name);
+                }
+            }
+        }
+
+        private class UserWithId
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
+        [Fact]
+        public void StoreIdWithSlash()
+        {
+            using (var store = NewRemoteDocumentStore(fiddler: true))
+            {
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    bulkInsert.Store(new UserWithId { Name = "IdanWithSlash" }, "users/");
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<UserWithId>().Where(x => x.Name.Equals("IdanWithSlash"));
+                    foreach (var user in users)
+                    {
+                        Assert.False(user.Id[user.Id.Length - 1] == '/');
+                    }
                 }
             }
         }
