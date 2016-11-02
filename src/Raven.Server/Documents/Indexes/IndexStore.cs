@@ -196,6 +196,8 @@ namespace Raven.Server.Documents.Indexes
 
             _indexes.Add(index);
 
+            _documentDatabase.IndexesPersistence.OnIndexCreated(index);
+
             _documentDatabase.Notifications.RaiseNotifications(
                 new IndexChangeNotification { Name = index.Name, Type = IndexChangeTypes.IndexAdded });
 
@@ -328,6 +330,9 @@ namespace Raven.Server.Documents.Indexes
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not dispose index '{index.Name}' ({id}).", e);
                 }
+
+                _documentDatabase.IndexesPersistence.OnIndexDeleted(index);
+
 
                 _documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
                 {
