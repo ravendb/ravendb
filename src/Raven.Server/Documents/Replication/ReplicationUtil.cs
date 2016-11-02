@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Text;
 using Raven.Client.Replication.Messages;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
@@ -113,5 +115,57 @@ namespace Raven.Server.Documents.Replication
             changeVector[length].Etag = newEtag;
             return changeVector;
         }
+
+        public static void GetLowerCaseStringBytes(
+          JsonOperationContext context,
+          string str,
+          out byte* lowerKey,
+          out int size)
+        {
+            var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
+            var buffer = context.GetNativeTempBuffer(byteCount);
+
+            fixed (char* pChars = str)
+            {
+                var lowerCaseChars = (char*)buffer;
+                for (var i = 0; i < str.Length; i++)
+                {
+                    lowerCaseChars[i] = char.ToLowerInvariant(pChars[i]);
+                }
+                lowerKey = (byte*)lowerCaseChars;
+                size = Encoding.UTF8.GetBytes(lowerCaseChars, str.Length, lowerKey, byteCount);
+            }
+        }
+
+        public static void GetLowerCaseStringBytesWithOriginalCase(
+          JsonOperationContext context,
+          string str,
+          out byte* key,
+          out byte* lowerKey,
+          out int size)
+        {
+            var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
+            var buffer = context.GetNativeTempBuffer(byteCount * 2);
+
+            fixed (char* pChars = str)
+            {
+                var lowerCaseChars = (char*)buffer;
+                for (var i = 0; i < str.Length; i++)
+                {
+                    lowerCaseChars[i] = char.ToLowerInvariant(pChars[i]);
+                }
+                lowerKey = (byte*)lowerCaseChars;
+                size = Encoding.UTF8.GetBytes(lowerCaseChars, str.Length, lowerKey, byteCount);
+
+                var originalCaseChars = (char*)(buffer + size);
+                for (var i = 0; i < str.Length; i++)
+                {
+                    originalCaseChars[i] = pChars[i];
+                }
+                key = (byte*)originalCaseChars;
+                Encoding.UTF8.GetBytes(originalCaseChars, str.Length, key, byteCount);
+            }
+        }
+
     }
 }

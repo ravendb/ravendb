@@ -336,13 +336,12 @@ namespace Raven.Server.Documents.Indexes
                         _logger.Info($"Could not dispose index '{index.Name}' ({id}).", e);
                 }
 
-                _documentDatabase.IndexesPersistence.OnIndexDeleted(index);
-
-
+                var tombstoneEtag = _documentDatabase.IndexesPersistence.OnIndexDeleted(index);
                 _documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
                 {
                     Name = index.Name,
-                    Type = IndexChangeTypes.IndexRemoved
+                    Type = IndexChangeTypes.IndexRemoved,
+                    Etag = tombstoneEtag
                 });
 
                 if (_documentDatabase.Configuration.Indexing.RunInMemory)
