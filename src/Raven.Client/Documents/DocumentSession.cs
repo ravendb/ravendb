@@ -115,23 +115,7 @@ namespace Raven.Client.Documents
             throw new NotImplementedException();
         }
 
-        //Todo iftah, when implementing lazy, replace with Raven.Client.Documents.ILoadConfiguration
-        Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<Raven.Client.ILoadConfiguration> configure, Action<TResult> onEval)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Lazy<TResult> Load<TResult>(string id, Type transformerType, Action<Client.ILoadConfiguration> configure = null, Action<TResult> onEval = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Lazy<TResult[]> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<Client.ILoadConfiguration> configure = null, Action<TResult> onEval = null) where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<Client.ILoadConfiguration> configure = null, Action<TResult> onEval = null)
+        Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure, Action<TResult> onEval)
         {
             throw new NotImplementedException();
         }
@@ -681,6 +665,5 @@ namespace Raven.Client.Documents
         {
             throw new NotImplementedException();
         }
-
     }
 }
