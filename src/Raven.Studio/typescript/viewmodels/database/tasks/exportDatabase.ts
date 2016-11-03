@@ -110,9 +110,6 @@ class exportDatabase extends viewModelBase {
             var databaseName = this.activeDatabase().name;
             commandTokens.push("--database=" + exportDatabase.escapeForShell(databaseName));
 
-            var batchSize = model.batchSize();
-            commandTokens.push("--batch-size=" + batchSize);
-
             if (model.includeExpiredDocuments()) {
                 commandTokens.push("--includeexpired");
             }

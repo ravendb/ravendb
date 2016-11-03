@@ -58,8 +58,8 @@ namespace Raven.Server.Smuggler.Documents
                     writer.WritePropertyName(("Docs"));
 
                     IEnumerable<Document> documents = Options.CollectionsToExport.Count != 0 ? 
-                        _database.DocumentsStorage.GetDocumentsFrom(context, Options.CollectionsToExport, StartDocsEtag ?? 0, Options.BatchSize) : 
-                        _database.DocumentsStorage.GetDocumentsFrom(context, StartDocsEtag ?? 0, 0, Options.BatchSize);
+                        _database.DocumentsStorage.GetDocumentsFrom(context, Options.CollectionsToExport, StartDocsEtag ?? 0, int.MaxValue) : 
+                        _database.DocumentsStorage.GetDocumentsFrom(context, StartDocsEtag ?? 0, 0, int.MaxValue);
 
                     writer.WriteStartArray();
 
