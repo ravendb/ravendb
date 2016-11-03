@@ -45,6 +45,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var blittableJson = await context.ReadForMemoryAsync(RequestBodyStream(), "");
                 var options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
 
+                if(options.FileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                    throw new InvalidOperationException($"{options.FileName} is Invalid File Name");
+
                 if (string.IsNullOrEmpty(options?.TransformScript))
                     return;
 
@@ -64,7 +67,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
                 catch (Exception)
                 {
-                    throw new ArgumentException("sssd");
+                    throw new InvalidOperationException("Incorrect transform script");
                 }
             }
         }
@@ -90,10 +93,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 if (string.IsNullOrEmpty(fileName))
                 {
                     fileName = $"Dump of {context.DocumentDatabase.Name}, {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}";
-                }
-                else if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-                {
-                    throw new InvalidOperationException($"{fileName} is Invalid File Name");
                 }
 
                 var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(fileName)+ ".ravendbdump";
