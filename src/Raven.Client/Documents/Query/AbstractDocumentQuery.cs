@@ -662,7 +662,10 @@ namespace Raven.Client.Documents
             if (queryOperation != null)
                 return;
             ClearSortHints(DatabaseCommands);
-            theSession.OnBeforeQueryExecuted(this);
+
+            var beforeQueryExecutedEventArgs = new BeforeQueryExecutedEventArgs(theSession, this);
+            theSession.OnBeforeQueryExecutedInvoke(beforeQueryExecutedEventArgs);
+
             queryOperation = InitializeQueryOperation();
             ExecuteActualQuery();
         }
@@ -788,7 +791,9 @@ namespace Raven.Client.Documents
             if (queryOperation != null)
                 return queryOperation;
             ClearSortHints(AsyncDatabaseCommands);
-            theSession.OnBeforeQueryExecuted(this);
+
+            var beforeQueryExecutedEventArgs = new BeforeQueryExecutedEventArgs(theSession, this);
+            theSession.OnBeforeQueryExecutedInvoke(beforeQueryExecutedEventArgs);
 
             queryOperation = InitializeQueryOperation(isAsync: true);
             return await ExecuteActualQueryAsync().ConfigureAwait(false);
