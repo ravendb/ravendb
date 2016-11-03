@@ -12,8 +12,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
-
-using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.Document;
 
@@ -33,35 +31,6 @@ namespace Raven.Client
             AsyncSubscriptions = new AsyncDocumentSubscriptions(this);
             Subscriptions = new DocumentSubscriptions(this);
         }
-
-        public virtual void OnBeforeStore(Documents.InMemoryDocumentSessionOperations session, string id, object entityinstance, IDictionary<string, string> metadata)
-        {
-            BeforeStoreEvent?.Invoke(session, id, entityinstance, metadata);
-        }
-
-        public virtual void OnAfterStore(Documents.InMemoryDocumentSessionOperations session, string id, object entityinstance, IDictionary<string, string> metadata)
-        {
-            AfterStoreEvent?.Invoke(session, id, entityinstance, metadata);
-        }
-
-        public bool BeforeStoreEmpty => (BeforeStoreEvent == null);
-
-        public bool AfterStoreEmpty => (AfterStoreEvent == null);
-
-
-        public virtual void OnBeforeDelete(Documents.InMemoryDocumentSessionOperations session, string id, object entityinstance, IDictionary<string, string> metadata)
-        {
-            BeforeDeleteEvent?.Invoke(session, id, entityinstance, metadata);
-        }
-
-        public virtual void OnBeforeQueryExecutedEvent(Documents.IDocumentQueryCustomization queryCustomization)
-        {
-            BeforeQueryExecutedEvent?.Invoke(queryCustomization);
-        }
-
-        public bool BeforeDeleteEmpty => (BeforeDeleteEvent == null);
-
-        public bool BeforeQueryExecutedEventEmpty => (BeforeQueryExecutedEvent == null);
 
         public DocumentSessionListeners Listeners
         {
@@ -370,10 +339,10 @@ namespace Raven.Client
         /// Internal notification for integration tools, mainly
         ///</summary>
         public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
-        public event BeforeStoreDelegate BeforeStoreEvent;
-        public event AfterStoreDelegate AfterStoreEvent;
-        public event BeforeDeleteDelegate BeforeDeleteEvent;
-        public event BeforeQueryExecutedDelegate BeforeQueryExecutedEvent;
+        public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
+        public event EventHandler<AfterStoreEventArgs> OnAfterStore;
+        public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
+        public event EventHandler<BeforeQueryExecutedEventArgs> OnBeforeQueryExecuted;
 
         protected readonly ProfilingContext profilingContext = new ProfilingContext();
 
@@ -407,5 +376,15 @@ namespace Raven.Client
         }
 
         public abstract void InitializeProfiling();
+
+        protected void RegisterEvents(Documents.InMemoryDocumentSessionOperations session)
+        {
+            session.OnBeforeStore += OnBeforeStore;
+            session.OnAfterStore += OnAfterStore;
+            session.OnBeforeDelete += OnBeforeDelete;
+            session.OnBeforeQueryExecuted += OnBeforeQueryExecuted;
+        }
+
+
     }
 }
