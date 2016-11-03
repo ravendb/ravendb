@@ -26,8 +26,6 @@ namespace Raven.Client.Documents
 
         private MemoryStream _stream;
 
-        public StreamReader _streamReader;
-
         public StreamWriter _streamWriter;
 
         /// <summary>
@@ -37,7 +35,6 @@ namespace Raven.Client.Documents
         {
             _session = session;
             _stream = new MemoryStream();
-            _streamReader = new StreamReader(_stream, Encoding.UTF8, true, 1024, true);
             _streamWriter = new StreamWriter(_stream, StreamWriter.Null.Encoding, 1024, true);
 
         }
@@ -87,25 +84,19 @@ namespace Raven.Client.Documents
                 var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(entityType);
                 var entity = defaultValue;
 
-                _stream.Position = 0;
-
                 var documentType = _session.Conventions.GetClrType(id, document);
                 if (documentType != null)
                 {
                     var type = Type.GetType(documentType);
                     if (type != null)
                     {
-                        document.WriteJsonTo(_stream);
-                        _stream.Position = 0;
-                        entity = _session.Conventions.DeserializeEntityFromJsonStream(type, _streamReader);
+                        entity = _session.Conventions.DeserializeEntityFromBlittable(type, document);
                     }
                 }
 
                 if (Equals(entity, defaultValue))
                 {
-                    document.WriteJsonTo(_stream);
-                    _stream.Position = 0;
-                    entity = _session.Conventions.DeserializeEntityFromJsonStream(entityType, _streamReader);
+                    entity = _session.Conventions.DeserializeEntityFromBlittable(entityType, document);
                 }
                 _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
 
@@ -115,11 +106,6 @@ namespace Raven.Client.Documents
             {
                 throw new InvalidOperationException($"Could not convert document {id} to entity of type {entityType}",
                     ex);
-            }
-            finally
-            {
-                _streamReader.DiscardBufferedData();
-                _stream.Position = 0;
             }
         }
        

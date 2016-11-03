@@ -6,6 +6,8 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -77,6 +79,12 @@ namespace Raven.Client.Documents.SessionOperations
             _transformerParameters = transformerParameters;
         }
 
+        public object DeserializeFromTransformer(Type entityType, string id, BlittableJsonReaderObject document)
+        {
+            _session.HandleInternalMetadata(document);
+            return _session.EntityToBlittable.ConvertToEntity(entityType, id, document);
+        }
+
         public T[] GetTransformedDocuments<T>(GetDocumentResult result)
         {
             if (typeof(T).IsArray)
@@ -86,13 +94,14 @@ namespace Raven.Client.Documents.SessionOperations
                     {
                         if (x == null)
                             return null;
-
+                        
                         BlittableJsonReaderArray values;
-                        if (((BlittableJsonReaderObject) x).TryGet("$values", out values) == false)
+                        if (((BlittableJsonReaderObject)x).TryGet("$values", out values) == false)
                             throw new InvalidOperationException("Transformed document must have a $values property");
 
                         var elementType = typeof(T).GetElementType();
-                        var array = values.Select(value => _session.EntityToBlittable.ConvertToEntity(elementType, null, value as BlittableJsonReaderObject)).ToArray();
+
+                        var array = values.Select(value => DeserializeFromTransformer(elementType, null, value as BlittableJsonReaderObject)).ToArray();
                         var newArray = Array.CreateInstance(elementType, array.Length);
                         Array.Copy(array, newArray, array.Length);
                         return newArray;

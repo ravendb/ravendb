@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using Raven.Imports.Newtonsoft.Json;
@@ -20,12 +21,14 @@ namespace Raven.Client.Json
             public BlittableJsonReaderObject.PropertyDetails PropertyDetails;
         }
 
-
-        public BlittableJsonReader(BlittableJsonReaderObject reader)
+        public void Init(BlittableJsonReaderObject root)
         {
+            _items.Clear();
+            _currentState = State.Start;
+            _tokenType =JsonToken.None;
             _items.Push(new CurrentItem
             {
-                Object = reader,
+                Object = root,
             });
         }
 
@@ -52,9 +55,22 @@ namespace Raven.Client.Json
                     SetToken(JsonToken.StartObject);
                     return true;
                 }
+                if (current.Object.Modifications != null && current.Object.Modifications.Properties.Count > 0)
+                {
+                    Tuple<string, object> property;
+                    if (CurrentState != State.Property)
+                    {
+                        property = current.Object.Modifications.Properties.Peek();
+                        SetToken(JsonToken.PropertyName, property.Item1);
+                        return true;
+                    }
+                    property = current.Object.Modifications.Properties.Dequeue(); // move to next property
+                    return SetToken(GetTokenFromType(property.Item2), property.Item2);
+                }
                 if (current.Position == current.Object.Count)
                 {
                     SetToken(JsonToken.EndObject);
+                    _buffers.Push(current.Buffers);
                     _items.Pop();
                     return true;
                 }
@@ -84,6 +100,23 @@ namespace Raven.Client.Json
             throw new InvalidOperationException("Shouldn't happen");
         }
 
+        private BlittableJsonToken GetTokenFromType(object val)
+        {
+            if (val is string)
+                return BlittableJsonToken.String;
+            if (val is bool)
+                return BlittableJsonToken.Boolean;
+            if (val == null)
+                return BlittableJsonToken.Null;
+            if (val is int || val is long)
+                return BlittableJsonToken.Integer;
+            if (val is float || val is double || val is decimal)
+                return BlittableJsonToken.Float;
+            if (val is IEnumerable)
+                return BlittableJsonToken.StartArray;
+            return BlittableJsonToken.StartObject;
+        }
+
         private bool SetToken(BlittableJsonToken token, object value)
         {
             switch (token & BlittableJsonReaderBase.TypesMask)
@@ -110,7 +143,7 @@ namespace Raven.Client.Json
                     SetToken(JsonToken.Integer, (long)value);
                     return true;
                 case BlittableJsonToken.Float:
-                    SetToken(JsonToken.Float, (double)value);
+                    SetToken(JsonToken.Float, (double)((LazyDoubleValue)value));
                     return true;
                 case BlittableJsonToken.String:
                 case BlittableJsonToken.CompressedString:

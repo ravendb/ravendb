@@ -115,7 +115,7 @@ namespace Raven.Imports.Newtonsoft.Json
         }
 
         // current Token data
-        private JsonToken _tokenType;
+        internal JsonToken _tokenType;
         private object _value;
         internal char _quoteChar;
         internal State _currentState;

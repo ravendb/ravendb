@@ -34,7 +34,9 @@ namespace FastTests.Client
                 BlittableJsonReaderObject reader = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "users/1");
 
                 var serializer = new JsonSerializer();
-                var u = serializer.Deserialize<User>(new BlittableJsonReader(reader));
+                var blittableJsonReader = new BlittableJsonReader();
+                blittableJsonReader.Init(reader);
+                var u = serializer.Deserialize<User>(blittableJsonReader);
 
                 Assert.Equal("Oren", u.Name);
                 Assert.Equal("users/1", u.Id);

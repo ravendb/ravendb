@@ -352,15 +352,20 @@ namespace Sparrow.Json
             result = GetObject(token, (int)(_objStart - _mem - position));
             if (result is BlittableJsonReaderBase)
             {
-                if (_objectsPathCache == null)
-                {
-                    _objectsPathCache = new Dictionary<StringSegment, object>();
-                    _objectsPathCacheByIndex = new Dictionary<int, object>();
-                }
-                _objectsPathCache[name] = result;
-                _objectsPathCacheByIndex[index] = result;
+                AddToCache(name, result, index);
             }
             return true;
+        }
+
+        private void AddToCache(StringSegment name, object result, int index)
+        {
+            if (_objectsPathCache == null)
+            {
+                _objectsPathCache = new Dictionary<StringSegment, object>();
+                _objectsPathCacheByIndex = new Dictionary<int, object>();
+            }
+            _objectsPathCache[name] = result;
+            _objectsPathCacheByIndex[index] = result;
         }
 
 
@@ -380,7 +385,7 @@ namespace Sparrow.Json
             public BlittableJsonToken Token;
         }
 
-        public void GetPropertyByIndex(int index, ref PropertyDetails prop)
+        public void GetPropertyByIndex(int index, ref PropertyDetails prop, bool addObjectToCache = false)
         {
             if (index < 0 || index >= _propCount)
                 ThrowOutOfRangeException();
@@ -402,9 +407,14 @@ namespace Sparrow.Json
                 return;
             }
 
-            var value = GetObject((BlittableJsonToken)token, (int)(_objStart - _mem - position));
-            // we explicitly don't add it to the cache here, we don't need to.
-            // users will always access the props by name, not by id.
+            var value = GetObject(token, (int)(_objStart - _mem - position));
+
+            if (addObjectToCache)
+            {
+                AddToCache(stringValue.ToString(), value, index);
+
+            }
+
             prop.Value = value;
         }
 

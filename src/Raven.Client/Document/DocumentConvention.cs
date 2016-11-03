@@ -29,6 +29,7 @@ using Raven.Client.Converters;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Sparrow.Json;
@@ -60,7 +61,7 @@ namespace Raven.Client.Document
             new List<Tuple<Type, Func<ValueType, string>>>();
 
         public Action<object, StreamWriter> SerializeEntityToJsonStream;
-        public Func<Type, StreamReader, object> DeserializeEntityFromJsonStream;
+        public Func<Type, BlittableJsonReaderObject, object> DeserializeEntityFromBlittable;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentConvention"/> class.
@@ -120,13 +121,32 @@ namespace Raven.Client.Document
                 streamWriter.Flush();
             };
 
-            DeserializeEntityFromJsonStream = (type, streamReader) =>
+            DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
+        }
+
+        public class JsonNetBlittableEntitySerializer
+        {
+            private readonly DocumentConvention _conventions;
+
+            [ThreadStatic] private static BlittableJsonReader _reader;
+            [ThreadStatic] private static JsonSerializer _serializer;
+
+            public JsonNetBlittableEntitySerializer(DocumentConvention conventions)
             {
-                var jsonSerializer = CreateSerializer();
-                var deserializedObject = jsonSerializer.Deserialize(streamReader, type);
-                return deserializedObject;
-                
-            };
+                _conventions = conventions;
+            }
+
+            public object EntityFromJsonStream(Type type, BlittableJsonReaderObject jsonObject)
+            {
+                if(_reader == null)
+                    _reader = new BlittableJsonReader();
+                if (_serializer == null)
+                    _serializer = _conventions.CreateSerializer();
+
+                _reader.Init(jsonObject);
+
+                return _serializer.Deserialize(_reader, type);
+            }
         }
 
 
