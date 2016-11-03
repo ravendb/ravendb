@@ -122,7 +122,7 @@ class createDatabase extends createResourceBase {
     createResource() {
         const globalValid = this.isValid(this.resourceModel.globalValidationGroup);
         const advancedValid = this.isValid(this.resourceModel.advancedValidationGroup);
-        const encryptionValid = this.bundlesEnabled.encryption() && this.isValid(this.resourceModel.encryptionValidationGroup);
+        const encryptionValid = !this.bundlesEnabled.encryption() || this.isValid(this.resourceModel.encryptionValidationGroup);
 
         const allValid = globalValid && advancedValid && encryptionValid;
 

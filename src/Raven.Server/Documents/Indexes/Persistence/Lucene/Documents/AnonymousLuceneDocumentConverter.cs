@@ -59,12 +59,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     yield return luceneField;
                 }
 
-                if (_reduceOutput)
-                    reduceResult[property.Key] = TypeConverter.ToBlittableSupportedType(value, indexContext, flattenArrays: true);
+                if (reduceResult != null)
+                    reduceResult[property.Key] = TypeConverter.ToBlittableSupportedType(value, flattenArrays: true);
             }
 
             if (_reduceOutput)
-                yield return GetReduceResultValueField(indexContext.ReadObject(reduceResult, "map/reduce result field"));
+                yield return GetReduceResultValueField(Scope.CreateJson(reduceResult, indexContext));
         }
     }
 }

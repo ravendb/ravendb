@@ -275,12 +275,18 @@ namespace Sparrow.Binary
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong SwapBytes(uint value)
+        public static uint SwapBytes(uint value)
         {
-            return (((value & 0xff000000) >> 24) |
-                    ((value & 0x00ff0000) >> 8)  |
-                    ((value & 0x0000ff00) << 8)  |
-                    ((value & 0x000000ff) << 24));
+            return ((value & 0xff000000) >> 24) |
+                   ((value & 0x00ff0000) >> 8)  |
+                   ((value & 0x0000ff00) << 8)  |
+                   ((value & 0x000000ff) << 24);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int SwapBytes(int value)
+        {
+            return (int) SwapBytes((uint) value);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

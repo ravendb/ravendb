@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Raven.Abstractions.Data;
+using Sparrow;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -50,7 +52,15 @@ namespace Raven.Server.Documents.Indexes
                 combinedFields = $"{combinedFields}Highlight{string.Join(string.Empty, highlighted.OrderBy(x => x))}";
             }
 
-            return $"Auto/{joinedCollections}/By{combinedFields}";
+            string formattableString = $"Auto/{joinedCollections}/By{combinedFields}";
+            if (formattableString.Length > 256)
+            {
+                var shorterString = formattableString.Substring(0, 256) + "..." +
+                                    Hashing.XXHash64.Calculate(formattableString, Encoding.UTF8);
+                return shorterString;
+
+            }
+            return formattableString;
         }
     }
 }

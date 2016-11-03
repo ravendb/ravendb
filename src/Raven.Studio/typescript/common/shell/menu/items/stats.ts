@@ -8,40 +8,36 @@ export = getStatsMenuItem;
 function getStatsMenuItem(appUrls: computedAppUrls) {
     let activeDatabase = activeResourceTracker.default.database;
     var items: menuItem[] = [
-        new intermediateMenuItem('Indexing', [
-            new leafMenuItem({
-                route: 'databases/status/indexing',
-                moduleId: 'viewmodels/database/status/indexing/indexPerformance',
-                title: 'Indexing performance',
-                tooltip: "Shows details about indexing peformance",
-                nav: true,
-                dynamicHash: appUrls.indexPerformance
-            }),
-            new leafMenuItem({
-                route: 'databases/status/indexing/stats',
-                moduleId: 'viewmodels/database/status/indexing/indexStats',
-                title: 'Index stats',
-                tooltip: "Show details about indexing in/out counts",
-                nav: true,
-                dynamicHash: appUrls.indexStats
-            }),
-            new leafMenuItem({
-                route: 'databases/status/indexing/batchSize',
-                moduleId: 'viewmodels/database/status/indexing/indexBatchSize',
-                title: 'Index batch size',
-                tooltip: "Index batch sizes",
-                nav: true,
-                dynamicHash: appUrls.indexBatchSize
-            }),
-            new leafMenuItem({
-                route: 'databases/status/indexing/prefetches',
-                moduleId: 'viewmodels/database/status/indexing/indexPrefetches',
-                title: 'Prefetches',
-                tooltip: "Prefetches",
-                nav: true,
-                dynamicHash: appUrls.indexPrefetches
-            })
-        ], 'icon-indexes'),
+        /*TODO
+        new intermediateMenuItem('Indexing',
+            [
+                new leafMenuItem({
+                    route: 'databases/status/indexing/batchSize',
+                    moduleId: 'viewmodels/database/status/indexing/indexBatchSize',
+                    title: 'Index batch size',
+                    tooltip: "Index batch sizes",
+                    nav: true,
+                    dynamicHash: appUrls.indexBatchSize
+                }),
+                new leafMenuItem({
+                    route: 'databases/status/indexing/prefetches',
+                    moduleId: 'viewmodels/database/status/indexing/indexPrefetches',
+                    title: 'Prefetches',
+                    tooltip: "Prefetches",
+                    nav: true,
+                    dynamicHash: appUrls.indexPrefetches
+                })
+            ],
+            'icon-indexes'),*/
+        new leafMenuItem({
+            route: 'databases/status/storage/stats',
+            moduleId: 'viewmodels/database/status/storage/stats',
+            title: 'Storage Breakdown',
+            tooltip: "TODO", //TODO:
+            nav: accessHelper.isGlobalAdmin(),
+            dynamicHash: appUrls.statusStorageStats
+        }),
+        /* TODO
         new intermediateMenuItem('Storage', [
             new leafMenuItem({
                 route: 'databases/status/storage',
@@ -67,7 +63,8 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
                 nav: true,
                 dynamicHash: appUrls.statusStorageCollections
             })
-        ], 'icon-plus'),
+        ], 'icon-plus'),*/
+        /* TODO
         new intermediateMenuItem('Debug', [
             new leafMenuItem({
                 route: 'databases/status/debug',
@@ -181,7 +178,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
                 nav: activeDatabase() && activeDatabase().isBundleActive("Replication"),
                 dynamicHash: appUrls.statusDebugExplainReplication
             })
-        ], 'icon-plus'),
+        ], 'icon-plus'),*/
         new leafMenuItem({
             route: 'databases/status/ioStats',
             moduleId: 'viewmodels/database/status/ioStats',
@@ -190,6 +187,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             dynamicHash: appUrls.ioStats
         }),
+        /* TODO:
         new leafMenuItem({
             route: 'databases/status/requests',
             moduleId: 'viewmodels/database/status/requests/requestsCount',
@@ -197,7 +195,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             tooltip: "Displays requests counts over time",
             nav: true,
             dynamicHash: appUrls.requestsCount
-        }),
+        }),*/
         new leafMenuItem({
             route: 'databases/status/requests/tracing',
             moduleId: 'viewmodels/database/status/requests/requestTracing',
@@ -213,27 +211,30 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             dynamicHash: appUrls.status
         }),
+        /* TODO: 
         new leafMenuItem({
             route: 'databases/status/logs',
             moduleId: 'viewmodels/database/status/logs',
             title: 'Logs',
             nav: true,
             dynamicHash: appUrls.logs
-        }),
+        }),*/
+        /*TODO
         new leafMenuItem({
             route: 'databases/status/runningTasks',
             moduleId: 'viewmodels/database/status/runningTasks',
             title: 'Running Tasks',
             nav: true,
             dynamicHash: appUrls.runningTasks
-        }),
+        }),*/
+        /* TODO
         new leafMenuItem({
             route: 'databases/status/alerts',
             moduleId: 'viewmodels/database/status/alerts',
             title: 'Alerts',
             nav: true,
             dynamicHash: appUrls.alerts
-        }),
+        }),*/
         new leafMenuItem({
             route: 'databases/status/indexErrors',
             moduleId: 'viewmodels/database/status/indexErrors',
@@ -255,13 +256,14 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             dynamicHash: appUrls.sqlReplicationPerfStats
         }),
+        /* TODO:
         new leafMenuItem({
             route: 'databases/status/userInfo',
             moduleId: 'viewmodels/database/status/userInfo',
             title: 'User Info',
             nav: true,
             dynamicHash: appUrls.userInfo
-        }),
+        }),*/
         new leafMenuItem({
             route: 'databases/status/visualizer',
             moduleId: 'viewmodels/database/status/visualizer',
@@ -273,23 +275,24 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             route: 'databases/status/debug*details',
             moduleId: 'viewmodels/database/status/debug/statusDebug',
             title: 'Debug',
-            nav: true,
+            nav: false,
             dynamicHash: appUrls.statusDebug
         }),
         new leafMenuItem({
             route: 'databases/status/storage*details',
             moduleId: 'viewmodels/database/status/storage/statusStorage',
             title: 'Storage',
-            nav: true,
+            nav: false,
             dynamicHash: appUrls.statusStorageOnDisk
         }),
+        /* TODO
         new leafMenuItem({
             route: 'databases/status/infoPackage',
             moduleId: 'viewmodels/manage/infoPackage',
             title: 'Gather Debug Info',
             nav: accessHelper.canExposeConfigOverTheWire(),
             dynamicHash: appUrls.infoPackage
-        })
+        })*/
     ];
 
     return new intermediateMenuItem("Stats", items, "icon-stats");

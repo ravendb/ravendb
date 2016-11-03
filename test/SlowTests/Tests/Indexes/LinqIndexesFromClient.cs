@@ -68,8 +68,8 @@ namespace SlowTests.Tests.Indexes
                 {
                     using (var lazyStringValue = context.GetLazyString("docs/1"))
                     {
-                        var doc = converter.ConvertToCachedDocument(lazyStringValue, result, context);
-                        Assert.Equal("docs/1", doc.Get("__document_id"));
+                        converter.SetDocument(lazyStringValue, result, context);
+                        Assert.Equal("docs/1", converter.Document.Get("__document_id"));
                     }
                 }
             }

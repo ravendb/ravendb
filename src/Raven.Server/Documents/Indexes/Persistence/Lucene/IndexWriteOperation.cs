@@ -84,17 +84,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             EnsureValidStats(stats);
 
-            global::Lucene.Net.Documents.Document luceneDoc;
-            using (_convertStats?.Start() ?? (_convertStats = stats.For(IndexingOperation.Lucene.Convert)))
-                luceneDoc = _converter.ConvertToCachedDocument(key, document, indexContext);
+            var convertDuration = _convertStats?.Start() ?? (_convertStats = stats.For(IndexingOperation.Lucene.Convert));
 
-            using (_addStats?.Start() ?? (_addStats = stats.For(IndexingOperation.Lucene.AddDocument)))
-                _writer.AddDocument(luceneDoc, _analyzer);
+            using (_converter.SetDocument(key, document, indexContext))
+            {
+                convertDuration.Dispose();
 
-            stats.RecordIndexingOutput();
+                using (_addStats?.Start() ?? (_addStats = stats.For(IndexingOperation.Lucene.AddDocument)))
+                    _writer.AddDocument(_converter.Document, _analyzer);
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Indexed document for '{_indexName}'. Key: {key}. Output: {luceneDoc}.");
+                stats.RecordIndexingOutput();
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Indexed document for '{_indexName}'. Key: {key}. Output: {_converter.Document}.");
+            }
         }
 
         public long GetUsedMemory()

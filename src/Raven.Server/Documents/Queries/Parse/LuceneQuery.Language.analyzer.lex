@@ -44,6 +44,7 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 "AND"							{return (int)Token.AND;}
 "&&"							{return (int)Token.AND;}
 "NOT"							{return (int)Token.NOT;}
+"!"		 					    {return (int)Token.NOT;}
 "+"								{return (int)Token.PLUS;}
 "-"								{return (int)Token.MINUS;}
 "\""							{return (int)Token.QUOTE;}

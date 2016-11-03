@@ -31,15 +31,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private const string FalseString = "false";
 
+        private static readonly FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
+
         private readonly Field _reduceValueField = new Field(Constants.Indexing.Fields.ReduceValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
-        private static readonly FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
+        protected readonly ConversionScope Scope = new ConversionScope();
 
         private readonly Dictionary<FieldCacheKey, CachedFieldItem<Field>> _fieldsCache = new Dictionary<FieldCacheKey, CachedFieldItem<Field>>(Comparer);
 
         private readonly Dictionary<FieldCacheKey, CachedFieldItem<NumericField>> _numericFieldsCache = new Dictionary<FieldCacheKey, CachedFieldItem<NumericField>>(Comparer);
 
-        private readonly global::Lucene.Net.Documents.Document _document = new global::Lucene.Net.Documents.Document();
+        public readonly global::Lucene.Net.Documents.Document Document = new global::Lucene.Net.Documents.Document();
 
         private readonly List<int> _multipleItemsSameFieldCount = new List<int>();
 
@@ -68,16 +70,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
-        public global::Lucene.Net.Documents.Document ConvertToCachedDocument(LazyStringValue key, object document, JsonOperationContext indexContext)
+        public IDisposable SetDocument(LazyStringValue key, object document, JsonOperationContext indexContext)
         {
-            _document.GetFields().Clear();
+            Document.GetFields().Clear();
 
             foreach (var field in GetFields(key, document, indexContext))
             {
-                _document.Add(field);
+                Document.Add(field);
             }
 
-            return _document;
+            return Scope;
         }
 
         protected abstract IEnumerable<AbstractField> GetFields(LazyStringValue key, object document, JsonOperationContext indexContext);
@@ -298,9 +300,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.ConvertToJson)
             {
-                var json = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(value, indexContext);
+                var json = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(value);
 
-                foreach (var jsonField in GetComplexObjectFields(path, indexContext.ReadObject(json, "json value field"), storage, indexing, termVector))
+                foreach (var jsonField in GetComplexObjectFields(path, Scope.CreateJson(json, indexContext), storage, indexing, termVector))
                     yield return jsonField;
 
                 yield break;
@@ -603,6 +605,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             Lucene,
 
             ConvertToJson
+        }
+
+        protected class ConversionScope : IDisposable
+        {
+            private readonly LinkedList<BlittableJsonReaderObject> _jsons = new LinkedList<BlittableJsonReaderObject>();
+
+            public BlittableJsonReaderObject CreateJson(DynamicJsonValue djv, JsonOperationContext context)
+            {
+                var result = context.ReadObject(djv, "lucene field as json");
+
+                _jsons.AddFirst(result);
+
+                return result;
+            }
+
+            public void Dispose()
+            {
+                if (_jsons.Count == 0)
+                    return;
+
+                foreach (var json in _jsons)
+                {
+                    json.Dispose();
+                }
+
+                _jsons.Clear();
+            }
         }
     }
 }

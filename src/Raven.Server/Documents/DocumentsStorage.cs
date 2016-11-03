@@ -741,7 +741,8 @@ namespace Raven.Server.Documents
                     .Count();
         }
 
-        public static ByteStringContext.ExternalScope GetSliceFromKey(DocumentsOperationContext context, string key, out Slice keySlice)
+        public static ByteStringContext.ExternalScope GetSliceFromKey<TTransaction>(TransactionOperationContext<TTransaction> context, string key, out Slice keySlice)
+            where TTransaction : RavenTransaction
         {
             var byteCount = Utf8.GetMaxByteCount(key.Length);
 
@@ -771,11 +772,12 @@ namespace Raven.Server.Documents
             return GetSliceFromUnicodeKey(context, key, out keySlice, buffer, byteCount);
         }
 
-        private static ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromUnicodeKey(
-            DocumentsOperationContext context, 
+        private static ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromUnicodeKey<TTransaction>(
+            TransactionOperationContext<TTransaction> context,
             string key, 
             out Slice keySlice,
             byte* buffer, int byteCount)
+              where TTransaction : RavenTransaction
         {
             fixed (char* pChars = key)
             {

@@ -13,6 +13,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.documents,
             css: 'icon-plus'
         }),
+/* TODO:
         new leafMenuItem({
             title: "Conflicts",
             nav: true,
@@ -20,7 +21,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             moduleId: "viewmodels/database/conflicts/conflicts",
             css: 'icon-plus',
             dynamicHash: appUrls.conflicts
-        }),
+        }),*/
         new leafMenuItem({
             title: "Patch",
             nav: true,
