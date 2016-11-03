@@ -100,9 +100,7 @@ namespace Sparrow.Json
             return self.String;
         }
 
-        //materialize the lazy string for cases when we need to use it out of context
-        //(where the allocated buffers become invalid/not available)
-        public void Materialize()
+        private void Materialize()
         {
             if (String != null)
                 return;

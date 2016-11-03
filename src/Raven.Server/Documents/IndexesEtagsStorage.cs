@@ -244,8 +244,7 @@ namespace Raven.Server.Documents
 
         private IndexEntryMetadata TableValueToMetadata(TableValueReader tvr, 
             JsonOperationContext context, 
-            bool returnNullIfTombstone, 
-            bool shouldMaterialize = true)
+            bool returnNullIfTombstone)
         {
             var metadata = new IndexEntryMetadata();
 
@@ -254,11 +253,7 @@ namespace Raven.Server.Documents
             if (returnNullIfTombstone && metadata.Id == -1)
                 return null;
 
-            metadata.Name = new LazyStringValue(null, tvr.Read((int)MetadataFields.Name, out size), size, context);
-            if (shouldMaterialize)
-//since most of the uses of IndexEntryMetadata will not be in the same context, we need to materialize the string
-//before disposing the context
-                metadata.Name.Materialize(); 
+            metadata.Name = new LazyStringValue(null, tvr.Read((int) MetadataFields.Name, out size), size, context).ToString();
 
             metadata.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(tvr, (int)MetadataFields.ChangeVector);
             metadata.Type = (IndexEntryType) (*tvr.Read((int) MetadataFields.Type, out size));
@@ -288,7 +283,7 @@ namespace Raven.Server.Documents
         public class IndexEntryMetadata
         {
             public int Id;
-            public LazyStringValue Name; 
+            public string Name; 
             public long Etag;
             public IndexEntryType Type;
             public ChangeVectorEntry[] ChangeVector;
