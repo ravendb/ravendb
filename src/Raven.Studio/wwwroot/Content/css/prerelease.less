@@ -4,7 +4,7 @@
     font-weight: bold;
     background-image: repeating-linear-gradient(-45deg, fadeout(@prerelease-color,0%), fadeout(@prerelease-color,0%) 3px, fadeout(darken(@prerelease-color,10%),0%) 3px, fadeout(darken(@prerelease-color,10%),0%) 6px);
 
-    i {
+    .icon-hammer-driver {
         font-size: 40px;
     }
 
@@ -57,5 +57,20 @@
             margin: 0;
             text-align: center;
         }
+    }
+}
+
+.search-prerelease {
+    .bg-warning;
+    position: absolute;
+    left: @grid-gutter-width / 2;
+    right: 51%;
+    top: 2px;
+    height: 36px;
+    padding: 5px 10px;
+
+    color:@gray-lighter;
+    .text-muted {
+        color: @gray-light;
     }
 }
