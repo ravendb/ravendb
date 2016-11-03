@@ -105,7 +105,7 @@ class exportDatabase extends viewModelBase {
                 commandTokens.push("--operate-on-types=" + types.join(","));
             }
 
-            //TODO: identities, remove analyzers
+            //TODO: identities, remove analyzers, RevisionDocuments
 
             var databaseName = this.activeDatabase().name;
             commandTokens.push("--database=" + exportDatabase.escapeForShell(databaseName));
