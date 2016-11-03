@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
@@ -278,11 +279,13 @@ namespace Raven.Server.Documents
             {
                 using (var ms = new MemoryStream())
                 {
+                    var sp = Stopwatch.StartNew();
                     while (true)
                     {
                         if (_disposeToken.IsCancellationRequested)
                             break;
 
+                        sp.Restart();
                         ms.SetLength(0);
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
@@ -297,7 +300,14 @@ namespace Raven.Server.Documents
 
                                 if (ms.Length > 16*1024)
                                     break;
-                            } while (_sendQueue.Count > 0);
+                            } while (_sendQueue.Count > 0 || sp.Elapsed > _maxTimeToThorttleMessage);
+                        }
+                        if (ms.Length == 0)
+                        {
+                            // ensure that we send _something_ over the network, to keep the 
+                            // connection alive
+                            ms.WriteByte((byte)'\r');
+                            ms.WriteByte((byte)'\n');
                         }
 
                         ArraySegment<byte> bytes;
