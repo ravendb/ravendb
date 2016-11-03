@@ -29,7 +29,6 @@ namespace Raven.Server.Documents
         private readonly object _idleLocker = new object();
         private Task _indexStoreTask;
         private Task _transformerStoreTask;
-        private readonly ConfigurationStorage _configurationStorage;
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
 
@@ -55,7 +54,7 @@ namespace Raven.Server.Documents
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
             HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments,
                 configuration.Databases.MaxWarnSizeHugeDocuments);
-            _configurationStorage = new ConfigurationStorage(this);
+            ConfigurationStorage = new ConfigurationStorage(this);
         }
 
         public SystemTime Time = new SystemTime();
@@ -96,9 +95,11 @@ namespace Raven.Server.Documents
 
         public TransformerStore TransformerStore { get; }
 
-        public IndexesEtagsStorage IndexMetadataPersistence => _configurationStorage.IndexesEtagsStorage;
+        public ConfigurationStorage ConfigurationStorage { get; private set; }
 
-        public AlertsStorage Alerts => _configurationStorage.AlertsStorage;
+        public IndexesEtagsStorage IndexMetadataPersistence => ConfigurationStorage.IndexesEtagsStorage;
+
+        public AlertsStorage Alerts => ConfigurationStorage.AlertsStorage;
 
         public SqlReplicationLoader SqlReplicationLoader { get; private set; }
 
@@ -184,7 +185,7 @@ namespace Raven.Server.Documents
             }
 
             SubscriptionStorage.Initialize();
-            _configurationStorage.Initialize();
+            ConfigurationStorage.Initialize();
         }
 
         public void Dispose()
@@ -271,7 +272,7 @@ namespace Raven.Server.Documents
 
             exceptionAggregator.Execute(() =>
             {
-                _configurationStorage?.Dispose();
+                ConfigurationStorage?.Dispose();
             });
 
             exceptionAggregator.Execute(() =>
@@ -300,17 +301,17 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<StorageEnvironment> GetAllStoragesEnvironment()
+        public IEnumerable<StorageEnvironmentWithType> GetAllStoragesEnvironment()
         {
             // TODO :: more storage environments ?
-            yield return DocumentsStorage.Environment;
-            yield return SubscriptionStorage.Environment();
-            yield return _configurationStorage.Environment;
+            yield return new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents, DocumentsStorage.Environment);
+            yield return new StorageEnvironmentWithType("Subscriptions", StorageEnvironmentWithType.StorageEnvironmentType.Subscriptions, SubscriptionStorage.Environment());
+            yield return new StorageEnvironmentWithType("Configuration", StorageEnvironmentWithType.StorageEnvironmentType.Configuration, ConfigurationStorage.Environment);
             foreach (var index in IndexStore.GetIndexes())
             {
                 var env = index._indexStorage.Environment();
                 if (env != null)
-                    yield return env;
+                    yield return new StorageEnvironmentWithType(index.Name, StorageEnvironmentWithType.StorageEnvironmentType.Index, env);
             }
         }
 
@@ -350,6 +351,28 @@ namespace Raven.Server.Documents
         public void IncrementalBackupTo(string backupPath)
         {
             BackupMethods.Incremental.ToFile(GetAllStoragesEnvironmentInformation(), backupPath);
+        }
+    }
+
+    public class StorageEnvironmentWithType
+    {
+        public string Name { get; set; }
+        public StorageEnvironmentType Type { get; set; }
+        public StorageEnvironment Environment { get; set; }
+
+        public StorageEnvironmentWithType(string name, StorageEnvironmentType type, StorageEnvironment environment)
+        {
+            Name = name;
+            Type = type;
+            Environment = environment;
+        }
+
+        public enum StorageEnvironmentType
+        {
+            Documents,
+            Subscriptions,
+            Index,
+            Configuration
         }
     }
 }

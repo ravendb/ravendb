@@ -34,6 +34,8 @@ namespace Voron.Data.Fixed
         private Stack<FixedSizeTreePage> _cursor;
         private int _changes;
 
+        public LowLevelTransaction Llt => _tx;
+
         public static ushort GetValueSize(LowLevelTransaction tx, Tree parent, Slice treeName)
         {
             var header = (FixedSizeTreeHeader.Embedded*)parent.DirectRead(treeName);

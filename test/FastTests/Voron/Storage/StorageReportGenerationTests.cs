@@ -28,7 +28,7 @@ namespace FastTests.Voron.Storage
             {
                 var report = Env.GenerateReport(tx);
 
-                Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
+                Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.UsedSpaceInBytes + report.DataFile.FreeSpaceInBytes);
             }
         }
 
@@ -62,12 +62,12 @@ namespace FastTests.Voron.Storage
             {
                 var report = Env.GenerateReport(tx, computeExactSizes: true);
 
-                Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
+                Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.UsedSpaceInBytes + report.DataFile.FreeSpaceInBytes);
                 Assert.Equal(numberOfTrees + 1/*$Database-Metadata*/, report.Trees.Count);
 
                 foreach (var treeReport in report.Trees)
                 {
-                    if (SliceComparer.Equals(treeReport.Name, Constants.MetadataTreeNameSlice))
+                    if (string.Equals(treeReport.Name, Constants.MetadataTreeNameSlice.ToString()))
                         continue;
 
                     Assert.True(treeReport.PageCount > 0);
@@ -126,12 +126,12 @@ namespace FastTests.Voron.Storage
             {
                 var report = Env.GenerateReport(tx, computeExactSizes: true);
 
-                Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
+                Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.UsedSpaceInBytes + report.DataFile.FreeSpaceInBytes);
                 Assert.Equal(numberOfTrees + 1/*$Database-Metadata*/, report.Trees.Count);
 
                 foreach (var treeReport in report.Trees)
                 {
-                    if (SliceComparer.Equals(treeReport.Name, Constants.MetadataTreeNameSlice))
+                    if (string.Equals(treeReport.Name, Constants.MetadataTreeNameSlice.ToString()))
                         continue;
 
                     Assert.Equal(1, treeReport.PageCount); // root
@@ -143,16 +143,6 @@ namespace FastTests.Voron.Storage
                     Assert.Equal(1, treeReport.Depth);
                 }
             }
-        }
-
-        [Theory]
-        [InlineData(new[] { 1.0, 1.0, 1.0 }, 1.0)]
-        [InlineData(new[] { 1.0, 0.0 }, 0.5)]
-        [InlineData(new[] { 0.8, 0.7, 0.9, 0.8 }, 0.8)]
-        [InlineData(new[] { 0.3, 0.5, 0.1, 0.3 }, 0.3)]
-        public void ReportGeneratorCalculatesCorrectDensity(double[] pageDensities, double expectedDensity)
-        {
-            Assert.Equal(expectedDensity, StorageReportGenerator.CalculateTreeDensity(pageDensities.ToList()));
         }
 
         [Theory]
@@ -220,7 +210,7 @@ namespace FastTests.Voron.Storage
             {
                 var report = Env.GenerateReport(tx, computeExactSizes: true);
 
-                Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
+                Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.UsedSpaceInBytes + report.DataFile.FreeSpaceInBytes);
                 Assert.Equal(1 + 1/*$Database-Metadata*/, report.Trees.Count);
 
                 var treeReport = report.Trees[1];

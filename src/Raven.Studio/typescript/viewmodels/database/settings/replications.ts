@@ -22,14 +22,11 @@ import resolveAllConflictsCommand = require("commands/database/replication/resol
 
 class replications extends viewModelBase {
 
-    replicationEnabled = ko.observable<boolean>(false);
+    replicationEnabled = ko.observable<boolean>(true);
 
     prefixForHilo = ko.observable<string>("");
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None" }));
-    replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ MergedDocument: { Destinations: [], Source: null } }));
-    globalClientFailoverBehaviour = ko.observable<string>(null);
-    globalClientRequestTimeSlaThreshold = ko.observable<number>();
-    globalReplicationConfig = ko.observable<replicationConfig>();
+    replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ Source: null, Destinations: [], ClientConfiguration: null, DocumentConflictResolution: null, Id: null }));
 
     serverPrefixForHiLoDirtyFlag = new ko.DirtyFlag([]);
     replicationConfigDirtyFlag = new ko.DirtyFlag([]);
@@ -69,52 +66,22 @@ class replications extends viewModelBase {
         return 'mixed';
     }
 
-    usingGlobal = ko.observable<boolean>(false);
-    hasGlobalValues = ko.observable<boolean>(false);
-
-    globalReadFromAllAllowWriteToSecondaries = ko.computed(() => {
-        var behaviour = this.globalClientFailoverBehaviour();
-        if (behaviour == null) {
-            return false;
-        }
-        var tokens = behaviour.split(",").map(x => x.trim());
-        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
-    });
-
-    globalReadFromAllButSwitchWhenRequestTimeSlaThresholdIsReached = ko.computed(() => {
-        var behaviour = this.globalClientFailoverBehaviour();
-        if (behaviour == null) {
-            return false;
-        }
-        var tokens = behaviour.split(",").map(x => x.trim());
-        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
-    });
-
     constructor() {
         super();
         aceEditorBindingHandler.install();
 
-        this.showRequestTimeoutRow = ko.computed(() => {
-            var localSetting = this.replicationsSetup().showRequestTimeSlaThreshold();
-            var globalSetting = this.hasGlobalValues() && this.globalClientFailoverBehaviour() &&
-                this.globalClientFailoverBehaviour().contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
-            return localSetting || globalSetting;
-        });
+        this.showRequestTimeoutRow = ko.computed(() => this.replicationsSetup().showRequestTimeSlaThreshold());
     }
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
         var db = this.activeDatabase();
         if (db) {
-            if (db.activeBundles.contains("Replication")) {
-                this.replicationEnabled(true);
-                $.when(this.fetchServerPrefixForHiLoCommand(db), this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
-                    .done(() => deferred.resolve({ can: true }))
-                    .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
-            } else {
-                this.replicationEnabled(false);
-                deferred.resolve({ can: true });
-            }
+            //TODO: we don't have active bundles in v4.0, let assume it is enabled
+            this.replicationEnabled(true);
+            $.when(this.fetchServerPrefixForHiLoCommand(db), this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
+                .done(() => deferred.resolve({ can: true }))
+                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
 
         }
         return deferred;
@@ -129,7 +96,7 @@ class replications extends viewModelBase {
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
         this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
 
-        var replicationSetupDirtyFlagItems = [this.replicationsSetup, this.replicationsSetup().destinations(), this.skipIndexReplicationForAll, this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour, this.usingGlobal];
+        var replicationSetupDirtyFlagItems = [this.replicationsSetup, this.replicationsSetup().destinations(), this.skipIndexReplicationForAll, this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour];
 
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag(replicationSetupDirtyFlagItems);
 
@@ -141,7 +108,7 @@ class replications extends viewModelBase {
             var sp = this.serverPrefixForHiLoDirtyFlag().isDirty();
             return rc || rs || sp;
         });
-        this.dirtyFlag = new ko.DirtyFlag([combinedFlag, this.usingGlobal]);
+        this.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
     }
 
     attached() {
@@ -164,9 +131,6 @@ class replications extends viewModelBase {
             .execute()
             .done((repConfig: configurationDocumentDto<replicationConfigDto>) => {
                 this.replicationConfig(new replicationConfig(repConfig.MergedDocument));
-                if (repConfig.GlobalDocument) {
-                    this.globalReplicationConfig(new replicationConfig(repConfig.GlobalDocument));
-                }
             })
             .always(() => deferred.resolve({ can: true }));
         return deferred;
@@ -178,13 +142,9 @@ class replications extends viewModelBase {
 
         new getReplicationsCommand(db)
             .execute()
-            .done((repSetup: configurationDocumentDto<replicationsDto>) => {
-                this.replicationsSetup(new replicationsSetup(repSetup));
-                this.usingGlobal(repSetup.GlobalExists && !repSetup.LocalExists);
-                this.hasGlobalValues(repSetup.GlobalExists);
-                if (repSetup.GlobalDocument && repSetup.GlobalDocument.ClientConfiguration) {
-                    this.globalClientFailoverBehaviour(repSetup.GlobalDocument.ClientConfiguration.FailoverBehavior);
-                    this.globalClientRequestTimeSlaThreshold(repSetup.GlobalDocument.ClientConfiguration.RequestTimeSlaThresholdInMilliseconds);
+            .done((repSetup: Raven.Abstractions.Replication.ReplicationDocument<Raven.Abstractions.Replication.ReplicationDestination>) => {
+                if (repSetup) {
+                    this.replicationsSetup(new replicationsSetup(repSetup));    
                 }
 
                 var status = this.getIndexReplicationStatusForAllDestinations();
@@ -240,24 +200,19 @@ class replications extends viewModelBase {
     }
 
     saveChanges() {
-        if (this.usingGlobal()) {
-            new deleteLocalReplicationsSetupCommand(this.activeDatabase())
-                .execute();
-        } else {
-            if (this.isConfigSaveEnabled())
-                this.saveAutomaticConflictResolutionSettings();
-            if (this.isSetupSaveEnabled()) {
-                if (this.replicationsSetup().source()) {
-                    this.saveReplicationSetup();
-                } else {
-                    var db = this.activeDatabase();
-                    if (db) {
-                        new getDatabaseStatsCommand(db)
-                            .execute()
-                            .done(result=> {
-                                this.prepareAndSaveReplicationSetup(result.DatabaseId);
-                            });
-                    }
+        if (this.isConfigSaveEnabled())
+            this.saveAutomaticConflictResolutionSettings();
+        if (this.isSetupSaveEnabled()) {
+            if (this.replicationsSetup().source()) {
+                this.saveReplicationSetup();
+            } else {
+                var db = this.activeDatabase();
+                if (db) {
+                    new getDatabaseStatsCommand(db)
+                        .execute()
+                        .done(result=> {
+                            this.prepareAndSaveReplicationSetup(result.DatabaseId);
+                        });
                 }
             }
         }
@@ -341,37 +296,6 @@ class replications extends viewModelBase {
                     this.dirtyFlag().reset();
                 });
         }
-    }
-
-    override(value: boolean, destination: replicationDestination) {
-        destination.hasLocal(value);
-        if (!destination.hasLocal()) {
-            destination.copyFromGlobal();
-        }
-    }
-
-    useLocal() {
-        this.usingGlobal(false);
-    }
-
-    useGlobal() {
-        // using global configuration will discard all ETL configurations, if you find any warning user about this. 
-        if (this.replicationsSetup().destinations().filter(x => x.enableReplicateOnlyFromCollections()).length) {
-            this.confirmationMessage("Are you sure?",
-                    "All ETL destinations will be discarded when using global configuration.")
-                .done(() => this.proceedWithUseGlobal());
-        } else {
-            this.proceedWithUseGlobal();
-        }
-    }
-
-    private proceedWithUseGlobal() {
-        this.usingGlobal(true);
-        if (this.globalReplicationConfig()) {
-            this.replicationConfig().documentConflictResolution(this.globalReplicationConfig().documentConflictResolution());
-        }
-
-        this.replicationsSetup().copyFromParent(this.globalClientFailoverBehaviour(), this.globalClientRequestTimeSlaThreshold());
     }
 
     enableReplication() {

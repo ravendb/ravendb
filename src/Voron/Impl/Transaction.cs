@@ -33,6 +33,8 @@ namespace Voron.Impl
 
         public IEnumerable<Tree> Trees => _trees == null ? Enumerable.Empty<Tree>() : _trees.Values;
 
+        public IEnumerable<Table> Tables => _tables == null ? Enumerable.Empty<Table>() : _tables.Values;
+
         public Transaction(LowLevelTransaction lowLevelTransaction)
         {
             _lowLevelTransaction = lowLevelTransaction;

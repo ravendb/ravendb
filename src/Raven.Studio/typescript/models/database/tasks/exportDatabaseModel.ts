@@ -4,6 +4,7 @@
     includeIndexes = ko.observable(true);
     includeTransformers = ko.observable(true);
     includeIdentities = ko.observable(true);
+    includeRevisionDocuments = ko.observable(true);
     
     exportFileName = ko.observable<string>();
 
@@ -30,6 +31,9 @@
         }
         if (this.includeIdentities()) {
             operateOnTypes.push("Identities");
+        }
+        if (this.includeRevisionDocuments()) {
+            operateOnTypes.push("RevisionDocuments");
         }
 
         return {

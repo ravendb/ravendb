@@ -17,6 +17,7 @@ import database = require("models/resources/database");
 
 class globalConfigReplications extends viewModelBase {
 
+    /* TODO
     developerLicense = globalConfig.developerLicense;
     canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
 
@@ -126,7 +127,7 @@ class globalConfigReplications extends viewModelBase {
                 this.replicationConfig(new replicationConfig(repConfig));
                 this.activated(true);
             })
-            .always(() => deferred.resolve({ can: true }));*/
+            .always(() => deferred.resolve({ can: true }));
         return deferred;
     }
 
@@ -244,7 +245,7 @@ class globalConfigReplications extends viewModelBase {
         this.replicationConfigDirtyFlag().reset();
         this.replicationsSetupDirtyFlag().reset();
     }
-
+*/
 }
 
 export = globalConfigReplications; 

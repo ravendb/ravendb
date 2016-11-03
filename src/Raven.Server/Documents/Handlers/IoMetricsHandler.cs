@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var storageEnvironment in Database.GetAllStoragesEnvironment())
                 {
-                    environments.Add(GetIoMetrics(storageEnvironment));
+                    environments.Add(GetIoMetrics(storageEnvironment.Environment));
                 }
 
                 context.Write(writer, result);

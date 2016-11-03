@@ -3,14 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Sparrow;
-using Sparrow.Binary;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;
-using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using Voron.Util.Conversion;
 
 namespace Voron.Data.Tables
 {
@@ -32,6 +29,8 @@ namespace Voron.Data.Tables
         public readonly Slice Name;
 
         public long NumberOfEntries { get; private set; }
+
+        private long _overflowPageCount;
 
         public FixedSizeTree FixedSizeKey
         {
@@ -98,7 +97,7 @@ namespace Voron.Data.Tables
         /// Using this constructor WILL NOT register the Table for commit in
         /// the Transaction, and hence changes WILL NOT be commited.
         /// </summary>
-        public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree,  bool doSchemaValidation = false)
+        public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree, bool doSchemaValidation = false)
         {
             Name = name;
 
@@ -108,13 +107,14 @@ namespace Voron.Data.Tables
 
             _tableTree = tableTree;
             if (_tableTree == null)
-                throw new ArgumentNullException(nameof(tableTree),"Cannot open table " + Name);
+                throw new ArgumentNullException(nameof(tableTree), "Cannot open table " + Name);
 
             var stats = (TableSchemaStats*)_tableTree.DirectRead(TableSchema.StatsSlice);
             if (stats == null)
                 throw new InvalidDataException($"Cannot find stats value for table {name}");
 
             NumberOfEntries = stats->NumberOfEntries;
+            _overflowPageCount = stats->OverflowPageCount;
 
             if (doSchemaValidation)
             {
@@ -258,6 +258,9 @@ namespace Voron.Data.Tables
             {
                 var page = _tx.LowLevelTransaction.GetPage(id / _pageSize);
                 var numberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
+                _overflowPageCount -= numberOfPages;
+                stats->OverflowPageCount = _overflowPageCount;
+
                 for (int i = 0; i < numberOfPages; i++)
                 {
                     _tx.LowLevelTransaction.FreePage(page.PageNumber + i);
@@ -347,7 +350,6 @@ namespace Voron.Data.Tables
             NumberOfEntries++;
             stats->NumberOfEntries = NumberOfEntries;
 
-
             int size = builder.Size;
 
             byte* pos;
@@ -366,6 +368,9 @@ namespace Voron.Data.Tables
             {
                 var numberOfOverflowPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(size);
                 var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
+                _overflowPageCount += numberOfOverflowPages;
+                stats->OverflowPageCount = _overflowPageCount;
+
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = size;
 
@@ -388,7 +393,6 @@ namespace Voron.Data.Tables
             NumberOfEntries++;
             stats->NumberOfEntries = NumberOfEntries;
 
-
             int size = reader.Size;
 
             byte* pos;
@@ -404,6 +408,9 @@ namespace Voron.Data.Tables
             {
                 var numberOfOverflowPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(size);
                 var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
+                _overflowPageCount += numberOfOverflowPages;
+                stats->OverflowPageCount = _overflowPageCount;
+
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = size;
 
@@ -553,7 +560,7 @@ namespace Voron.Data.Tables
             return GetTree(idx.Name);
         }
 
-         public void DeleteByKey(Slice key)
+        public void DeleteByKey(Slice key)
         {
             var pkTree = GetTree(_schema.Key);
 
@@ -740,7 +747,7 @@ namespace Voron.Data.Tables
             long id;
             Slice slice;
             using (it.Value(out slice))
-                slice.CopyTo((byte*) &id);
+                slice.CopyTo((byte*)&id);
             int size;
             var ptr = DirectRead(id, out size);
             return new TableValueReader(ptr, size)
@@ -857,7 +864,7 @@ namespace Voron.Data.Tables
                     continue;
 
                 var treeName = item.Key;
-                var header = (TreeRootHeader*) _tableTree.DirectAdd(treeName, sizeof(TreeRootHeader));
+                var header = (TreeRootHeader*)_tableTree.DirectAdd(treeName, sizeof(TreeRootHeader));
                 tree.State.CopyTo(header);
             }
         }
@@ -882,6 +889,64 @@ namespace Voron.Data.Tables
             _fstKey?.Dispose();
             _inactiveSections?.Dispose();
             _tableTree?.Dispose();
+        }
+
+        public TableReport GetReport(bool calculateDensity)
+        {
+            var overflowSize = _overflowPageCount * _pageSize;
+            var report = new TableReport(overflowSize, overflowSize, calculateDensity)
+            {
+                Name = Name.ToString(),
+                NumberOfEntries = NumberOfEntries
+            };
+
+            report.AddStructure(_tableTree, calculateDensity);
+
+            if (_schema.Key != null && _schema.Key.IsGlobal == false)
+            {
+                var pkTree = GetTree(_schema.Key);
+                report.AddIndex(pkTree, calculateDensity);
+            }
+
+            foreach (var index in _schema.FixedSizeIndexes)
+            {
+                if (index.Value.IsGlobal)
+                    continue;
+
+                var fst = GetFixedSizeTree(index.Value);
+                report.AddIndex(fst, calculateDensity);
+            }
+
+            foreach (var index in _schema.Indexes)
+            {
+                if (index.Value.IsGlobal)
+                    continue;
+
+                var tree = GetTree(index.Value);
+                report.AddIndex(tree, calculateDensity);
+            }
+
+            var activeCandidateSection = ActiveCandidateSection;
+            report.AddStructure(activeCandidateSection, calculateDensity);
+
+            var inactiveSections = InactiveSections;
+            report.AddStructure(inactiveSections, calculateDensity);
+
+            using (var it = inactiveSections.Iterate())
+            {
+                if (it.Seek(0))
+                {
+                    do
+                    {
+                        var inactiveSection = new RawDataSection(_tx.LowLevelTransaction, it.CurrentKey);
+                        report.AddData(inactiveSection, calculateDensity);
+                    } while (it.MoveNext());
+                }
+            }
+
+            report.AddData(ActiveDataSmallSection, calculateDensity);
+
+            return report;
         }
     }
 }

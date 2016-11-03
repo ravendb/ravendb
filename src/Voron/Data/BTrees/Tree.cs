@@ -10,6 +10,7 @@ using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using System.Linq;
 
 namespace Voron.Data.BTrees
 {
@@ -86,7 +87,7 @@ namespace Voron.Data.BTrees
 
         public static Tree Create(LowLevelTransaction llt, Transaction tx, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
         {
-            if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table )
+            if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table)
                 throw new ArgumentException($"Only valid types are {nameof(RootObjectType.VariableSizeTree)} or {nameof(RootObjectType.Table)}.", nameof(type));
 
             var newRootPage = AllocateNewPage(llt, TreePageFlags.Leaf, 1);
@@ -241,7 +242,7 @@ namespace Voron.Data.BTrees
 
 #if DEBUG
                 Slice nodeCheck;
-                using(TreeNodeHeader.ToSlicePtr(_llt.Allocator, node,out nodeCheck))
+                using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out nodeCheck))
                 {
                     Debug.Assert(SliceComparer.EqualsInline(nodeCheck, key));
                 }
@@ -444,7 +445,7 @@ namespace Voron.Data.BTrees
             return SearchForPage(key, out node);
         }
 
-        internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, out Func<Slice,TreeCursor> cursor)
+        internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, out Func<Slice, TreeCursor> cursor)
         {
             TreePage p;
 
@@ -470,7 +471,7 @@ namespace Voron.Data.BTrees
             {
                 int nodePos;
 
-                if ( key.Options == SliceOptions.Key)
+                if (key.Options == SliceOptions.Key)
                 {
                     if (p.Search(_llt, key) != null)
                     {
@@ -756,7 +757,7 @@ namespace Voron.Data.BTrees
                     }
                     else if (key.Options == SliceOptions.AfterAllKeys)
                     {
-                        cursorPage.LastSearchPosition = (ushort) (cursorPage.NumberOfEntries - 1);
+                        cursorPage.LastSearchPosition = (ushort)(cursorPage.NumberOfEntries - 1);
                     }
                     else throw new ArgumentException();
 
@@ -819,7 +820,7 @@ namespace Voron.Data.BTrees
                 throw new ArgumentException("Cannot delete a value in a read only transaction");
 
             State.IsModified = true;
-            Func<Slice,TreeCursor> cursorConstructor;
+            Func<Slice, TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
             var page = FindPageFor(key, out node, out cursorConstructor);
 
@@ -877,7 +878,7 @@ namespace Voron.Data.BTrees
             using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out nodeKey))
             {
                 if (!SliceComparer.EqualsInline(nodeKey, key))
-                return -1;
+                    return -1;
             }
 
             return GetDataSize(node);
@@ -899,7 +900,7 @@ namespace Voron.Data.BTrees
             Slice key;
             using (page.IsLeaf ? page.GetNodeKey(_llt, 0, out key) : page.GetNodeKey(_llt, 1, out key))
             {
-                Func<Slice,TreeCursor> cursorConstructor;
+                Func<Slice, TreeCursor> cursorConstructor;
                 TreeNodeHeader* node;
                 p = FindPageFor(key, out node, out cursorConstructor);
                 if (p == null || p.LastMatch != 0)
@@ -1195,7 +1196,7 @@ namespace Voron.Data.BTrees
                 if (overFlowPage.OverflowSize > ushort.MaxValue)
                     throw new InvalidOperationException("Cannot convert big data to a slice, too big");
                 Slice.External(Llt.Allocator, overFlowPage.Pointer + Constants.TreePageHeaderSize,
-                    (ushort) overFlowPage.OverflowSize, out outputDataSlice);
+                    (ushort)overFlowPage.OverflowSize, out outputDataSlice);
             }
             else
             {

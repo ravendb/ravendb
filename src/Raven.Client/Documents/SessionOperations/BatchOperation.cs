@@ -86,7 +86,8 @@ namespace Raven.Client.Documents.SessionOperations
                     _session.DocumentsById[key] = documentInfo;
                 }
 
-                _session.OnAfterStore(_session, key, entity, _session.GetMetadataFor(entity));
+                var afterStoreEventArgs = new AfterStoreEventArgs(_session, documentInfo.Id, documentInfo.Entity);
+                _session.OnAfterStoreInvoke(afterStoreEventArgs);
             }
         }
     }

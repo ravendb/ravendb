@@ -7,5 +7,8 @@ namespace Voron.Data.Tables
     {
         [FieldOffset(0)]
         public long NumberOfEntries;
+
+        [FieldOffset(8)]
+        public long OverflowPageCount;
     }
 }

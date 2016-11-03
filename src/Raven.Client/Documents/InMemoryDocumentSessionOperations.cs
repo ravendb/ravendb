@@ -58,6 +58,11 @@ namespace Raven.Client.Documents
         /// </summary>
         protected readonly HashSet<object> DeletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
 
+        public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
+        public event EventHandler<AfterStoreEventArgs> OnAfterStore;
+        public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
+        public event EventHandler<BeforeQueryExecutedEventArgs> OnBeforeQueryExecuted;
+
         /// <summary>
         /// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
         /// </summary>
@@ -786,7 +791,8 @@ more responsive application.
 
                         if (documentInfo.Entity != null)
                         {
-                            _documentStore.OnAfterStore(this, documentInfo.Id, documentInfo.Entity, GetMetadataFor(documentInfo.Entity));
+                            var afterStoreEventArgs = new AfterStoreEventArgs(this, documentInfo.Id, documentInfo.Entity);
+                            OnAfterStore?.Invoke(this, afterStoreEventArgs);
 
                             DocumentsByEntity.Remove(documentInfo.Entity);
                             result.Entities.Add(documentInfo.Entity);
@@ -814,13 +820,13 @@ more responsive application.
             {
                 UpdateMetadataModifications(entity.Value);
                 var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
-                if ((entity.Value.IgnoreChanges) || (!EntityChanged(document, entity.Value, null))) continue;
+                if (entity.Value.IgnoreChanges || (!EntityChanged(document, entity.Value, null)))
+                    continue;
 
-                if (!_documentStore.BeforeStoreEmpty)
-                {
-                    _documentStore.OnBeforeStore(this, entity.Value.Id, entity.Key, GetMetadataFor(entity.Key));
+                var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
+                OnBeforeStore?.Invoke(this, beforeStoreEventArgs);
+                if ((OnBeforeStore != null) && EntityChanged(document, entity.Value, null))
                     document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
-                }
 
                 entity.Value.IsNewDocument = false;
                 result.Entities.Add(entity.Key);
@@ -830,9 +836,11 @@ more responsive application.
 
                 entity.Value.Document = document;
 
-                var etag = (UseOptimisticConcurrency && entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled) || entity.Value.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced
-                           ? (long?)(entity.Value.ETag ?? 0)
-                           : null;
+                var etag = (UseOptimisticConcurrency &&
+                            entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled) ||
+                           entity.Value.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced
+                    ? (long?) (entity.Value.ETag ?? 0)
+                    : null;
 
                 result.Commands.Add(new DynamicJsonValue()
                 {
@@ -1287,14 +1295,14 @@ more responsive application.
 
         }
 
-        public virtual void OnAfterStore(InMemoryDocumentSessionOperations session, string id, object entityinstance, IDictionary<string, string> metadata)
+        public void OnAfterStoreInvoke(AfterStoreEventArgs afterStoreEventArgs)
         {
-            _documentStore.OnAfterStore(session, id, entityinstance, metadata);
+            OnAfterStore?.Invoke(this, afterStoreEventArgs);
         }
 
-        public virtual void OnBeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
+        public void OnBeforeQueryExecutedInvoke(BeforeQueryExecutedEventArgs beforeQueryExecutedEventArgs)
         {
-            _documentStore.OnBeforeQueryExecutedEvent(queryCustomization);
+            OnBeforeQueryExecuted?.Invoke(this, beforeQueryExecutedEventArgs);
         }
     }
 }
