@@ -10,6 +10,7 @@ using Raven.Client.Indexing;
 using Raven.Client.Smuggler;
 using Raven.Json.Linq;
 using Raven.Server.Documents;
+using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web.Operations;
 using Sparrow.Json;
@@ -98,6 +99,10 @@ namespace TypingsGenerator
 
             // replication 
             scripter.AddType(typeof(ReplicationDocument<>));
+
+            // sql replication 
+            scripter.AddType(typeof(SqlConnections));
+            scripter.AddType(typeof(SqlReplicationConfiguration));
 
             return scripter;
         }

@@ -22,6 +22,7 @@ import sqlReplicationSimulationDialog = require("viewmodels/database/status/sqlR
 import sqlReplicationConnections = require("models/database/sqlReplication/sqlReplicationConnections");
 import predefinedSqlConnection = require("models/database/sqlReplication/predefinedSqlConnection");
 import getEffectiveSqlReplicationConnectionStringsCommand = require("commands/database/globalConfig/getEffectiveSqlReplicationConnectionStringsCommand");
+import getSqlReplicationConnectionsCommand = require("commands/database/sqlReplication/getSqlReplicationConnectionsCommand");
 
 
 class editSqlReplication extends viewModelBase {
@@ -79,9 +80,9 @@ class editSqlReplication extends viewModelBase {
     }
 
     loadSqlReplicationConnections(): JQueryPromise<any> {
-        return new getEffectiveSqlReplicationConnectionStringsCommand(this.activeDatabase())
+        return new getSqlReplicationConnectionsCommand(this.activeDatabase())
             .execute()
-            .done((dto: configurationDocumentDto<sqlReplicationConnectionsDto>) => {
+            .done((dto: Raven.Server.Documents.SqlReplication.SqlConnections) => {
                 var connections = new sqlReplicationConnections(dto);
 
                 if (connections.predefinedConnections().length > 0) {
@@ -275,9 +276,8 @@ class editSqlReplication extends viewModelBase {
 
         var saveCommand = new saveDocumentCommand(editSqlReplication.sqlReplicationDocumentPrefix + currentDocumentId, newDoc, this.activeDatabase());
         var saveTask = saveCommand.execute();
-        /* TODO
-        saveTask.done((saveResult: bulkDocumentDto[]) => {
-            var savedDocumentDto: bulkDocumentDto = saveResult[0];
+        saveTask.done((saveResult: saveDocumentResponseDto) => {
+            var savedDocumentDto: saveDocumentResponseItemDto = saveResult.Results[0];
             var sqlReplicationKey = savedDocumentDto.Key.substring(editSqlReplication.sqlReplicationDocumentPrefix.length);
             this.loadSqlReplication(sqlReplicationKey)
                 .done(() => this.dirtyFlag().reset());
@@ -285,7 +285,7 @@ class editSqlReplication extends viewModelBase {
 
             this.isEditingNewReplication(false);
             this.initialReplicationId = currentDocumentId;
-        });*/
+        });
     }
 
 

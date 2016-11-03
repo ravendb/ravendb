@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
  class testSqlConnectionCommand extends commandBase{
      constructor(private db: database, private factoryName: string, private connectionString:string) {
@@ -7,11 +8,11 @@ import database = require("models/resources/database");
      }
 
      execute(): JQueryPromise<any> {
-         var args = {
+         const args = {
              factoryName: this.factoryName,
              connectionString: this.connectionString
          };
-         return this.query<any>("/studio-tasks/test-sql-replication-connection", args, this.db, null, 60000);//TODO: use endpoints
+         return this.query<any>(endpoints.databases.sqlReplication.sqlReplicationTestSqlConnection, args, this.db, null, 60000);
      }
  }
 

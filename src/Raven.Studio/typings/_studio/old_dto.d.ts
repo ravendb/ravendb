@@ -591,32 +591,9 @@ interface compactStatusDto {
     State: string;
 }
 
-interface sqlReplicationTableDto {
-    TableName: string;
-    DocumentKeyColumn: string;
-    InsertOnlyMode: boolean;
-}
-
-interface sqlReplicationDto extends documentDto {
-    Name: string;
-    Disabled: boolean;
-    ParameterizeDeletesDisabled: boolean;
-    RavenEntityName: string;
-    Script: string;
-    FactoryName: string;
-    ConnectionString: string;
-    ConnectionStringName: string;
-    PredefinedConnectionStringSettingName: string;
-    ConnectionStringSettingName: string;
-    SqlReplicationTables: sqlReplicationTableDto[];
-    ForceSqlServerQueryRecompile?: boolean;
-    QuoteTables?: boolean;
-    PerformTableQuatation?: boolean; //obsolete
-}
-
 interface commandData {
     CommandText: string;
-    Params:{Key:string;Value:any}[]
+    Params:{Key:string;Value:any}[];
 }
 
 interface tableQuerySummary {
@@ -627,18 +604,6 @@ interface tableQuerySummary {
 interface sqlReplicationSimulationResultDto {
     Results: tableQuerySummary[];
     //TODO: LastAlert: alertDto;
-}
-
-interface sqlReplicationConnectionsDto extends documentDto {
-    PredefinedConnections: predefinedSqlConnectionDto[];
-}
-
-interface predefinedSqlConnectionDto {
-    Name:string;
-    FactoryName: string;
-    ConnectionString: string;
-    HasGlobal?: boolean;
-    HasLocal?: boolean;
 }
 
 interface facetDto {

@@ -2,8 +2,9 @@
 
 import document = require("models/database/documents/document");
 import predefinedConnection = require("models/database/sqlReplication/predefinedSqlConnection");
+import documentMetadata = require("models/database/documents/documentMetadata");
 
-class sqlReplicationConnections extends document {
+class sqlReplicationConnections {
 
     static sqlProvidersConnectionStrings: { ProviderName: string; ConnectionString: string; }[] = [
         { ProviderName: "System.Data.SqlClient", ConnectionString: "Server=[Server Address];Database=[Database Name];User Id=[User ID];Password=[Password];" },
@@ -17,43 +18,42 @@ class sqlReplicationConnections extends document {
 
     predefinedConnections = ko.observableArray<predefinedConnection>();
 
-    constructor(dto: configurationDocumentDto<sqlReplicationConnectionsDto>) {
-        super(dto);
+    constructor(dto: Raven.Server.Documents.SqlReplication.SqlConnections) {
 
-        this.predefinedConnections(dto.MergedDocument.PredefinedConnections.map(c => {
-            var result = new predefinedConnection(c);
-            if (dto.GlobalDocument) {
-                var foundParent = dto.GlobalDocument.PredefinedConnections.first(x => x.Name.toLowerCase() === c.Name.toLowerCase());
-                if (foundParent) {
-                    result.globalConfiguration(new predefinedConnection(foundParent));
-                }
+        //TODO: this.__metadata = dto["metadata"];
+        if (dto) {
+            const connections = [] as Array<predefinedConnection>;
+            for (const connectionName in dto.Connections) {
+                connections.push(new predefinedConnection(connectionName, dto.Connections[connectionName]));
             }
-            return result;
-        }));
+
+            this.predefinedConnections(connections);    
+        }
     }
 
     static empty(): sqlReplicationConnections {
         return new sqlReplicationConnections({
-            MergedDocument: {
-                PredefinedConnections: []
-            },
-            LocalExists: true,
-            GlobalExists: false
-        });
+            Connections: {},
+            Id: null
+        } as Raven.Server.Documents.SqlReplication.SqlConnections);
     }
    
-    toDto(filterLocal = true): sqlReplicationConnectionsDto {
-        var meta = this.__metadata.toDto();
-        meta["@id"] = "Raven/SqlReplication/Connections/";
+    toDto(): Raven.Server.Documents.SqlReplication.SqlConnections {
+        //TODO: var meta = this.__metadata.toDto();
+        //TODO: meta["@id"] = "Raven/SqlReplication/Connections/";
+        const connectionsMap = {} as System.Collections.Generic.
+            Dictionary<string, Raven.Server.Documents.SqlReplication.PredefinedSqlConnection>;
+
+        this.predefinedConnections().forEach(c => {
+            connectionsMap[c.name()] = c.toDto();
+        });
+
         return {
-            PredefinedConnections: this.predefinedConnections().filter(dest => !filterLocal || dest.hasLocal()).map(x => x.toDto()) 
+            Connections: connectionsMap,
+            Id: null
         };
     }
 
-    copyFromParent() {
-        this.predefinedConnections(this.predefinedConnections().filter(c => c.hasGlobal()));
-        this.predefinedConnections().forEach(c => c.copyFromGlobal());
-    }
 }
 
 export =sqlReplicationConnections;

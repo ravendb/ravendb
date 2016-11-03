@@ -21,10 +21,9 @@ class sqlReplication extends document {
 
     name = ko.observable<string>().extend({ required: true });
     disabled = ko.observable<boolean>().extend({ required: true });
-    factoryName = ko.observable<string>().extend({ required: true });
     connectionStringType = ko.observable<string>().extend({ required: true });
     connectionStringValue = ko.observable<string>(null).extend({ required: true });
-    ravenEntityName = ko.observable<string>("").extend({ required: true });
+    collection = ko.observable<string>("");
     parameterizeDeletesDisabled = ko.observable<boolean>(false).extend({ required: true });
     forceSqlServerQueryRecompile = ko.observable<boolean>(false);
     quoteTables = ko.observable<boolean>(true);
@@ -52,21 +51,22 @@ class sqlReplication extends document {
         return hasAny;
     });
 
-    constructor(dto: sqlReplicationDto) {
+    constructor(dto: Raven.Server.Documents.SqlReplication.SqlReplicationConfiguration) {
         super(dto);
 
         this.name(dto.Name);
         this.disabled(dto.Disabled);
-        this.factoryName(dto.FactoryName);
-        this.ravenEntityName(dto.RavenEntityName != null ? dto.RavenEntityName : "");
+        this.collection(dto.Collection);
         this.parameterizeDeletesDisabled(dto.ParameterizeDeletesDisabled);
         this.sqlReplicationTables(dto.SqlReplicationTables.map(tab => new sqlReplicationTable(tab)));
         this.script(dto.Script);
         this.forceSqlServerQueryRecompile(!!dto.ForceSqlServerQueryRecompile? dto.ForceSqlServerQueryRecompile:false);
-        this.quoteTables(("PerformTableQuatation" in dto) ? dto.PerformTableQuatation : ("QuoteTables" in dto ? dto.QuoteTables : true));
-        this.setupConnectionString(dto);
+        this.quoteTables(("PerformTableQuatation" in dto) ? dto.QuoteTables : ("QuoteTables" in dto ? dto.QuoteTables : true));
+        //TODO: this.setupConnectionString(dto);
+        this.connectionStringType(this.PREDEFINED_CONNECTION_STRING_NAME); //TODO: delete 
+        this.connectionStringValue(dto.ConnectionStringName); //TODO: delete
 
-        this.metadata = new documentMetadata(dto["@metadata"]);
+        this.metadata = new documentMetadata((dto as any)["@metadata"]);
 
         this.connectionStringSourceFieldName = ko.computed(() => {
             if (this.connectionStringType() == this.CONNECTION_STRING) {
@@ -81,8 +81,8 @@ class sqlReplication extends document {
         });
 
         this.searchResults = ko.computed(() => {
-            var newRavenEntityName: string = this.ravenEntityName();
-            return this.collections().filter((name) => name.toLowerCase().indexOf(newRavenEntityName.toLowerCase()) > -1);
+            var collection: string = this.collection();
+            return this.collections().filter((name) => name.toLowerCase().indexOf(collection.toLowerCase()) > -1);
         });
         
         this.script.subscribe((newValue) => {
@@ -112,7 +112,7 @@ class sqlReplication extends document {
         });
     }
 
-    private setupConnectionString(dto: sqlReplicationDto) {
+    /*TODO private setupConnectionString(dto: sqlReplicationDto) {
         
         if (dto.ConnectionStringName) {
             this.connectionStringType(this.CONNECTION_STRING_NAME);
@@ -128,7 +128,7 @@ class sqlReplication extends document {
             this.connectionStringType(this.PREDEFINED_CONNECTION_STRING_NAME);
             this.connectionStringValue(dto.PredefinedConnectionStringSettingName);
         }
-    }
+    }*/
 
     setConnectionStringType(strType: string) {
         this.connectionStringType(strType);
@@ -139,8 +139,9 @@ class sqlReplication extends document {
             Name: "",
             Disabled: true,
             ParameterizeDeletesDisabled: false,
-            RavenEntityName: "",
+            Collection: "",
             Script: "",
+            Id: null,
             FactoryName: null,
             ConnectionString: null,
             PredefinedConnectionStringSettingName:null,
@@ -149,24 +150,25 @@ class sqlReplication extends document {
             SqlReplicationTables: [sqlReplicationTable.empty().toDto()],
             ForceSqlServerQueryRecompile: false,
             QuoteTables:true
-        });
+        } as Raven.Server.Documents.SqlReplication.SqlReplicationConfiguration);
     }
 
-    toDto(): sqlReplicationDto {
-        var meta = this.__metadata.toDto();
-        meta["@id"] = "Raven/SqlReplication/Configuration/" + this.name();
+    toDto(): Raven.Server.Documents.SqlReplication.SqlReplicationConfiguration {
+        //TODO:var meta = this.__metadata.toDto();
+        //TODO: meta["@id"] = "Raven/SqlReplication/Configuration/" + this.name();
         return {
-            '@metadata': meta,
+            //TODO: '@metadata': meta,
+            Id: null,
             Name: this.name(),
             Disabled: this.disabled(),
             ParameterizeDeletesDisabled: this.parameterizeDeletesDisabled(),
-            RavenEntityName: this.ravenEntityName(),
+            Collection: this.collection(),
             Script: this.script(),
-            FactoryName: this.factoryName(),
-            ConnectionString: this.prepareConnectionString(this.CONNECTION_STRING),
-            PredefinedConnectionStringSettingName: this.prepareConnectionString(this.PREDEFINED_CONNECTION_STRING_NAME),
-            ConnectionStringName: this.prepareConnectionString(this.CONNECTION_STRING_NAME),
-            ConnectionStringSettingName: this.prepareConnectionString(this.CONNECTION_STRING_SETTING_NAME),
+            //TODO: FactoryName: this.factoryName(),
+            //TODO: ConnectionString: this.prepareConnectionString(this.CONNECTION_STRING),
+            //TODO: PredefinedConnectionStringSettingName: this.prepareConnectionString(this.PREDEFINED_CONNECTION_STRING_NAME),
+            ConnectionStringName: this.prepareConnectionString(this.PREDEFINED_CONNECTION_STRING_NAME),//TODO: revert CONNECTION_STRING_NAME
+            //TODO: ConnectionStringSettingName: this.prepareConnectionString(this.CONNECTION_STRING_SETTING_NAME),
             ForceSqlServerQueryRecompile: this.forceSqlServerQueryRecompile(),
             QuoteTables: this.quoteTables(),
             SqlReplicationTables: this.sqlReplicationTables().map(tab => tab.toDto())
@@ -201,12 +203,13 @@ class sqlReplication extends document {
         this.sqlReplicationTables.remove(table);
     }
 
+    /* TODO
     setIdFromName() {
         this.__metadata.id = "Raven/SqlReplication/Configuration/" + this.name();
-    }
+    }*/
 
-    saveNewRavenEntityName(newRavenEntityName: string) {
-        this.ravenEntityName(newRavenEntityName);
+    saveNewCollectionName(newRavenEntityName: string) {
+        this.collection(newRavenEntityName);
     }
 
 
