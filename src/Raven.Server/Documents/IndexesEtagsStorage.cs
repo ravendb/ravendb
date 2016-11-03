@@ -26,12 +26,11 @@ namespace Raven.Server.Documents
 
         private static readonly TableSchema IndexesTableSchema;
         private static readonly Slice EtagIndexName;
-        private static readonly Slice MetadataIdAndEtagIndexName;
+
 
         static IndexesEtagsStorage()
         {
             Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out EtagIndexName);
-            Slice.From(StorageEnvironment.LabelsContext, "MetadataIdAndEtagIndexName", out MetadataIdAndEtagIndexName);
 
             // Table schema is:
             //  - index id - int (-1 if tombstone)
@@ -102,7 +101,7 @@ namespace Raven.Server.Documents
             using (var tx = _environment.WriteTransaction())
             {
                 var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
-                var existing = GetIndexMetadataByNameInternal(tx, context, indexName);
+                var existing = GetIndexMetadataByNameInternal(tx, context, indexName, false);
                 var lastEtag = ReadLastEtag(table);
                 var newEtag = lastEtag + 1;
 
@@ -145,32 +144,45 @@ namespace Raven.Server.Documents
             Transformer = 2
         }
 
-        public IEnumerable<IndexEntryMetadata> GetAfter(long etag, int start, int take)
+        public void PurgeTombstonesFrom(long etag, int take)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.WriteTransaction())
             {
                 int taken = 0;
-                int skipped = 0;
                 var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
-
-                var swapped = Bits.SwapBytes(etag);
-
-                Slice slice;
-                using (Slice.External(tx.Allocator, (byte*)&swapped, sizeof(long), out slice))
+                var idsToDelete = new List<long>();
+                foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], etag))
                 {
-                    return YieldResults(start, take, table, slice, skipped, taken, context);
+                    if (taken++ >= take)
+                        break;
+                    var metadata = TableValueToMetadata(tvr, context, false, false);
+                    if(metadata.Id == -1)
+                        idsToDelete.Add(tvr.Id);
                 }
+
+                foreach(var id in idsToDelete)
+                    table.Delete(id);
+                tx.Commit();
             }
         }
 
-        private IEnumerable<IndexEntryMetadata> YieldResults(int start, int take, Table table, Slice slice, int skipped, int taken,
-            TransactionOperationContext context)
+        /// <summary>
+        /// this method will fetch all metadata entries - tombstones or otherwise
+        /// </summary>
+        public List<IndexEntryMetadata> GetAfter(long etag, int start, int take)
         {
-            foreach (var seekResult in table.SeekForwardFrom(IndexesTableSchema.Indexes[MetadataIdAndEtagIndexName], slice))
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = _environment.ReadTransaction())
             {
-                foreach (var tvr in seekResult.Results)
+                int taken = 0;
+                int skipped = 0;
+                var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
+
+                var results = new List<IndexEntryMetadata>();
+                foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], etag))
                 {
                     if (start > skipped)
                     {
@@ -181,8 +193,10 @@ namespace Raven.Server.Documents
                     if (taken++ >= take)
                         break;
 
-                    yield return TableValueToMetadata(tvr, context);
+                    results.Add(TableValueToMetadata(tvr, context, false));
                 }
+
+                return results;
             }
         }
 
@@ -208,15 +222,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IndexEntryMetadata GetIndexMetadataByName(string name)
+        public IndexEntryMetadata GetIndexMetadataByName(string name, bool returnNullIfTombstone = true)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.ReadTransaction())
-                return GetIndexMetadataByNameInternal(tx, context, name);
+                return GetIndexMetadataByNameInternal(tx, context, name, returnNullIfTombstone);
         }
 
-        private IndexEntryMetadata GetIndexMetadataByNameInternal(Transaction tx, TransactionOperationContext context, string name)
+        private IndexEntryMetadata GetIndexMetadataByNameInternal(Transaction tx, TransactionOperationContext context, string name, bool returnNullIfTombstone)
         {
             var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
 
@@ -225,16 +239,27 @@ namespace Raven.Server.Documents
             using (DocumentsStorage.GetSliceFromKey(context, name, out nameAsSlice))
                 tvr = table.ReadByKey(nameAsSlice);
 
-            return tvr == null ? null : TableValueToMetadata(tvr, context);
+            return tvr == null ? null : TableValueToMetadata(tvr, context, returnNullIfTombstone);
         }
 
-        private IndexEntryMetadata TableValueToMetadata(TableValueReader tvr, JsonOperationContext context)
+        private IndexEntryMetadata TableValueToMetadata(TableValueReader tvr, 
+            JsonOperationContext context, 
+            bool returnNullIfTombstone, 
+            bool shouldMaterialize = true)
         {
             var metadata = new IndexEntryMetadata();
 
             int size;
             metadata.Id = Bits.SwapBytes(*(int*)tvr.Read((int)MetadataFields.Id, out size));
+            if (returnNullIfTombstone && metadata.Id == -1)
+                return null;
+
             metadata.Name = new LazyStringValue(null, tvr.Read((int)MetadataFields.Name, out size), size, context);
+            if (shouldMaterialize)
+//since most of the uses of IndexEntryMetadata will not be in the same context, we need to materialize the string
+//before disposing the context
+                metadata.Name.Materialize(); 
+
             metadata.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(tvr, (int)MetadataFields.ChangeVector);
             metadata.Type = (IndexEntryType) (*tvr.Read((int) MetadataFields.Type, out size));
             metadata.Etag = Bits.SwapBytes(*(long*)tvr.Read((int)MetadataFields.Etag, out size));

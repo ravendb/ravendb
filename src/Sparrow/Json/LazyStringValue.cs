@@ -93,19 +93,26 @@ namespace Sparrow.Json
 
         public static implicit operator string(LazyStringValue self)
         {
-            if (self == (LazyStringValue)null)
+            if (self == null)
                 return null;
 
-            if (self.String != null)
-                return self.String;
+            self.Materialize();
+            return self.String;
+        }
 
-            var charCount = self.Context.Encoding.GetCharCount(self.Buffer, self.Size);
+        //materialize the lazy string for cases when we need to use it out of context
+        //(where the allocated buffers become invalid/not available)
+        public void Materialize()
+        {
+            if (String != null)
+                return;
+
+            var charCount = Context.Encoding.GetCharCount(Buffer, Size);
             var str = new string(' ', charCount);
             fixed (char* pStr = str)
             {
-                self.Context.Encoding.GetChars(self.Buffer, self.Size, pStr, charCount);
-                self.String = str;
-                return str;
+                Context.Encoding.GetChars(Buffer, Size, pStr, charCount);
+                String = str;
             }
         }
 
