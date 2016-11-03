@@ -9,13 +9,9 @@ using System.Globalization;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
-using Raven.Abstractions.Logging;
-using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -26,16 +22,12 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                // this flag can be used to detect if server was restarted between changes connections on client side
-                var sendStartTime = GetBoolValueQueryString("sendServerStartTime", false).GetValueOrDefault(false);
-
-                //TODO: select small context size (maybe pool just for them?)
                 JsonOperationContext context;
                 using (ContextPool.AllocateOperationContext(out context))
                 {
                     try
                     {
-                        await HandleConnection(webSocket, context, sendStartTime);
+                        await HandleConnection(webSocket, context);
                     }
                     catch (OperationCanceledException)
                     {
@@ -95,11 +87,15 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        private async Task HandleConnection(WebSocket webSocket, JsonOperationContext context, bool sendStartTime)
+        private async Task HandleConnection(WebSocket webSocket, JsonOperationContext context)
         {
+            // this flag can be used to detect if server was restarted between changes connections on client side
+            var sendStartTime = GetBoolValueQueryString("sendServerStartTime", false).GetValueOrDefault(false);
+            var throttleNotifications = GetBoolValueQueryString("throttleNotifications", false).GetValueOrDefault(false);
+
             var connection = new NotificationsClientConnection(webSocket, Database);
             Database.Notifications.Connect(connection);
-            var sendTask = connection.StartSendingNotifications(sendStartTime);
+            var sendTask = connection.StartSendingNotifications(sendStartTime, throttleNotifications);
             var debugTag = "changes/" + connection.Id;
             JsonOperationContext.ManagedPinnedBuffer segment1,segment2;
             using (context.GetManagedBuffer(out segment1))

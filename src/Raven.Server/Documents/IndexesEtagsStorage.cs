@@ -157,7 +157,7 @@ namespace Raven.Server.Documents
                 {
                     if (taken++ >= take)
                         break;
-                    var metadata = TableValueToMetadata(tvr, context, false, false);
+                    var metadata = TableValueToMetadata(tvr, context, false);
                     if(metadata.Id == -1)
                         idsToDelete.Add(tvr.Id);
                 }

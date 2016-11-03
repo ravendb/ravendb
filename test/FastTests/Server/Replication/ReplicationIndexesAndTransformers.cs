@@ -155,12 +155,12 @@ namespace FastTests.Server.Replication
                 var metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByAge.IndexName, returnNullIfTombstone: false);
                 Assert.NotNull(metadata);
                 Assert.Equal(-1,metadata.Id);
-                Assert.Equal(userByAge.IndexName.ToLower(),metadata.Name.String);
+                Assert.Equal(userByAge.IndexName.ToLower(),metadata.Name);
 
                 metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByName.IndexName, returnNullIfTombstone: false);
                 Assert.NotNull(metadata);
                 Assert.Equal(-1, metadata.Id);
-                Assert.Equal(userByName.IndexName.ToLower(), metadata.Name.String);
+                Assert.Equal(userByName.IndexName.ToLower(), metadata.Name);
 
             }
         }
