@@ -15,6 +15,7 @@ import database = require("models/resources/database");
 import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
 
 class etl extends viewModelBase {
+    /*TODO
 
     replicationEnabled = ko.observable<boolean>(false);
 
@@ -226,7 +227,7 @@ class etl extends viewModelBase {
                     this.collections(results.collections);
                 });
             });
-    }
+    }*/
 
 }
 
