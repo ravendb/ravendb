@@ -42,7 +42,7 @@
 
 </head>
 
-<body>
+<body class="hasalert">
     <div class="processing-spinner"></div>
  <nav id="topbar" class="navbar navbar-inverse navbar-fixed-top" >
     <div class="container-fluid">
@@ -1970,7 +1970,7 @@
                 </div>
             </section>
 
-            <h2>badges</h2>
+            <h2>Badges</h2>
             <section div class="panel">
                 <div class="panel-body">
                     <a href="#">Inbox <span class="badge">42</span></a>
@@ -1986,6 +1986,65 @@
                 </div>
             </section>
 
+            <h2>Under development</h2>
+            <section div class="panel">
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+                            <i class="icon-xl icon-hammer-driver"></i>
+                            <h2 class="text-center">This section is still undergoing development.</h2>
+                            <p class="lead text-center text-muted">Please be patient while we add new features to upcoming RavenDB 4.0</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3 bg-prerelease">
+                            <i class="icon-xl icon-hammer-driver"></i>
+                            <h2 class="text-center">This section is still undergoing development.</h2>
+                            <p class="lead text-center">Please be patient while we add new features to upcoming RavenDB 4.0</p>
+                        </div>
+                    </div>
+<p></p>
+                    <div class="bg-prerelease padding">
+                        <i class="icon-hammer-driver pull-left"></i>
+                            <p>
+                            This section is still undergoing development.<br/>
+                            <small>Some features might not work. Please be patient while we add new features to upcoming RavenDB 4.0</small>
+                            </p>
+                    </div>
+                    <div class="padding">
+                        <div class="dropdown">
+                          <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                            Dropdown
+                            <span class="caret"></span>
+                          </button>
+                          <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                            <li><a href="#">Action</a></li>
+                            <li><a href="#" class="btn-prerelease">Another action</a></li>
+                            <li><a href="#">Something else here</a></li>
+                            <li role="separator" class="divider"></li>
+                            <li><a href="#">Separated link</a></li>
+                          </ul>
+                        </div>
+                    </div>
+
+                    <div class="text-center padding">
+                        <button class="btn btn-primary btn-prerelease" type="button"><i class="icon-database"></i><span>Primary</span></button>
+                        <button class="btn btn-success btn-prerelease" type="button"><i class="icon-database"></i><span>Success</span></button>
+                        <button class="btn btn-info btn-prerelease" type="button"><i class="icon-database"></i><span>Info</span></button>
+                        <button class="btn btn-warning btn-prerelease" type="button"><i class="icon-database"></i><span>Warning</span></button>
+                        <button class="btn btn-danger btn-prerelease" type="button"><i class="icon-database"></i><span>Danger</span></button>
+                    </div>
+                    <div class="text-center padding">
+                        <button class="btn btn-primary btn-prerelease" disabled type="button"><i class="icon-database"></i><span>Primary</span></button>
+                        <button class="btn btn-success btn-prerelease" disabled type="button"><i class="icon-database"></i><span>Success</span></button>
+                        <button class="btn btn-info btn-prerelease" disabled type="button"><i class="icon-database"></i><span>Info</span></button>
+                        <button class="btn btn-warning btn-prerelease" disabled type="button"><i class="icon-database"></i><span>Warning</span></button>
+                        <button class="btn btn-danger btn-prerelease" disabled type="button"><i class="icon-database"></i><span>Danger</span></button>
+                    </div>
+                </div>
+
+
+            </section>
 
             </div>
         </div>
@@ -2404,6 +2463,8 @@
             editor.getSession().setMode("ace/mode/json");
         
         </script>
-
+<div class="prerelease-alert bg-prerelease"><i class="icon-hammer-driver pull-left"></i>
+    <p>CAUTION: This is a pre-release version of RavenDB 4.0<br/>
+    <small>it is not intended for business use.</small></p></div>
 </body>
 </html>
