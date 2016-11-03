@@ -181,11 +181,12 @@ namespace Raven.Server.Documents.Transformers
                 throw new InvalidOperationException("There is no transformer with id: " + id);
 
             transformer.Delete();
-
+            var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnTransformerDeleted(transformer);
             _documentDatabase.Notifications.RaiseNotifications(new TransformerChangeNotification
             {
                 Name = transformer.Name,
-                Type = TransformerChangeTypes.TransformerRemoved
+                Type = TransformerChangeTypes.TransformerRemoved,
+                Etag = tombstoneEtag
             });
         }
 
@@ -195,8 +196,13 @@ namespace Raven.Server.Documents.Transformers
             Debug.Assert(transformerId > 0);
 
             _transformers.Add(transformer);
-
-            _documentDatabase.Notifications.RaiseNotifications(new TransformerChangeNotification { Name = transformer.Name, Type = TransformerChangeTypes.TransformerAdded });
+            var etag = _documentDatabase.IndexMetadataPersistence.OnTransformerCreated(transformer);
+            _documentDatabase.Notifications.RaiseNotifications(new TransformerChangeNotification
+            {
+                Name = transformer.Name,
+                Type = TransformerChangeTypes.TransformerAdded,
+                Etag = etag
+            });
 
             return transformerId;
         }

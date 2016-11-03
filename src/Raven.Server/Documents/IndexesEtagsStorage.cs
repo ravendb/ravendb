@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
@@ -33,7 +34,7 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, "MetadataIdAndEtagIndexName", out MetadataIdAndEtagIndexName);
 
             // Table schema is:
-            //  - index id - int (-1 if null)
+            //  - index id - int (-1 if tombstone)
             //  - etag - long
             //  - name - string, lowercase
             //  - type - enum (index / transformer)
@@ -84,6 +85,16 @@ namespace Raven.Server.Documents
             return WriteEntry(index.Name, IndexEntryType.Index, -1);
         }
 
+        public long OnTransformerCreated(Transformer transformer)
+        {
+            return WriteEntry(transformer.Name, IndexEntryType.Transformer, transformer.TransformerId);
+        }
+
+        public long OnTransformerDeleted(Transformer transformer)
+        {
+            return WriteEntry(transformer.Name, IndexEntryType.Transformer, -1);
+        }
+
         private long WriteEntry(string indexName, IndexEntryType type, int indexIndexId)
         {
             TransactionOperationContext context;
@@ -95,7 +106,7 @@ namespace Raven.Server.Documents
                 var lastEtag = ReadLastEtag(table);
                 var newEtag = lastEtag + 1;
 
-                var changeVectorForWrite = ReplicationUtil.GetChangeVectorForWrite(existing?.ChangeVector, _environment.DbId, newEtag);
+                var changeVectorForWrite = ReplicationUtils.GetChangeVectorForWrite(existing?.ChangeVector, _environment.DbId, newEtag);
 
                 Slice indexNameAsSlice;
                 using (DocumentsStorage.GetSliceFromKey(context, indexName, out indexNameAsSlice))
@@ -180,7 +191,7 @@ namespace Raven.Server.Documents
             ChangeVectorEntry[] changeVectorForWrite)
         {
             var globalChangeVectorTree = tx.ReadTree(SchemaNameConstants.GlobalChangeVectorTree);
-            var globalChangeVector = ReplicationUtil.ReadChangeVectorFrom(globalChangeVectorTree);
+            var globalChangeVector = ReplicationUtils.ReadChangeVectorFrom(globalChangeVectorTree);
 
             // merge metadata change vector into global change vector
             // --> if we have any entry in global vector smaller than in metadata vector,
@@ -214,10 +225,7 @@ namespace Raven.Server.Documents
             using (DocumentsStorage.GetSliceFromKey(context, name, out nameAsSlice))
                 tvr = table.ReadByKey(nameAsSlice);
 
-            if (tvr == null)
-                return null;
-
-            return TableValueToMetadata(tvr, context);
+            return tvr == null ? null : TableValueToMetadata(tvr, context);
         }
 
         private IndexEntryMetadata TableValueToMetadata(TableValueReader tvr, JsonOperationContext context)
@@ -227,7 +235,7 @@ namespace Raven.Server.Documents
             int size;
             metadata.Id = Bits.SwapBytes(*(int*)tvr.Read((int)MetadataFields.Id, out size));
             metadata.Name = new LazyStringValue(null, tvr.Read((int)MetadataFields.Name, out size), size, context);
-            metadata.ChangeVector = ReplicationUtil.GetChangeVectorEntriesFromTableValueReader(tvr, (int)MetadataFields.ChangeVector);
+            metadata.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(tvr, (int)MetadataFields.ChangeVector);
             metadata.Type = (IndexEntryType) (*tvr.Read((int) MetadataFields.Type, out size));
             metadata.Etag = Bits.SwapBytes(*(long*)tvr.Read((int)MetadataFields.Etag, out size));
 
@@ -237,7 +245,6 @@ namespace Raven.Server.Documents
 
         //since both transformers and indexes need to store the same information,
         //this can be used for both
-
         private long ReadLastEtag(Table table)
         {
             //assuming an active transaction

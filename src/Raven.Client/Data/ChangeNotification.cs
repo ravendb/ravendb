@@ -150,6 +150,8 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public string Name { get; set; }
 
+        public long Etag { get; set; }
+
         public override string ToString()
         {
             return string.Format("{0} on {1}", Type, Name);
