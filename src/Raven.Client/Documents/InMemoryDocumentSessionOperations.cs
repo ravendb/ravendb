@@ -1069,38 +1069,60 @@ more responsive application.
             return ReferenceEquals(obj, this);
         }
 
-        //TODO
-       /* internal void HandleInternalMetadata(RavenJObject result)
+        internal void HandleInternalMetadata(BlittableJsonReaderObject result)
         {
-            // Implant a property with "id" value ... if not exists
-            var metadata = result.Value<RavenJObject>("@metadata");
-            if (metadata == null || string.IsNullOrEmpty(metadata.Value<string>("@id")))
+            // Implant a property with "id" value ... if it doesn't exist
+            BlittableJsonReaderObject metadata;
+            string id;
+            if (result.TryGet(Constants.Metadata.Key, out metadata) == false ||
+                metadata.TryGet(Constants.Metadata.Id, out id) == false)
             {
-                // if the item has metadata, then nested items will not have it, so we can skip recursing down
-                foreach (var nested in result.Select(property => property.Value))
+                // if the item doesn't have meta data, then nested items might have, so we need to check them
+                var propDetail = new BlittableJsonReaderObject.PropertyDetails();
+                for (int index = 0; index < result.Count; index++)
                 {
-                    var jObject = nested as RavenJObject;
-                    if (jObject != null)
-                        HandleInternalMetadata(jObject);
-                    var jArray = nested as RavenJArray;
-                    if (jArray == null)
-                        continue;
-                    foreach (var item in jArray.OfType<RavenJObject>())
+                    result.GetPropertyByIndex(index, ref propDetail, addObjectToCache: true);
+                    var jsonObj = propDetail.Value as BlittableJsonReaderObject;
+                    if (jsonObj != null)
                     {
-                        HandleInternalMetadata(item);
+                        HandleInternalMetadata(jsonObj);
+                        continue;
+                    }
+
+                    var jsonArray = propDetail.Value as BlittableJsonReaderArray;
+                    if (jsonArray != null)
+                    {
+                        HandleInternalMetadata(jsonArray);
                     }
                 }
                 return;
             }
 
-            var entityName = metadata.Value<string>(Constants.Headers.RavenEntityName);
+            string entityName;
+            if (metadata.TryGet(Constants.Headers.RavenEntityName, out entityName) == false)
+                return ;
 
             var idPropName = Conventions.FindIdentityPropertyNameFromEntityName(entityName);
-            if (result.ContainsKey(idPropName))
-                return;
 
-            result[idPropName] = new RavenJValue(metadata.Value<string>("@id"));
-        }*/
+            result.Modifications = new DynamicJsonValue
+            {
+                [idPropName] = id // this is being read by BlittableJsonReader for additional properties on the object
+            };
+        }
+
+        internal void HandleInternalMetadata(BlittableJsonReaderArray values)
+        {
+            foreach (var nested in values)
+            {
+                var bObject = nested as BlittableJsonReaderObject;
+                if (bObject != null)
+                    HandleInternalMetadata(bObject);
+                var bArray = nested as BlittableJsonReaderArray;
+                if (bArray == null)
+                    continue;
+                HandleInternalMetadata(bArray);
+            }
+        }
 
         public string CreateDynamicIndexName<T>()
         {

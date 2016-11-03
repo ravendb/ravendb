@@ -16,12 +16,19 @@ namespace FastTests.NewClient.ResultsTransformer
             public string Id { get; set; }
             public string Name { get; set; }
         }
+
+        public class ProductWithoutId
+        {
+            public string Name { get; set; }
+        }
+
         public class Order
         {
             public string Id { get; set; }
             public string CustomerId { get; set; }
             public string[] ProductIds { get; set; }
         }
+
         public class Customer
         {
             public string Id { get; set; }
@@ -50,6 +57,25 @@ namespace FastTests.NewClient.ResultsTransformer
                                              };
             }
         }
+
+        public class OrderWithFullProductMultipleReturns : AbstractTransformerCreationTask<Order>
+        {
+            public class Result
+            {
+                public Product FullProduct { get; set; }
+            }
+            public OrderWithFullProductMultipleReturns()
+            {
+                TransformResults = orders => from doc in orders
+                                             from productid in doc.ProductIds
+                                             let product = LoadDocument<Product>(productid)
+                                             select new
+                                             {
+                                                 FullProduct = product
+                                             };
+            }
+        }
+
         public class OrderWithProductInformation : AbstractTransformerCreationTask<Order>
         {
             public class Result
@@ -100,6 +126,15 @@ namespace FastTests.NewClient.ResultsTransformer
         }
 
         [Fact]
+        public void CanUseResultsTransformerOnLoadWithMultipleReturnsFullDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                PerformLoadingTestArrayWithFullDocument(store);
+            }
+        }
+
+        [Fact]
         public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithSingleException()
         {
             using (var store = GetDocumentStore())
@@ -143,6 +178,33 @@ namespace FastTests.NewClient.ResultsTransformer
             {
                 var products = session.Load<OrderWithProductInformationMultipleReturns, OrderWithProductInformationMultipleReturns.Result>("orders/1");
             }
+        }
+
+        private void PerformLoadingTestArrayWithFullDocument(DocumentStore store)
+        {
+            new OrderWithFullProductMultipleReturns().Execute(store);
+
+            using (var session = store.OpenNewSession())
+            {
+                session.Store(new ProductWithoutId() { Name = "Milk" }, "products/milk");
+                session.Store(new ProductWithoutId() { Name = "Bear" }, "products/bear");
+
+                session.Store(new Order
+                {
+                    Id = "orders/1",
+                    CustomerId = "customers/ayende",
+                    ProductIds = new[] { "products/milk", "products/bear" }
+                });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenNewSession())
+            {
+                var products = session.Load<OrderWithFullProductMultipleReturns, OrderWithFullProductMultipleReturns.Result[]>("orders/1");
+                Assert.Equal(products[0].FullProduct.Id, "products/milk");
+                Assert.Equal(products[1].FullProduct.Id, "products/bear");
+            }
+
         }
 
         private void PerformLoadingTestArray(DocumentStore store)
