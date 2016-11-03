@@ -3,21 +3,17 @@ import collection = require("models/database/documents/collection");
 
 class replicationDestination {
 
-    url = ko.observable<string>().extend({ required: true });
-    username = ko.observable<string>().extend({ required: true });
-    password = ko.observable<string>().extend({ required: true });
-    domain = ko.observable<string>().extend({ required: true });
-    apiKey = ko.observable<string>().extend({ required: true });
-    database = ko.observable<string>().extend({ required: true });
-    transitiveReplicationBehavior = ko.observable<string>().extend({ required: true });
-    ignoredClient = ko.observable<boolean>().extend({ required: true });
-    disabled = ko.observable<boolean>().extend({ required: true });
-    clientVisibleUrl = ko.observable<string>().extend({ required: true });
-    skipIndexReplication = ko.observable<boolean>().extend({ required: true });
-    hasGlobal = ko.observable<boolean>(false);
-    hasLocal = ko.observable<boolean>(true);
-
-    globalConfiguration = ko.observable<replicationDestination>();
+    url = ko.observable<string>();
+    username = ko.observable<string>();
+    password = ko.observable<string>();
+    domain = ko.observable<string>();
+    apiKey = ko.observable<string>();
+    database = ko.observable<string>();
+    transitiveReplicationBehavior = ko.observable<string>();
+    ignoredClient = ko.observable<boolean>();
+    disabled = ko.observable<boolean>();
+    clientVisibleUrl = ko.observable<string>();
+    skipIndexReplication = ko.observable<boolean>();
 
     specifiedCollections = ko.observableArray<replicationPatchScript>().extend({ required: false });
     withScripts = ko.observableArray<string>([]);
@@ -35,8 +31,6 @@ class replicationDestination {
             || "[empty]";
     });
     isValid = ko.computed(() => this.url() != null && this.url().length > 0);
-
-    canEdit = ko.computed(() => this.hasLocal());
 
 
     // data members for the ui
@@ -85,7 +79,7 @@ class replicationDestination {
         $(event.target).next().toggle();
     }
 
-    constructor(dto: replicationDestinationDto) {
+    constructor(dto: Raven.Abstractions.Replication.ReplicationDestination) {
         this.url(dto.Url);
         this.username(dto.Username);
         this.password(dto.Password);
@@ -110,8 +104,6 @@ class replicationDestination {
 
         this.skipIndexReplication.subscribe(() => ko.postbox.publish('skip-index-replication'));
 
-        this.hasGlobal(dto.HasGlobal);
-        this.hasLocal(dto.HasLocal);
     }
 
     mapSpecifiedCollections(input: dictionary<string>) {
@@ -135,12 +127,12 @@ class replicationDestination {
         return result;
     }
 
-    public isSelected(col: collection) {
+    isSelected(col: collection) {
         var cols = this.specifiedCollections();
         return !!cols.first(c => c.collection() === col.name);
     }
 
-    public hasScript(col: collection) {
+    hasScript(col: collection) {
         var cols = this.specifiedCollections();
         var item = cols.first(c => c.collection() === col.name);
         if (!item) {
@@ -160,16 +152,15 @@ class replicationDestination {
             Password: null,
             Domain: null,
             ApiKey: null,
+            
             Database: databaseName,
-            TransitiveReplicationBehavior: "Replicate",
+            TransitiveReplicationBehavior: "Replicate" as Raven.Abstractions.Replication.TransitiveReplicationOptions,
             IgnoredClient: false,
             Disabled: false,
             ClientVisibleUrl: null,
             SkipIndexReplication: false,
-            SpecifiedCollections: {},
-            HasGlobal: false,
-            HasLocal: true
-        });
+            SpecifiedCollections: {} as { [key: string]: string; }
+        } as Raven.Abstractions.Replication.ReplicationDestination);
     }
 
     enable() {
@@ -188,7 +179,7 @@ class replicationDestination {
         this.ignoredClient(true);
     }
 
-    toDto(): replicationDestinationDto {
+    toDto(): Raven.Abstractions.Replication.ReplicationDestination {
         return {
             Url: this.prepareUrl(),
             Username: this.username(),
@@ -201,8 +192,8 @@ class replicationDestination {
             Disabled: this.disabled(),
             ClientVisibleUrl: this.clientVisibleUrl(),
             SkipIndexReplication: this.skipIndexReplication(),
-            SpecifiedCollections: this.enableReplicateOnlyFromCollections() ? this.specifiedCollectionsToMap() : {}
-        };
+            SpecifiedCollections: this.enableReplicateOnlyFromCollections() ? this.specifiedCollectionsToMap() : null
+        } as Raven.Abstractions.Replication.ReplicationDestination;
     }
 
     specifiedCollectionsToMap(): dictionary<string> {
@@ -227,31 +218,6 @@ class replicationDestination {
         return url;
     }
 
-    copyFromGlobal() {
-        if (this.globalConfiguration()) {
-            var gConfig = this.globalConfiguration();
-            this.url(gConfig.url());
-            this.username(gConfig.username());
-            this.password(gConfig.password());
-            this.domain(gConfig.domain());
-            this.apiKey(gConfig.apiKey());
-            this.database(gConfig.database());
-            this.transitiveReplicationBehavior(gConfig.transitiveReplicationBehavior());
-            this.ignoredClient(gConfig.ignoredClient());
-            this.disabled(gConfig.disabled());
-            this.clientVisibleUrl(gConfig.clientVisibleUrl());
-            this.skipIndexReplication(gConfig.skipIndexReplication());
-            this.hasGlobal(true);
-            this.hasLocal(false);
-            this.isUserCredentials(gConfig.isUserCredentials());
-            this.isApiKeyCredentials(gConfig.isApiKeyCredentials());
-
-            this.specifiedCollections([]);
-            this.withScripts([]);
-            this.enableReplicateOnlyFromCollections(false);
-        }
-    }
-     
     addNewCollection() {
         this.specifiedCollections.push(replicationPatchScript.empty());
     }

@@ -4,6 +4,7 @@ using System.IO;
 using Raven.Client.Data;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Replication;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Client.Smuggler;
@@ -93,6 +94,10 @@ namespace TypingsGenerator
 
             // smuggler
             scripter.AddType(typeof(DatabaseSmugglerOptions));
+
+
+            // replication 
+            scripter.AddType(typeof(ReplicationDocument<>));
 
             return scripter;
         }
