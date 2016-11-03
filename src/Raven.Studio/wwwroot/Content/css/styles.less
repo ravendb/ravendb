@@ -53,7 +53,7 @@ body {
         .loading-overlay {
             opacity: 1;
 
-            &:before {
+            .loading-info{
                 opacity: 1;
                 -moz-transform: translateX(-50%) translateY(-50%) scale(1);
                 -webkit-transform: translateX(-50%) translateY(-50%) scale(1);
@@ -585,13 +585,13 @@ input[type=file] + .form-control {
     background-position: center;
     background-size: cover;
 
-    &:before {
+    .loading-info {
         content: '';
         display: block;
         position: absolute;
         width: 250px;
         max-width: 60%;
-        height: 100px;
+        padding-top:60px;
         top: 50%;
         left: 50%;
         opacity: 0;
@@ -602,7 +602,7 @@ input[type=file] + .form-control {
         transform: translateX(-50%) translateY(-50%) scale(1.4);
         background-image: url('../img/ravendb_logo.png');
         background-image: url('../img/ravendb_logo.svg'),none;
-        background-position: center;
+        background-position: top center;;
         background-repeat: no-repeat;
         background-size: contain;
         -webkit-transition: all 0.3s cubic-bezier(0.70,-0.40, 0.40, 0.50);
@@ -610,6 +610,10 @@ input[type=file] + .form-control {
         -ms-transition: all 0.3s cubic-bezier(0.70,-0.40, 0.40, 0.50);
         -o-transition: all 0.3s cubic-bezier(0.70,-0.40, 0.40, 0.50);
         transition: all 0.3s cubic-bezier(0.70,-0.40, 0.40, 0.50);
+
+        span {
+            font-size: 22px;
+        }
     }
 }
 

@@ -9403,7 +9403,7 @@ button.close {
   font-weight: bold;
   background-image: repeating-linear-gradient(-45deg, #ffe066, #ffe066 3px, #ffd633 3px, #ffd633 6px);
 }
-.bg-prerelease i {
+.bg-prerelease .icon-hammer-driver {
   font-size: 40px;
 }
 .bg-prerelease p:not(.lead) {
@@ -9451,6 +9451,28 @@ button.close {
   margin: 0;
   text-align: center;
 }
+.search-prerelease {
+  background-color: rgba(185, 133, 37, 0.4);
+  color: #ffe066;
+  background-image: repeating-linear-gradient(-45deg, rgba(44, 51, 51, 0.25), rgba(44, 51, 51, 0.25) 3px, rgba(255, 255, 255, 0) 3px, rgba(255, 255, 255, 0) 6px);
+  position: absolute;
+  left: 15px;
+  right: 51%;
+  top: 2px;
+  height: 36px;
+  padding: 5px 10px;
+  color: #e9eaea;
+}
+.search-prerelease a {
+  color: #FFF;
+}
+.search-prerelease a:hover,
+.search-prerelease a:focus {
+  text-decoration: underline !important;
+}
+.search-prerelease .text-muted {
+  color: #a9adad;
+}
 /*
     Available animations (add "classname;" inside your class)
     .bouncein-style
@@ -9494,7 +9516,7 @@ body.loading-active {
 body.loading-active .loading-overlay {
   opacity: 1;
 }
-body.loading-active .loading-overlay:before {
+body.loading-active .loading-overlay .loading-info {
   opacity: 1;
   -moz-transform: translateX(-50%) translateY(-50%) scale(1);
   -webkit-transform: translateX(-50%) translateY(-50%) scale(1);
@@ -10080,13 +10102,13 @@ input[type=file] + .form-control {
   background-position: center;
   background-size: cover;
 }
-.loading-overlay:before {
+.loading-overlay .loading-info {
   content: '';
   display: block;
   position: absolute;
   width: 250px;
   max-width: 60%;
-  height: 100px;
+  padding-top: 60px;
   top: 50%;
   left: 50%;
   opacity: 0;
@@ -10097,7 +10119,7 @@ input[type=file] + .form-control {
   transform: translateX(-50%) translateY(-50%) scale(1.4);
   background-image: url('../img/ravendb_logo.png');
   background-image: url('../img/ravendb_logo.svg'), none;
-  background-position: center;
+  background-position: top center;
   background-repeat: no-repeat;
   background-size: contain;
   -webkit-transition: all 0.3s cubic-bezier(0.7, -0.4, 0.4, 0.5);
@@ -10105,6 +10127,9 @@ input[type=file] + .form-control {
   -ms-transition: all 0.3s cubic-bezier(0.7, -0.4, 0.4, 0.5);
   -o-transition: all 0.3s cubic-bezier(0.7, -0.4, 0.4, 0.5);
   transition: all 0.3s cubic-bezier(0.7, -0.4, 0.4, 0.5);
+}
+.loading-overlay .loading-info span {
+  font-size: 22px;
 }
 .limit-height {
   max-height: 250px;
