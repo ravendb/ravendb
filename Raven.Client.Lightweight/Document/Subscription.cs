@@ -222,7 +222,7 @@ namespace Raven.Client.Document
                                                                 }
 
                                                                 SubscriptionConnectionInterrupted(ex, false);
-                                                                taskCompletionSource.SetException(ex);
+                                                                taskCompletionSource.TrySetException(ex);
 
                                                                 break;
                                                             }
@@ -462,7 +462,7 @@ namespace Raven.Client.Document
                 startPullingTask = null; // prevent from calling Wait() on this in Dispose because we can be already inside this task
                 pullingTask = null; // prevent from calling Wait() on this in Dispose because we can be already inside this task
 
-                taskCompletionSource.SetException(ex);
+                taskCompletionSource.TrySetException(ex);
                 Dispose();
                 
 
@@ -583,7 +583,7 @@ namespace Raven.Client.Document
 
             if (taskCompletionSource.Task.IsCanceled == false && taskCompletionSource.Task.IsCompleted == false)
             {
-                taskCompletionSource.SetResult(true);
+                taskCompletionSource.TrySetResult(true);
             }
 
             subscribers.Clear();
