@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -14,6 +15,7 @@ namespace FastTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
+                store.OnBeforeStore += eventTest1;
                 using (var newSession = store.OpenNewSession())
                 {
                     newSession.Store(new User()
@@ -23,8 +25,7 @@ namespace FastTests.NewClient
                     } 
                     , "users/1");
 
-                    store.BeforeStoreEvent += eventTest1;
-                    newSession.DocumentStore.BeforeStoreEvent += eventTest2;
+                    newSession.OnBeforeStore += eventTest2;
 
                     Assert.Equal(newSession.WhatChanged().Count, 1);
                     newSession.SaveChanges();
@@ -40,19 +41,22 @@ namespace FastTests.NewClient
             }
         }
 
-        private void eventTest1(InMemoryDocumentSessionOperations session, string id, object entityInstance, IDictionary<string, string> metadata)
+       private void eventTest1(object sender, BeforeStoreEventArgs e)
         {
-            if (entityInstance is User)
+            var user = e.Entity as User;
+            if (user != null)
             {
-                ((User)entityInstance).Count = 1000;
+                user.Count = 1000;
             }
+            e.DocumentMetadata["Nice"] = "true";
         }
 
-        private void eventTest2(InMemoryDocumentSessionOperations session, string id, object entityInstance, IDictionary<string, string> metadata)
+        private void eventTest2(object sender, BeforeStoreEventArgs e)
         {
-            if (entityInstance is User)
+            var user = e.Entity as User;
+            if (user != null)
             {
-                ((User)entityInstance).LastName = "ravendb";
+                user.LastName = "ravendb";
             }
         }
 

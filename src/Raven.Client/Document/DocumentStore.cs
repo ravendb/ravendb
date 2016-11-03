@@ -322,6 +322,7 @@ namespace Raven.Client.Document
                 var requestExecuter = GetRequestExecuter(databaseName);
                 var session = new Documents.DocumentSession(databaseName, this, sessionId,
                     SetupCommands(DatabaseCommands, databaseName, options.Credentials, options), requestExecuter);
+                RegisterEvents(session);
                 // AfterSessionCreated(session);
                 return session;
             }
