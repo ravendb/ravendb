@@ -12,7 +12,7 @@ import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class globalConfigSqlReplication extends viewModelBase {
-
+    /* TODO
     developerLicense = globalConfig.developerLicense;
     canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
     htmlSelector ="#sqlReplicationConnectionsManagement";
@@ -154,7 +154,7 @@ class globalConfigSqlReplication extends viewModelBase {
                 this.activated(false);
                 this.syncChanges(true);
             });
-    }
+    }*/
 }
 
 export = globalConfigSqlReplication;

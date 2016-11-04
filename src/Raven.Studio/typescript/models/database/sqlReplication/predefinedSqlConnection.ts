@@ -3,44 +3,31 @@ import database = require("models/resources/database");
 import testSqlConnectionCommand = require("commands/database/sqlReplication/testSqlConnectionCommand");
 
 class predefinedSqlConnection {
-    name=ko.observable<string>();
+    name = ko.observable<string>();
     factoryName = ko.observable<string>();
     connectionString = ko.observable<string>();
     connectionTestState = ko.observable<string>(this.CONNECTION_STATE_STAND_BY);
-
-    hasGlobal = ko.observable<boolean>(false);
-    hasLocal = ko.observable<boolean>(true);
-
-    globalConfiguration = ko.observable<predefinedSqlConnection>();
-
-    canEdit = ko.computed(() => this.hasLocal());
 
     public CONNECTION_STATE_STAND_BY = "stand-by";
     public CONNECTION_STATE_CONNECTING = "connecting";
     public CONNECTION_STATE_CONNECTED = "connected";
 
-    constructor(dto: predefinedSqlConnectionDto) {
-        this.name(dto.Name);
+    constructor(name: string, dto: Raven.Server.Documents.SqlReplication.PredefinedSqlConnection) {
+        this.name(name);
         this.factoryName(dto.FactoryName);
         this.connectionString(dto.ConnectionString);
         this.connectionTestState = ko.observable<string>(this.CONNECTION_STATE_STAND_BY);
-        this.hasGlobal(dto.HasGlobal);
-        this.hasLocal(dto.HasLocal);
     }
 
     static empty(): predefinedSqlConnection {
-        return new predefinedSqlConnection({
-            Name:"",
+        return new predefinedSqlConnection("", {
             FactoryName: "",
-            ConnectionString: "",
-            HasGlobal: false,
-            HasLocal: true
+            ConnectionString: ""
         });
     }
 
-    toDto(): predefinedSqlConnectionDto {
+    toDto(): Raven.Server.Documents.SqlReplication.PredefinedSqlConnection {
         return {
-            Name:this.name(),
             FactoryName: this.factoryName(),
             ConnectionString: this.connectionString()
         }
@@ -61,19 +48,6 @@ class predefinedSqlConnection {
             always(() => setTimeout(this.connectionTestState, 500, this.CONNECTION_STATE_STAND_BY ));
     }
 
-    copyFromGlobal() {
-        if (this.globalConfiguration()) {
-            var gConfig = this.globalConfiguration();
-
-            this.name(gConfig.name());
-            this.factoryName(gConfig.factoryName());
-            this.connectionString(gConfig.connectionString());
-            this.connectionTestState(gConfig.connectionTestState());
-
-            this.hasGlobal(true);
-            this.hasLocal(false);
-        }
-    }
 }
 
 export =predefinedSqlConnection;

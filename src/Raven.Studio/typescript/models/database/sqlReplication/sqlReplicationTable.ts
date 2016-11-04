@@ -6,7 +6,7 @@ class sqlReplicationTable {
     documentKeyColumn = ko.observable<string>().extend({ required: true });
     insertOnly = ko.observable<boolean>(false);
 
-    constructor(dto: sqlReplicationTableDto) {
+    constructor(dto: Raven.Server.Documents.SqlReplication.SqlReplicationTable) {
         this.tableName(dto.TableName);
         this.documentKeyColumn(dto.DocumentKeyColumn);
         this.insertOnly(dto.InsertOnlyMode);
@@ -20,7 +20,7 @@ class sqlReplicationTable {
         });
     }
 
-    toDto(): sqlReplicationTableDto {
+    toDto(): Raven.Server.Documents.SqlReplication.SqlReplicationTable {
         return {
             TableName: this.tableName(),
             DocumentKeyColumn: this.documentKeyColumn(),
