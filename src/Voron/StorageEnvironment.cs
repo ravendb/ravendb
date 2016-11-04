@@ -765,6 +765,12 @@ namespace Voron
             Volatile.Write(ref _otherThreadsShouldWaitBeforeGettingWriteTxLock, -1);
         }
 
+        public void Cleanup()
+        {
+            Journal.Cleanup();
+            ScratchBufferPool.Cleanup();
+        }
+
         public override string ToString()
         {
             return Options.ToString();

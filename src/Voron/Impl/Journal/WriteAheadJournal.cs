@@ -21,7 +21,6 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Util;
 using Voron.Global;
-using Voron.Platform.Win32;
 
 namespace Voron.Impl.Journal
 {
@@ -54,6 +53,8 @@ namespace Voron.Impl.Journal
         private List<JournalSnapshot> _snapshotCache;
         public bool HasDataInLazyTxBuffer() => _lazyTransactionBuffer?.HasDataInBuffer() ?? false;
 
+        private readonly object _writeLock = new object();
+
         public WriteAheadJournal(StorageEnvironment env)
         {
             _env = env;
@@ -70,7 +71,7 @@ namespace Voron.Impl.Journal
                 header->IncrementalBackup.LastCreatedJournal = _journalIndex;
             };
 
-            _compressionPager = _env.Options.CreateScratchPager($"compression.{_compressionPagerCounter++:D10}.buffers", env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
+            _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
             _journalApplicator = new JournalApplicator(this);
         }
 
@@ -1030,46 +1031,48 @@ namespace Voron.Impl.Journal
 
         public int WriteToJournal(LowLevelTransaction tx, int pageCount)
         {
-            var pages = PrepreToWriteToJournal(tx, _compressionPager, pageCount);
-
-            if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
+            lock (_writeLock)
             {
-                _lazyTransactionBuffer = new LazyTransactionBuffer(_env.Options);
-            }
+                var pages = PrepreToWriteToJournal(tx, _compressionPager, pageCount);
 
-            if (CurrentFile == null || CurrentFile.AvailablePages < pages.NumberOfPages)
-            {
-                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
-                CurrentFile = NextFile(pages.NumberOfPages);
-            }
-
-            CurrentFile.Write(tx, pages, _lazyTransactionBuffer, pageCount);
-
-            if (CurrentFile.AvailablePages == 0)
-            {
-                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
-                CurrentFile = null;
-            }
-
-            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * _compressionPager.PageSize;
-            if (compressionBufferSize > _env.Options.MaxScratchBufferSize)
-            {
-                // the compression pager is too large, we probably had a big transaction and now can
-                // free all of that and come back to more reasonable values.
-                if (_logger.IsOperationsEnabled)
+                if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
                 {
-                    _logger.Operations(
-                        $"Compression buffer: {_compressionPager} has reached size {compressionBufferSize / 1024:#,#} kb which is more than the limit " +
-                        $"of {_env.Options.MaxScratchBufferSize / 1024:#,#} kb. Will trim it no to the max size allowed. If this is happen on a regular basis," +
-                        " consider raising the limt (MaxScratchBufferSize option control it), since it can cause performance issues");
+                    _lazyTransactionBuffer = new LazyTransactionBuffer(_env.Options);
                 }
 
-                _compressionPager.Dispose();
-                _compressionPager = _env.Options.CreateScratchPager($"compression.{_compressionPagerCounter++:D10}.buffers", _env.Options.MaxScratchBufferSize);
+                if (CurrentFile == null || CurrentFile.AvailablePages < pages.NumberOfPages)
+                {
+                    _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
+                    CurrentFile = NextFile(pages.NumberOfPages);
+                }
 
+                CurrentFile.Write(tx, pages, _lazyTransactionBuffer, pageCount);
+
+                if (CurrentFile.AvailablePages == 0)
+                {
+                    _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
+                    CurrentFile = null;
+                }
+
+                var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * _compressionPager.PageSize;
+                if (compressionBufferSize > _env.Options.MaxScratchBufferSize)
+                {
+                    // the compression pager is too large, we probably had a big transaction and now can
+                    // free all of that and come back to more reasonable values.
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        _logger.Operations(
+                            $"Compression buffer: {_compressionPager} has reached size {compressionBufferSize / 1024:#,#} kb which is more than the limit " +
+                            $"of {_env.Options.MaxScratchBufferSize / 1024:#,#} kb. Will trim it no to the max size allowed. If this is happen on a regular basis," +
+                            " consider raising the limt (MaxScratchBufferSize option control it), since it can cause performance issues");
+                    }
+
+                    _compressionPager.Dispose();
+                    _compressionPager = CreateCompressionPager(_env.Options.MaxScratchBufferSize);
+                }
+
+                return pages.NumberOfPages;
             }
-
-            return pages.NumberOfPages;
         }
 
         private CompressedPagesResult PrepreToWriteToJournal(LowLevelTransaction tx, AbstractPager compressionPager, int pageCountIncludingAllOverflowPages)
@@ -1179,8 +1182,30 @@ namespace Voron.Impl.Journal
             CurrentFile?.JournalWriter.Truncate(pageSize * CurrentFile.WritePagePosition);
             CurrentFile = null;
         }
-    }
 
+        private AbstractPager CreateCompressionPager(long initialSize)
+        {
+            return _env.Options.CreateScratchPager($"compression.{_compressionPagerCounter++:D10}.buffers", initialSize);
+        }
+
+        public void Cleanup()
+        {
+            const int bufferSizeLimitBeforeCleanup = 32 * 1024 * 1024;
+            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * _compressionPager.PageSize;
+            if (compressionBufferSize <= bufferSizeLimitBeforeCleanup)
+                return;
+
+            lock (_writeLock)
+            {
+                compressionBufferSize = _compressionPager.NumberOfAllocatedPages * _compressionPager.PageSize;
+                if (compressionBufferSize <= bufferSizeLimitBeforeCleanup)
+                    return;
+
+                _compressionPager.Dispose();
+                _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
+            }
+        }
+    }
 
     public unsafe struct CompressedPagesResult
     {
