@@ -120,7 +120,7 @@ namespace Voron
 
             PageSize = Constants.Storage.PageSize;
 
-            ShouldUseKeyPrefix = name => false;            
+            ShouldUseKeyPrefix = name => false;
 
             MaxLogFileSize = 256 * Constants.Size.Megabyte;
 
@@ -143,7 +143,7 @@ namespace Voron
         public int ScratchBufferOverflowTimeout { get; set; }
 
 
-        public static StorageEnvironmentOptions CreateMemoryOnly(string name = null,string configTempPath = null)
+        public static StorageEnvironmentOptions CreateMemoryOnly(string name = null, string configTempPath = null)
         {
             if (configTempPath == null)
                 configTempPath = Path.GetTempPath();
@@ -303,6 +303,14 @@ namespace Voron
                     Win32Helper.WriteFileHeader(header, path);
             }
 
+            public override void DeleteAllTempBuffers()
+            {
+                if (Directory.Exists(TempPath) == false)
+                    return;
+
+                foreach (var file in Directory.GetFiles(TempPath, "*.buffers"))
+                    File.Delete(file);
+            }
 
             public override AbstractPager CreateScratchPager(string name, long initialSize)
             {
@@ -340,7 +348,7 @@ namespace Voron
             private readonly string _name;
             private static int _counter;
 
-            private readonly Lazy<AbstractPager> _dataPager;            
+            private readonly Lazy<AbstractPager> _dataPager;
 
             private readonly Dictionary<string, IJournalWriter> _logs =
                 new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
@@ -415,7 +423,7 @@ namespace Voron
                 return true;
             }
 
-            public unsafe override bool ReadHeader(string filename, FileHeader* header)
+            public override unsafe bool ReadHeader(string filename, FileHeader* header)
             {
                 if (Disposed)
                     throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
@@ -440,6 +448,11 @@ namespace Voron
                     _headers[filename] = ptr;
                 }
                 Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
+            }
+
+            public override void DeleteAllTempBuffers()
+            {
+                //no-op
             }
 
             public override AbstractPager CreateScratchPager(string name, long intialSize)
@@ -490,9 +503,11 @@ namespace Voron
 
         public abstract bool TryDeleteJournal(long number);
 
-        public unsafe abstract bool ReadHeader(string filename, FileHeader* header);
+        public abstract unsafe bool ReadHeader(string filename, FileHeader* header);
 
-        public unsafe abstract void WriteHeader(string filename, FileHeader* header);
+        public abstract unsafe void WriteHeader(string filename, FileHeader* header);
+
+        public abstract void DeleteAllTempBuffers();
 
         public abstract AbstractPager CreateScratchPager(string name, long initialSize);
 
