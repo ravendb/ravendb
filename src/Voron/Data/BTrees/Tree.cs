@@ -28,7 +28,6 @@ namespace Voron.Data.BTrees
         private readonly RecentlyFoundTreePages _recentlyFoundPages;
         private PageLocator _pageLocator;
         private readonly bool _isPageLocatorOwned;
-        private LZ4 _lz4;
 
         public Slice Name { get; set; }
 
@@ -475,7 +474,7 @@ namespace Voron.Data.BTrees
             return SearchForPage(key, out cursor, out node);
         }
 
-        private TreePage SearchForPage(Slice key, bool canDecompress, out TreeNodeHeader* node)
+        private TreePage SearchForPage(Slice key, bool shouldDecompress, out TreeNodeHeader* node)
         {
             var p = GetReadOnlyTreePage(State.RootPageNumber);
 
@@ -534,7 +533,7 @@ namespace Voron.Data.BTrees
             if (p.IsLeaf == false)
                 VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page " + p.PageNumber);
 
-            if (p.IsCompressed && canDecompress)
+            if (p.IsCompressed && shouldDecompress)
                 p = DecompressPage(p);
 
             node = p.Search(_llt, key); // will set the LastSearchPosition
@@ -788,21 +787,13 @@ namespace Voron.Data.BTrees
             return c;
         }
 
-        private TreePage DecompressPage(TreePage p)
+        public DecompressedLeafPage DecompressPage(TreePage p)
         {
-            TemporaryPage tmp;
             var compressioncHeader = p.CompressionHeader;
 
             var necessarySize = p.SizeUsed + compressioncHeader->UncompressedSize - compressioncHeader->CompressedSize;
 
-            var returnPage = _llt.Environment.DecompressedPagesPool.GetTemporaryPage(_llt, Bits.NextPowerOf2(necessarySize), out tmp);
-
-            var decompressedPage = tmp.GetTempPage();
-
-            decompressedPage.ReturnDecompressedPage = returnPage;
-            decompressedPage.PageNumber = p.PageNumber;
-            decompressedPage.TreeFlags = p.TreeFlags;
-            decompressedPage.Flags = p.Flags ^ PageFlags.Compressed;
+            var decompressedPage = _llt.Environment.DecompressionBuffers.GetPage(_llt, Bits.NextPowerOf2(necessarySize), p);
 
             for (var i = 0; i < p.NumberOfEntries; i++)
             {
@@ -815,18 +806,18 @@ namespace Voron.Data.BTrees
                 }
             }
 
-            TemporaryPage tempBuffer;
-            using (_llt.Environment.DecompressedPagesPool.GetTemporaryPage(_llt, Bits.NextPowerOf2(compressioncHeader->UncompressedSize), out tempBuffer))
+            byte* tempBuffer;
+            using (_llt.Environment.DecompressionBuffers.GetTemporaryBuffer(_llt, Bits.NextPowerOf2(compressioncHeader->UncompressedSize), out tempBuffer))
             {
                 LZ4.Decode64LongBuffers(
                     (byte*)compressioncHeader - compressioncHeader->CompressedSize,
                     compressioncHeader->CompressedSize,
-                    tempBuffer.TempPagePointer,
+                    tempBuffer,
                     compressioncHeader->UncompressedSize, true);
 
-                var ptr = tempBuffer.TempPagePointer;
+                var ptr = tempBuffer;
 
-                while (ptr - tempBuffer.TempPagePointer < compressioncHeader->UncompressedSize)
+                while (ptr - tempBuffer < compressioncHeader->UncompressedSize)
                 {
                     var nodeHeader = (TreeNodeHeader*)ptr;
 
@@ -1193,60 +1184,16 @@ namespace Voron.Data.BTrees
 
         private bool TryCompressPageValues(Slice key, int len, TreePage page)
         {
-            //if (page.PageMaxSpace - (page.PageSize - page.Upper) == page.NumberOfEntries * Constants.ke + page.SizeLeft)
-
-            page.Defrag(_llt); // TODO arek no need to call it on every time probably - need to check if a page really requires defrag
-
-            var pageSize = _llt.Environment.Options.PageSize;
-            var valuesSize = pageSize - page.Upper;
-
-            TemporaryPage temp;
-            using (_llt.Environment.GetTemporaryPage(_llt, out temp))
+            LeafPageCompressor.CompressionResult compressed;
+            using (LeafPageCompressor.TryGetCompressedTempPage(_llt, page, out compressed))
             {
-                var tempPage = temp.GetTempPage();
-
-                if (_lz4 == null)
-                    _lz4 = new LZ4();
-
-                var compressionInput = page.Base + page.Upper;
-                var compressionOutput = tempPage.Base + Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize;
-
-                var compressedSize = _lz4.Encode64(
-                    compressionInput,
-                    compressionOutput,
-                    valuesSize,
-                    pageSize - Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize);
-
-                if (compressedSize == 0)
-                {
-                    // output buffer size not enough
+                if (compressed == null)
                     return false;
-                }
 
-                Memory.Copy(tempPage.Base, page.Base, Constants.TreePageHeaderSize);
-
-                tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize + compressedSize);
-                tempPage.Upper = (ushort)pageSize;
-
-                if (tempPage.HasSpaceFor(_llt, key, len) == false)
+                if (compressed.CompressedPage.HasSpaceFor(_llt, key, len) == false)
                     return false;
-                
-                // let us copy the compressed values at the end of the page
-                // so we will handle next writes as usual
 
-                var writePtr = page.Base + page.PageSize - Constants.CompressedValuesHeaderSize;
-
-                var header = (CompressedValuesHeader*)writePtr;
-                header->CompressedSize = (short)compressedSize;
-                header->UncompressedSize = (short)valuesSize;
-
-                writePtr -= compressedSize;
-
-                Memory.Copy(writePtr, compressionOutput, compressedSize);
-
-                page.Flags |= PageFlags.Compressed;
-                page.Lower = (ushort)Constants.TreePageHeaderSize;
-                page.Upper = (ushort)(writePtr - page.Base);
+                LeafPageCompressor.CopyToPage(compressed, page);
 
                 return true;
             }

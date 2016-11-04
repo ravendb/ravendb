@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Text;
+using Voron.Data.Compression;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.FreeSpace;
@@ -14,10 +15,10 @@ namespace Voron.Data.BTrees
         private readonly Slice _newKey;
         private readonly TreeNodeFlags _nodeType;
         private readonly ushort _nodeVersion;
-        private readonly TreePage _page;
         private readonly long _pageNumber;
         private readonly LowLevelTransaction _tx;
         private readonly Tree _tree;
+        private TreePage _page;
         private TreePage _parentPage;
 
         public TreePageSplitter(LowLevelTransaction tx,
@@ -83,55 +84,76 @@ namespace Voron.Data.BTrees
                     _tree.ClearPagesCache();
                 }
 
-                if (_page.LastSearchPosition >= _page.NumberOfEntries)
+                DecompressedLeafPage decompressed = null;
+                if (_page.IsCompressed)
                 {
-                    // when we get a split at the end of the page, we take that as a hint that the user is doing 
-                    // sequential inserts, at that point, we are going to keep the current page as is and create a new 
-                    // page, this will allow us to do minimal amount of work to get the best density
+                    decompressed = _tree.DecompressPage(_page);
+                    _page = decompressed;
+                    _page.Search(_tx, _newKey);
+                }
 
-                    TreePage branchOfSeparator;
-
-                    byte* pos;
-                    if (_page.IsBranch)
+                try
+                {
+                    if (_page.LastSearchPosition >= _page.NumberOfEntries)
                     {
-                        if (_page.NumberOfEntries > 2)
+                        // when we get a split at the end of the page, we take that as a hint that the user is doing 
+                        // sequential inserts, at that point, we are going to keep the current page as is and create a new 
+                        // page, this will allow us to do minimal amount of work to get the best density
+
+                        TreePage branchOfSeparator;
+
+                        byte* pos;
+                        if (_page.IsBranch)
                         {
-                            // here we steal the last entry from the current page so we maintain the implicit null left entry
-
-                            TreeNodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
-                            Debug.Assert(node->Flags == TreeNodeFlags.PageRef);
-                            rightPage.AddPageRefNode(0, Slices.BeforeAllKeys, node->PageNumber);
-                            pos = AddNodeToPage(rightPage, 1);
-
-                            Slice separatorKey;
-                            using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out separatorKey))
+                            if (_page.NumberOfEntries > 2)
                             {
-                                AddSeparatorToParentPage(rightPage.PageNumber, separatorKey, out branchOfSeparator);
-                            }
+                                // here we steal the last entry from the current page so we maintain the implicit null left entry
 
-                            _page.RemoveNode(_page.NumberOfEntries - 1);
+                                TreeNodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
+                                Debug.Assert(node->Flags == TreeNodeFlags.PageRef);
+                                rightPage.AddPageRefNode(0, Slices.BeforeAllKeys, node->PageNumber);
+                                pos = AddNodeToPage(rightPage, 1);
+
+                                Slice separatorKey;
+                                using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out separatorKey))
+                                {
+                                    AddSeparatorToParentPage(rightPage.PageNumber, separatorKey, out branchOfSeparator);
+                                }
+
+                                _page.RemoveNode(_page.NumberOfEntries - 1);
+                            }
+                            else
+                            {
+                                _tree.FreePage(rightPage); // return the unnecessary right page
+                                pos = AddSeparatorToParentPage(_pageNumber, _newKey, out branchOfSeparator);
+
+                                if (_cursor.CurrentPage.PageNumber != branchOfSeparator.PageNumber)
+                                    _cursor.Push(branchOfSeparator);
+
+                                return pos;
+                            }
                         }
                         else
                         {
-                            _tree.FreePage(rightPage); // return the unnecessary right page
-                            pos = AddSeparatorToParentPage(_pageNumber, _newKey, out branchOfSeparator);
+                            AddSeparatorToParentPage(rightPage.PageNumber, _newKey, out branchOfSeparator);
+                            pos = AddNodeToPage(rightPage, 0);
+                        }
+                        _cursor.Push(rightPage);
+                        return pos;
+                    }
 
-                            if (_cursor.CurrentPage.PageNumber != branchOfSeparator.PageNumber)
-                                _cursor.Push(branchOfSeparator);
-
-                            return pos;
+                    return SplitPageInHalf(rightPage);
+                }
+                finally
+                {
+                    if (decompressed != null)
+                    {
+                        using (decompressed)
+                        {
+                            decompressed.CopyToOriginalPage(_tx);
                         }
                     }
-                    else
-                    {
-                        AddSeparatorToParentPage(rightPage.PageNumber, _newKey, out branchOfSeparator);
-                        pos = AddNodeToPage(rightPage, 0);
-                    }
-                    _cursor.Push(rightPage);
-                    return pos;
                 }
-
-                return SplitPageInHalf(rightPage);
             }
         }
 

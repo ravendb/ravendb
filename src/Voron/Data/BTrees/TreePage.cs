@@ -20,7 +20,6 @@ namespace Voron.Data.BTrees
         public int LastMatch;
         public int LastSearchPosition;
         public bool Dirty;
-        public IDisposable ReturnDecompressedPage;
 
         public TreePage(byte* basePtr, int pageSize)
         {

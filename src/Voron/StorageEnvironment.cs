@@ -64,7 +64,7 @@ namespace Voron
         private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         private readonly HeaderAccessor _headerAccessor;
-        private readonly DecompressedPagesPool _decompressedPagesPool;
+        private readonly DecompressionBuffersPool _decompressionBuffers;
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ScratchBufferPool _scratchBufferPool;
@@ -92,6 +92,10 @@ namespace Voron
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
                 _headerAccessor = new HeaderAccessor(this);
+
+                _options.DeleteAllTempBuffers();
+
+                _decompressedPagesPool = new DecompressedPagesPool(options);
 
                 _options.DeleteAllTempBuffers();
 
@@ -267,7 +271,7 @@ namespace Voron
 
         public WriteAheadJournal Journal => _journal;
 
-        public DecompressedPagesPool DecompressedPagesPool => _decompressedPagesPool;
+        public DecompressionBuffersPool DecompressionBuffers => _decompressionBuffers;
 
         public void Dispose()
         {
@@ -315,7 +319,7 @@ namespace Voron
                     _headerAccessor,
                     _scratchBufferPool,
                     _journal,
-                    _decompressedPagesPool,
+                    _decompressionBuffers,
                     _options.OwnsPagers ? _options : null
                 }.Concat(_tempPagesPool))
                 {

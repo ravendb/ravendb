@@ -6,6 +6,7 @@
 
 using System;
 using Sparrow;
+using Voron.Data.Compression;
 using Voron.Impl;
 
 namespace Voron.Data.BTrees
@@ -38,7 +39,10 @@ namespace Voron.Data.BTrees
             {
                 _firstScope.Dispose();
                _lastScope.Dispose();
-                Page?.ReturnDecompressedPage?.Dispose();
+
+                using (Page as DecompressedLeafPage)
+                {                    
+                }
             }
         }
 
@@ -144,7 +148,10 @@ namespace Voron.Data.BTrees
                 {
                     if (page.Page != null)
                     {
-                        page.Page.ReturnDecompressedPage?.Dispose();
+                        using (page.Page as DecompressedLeafPage)
+                        {
+                        }
+
                         page.Page = null;
                     }
                     return;

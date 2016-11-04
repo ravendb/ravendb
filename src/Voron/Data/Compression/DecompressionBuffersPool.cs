@@ -4,12 +4,13 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow.Binary;
+using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Impl.Paging;
 
 namespace Voron.Data.Compression
 {
-    public class DecompressedPagesPool : IDisposable
+    public unsafe class DecompressionBuffersPool : IDisposable
     {
         private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
@@ -17,12 +18,31 @@ namespace Voron.Data.Compression
 
         private ConcurrentQueue<TemporaryPage>[] _pool = { new ConcurrentQueue<TemporaryPage>() };
 
-        public DecompressedPagesPool(StorageEnvironmentOptions options)
+        public DecompressionBuffersPool(StorageEnvironmentOptions options)
         {
             _options = options;
         }
 
-        public IDisposable GetTemporaryPage(LowLevelTransaction tx, int pageSize, out TemporaryPage tmp)
+        public IDisposable GetTemporaryBuffer(LowLevelTransaction tx, int pageSize, out byte* buffer)
+        {
+            TemporaryPage tempPage;
+            var disposable = GetTemporaryPage(tx, pageSize, out tempPage);
+            buffer = tempPage.TempPagePointer;
+
+            return disposable;
+        }
+
+        public DecompressedLeafPage GetPage(LowLevelTransaction tx, int pageSize, TreePage original)
+        {
+            TemporaryPage tempPage;
+            GetTemporaryPage(tx, pageSize, out tempPage);
+
+            var treePage = tempPage.GetTempPage();
+
+            return new DecompressedLeafPage(treePage.Base, treePage.PageSize, original, tempPage);
+        }
+
+        private IDisposable GetTemporaryPage(LowLevelTransaction tx, int pageSize, out TemporaryPage tmp)
         {
             if (pageSize < _options.PageSize)
                 throw new ArgumentException($"Page cannot be smaller than {_options.PageSize} bytes while {pageSize} bytes were requested.");
@@ -107,9 +127,9 @@ namespace Voron.Data.Compression
         private class ReturnDecompressedPageToPool : IDisposable
         {
             private readonly TemporaryPage _tmp;
-            private readonly DecompressedPagesPool _pool;
+            private readonly DecompressionBuffersPool _pool;
 
-            public ReturnDecompressedPageToPool(DecompressedPagesPool pool, TemporaryPage tmp)
+            public ReturnDecompressedPageToPool(DecompressionBuffersPool pool, TemporaryPage tmp)
             {
                 _tmp = tmp;
                 _pool = pool;
