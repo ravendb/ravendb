@@ -294,6 +294,19 @@ namespace Voron.Impl.Scratch
 
         public void Cleanup()
         {
+            if (_recycleArea.Count == 0)
+                return;
+
+            // we need to ensure that no access to _recycleArea will take place in the same time
+            // and only methods that access this are used within write transaction
+            using (_env.WriteTransaction())
+            {
+                while (_recycleArea.First != null)
+                {
+                    _recycleArea.First.Value.Item2.File.Dispose();
+                    _recycleArea.RemoveFirst();
+                }
+            }
         }
     }
 }
