@@ -3,21 +3,19 @@ import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSetti
 import savePeriodicExportSetupCommand = require("commands/maintenance/savePeriodicExportSetupCommand");
 import document = require("models/database/documents/document");
 import periodicExportSetup = require("models/database/documents/periodicExportSetup");
-import getEffectivePeriodicExportCommand = require("commands/database/globalConfig/getEffectivePeriodicExportCommand");
 import appUrl = require("common/appUrl");
 import configurationSettings = require("models/database/globalConfig/configurationSettings");
 import getConfigurationSettingsCommand = require("commands/database/globalConfig/getConfigurationSettingsCommand");
 import deleteLocalPeriodicExportSetupCommand = require("commands/database/globalConfig/deleteLocalPeriodicExportSetupCommand");
 import database = require("models/resources/database");
+import getPeriodicExportSetupCommand = require("commands/database/documents/getPeriodicExportSetupCommand");
+import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 
 class periodicExport extends viewModelBase {
     backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });
-    globalBackupSetup = ko.observable<periodicExportSetup>();
     isSaveEnabled: KnockoutComputed<boolean>;
     exportDisabled = ko.observable<boolean>(false);
 
-    usingGlobal = ko.observable<boolean>(false);
-    hasGlobalValues = ko.observable<boolean>(false);
     isForbidden = ko.observable<boolean>(false);
     
     showOnDiskExportRow: KnockoutComputed<boolean>;
@@ -25,11 +23,7 @@ class periodicExport extends viewModelBase {
     constructor() {
         super();
         this.activeDatabase.subscribe((db: database) => this.isForbidden(!db.isAdminCurrentTenant()));
-        this.showOnDiskExportRow = ko.computed(() => {
-            var localSetting = this.backupSetup() && this.backupSetup().onDiskExportEnabled();
-            var globalSetting = this.hasGlobalValues() && this.globalBackupSetup().onDiskExportEnabled();
-            return localSetting || globalSetting;
-        });
+        this.showOnDiskExportRow = ko.computed(() => this.backupSetup() && this.backupSetup().onDiskExportEnabled());
     }
 
     attached() {
@@ -56,7 +50,6 @@ class periodicExport extends viewModelBase {
     canActivate(args: any): any {
         super.canActivate(args);
         this.backupSetup(new periodicExportSetup);
-        this.globalBackupSetup(new periodicExportSetup);
 
         var deferred = $.Deferred();
 
@@ -80,7 +73,7 @@ class periodicExport extends viewModelBase {
         super.activate(args);
         this.updateHelpLink("OU78CB");
         
-        this.dirtyFlag = new ko.DirtyFlag([this.backupSetup, this.usingGlobal]);
+        this.dirtyFlag = new ko.DirtyFlag([this.backupSetup]);
 
         var self = this;
         this.isSaveEnabled = ko.computed(() => {
@@ -94,15 +87,10 @@ class periodicExport extends viewModelBase {
 
     fetchPeriodicExportSetup(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
-        new getEffectivePeriodicExportCommand(db)
+        new getPeriodicExportSetupCommand(db)
             .execute()
-            .done((result: configurationDocumentDto<periodicExportSetupDto>) => {
-                this.backupSetup().fromDto(result.MergedDocument);
-                this.hasGlobalValues(result.GlobalExists);
-                this.usingGlobal(result.GlobalExists && !result.LocalExists);
-                if (this.hasGlobalValues()) {
-                    this.globalBackupSetup().fromDto(result.GlobalDocument);
-                }
+            .done((result: Raven.Server.Documents.PeriodicExport.PeriodicExportConfiguration) => {
+                this.backupSetup().fromDto(result);
             })
             .always(() => deferred.resolve());
         return deferred;
@@ -112,9 +100,13 @@ class periodicExport extends viewModelBase {
         var task = $.Deferred();
         var dbSettingsTask = new getDatabaseSettingsCommand(db)
             .execute()
-            .done((document: document) => { this.backupSetup().fromDatabaseSettingsDto(document.toDto(true)); });
+            .done((document: document) => {
+                 this.backupSetup().fromDatabaseSettingsDto(document.toDto(false));
+            });
 
         dbSettingsTask.then(() => {
+            task.resolve(); //TODO: delete me!
+            /* TODO add support for remote export
             new getConfigurationSettingsCommand(db,
                 ["Raven/AWSAccessKey", "Raven/AWSSecretKey", "Raven/AzureStorageAccount", "Raven/AzureStorageKey"])
                 .execute()
@@ -123,16 +115,12 @@ class periodicExport extends viewModelBase {
                     var awsSecret = result.results["Raven/AWSSecretKey"];
                     var azureAccess = result.results["Raven/AzureStorageAccount"];
                     var azureSecret = result.results["Raven/AzureStorageKey"];
-                    this.globalBackupSetup().awsAccessKey(awsAccess.globalValue());
-                    this.globalBackupSetup().awsSecretKey(awsSecret.globalValue());
-                    this.globalBackupSetup().azureStorageAccount(azureAccess.globalValue());
-                    this.globalBackupSetup().azureStorageKey(azureSecret.globalValue());
                     this.backupSetup().awsAccessKey(awsAccess.effectiveValue());
                     this.backupSetup().awsSecretKey(awsSecret.effectiveValue());
                     this.backupSetup().azureStorageAccount(azureAccess.effectiveValue());
                     this.backupSetup().azureStorageKey(azureSecret.effectiveValue());
                     task.resolve();
-            });
+            });*/
         });
         return task;
     }
@@ -140,38 +128,33 @@ class periodicExport extends viewModelBase {
     saveChanges() {
         var db = this.activeDatabase();
         if (db) {
+
+            const periodicExportConfig = this.backupSetup().toDto();
+
+            new saveDocumentCommand("Raven/PeriodicExport/Configuration",
+                    new document(periodicExportConfig),
+                    this.activeDatabase())
+                .execute()
+                .done(() => {
+                    this.backupSetup().resetDecryptionFailures();
+                    this.dirtyFlag().reset();
+                    this.updateExportDisabledFlag();
+                });
+            /* TODO:
             var task: JQueryPromise<any>;
-            if (this.usingGlobal()) {
-                task = new deleteLocalPeriodicExportSetupCommand(this.backupSetup(), db)
-                    .execute();
-            } else {
-                task = new savePeriodicExportSetupCommand(this.backupSetup(), db).execute();
-            }
+            task = new savePeriodicExportSetupCommand(this.backupSetup(), db).execute();
             task.done((resultArray) => {
                 var newEtag = resultArray[0].ETag;
                 this.backupSetup().setEtag(newEtag);
                 this.backupSetup().resetDecryptionFailures();
                 this.dirtyFlag().reset(); // Resync changes
                 this.updateExportDisabledFlag();
-            });
+            });*/
         }
-    }
-
-    useLocal() {
-        this.usingGlobal(false);
-    }
-
-    useGlobal() {
-        this.usingGlobal(true);
-        this.backupSetup().copyFrom(this.globalBackupSetup());
     }
 
     updateExportDisabledFlag() {
-        if (this.usingGlobal()) {
-            this.exportDisabled(this.globalBackupSetup().disabled());
-        } else {
-            this.exportDisabled(this.backupSetup().disabled());
-        }
+        this.exportDisabled(!this.backupSetup().active());
     }
 }
 

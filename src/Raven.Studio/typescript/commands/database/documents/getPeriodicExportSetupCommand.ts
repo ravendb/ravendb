@@ -4,11 +4,11 @@ import database = require("models/resources/database");
 
 class getPeriodicExportSetupCommand extends getDocumentWithMetadataCommand {
 
-    constructor(db: database, getGlobalConfig = false) {
-        super(getGlobalConfig ? "Raven/Global/Backup/Periodic/Setup" :"Raven/Backup/Periodic/Setup", db);
+    constructor(db: database) {
+        super("Raven/PeriodicExport/Configuration", db, true);
     }
 
-    execute(): JQueryPromise<periodicExportSetupDto> {
+    execute(): JQueryPromise<Raven.Server.Documents.PeriodicExport.PeriodicExportConfiguration> {
         return super.execute();
     }
 }

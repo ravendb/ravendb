@@ -357,18 +357,6 @@ interface spatialIndexSuggestionDto {
     Accuracy: number;
 }
 
-interface periodicExportSetupDto {
-    Disabled: boolean;
-    GlacierVaultName: string;
-    S3BucketName: string;
-    AwsRegionEndpoint: string;
-    AzureStorageContainer: string;
-    LocalFolderName: string;
-    S3RemoteFolderName: string;
-    AzureRemoteFolderName: string;
-    IntervalMilliseconds: number;
-    FullBackupIntervalMilliseconds: number;
-}
 
 interface indexResultsDto<T extends metadataAwareDto> {
     DurationMilliseconds: number;

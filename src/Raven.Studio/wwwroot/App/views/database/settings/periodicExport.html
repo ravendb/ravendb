@@ -13,54 +13,25 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
-                    <span data-bind="visible: $root.hasGlobalValues()">
-                        <button type="button" class="btn btn-default" data-bind="click: $root.useLocal.bind($root), visible: $root.usingGlobal()">
-                            <i class="fa fa-arrow-down"></i> Override global configuration
-                        </button>
-                        <button type="button" class="btn btn-default" data-bind="click: $root.useGlobal.bind($root), visible: $root.usingGlobal() == false">
-                            <i class="fa fa-arrow-up"></i> Use global configuration
-                        </button>
-                    </span>
                 </div>
                 <div class="panel-body">
-
-                    <div class="form-group" data-bind="visible: $root.hasGlobalValues">
-                        <div class="col-md-4 text-right">
-                            <strong>Property</strong>
-                        </div>
-                        <div class="col-md-4">
-                            <strong>Effective value</strong>
-                        </div>
-                        <div class="col-md-4">
-                            <strong>Global value</strong>
-                        </div>
-                    </div>
                     <div class="form-group">
                         <label for="disabled" class="col-sm-4 control-label">Enabled:</label>
                         <div class="col-sm-4">
                             <div class="btn-group">
-                                <button type="button" class="btn btn-default dropdown-toggle" data-bind="enable: $root.usingGlobal() == false" data-toggle="dropdown">
-                                    <span data-bind="visible: disabled() == false">Yes</span>
-                                    <span data-bind="visible: disabled()">No</span>
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <span data-bind="visible: active()">Yes</span>
+                                    <span data-bind="visible: !active()">No</span>
                                     <span class="caret"></span>
                                 </button>
                                 <ul class="dropdown-menu" role="menu">
-                                    <li><a href="#" data-bind="click: disabled.bind(disabled, false)">Yes</a></li>
-                                    <li><a href="#" data-bind="click: disabled.bind(disabled, true)">No</a></li>
+                                    <li><a href="#" data-bind="click: active.bind(active, true)">Yes</a></li>
+                                    <li><a href="#" data-bind="click: active.bind(active, false)">No</a></li>
                                 </ul>
                             </div>
                             <p class="text-info" data-bind="visible: $root.exportDisabled">
                                 <i class="fa fa-info-circle text-info"></i> Periodic Export is currently deactivated.
                             </p>
-                        </div>
-                        <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                            <div class="btn-group">
-                                <button disabled="disabled" type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                    <span data-bind="visible: $root.globalBackupSetup().disabled() == false">Yes</span>
-                                    <span data-bind="visible: $root.globalBackupSetup().disabled()">No</span>
-                                    <span class="caret"></span>
-                                </button>
-                            </div>
                         </div>
                     </div>
 
@@ -69,7 +40,7 @@
                             <label for="onDiskExport" class="col-sm-4 control-label">On disk export:</label>
                             <div class="col-sm-4">
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: $root.usingGlobal() == false">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: false">
                                         <span data-bind="visible: onDiskExportEnabled">Yes</span>
                                         <span data-bind="visible: !onDiskExportEnabled()">No</span>
                                         <span class="caret"></span>
@@ -80,34 +51,23 @@
                                     </ul>
                                 </div>
                             </div>
-                            <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" disabled="disabled" data-toggle="dropdown">
-                                        <span data-bind="visible: $root.globalBackupSetup().onDiskExportEnabled">Yes</span>
-                                        <span data-bind="visible: !$root.globalBackupSetup().onDiskExportEnabled()">No</span>
-                                        <span class="caret"></span>
-                                    </button>
-                                </div>
-                            </div>
                         </div>
 
                         <div class="form-group" data-bind="if: $root.showOnDiskExportRow()">
                             <label for="onDiskLocation" class="col-sm-4 control-label">File System Folder:</label>
                             <div class="col-sm-4" >
                                 <div data-bind="visible: onDiskExportEnabled">
-                                    <input type="text" id="onDiskLocation" placeholder="full path" required class="form-control" data-bind="value: localFolderName, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'" />    
+                                    <input type="text" id="onDiskLocation" placeholder="full path" required class="form-control" data-bind="value: localFolderName, valueUpdate: 'afterkeydown'" />    
                                 </div>
                             </div>
-                            <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues() && $root.globalBackupSetup().onDiskExportEnabled()">
-                                <input type="text" disabled="disabled" placeholder="full path" class="form-control" data-bind="value: $root.globalBackupSetup().localFolderName" />
-                            </div>
                         </div>
-
+                        <!-- TODO: add support for remote upload -->
+                        <!--
                         <div class="form-group">
                             <label for="serverUpload" class="col-sm-4 control-label">Upload to remote server:</label>
                             <div class="col-sm-4">
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: $root.usingGlobal() == false">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: false"> 
                                         <span data-bind="visible: remoteUploadEnabled">Yes</span>
                                         <span data-bind="visible: !remoteUploadEnabled()">No</span>
                                         <span class="caret"></span>
@@ -118,23 +78,15 @@
                                     </ul>
                                 </div>
                             </div>
-                            <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                <div class="btn-group">
-                                    <button disabled="disabled" type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                        <span data-bind="visible: $root.globalBackupSetup().remoteUploadEnabled">Yes</span>
-                                        <span data-bind="visible: !$root.globalBackupSetup().remoteUploadEnabled()">No</span>
-                                        <span class="caret"></span>
-                                    </button>
-                                </div>
-                            </div>
                         </div>
+                        -->
 
                         <div class="form-group" data-bind="if: remoteUploadEnabled, visible: remoteUploadEnabled">
                             <div class="col-sm-4">
-                                <select class="form-control" data-bind="enable: $root.usingGlobal() == false, options: availablePeriodicExports, optionsText: 'label', optionsValue: 'value', value: type"></select>
+                                <select class="form-control" data-bind="options: availablePeriodicExports, optionsText: 'label', optionsValue: 'value', value: type"></select>
                             </div>
                             <div class="col-sm-4">
-                                <input type="text" required class="form-control" data-bind="value: mainValue, enable: $root.usingGlobal() == false, customValidity: mainValueCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: mainPlaceholder }"/>
+                                <input type="text" required class="form-control" data-bind="value: mainValue, customValidity: mainValueCustomValidity, valueUpdate: 'afterkeydown', attr: { placeholder: mainPlaceholder }"/>
                                 <div data-bind="visible: isGlaceirVault">
                                     <a target="_blank" href="http://docs.aws.amazon.com/amazonglacier/latest/dev/creating-vaults.html">Vault Name Restrictions and Limitations</a>
                                 </div>
@@ -142,82 +94,58 @@
                                     <a target="_blank" href="http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html">Bucket Name Restrictions and Limitations</a>
                                 </div>
                             </div>
-                            <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                <input type="text" disabled="disabled" class="form-control" data-bind="value: $root.globalBackupSetup().mainValue, attr: { placeholder: mainPlaceholder }"/>
-                            </div>
                         </div>
                         <div class="form-group" data-bind="if: isS3Bucket, visible: isS3Bucket">
                             <label for="awsRemoteFolder" class="col-sm-4 control-label">Folder name:</label>
                             <div class="col-sm-4">
-                                <input id="awsRemoteFolder" type="text" placeholder="Remote folder name" class="form-control" data-bind="enable: $root.usingGlobal() == false, value: s3RemoteFolderName, valueUpdate: 'afterkeydown'" />
-                            </div>
-                            <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                <input disabled="disabled" type="text" class="form-control" data-bind="value: $root.globalBackupSetup().s3RemoteFolderName" />
+                                <input id="awsRemoteFolder" type="text" placeholder="Remote folder name" class="form-control" data-bind="value: s3RemoteFolderName, valueUpdate: 'afterkeydown'" />
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
                             <label for="awsAccessKey" class="col-sm-4 control-label">AWS Access Key:</label>
                             <div class="col-sm-4">
-                                <input required id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'"/>
-                            </div>
-                            <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                <input disabled="disabled" type="text" class="form-control" data-bind="value: $root.globalBackupSetup().awsAccessKey"/>
+                                <input required id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey, valueUpdate: 'afterkeydown'"/>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
                             <label for="awsSecretKey" class="col-sm-4 control-label">AWS Secret Key:</label>
                             <div class="col-sm-3">
-                                <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'"/>
+                                <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, valueUpdate: 'afterkeydown'"/>
                             </div>
                             <div class="col-sm-1 control-label" style="text-align: left" data-bind="if: awsSecretKeyDecryptionFailed">
                                 <span id="awsDecryptFailureSpan" class="help-cursor" data-placement="auto right" data-original-title="Why this input is empty?" data-trigger="hover">
                                     <i class="fa fa-warning text-info"></i>
                                 </span>
                             </div>
-                            <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                <input disabled="disabled" type="password" autocomplete="off" class="form-control" data-bind="value: $root.globalBackupSetup().awsSecretKey"/>
-                            </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
                             <label for="awsRegionEndpoint" class="col-sm-4 control-label">AWS Region Endpoint:</label>
                             <div class="col-sm-4">
-                                <select required id="awsRegionEndpoint" class="form-control" data-bind="enable: $root.usingGlobal() == false, options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: awsRegionEndpoint"></select>
-                            </div>
-                            <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                <select disabled="disabled" class="form-control" data-bind="options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: $root.globalBackupSetup().awsRegionEndpoint"></select>
+                                <select required id="awsRegionEndpoint" class="form-control" data-bind="options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: awsRegionEndpoint"></select>
                             </div>
                         </div>
                         <div data-bind="if: additionalAzureInfoRequired">
                             <div class="form-group">
                                 <label for="remoteFolder" class="col-sm-4 control-label">Folder name:</label>
                                 <div class="col-sm-4">
-                                    <input id="remoteFolder" type="text" placeholder="Remote folder name" class="form-control" data-bind="enable: $root.usingGlobal() == false, value: azureRemoteFolderName, valueUpdate: 'afterkeydown'"/>
-                                </div>
-                                <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                    <input disabled="disabled" type="text" class="form-control" data-bind="value: $root.globalBackupSetup().azureRemoteFolderName" />
+                                    <input id="remoteFolder" type="text" placeholder="Remote folder name" class="form-control" data-bind="value: azureRemoteFolderName, valueUpdate: 'afterkeydown'"/>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label for="azureStorageAccount" class="col-sm-4 control-label">Azure Storage Account:</label>
                                 <div class="col-sm-4">
-                                    <input required id="azureStorageAccount" type="text" class="form-control" data-bind="enable: $root.usingGlobal() == false, value: azureStorageAccount, valueUpdate: 'afterkeydown'"/>
-                                </div>
-                                <div class="col-sm-4" data-bind="visible: $root.hasGlobalValues">
-                                    <input disabled="disabled" type="text" class="form-control" data-bind="value: $root.globalBackupSetup().azureStorageAccount"/>
+                                    <input required id="azureStorageAccount" type="text" class="form-control" data-bind="value: azureStorageAccount, valueUpdate: 'afterkeydown'"/>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label for="azureStorageKey" class="col-sm-4 control-label">Azure Storage Key:</label>
                                 <div class="col-sm-3">
-                                    <input required id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="enable: $root.usingGlobal() == false, value: azureStorageKey, valueUpdate: 'afterkeydown'"/>
+                                    <input required id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="value: azureStorageKey, valueUpdate: 'afterkeydown'"/>
                                 </div>
                                 <div class="col-sm-1 control-label" style="text-align: left" data-bind="if: azureStorageKeyDecryptionFailed">
                                     <span id="azureDecryptFailureSpan" class="help-cursor" data-placement="auto right" data-original-title="Why this input is empty?" data-trigger="hover">
                                         <i class="fa fa-warning text-info"></i>
                                     </span>
-                                </div>
-                                <div class="col-sm-3" data-bind="visible: $root.hasGlobalValues">
-                                    <input disabled="disabled" type="password" autocomplete="off" class="form-control" data-bind="value: $root.globalBackupSetup().azureStorageKey"/>
                                 </div>
                             </div>
                         </div>
@@ -225,31 +153,19 @@
                         <div class="form-group">
                             <label for="incrementalBackupInterval" class="col-sm-4 control-label">Incremental Export Interval:</label>
                             <div class="col-sm-1">
-                                <input id="incrementalBackupInterval" required type="number" class="form-control" min="0" data-bind="enable: $root.usingGlobal() == false, numericValue: incrementalBackupInterval, valueUpdate: 'afterkeydown'" />
+                                <input id="incrementalBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: incrementalBackupInterval, valueUpdate: 'afterkeydown'" />
                             </div>
                             <div class="col-sm-3">
-                                <select class="form-control" data-bind="enable: $root.usingGlobal() == false, options: availableIntervalUnits, value: incrementalBackupIntervalUnit"></select>
-                            </div>
-                            <div class="col-sm-1" data-bind="visible: $root.hasGlobalValues">
-                                <input disabled="disabled" type="number" class="form-control" min="0" data-bind="numericValue: $root.globalBackupSetup().incrementalBackupInterval" />
-                            </div>
-                            <div class="col-sm-3" data-bind="visible: $root.hasGlobalValues">
-                                <select disabled="disabled" class="form-control" data-bind="options: availableIntervalUnits, value: $root.globalBackupSetup().incrementalBackupIntervalUnit"></select>
+                                <select class="form-control" data-bind="options: availableIntervalUnits, value: incrementalBackupIntervalUnit"></select>
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="fullBackupInterval" class="col-sm-4 control-label">Full Export Interval:</label>
                             <div class="col-sm-1">
-                                <input id="fullBackupInterval" required type="number" class="form-control" min="0" data-bind="enable: $root.usingGlobal() == false, numericValue: fullBackupInterval, valueUpdate: 'afterkeydown'" />
+                                <input id="fullBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: fullBackupInterval, valueUpdate: 'afterkeydown'" />
                             </div>
                             <div class="col-sm-3">
-                                <select class="form-control" data-bind="enable: $root.usingGlobal() == false, options: availableIntervalUnits, value: fullBackupIntervalUnit"></select>
-                            </div>
-                            <div class="col-sm-1" data-bind="visible: $root.hasGlobalValues">
-                                <input disabled="disabled" type="number" class="form-control" min="0" data-bind="numericValue: $root.globalBackupSetup().fullBackupInterval" />
-                            </div>
-                            <div class="col-sm-3" data-bind="visible: $root.hasGlobalValues">
-                                <select disabled="disabled" class="form-control" data-bind="options: availableIntervalUnits, value: $root.globalBackupSetup().fullBackupIntervalUnit"></select>
+                                <select class="form-control" data-bind="options: availableIntervalUnits, value: fullBackupIntervalUnit"></select>
                             </div>
                         </div>
                     </div>
