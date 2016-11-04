@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow;
+using Voron.Data.Compression;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
@@ -19,6 +20,7 @@ namespace Voron.Data.BTrees
         public int LastMatch;
         public int LastSearchPosition;
         public bool Dirty;
+        public IDisposable ReturnDecompressedPage;
 
         public TreePage(byte* basePtr, int pageSize)
         {
@@ -191,6 +193,18 @@ namespace Voron.Data.BTrees
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get{ return (Header->Flags & PageFlags.Overflow) == PageFlags.Overflow; }
+        }
+
+        public bool IsCompressed
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (Header->Flags & PageFlags.Compressed) == PageFlags.Compressed; }
+        }
+
+        public CompressedValuesHeader* CompressionHeader
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (CompressedValuesHeader*)(Base + PageSize - Constants.CompressedValuesHeaderSize); }
         }
 
         public ushort NumberOfEntries
@@ -438,7 +452,12 @@ namespace Voron.Data.BTrees
 
         public override string ToString()
         {
-            return "#" + PageNumber + " (count: " + NumberOfEntries + ") " + TreeFlags;
+            var result = $"#{PageNumber} (count: {NumberOfEntries}) {TreeFlags}";
+
+            if (IsCompressed)
+                result += $" Compressed (size: {CompressionHeader->CompressedSize})";
+
+            return result;
         }
 
         public string Dump()
@@ -469,7 +488,7 @@ namespace Voron.Data.BTrees
             return true;
         }
 
-        private void Defrag(LowLevelTransaction tx)
+        internal void Defrag(LowLevelTransaction tx)
         {
             TemporaryPage tmp;
             using (tx.Environment.GetTemporaryPage(tx, out tmp))
@@ -479,7 +498,10 @@ namespace Voron.Data.BTrees
 
                 var numberOfEntries = NumberOfEntries;
 
-                Upper = (ushort)PageSize;
+                if (IsCompressed)
+                    Upper = (ushort)(PageSize - Constants.CompressedValuesHeaderSize - CompressionHeader->CompressedSize);
+                else
+                    Upper = (ushort)PageSize;
 
                 ushort* offsets = KeysOffsets;
                 for (int i = 0; i < numberOfEntries; i++)
@@ -640,6 +662,9 @@ namespace Voron.Data.BTrees
                 var nodeSize = node->GetNodeSize();
                 size += nodeSize + (nodeSize & 1);
             }
+
+            if (IsCompressed)
+                size += CompressionHeader->CompressedSize + Constants.CompressedValuesHeaderSize;
 
             Debug.Assert(size <= PageSize);
             Debug.Assert(SizeUsed >= size);

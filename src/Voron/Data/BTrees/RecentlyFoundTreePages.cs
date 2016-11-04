@@ -36,8 +36,9 @@ namespace Voron.Data.BTrees
 
             public void Dispose()
             {
-               _firstScope.Dispose();
+                _firstScope.Dispose();
                _lastScope.Dispose();
+                Page?.ReturnDecompressedPage?.Dispose();
             }
         }
 
@@ -135,7 +136,11 @@ namespace Voron.Data.BTrees
                 var page = _cache[i];
                 if (page != null && page.Number == num)
                 {
-                    page.Page = null;
+                    if (page.Page != null)
+                    {
+                        page.Page.ReturnDecompressedPage?.Dispose();
+                        page.Page = null;
+                    }
                     return;
                 }
             }

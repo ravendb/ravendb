@@ -4,6 +4,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Sparrow.Binary;
+using Sparrow.Compression;
+using Voron.Data.Compression;
 using Voron.Data.Fixed;
 using Voron.Debugging;
 using Voron.Exceptions;
@@ -25,6 +28,7 @@ namespace Voron.Data.BTrees
         private readonly RecentlyFoundTreePages _recentlyFoundPages;
         private PageLocator _pageLocator;
         private readonly bool _isPageLocatorOwned;
+        private LZ4 _lz4;
 
         public Slice Name { get; set; }
 
@@ -64,6 +68,12 @@ namespace Voron.Data.BTrees
             _pageLocator = llt.PersistentContext.AllocatePageLocator(llt);
             _state = new TreeMutableState(llt);
             _state = state;
+        }
+
+        public bool IsLeafCompressionSupported
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (State.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed; }
         }
 
         public static Tree Open(LowLevelTransaction llt, Transaction tx, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
@@ -285,37 +295,45 @@ namespace Voron.Data.BTrees
             byte* dataPos;
             if (page.HasSpaceFor(_llt, key, len) == false)
             {
-                using (var cursor = cursorConstructor(key))
-                {
-                    cursor.Update(cursor.Pages.First, page);
+                var canCompress = IsLeafCompressionSupported && page.IsCompressed == false;
 
-                    var pageSplitter = new TreePageSplitter(_llt, this, key, len, pageNumber, nodeType, nodeVersion, cursor);
-                    dataPos = pageSplitter.Execute();
+                if (canCompress == false || TryCompressPageValues(key, len, page) == false)
+                {
+                    using (var cursor = cursorConstructor(key))
+                    {
+                        cursor.Update(cursor.Pages.First, page);
+
+                        var pageSplitter = new TreePageSplitter(_llt, this, key, len, pageNumber, nodeType, nodeVersion, cursor);
+                        dataPos = pageSplitter.Execute();
+                    }
+
+                    DebugValidateTree(State.RootPageNumber);
+
+                    return overFlowPos == null ? dataPos : overFlowPos;
                 }
 
-                DebugValidateTree(State.RootPageNumber);
+                // existing values compressed and put at the end of the page, let's insert from Upper position
+                lastSearchPosition = 0;
             }
-            else
+
+            switch (nodeType)
             {
-                switch (nodeType)
-                {
-                    case TreeNodeFlags.PageRef:
-                        dataPos = page.AddPageRefNode(lastSearchPosition, key, pageNumber);
-                        break;
-                    case TreeNodeFlags.Data:
-                        dataPos = page.AddDataNode(lastSearchPosition, key, len, nodeVersion);
-                        break;
-                    case TreeNodeFlags.MultiValuePageRef:
-                        dataPos = page.AddMultiValueNode(lastSearchPosition, key, len, nodeVersion);
-                        break;
-                    default:
-                        throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
-                }
-                page.DebugValidate(this, State.RootPageNumber);
+                case TreeNodeFlags.PageRef:
+                    dataPos = page.AddPageRefNode(lastSearchPosition, key, pageNumber);
+                    break;
+                case TreeNodeFlags.Data:
+                    dataPos = page.AddDataNode(lastSearchPosition, key, len, nodeVersion);
+                    break;
+                case TreeNodeFlags.MultiValuePageRef:
+                    dataPos = page.AddMultiValueNode(lastSearchPosition, key, len, nodeVersion);
+                    break;
+                default:
+                    throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
             }
-            if (overFlowPos != null)
-                return overFlowPos;
-            return dataPos;
+
+            page.DebugValidate(this, State.RootPageNumber);
+
+            return overFlowPos == null ? dataPos : overFlowPos;
         }
 
         public TreePage ModifyPage(TreePage page)
@@ -442,7 +460,7 @@ namespace Voron.Data.BTrees
                 return p;
             }
 
-            return SearchForPage(key, out node);
+            return SearchForPage(key, true, out node);
         }
 
         internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, out Func<Slice, TreeCursor> cursor)
@@ -457,7 +475,7 @@ namespace Voron.Data.BTrees
             return SearchForPage(key, out cursor, out node);
         }
 
-        private TreePage SearchForPage(Slice key, out TreeNodeHeader* node)
+        private TreePage SearchForPage(Slice key, bool canDecompress, out TreeNodeHeader* node)
         {
             var p = GetReadOnlyTreePage(State.RootPageNumber);
 
@@ -515,6 +533,9 @@ namespace Voron.Data.BTrees
 
             if (p.IsLeaf == false)
                 VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page " + p.PageNumber);
+
+            if (p.IsCompressed && canDecompress)
+                p = DecompressPage(p);
 
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
@@ -765,6 +786,66 @@ namespace Voron.Data.BTrees
                 }
             }
             return c;
+        }
+
+        private TreePage DecompressPage(TreePage p)
+        {
+            TemporaryPage tmp;
+            var compressioncHeader = p.CompressionHeader;
+
+            var necessarySize = p.SizeUsed + compressioncHeader->UncompressedSize - compressioncHeader->CompressedSize;
+
+            var returnPage = _llt.Environment.DecompressedPagesPool.GetTemporaryPage(_llt, Bits.NextPowerOf2(necessarySize), out tmp);
+
+            var decompressedPage = tmp.GetTempPage();
+
+            decompressedPage.ReturnDecompressedPage = returnPage;
+            decompressedPage.PageNumber = p.PageNumber;
+            decompressedPage.TreeFlags = p.TreeFlags;
+            decompressedPage.Flags = p.Flags ^ PageFlags.Compressed;
+
+            for (var i = 0; i < p.NumberOfEntries; i++)
+            {
+                var uncompressedNode = p.GetNode(i);
+
+                Slice slice;
+                using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, uncompressedNode, out slice))
+                {
+                    decompressedPage.CopyNodeDataToEndOfPage(uncompressedNode, slice);
+                }
+            }
+
+            TemporaryPage tempBuffer;
+            using (_llt.Environment.DecompressedPagesPool.GetTemporaryPage(_llt, Bits.NextPowerOf2(compressioncHeader->UncompressedSize), out tempBuffer))
+            {
+                LZ4.Decode64LongBuffers(
+                    (byte*)compressioncHeader - compressioncHeader->CompressedSize,
+                    compressioncHeader->CompressedSize,
+                    tempBuffer.TempPagePointer,
+                    compressioncHeader->UncompressedSize, true);
+
+                var ptr = tempBuffer.TempPagePointer;
+
+                while (ptr - tempBuffer.TempPagePointer < compressioncHeader->UncompressedSize)
+                {
+                    var nodeHeader = (TreeNodeHeader*)ptr;
+
+                    Slice nodeKey;
+                    using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, nodeHeader, out nodeKey))
+                    {
+                        var index = decompressedPage.NodePositionFor(_llt, nodeKey);
+
+                        var pos = decompressedPage.AddDataNode(index, nodeKey, nodeHeader->DataSize, (ushort) (nodeHeader->Version - 1));
+
+                        var nodeValue = TreeNodeHeader.Reader(_llt, nodeHeader);
+                        Memory.Copy(pos, nodeValue.Base, nodeValue.Length);
+                    }
+
+                    ptr += TreeSizeOf.NodeEntry(nodeHeader);
+                }
+            }
+
+            return decompressedPage;
         }
 
         internal TreePage NewPage(TreePageFlags flags, int num)
@@ -1108,6 +1189,67 @@ namespace Voron.Data.BTrees
             }
             pos = null;
             return false;
+        }
+
+        private bool TryCompressPageValues(Slice key, int len, TreePage page)
+        {
+            //if (page.PageMaxSpace - (page.PageSize - page.Upper) == page.NumberOfEntries * Constants.ke + page.SizeLeft)
+
+            page.Defrag(_llt); // TODO arek no need to call it on every time probably - need to check if a page really requires defrag
+
+            var pageSize = _llt.Environment.Options.PageSize;
+            var valuesSize = pageSize - page.Upper;
+
+            TemporaryPage temp;
+            using (_llt.Environment.GetTemporaryPage(_llt, out temp))
+            {
+                var tempPage = temp.GetTempPage();
+
+                if (_lz4 == null)
+                    _lz4 = new LZ4();
+
+                var compressionInput = page.Base + page.Upper;
+                var compressionOutput = tempPage.Base + Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize;
+
+                var compressedSize = _lz4.Encode64(
+                    compressionInput,
+                    compressionOutput,
+                    valuesSize,
+                    pageSize - Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize);
+
+                if (compressedSize == 0)
+                {
+                    // output buffer size not enough
+                    return false;
+                }
+
+                Memory.Copy(tempPage.Base, page.Base, Constants.TreePageHeaderSize);
+
+                tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize + compressedSize);
+                tempPage.Upper = (ushort)pageSize;
+
+                if (tempPage.HasSpaceFor(_llt, key, len) == false)
+                    return false;
+                
+                // let us copy the compressed values at the end of the page
+                // so we will handle next writes as usual
+
+                var writePtr = page.Base + page.PageSize - Constants.CompressedValuesHeaderSize;
+
+                var header = (CompressedValuesHeader*)writePtr;
+                header->CompressedSize = (short)compressedSize;
+                header->UncompressedSize = (short)valuesSize;
+
+                writePtr -= compressedSize;
+
+                Memory.Copy(writePtr, compressionOutput, compressedSize);
+
+                page.Flags |= PageFlags.Compressed;
+                page.Lower = (ushort)Constants.TreePageHeaderSize;
+                page.Upper = (ushort)(writePtr - page.Base);
+
+                return true;
+            }
         }
 
         public Slice LastKeyOrDefault()

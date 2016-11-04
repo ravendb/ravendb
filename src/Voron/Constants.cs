@@ -1,5 +1,6 @@
 ﻿using Sparrow;
 using Voron.Data.BTrees;
+using Voron.Data.Compression;
 using Voron.Data.Fixed;
 
 namespace Voron.Global
@@ -37,6 +38,8 @@ namespace Voron.Global
         public static readonly int TreePageHeaderSize = sizeof(TreePageHeader);
 
         public static readonly int NodeHeaderSize = sizeof(TreeNodeHeader);
+
+        public static readonly int CompressedValuesHeaderSize = sizeof(CompressedValuesHeader);
 
         public const int PageNumberSize = sizeof(long);
 
