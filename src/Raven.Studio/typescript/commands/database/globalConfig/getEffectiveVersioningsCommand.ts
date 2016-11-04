@@ -9,6 +9,12 @@ class getEffectiveVersioningsCommand extends commandBase {
         super();
     }
 
+    execute(): JQueryPromise<Raven.Server.Documents.Versioning.VersioningConfiguration> {
+        return super.execute();
+    }
+
+    /* TODO:
+
     execute(): JQueryPromise<configurationDocument<versioningEntry>[]> {
         var url = "/configuration/versioning";//TODO: use endpoints
         var mapper = (configs: configurationDocumentDto<versioningEntryDto>[]): configurationDocument<versioningEntry>[]=> {
@@ -16,7 +22,7 @@ class getEffectiveVersioningsCommand extends commandBase {
                 configurationDocument.fromDtoWithTransform<versioningEntryDto, versioningEntry>(config, (x: versioningEntryDto) => new versioningEntry(x, true)));
         };
         return this.query<configurationDocument<versioningEntry>[]>(url, null, this.db, mapper);
-    }
+    }*/
 
 }
 

@@ -10,6 +10,7 @@ using Raven.Client.Indexing;
 using Raven.Client.Smuggler;
 using Raven.Json.Linq;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Versioning;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web.Operations;
 using Sparrow.Json;
@@ -95,6 +96,8 @@ namespace TypingsGenerator
             // smuggler
             scripter.AddType(typeof(DatabaseSmugglerOptions));
 
+            // versioning
+            scripter.AddType(typeof(VersioningConfiguration));
 
             // replication 
             scripter.AddType(typeof(ReplicationDocument<>));

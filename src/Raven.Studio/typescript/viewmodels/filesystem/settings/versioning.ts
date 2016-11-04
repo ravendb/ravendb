@@ -6,6 +6,7 @@ import getVersioningCommand = require("commands/filesystem/getVersioningCommand"
 import saveVersioningCommand = require("commands/filesystem/saveVersioningCommand");
 
 class versioning extends viewModelBase {
+    /* TODO
     versioning = ko.observable<versioningEntry>();
     isSaveEnabled: KnockoutComputed<boolean>;
 
@@ -50,7 +51,7 @@ class versioning extends viewModelBase {
     versioningLoaded(data: versioningEntry) {
         this.versioning(data);
         this.dirtyFlag().reset();
-    }
+    }*/
 }
 
 export = versioning;

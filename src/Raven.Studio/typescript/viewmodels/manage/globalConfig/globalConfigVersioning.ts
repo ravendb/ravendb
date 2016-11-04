@@ -9,6 +9,7 @@ import database = require("models/resources/database");
 
 
 class globalConfigVersioning extends viewModelBase {
+    /* TODO:
     activated = ko.observable<boolean>(false);
 
     developerLicense = globalConfig.developerLicense;
@@ -141,7 +142,7 @@ class globalConfigVersioning extends viewModelBase {
 
     makeIncluded(entry: versioningEntry) {
         entry.exclude(false);
-    }
+    }*/
 }
 
 export = globalConfigVersioning;

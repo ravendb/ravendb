@@ -160,11 +160,11 @@ namespace Raven.Server.Documents
                 ["Type"] = "DocumentChangeNotification",
                 ["Value"] = new DynamicJsonValue
                 {
-                    ["Type"] = (int)notification.Type,
-                    ["Key"] = notification.Key,
-                    ["CollectionName"] = notification.CollectionName,
-                    ["TypeName"] = notification.TypeName,
-                    ["Etag"] = notification.Etag,
+                    [nameof(DocumentChangeNotification.Type)] = (int)notification.Type,
+                    [nameof(DocumentChangeNotification.Key)] = notification.Key,
+                    [nameof(DocumentChangeNotification.CollectionName)] = notification.CollectionName,
+                    [nameof(DocumentChangeNotification.TypeName)] = notification.TypeName,
+                    [nameof(DocumentChangeNotification.Etag)] = notification.Etag,
                 },
             };
 
@@ -213,8 +213,8 @@ namespace Raven.Server.Documents
                 ["Type"] = "OperationStatusChangeNotification",
                 ["Value"] = new DynamicJsonValue
                 {
-                    ["OperationId"] = (int)notification.OperationId,
-                    ["State"] = notification.State.ToJson()
+                    [nameof(OperationStatusChangeNotification.OperationId)] = (int)notification.OperationId,
+                    [nameof(OperationStatusChangeNotification.State)] = notification.State.ToJson()
                 },
             };
 
@@ -259,8 +259,8 @@ namespace Raven.Server.Documents
                 ["Type"] = "AlertNotification",
                 ["Value"] = new DynamicJsonValue
                 {
-                    ["Global"] = notification.Global,
-                    ["Alert"] = notification.Alert.ToJson()
+                    [nameof(AlertNotification.Global)] = notification.Global,
+                    [nameof(AlertNotification.Alert)] = notification.Alert.ToJson()
                 }
             };
 
