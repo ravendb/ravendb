@@ -142,6 +142,14 @@ h6 {
             }
         }
     }
+
+    &.btn-checkable {
+        &.active {
+            &>i::before {
+                content: @tick-character;
+            }
+        }
+    }
 }
 
 .btn,
