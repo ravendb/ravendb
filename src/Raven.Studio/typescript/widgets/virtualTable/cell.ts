@@ -10,7 +10,7 @@ class cell {
     static externalIdTemplate = "externalIdTemplate";
     static customTemplate = "customTemplate";
     static counterNameTemplate = "counterNameTemplate";
-    static counterGroupTemplate = "counterGroupTemplate";
+    static counterGroupTemplate = "counterGroupTemplate"; 
     static timeSeriesKeyTemplate = "timeSeriesKeyTemplate";
 
     constructor(data: any, public templateName: string) {
