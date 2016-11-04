@@ -12,7 +12,7 @@ import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class globalConfigPeriodicExport extends viewModelBase {
-
+    /* TODO
     developerLicense = globalConfig.developerLicense;
     canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
     settingsDocument = ko.observable<document>();
@@ -165,7 +165,7 @@ class globalConfigPeriodicExport extends viewModelBase {
                 this.activated(false);
                 this.syncChanges(true);
             });
-    }
+    }*/
 }
 
 export = globalConfigPeriodicExport; 

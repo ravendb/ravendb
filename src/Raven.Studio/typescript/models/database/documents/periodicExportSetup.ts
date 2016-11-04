@@ -4,13 +4,13 @@ class periodicExportSetup {
 
     static decryptFailedValue = "<data could not be decrypted>";
 
-    onDiskExportEnabled = ko.observable<boolean>(false);
+    onDiskExportEnabled = ko.observable<boolean>(true);
     remoteUploadEnabled = ko.observable<boolean>(false);
 
     localFolderName = ko.observable<string>();
 
     unsupported = ko.observable<boolean>(false);
-    disabled = ko.observable<boolean>(true);
+    active = ko.observable<boolean>(false);
 
     type = ko.observable<string>();
     mainValue = ko.observable<string>();
@@ -22,7 +22,7 @@ class periodicExportSetup {
 
     awsAccessKey = ko.observable<string>(); 
     awsSecretKey = ko.observable<string>();
-    awsRegionEndpoint = ko.observable<string>();
+    awsRegionName = ko.observable<string>();
 
     awsSecretKeyDecryptionFailed = ko.observable<boolean>(false);
     azureStorageKeyDecryptionFailed = ko.observable<boolean>(false);
@@ -205,36 +205,38 @@ class periodicExportSetup {
         return "";
     }
 
-    fromDto(dto: periodicExportSetupDto) {
-        this.awsRegionEndpoint(dto.AwsRegionEndpoint);
+    fromDto(dto: Raven.Server.Documents.PeriodicExport.PeriodicExportConfiguration) {
+        if (dto) {
+            this.awsRegionName(dto.AwsRegionName);
 
-        this.setupTypeAndMainValue(dto);
+            this.setupTypeAndMainValue(dto);
 
-        this.s3RemoteFolderName(dto.S3RemoteFolderName);
-        this.azureRemoteFolderName(dto.AzureRemoteFolderName);
-        var incr = this.prepareBackupInterval(dto.IntervalMilliseconds);
-        this.incrementalBackupInterval(incr[0]);
-        this.incrementalBackupIntervalUnit(incr[1]);
+            this.s3RemoteFolderName(dto.S3RemoteFolderName);
+            this.azureRemoteFolderName(dto.AzureRemoteFolderName);
+            var incr = this.prepareBackupInterval(dto.IntervalMilliseconds);
+            this.incrementalBackupInterval(incr[0]);
+            this.incrementalBackupIntervalUnit(incr[1]);
 
-        var full = this.prepareBackupInterval(dto.FullBackupIntervalMilliseconds);
-        this.fullBackupInterval(full[0]);
-        this.fullBackupIntervalUnit(full[1]);
+            var full = this.prepareBackupInterval(dto.FullExportIntervalMilliseconds);
+            this.fullBackupInterval(full[0]);
+            this.fullBackupIntervalUnit(full[1]);
 
-        this.disabled(dto.Disabled);
+            this.active(dto.Active);
+        }
     }
 
-    toDto(): periodicExportSetupDto {
+    toDto(): Raven.Server.Documents.PeriodicExport.PeriodicExportConfiguration {
         return {
-            Disabled: this.disabled(),
+            Active: this.active(),
             GlacierVaultName: this.prepareMainValue(this.GLACIER_VAULT),
             S3BucketName: this.prepareMainValue(this.S3_BUCKET),
-            AwsRegionEndpoint: this.awsRegionEndpoint(),
+            AwsRegionName: this.awsRegionName(),
             AzureStorageContainer: this.prepareMainValue(this.AZURE_STORAGE),
             LocalFolderName: this.onDiskExportEnabled() ? this.localFolderName() : null,
             S3RemoteFolderName: this.isS3Bucket() ? this.s3RemoteFolderName() : null,
             AzureRemoteFolderName: this.additionalAzureInfoRequired() ? this.azureRemoteFolderName() : null,
             IntervalMilliseconds: this.convertToMilliseconds(this.incrementalBackupInterval(), this.incrementalBackupIntervalUnit()),
-            FullBackupIntervalMilliseconds: this.convertToMilliseconds(this.fullBackupInterval(), this.fullBackupIntervalUnit()),
+            FullExportIntervalMilliseconds: this.convertToMilliseconds(this.fullBackupInterval(), this.fullBackupIntervalUnit())
         };
     }
 
@@ -313,7 +315,7 @@ class periodicExportSetup {
         this.azureStorageKeyDecryptionFailed(false);
     }
 
-    private setupTypeAndMainValue(dto: periodicExportSetupDto) {
+    private setupTypeAndMainValue(dto: Raven.Server.Documents.PeriodicExport.PeriodicExportConfiguration) {
         var count = 0;
         if (dto.LocalFolderName) {
             this.localFolderName(dto.LocalFolderName);
@@ -366,13 +368,13 @@ class periodicExportSetup {
         this.remoteUploadEnabled(from.remoteUploadEnabled());
         this.localFolderName(from.localFolderName());
         this.unsupported(from.unsupported());
-        this.disabled(from.disabled());
+        this.active(from.active());
         this.type(from.type());
         this.mainValue(from.mainValue());
 
         this.awsAccessKey(from.awsAccessKey());
         this.awsSecretKey(from.awsSecretKey());
-        this.awsRegionEndpoint(from.awsRegionEndpoint());
+        this.awsRegionName(from.awsRegionName());
 
         this.s3RemoteFolderName(from.s3RemoteFolderName());
 
