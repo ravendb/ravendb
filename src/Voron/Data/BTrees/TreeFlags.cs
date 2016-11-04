@@ -8,6 +8,7 @@ namespace Voron.Data.BTrees
         None = 0,
         MultiValue = 1,
         FixedSizeTrees = 2,
-        MultiValueTrees = 4
+        MultiValueTrees = 4,
+        LeafsCompressed = 8
     }
 }

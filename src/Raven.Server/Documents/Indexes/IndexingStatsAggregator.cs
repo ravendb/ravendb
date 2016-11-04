@@ -246,6 +246,14 @@ namespace Raven.Server.Documents.Indexes
                 _stats.ReduceDetails.NumberOfModifiedBranches++;
         }
 
+        public void RecordCompressedLeafPage()
+        {
+            if (_stats.ReduceDetails == null)
+                _stats.ReduceDetails = new ReduceRunDetails();
+
+            _stats.ReduceDetails.NumberOfCompressedLeafs++;
+        }
+
         public void RecordReduceAttempts(int numberOfEntries)
         {
             _stats.ReduceAttempts += numberOfEntries;

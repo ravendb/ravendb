@@ -18,6 +18,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Raven.Client.Data.Indexes;
+using Voron.Data.Compression;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
@@ -214,7 +215,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var parentPagesToAggregate = new HashSet<long>();
 
             var page = new TreePage(null, lowLevelTransaction.PageSize);
-
+            
             foreach (var modifiedPage in modifiedStore.ModifiedPages)
             {
                 token.ThrowIfCancellationRequested();
@@ -231,31 +232,40 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     continue;
                 }
 
-                if (page.NumberOfEntries == 0)
+                var leafPage = page;
+
+                var compressed = leafPage.IsCompressed;
+
+                if (compressed)
+                    stats.RecordCompressedLeafPage();
+
+                using (compressed ? (DecompressedLeafPage)(leafPage = tree.DecompressPage(leafPage, skipCache: true)) : null)
                 {
-                    if (page.PageNumber != tree.State.RootPageNumber)
+                    if (leafPage.NumberOfEntries == 0)
                     {
-                        throw new InvalidOperationException(
-                            $"Encountered empty page which isn't a root. Page #{page.PageNumber} in '{tree.Name}' tree.");
+                        if (leafPage.PageNumber != tree.State.RootPageNumber)
+                        {
+                            throw new InvalidOperationException(
+                                $"Encountered empty page which isn't a root. Page #{leafPage.PageNumber} in '{tree.Name}' tree.");
+                        }
+
+                        writer.DeleteReduceResult(reduceKeyHash, stats);
+
+                        var emptyPageNumber = Bits.SwapBytes(leafPage.PageNumber);
+                        Slice pageNumSlice;
+                        using (Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long), out pageNumSlice))
+                            table.DeleteByKey(pageNumSlice);
+
+                        continue;
                     }
 
-                    writer.DeleteReduceResult(reduceKeyHash, stats);
+                var parentPage = tree.GetParentPageOf(leafPage);
 
-                    var emptyPageNumber = Bits.SwapBytes(page.PageNumber);
-                    Slice pageNumSlice;
-                    using (Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long), out pageNumSlice))
-                        table.DeleteByKey(pageNumSlice);
-
-                    continue;
-                }
-
-                var parentPage = tree.GetParentPageOf(page);
-
-                stats.RecordReduceAttempts(page.NumberOfEntries);
+                stats.RecordReduceAttempts(leafPage.NumberOfEntries);
 
                 try
                 {
-                    using (var result = AggregateLeafPage(page, lowLevelTransaction, indexContext, stats, token))
+                    using (var result = AggregateLeafPage(leafPage, lowLevelTransaction, indexContext, stats, token))
                     {
                         if (parentPage == -1)
                         {
@@ -268,13 +278,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         }
                         else
                         {
-                            StoreAggregationResult(page.PageNumber, page.NumberOfEntries, table, result, stats);
+                            StoreAggregationResult(leafPage.PageNumber, leafPage.NumberOfEntries, table, result, stats);
                             parentPagesToAggregate.Add(parentPage);
                         }
 
-                        _metrics.MapReduceReducedPerSecond.Mark(page.NumberOfEntries);
+                        _metrics.MapReduceReducedPerSecond.Mark(leafPage.NumberOfEntries);
 
-                        stats.RecordReduceSuccesses(page.NumberOfEntries);
+                        stats.RecordReduceSuccesses(leafPage.NumberOfEntries);
                     }
                 }
                 catch (Exception e)
@@ -282,18 +292,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     _index.HandleError(e);
 
                     var message =
-                        $"Failed to execute reduce function for reduce key '{tree.Name}' on a leaf page #{page} of '{_indexDefinition.Name}' index.";
+                        $"Failed to execute reduce function for reduce key '{tree.Name}' on a leaf page #{leafPage} of '{_indexDefinition.Name}' index.";
 
                     if (_logger.IsInfoEnabled)
                         _logger.Info(message, e);
 
                     if (parentPage == -1)
                     {
-                        stats.RecordReduceErrors(page.NumberOfEntries);
+                        stats.RecordReduceErrors(leafPage.NumberOfEntries);
                         stats.AddReduceError(message + $"  Exception: {e}");
                     }
                 }
             }
+        }
 
             long tmp = 0;
             Slice pageNumberSlice;

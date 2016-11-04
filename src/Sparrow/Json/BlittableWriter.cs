@@ -465,7 +465,7 @@ namespace Sparrow.Json
             var compressionBuffer = GetCompressionBuffer(size);
             if (size > 128)
             {
-                compressedSize = _context.Lz4.Encode64(buffer,
+                compressedSize = LZ4.Encode64(buffer,
                     compressionBuffer,
                     size,
                     maxGoodCompressionSize,

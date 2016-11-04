@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
@@ -58,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             //TODO: Need better way to handle tree names
 
             var treeName = ReduceTreePrefix + _reduceKeyHash;
-            Tree = create ? _tx.CreateTree(treeName, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
+            Tree = create ? _tx.CreateTree(treeName, flags: TreeFlags.LeafsCompressed, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
 
             ModifiedPages = new HashSet<long>();
             FreedPages = new HashSet<long>();
@@ -94,8 +95,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 default:
                     throw new ArgumentOutOfRangeException(Type.ToString());
             }
-            
-            _mapReduceContext.EntryDeleted(id);
         }
 
         public void Add(long id, BlittableJsonReaderObject result)
@@ -104,6 +103,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 case MapResultsStorageType.Tree:
                     Slice entrySlice;
+                    
                     using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
                     {
                         var pos = Tree.DirectAdd(entrySlice, result.Size);
