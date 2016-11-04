@@ -291,5 +291,9 @@ namespace Voron.Impl.Scratch
         {
             return _current.File.NumberOfAllocatedPages - _current.File.AllocatedPagesUsedSize;
         }
+
+        public void Cleanup()
+        {
+        }
     }
 }

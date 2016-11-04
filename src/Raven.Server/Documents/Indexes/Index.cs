@@ -630,6 +630,8 @@ namespace Raven.Server.Documents.Indexes
                                 // so this is a good time to release resources we won't need 
                                 // anytime soon
                                 ReduceMemoryUsage();
+                                ReduceDiskUsage();
+
                                 _mre.Wait(cts.Token);
                             }
                         }
@@ -644,6 +646,11 @@ namespace Raven.Server.Documents.Indexes
                     DocumentDatabase.Notifications.OnDocumentChange -= HandleDocumentChange;
                 }
             }
+        }
+
+        private void ReduceDiskUsage()
+        {
+            _environment.Cleanup();
         }
 
         private void ReduceMemoryUsage()
