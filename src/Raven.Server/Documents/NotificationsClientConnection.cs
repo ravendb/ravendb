@@ -269,7 +269,7 @@ namespace Raven.Server.Documents
         }
 
 
-        public async Task StartSendingNotifications(bool sendStartTime, bool throttleNotifications)
+        public async Task StartSendingNotifications(bool sendStartTime)
         {
             if (sendStartTime)
                 SendStartTime();
@@ -279,19 +279,17 @@ namespace Raven.Server.Documents
             {
                 using (var ms = new MemoryStream())
                 {
-                    var sp = Stopwatch.StartNew();
                     while (true)
                     {
                         if (_disposeToken.IsCancellationRequested)
                             break;
 
-                        sp.Restart();
                         ms.SetLength(0);
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
                             do
                             {
-                                var value = await GetNextMessage(throttleNotifications);
+                                var value = await _sendQueue.DequeueAsync();
                                 if (_disposeToken.IsCancellationRequested)
                                     break;
 
@@ -300,7 +298,7 @@ namespace Raven.Server.Documents
 
                                 if (ms.Length > 16*1024)
                                     break;
-                            } while (_sendQueue.Count > 0 || sp.Elapsed > _maxTimeToThorttleMessage);
+                            } while (_sendQueue.Count > 0);
                         }
                         if (ms.Length == 0)
                         {
@@ -316,41 +314,6 @@ namespace Raven.Server.Documents
                     }
                 }
             }
-        }
-
-        private readonly TimeSpan _maxTimeToThorttleMessage = TimeSpan.FromSeconds(5);
-        private DateTime _lastMessage;
-        private Task<DynamicJsonValue> _dequeueAsync;
-
-        private async Task<DynamicJsonValue> GetNextMessage(bool throttleNotifications)
-        {
-            _dequeueAsync = _sendQueue.DequeueAsync();
-
-            var dynamicJsonValue = await _dequeueAsync;
-
-            if (throttleNotifications == false)
-                return dynamicJsonValue;
-
-            while (true)
-            {
-                var now = DateTime.UtcNow;
-                var timeSinceLastMessage = now - _lastMessage;
-                if (timeSinceLastMessage > _maxTimeToThorttleMessage)
-                {
-                    _lastMessage = now;
-                    return dynamicJsonValue;
-                }
-
-                // we got more messages than we care to send, so we need to wait a maximum
-                _dequeueAsync = _sendQueue.DequeueAsync();
-                var waitResult = await Task.WhenAny(_dequeueAsync, Task.Delay(_maxTimeToThorttleMessage - timeSinceLastMessage));
-                if (waitResult != _dequeueAsync)
-                    break; // we hit the timeout, we can release the last recieved message
-
-                dynamicJsonValue = await _dequeueAsync;
-            }
-
-            return dynamicJsonValue;
         }
 
         public void Dispose()
