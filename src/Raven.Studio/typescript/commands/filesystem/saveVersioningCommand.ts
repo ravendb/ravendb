@@ -4,6 +4,7 @@ import saveConfigurationCommand = require('commands/filesystem/saveConfiguration
 import configurationKey = require('models/filesystem/configurationKey');
 
 class saveVersioningCommand extends commandBase {
+    /* TODO
     constructor(private fs: filesystem, private versioningEntry: versioningEntryDto) {
         super();
     }
@@ -12,7 +13,7 @@ class saveVersioningCommand extends commandBase {
         return new saveConfigurationCommand(this.fs,
             new configurationKey(this.fs, 'Raven/Versioning/DefaultConfiguration'), this.versioningEntry)
           .execute();
-    }
+    }*/
 }
 
 export = saveVersioningCommand;

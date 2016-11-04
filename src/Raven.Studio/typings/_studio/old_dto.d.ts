@@ -383,18 +383,6 @@ interface indexQueryResultsDto extends indexResultsDto<documentDto> {
     Error?: string;
 }
 
-interface versioningEntryDto extends documentDto {
-  Id: string;
-  MaxRevisions: number;
-  Exclude: boolean;
-  ExcludeUnlessExplicit: boolean;
-  PurgeOnDelete: boolean;
-  ResetOnRename?: boolean;
-}
-
-interface versioningDto {
-  Entries: versioningEntryDto[]
-}
 
 interface replicationDestinationDto {
     Url: string;

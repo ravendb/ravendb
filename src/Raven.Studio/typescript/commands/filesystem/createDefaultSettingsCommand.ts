@@ -6,6 +6,7 @@ import commandBase = require("commands/commandBase");
 import saveVersioningCommand = require("commands/filesystem/saveVersioningCommand");
 
 class createDefaultSettingsCommand extends commandBase {
+    /*TODO
     constructor(private fs: filesystem, private bundles: string[]) {
         super();
     }
@@ -37,7 +38,7 @@ class createDefaultSettingsCommand extends commandBase {
 
     private saveVersioningConfiguration(): JQueryPromise<any> {
         return new saveVersioningCommand(this.fs, this.createDefaultVersioning().toDto()).execute();
-    }
+    }*/
 }
 
 export = createDefaultSettingsCommand;

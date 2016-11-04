@@ -23,9 +23,10 @@ class createDefaultSettingsCommand extends commandBase {
         if (this.bundles.contains("Quotas")) {
             tasksToWatch.push(this.updateQuotasSettings());
         }
+        /* TODO
         if (this.bundles.contains("Versioning")) {
             tasksToWatch.push(this.saveVersioningConfiguration());
-        }
+        }*/
 
         if (tasksToWatch.length > 0) {
             return $.when.apply(null, tasksToWatch);
@@ -70,6 +71,7 @@ class createDefaultSettingsCommand extends commandBase {
         return taskDone;
     }
 
+    /* TODO
     private createDefaultVersioningSettings(): Array<versioningEntry> {
         return [
             new versioningEntry({
@@ -80,8 +82,9 @@ class createDefaultSettingsCommand extends commandBase {
                 PurgeOnDelete: false
             })
         ];
-    }
+    }*/
 
+    /*TODO
     private saveVersioningConfiguration(): JQueryPromise<any> {
 
         var saveTask = $.Deferred();
@@ -99,7 +102,9 @@ class createDefaultSettingsCommand extends commandBase {
                 }
             });
         return saveTask;
-    }
+    }*/
+
+    /* TODO
 
     private hasGlobalVersioningSettings(): JQueryPromise<boolean> {
         var hasGlobal = $.Deferred();
@@ -111,7 +116,7 @@ class createDefaultSettingsCommand extends commandBase {
             .fail(() => hasGlobal.reject());
 
         return hasGlobal.promise();
-    }
+    }*/
 
     private hasGlobalQuotaSettings(): JQueryPromise<boolean> {
         var hasGlobal = $.Deferred();

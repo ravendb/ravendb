@@ -1,89 +1,43 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
-import documentMetadata = require("models/database/documents/documentMetadata");
+class versioningEntry {
 
-class versioningEntry implements copyFromParentDto<versioningEntry> {
-    collection = ko.observable<string>();
+    static readonly DefaultConfiguration = "DefaultConfiguration";
+
+    active = ko.observable<boolean>();
     maxRevisions = ko.observable<number>();
-    exclude = ko.observable<boolean>();
-    excludeUnlessExplicit = ko.observable<boolean>();
     purgeOnDelete = ko.observable<boolean>();
+    collection = ko.observable<string>().extend({ required: true});
 
-    fromDatabase = ko.observable<boolean>();
+    /*TODO
+    exclude = ko.observable<boolean>();
+    excludeUnlessExplicit = ko.observable<boolean>();*/
 
-    removable: KnockoutComputed<boolean>;
-    isValid: KnockoutComputed<boolean>;
-    disabled: KnockoutComputed<boolean>;
-    __metadata: documentMetadata;
+    isDefault: KnockoutComputed<boolean>;
 
-    constructor(dto?: versioningEntryDto, fromDatabse: boolean = false) {
-        if (!dto) {
-            // Default settings for new entries
-            dto = {
-                Id: "",
-                MaxRevisions: 214748368,
-                Exclude: false,
-                ExcludeUnlessExplicit: false,
-                PurgeOnDelete: false
-            };
-            this.__metadata = new documentMetadata();
-        } else {
-            this.__metadata = new documentMetadata(dto["@metadata"]);
-        }
-
-        this.fromDatabase(fromDatabse);
-
-        var id = dto.Id;
-        if (!id && this.__metadata.id) {
-            // pre 3.0 backward compatibility
-            var prefix = "Raven/Versioning/";
-            id = this.__metadata.id;
-            if (id && id.startsWith(prefix)) {
-                id = id.substring(prefix.length);
-            } 
-        }
-        
-        this.collection(id);
+    constructor(collection: string, dto: Raven.Server.Documents.Versioning.VersioningConfigurationCollection) {
+        this.collection(collection);
         this.maxRevisions(dto.MaxRevisions);
-        this.exclude(dto.Exclude);
-        this.excludeUnlessExplicit(dto.ExcludeUnlessExplicit);
+        this.active(dto.Active);
         this.purgeOnDelete(dto.PurgeOnDelete);
-        this.removable = ko.computed<boolean>(() => {
-            return (this.collection() !== "DefaultConfiguration");
-        });
-
-        this.isValid = ko.computed(() => {
-            return this.collection() != null && this.collection().length > 0 && this.collection().indexOf(' ') === -1;
-        });
-
-        this.disabled = ko.computed(() => this.exclude());
+        this.isDefault = ko.pureComputed<boolean>(() => this.collection() === versioningEntry.DefaultConfiguration);
     }
 
-    toDto(includeMetadata:boolean): versioningEntryDto {
-        var dto: versioningEntryDto = {
-            '@metadata': undefined,
-            Id: this.collection(),
+    toDto(): Raven.Server.Documents.Versioning.VersioningConfigurationCollection {
+        return {
+            Active: this.active(),
             MaxRevisions: this.maxRevisions(),
-            Exclude: this.exclude(),
-            ExcludeUnlessExplicit: this.excludeUnlessExplicit(),
             PurgeOnDelete: this.purgeOnDelete()
         };
-
-        if (includeMetadata && this.__metadata) {
-            dto["@metadata"] = <any>(this.__metadata.toDto());
-        }
-
-        return dto;
     }
 
-    copyFromParent(parent: versioningEntry) {
-        this.collection(parent.collection());
-        this.maxRevisions(parent.maxRevisions());
-        this.exclude(parent.exclude());
-        this.excludeUnlessExplicit(parent.excludeUnlessExplicit());
-        this.purgeOnDelete(parent.purgeOnDelete());
-        this.fromDatabase(true);
-        this.__metadata = parent.__metadata;
+    static empty() {
+        return new versioningEntry("",
+        {
+            Active: true,
+            MaxRevisions: 5,
+            PurgeOnDelete: false
+        });
     }
 }
 

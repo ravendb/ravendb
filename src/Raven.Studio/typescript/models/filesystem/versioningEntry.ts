@@ -1,6 +1,7 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
 class versioningEntry {
+    /* TODO
     maxRevisions = ko.observable<number>();
     exclude = ko.observable<boolean>();
     excludeUnlessExplicit = ko.observable<boolean>();
@@ -42,7 +43,7 @@ class versioningEntry {
         };
 
         return dto;
-    }
+    }*/
 }
 
 export = versioningEntry;

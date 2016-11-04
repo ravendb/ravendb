@@ -8,6 +8,7 @@ class getVersioningCommand extends commandBase {
         super();
     }
 
+    /* TODO
     execute(): JQueryPromise<versioningEntry> {
         var result = $.Deferred();
 
@@ -20,7 +21,7 @@ class getVersioningCommand extends commandBase {
         });
 
         return result;
-    }
+    }*/
 }
 
 export = getVersioningCommand;
