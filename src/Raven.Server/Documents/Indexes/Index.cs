@@ -63,7 +63,11 @@ namespace Raven.Server.Documents.Indexes
     {
         private long _writeErrors;
 
+        private long _criticalErrors;
+
         private const long WriteErrorsLimit = 10;
+
+        private const long CriticalErrorsLimit = 3;
 
         protected Logger _logger;
 
@@ -504,6 +508,10 @@ namespace Raven.Server.Documents.Indexes
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown,
                     _cancellationTokenSource.Token))
             {
+                // if we are starting indexing e.g. manually after failure
+                // we need to reset errors to give it a chance
+                ResetErrors();
+
                 try
                 {
                     _contextPool.SetMostWorkInGoingToHappenonThisThread();
@@ -545,7 +553,7 @@ namespace Raven.Server.Documents.Indexes
                                     new IndexChangeNotification { Name = Name, Type = IndexChangeTypes.BatchCompleted });
 
                                 if (didWork)
-                                    ResetWriteErrors();
+                                    ResetErrors();
 
                                 if (_logger.IsInfoEnabled)
                                     _logger.Info($"Finished indexing for '{Name} ({IndexId})'.'");
@@ -580,10 +588,10 @@ namespace Raven.Server.Documents.Indexes
                             }
                             catch (Exception e)
                             {
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Exception occurred for '{Name} ({IndexId})'.", e);
+                                if (_logger.IsOperationsEnabled)
+                                    _logger.Operations($"Critical exception occurred for '{Name} ({IndexId})'.", e);
 
-                                scope.AddGenericError(e);
+                                HandleCriticalErrors(scope, e);
                             }
 
                             try
@@ -672,9 +680,24 @@ namespace Raven.Server.Documents.Indexes
                 _logger.Info($"After clenaup, using {afterFree / 1024:#,#} kb by '{Name} ({IndexId})'.");
         }
 
-        internal void ResetWriteErrors()
+        internal void ResetErrors()
         {
             Interlocked.Exchange(ref _writeErrors, 0);
+            Interlocked.Exchange(ref _criticalErrors, 0);
+        }
+
+        internal void HandleCriticalErrors(IndexingStatsScope stats, Exception e)
+        {
+            stats.AddCriticalError(e);
+
+            var criticalErrors = Interlocked.Increment(ref _criticalErrors);
+
+            if (Priority.HasFlag(IndexingPriority.Error) || criticalErrors < CriticalErrorsLimit)
+                return;
+
+            // TODO we should create notification here?
+            _errorPriorityReason = $"Priority was changed due to excessive number of critical errors ({criticalErrors}).";
+            SetPriority(IndexingPriority.Error);
         }
 
         internal void HandleWriteErrors(IndexingStatsScope stats, IndexWriteException iwe)
