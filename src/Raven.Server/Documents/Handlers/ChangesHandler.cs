@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Handlers
         {
             // this flag can be used to detect if server was restarted between changes connections on client side
             var sendStartTime = GetBoolValueQueryString("sendServerStartTime", false).GetValueOrDefault(false);
-            var throttleConnection = GetBoolValueQueryString("throttleConnection ", false).GetValueOrDefault(false);
+            var throttleConnection = GetBoolValueQueryString("throttleConnection", false).GetValueOrDefault(false);
 
             var connection = new NotificationsClientConnection(webSocket, Database);
             Database.Notifications.Connect(connection);
