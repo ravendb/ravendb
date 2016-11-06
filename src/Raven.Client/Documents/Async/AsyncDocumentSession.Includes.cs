@@ -39,19 +39,31 @@ namespace Raven.Client.Documents.Async
     /// </summary>
     public partial class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
     {
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
         public IAsyncLoaderWithInclude<object> Include(string path)
         {
-            throw new NotImplementedException();
+            return new AsyncMultiLoaderWithInclude<object>(this).Include(path);
         }
 
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
         public IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
         {
-            throw new NotImplementedException();
+            return new AsyncMultiLoaderWithInclude<T>(this).Include(path);
         }
 
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
         public IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
         {
-            throw new NotImplementedException();
+            return new AsyncMultiLoaderWithInclude<T>(this).Include<TInclude>(path);
         }
     }
 }
