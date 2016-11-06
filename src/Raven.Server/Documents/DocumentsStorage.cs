@@ -1971,20 +1971,25 @@ namespace Raven.Server.Documents
                 if(context.Transaction.InnerTransaction.LowLevelTransaction.AlsoDispose == null)
                     context.Transaction.InnerTransaction.LowLevelTransaction.AlsoDispose = new List<IDisposable>();
 
+                //add to cache ONLY if the transaction was committed. 
+                //this would prevent NREs next time a PUT is run,since if a transaction
+                //is not commited, DocsSchema and TombstonesSchema will not be actually created..
                 var lowLevelTx = context.Transaction.InnerTransaction.LowLevelTransaction;
                 context.Transaction.InnerTransaction.LowLevelTransaction.AlsoDispose.Add(new DisposableAction(() =>
                 {
-                    //add to cache ONLY if the transaction was committed. 
-                    //this would prevent NREs next time a PUT is run,since if a transaction
-                    //is not commited, DocsSchema and TombstonesSchema will not be actually created..
-                    if (lowLevelTx.Committed)
+                    if (!lowLevelTx.Committed)
+                        return;
+
+                    // other transactions might be running in parallel
+                    while (_collectionsCache.ContainsKey(name.Name) == false)
                     {
-                        // safe to do, other transactions will see it, but we are under write lock here
-                        _collectionsCache = new Dictionary<string, CollectionName>(_collectionsCache,
-                            StringComparer.OrdinalIgnoreCase)
-                        {
-                            {name.Name, name}
-                        };
+                        var oldCopy = _collectionsCache;
+                        var newCopy = new Dictionary<string, CollectionName>(oldCopy,StringComparer.OrdinalIgnoreCase);
+                        if (newCopy.ContainsKey(name.Name))
+                            return;
+                        newCopy[name.Name] = name;
+                        if (Interlocked.CompareExchange(ref _collectionsCache, newCopy, oldCopy) == oldCopy)
+                            return; // copied
                     }
                 }));
             }
