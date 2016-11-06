@@ -16,18 +16,22 @@ namespace Raven.Server.Utils
 {
     public static unsafe class ReplicationUtils
     {
-        public static unsafe void WriteChangeVectorTo(DocumentsOperationContext context, Dictionary<Guid, long> changeVector, Tree tree)
+        public static void WriteChangeVectorTo(DocumentsOperationContext context, Dictionary<Guid, long> changeVector, Tree tree)
         {
-            foreach (var kvp in changeVector)
+            Guid dbId;
+            long etagBigEndian;
+            Slice keySlice;
+            Slice valSlice;
+            using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out keySlice))
+            using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out valSlice))
             {
-                var dbId = kvp.Key;
-                var etagBigEndian = IPAddress.HostToNetworkOrder(kvp.Value);
-                Slice key;
-                Slice value;
-                using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out key))
-                using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out value))
-                    tree.Add(key, value);
-            }
+                foreach (var kvp in changeVector)
+                {
+                    dbId = kvp.Key;
+                    etagBigEndian = IPAddress.HostToNetworkOrder(kvp.Value);
+                    tree.Add(keySlice, valSlice);
+                }
+            }           
         }
 
         public static TEnum GetEnumFromTableValueReader<TEnum>(TableValueReader tvr, int index)
