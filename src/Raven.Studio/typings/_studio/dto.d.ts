@@ -134,3 +134,10 @@ interface availableBundle {
     hasAdvancedConfiguration: boolean;
     validationGroup?: KnockoutValidationGroup;
 }
+
+
+interface storageReportItem {
+    Name: string;
+    Type: string;
+    Report: Voron.Debugging.StorageReport;
+}
