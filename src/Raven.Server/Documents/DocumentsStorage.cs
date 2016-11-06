@@ -271,44 +271,13 @@ namespace Raven.Server.Documents
             AssertTransaction(context);
 
             var tree = context.Transaction.InnerTransaction.ReadTree("ChangeVector");
-            var changeVector = new ChangeVectorEntry[tree.State.NumberOfEntries];
-            using (var iter = tree.Iterate(false))
-            {
-                if (iter.Seek(Slices.BeforeAllKeys) == false)
-                    return changeVector;
-                var buffer = new byte[sizeof(Guid)];
-                int index = 0;
-                do
-                {
-                    var read = iter.CurrentKey.CreateReader().Read(buffer, 0, sizeof(Guid));
-                    if (read != sizeof(Guid))
-                        throw new InvalidDataException($"Expected guid, but got {read} bytes back for change vector");
-
-                    changeVector[index].DbId = new Guid(buffer);
-                    changeVector[index].Etag = iter.CreateReaderForCurrent().ReadBigEndianInt64();
-                    index++;
-                } while (iter.MoveNext());
-            }
-            return changeVector;
+            return ReplicationUtils.ReadChangeVectorFrom(tree);
         }
 
         public void SetDatabaseChangeVector(DocumentsOperationContext context, Dictionary<Guid, long> changeVector)
         {
-            var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
-            Guid dbId;
-            long etagBigEndian;
-            Slice keySlice; ;
-            Slice valSlice;
-            using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out keySlice))
-            using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out valSlice))
-            {
-                foreach (var kvp in changeVector)
-                {
-                    dbId = kvp.Key;
-                    etagBigEndian = IPAddress.HostToNetworkOrder(kvp.Value);
-                    tree.Add(keySlice, valSlice);
-                }
-            }
+            var tree = context.Transaction.InnerTransaction.ReadTree("ChangeVector");
+            ReplicationUtils.WriteChangeVectorTo(context, changeVector, tree);
         }
 
         public static long ReadLastDocumentEtag(Transaction tx)
@@ -1608,7 +1577,7 @@ namespace Raven.Server.Documents
             if (oldValue != null)
             {
                 var changeVector = GetChangeVectorEntriesFromTableValueReader(oldValue, 4);
-                return UpdateChangeVectorWithLocalChange(newEtag, changeVector);
+                return ReplicationUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, changeVector);
             }
 
             return GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredKey, newEtag);
@@ -1624,7 +1593,7 @@ namespace Raven.Server.Documents
             if (conflictChangeVectors.Count == 0)
             {
                 if (existing != null)
-                    return UpdateChangeVectorWithLocalChange(newEtag, existing);
+                    return ReplicationUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, existing);
 
                 return new[]
                 {
@@ -1662,23 +1631,6 @@ namespace Raven.Server.Documents
                 changeVector[index].Etag = maxEtag.Value;
                 index++;
             }
-            return changeVector;
-        }
-
-        private ChangeVectorEntry[] UpdateChangeVectorWithLocalChange(long newEtag, ChangeVectorEntry[] changeVector)
-        {
-            var length = changeVector.Length;
-            for (int i = 0; i < length; i++)
-            {
-                if (changeVector[i].DbId == Environment.DbId)
-                {
-                    changeVector[i].Etag = newEtag;
-                    return changeVector;
-                }
-            }
-            Array.Resize(ref changeVector, length + 1);
-            changeVector[length].DbId = Environment.DbId;
-            changeVector[length].Etag = newEtag;
             return changeVector;
         }
 
