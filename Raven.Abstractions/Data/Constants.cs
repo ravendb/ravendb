@@ -21,8 +21,9 @@ namespace Raven.Abstractions.Data
         public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
 
         public const string RavenShardId = "Raven-Shard-Id";
-        
-        
+
+        public const string BuildVersion = "BuildVersion";
+
         public const string LastModified = "Last-Modified";
         public const string SerializedSizeOnDisk = "SerializedSizeOnDisk";
 
