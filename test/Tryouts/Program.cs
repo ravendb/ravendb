@@ -13,9 +13,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                using (var a = new FastTests.Server.Documents.Notifications.ChangesTests())
+                using (var a = new SlowTests.MailingList.NullableEnums())
                 {
-                    a.CanGetNotificationAboutDocumentDelete().Wait();
+                    a.CanQueryByNullableEnumThatIsNull();
                 }
                 Console.WriteLine(sp.Elapsed);
             }
