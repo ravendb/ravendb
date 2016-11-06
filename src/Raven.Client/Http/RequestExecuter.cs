@@ -129,14 +129,14 @@ namespace Raven.Client.Http
             AsyncHelpers.RunSync(() => ExecuteAsync(command, context));
         }
 
-        public async Task ExecuteAsync<TResult>(RavenCommand<TResult> command, JsonOperationContext context)
+        public async Task ExecuteAsync<TResult>(RavenCommand<TResult> command, JsonOperationContext context, CancellationToken token = default(CancellationToken))
         {
             var choosenNode = ChooseNodeForRequest(command);
 
-            await ExecuteAsync(choosenNode, context, command);
+            await ExecuteAsync(choosenNode, context, command, token);
         }
 
-        public async Task ExecuteAsync<TResult>(ChoosenNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command)
+        public async Task ExecuteAsync<TResult>(ChoosenNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command, CancellationToken token = default(CancellationToken))
         {
             string url;
             var request = CreateRequest(choosenNode.Node, command, out url);
@@ -162,7 +162,7 @@ namespace Raven.Client.Http
                 HttpResponseMessage response;
                 try
                 {
-                    response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+                    response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
                     sp.Stop();
                 }
                 catch (HttpRequestException e) // server down, network down

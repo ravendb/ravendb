@@ -155,13 +155,13 @@ namespace Raven.Client.Documents.Async
             return documentInfo;
         }
 
-        private async Task<BlittableJsonReaderObject> TempAsyncDatabaseCommandGet(DocumentInfo documentInfo)
+        private async Task<BlittableJsonReaderObject> TempAsyncDatabaseCommandGet(DocumentInfo documentInfo, CancellationToken token = default(CancellationToken))
         {
             var command = new GetDocumentCommand
             {
                 Ids = new[] { documentInfo.Id }
             };
-            await RequestExecuter.ExecuteAsync(command, Context);
+            await RequestExecuter.ExecuteAsync(command, Context, token);
             var document = (BlittableJsonReaderObject)command.Result.Results[0];
             if (document == null)
                 throw new InvalidOperationException("Document '" + documentInfo.Id +
@@ -196,7 +196,7 @@ namespace Raven.Client.Documents.Async
             var command = saveChangesOeration.CreateRequest();
             if (command != null)
             {
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecuter.ExecuteAsync(command, Context, token);
                 saveChangesOeration.SetResult(command.Result);
             }
         }
