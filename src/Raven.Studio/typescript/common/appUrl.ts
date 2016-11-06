@@ -109,6 +109,7 @@ class appUrl {
         statusStorageOnDisk: ko.computed(() => appUrl.forStatusStorageOnDisk(appUrl.currentDatabase())),
         statusStorageBreakdown: ko.computed(() => appUrl.forStatusStorageBreakdown(appUrl.currentDatabase())),
         statusStorageCollections: ko.computed(() => appUrl.forStatusStorageCollections(appUrl.currentDatabase())),
+        statusStorageReport: ko.computed(() => appUrl.forStatusStorageReport(appUrl.currentDatabase())),
 
         isAreaActive: (routeRoot: string) => ko.pureComputed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.pureComputed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
@@ -513,6 +514,10 @@ class appUrl {
 
     static forStatusStorageCollections(db: database): string {
         return '#databases/status/storage/collections?' + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusStorageReport(db: database): string {
+        return '#databases/status/storage/report?' + appUrl.getEncodedDbPart(db);
     }
 
     static forSettings(db: database): string {
