@@ -352,8 +352,7 @@ more responsive application.
         {
             if (string.IsNullOrEmpty(key))
             {
-                // TODO, iftah, find out in which scenario the key would be empty and handle appropriately
-                //return JsonObjectToClrInstancesWithoutTracking(entityType, document);
+                return DeserializeFromTransformer(entityType, null, document);
             }
 
             DocumentInfo docInfo;
@@ -1122,6 +1121,12 @@ more responsive application.
                     continue;
                 HandleInternalMetadata(bArray);
             }
+        }
+
+        public object DeserializeFromTransformer(Type entityType, string id, BlittableJsonReaderObject document)
+        {
+            HandleInternalMetadata(document);
+            return EntityToBlittable.ConvertToEntity(entityType, id, document);
         }
 
         public string CreateDynamicIndexName<T>()

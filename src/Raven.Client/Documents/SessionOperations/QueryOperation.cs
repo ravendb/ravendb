@@ -138,10 +138,10 @@ namespace Raven.Client.Documents.SessionOperations
                     BlittableJsonReaderArray values;
                     if (document.TryGet("$values", out values) == false)
                         throw new InvalidOperationException("Transformed document must have a $values property");
-                    
-                    foreach (BlittableJsonReaderObject value in values)
-                        list.Add((T)_session.EntityToBlittable.ConvertToEntity(typeof(T), null, value));
 
+                    foreach (BlittableJsonReaderObject value in values)
+                        list.Add((T)_session.DeserializeFromTransformer(typeof(T), null, value));
+                    
                     continue;
                 }
 
