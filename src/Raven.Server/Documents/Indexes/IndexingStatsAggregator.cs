@@ -168,9 +168,9 @@ namespace Raven.Server.Documents.Indexes
             _stats.AddWriteError(iwe);
         }
 
-        public void AddGenericError(Exception e)
+        public void AddCriticalError(Exception e)
         {
-            _stats.AddGenericError(e);
+            _stats.AddCriticalError(e);
         }
 
         public void AddMemoryError(OutOfMemoryException oome)
