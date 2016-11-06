@@ -1012,6 +1012,12 @@ namespace Raven.Abstractions.Smuggler
                 return deletedDocumentsCount;
             });
 
+            exportSectionRegistar.Add(Constants.BuildVersion, async () =>
+            {
+                Options.OperateOnTypes &= ~(ItemType.Indexes | ItemType.Transformers);
+                return 0;
+            });
+
             exportSectionRegistar.Add("AttachmentsDeletions", async () =>
             {
                 Operations.ShowProgress("Begin reading deleted attachments");
@@ -1061,7 +1067,8 @@ namespace Raven.Abstractions.Smuggler
                     continue;
                 }
 
-                if (jsonReader.TokenType != JsonToken.StartArray)
+                if (jsonReader.TokenType != JsonToken.StartArray &&
+                    !currentSection.Equals(Constants.BuildVersion))
                 {
                     throw new InvalidDataException("StartArray was expected");
                 }
