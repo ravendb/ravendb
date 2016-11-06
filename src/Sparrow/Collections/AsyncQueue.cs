@@ -34,6 +34,21 @@ namespace Sparrow.Collections
             return result;
         }
 
+        public async Task<Tuple<bool, T>> TryDequeueAsync(TimeSpan timeout)
+        {
+            EnsureNotDisposed();
+
+            T result;
+            while (_inner.TryDequeue(out result) == false)
+            {
+                EnsureNotDisposed();
+                if (await _event.WaitAsync(timeout) == false)
+                    return Tuple.Create(false, default(T));
+                _event.Reset();
+            }
+            return Tuple.Create(true, result);
+        }
+
         public void Dispose()
         {
             _disposed = true;

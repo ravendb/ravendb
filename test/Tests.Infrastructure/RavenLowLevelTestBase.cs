@@ -49,7 +49,7 @@ namespace FastTests
 
             modifyConfiguration?.Invoke(configuration);
 
-            var documentDatabase = new DocumentDatabase(name, configuration, new IoMetrics(256, 256));
+            var documentDatabase = new DocumentDatabase(name, configuration, null);
             documentDatabase.Initialize();
 
             return documentDatabase;

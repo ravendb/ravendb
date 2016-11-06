@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -15,6 +15,8 @@ using Sparrow.Json;
 using Voron;
 using Voron.Data;
 using Sparrow;
+using Sparrow.Collections;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Data.Tables;
 
@@ -42,6 +44,8 @@ namespace Raven.Server.ServerWide
         public readonly IoMetrics IoMetrics;
         public readonly AlertsStorage Alerts;
 
+        private readonly ConcurrentSet<AsyncQueue<DynamicJsonValue>> _changes = new ConcurrentSet<AsyncQueue<DynamicJsonValue>>();
+
         private readonly TimeSpan _frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 
         public ServerStore(RavenConfiguration configuration)
@@ -52,7 +56,7 @@ namespace Raven.Server.ServerWide
             _logger = LoggingSource.Instance.GetLogger<ServerStore>("ServerStore");
             DatabasesLandlord = new DatabasesLandlord(this);
 
-            Alerts = new AlertsStorage("Raven/Server");
+            Alerts = new AlertsStorage("Raven/Server",this);
 
             // We use the follow format for the items data
             // { lowered key, key, data }
@@ -127,6 +131,8 @@ namespace Raven.Server.ServerWide
 
         public void Delete(TransactionOperationContext ctx, string id)
         {
+            TrackChange(ctx, "Delete", id);
+
             var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
             Slice key;
             using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
@@ -174,6 +180,7 @@ namespace Raven.Server.ServerWide
 
         public void Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc)
         {
+            TrackChange(ctx, "Write", id);
             Slice idAsSlice;
             Slice loweredId;
             using (Slice.From(ctx.Allocator, id, out idAsSlice))
@@ -285,5 +292,38 @@ namespace Raven.Server.ServerWide
 
             return true;
         }
+
+        public IDisposable TrackChanges(AsyncQueue<DynamicJsonValue> asyncQueue)
+        {
+            _changes.TryAdd(asyncQueue);
+            return new DisposableAction(() => _changes.TryRemove(asyncQueue));
+        }
+
+        public void TrackChange(TransactionOperationContext ctx, string operation, string id)
+        {
+            if (_changes.Count == 0)
+                return;
+
+            var llt = ctx.Transaction.InnerTransaction.LowLevelTransaction;
+            if (llt.AlsoDispose == null)
+                llt.AlsoDispose = new List<IDisposable>(1);
+
+            // need to do this after the transaction is over
+            llt.AlsoDispose.Add(new DisposableAction(() =>
+            {
+                if (llt.Committed == false)
+                    return;
+                var djv = new DynamicJsonValue
+                {
+                    ["Operation"] = operation,
+                    ["Id"] = id
+                };
+                foreach (var asyncQueue in _changes)
+                {
+                    asyncQueue.Enqueue(djv);
+                }
+            }));
+        }
+
     }
 }

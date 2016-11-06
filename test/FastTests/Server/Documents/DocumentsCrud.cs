@@ -25,7 +25,7 @@ namespace FastTests.Server.Documents
             _configuration.Core.RunInMemory = true;
             _configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
 
-            _documentDatabase = new DocumentDatabase("foo", _configuration, new IoMetrics(256, 256));
+            _documentDatabase = new DocumentDatabase("foo", _configuration, null);
             _documentDatabase.Initialize();
         }
 
@@ -275,7 +275,7 @@ namespace FastTests.Server.Documents
             _configuration.Initialize();
             _configuration.Core.RunInMemory = true;
 
-            _documentDatabase = new DocumentDatabase("test", _configuration, new IoMetrics(256, 256));
+            _documentDatabase = new DocumentDatabase("test", _configuration, null);
             _documentDatabase.Initialize(options);
         }
 

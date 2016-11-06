@@ -32,7 +32,7 @@ namespace Raven.Server.Documents
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
 
-        public DocumentDatabase(string name, RavenConfiguration configuration, IoMetrics ioMetrics)
+        public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
         {
             StartTime = SystemTime.UtcNow;
             Name = name;
@@ -49,12 +49,12 @@ namespace Raven.Server.Documents
             SubscriptionStorage = new SubscriptionStorage(this);
             Operations = new DatabaseOperations(this);
             Metrics = new MetricsCountersManager();
-            IoMetrics = ioMetrics;
+            IoMetrics = serverStore?.IoMetrics ?? new IoMetrics(256, 256);
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
             HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments,
                 configuration.Databases.MaxWarnSizeHugeDocuments);
-            ConfigurationStorage = new ConfigurationStorage(this);
+            ConfigurationStorage = new ConfigurationStorage(this, serverStore);
         }
 
         public SystemTime Time = new SystemTime();
