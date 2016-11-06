@@ -80,7 +80,6 @@ namespace Raven.Client.Documents.Async
             IncrementRequestCount();
 
             //TODO - Efrat - Change when we have new DatabaseCommands.Get
-            //TODO - Efrat - fix after pull
             var document = await TempAsyncDatabaseCommandGet(documentInfo);
 
             RefreshInternal(entity, document, documentInfo);
@@ -96,7 +95,14 @@ namespace Raven.Client.Documents.Async
             throw new NotImplementedException();
         }
 
-        public IAsyncAdvancedSessionOperations Advanced { get; }
+        /// <summary>
+        /// Get the accessor for advanced operations
+        /// </summary>
+        /// <remarks>
+        /// Those operations are rarely needed, and have been moved to a separate
+        /// property to avoid cluttering the API
+        /// </remarks>
+        public IAsyncAdvancedSessionOperations Advanced => this;
 
         /// <summary>
         /// Get the json document by key from the store
@@ -121,8 +127,6 @@ namespace Raven.Client.Documents.Async
             return Conventions.GenerateDocumentKeyAsync(DatabaseName, AsyncDatabaseCommands, entity);
         }
 
-        private readonly List<object> _entitiesWithMetadataInstance = new List<object>();
-
         public async Task<IDictionary<string, string>> GetMetadataForAsync<T>(T instance)
         {
             var documentInfo = await GetDocumentInfo(instance).ConfigureAwait(false);
@@ -132,7 +136,6 @@ namespace Raven.Client.Documents.Async
 
             var metadataAsBlittable = documentInfo.Metadata;
             var metadata = new MetadataAsDictionary(metadataAsBlittable);
-            _entitiesWithMetadataInstance.Add(documentInfo.Entity);
             documentInfo.MetadataInstance = metadata;
             return metadata;
         }
@@ -141,17 +144,25 @@ namespace Raven.Client.Documents.Async
         {
             DocumentInfo value;
             string id;
-            if (DocumentsByEntity.TryGetValue(instance, out value) ||
-                (!GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id) &&
-                 (!(instance is IDynamicMetaObjectProvider) ||
-                  !GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))) return value;
+
+            if (DocumentsByEntity.TryGetValue(instance, out value)) return value;
+
+            if (!GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id) &&
+                (!(instance is IDynamicMetaObjectProvider) ||
+                 !GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))
+                throw new InvalidOperationException("Could not find the document key for " + instance);
+
             AssertNoNonUniqueInstance(instance, id);
+
             var documentInfo = new DocumentInfo
             {
                 Id = id,
                 Entity = instance
             };
+
+            //TODO - Efrat - Change when we have new DatabaseCommands.Get
             await TempAsyncDatabaseCommandGet(documentInfo);
+
             return documentInfo;
         }
 
