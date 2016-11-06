@@ -153,11 +153,12 @@ namespace Raven.Server.Documents.Replication
         private unsafe void ReceiveSingleBatch(int replicatedDocsCount, long lastEtag)
         {
             var sw = Stopwatch.StartNew();
-            using (var writeBuffer = _context.GetStream())
+            var writeBuffer = _context.GetStream();
+            try
             {
                 // this will read the documents to memory from the network
                 // without holding the write tx open
-                ReadDocumentsFromSource(writeBuffer, replicatedDocsCount);
+                ReadDocumentsFromSource(ref writeBuffer, replicatedDocsCount);
                 byte* buffer;
                 int totalSize;
                 writeBuffer.EnsureSingleChunk(out buffer, out totalSize);
@@ -182,10 +183,16 @@ namespace Raven.Server.Documents.Replication
                         if (doc.DocumentSize >= 0) //no need to load document data for tombstones
                             // document size == -1 --> doc is a tombstone
                         {
-                            json = new BlittableJsonReaderObject(
-                                buffer + doc.Position + (doc.ChangeVectorCount*sizeof(ChangeVectorEntry)),
-                                doc.DocumentSize, _context);
-                        }
+                            {
+                                if (doc.Position + doc.DocumentSize > totalSize)
+                                    ThrowInvalidSize(totalSize, doc);
+
+                                //if something throws at this point, this means something is really wrong and we should stop receiving documents.
+                                //the other side will receive negative ack and will retry sending again.
+                                json = new BlittableJsonReaderObject(
+                                    buffer + doc.Position + (doc.ChangeVectorCount*sizeof(ChangeVectorEntry)),
+                                    doc.DocumentSize, _context);
+                            }
                         ChangeVectorEntry[] conflictingVector;
                         var conflictStatus = GetConflictStatus(_context, doc.Id, _tempReplicatedChangeVector,out conflictingVector);
                         switch (conflictStatus)
@@ -229,6 +236,16 @@ namespace Raven.Server.Documents.Replication
                     _log.Info(
                         $"Replication connection {FromToString}: received and written {replicatedDocsCount:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms, with last etag = {lastEtag}.");
             }
+            finally
+            {
+                writeBuffer.Dispose();
+            }
+        }
+
+        private static void ThrowInvalidSize(int totalSize, ReplicationDocumentsPositions doc)
+        {
+            throw new ArgumentOutOfRangeException(
+                $"Reading past the size of buffer! TotalSize {totalSize} but position is {doc.Position} & size is {doc.DocumentSize}!");
         }
 
 
@@ -423,7 +440,7 @@ namespace Raven.Server.Documents.Replication
             public string Collection;
         }
 
-        private unsafe void ReadDocumentsFromSource(UnmanagedWriteBuffer writeBuffer, int replicatedDocs)
+        private unsafe void ReadDocumentsFromSource(ref UnmanagedWriteBuffer writeBuffer, int replicatedDocs)
         {
             _replicatedDocs.Clear();
 
