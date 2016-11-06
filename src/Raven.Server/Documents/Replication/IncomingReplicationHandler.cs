@@ -183,16 +183,15 @@ namespace Raven.Server.Documents.Replication
                         if (doc.DocumentSize >= 0) //no need to load document data for tombstones
                             // document size == -1 --> doc is a tombstone
                         {
-                            {
-                                if (doc.Position + doc.DocumentSize > totalSize)
-                                    ThrowInvalidSize(totalSize, doc);
+                            if (doc.Position + doc.DocumentSize > totalSize)
+                                ThrowInvalidSize(totalSize, doc);
 
-                                //if something throws at this point, this means something is really wrong and we should stop receiving documents.
-                                //the other side will receive negative ack and will retry sending again.
-                                json = new BlittableJsonReaderObject(
-                                    buffer + doc.Position + (doc.ChangeVectorCount*sizeof(ChangeVectorEntry)),
-                                    doc.DocumentSize, _context);
-                            }
+                            //if something throws at this point, this means something is really wrong and we should stop receiving documents.
+                            //the other side will receive negative ack and will retry sending again.
+                            json = new BlittableJsonReaderObject(
+                                buffer + doc.Position + (doc.ChangeVectorCount*sizeof(ChangeVectorEntry)),
+                                doc.DocumentSize, _context);
+                        }
                         ChangeVectorEntry[] conflictingVector;
                         var conflictStatus = GetConflictStatus(_context, doc.Id, _tempReplicatedChangeVector,out conflictingVector);
                         switch (conflictStatus)
