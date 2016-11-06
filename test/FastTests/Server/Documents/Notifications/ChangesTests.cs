@@ -23,6 +23,7 @@ namespace FastTests.Server.Documents.Notifications
             store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
         }
 
+        [Fact]
         public async Task CanGetNotificationAboutDocumentPut()
         {
             using (var store = GetDocumentStore())
@@ -49,6 +50,7 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
+        [Fact]
         public async Task CanGetAllNotificationAboutDocument_ALotOfDocuments()
         {
             using (var store = GetDocumentStore())
@@ -77,6 +79,7 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
+        [Fact]
         public async Task CanGetNotificationAboutDocumentDelete()
         {
             using (var store = GetDocumentStore())
@@ -143,6 +146,7 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
+        [Fact]
         public async Task NotificationOnWrongDatabase_ShouldNotCrashServer()
         {
             using (var store = GetDocumentStore())

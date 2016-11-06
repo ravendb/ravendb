@@ -160,7 +160,7 @@ namespace Raven.Server.Documents
                 ["Type"] = "DocumentChangeNotification",
                 ["Value"] = new DynamicJsonValue
                 {
-                    [nameof(DocumentChangeNotification.Type)] = (int)notification.Type,
+                    [nameof(DocumentChangeNotification.Type)] = notification.Type.ToString(),
                     [nameof(DocumentChangeNotification.Key)] = notification.Key,
                     [nameof(DocumentChangeNotification.CollectionName)] = notification.CollectionName,
                     [nameof(DocumentChangeNotification.TypeName)] = notification.TypeName,

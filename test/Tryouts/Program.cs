@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using FastTests.Sparrow;
+using FastTests.Voron.Bugs;
 
 namespace Tryouts
 {
@@ -12,8 +13,10 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                var x = new SlowTests.Voron.MultiAdds();
-                x.MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail(500);
+                using (var a = new FastTests.Server.Documents.Notifications.ChangesTests())
+                {
+                    a.CanGetNotificationAboutDocumentDelete().Wait();
+                }
                 Console.WriteLine(sp.Elapsed);
             }
         }

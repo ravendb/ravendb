@@ -963,12 +963,13 @@ namespace Raven.Server.Documents
             Slice keySlice;
             using (GetSliceFromKey(context, key, out keySlice))
             {
-                return Delete(context, keySlice, expectedEtag);
+                return Delete(context, keySlice, key, expectedEtag);
             }
         }
 
         public bool Delete(DocumentsOperationContext context,
             Slice loweredKey,
+            string key,
             long? expectedEtag,
             ChangeVectorEntry[] changeVector = null)
         {
@@ -1035,6 +1036,7 @@ namespace Raven.Server.Documents
                 Etag = expectedEtag,
                 MaterializeKey = state => ((Slice)state).ToString(),
                 MaterializeKeyState = loweredKey,
+                Key = key ?? loweredKey.ToString(),
                 CollectionName = collectionName.Name,
                 IsSystemDocument = collectionName.IsSystem,
             });
