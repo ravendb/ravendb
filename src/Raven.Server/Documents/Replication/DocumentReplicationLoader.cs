@@ -199,8 +199,13 @@ namespace Raven.Server.Documents.Replication
         private void InitializeOutgoingReplications()
         {
             _replicationDocument = GetReplicationDocument();
-            if (_replicationDocument?.Destinations == null) //precaution
+            if (_replicationDocument?.Destinations == null || //precaution
+                _replicationDocument.Destinations.Count == 0) 
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info("Tried to initialize outgoing replications, but there is no replication document or destinations are empty. Nothing to do...");
                 return;
+            }
 
             if (_log.IsInfoEnabled)
                 _log.Info("Initializing outgoing replications..");
@@ -288,7 +293,10 @@ namespace Raven.Server.Documents.Replication
         {
             if (!notification.Key.Equals(Constants.Replication.DocumentReplicationConfiguration, StringComparison.OrdinalIgnoreCase))
                 return;
-            // TODO: logging
+            
+            if(_log.IsInfoEnabled)
+                _log.Info("System document change detected. Starting and stopping outgoing replication threads.");
+
             var outgoing = _outgoing.ToList();
             _outgoing.Clear();
 
