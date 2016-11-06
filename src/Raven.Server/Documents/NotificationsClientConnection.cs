@@ -22,7 +22,8 @@ namespace Raven.Server.Documents
 
         private readonly WebSocket _webSocket;
         private readonly DocumentDatabase _documentDatabase;
-        private readonly AsyncQueue<DynamicJsonValue> _sendQueue = new AsyncQueue<DynamicJsonValue>();
+        private readonly AsyncQueue<NotificationValue> _sendQueue = new AsyncQueue<NotificationValue>();
+
         private readonly CancellationTokenSource _disposeToken = new CancellationTokenSource();
         private readonly DateTime _startedAt;
 
@@ -47,6 +48,12 @@ namespace Raven.Server.Documents
         private int _watchAllDocuments;
         private int _watchAllOperations;
         private int _watchAllAlerts;
+
+        public class NotificationValue
+        {
+            public DynamicJsonValue ValueToSend;
+            public bool AllowSkip;
+        }
 
         public NotificationsClientConnection(WebSocket webSocket, DocumentDatabase documentDatabase)
         {
@@ -169,7 +176,11 @@ namespace Raven.Server.Documents
             };
 
             if (_disposeToken.IsCancellationRequested == false)
-                _sendQueue.Enqueue(value);
+                _sendQueue.Enqueue(new NotificationValue
+                {
+                    ValueToSend = value,
+                    AllowSkip = true
+                });
         }
 
         public void WatchOperation(long operationId)
@@ -219,7 +230,11 @@ namespace Raven.Server.Documents
             };
 
             if (_disposeToken.IsCancellationRequested == false)
-                _sendQueue.Enqueue(value);
+                _sendQueue.Enqueue(new NotificationValue
+                {
+                    ValueToSend = value,
+                    AllowSkip = false
+                });
         }
 
         private void SendStartTime()
@@ -231,7 +246,11 @@ namespace Raven.Server.Documents
             };
 
             if (_disposeToken.IsCancellationRequested == false)
-                _sendQueue.Enqueue(value);
+                _sendQueue.Enqueue(new NotificationValue
+                {
+                    ValueToSend = value,
+                    AllowSkip = false
+                });
         }
 
         public void WatchAllAlerts()
@@ -265,11 +284,15 @@ namespace Raven.Server.Documents
             };
 
             if (_disposeToken.IsCancellationRequested == false)
-                _sendQueue.Enqueue(value);
+                _sendQueue.Enqueue(new NotificationValue
+                {
+                    ValueToSend = value,
+                    AllowSkip = false
+                });
         }
 
 
-        public async Task StartSendingNotifications(bool sendStartTime)
+        public async Task StartSendingNotifications(bool sendStartTime, bool throttleConnection)
         {
             if (sendStartTime)
                 SendStartTime();
@@ -279,6 +302,7 @@ namespace Raven.Server.Documents
             {
                 using (var ms = new MemoryStream())
                 {
+                    var sp = Stopwatch.StartNew();
                     while (true)
                     {
                         if (_disposeToken.IsCancellationRequested)
@@ -287,18 +311,23 @@ namespace Raven.Server.Documents
                         ms.SetLength(0);
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
+                            sp.Restart();
                             do
                             {
-                                var value = await _sendQueue.DequeueAsync();
+                                var value = await GetNextMessage(throttleConnection);
                                 if (_disposeToken.IsCancellationRequested)
                                     break;
 
+                                if (value == null)
+                                {
+                                    break;
+                                }
+
                                 context.Write(writer, value);
                                 writer.WriteNewLine();
-
                                 if (ms.Length > 16*1024)
                                     break;
-                            } while (_sendQueue.Count > 0);
+                            } while (_sendQueue.Count > 0 && sp.Elapsed < TimeSpan.FromSeconds(5));
                         }
                         if (ms.Length == 0)
                         {
@@ -316,6 +345,35 @@ namespace Raven.Server.Documents
             }
         }
 
+        private DynamicJsonValue _skippedMessage;
+        private DateTime _lastSendMessage;
+
+        private async Task<DynamicJsonValue> GetNextMessage(bool throttleConnection)
+        {
+            while (true)
+            {
+                var nextMessage = await _sendQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
+                if (nextMessage.Item1 == false)
+                {
+                    var dynamicJsonValue = _skippedMessage;
+                    _skippedMessage = null;
+                    return dynamicJsonValue;
+                }
+                var msg = nextMessage.Item2;
+                if (throttleConnection && msg.AllowSkip)
+                {
+                    if (DateTime.UtcNow - _lastSendMessage < TimeSpan.FromSeconds(5))
+                    {
+                        _skippedMessage = msg.ValueToSend;
+                        continue;
+                    }
+                }
+                _skippedMessage = null;
+                _lastSendMessage = DateTime.UtcNow;
+                return msg.ValueToSend;
+            }
+        }
+
         public void Dispose()
         {
             _disposeToken.Cancel();
@@ -324,10 +382,14 @@ namespace Raven.Server.Documents
 
         public void Confirm(int commandId)
         {
-            _sendQueue.Enqueue(new DynamicJsonValue
+            _sendQueue.Enqueue(new NotificationValue
             {
-                ["CommandId"] = commandId,
-                ["Type"] = "Confirm"
+                ValueToSend = new DynamicJsonValue
+                {
+                    ["CommandId"] = commandId,
+                    ["Type"] = "Confirm"
+                },
+                AllowSkip = false
             });
         }
 
