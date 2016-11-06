@@ -72,6 +72,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OperationStatusChangeNotification));
             scripter.AddType(typeof(DeterminateProgress));
             scripter.AddType(typeof(IndeterminateProgress));
+            scripter.AddType(typeof(OperationExceptionResult));
             scripter.AddType(typeof(DocumentChangeNotification));
             scripter.AddType(typeof(IndexChangeNotification));
             scripter.AddType(typeof(TransformerChangeNotification));
