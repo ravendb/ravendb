@@ -1968,12 +1968,25 @@ namespace Raven.Server.Documents
                 TombstonesSchema.Create(context.Transaction.InnerTransaction,
                     name.GetTableName(CollectionTableType.Tombstones));
 
-                // safe to do, other transactions will see it, but we are under write lock here
-                _collectionsCache = new Dictionary<string, CollectionName>(_collectionsCache,
-                    StringComparer.OrdinalIgnoreCase)
+                if(context.Transaction.InnerTransaction.LowLevelTransaction.AlsoDispose == null)
+                    context.Transaction.InnerTransaction.LowLevelTransaction.AlsoDispose = new List<IDisposable>();
+
+                var lowLevelTx = context.Transaction.InnerTransaction.LowLevelTransaction;
+                context.Transaction.InnerTransaction.LowLevelTransaction.AlsoDispose.Add(new DisposableAction(() =>
                 {
-                    {name.Name, name}
-                };
+                    //add to cache ONLY if the transaction was committed. 
+                    //this would prevent NREs next time a PUT is run,since if a transaction
+                    //is not commited, DocsSchema and TombstonesSchema will not be actually created..
+                    if (lowLevelTx.Committed)
+                    {
+                        // safe to do, other transactions will see it, but we are under write lock here
+                        _collectionsCache = new Dictionary<string, CollectionName>(_collectionsCache,
+                            StringComparer.OrdinalIgnoreCase)
+                        {
+                            {name.Name, name}
+                        };
+                    }
+                }));
             }
             return name;
         }
