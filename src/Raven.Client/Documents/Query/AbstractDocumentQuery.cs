@@ -587,7 +587,6 @@ namespace Raven.Client.Documents
 
         protected internal QueryOperation InitializeQueryOperation(bool isAsync = false)
         {
-            // TODO Iftah, should we use isAsync? GetIndexQuery doesn't use it...
             var indexQuery = GetIndexQuery(isAsync: isAsync);
 
             if (beforeQueryExecutionAction != null)
@@ -2286,7 +2285,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public async Task<IList<T>> ToListAsync(CancellationToken token = default(CancellationToken))
         {
-            var currentQueryOperation = await InitAsync().WithCancellation(token).ConfigureAwait(false);
+            var currentQueryOperation = await InitAsync(token).ConfigureAwait(false);
             var tuple = await ProcessEnumerator(currentQueryOperation).WithCancellation(token).ConfigureAwait(false);
             return tuple.Item2;
         }
