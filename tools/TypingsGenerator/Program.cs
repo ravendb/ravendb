@@ -18,6 +18,7 @@ using Raven.Server.Web.Operations;
 using Sparrow.Json;
 using TypeScripter;
 using TypeScripter.TypeScript;
+using Voron.Debugging;
 
 namespace TypingsGenerator
 {
@@ -112,6 +113,10 @@ namespace TypingsGenerator
 
             // periodic export
             scripter.AddType(typeof(PeriodicExportConfiguration));
+
+            // storage report
+            scripter.AddType(typeof(StorageReport));
+
             return scripter;
         }
     }

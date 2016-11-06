@@ -30,12 +30,12 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             ],
             'icon-indexes'),*/
         new leafMenuItem({
-            route: 'databases/status/storage/stats',
-            moduleId: 'viewmodels/database/status/storage/stats',
-            title: 'Storage Breakdown',
+            route: 'databases/status/storage/report',
+            moduleId: 'viewmodels/database/status/storage/storageReport',
+            title: 'Storage Report',
             tooltip: "TODO", //TODO:
-            nav: accessHelper.isGlobalAdmin(),
-            dynamicHash: appUrls.statusStorageStats
+            nav: true,
+            dynamicHash: appUrls.statusStorageReport
         }),
         /* TODO
         new intermediateMenuItem('Storage', [
@@ -278,13 +278,14 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             dynamicHash: appUrls.statusDebug
         }),
+        /* TODO
         new leafMenuItem({
             route: 'databases/status/storage*details',
             moduleId: 'viewmodels/database/status/storage/statusStorage',
             title: 'Storage',
             nav: false,
             dynamicHash: appUrls.statusStorageOnDisk
-        }),
+        }),*/
         /* TODO
         new leafMenuItem({
             route: 'databases/status/infoPackage',
