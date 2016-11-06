@@ -7,6 +7,8 @@ import commandBase = require('commands/commandBase');
 import idGenerator = require("common/idGenerator");
 import adminLogsConfigureCommand = require("commands/database/debug/adminLogsConfigureCommand");
 
+//TODO: use abstractWebSocketClient
+
 class adminLogsClient {
 
     public connectionClosingTask: JQueryDeferred<any>;

@@ -1,28 +1,17 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
 import resource = require("models/resources/resource");
-import appUrl = require("common/appUrl");
 import changeSubscription = require("common/changeSubscription");
 import changesCallback = require("common/changesCallback");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
-import messagePublisher = require("common/messagePublisher");
 
-class changesApi {
+import abstractWebSocketClient = require("common/abstractWebSocketClient");
 
-    private static readonly readyStateOpen = 1;
+class changesApi extends abstractWebSocketClient {
 
-    private static messageWasShownOnce: boolean = false;
+    constructor(rs: resource) {
+        super(rs);
+    }
 
-    connectToChangesApiTask: JQueryDeferred<void>;
-
-    private resourcePath: string;
-    private webSocket: WebSocket;
-    
-    private isDisposing = false;
-    private disposed: boolean = false;
-    private isCleanClose: boolean = false;
-    private successfullyConnectedOnce: boolean = false;
-    private sentMessages: chagesApiConfigureRequestDto[] = [];
     serverStartTime = ko.observable<string>();
 
     //TODO: private allReplicationConflicts = ko.observableArray<changesCallback<replicationConflictNotificationDto>>();
@@ -52,158 +41,31 @@ class changesApi {
     private allTimeSeriesHandlers = ko.observableArray<changesCallback<timeSeriesKeyChangeNotification>>();
     private watchedTimeSeries: dictionary<KnockoutObservableArray<changesCallback<timeSeriesKeyChangeNotification>>> = {};
     private allTimeSeriesBulkOperationsHandlers = ko.observableArray<changesCallback<timeSeriesBulkOperationNotificationDto>>();*/
-    
-    constructor(private rs: resource) {
-        this.resourcePath = appUrl.forResourceQuery(this.rs);
-        this.connectToChangesApiTask = $.Deferred<void>();
 
-        if ("WebSocket" in window) {
-            this.connect(this.connectWebSocket);
-        } else {
-            //The browser doesn't support websocket
-            //or we are in IE10 or IE11 and the server doesn't support WebSockets.
-            //Anyway, at this point a warning message was already shown. 
-            this.connectToChangesApiTask.reject();
-        }
+    private onServerStartTimeReceived(startTime: string) {
+        this.serverStartTime(startTime);
     }
 
-    private connect(action: Function, recoveringFromWebsocketFailure: boolean = false) {
-        if (this.disposed) {
-            if (!!this.connectToChangesApiTask)
-                this.connectToChangesApiTask.resolve();
-            return;
-        }
-        if (!recoveringFromWebsocketFailure) {
-            this.connectToChangesApiTask = $.Deferred<void>();
-        }
-
-        new getSingleAuthTokenCommand(this.rs)
-            .execute()
-            .done((tokenObject: singleAuthToken) => {
-                var token = tokenObject.Token;
-                var connectionString = "singleUseAuthToken=" + token + "&sendServerStartTime=true&throttleConnection=true"; // always throttle in studio
-                action.call(this, connectionString);
-            })
-            .fail((e) => {
-                if (this.isDisposing) {
-                    this.connectToChangesApiTask.reject();
-                    return;
-                }
-                    
-                var error = !!e.responseJSON ? e.responseJSON.Error : e.responseText;
-                if (e.status === 0) {
-                    // Connection has closed so try to reconnect every 3 seconds.
-                    setTimeout(() => this.connect(action), 3 * 1000);
-                }
-                else if (e.status === ResponseCodes.ServiceUnavailable) {
-                    // We're still loading the database, try to reconnect every 2 seconds.
-                    setTimeout(() => this.connect(action, true), 2 * 1000);
-                }
-                else if (e.status !== ResponseCodes.Forbidden) { // authorized connection
-                    messagePublisher.reportError(error || "Failed to connect to changes", e.responseText, e.StatusText);
-                    this.connectToChangesApiTask.reject();
-                }
-            });
+    get connectionDescription() {
+        return this.rs.fullTypeName + " = " + this.rs.name;
     }
 
-    private connectWebSocket(connectionString: string) {
-        var connectionOpened: boolean = false;
-
-        let wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-        let url = wsProtocol + window.location.host + this.resourcePath + "/changes?" + connectionString;
-        this.webSocket = new WebSocket(url);
-
-        this.webSocket.onmessage = (e) => this.onMessage(e);
-        this.webSocket.onerror = (e) => {
-            this.serverStartTime(null);
-            if (connectionOpened === false) {
-                this.onError(e);
-            }
-        };
-        this.webSocket.onclose = () => {
-            this.serverStartTime(null);
-            if (this.isCleanClose === false) {
-                // Connection has closed uncleanly, so try to reconnect.
-                this.connect(this.connectWebSocket);
-            }
-        }
-        this.webSocket.onopen = () => {
-            console.log("Connected to WebSocket changes API (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
-            this.reconnect();
-            this.successfullyConnectedOnce = true;
-            connectionOpened = true;
-        }
+    protected webSocketUrlFactory(token: singleAuthToken) {
+        const connectionString = "singleUseAuthToken=" + token.Token + "&sendServerStartTime=true&throttleConnection=true";
+        return "/changes?" + connectionString;
     }
 
-    private reconnect() {
-        if (this.successfullyConnectedOnce) {
-            //TODO: don't send watch operations when server is restarted
-            //send changes connection args after reconnecting
-            this.sentMessages.forEach(args => this.send(args.Command, args.Param, false));
-            
-            if (changesApi.messageWasShownOnce) {
-                messagePublisher.reportSuccess("Successfully reconnected to changes stream!");
-                changesApi.messageWasShownOnce = false;
-            }
-        }
+    protected onError(e: any) {
+        super.onError(e);
+        this.serverStartTime(null);
     }
 
-    private onError(e: Event) {
-        if (changesApi.messageWasShownOnce === false) {
-            messagePublisher.reportError("Changes stream was disconnected!", "Retrying connection shortly.");
-            changesApi.messageWasShownOnce = true;
-        }
+    protected onClose() {
+        super.onClose();
+        this.serverStartTime(null);
     }
 
-    //TODO: wait for confirmations! - using CommandId property - this method will be async!
-    private send(command: string, value?: string, needToSaveSentMessages: boolean = true) {
-        this.connectToChangesApiTask.done(() => {
-            var args: chagesApiConfigureRequestDto = {
-                Command: command
-            };
-            if (value !== undefined) {
-                args.Param = value;
-            }
-
-            const payload = JSON.stringify(args, null, 2);
-
-            if (!this.closingOrClosed() || !this.isUnwatchCommand(command)) {
-                this.webSocket.send(payload);
-            }
-                
-            this.saveSentMessages(needToSaveSentMessages, command, args);
-        });
-    }
-
-    private closingOrClosed() {
-        const state = this.webSocket.readyState;
-        return WebSocket.CLOSED === state || WebSocket.CLOSING === state;
-    }
-
-    private isUnwatchCommand(command: string) {
-        return command.slice(0, 2) === "un";
-    }
-
-    private saveSentMessages(needToSaveSentMessages: boolean, command: string, args: chagesApiConfigureRequestDto) {
-        if (needToSaveSentMessages) {
-            if (this.isUnwatchCommand(command)) {
-                var commandName = command.slice(2, command.length);
-                this.sentMessages = this.sentMessages.filter(msg => msg.Command !== commandName);
-            } else {
-                this.sentMessages.push(args);
-            }
-        }
-    }
-
-    private fireEvents<T>(events: Array<any>, param: T, filter: (element: T) => boolean) {
-        for (let i = 0; i < events.length; i++) {
-            if (filter(param)) {
-                events[i].fire(param);
-            }
-        }
-    }
-
-    private onMessage(e: any) {
+    protected onMessage(e: any) {
         const eventDto: changesApiEventDto = JSON.parse(e.data);
         const eventType = eventDto.Type;
         const value = eventDto.Value;
@@ -240,43 +102,39 @@ class changesApi {
                 this.watchedOperations.forEach((callbacks, key) =>
                     this.fireEvents<Raven.Client.Data.OperationStatusChangeNotification>(callbacks(), value, (event) => event.OperationId === key));
                 break;
-            default: 
+            default:
                 console.log("Unhandled Changes API notification type: " + eventType);
         }
 
-            /* TODO:} else if (eventType === "SynchronizationUpdateNotification") {
-                this.fireEvents<typeHere>(this.allFsSyncHandlers(), value, () => true);
-            } else if (eventType === "ReplicationConflictNotification") {
-                this.fireEvents<typeHere>(this.allReplicationConflicts(), value, () => true);
-            } else if (eventType === "ConflictNotification") {
-                this.fireEvents<typeHere>(this.allFsConflictsHandlers(), value, () => true);
-            } else if (eventType === "FileChangeNotification") {
-                for (var key in this.watchedFolders) {
-                    var folderCallbacks = this.watchedFolders[key];
-                    this.fireEvents<typeHere>(folderCallbacks(), value, (event) => {
-                        var notifiedFolder = folder.getFolderFromFilePath(event.File);
-                        var match: string[] = null;
-                        if (notifiedFolder && notifiedFolder.path) {
-                            match = notifiedFolder.path.match(key);
-                        }
-                        return match && match.length > 0;
-                    });
-                }
-            } else if (eventType === "ConfigurationChangeNotification") {
-                if (value.Name.indexOf("Raven/Synchronization/Destinations") >= 0) {
-                    this.fireEvents<typeHere>(this.allFsDestinationsHandlers(), value, () => true);
-                }
-                this.fireEvents<typeHere>(this.allFsConfigHandlers(), value, () => true);
-            } else if (eventType === "ChangeNotification") {
-                this.fireEvents<typeHere>(this.allCountersHandlers(), value, () => true);
-                //TODO: send events to other subscriptions
-            } else if (eventType === "KeyChangeNotification") {
-                this.fireEvents<typeHere>(this.allTimeSeriesHandlers(), value, () => true);
-                //TODO: send events to other subscriptions*/
-    }
-
-    private onServerStartTimeReceived(startTime: string) {
-        this.serverStartTime(startTime);
+        /* TODO:} else if (eventType === "SynchronizationUpdateNotification") {
+            this.fireEvents<typeHere>(this.allFsSyncHandlers(), value, () => true);
+        } else if (eventType === "ReplicationConflictNotification") {
+            this.fireEvents<typeHere>(this.allReplicationConflicts(), value, () => true);
+        } else if (eventType === "ConflictNotification") {
+            this.fireEvents<typeHere>(this.allFsConflictsHandlers(), value, () => true);
+        } else if (eventType === "FileChangeNotification") {
+            for (var key in this.watchedFolders) {
+                var folderCallbacks = this.watchedFolders[key];
+                this.fireEvents<typeHere>(folderCallbacks(), value, (event) => {
+                    var notifiedFolder = folder.getFolderFromFilePath(event.File);
+                    var match: string[] = null;
+                    if (notifiedFolder && notifiedFolder.path) {
+                        match = notifiedFolder.path.match(key);
+                    }
+                    return match && match.length > 0;
+                });
+            }
+        } else if (eventType === "ConfigurationChangeNotification") {
+            if (value.Name.indexOf("Raven/Synchronization/Destinations") >= 0) {
+                this.fireEvents<typeHere>(this.allFsDestinationsHandlers(), value, () => true);
+            }
+            this.fireEvents<typeHere>(this.allFsConfigHandlers(), value, () => true);
+        } else if (eventType === "ChangeNotification") {
+            this.fireEvents<typeHere>(this.allCountersHandlers(), value, () => true);
+            //TODO: send events to other subscriptions
+        } else if (eventType === "KeyChangeNotification") {
+            this.fireEvents<typeHere>(this.allTimeSeriesHandlers(), value, () => true);
+            //TODO: send events to other subscriptions*/
     }
 
     watchAllIndexes(onChange: (e: Raven.Abstractions.Data.IndexChangeNotification) => void) {
@@ -629,21 +487,7 @@ class changesApi {
             }
         });
     }*/
-    
-    dispose() {
-        this.isDisposing = true;
-        this.disposed = true;
-        this.connectToChangesApiTask.done(() => {
-            if (this.webSocket && this.webSocket.readyState === changesApi.readyStateOpen) {
-                console.log("Disconnecting from WebSocket changes API for (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
-                this.webSocket.close();
-            }
-        });
-    }
-
-    getResource() {
-        return this.rs;
-    }
+   
 }
 
 export = changesApi;
