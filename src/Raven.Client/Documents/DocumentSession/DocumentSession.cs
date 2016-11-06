@@ -62,48 +62,6 @@ namespace Raven.Client.Documents
             DatabaseCommands = databaseCommands;
         }
         
-        #region Stream
-
-        public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
-        {
-            throw new NotImplementedException();
-        }
-
-        IEnumerator<StreamResult<T>> ISyncAdvancedSessionOperation.Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, int start = 0, int pageSize = Int32.MaxValue,
-            RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue,
-            RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null,
-            Dictionary<string, RavenJToken> transformerParameters = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion Stream
-
         #region DeleteByIndex
 
         Operation ISyncAdvancedSessionOperation.DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
