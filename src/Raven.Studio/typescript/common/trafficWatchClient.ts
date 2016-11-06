@@ -4,6 +4,7 @@ import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');
 import idGenerator = require("common/idGenerator");
 
+//TODO: use abstractWebSocketClient
 class trafficWatchClient {
     
     public connectionOpeningTask: JQueryDeferred<any>;

@@ -10,7 +10,7 @@ class statusDebugWebSocket extends viewModelBase {
         super.activate(args);
         this.updateHelpLink('JHZ574');
     }
-
+    //TODO: use abstractWebSocketClient
     test() {
         if ("WebSocket" in window) {
             var getTokenTask = new getSingleAuthTokenCommand(this.activeDatabase()).execute();
