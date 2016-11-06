@@ -106,38 +106,7 @@ namespace Raven.Client.Documents
             throw new NotImplementedException();
         }
 
-        public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, object> transformerParameters = null)
-        {
-            throw new NotImplementedException();
-        }
-
         public Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
-        {
-            throw new NotImplementedException();
-        }
-
-        public T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, object> transformerParameters = null)
-        {
-            if (transformer == null)
-                throw new ArgumentNullException("transformer");
-            if (ids.Length == 0)
-                return new T[0];
-
-            var loadTransformerOeration = new LoadTransformerOperation(this);
-            loadTransformerOeration.ByIds(ids);
-            loadTransformerOeration.WithTransformer(transformer, transformerParameters);
-
-            var command = loadTransformerOeration.CreateRequest();
-            if (command != null)
-            {
-                RequestExecuter.Execute(command, Context);
-                loadTransformerOeration.SetResult(command.Result);
-            }
-
-            return loadTransformerOeration.GetTransformedDocuments<T>(command.Result);
-        }
-
-        public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null)
         {
             throw new NotImplementedException();
         }

@@ -81,6 +81,8 @@ namespace Raven.Client.Documents.SessionOperations
         
         public T[] GetTransformedDocuments<T>(GetDocumentResult result)
         {
+            if (result == null)
+                return null;
             if (typeof(T).IsArray)
             {
                 var arrayOfArrays = result.Results

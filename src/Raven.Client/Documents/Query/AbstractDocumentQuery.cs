@@ -782,11 +782,11 @@ namespace Raven.Client.Documents
         /// <value>The query result.</value>
         public async Task<QueryResult> QueryResultAsync(CancellationToken token = default(CancellationToken))
         {
-            var result = await InitAsync().WithCancellation(token).ConfigureAwait(false);
+            var result = await InitAsync(token).ConfigureAwait(false);
             return result.CurrentQueryResults.CreateSnapshot();
         }
 
-        protected virtual async Task<QueryOperation> InitAsync()
+        protected virtual async Task<QueryOperation> InitAsync(CancellationToken token = default(CancellationToken))
         {
             if (queryOperation != null)
                 return queryOperation;
@@ -796,7 +796,7 @@ namespace Raven.Client.Documents
             theSession.OnBeforeQueryExecutedInvoke(beforeQueryExecutedEventArgs);
 
             queryOperation = InitializeQueryOperation(isAsync: true);
-            return await ExecuteActualQueryAsync().ConfigureAwait(false);
+            return await ExecuteActualQueryAsync(token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1821,13 +1821,13 @@ If you really want to do in memory filtering on the data returned from the query
 
         #endregion
 
-        protected virtual async Task<QueryOperation> ExecuteActualQueryAsync()
+        protected virtual async Task<QueryOperation> ExecuteActualQueryAsync(CancellationToken token = new CancellationToken())
         {
             using (queryOperation.EnterQueryContext())
             {
                 queryOperation.LogQuery();
                 var command = queryOperation.CreateRequest();
-                await theSession.RequestExecuter.ExecuteAsync(command, theSession.Context);
+                await theSession.RequestExecuter.ExecuteAsync(command, theSession.Context, token);
                 queryOperation.SetResult(command.Result);
 
                 InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
