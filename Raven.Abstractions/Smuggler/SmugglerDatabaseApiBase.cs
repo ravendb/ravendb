@@ -1015,7 +1015,8 @@ namespace Raven.Abstractions.Smuggler
             Options.CancelToken.Token.ThrowIfCancellationRequested();
             exportSectionRegistar.Add(Constants.BuildVersion, async () =>
             {
-                Options.OperateOnTypes &= ~(ItemType.Indexes | ItemType.Transformers);
+                Operations.ShowProgress("Skipping import of indexes");
+                Options.OperateOnTypes &= ~ItemType.Indexes;
                 return 0;
             });
 
@@ -1303,7 +1304,7 @@ namespace Raven.Abstractions.Smuggler
                 if ((Options.OperateOnTypes & ItemType.Transformers) != ItemType.Transformers)
                     continue;
 
-                var transformerName = transformer.Value<string>("name");
+                var transformerName = transformer.Value<string>("name") ?? transformer.Value<string>("Name");
 
                 try
                 {
