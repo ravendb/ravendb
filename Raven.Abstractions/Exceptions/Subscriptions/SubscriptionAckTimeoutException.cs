@@ -9,7 +9,8 @@ using System.Runtime.Serialization;
 
 namespace Raven.Abstractions.Exceptions.Subscriptions
 {
-    public class SubscriptionAckTimeoutException:SubscriptionException
+    [Serializable]
+    public class SubscriptionAckTimeoutException : SubscriptionException
     {
         public static HttpStatusCode RelevantHttpStatusCode = HttpStatusCode.RequestTimeout;
 
