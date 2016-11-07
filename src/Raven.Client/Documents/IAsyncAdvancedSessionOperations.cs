@@ -10,17 +10,14 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
-using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents
 {
@@ -244,11 +241,9 @@ namespace Raven.Client.Documents
 
         /// <summary>
         ///     Gets the metadata for the specified entity.
-        ///     If the entity is transient, it will load the metadata from the store
-        ///     and associate the current state of the entity with the metadata from the server.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        Task<IDictionary<string, string>> GetMetadataForAsync<T>(T instance);
+        IDictionary<string, string> GetMetadataForAsync<T>(T instance);
 
         /// <summary>
         ///     DeleteByIndexAsync using linq expression

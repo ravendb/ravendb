@@ -6,20 +6,14 @@
 
 using Raven.Client.Connection;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
 using Raven.Client.Data;
-using Raven.Client.Data.Queries;
 using Raven.Client.Document;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.SessionOperations;
 using Raven.Client.Http;
 using Raven.Client.Indexes;
-using Raven.Json.Linq;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents
 {
@@ -108,34 +102,13 @@ namespace Raven.Client.Documents
                 throw new InvalidOperationException("Cannot refresh a transient instance");
             IncrementRequestCount();
 
-            //TODO - Change when we have new DatabaseCommands.Get
-            var document = TempDatabaseCommandGet(documentInfo);
-
-            RefreshInternal(entity, document, documentInfo);
-        }
-        
-        private BlittableJsonReaderObject TempDatabaseCommandGet(DocumentInfo documentInfo)
-        {
             var command = new GetDocumentCommand
             {
-                Ids = new[] {documentInfo.Id}
+                Ids = new[] { documentInfo.Id }
             };
             RequestExecuter.Execute(command, Context);
-            var document = (BlittableJsonReaderObject) command.Result.Results[0];
-            if (document == null)
-                throw new InvalidOperationException("Document '" + documentInfo.Id +
-                                                    "' no longer exists and was probably deleted");
 
-            object value;
-            document.TryGetMember(Constants.Metadata.Key, out value);
-            documentInfo.Metadata = value as BlittableJsonReaderObject;
-
-            object etag;
-            document.TryGetMember(Constants.Metadata.Etag, out etag);
-            documentInfo.ETag = etag as long?;
-
-            documentInfo.Document = document;
-            return document;
+            RefreshInternal(entity, command, documentInfo);
         }
 
         /// <summary>
@@ -151,20 +124,6 @@ namespace Raven.Client.Documents
         public FacetedQueryResult[] MultiFacetedSearch(params FacetQuery[] queries)
         {
             throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Gets the document info for the specified document id.
-        /// </summary>
-        /// <param name="documentId">Document Id</param>
-        /// <returns></returns>
-        protected override DocumentInfo GetDocumentInfo(string documentId)
-        {
-            var documentInfo = new DocumentInfo {Id = documentId};
-            DocumentsById.Add(documentId, documentInfo);
-            //TODO - Change when we have new DatabaseCommands.Get
-            TempDatabaseCommandGet(documentInfo);
-            return documentInfo;
         }
 
         /// <summary>
