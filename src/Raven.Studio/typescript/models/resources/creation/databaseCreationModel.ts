@@ -1,7 +1,5 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
-import resource = require("models/resources/resource");
-import license = require("models/auth/license");
 import resourceCreationModel = require("models/resources/creation/resourceCreationModel");
 import configuration = require("configuration");
 
@@ -38,8 +36,6 @@ class databaseCreationModel extends resourceCreationModel {
         const settings: dictionary<string> = {};
         const securedSettings: dictionary<string> = {};
 
-        //TODO: activate bundles: this.activeBundles().join(",");
-
         if (this.incrementalBackup()) {
             settings[configuration.storage.allowIncrementalBackups] = "true";
         }
@@ -70,10 +66,6 @@ class databaseCreationModel extends resourceCreationModel {
         */
 
         this.fillEncryptionSettingsIfNeeded(securedSettings);
-
-        //TODO: fill quotas
-        //TODO: fill sql replicaiton
-        //TODO: fill versioning
 
         return {
             Id: this.name(),
