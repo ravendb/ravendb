@@ -90,12 +90,11 @@ class shell extends viewModelBase {
         });
         oauthContext.enterApiKeyTask = this.setupApiKey();
         oauthContext.enterApiKeyTask.done(() => {
-            /* TODO
             changesContext.default
                 .connectGlobalChangesApi()
                 .done(() => {
                     this.resourcesManager.createGlobalNotifications();
-                });*/
+                });
         });
 
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));

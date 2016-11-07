@@ -48,6 +48,11 @@ interface singleAuthToken {
     Token: string;
 }
 
+interface adminWatchMessage {
+    Operation: string;
+    Id: string;
+}
+
 interface chagesApiConfigureRequestDto {
     Command: string;
     Param?: string;

@@ -234,13 +234,11 @@ class resourcesManager {
 
 
     createGlobalNotifications(): Array<changeSubscription> {
+        const globalChanges = changesContext.default.globalChangesApi();
+
         return [
-            /* TODO: extract to resources manager class 
-            this.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.onResourceUpdateReceivedViaChangesApi(e, shell.databases, this.activeDatabase, TenantType.Database)),
-            this.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.onResourceUpdateReceivedViaChangesApi(e, shell.fileSystems, this.activeFilesystem, TenantType.FileSystem)),
-            this.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.onResourceUpdateReceivedViaChangesApi(e, shell.counterStorages, this.activeCounterStorage, TenantType.CounterStorage)),
-            this.globalChangesApi.watchDocsStartingWith("Raven/TimeSeries/", (e) => this.onResourceUpdateReceivedViaChangesApi(e, shell.timeSeries, this.activeTimeSeries, TenantType.TimeSeries)),
-            //TODO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),*/
+            globalChanges.watchItemsStartingWith("db/", e => this.onResourceUpdateReceivedViaChangesApi())
+             //TODO: DO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),*/
         ];
     }
 
