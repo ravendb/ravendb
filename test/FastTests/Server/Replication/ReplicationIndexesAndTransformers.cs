@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Issues;
 using FastTests.Server.Documents.Replication;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Exceptions;
 using Raven.Client.Indexes;
 using Xunit;
 
