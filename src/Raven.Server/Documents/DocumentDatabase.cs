@@ -185,7 +185,7 @@ namespace Raven.Server.Documents
             }
 
             SubscriptionStorage.Initialize();
-            ConfigurationStorage.Initialize();
+            ConfigurationStorage.Initialize(IndexStore,TransformerStore);
         }
 
         public void Dispose()

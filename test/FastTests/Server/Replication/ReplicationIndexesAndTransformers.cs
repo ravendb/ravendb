@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Issues;
@@ -7,6 +8,8 @@ using FastTests.Server.Documents.Replication;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Indexes;
+using Raven.Server.Documents;
+using Raven.Server.Utils;
 using Xunit;
 
 namespace FastTests.Server.Replication
@@ -316,5 +319,56 @@ namespace FastTests.Server.Replication
                 Assert.Equal(3, metadata.ChangeVector[0].Etag);
             }
         }
+
+        [Fact]
+        public async Task Manually_removed_indexes_would_remove_metadata_on_startup()
+        {
+            var pathPrefix = Guid.NewGuid().ToString();
+            var databasePath = String.Empty;
+            var indexesPath = String.Empty;
+            
+            try
+            {
+                var userByAgeIndex = new UserByAgeIndex();
+                var userByNameIndex = new UserByNameIndex();
+                var usernameToUpperTransformer = new UsernameToUpperTransformer();
+
+
+                DocumentDatabase databaseStore;
+                using (var store = GetDocumentStore(path: pathPrefix))
+                {
+                    userByNameIndex.Execute(store);
+                    userByAgeIndex.Execute(store);
+                    usernameToUpperTransformer.Execute(store);
+                    databaseStore = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+
+                    Assert.NotNull(databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByNameIndex.IndexName));
+                    Assert.NotNull(databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByAgeIndex.IndexName));
+                    Assert.NotNull(databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(usernameToUpperTransformer.TransformerName));
+                }
+
+                indexesPath = databaseStore.Configuration.Indexing.IndexStoragePath;
+                databasePath = databaseStore.Configuration.Core.DataDirectory;
+                foreach (var indexFolder in Directory.GetDirectories(indexesPath))
+                    IOExtensions.DeleteDirectory(indexFolder);
+
+                using (var store = GetDocumentStore(path: pathPrefix))
+                {
+                    databaseStore = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+
+                    Assert.Null(databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByNameIndex.IndexName));
+                    Assert.Null(databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByAgeIndex.IndexName));
+                    Assert.Null(databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(usernameToUpperTransformer.TransformerName));
+                }
+            }
+            finally
+            {
+                IOExtensions.DeleteDirectory(databasePath);
+                IOExtensions.DeleteDirectory(indexesPath);
+            }
+        }
     }
 }
+
+       
+

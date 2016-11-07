@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Voron;
@@ -30,11 +32,11 @@ namespace Raven.Server.Documents
             IndexesEtagsStorage = new IndexesEtagsStorage(db.Name);
         }
 
-        public void Initialize()
+        public void Initialize(IndexStore indexStore, TransformerStore transformerStore)
         {
             _contextPool = new TransactionContextPool(Environment);
             AlertsStorage.Initialize(Environment, _contextPool);
-            IndexesEtagsStorage.Initialize(Environment, _contextPool);
+            IndexesEtagsStorage.Initialize(Environment, _contextPool,indexStore, transformerStore);
         }
 
         public void Dispose()
