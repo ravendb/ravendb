@@ -166,6 +166,12 @@ namespace Raven.Server.Documents
 
                 foreach(var id in idsToDelete)
                     table.Delete(id);
+
+                if (Logger.IsInfoEnabled)
+                {
+                    Logger.Info($"Purged index/metadata tombstones from etag = {etag}, total purged {taken}");
+                }
+
                 tx.Commit();
             }
         }
@@ -232,7 +238,7 @@ namespace Raven.Server.Documents
                 return GetIndexMetadataByNameInternal(tx, context, name, returnNullIfTombstone);
         }
 
-        private static void ThrowIfAlreadyExistsAndOverwriting(
+        private void ThrowIfAlreadyExistsAndOverwriting(
             string indexName, 
             IndexEntryType type, 
             int indexIndexId, 
@@ -241,7 +247,18 @@ namespace Raven.Server.Documents
             IndexEntryMetadata existing)
         {
             if (!table.VerifyKeyExists(indexNameAsSlice) || indexIndexId == -1 || existing == null || existing.Id == -1)
+            {
+                if (Logger.IsInfoEnabled &&
+                    indexIndexId != -1 &&
+                    existing != null && 
+                    existing.Id == -1 && 
+                    existing.Type != type)
+                {
+                    Logger.Info($"Writing {type}, and there is a tombstone of {existing.Type} under the same name. The created {type} will have take the change vector from the tombstone.");
+                }
+
                 return;
+            }
 
             string msg;
             switch (type)
