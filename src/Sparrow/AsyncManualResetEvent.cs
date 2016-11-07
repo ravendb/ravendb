@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,24 +18,51 @@ namespace Sparrow
 
         public AsyncManualResetEvent(CancellationToken token)
         {
+            token.Register(() => _tcs.TrySetResult(false));
             _token = token;
-            // ReSharper disable once ImpureMethodCallOnReadonlyValueField
-            _token.Register(() => _tcs.TrySetResult(false));
         }
-
         public Task<bool> WaitAsync()
         {
             return _tcs.Task;
         }
 
-        public async Task<bool> WaitAsync(TimeSpan timeout)
-        {			
-            var waitAsync = _tcs.Task;			
-            var result = await Task.WhenAny(waitAsync, Task.Delay(timeout, _token));
-            if (_token != CancellationToken.None)
-                return result == waitAsync && !_token.IsCancellationRequested;
+        public Task<bool> WaitAsync(TimeSpan timeout)
+        {
+            return new FrozenAwaiter(_tcs, this).WaitAsync(timeout);
+        }
 
-            return result == waitAsync;
+        public FrozenAwaiter GetFrozenAwaiter()
+        {
+            return new FrozenAwaiter(_tcs, this);
+        }
+
+        public struct FrozenAwaiter
+        {
+            private readonly TaskCompletionSource<bool> _tcs;
+            private readonly AsyncManualResetEvent _parent;
+
+            public FrozenAwaiter(TaskCompletionSource<bool> tcs, AsyncManualResetEvent parent)
+            {
+                _tcs = tcs;
+                _parent = parent;
+            }
+
+            [Pure]
+            public Task<bool> WaitAsync()
+            {
+                return _tcs.Task;
+            }
+
+            [Pure]
+            public async Task<bool> WaitAsync(TimeSpan timeout)
+            {
+                var waitAsync = _tcs.Task;
+                var result = await Task.WhenAny(waitAsync, Task.Delay(timeout, _parent._token));
+                if (_parent._token != CancellationToken.None)
+                    return result == waitAsync && !_parent._token.IsCancellationRequested;
+
+                return result == waitAsync;
+            }
         }
 
         public void Set() { _tcs.TrySetResult(true); }

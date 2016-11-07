@@ -13,9 +13,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                using (var a = new SlowTests.MailingList.NullableEnums())
+                using (var a = new SlowTests.MailingList.Daniel())
                 {
-                    a.CanQueryByNullableEnumThatIsNull();
+                    a.Run();
                 }
                 Console.WriteLine(sp.Elapsed);
             }

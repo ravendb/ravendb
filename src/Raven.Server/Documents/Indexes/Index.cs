@@ -614,9 +614,9 @@ namespace Raven.Server.Documents.Indexes
 
                         try
                         {
-                            // the logic here is that if we hit the memory limit on the system, we want to retain our
+                            // the logic here is that unless we hit the memory limit on the system, we want to retain our
                             // allocated memory as long as we still have work to do (since we will reuse it on the next batch)
-                            // and it is probably better to avoid alloc/dealloc jitter.
+                            // and it is probably better to avoid alloc/free jitter.
                             // This is because faster indexes will tend to allocate the memory faster, and we want to give them
                             // all the available resources so they can complete faster.
                             var timeToWaitForCleanup = 5000;
@@ -854,7 +854,6 @@ namespace Raven.Server.Documents.Indexes
         {
             if (HandleAllDocs == false && Collections.Contains(notification.CollectionName) == false)
                 return;
-
             _mre.Set();
         }
 
@@ -1147,6 +1146,12 @@ namespace Raven.Server.Documents.Indexes
                 while (true)
                 {
                     AssertIndexState();
+                    
+                    // we take the awaiter _before_ the indexing transaction happens, 
+                    // so if there are any changes, it will already happen to it, and we'll 
+                    // query the index again. This is important because of: 
+                    // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+                    var frozenAwaiter = _indexingBatchCompleted.GetFrozenAwaiter();
 
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
@@ -1167,9 +1172,9 @@ namespace Raven.Server.Documents.Indexes
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 
                             if (wait == null)
-                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, _indexingBatchCompleted);
+                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value);
 
-                            await wait.WaitForIndexingAsync().ConfigureAwait(false);
+                            await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
                             continue;
                         }
 
@@ -1264,6 +1269,11 @@ namespace Raven.Server.Documents.Indexes
                 while (true)
                 {
                     AssertIndexState();
+                    // we take the awaiter _before_ the indexing transaction happens, 
+                    // so if there are any changes, it will already happen to it, and we'll 
+                    // query the index again. This is important because of: 
+                    // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+                    var frozenAwaiter = _indexingBatchCompleted.GetFrozenAwaiter();
 
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
@@ -1285,10 +1295,9 @@ namespace Raven.Server.Documents.Indexes
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 
                             if (wait == null)
-                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value,
-                                    _indexingBatchCompleted);
+                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value);
 
-                            await wait.WaitForIndexingAsync().ConfigureAwait(false);
+                            await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
                             continue;
                         }
 
