@@ -77,7 +77,7 @@ namespace Sparrow.Compression
             public uint initCheck;
         }
 
-        public long Encode64LongBuffer(
+        public static long Encode64LongBuffer(
             byte* input,
             byte* output,
             long inputLength,
@@ -108,7 +108,7 @@ namespace Sparrow.Compression
             return totalOutputSize;
         }
 
-        public int Encode64(
+        public static int Encode64(
                 byte* input,
                 byte* output,
                 int inputLength,
@@ -144,7 +144,7 @@ namespace Sparrow.Compression
             return size + (size / 255) + 16;
         }
 
-        private int LZ4_compress_generic<TLimited, TTableType, TDictionaryType, TDictionaryIssue>(LZ4_stream_t_internal* dictPtr, byte* source, byte* dest, int inputSize, int maxOutputSize, int acceleration)
+        private static int LZ4_compress_generic<TLimited, TTableType, TDictionaryType, TDictionaryIssue>(LZ4_stream_t_internal* dictPtr, byte* source, byte* dest, int inputSize, int maxOutputSize, int acceleration)
             where TLimited : ILimitedOutputDirective
             where TTableType : ITableTypeDirective
             where TDictionaryType : IDictionaryTypeDirective
@@ -422,7 +422,7 @@ namespace Sparrow.Compression
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int LZ4_count(byte* pInPtr, byte* pMatchPtr, byte* pInLimitPtr)
+        private static int LZ4_count(byte* pInPtr, byte* pMatchPtr, byte* pInLimitPtr)
         {
             // JIT: We make local copies of the parameters because the JIT will not be able to figure out yet that it can safely inline
             //      the method cloning the parameters. As the arguments are modified the JIT will not be able to inline it.
@@ -464,7 +464,7 @@ namespace Sparrow.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private byte* LZ4_getPosition<TTableType>(byte* p, LZ4_stream_t_internal* ctx, byte* srcBase)
+        private static byte* LZ4_getPosition<TTableType>(byte* p, LZ4_stream_t_internal* ctx, byte* srcBase)
             where TTableType : ITableTypeDirective
         {
             int h = LZ4_hashPosition<TTableType>(p);
@@ -484,7 +484,7 @@ namespace Sparrow.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private byte* LZ4_getPositionOnHash<TTableType>(int h, LZ4_stream_t_internal* ctx, byte* srcBase)
+        private static byte* LZ4_getPositionOnHash<TTableType>(int h, LZ4_stream_t_internal* ctx, byte* srcBase)
             where TTableType : ITableTypeDirective
         {
             if (typeof(TTableType) == typeof(ByU32))

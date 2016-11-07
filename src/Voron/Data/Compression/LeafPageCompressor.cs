@@ -10,8 +10,6 @@ namespace Voron.Data.Compression
 {
     public unsafe class LeafPageCompressor
     {
-        private static readonly LZ4 Lz4 = new LZ4();
-
         public class CompressionResult
         {
             public TreePage CompressedPage;
@@ -37,7 +35,7 @@ namespace Voron.Data.Compression
             var compressionInput = page.Base + page.Upper;
             var compressionOutput = tempPage.Base + Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize;
 
-            var compressedSize = Lz4.Encode64(
+            var compressedSize = LZ4.Encode64(
                 compressionInput,
                 compressionOutput,
                 valuesSize,
