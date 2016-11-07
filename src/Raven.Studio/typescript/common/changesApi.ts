@@ -73,7 +73,7 @@ class changesApi extends abstractWebSocketClient {
         switch (eventType) {
             case "ServerStartTimeNotification":
                 this.onServerStartTimeReceived(value as string);
-                this.connectToChangesApiTask.resolve();
+                this.connectToWebSocketTask.resolve();
                 ko.postbox.publish("ChangesApiReconnected", this.rs);
                 break;
             case "DocumentChangeNotification":

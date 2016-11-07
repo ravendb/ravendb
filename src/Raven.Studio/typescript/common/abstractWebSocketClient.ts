@@ -11,7 +11,7 @@ abstract class abstractWebSocketClient {
 
     private static messageWasShownOnce: boolean = false;
 
-    connectToChangesApiTask: JQueryDeferred<void>;
+    connectToWebSocketTask: JQueryDeferred<void>;
 
     private readonly resourcePath: string;
     private webSocket: WebSocket;
@@ -24,7 +24,7 @@ abstract class abstractWebSocketClient {
    
     protected constructor(protected rs: resource) {
         this.resourcePath = appUrl.forResourceQuery(this.rs);
-        this.connectToChangesApiTask = $.Deferred<void>();
+        this.connectToWebSocketTask = $.Deferred<void>();
 
         if ("WebSocket" in window) {
             this.connect(this.connectWebSocket);
@@ -32,7 +32,7 @@ abstract class abstractWebSocketClient {
             //The browser doesn't support websocket
             //or we are in IE10 or IE11 and the server doesn't support WebSockets.
             //Anyway, at this point a warning message was already shown. 
-            this.connectToChangesApiTask.reject();
+            this.connectToWebSocketTask.reject();
         }
     }
 
@@ -45,12 +45,12 @@ abstract class abstractWebSocketClient {
 
     private connect(action: (token: singleAuthToken) => void, recoveringFromWebsocketFailure: boolean = false) {
         if (this.disposed) {
-            if (!!this.connectToChangesApiTask)
-                this.connectToChangesApiTask.resolve();
+            if (!!this.connectToWebSocketTask)
+                this.connectToWebSocketTask.resolve();
             return;
         }
         if (!recoveringFromWebsocketFailure) {
-            this.connectToChangesApiTask = $.Deferred<void>();
+            this.connectToWebSocketTask = $.Deferred<void>();
         }
 
         new getSingleAuthTokenCommand(this.rs)
@@ -60,7 +60,7 @@ abstract class abstractWebSocketClient {
             })
             .fail((e) => {
                 if (this.isDisposing) {
-                    this.connectToChangesApiTask.reject();
+                    this.connectToWebSocketTask.reject();
                     return;
                 }
                     
@@ -75,7 +75,7 @@ abstract class abstractWebSocketClient {
                 }
                 else if (e.status !== ResponseCodes.Forbidden) { // authorized connection
                     messagePublisher.reportError(error || "Failed to connect to changes", e.responseText, e.StatusText);
-                    this.connectToChangesApiTask.reject();
+                    this.connectToWebSocketTask.reject();
                 }
             });
     }
@@ -106,11 +106,15 @@ abstract class abstractWebSocketClient {
             }
         }
         this.webSocket.onopen = () => {
-            console.log("Connected to WebSocket changes API (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
-            this.reconnect();
-            this.successfullyConnectedOnce = true;
+            this.onOpen();
             connectionOpened = true;
         }
+    }
+
+    protected onOpen() {
+        console.log("Connected to WebSocket changes API (" + this.connectionDescription + ")");
+        this.reconnect();
+        this.successfullyConnectedOnce = true;
     }
 
     private reconnect() {
@@ -135,7 +139,7 @@ abstract class abstractWebSocketClient {
 
     //TODO: wait for confirmations! - using CommandId property - this method will be async!
     protected send(command: string, value?: string, needToSaveSentMessages: boolean = true) {
-        this.connectToChangesApiTask.done(() => {
+        this.connectToWebSocketTask.done(() => {
             var args: chagesApiConfigureRequestDto = {
                 Command: command
             };
@@ -184,7 +188,7 @@ abstract class abstractWebSocketClient {
     dispose() {
         this.isDisposing = true;
         this.disposed = true;
-        this.connectToChangesApiTask.done(() => {
+        this.connectToWebSocketTask.done(() => {
             if (this.webSocket && this.webSocket.readyState === abstractWebSocketClient.readyStateOpen) {
                 console.log("Disconnecting from WebSocket (" + this.connectionDescription + ")");
                 this.webSocket.close();

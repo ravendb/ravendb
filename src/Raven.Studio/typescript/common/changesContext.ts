@@ -5,12 +5,13 @@ import resource = require("models/resources/resource");
 import changeSubscription = require("common/changeSubscription");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
+import adminWatchClient = require("common/adminWatchClient");
 
 class changesContext {
     static default = new changesContext();
 
     currentResourceChangesApi = ko.observable<changesApi>(); //TODO: make private and use callback with changes as parameter
-    globalChangesApi = ko.observable<changesApi>();
+    globalChangesApi = ko.observable<adminWatchClient>();
 
     afterConnection = $.Deferred<changesApi>();
     afterConnectionResolved = false;
@@ -37,10 +38,10 @@ class changesContext {
     }
 
     connectGlobalChangesApi(): JQueryPromise<void> {
-        const globalChanges = new changesApi(null);
+        const globalChanges = new adminWatchClient();
         this.globalChangesApi(globalChanges);
 
-        return globalChanges.connectToChangesApiTask;
+        return globalChanges.connectToWebSocketTask;
     }
 
     updateChangesApi(rs: resource, subscriptions: (changes: changesApi) => changeSubscription[]) {
@@ -60,7 +61,7 @@ class changesContext {
         }
 
         const newChanges = new changesApi(rs);
-        newChanges.connectToChangesApiTask.done(() => {
+        newChanges.connectToWebSocketTask.done(() => {
             this.currentResourceChangesApi(newChanges);
 
             this.sentSubscriptions = subscriptions(newChanges);

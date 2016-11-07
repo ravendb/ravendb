@@ -25,6 +25,8 @@ import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeigh
 import d3 = require('d3');
 import nv = require('nvd3');
 
+//TODO: in v4.0 use tree, not cluster layout
+
 class visualizer extends viewModelBase {
     /*
     static chooseIndexText = "Select an index";
