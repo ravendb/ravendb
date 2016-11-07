@@ -14,9 +14,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                using (var a = new SlowTests.Core.Indexing.ReferencedDocuments())
+                using (var a = new FastTests.Server.Documents.Transformers.BasicTransformers())
                 {
-                    a.BasicLoadDocuments_Casing();
+                    a.CanDelete();
                 }
                 Console.WriteLine(sp.Elapsed);
             }
