@@ -271,7 +271,8 @@ namespace Raven.Abstractions.Data
             {
                 foreach (var input in TransformerParameters)
                 {
-                    path.AppendFormat("&tp-{0}={1}", input.Key, input.Value);
+                    var value = Uri.EscapeDataString(input.Value.ToString());
+                    path.AppendFormat("&tp-{0}={1}", input.Key, value);
                 }
             }
 
