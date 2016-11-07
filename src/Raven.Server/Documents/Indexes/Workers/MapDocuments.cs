@@ -188,9 +188,15 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
         {
-            if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
+            if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
             {
-                stats.RecordMapCompletedReason($"Reached maximum etag that was seen when batch started ({maxEtag}) and batch duration ({stats.Duration}) exceeded configured limit ({_configuration.MapTimeout.AsTimeSpan})");
+                stats.RecordMapCompletedReason($"Exceeded maximum configured map duration ({_configuration.MapTimeout.AsTimeSpan}). Was {stats.Duration}");
+                return false;
+            }
+
+            if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
+            {
+                stats.RecordMapCompletedReason($"Reached maximum etag that was seen when batch started ({maxEtag}) and map duration ({stats.Duration}) exceeded configured limit ({_configuration.MapTimeoutAfterEtagReached.AsTimeSpan})");
                 return false;
             }
 

@@ -79,10 +79,16 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/Indexing/MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory")]
         public int MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory { get; set; }
 
+        [Description("Number of seconds after which mapping will end even if there is more to map. By default we will map everything we can in single batch.")]
+        [DefaultValue(-1)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Raven/Indexing/MapTimeoutInSec")]
+        public TimeSetting MapTimeout { get; set; }
+
         [Description("Number of minutes after which mapping will end even if there is more to map. This will only be applied if we pass the last etag in collection that we saw when batch was started.")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Raven/Indexing/MapTimeoutInMin")]
-        public TimeSetting MapTimeout { get; set; }
+        [ConfigurationEntry("Raven/Indexing/MapTimeoutAfterEtagReachedInMin")]
+        public TimeSetting MapTimeoutAfterEtagReached { get; set; }
     }
 }
