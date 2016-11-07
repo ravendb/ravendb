@@ -97,6 +97,7 @@ namespace Raven.Tests.Helpers
             ravenConfiguration.DefaultStorageTypeName = storageType;
             ravenConfiguration.AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin;
             ravenConfiguration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
+            ravenConfiguration.MaxSecondsForTaskToWaitForDatabaseToLoad = 20;
 
             ravenConfiguration.FileSystem.MaximumSynchronizationInterval = SynchronizationInterval;
             ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystems");

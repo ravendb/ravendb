@@ -199,6 +199,7 @@ namespace Raven.Tests.Helpers
 
             documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
             documentStore.Configuration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
+            documentStore.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad = 20;
 
             if (activeBundles != null)
             {
@@ -434,6 +435,7 @@ namespace Raven.Tests.Helpers
 
             ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
             ravenConfiguration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
+            ravenConfiguration.MaxSecondsForTaskToWaitForDatabaseToLoad = 20;
 
             ravenConfiguration.Settings["Raven/StorageTypeName"] = ravenConfiguration.DefaultStorageTypeName;
 
