@@ -6,9 +6,9 @@
 //
 //  GPLEX Version:  1.2.2
 //  Machine:  TAL-PC
-//  DateTime: 11/2/2016 2:17:58 PM
+//  DateTime: 11/7/2016 3:58:44 PM
 //  UserName: Tal
-//  GPLEX input file <Indexing\LuceneQuery.Language.analyzer.lex - 11/2/2016 2:17:48 PM>
+//  GPLEX input file <Indexing\LuceneQuery.Language.analyzer.lex - 11/7/2016 3:55:08 PM>
 //  GPLEX frame file <embedded resource>
 //
 //  Option settings: verbose, parser, stack, minimize
@@ -1646,17 +1646,8 @@ int NextState() {
         case 100: // Recognized '{UnquotedTerm}',	Shortest string "0.+"
         case 102: // Recognized '{UnquotedTerm}',	Shortest string "0x"
         case 103: // Recognized '{UnquotedTerm}',	Shortest string "0x+"
-if(InMethod && bStack.Count == 0) 
-								{
-									yylval.s = HandleTermInMethod();
-								}
-								else 
-								{
-									yylval.s = DiscardEscapeChar(yytext, true);
-								}
-                                if(InMethod && yylval.s.Equals(","))
-                                    return (int)Token.COMMA;
-								return (int)Token.UNQUOTED_TERM;
+yylval.s = DiscardEscapeChar(yytext);
+								    return (int)Token.UNQUOTED_TERM;
             break;
         case 2: // Recognized '{Whitespace}',	Shortest string "\t"
 /* skip */
