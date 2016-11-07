@@ -133,7 +133,7 @@ namespace Raven.Server.Documents
 
         private string GetName(CollectionTableType type)
         {
-            return $"{GetTablePrefix(type)}{Name}";
+            return $"{GetTablePrefix(type)}{Name.ToLowerInvariant()}";
         }
     }
 

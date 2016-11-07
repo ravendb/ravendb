@@ -14,9 +14,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                using (var a = new RavenDB_5570())
+                using (var a = new SlowTests.Core.Indexing.ReferencedDocuments())
                 {
-                    a.Doing_PUT_without_commit_should_not_cause_NRE_on_subsequent_PUTs();
+                    a.BasicLoadDocuments_Casing();
                 }
                 Console.WriteLine(sp.Elapsed);
             }
