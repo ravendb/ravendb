@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 case MapResultsStorageType.Nested:
                     var section = GetNestedResultsSection();
 
-                    if (_mapReduceContext.MapEntries.ShouldGoToOverflowPage(_nestedSection.SizeAfterAdding(result)))
+                    if (_mapReduceContext.MapPhaseTree.ShouldGoToOverflowPage(_nestedSection.SizeAfterAdding(result)))
                     {
                         // would result in an overflow, that would be a space waste anyway, let's move to tree mode
                         MoveExistingResultsToTree(section);
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             if (_nestedSection != null)
                 return _nestedSection;
 
-            _nestedSection = new NestedMapResultsSection(_indexContext.Environment,_mapReduceContext.MapEntries, _nestedValueKey);
+            _nestedSection = new NestedMapResultsSection(_indexContext.Environment, _mapReduceContext.ReducePhaseTree, _nestedValueKey);
 
             return _nestedSection;
         }

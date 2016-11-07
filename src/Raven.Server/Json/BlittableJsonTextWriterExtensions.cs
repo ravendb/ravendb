@@ -1025,5 +1025,34 @@ namespace Raven.Server.Json
             WriteMetadata(writer, document, metadata);
             writer.WriteEndObject();
         }
+
+        public static void WriteArrayOfResultsAndCount(this BlittableJsonTextWriter writer, IEnumerable<LazyStringValue> results)
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName("Results");
+            writer.WriteStartArray();
+
+            var first = true;
+            var count = 0;
+
+            foreach (var id in results)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                writer.WriteString(id);
+                count++;
+
+                first = false;
+            }
+
+            writer.WriteEndArray();
+            writer.WriteComma();
+
+            writer.WritePropertyName("Count");
+            writer.WriteInteger(count);
+
+            writer.WriteEndObject();
+        }
     }
 }

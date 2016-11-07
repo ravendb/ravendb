@@ -11,12 +11,14 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -82,7 +84,50 @@ namespace Raven.Server.Documents.Handlers
                 return Task.CompletedTask;
             }
 
-            throw new NotImplementedException(); // TODO [ppekrol] not sure yet what will be needed, let's wait for Studio
+            var operation = GetStringQueryString("op");
+
+            JsonOperationContext context;
+            TransactionOperationContext indexContext;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (index._contextPool.AllocateOperationContext(out indexContext))
+            using (var tx = indexContext.OpenReadTransaction())
+            {
+                if (string.Equals(operation, "map-reduce-tree", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (index.Type.IsMapReduce() == false)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["Error"] = $"{index.Name} is not map-reduce index",
+                        });
+
+                        return Task.CompletedTask;
+                    }
+
+                    //index.Debug.Get
+                }
+
+                if (string.Equals(operation, "source-doc-ids", StringComparison.OrdinalIgnoreCase))
+                {
+                    IEnumerable<LazyStringValue> ids;
+                    using (index.GetIdentifiersOfMappedDocuments(GetStringQueryString("startsWith", required: false), GetStart(), GetPageSize(), out ids))
+                    {
+                        writer.WriteArrayOfResultsAndCount(ids);
+                    }
+                    
+                    return Task.CompletedTask;
+                }
+
+                if (string.Equals(operation, "reduce-keys", StringComparison.OrdinalIgnoreCase))
+                {
+
+                }
+
+                throw new NotSupportedException($"{operation} is not supported");
+            }
         }
 
         [RavenAction("/databases/*/indexes", "GET")]

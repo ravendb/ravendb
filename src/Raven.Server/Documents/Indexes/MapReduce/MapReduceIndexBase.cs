@@ -18,29 +18,31 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public abstract class MapReduceIndexBase<T> : Index<T> where T : IndexDefinitionBase
     {
-        internal const string MapEntriesTreeName = "MapEntries";
+        internal const string MapPhaseTreeName = "MapPhaseTree";
+        internal const string ReducePhaseTreeName = "ReducePhaseTree";
         internal const string ResultsStoreTypesTreeName = "ResultsStoreTypes";
-
-        private PageLocator _pageLocator;
+        
+        private readonly MapPhaseStats _stats = new MapPhaseStats();
         internal readonly MapReduceIndexingContext MapReduceWorkContext = new MapReduceIndexingContext();
 
         private IndexingStatsScope _statsInstance;
-        private readonly MapPhaseStats _stats = new MapPhaseStats();
-
+        private PageLocator _pageLocator;
+        
         protected MapReduceIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
         }
 
         public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
         {
-            MapReduceWorkContext.MapEntries = GetMapEntriesTree(indexContext.Transaction.InnerTransaction);
-            MapReduceWorkContext.ResultsStoreTypes = MapReduceWorkContext.MapEntries.FixedTreeFor(ResultsStoreTypesTreeName, sizeof(byte));
+            MapReduceWorkContext.MapPhaseTree = GetMapPhaseTree(indexContext.Transaction.InnerTransaction);
+            MapReduceWorkContext.ReducePhaseTree = GetReducePhaseTree(indexContext.Transaction.InnerTransaction);
+            MapReduceWorkContext.ResultsStoreTypes = MapReduceWorkContext.ReducePhaseTree.FixedTreeFor(ResultsStoreTypesTreeName, sizeof(byte));
 
             _pageLocator = new PageLocator(indexContext.Transaction.InnerTransaction.LowLevelTransaction, 128);
 
             MapReduceWorkContext.DocumentMapEntries = new FixedSizeTree(
                    indexContext.Transaction.InnerTransaction.LowLevelTransaction,
-                   MapReduceWorkContext.MapEntries,
+                   MapReduceWorkContext.MapPhaseTree,
                    Slices.Empty,
                    sizeof(ulong),
                    clone: false,
@@ -67,7 +69,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     store.Delete(mapEntry.Id);
                 }
 
-                MapReduceWorkContext.MapEntries.DeleteFixedTreeFor(tombstone.LoweredKey, sizeof(ulong));
+                MapReduceWorkContext.MapPhaseTree.DeleteFixedTreeFor(tombstone.LoweredKey, sizeof(ulong));
             }
 
 
@@ -78,18 +80,24 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return new MapReduceQueryResultRetriever(documentsContext, fieldsToFetch);
         }
 
-        private static Tree GetMapEntriesTree(Transaction tx)
+        private static Tree GetMapPhaseTree(Transaction tx)
         {
-            // map entries structure
-            // MapEntries tree has the following entries
-            // 1) { document key, fixed size tree }
-            // each fixed size tree stores records like 
+            // MapPhase tree has the following entries
+            // 1) { document key, fixed size tree } where each fixed size tree stores records like 
             //   |----> { identifier of a map result, hash of a reduce key for the map result }
-            // 2) entry to keep track of the identifier of last stored entry { #LastMapResultId, long_value }
-            // 3) { ResultsStoreTypes, fixed size tree } where the fixed size tree stores records like
-            //   |----> { reduce key hash, MapResultsStorageType enum } 
+            // 2) entry to keep track the identifier of a last stored entry { #LastMapResultId, long_value }
 
-            return tx.CreateTree(MapEntriesTreeName);
+            return tx.CreateTree(MapPhaseTreeName);
+        }
+
+        private static Tree GetReducePhaseTree(Transaction tx)
+        {
+            // ReducePhase tree has the following entries
+            // 1) fixed size tree called which stores records like
+            //    |----> { reduce key hash, MapResultsStorageType enum } 
+            // 2) { #reduceValues- hash of a reduce key, nested values section } 
+
+            return tx.CreateTree(ReducePhaseTreeName);
         }
 
         protected unsafe int PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext, IndexingStatsScope stats)
@@ -248,7 +256,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
             {
-                var mapEntries = tx.InnerTransaction.ReadTree(MapEntriesTreeName);
+                var mapEntries = tx.InnerTransaction.ReadTree(MapPhaseTreeName);
 
                 if (mapEntries == null)
                     return;
