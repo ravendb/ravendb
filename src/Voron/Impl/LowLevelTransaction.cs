@@ -37,7 +37,8 @@ namespace Voron.Impl
 
         private readonly HashSet<long> _dirtyPages;
         private readonly Dictionary<long, long> _dirtyOverflowPages;
-        public List<IDisposable> AlsoDispose;
+        public event Action<LowLevelTransaction> OnCommit;
+        public event Action<LowLevelTransaction> OnDispose;
         readonly Stack<long> _pagesToFreeOnCommit;
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -491,13 +492,7 @@ namespace Voron.Impl
                 _allocator.Dispose();
 
 
-            if (AlsoDispose != null)
-            {
-                foreach (var disposable in AlsoDispose)
-                {
-                    disposable.Dispose();
-                }
-            }
+            OnDispose?.Invoke(this);
         }
 
         internal void FreePageOnCommit(long pageNumber)
@@ -571,8 +566,6 @@ namespace Voron.Impl
             if (RolledBack)
                 throw new InvalidOperationException("Cannot commit rolled-back transaction.");
 
-
-
             while (_pagesToFreeOnCommit.Count > 0)
             {
                 FreePage(_pagesToFreeOnCommit.Pop());
@@ -616,6 +609,7 @@ namespace Voron.Impl
 
                 throw;
             }
+            OnCommit?.Invoke(this);
         }
 
 

@@ -1,15 +1,11 @@
-﻿﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Sparrow;
-using Sparrow.Json;
 using Voron.Impl;
 
 namespace Voron
 {
-    public class TransactionPersistentContext : IDisposable
+    public class TransactionPersistentContext
     {
         private bool _longLivedTransaction;
         private int _cacheSize;
@@ -56,9 +52,5 @@ namespace Voron
                 _pageLocators.Push(locator);
         }
 
-        public void Dispose()
-        {
-          
-        }
     }
 }

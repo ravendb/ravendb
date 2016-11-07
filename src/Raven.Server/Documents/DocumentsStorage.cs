@@ -1968,30 +1968,17 @@ namespace Raven.Server.Documents
                 TombstonesSchema.Create(context.Transaction.InnerTransaction,
                     name.GetTableName(CollectionTableType.Tombstones));
 
-                if(context.Transaction.InnerTransaction.LowLevelTransaction.AlsoDispose == null)
-                    context.Transaction.InnerTransaction.LowLevelTransaction.AlsoDispose = new List<IDisposable>();
-
-                //add to cache ONLY if the transaction was committed. 
-                //this would prevent NREs next time a PUT is run,since if a transaction
-                //is not commited, DocsSchema and TombstonesSchema will not be actually created..
-                var lowLevelTx = context.Transaction.InnerTransaction.LowLevelTransaction;
-                context.Transaction.InnerTransaction.LowLevelTransaction.AlsoDispose.Add(new DisposableAction(() =>
+                // Add to cache ONLY if the transaction was committed. 
+                // this would prevent NREs next time a PUT is run,since if a transaction
+                // is not commited, DocsSchema and TombstonesSchema will not be actually created..
+                // has to happen after the commit, but while we are holding the write tx lock
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += _ =>
                 {
-                    if (!lowLevelTx.Committed)
-                        return;
-
-                    // other transactions might be running in parallel
-                    while (_collectionsCache.ContainsKey(name.Name) == false)
-                    {
-                        var oldCopy = _collectionsCache;
-                        var newCopy = new Dictionary<string, CollectionName>(oldCopy,StringComparer.OrdinalIgnoreCase);
-                        if (newCopy.ContainsKey(name.Name))
-                            return;
-                        newCopy[name.Name] = name;
-                        if (Interlocked.CompareExchange(ref _collectionsCache, newCopy, oldCopy) == oldCopy)
-                            return; // copied
-                    }
-                }));
+                    var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache,
+                        StringComparer.OrdinalIgnoreCase);
+                    collectionNames[name.Name] = name;
+                    _collectionsCache=collectionNames;
+                };
             }
             return name;
         }

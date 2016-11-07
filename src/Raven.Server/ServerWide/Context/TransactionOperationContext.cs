@@ -97,7 +97,6 @@ namespace Raven.Server.ServerWide.Context
 
             Allocator?.Dispose();
             Allocator = null;
-            PersistentContext?.Dispose();
             PersistentContext = null;
 
             if (_pinnedObjects != null)

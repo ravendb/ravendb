@@ -73,7 +73,6 @@ namespace Voron.Impl.Journal
         public void Dispose()
         {
             _lazyTransactionPager?.Dispose();
-            _transactionPersistentContext?.Dispose();
         }
     }
 }

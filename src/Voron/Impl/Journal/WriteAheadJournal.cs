@@ -555,7 +555,7 @@ namespace Voron.Impl.Journal
                         }
 
                         _waj._env.IncreaseTheChanceForGettingTheTransactionLock();
-                        using (var transactionPersistentContext = new TransactionPersistentContext(true))
+                        var transactionPersistentContext = new TransactionPersistentContext(true);
                         using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
                         {
                             if (alreadyInWriteTx == false)
@@ -849,7 +849,7 @@ namespace Voron.Impl.Journal
                 }
                 else
                 {
-                    using (var transactionPersistentContext = new TransactionPersistentContext())
+                    var transactionPersistentContext = new TransactionPersistentContext();
                     using (var tx = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite).JournalApplicatorTransaction())
                     {
                         var pagerState = _waj._dataPager.EnsureContinuous(last.PageNumber, numberOfPagesInLastPage);

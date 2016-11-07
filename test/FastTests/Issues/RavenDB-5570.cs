@@ -31,15 +31,8 @@ namespace FastTests.Issues
 
                     using (context.OpenWriteTransaction())
                     {
-                        try
-                        {
-                            //should not throw exception...
-                            database.DocumentsStorage.Put(context, "foo/bar", null, doc);
-                        }
-                        catch (Exception)
-                        {
-                            Assert.False(true);
-                        }
+                        //should not throw exception...
+                        database.DocumentsStorage.Put(context, "foo/bar", null, doc);
                     }
                 }
             }

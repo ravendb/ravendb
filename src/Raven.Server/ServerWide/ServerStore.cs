@@ -305,11 +305,10 @@ namespace Raven.Server.ServerWide
                 return;
 
             var llt = ctx.Transaction.InnerTransaction.LowLevelTransaction;
-            if (llt.AlsoDispose == null)
-                llt.AlsoDispose = new List<IDisposable>(1);
+          
 
             // need to do this after the transaction is over
-            llt.AlsoDispose.Add(new DisposableAction(() =>
+            llt.OnDispose += _ =>
             {
                 if (llt.Committed == false)
                     return;
@@ -322,7 +321,7 @@ namespace Raven.Server.ServerWide
                 {
                     asyncQueue.Enqueue(djv);
                 }
-            }));
+            };
         }
 
     }
