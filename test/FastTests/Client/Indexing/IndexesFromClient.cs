@@ -329,12 +329,11 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(serverDefinition.Name, definition.Name);
                 Assert.Equal(serverDefinition.IsSideBySideIndex, definition.IsSideBySideIndex);
                 Assert.Equal(serverDefinition.IsTestIndex, definition.IsTestIndex);
-                Assert.Equal(serverDefinition.IndexVersion, definition.IndexVersion);
                 Assert.Equal(serverDefinition.Reduce, definition.Reduce);
                 Assert.Equal(serverDefinition.Type, definition.Type);
                 Assert.Equal(serverDefinition.IndexId, definition.IndexId);
                 Assert.Equal(serverDefinition.LockMode, definition.LockMode);
-                Assert.Equal(serverDefinition.MaxIndexOutputsPerDocument, definition.MaxIndexOutputsPerDocument);
+                Assert.Equal(serverDefinition.Configuration, definition.Configuration);
                 Assert.Equal(serverDefinition.Maps, definition.Maps);
 
                 var keys = serverDefinition.Fields.Keys;

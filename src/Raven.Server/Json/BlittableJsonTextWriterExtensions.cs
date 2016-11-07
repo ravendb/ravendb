@@ -660,18 +660,20 @@ namespace Raven.Server.Json
             writer.WriteString((indexDefinition.LockMode.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.MaxIndexOutputsPerDocument)));
-            if (indexDefinition.MaxIndexOutputsPerDocument.HasValue)
-                writer.WriteInteger(indexDefinition.MaxIndexOutputsPerDocument.Value);
-            else
-                writer.WriteNull();
-            writer.WriteComma();
+            writer.WritePropertyName(nameof(indexDefinition.Configuration));
+            writer.WriteStartObject();
+            var isFirstInternal = true;
+            foreach (var kvp in indexDefinition.Configuration)
+            {
+                if (isFirstInternal == false)
+                    writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.IndexVersion)));
-            if (indexDefinition.IndexVersion.HasValue)
-                writer.WriteInteger(indexDefinition.IndexVersion.Value);
-            else
-                writer.WriteNull();
+                isFirstInternal = false;
+
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteString(kvp.Value);
+            }
+            writer.WriteEndObject();
             writer.WriteComma();
 
             writer.WritePropertyName((nameof(indexDefinition.IsSideBySideIndex)));
@@ -691,7 +693,7 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName((nameof(indexDefinition.Maps)));
             writer.WriteStartArray();
-            var isFirstInternal = true;
+            isFirstInternal = true;
             foreach (var map in indexDefinition.Maps)
             {
                 if (isFirstInternal == false)

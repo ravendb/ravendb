@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         internal readonly MapReduceIndexingContext MapReduceWorkContext = new MapReduceIndexingContext();
 
         private IndexingStatsScope _statsInstance;
-        private MapPhaseStats _stats = new MapPhaseStats();
+        private readonly MapPhaseStats _stats = new MapPhaseStats();
 
         protected MapReduceIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                    MapReduceWorkContext.MapEntries,
                    Slices.Empty,
                    sizeof(ulong),
-                   clone: false, 
+                   clone: false,
                    pageLocator: _pageLocator);
 
             return MapReduceWorkContext;
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public override unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            Slice docKeyAsSlice;            
+            Slice docKeyAsSlice;
             using (Slice.External(indexContext.Allocator, tombstone.LoweredKey.Buffer, tombstone.LoweredKey.Length, out docKeyAsSlice))
             {
                 MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 MapReduceWorkContext.MapEntries.DeleteFixedTreeFor(tombstone.LoweredKey, sizeof(ulong));
             }
 
-            
+
         }
 
         public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch)
@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             EnsureValidStats(stats);
 
-            Slice docKeyAsSlice;            
+            Slice docKeyAsSlice;
             using (Slice.External(indexContext.Allocator, documentKey.Buffer, documentKey.Length, out docKeyAsSlice))
             {
                 Queue<MapEntry> existingEntries = null;
@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
 
                 return resultsCount;
-            }            
+            }
         }
 
         private static unsafe bool ResultsBinaryEqual(BlittableJsonReaderObject newResult, PtrSize existingData)

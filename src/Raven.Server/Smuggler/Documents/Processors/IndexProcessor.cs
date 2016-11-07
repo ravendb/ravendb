@@ -117,10 +117,12 @@ namespace Raven.Server.Smuggler.Documents.Processors
             var indexDefinition = new IndexDefinition
             {
                 IndexId = legacyIndexDefinition.IndexId,
-                IndexVersion = legacyIndexDefinition.IndexVersion,
                 LockMode = legacyIndexDefinition.LockMode,
                 Maps = legacyIndexDefinition.Maps,
-                MaxIndexOutputsPerDocument = legacyIndexDefinition.MaxIndexOutputsPerDocument,
+                Configuration =
+                {
+                    MaxIndexOutputsPerDocument = legacyIndexDefinition.MaxIndexOutputsPerDocument
+                },
                 Name = name,
                 Reduce = legacyIndexDefinition.Reduce
             };

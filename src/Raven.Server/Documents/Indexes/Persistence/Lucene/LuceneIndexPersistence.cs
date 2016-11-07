@@ -7,7 +7,6 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
@@ -80,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _converter?.Clean();
         }
 
-        public void Initialize(StorageEnvironment environment, IndexingConfiguration configuration)
+        public void Initialize(StorageEnvironment environment)
         {
             if (_initialized)
                 throw new InvalidOperationException();

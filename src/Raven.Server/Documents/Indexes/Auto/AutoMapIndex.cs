@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Auto
         public static AutoMapIndex CreateNew(int indexId, AutoMapIndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var instance = new AutoMapIndex(indexId, definition);
-            instance.Initialize(documentDatabase);
+            instance.Initialize(documentDatabase, documentDatabase.Configuration.Indexing);
 
             return instance;
         }
@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Auto
         {
             var definition = AutoMapIndexDefinition.Load(environment);
             var instance = new AutoMapIndex(indexId, definition);
-            instance.Initialize(environment, documentDatabase);
+            instance.Initialize(environment, documentDatabase, documentDatabase.Configuration.Indexing);
 
             return instance;
         }

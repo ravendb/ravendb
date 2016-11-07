@@ -31,7 +31,10 @@ namespace SlowTests.Core.Indexing
                 return new IndexDefinition
                 {
                     Maps = { @"docs.Users.SelectMany(user => user.Friends, (user, friend) => new { Name = user.Name })" },
-                    MaxIndexOutputsPerDocument = 16384,
+                    Configuration =
+                    {
+                        MaxIndexOutputsPerDocument = 16384
+                    }
                 };
             }
         }
@@ -41,7 +44,7 @@ namespace SlowTests.Core.Indexing
         {
             var index = new UsersAndFriendsIndex();
             var definition = index.CreateIndexDefinition();
-            definition.MaxIndexOutputsPerDocument = 2;
+            definition.Configuration.MaxIndexOutputsPerDocument = 2;
 
             using (var store = GetDocumentStore())
             {
@@ -91,7 +94,7 @@ namespace SlowTests.Core.Indexing
                 SpinWait.SpinUntil(() => store.DatabaseCommands.GetIndexErrors(index.IndexName).Errors.Length > 0, 1000);
 
                 var errors = store.DatabaseCommands.GetIndexErrors(index.IndexName);
-                
+
                 Assert.Equal(1, errors.Errors.Length);
                 Assert.Contains("Index 'UsersAndFriends' has already produced 3 map results for a source document 'users/2'", errors.Errors[0].Error);
 

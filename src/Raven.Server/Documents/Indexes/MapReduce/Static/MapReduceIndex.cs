@@ -47,13 +47,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         protected override void InitializeInternal()
         {
-            _maxNumberOfIndexOutputs = Definition.IndexDefinition.MaxIndexOutputsPerDocument ?? DocumentDatabase.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument;
+            _maxNumberOfIndexOutputs = Definition.IndexDefinition.Configuration.MaxIndexOutputsPerDocument ?? Configuration.MaxMapReduceIndexOutputsPerDocument;
         }
 
         public static MapReduceIndex CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var instance = CreateIndexInstance(indexId, definition);
-            instance.Initialize(documentDatabase);
+            instance.Initialize(documentDatabase, new IndexingConfigurationWithClientOverrides(definition.Configuration, documentDatabase.Configuration));
 
             return instance;
         }
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var definition = StaticMapIndexDefinition.Load(environment);
             var instance = CreateIndexInstance(indexId, definition);
 
-            instance.Initialize(environment, documentDatabase);
+            instance.Initialize(environment, documentDatabase, new IndexingConfigurationWithClientOverrides(definition.Configuration, documentDatabase.Configuration));
 
             return instance;
         }
@@ -81,12 +81,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
             var workers = new List<IIndexingWork>();
-            workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, MapReduceWorkContext));
+            workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext));
 
             if (_referencedCollections.Count > 0)
-                workers.Add(_handleReferences = new HandleReferences(this, Compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
+                workers.Add(_handleReferences = new HandleReferences(this, Compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
-            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, MapReduceWorkContext, DocumentDatabase.Configuration.Indexing));
+            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, MapReduceWorkContext, Configuration));
             workers.Add(new ReduceMapResultsOfStaticIndex(this, Compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, MapReduceWorkContext));
 
             return workers.ToArray();
@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             if (base.EnsureValidNumberOfOutputsForDocument(numberOfAlreadyProducedOutputs) == false)
                 return false;
 
-            if (Definition.IndexDefinition.MaxIndexOutputsPerDocument != null)
+            if (Definition.IndexDefinition.Configuration.MaxIndexOutputsPerDocument.HasValue)
             {
                 // user has specifically configured this value, but we don't trust it.
 

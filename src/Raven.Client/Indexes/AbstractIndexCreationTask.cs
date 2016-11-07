@@ -334,7 +334,7 @@ namespace Raven.Client.Indexes
                 // now we need to check if this is a legacy index...
                 var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
 
-                return serverDef.Equals(legacyIndexDefinition, compareIndexIds: false, ignoreFormatting: true, ignoreMaxIndexOutput: true);
+                return serverDef.Equals(legacyIndexDefinition, compareIndexIds: false, ignoreFormatting: true, ignoreMaxIndexOutputs: true);
             }
             finally
             {

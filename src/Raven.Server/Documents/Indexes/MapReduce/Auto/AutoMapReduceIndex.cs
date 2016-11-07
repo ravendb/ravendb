@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             DocumentDatabase documentDatabase)
         {
             var instance = new AutoMapReduceIndex(indexId, definition);
-            instance.Initialize(documentDatabase);
+            instance.Initialize(documentDatabase, documentDatabase.Configuration.Indexing);
 
             return instance;
         }
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             var definition = AutoMapReduceIndexDefinition.Load(environment);
             var instance = new AutoMapReduceIndex(indexId, definition);
-            instance.Initialize(environment, documentDatabase);
+            instance.Initialize(environment, documentDatabase, documentDatabase.Configuration.Indexing);
 
             return instance;
         }
@@ -60,8 +60,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             return new IIndexingWork[]
             {
-                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, MapReduceWorkContext),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, MapReduceWorkContext, DocumentDatabase.Configuration.Indexing),
+                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, MapReduceWorkContext, Configuration),
                 new ReduceMapResultsOfAutoIndex(this, Definition, _indexStorage, DocumentDatabase.Metrics, MapReduceWorkContext),
             };
         }

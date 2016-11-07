@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -14,21 +15,39 @@ namespace Sparrow.Json
         {
             try
             {
+                var type = typeof(T);
                 var json = Expression.Parameter(typeof(BlittableJsonReaderObject), "json");
 
                 var vars = new Dictionary<Type, ParameterExpression>();
 
-                if (typeof(T) == typeof(BlittableJsonReaderArray))
+                if (type == typeof(BlittableJsonReaderArray))
                 {
                     return null;
                 }
 
-                NewExpression instance;
-                var ctor = typeof(T).GetConstructor(EmptyTypes);
-                if (ctor != null)
-                    instance = Expression.New(ctor);
-                else
-                    instance = Expression.New(typeof(T));
+                var ctor = type.GetConstructor(EmptyTypes);
+                var instance = ctor != null
+                    ? Expression.New(ctor)
+                    : Expression.New(type);
+
+                if (typeof(T).GetInterfaces().Contains(typeof(IFillFromBlittableJson)))
+                {
+                    var obj = Expression.Parameter(type, "obj");
+                    var methodToCall = typeof(IFillFromBlittableJson).GetMethod(nameof(IFillFromBlittableJson.FillFromBlittableJson), BindingFlags.Public | BindingFlags.Instance);
+
+                    var returnTarget = Expression.Label(type);
+
+                    var block = Expression.Block(
+                        new[] { obj },
+                        Expression.Assign(obj, Expression.MemberInit(instance)),
+                        Expression.Call(obj, methodToCall, json),
+                        Expression.Return(returnTarget, obj, type),
+                        Expression.Label(returnTarget, Expression.Default(type))
+                    );
+
+                    var l = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(block, json);
+                    return l.Compile();
+                }
 
                 var propInit = new List<MemberBinding>();
                 foreach (var fieldInfo in typeof(T).GetFields())
@@ -204,7 +223,7 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, TEnum> ToDictionaryOfEnum<TEnum>(BlittableJsonReaderObject json, string name) 
+        private static Dictionary<string, TEnum> ToDictionaryOfEnum<TEnum>(BlittableJsonReaderObject json, string name)
         {
             var dic = new Dictionary<string, TEnum>(StringComparer.OrdinalIgnoreCase);
 

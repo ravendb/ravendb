@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override bool Equals(IndexDefinition indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
         {
-            return IndexDefinition.Equals(indexDefinition, compareIndexIds: false, ignoreFormatting: ignoreFormatting, ignoreMaxIndexOutput: ignoreMaxIndexOutputs);
+            return IndexDefinition.Equals(indexDefinition, compareIndexIds: false, ignoreFormatting: ignoreFormatting, ignoreMaxIndexOutputs: ignoreMaxIndexOutputs);
         }
 
         protected override int ComputeRestOfHash(int hashCode)

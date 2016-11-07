@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -20,14 +19,27 @@ namespace Raven.Server.Config.Categories
 
         public virtual void Initialize(IConfigurationRoot settings)
         {
+            Initialize(key => settings[key], throwIfThereIsNoSetMethod: true);
+        }
+
+        public void Initialize(Func<string, string> getSetting, bool throwIfThereIsNoSetMethod)
+        {
             var configurationProperties = from property in GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                let configurationEntryAttribute = property.GetCustomAttributes<ConfigurationEntryAttribute>().FirstOrDefault()
-                where configurationEntryAttribute != null // filter out properties which aren't marked as configuration entry
-                orderby configurationEntryAttribute.Order // properties are initialized in order of declaration
-                select property;
+                                          let configurationEntryAttribute = property.GetCustomAttributes<ConfigurationEntryAttribute>().FirstOrDefault()
+                                          where configurationEntryAttribute != null // filter out properties which aren't marked as configuration entry
+                                          orderby configurationEntryAttribute.Order // properties are initialized in order of declaration
+                                          select property;
 
             foreach (var property in configurationProperties)
             {
+                if (property.SetMethod == null)
+                {
+                    if (throwIfThereIsNoSetMethod)
+                        throw new InvalidOperationException($"No set method available for '{property.Name}' property.");
+
+                    continue;
+                }
+
                 TimeUnitAttribute timeUnit = null;
                 SizeUnitAttribute sizeUnit = null;
 
@@ -46,7 +58,7 @@ namespace Raven.Server.Config.Categories
 
                 foreach (var entry in property.GetCustomAttributes<ConfigurationEntryAttribute>())
                 {
-                    var value = settings[entry.Key];
+                    var value = getSetting(entry.Key);
 
                     if (value == null)
                         continue;

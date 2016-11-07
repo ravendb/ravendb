@@ -16,6 +16,7 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -125,6 +126,8 @@ namespace Raven.Server.Documents.Indexes
         protected internal MeterMetric MapsPerSec = new MeterMetric();
         protected internal MeterMetric ReducesPerSec = new MeterMetric();
 
+        protected internal IndexingConfiguration Configuration;
+
         private bool _allocationCleanupNeeded;
         private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
@@ -213,7 +216,7 @@ namespace Raven.Server.Documents.Indexes
                 if (_indexingThread != null)
                     return IndexRunningStatus.Running;
 
-                if (DocumentDatabase.Configuration.Indexing.Disabled)
+                if (Configuration.Disabled)
                     return IndexRunningStatus.Disabled;
 
                 return IndexRunningStatus.Paused;
@@ -222,7 +225,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual bool HasBoostedFields => false;
 
-        protected void Initialize(DocumentDatabase documentDatabase)
+        protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration)
         {
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
             lock (_locker)
@@ -230,16 +233,16 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' was already initialized.");
 
-                var indexPath = Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath,
+                var indexPath = Path.Combine(configuration.IndexStoragePath,
                     GetIndexNameSafeForFileSystem());
-                var options = documentDatabase.Configuration.Indexing.RunInMemory
+                var options = configuration.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath)
                     : StorageEnvironmentOptions.ForPath(indexPath);
 
                 options.SchemaVersion = 1;
                 try
                 {
-                    Initialize(new StorageEnvironment(options), documentDatabase);
+                    Initialize(new StorageEnvironment(options), documentDatabase, configuration);
                 }
                 catch (Exception)
                 {
@@ -261,7 +264,7 @@ namespace Raven.Server.Documents.Indexes
             return $"{IndexId:0000}-{name.Substring(0, 64)}";
         }
 
-        protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase)
+        protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase, IndexingConfiguration configuration)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -276,13 +279,15 @@ namespace Raven.Server.Documents.Indexes
                     Debug.Assert(Definition != null);
 
                     DocumentDatabase = documentDatabase;
+                    Configuration = configuration;
+
                     _environment = environment;
                     _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{IndexId}");
                     _contextPool = new TransactionContextPool(_environment);
                     _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
                     _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                     _indexStorage.Initialize(_environment);
-                    IndexPersistence.Initialize(_environment, DocumentDatabase.Configuration.Indexing);
+                    IndexPersistence.Initialize(_environment);
 
                     LoadValues();
 
@@ -333,7 +338,7 @@ namespace Raven.Server.Documents.Indexes
                 if (_indexingThread != null)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' is executing.");
 
-                if (DocumentDatabase.Configuration.Indexing.Disabled)
+                if (Configuration.Disabled)
                     return;
 
                 if (Priority.HasFlag(IndexingPriority.Error))
@@ -1060,7 +1065,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var stats = new IndexStats.MemoryStats();
 
-            var indexPath = Path.Combine(DocumentDatabase.Configuration.Indexing.IndexStoragePath,
+            var indexPath = Path.Combine(Configuration.IndexStoragePath,
                 GetIndexNameSafeForFileSystem());
             var totalSize = 0L;
             foreach (var mapping in NativeMemory.FileMapping)
@@ -1165,7 +1170,7 @@ namespace Raven.Server.Documents.Indexes
                 while (true)
                 {
                     AssertIndexState();
-                    
+
                     // we take the awaiter _before_ the indexing transaction happens, 
                     // so if there are any changes, it will already happen to it, and we'll 
                     // query the index again. This is important because of: 
@@ -1680,7 +1685,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), stats) == false)
                 {
-                    if (stats.MapAttempts < DocumentDatabase.Configuration.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
+                    if (stats.MapAttempts < Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
                         return true;
 
                     stats.RecordMapCompletedReason("Cannot budget additional memory for batch");

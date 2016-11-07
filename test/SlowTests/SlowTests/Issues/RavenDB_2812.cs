@@ -31,7 +31,10 @@ namespace SlowTests.SlowTests.Issues
                 return new IndexDefinition
                 {
                     Maps = { @"docs.Users.SelectMany(user => user.Friends, (user, friend) => new {Name = user.Name})" },
-                    MaxIndexOutputsPerDocument = 16384,
+                    Configuration =
+                    {
+                        MaxIndexOutputsPerDocument = 16384
+                    }
                 };
             }
         }
@@ -41,7 +44,7 @@ namespace SlowTests.SlowTests.Issues
         {
             var store = GetDocumentStore();
 
-            new UsersAndFiendsIndex().Execute(store);
+           new UsersAndFiendsIndex().Execute(store);
 
             using (var bulk = store.BulkInsert())
             {
