@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Exceptions;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -107,12 +107,14 @@ namespace Raven.Server.Documents
 
                 var changeVectorForWrite = ReplicationUtils.GetChangeVectorForWrite(existing?.ChangeVector, _environment.DbId, newEtag);
 
+                //precautions
+                if (newEtag < 0) throw new ArgumentException("etag must not be negative");
+                if (changeVectorForWrite == null) throw new ArgumentException("changeVector == null, should not be so");
+
                 Slice indexNameAsSlice;
                 using (DocumentsStorage.GetSliceFromKey(context, indexName, out indexNameAsSlice))
                 {
-                    //precautions
-                    if (newEtag < 0) throw new ArgumentException("etag must not be negative");
-                    if (changeVectorForWrite == null) throw new ArgumentException("changeVector == null, should not be so");
+                    ThrowIfAlreadyExistsAndOverwriting(indexName, type, indexIndexId, table, indexNameAsSlice, existing);
 
                     fixed (ChangeVectorEntry* pChangeVector = changeVectorForWrite)
                     {
@@ -228,6 +230,36 @@ namespace Raven.Server.Documents
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.ReadTransaction())
                 return GetIndexMetadataByNameInternal(tx, context, name, returnNullIfTombstone);
+        }
+
+        private static void ThrowIfAlreadyExistsAndOverwriting(
+            string indexName, 
+            IndexEntryType type, 
+            int indexIndexId, 
+            Table table,
+            Slice indexNameAsSlice, 
+            IndexEntryMetadata existing)
+        {
+            if (!table.VerifyKeyExists(indexNameAsSlice) || indexIndexId == -1 || existing == null || existing.Id == -1)
+                return;
+
+            string msg;
+            switch (type)
+            {
+                case IndexEntryType.Index:
+                    msg =
+                        $"Tried to create an index with a name of {indexName}, but an index or a transformer under the same name exist";
+                    break;
+                case IndexEntryType.Transformer:
+                    msg =
+                        $"Tried to create an transformer with a name of {indexName}, but an index or a transformer under the same name exist";
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type),
+                        $"Unknown index/transformer type. For the record, I've got {(int)type}..");
+            }
+
+            throw new IndexOrTransformerAlreadyExistException(msg);
         }
 
         private IndexEntryMetadata GetIndexMetadataByNameInternal(Transaction tx, TransactionOperationContext context, string name, bool returnNullIfTombstone)
