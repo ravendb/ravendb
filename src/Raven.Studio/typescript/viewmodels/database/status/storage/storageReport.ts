@@ -29,25 +29,72 @@ class storageReport extends viewModelBase {
     }
 
     private mapReport(reportItem: storageReportItem): treeMapItem {
-        let totalSize = 0;
-        totalSize += reportItem.Report.DataFile.AllocatedSpaceInBytes;
-        reportItem.Report.Journals.forEach(journal => totalSize += journal.AllocatedSpaceInBytes);
         return {
             name: reportItem.Type + ": " + reportItem.Name,
             children: [
                 this.mapDataFile(reportItem.Report),
                 this.mapJournals(reportItem.Report)
-            ],
-            size: totalSize
+            ]
         }
     }
 
     private mapDataFile(report: Voron.Debugging.StorageReport): treeMapItem {
         const dataFile = report.DataFile;
+
+        const tables = this.mapTables(report.Tables);
+        const trees = this.mapTrees(report.Trees, "Trees");
+        const freeSpace = {
+            name: "Free",
+            size: dataFile.FreeSpaceInBytes
+        } as treeMapItem;
+
         return {
             name: "datafile",
-            size: dataFile.AllocatedSpaceInBytes
+            children: [
+                tables,
+                trees,
+                freeSpace
+            ]
         };
+    }
+
+    private mapTables(tables: Voron.Data.Tables.TableReport[]): treeMapItem {
+        return {
+            name: "Tables",
+            children: tables.map(x => this.mapTable(x))
+        }
+    }
+
+    private mapTable(table: Voron.Data.Tables.TableReport): treeMapItem {
+        const structure = this.mapTrees(table.Structure, "Structure");
+        const data = {
+            name: "Data",
+            size: table.DataSizeInBytes
+        } as treeMapItem;
+        const indexes = this.mapTrees(table.Indexes, "Indexes");
+
+        return {
+            name: table.Name,
+            children: [
+                structure,
+                data,
+                indexes
+            ]
+        } as treeMapItem;
+    }
+
+    private mapTrees(trees: Voron.Debugging.TreeReport[], name: string): treeMapItem {
+        return {
+            name: "Trees",
+            children: trees.map(x => this.mapTree(x))
+        }
+    }
+
+    private mapTree(tree: Voron.Debugging.TreeReport): treeMapItem {
+        return {
+            name: tree.Name,
+            size: tree.AllocatedSpaceInBytes
+        }
     }
 
     private mapJournals(report: Voron.Debugging.StorageReport): treeMapItem {
