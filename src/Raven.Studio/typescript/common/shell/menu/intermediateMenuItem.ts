@@ -25,6 +25,14 @@
             this.children.forEach(x => x.parent(this));
         }
     }
+
+    open() {
+        this.isOpen(true);
+    }
+
+    close() {
+        this.isOpen(false);
+    }
 }
 
 export = intermediateMenuItem;
