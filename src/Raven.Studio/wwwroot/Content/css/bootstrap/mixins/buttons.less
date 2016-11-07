@@ -23,19 +23,43 @@
     background-color: saturate(lighten(@background, 5%),0%);
     border-color: saturate(lighten(@border, 5%),0%);
   }
-  &:active,
+  &:active {
+      color: @color;
+      background-color: desaturate(darken(@background, 8%),0%);
+      border-color: desaturate(darken(@border, 8%),0%);
+
+      &:hover,
+      &:focus,
+      &.focus {
+        color: @color;
+        background-color: saturate(darken(@background, 8%),10%);
+        border-color: saturate(darken(@background, 8%),10%);
+      }
+  }
   &.active,
   .open > .dropdown-toggle& {
-    color: @color;
+    /*color: @color;
     background-color: desaturate(darken(@background, 8%),0%);
-    border-color: desaturate(darken(@border, 8%),0%);
+    border-color: desaturate(darken(@border, 8%),0%);*/
+    color:@background;
+    background-color: @gray-lighter;
+    border-color:@gray-lighter;
+
+    [class^="icon-"], [class*=" icon-"] {
+        color:@background;
+    }
 
     &:hover,
     &:focus,
     &.focus {
-      color: @color;
-      background-color: saturate(darken(@background, 8%),10%);
-      border-color: saturate(darken(@border, 8%),10%);
+      color: @background;
+      background-color: saturate(darken(@gray-lighter, 11%),0%);
+      border-color: saturate(darken(@gray-lighter, 11%),0%);
+    }
+
+    &:active {
+        background-color: saturate(lighten(@gray-light, 0%),0%);
+        border-color: saturate(lighten(@gray-light, 0%),0%);
     }
   }
   &:active,

@@ -1,0 +1,76 @@
+@prerelease-color: @brand-warning-light;
+.bg-prerelease {
+    color: @gray-dark;
+    font-weight: bold;
+    background-image: repeating-linear-gradient(-45deg, fadeout(@prerelease-color,0%), fadeout(@prerelease-color,0%) 3px, fadeout(darken(@prerelease-color,10%),0%) 3px, fadeout(darken(@prerelease-color,10%),0%) 6px);
+
+    .icon-hammer-driver {
+        font-size: 40px;
+    }
+
+    p:not(.lead) {
+        margin-top: 4px;
+        margin-left: 10px;
+        display: inline-block;
+        margin-bottom: 0;
+        line-height: 17px;
+    }
+}
+
+.prerelease-alert {
+    .padding.padding-sm;
+    font-weight: 600;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+}
+
+.btn-prerelease {
+    padding-right: 40px;
+    position: relative;
+    background-image: repeating-linear-gradient(-45deg, fadeout(@prerelease-color,90%), fadeout(@prerelease-color,90%) 3px, fadeout(darken(@prerelease-color,10%),100%) 3px, fadeout(darken(@prerelease-color,10%),100%) 6px);
+    &:after {
+        content: "upcoming";
+        font-weight: bold;
+        color:@gray-dark;
+        transform: translateY(-100%);
+        top:0;
+        left:0;
+        right:0;
+        margin-left: -1px;
+        margin-right: -1px;
+        line-height: 12px;
+        text-transform: uppercase;
+        position: absolute;
+        font-size: 10px;
+        background-image: repeating-linear-gradient(-45deg, fadeout(@prerelease-color,0%), fadeout(@prerelease-color,0%) 3px, fadeout(darken(@prerelease-color,10%),0%) 3px, fadeout(darken(@prerelease-color,10%),0%) 6px);
+    }
+}
+
+.dropdown-menu {
+    .btn-prerelease {
+        margin-top:12px;
+        cursor: not-allowed;
+        &:after {
+            margin: 0;
+            text-align: center;
+        }
+    }
+}
+
+.search-prerelease {
+    .bg-warning;
+    position: absolute;
+    left: @grid-gutter-width / 2;
+    right: 51%;
+    top: 2px;
+    height: 36px;
+    padding: 5px 10px;
+
+    color:@gray-lighter;
+    .text-muted {
+        color: @gray-light;
+    }
+}

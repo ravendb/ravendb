@@ -114,6 +114,8 @@
         (function setupMainMenu() {
 
             $('#main-menu a').click(function (e) {
+                $('#main-menu a').removeClass('active');
+                $(this).addClass('active');
                 var $list = $(this).closest('ul');
                 var hasOpenSubmenus = $list.find('.level-show').length;
                 var isOpenable = $(this).siblings('.level').length;
@@ -153,7 +155,11 @@
             $('.btn-toggle').click(function (e) {
                 var target = $(this).attr('data-target');
                 var targetClass = $(this).attr('data-class');
-                $(target).toggleClass(targetClass);
+                if (target == "this") {
+                    $(this).toggleClass(targetClass);
+                } else {
+                    $(target).toggleClass(targetClass);
+                }
             });
         }());
     }

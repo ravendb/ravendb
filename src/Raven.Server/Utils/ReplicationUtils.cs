@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.BTrees;
@@ -14,6 +16,24 @@ namespace Raven.Server.Utils
 {
     public static unsafe class ReplicationUtils
     {
+        public static void WriteChangeVectorTo(DocumentsOperationContext context, Dictionary<Guid, long> changeVector, Tree tree)
+        {
+            Guid dbId;
+            long etagBigEndian;
+            Slice keySlice;
+            Slice valSlice;
+            using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out keySlice))
+            using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out valSlice))
+            {
+                foreach (var kvp in changeVector)
+                {
+                    dbId = kvp.Key;
+                    etagBigEndian = IPAddress.HostToNetworkOrder(kvp.Value);
+                    tree.Add(keySlice, valSlice);
+                }
+            }           
+        }
+
         public static TEnum GetEnumFromTableValueReader<TEnum>(TableValueReader tvr, int index)
         {
             int size;
