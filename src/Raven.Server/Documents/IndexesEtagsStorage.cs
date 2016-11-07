@@ -58,11 +58,11 @@ namespace Raven.Server.Documents
             Logger = LoggingSource.Instance.GetLogger<IndexesEtagsStorage>(resourceName);
         }
 
-        public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
+        public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool, IndexStore indexStore, TransformerStore transformerStore)
         {
             _environment = environment;
             _contextPool = contextPool;
-
+            
             TransactionOperationContext context;
             using (contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.WriteTransaction(context.PersistentContext))
@@ -72,6 +72,8 @@ namespace Raven.Server.Documents
 
                 tx.Commit();
             }
+            
+            DeleteIndexMetadataForRemovedIndexesAndTransformers(indexStore, transformerStore);
         }
 
         public long OnIndexCreated(Index index)
@@ -100,12 +102,22 @@ namespace Raven.Server.Documents
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.WriteTransaction())
             {
+                var newEtag = WriteEntry(tx, indexName, type, indexIndexId, context);
+                tx.Commit();
+                return newEtag;
+            }
+        }
+
+        private long WriteEntry(Transaction tx, string indexName, IndexEntryType type, int indexIndexId,
+            TransactionOperationContext context)
+        {
                 var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
                 var existing = GetIndexMetadataByNameInternal(tx, context, indexName, false);
                 var lastEtag = ReadLastEtag(table);
                 var newEtag = lastEtag + 1;
 
-                var changeVectorForWrite = ReplicationUtils.GetChangeVectorForWrite(existing?.ChangeVector, _environment.DbId, newEtag);
+            var changeVectorForWrite = ReplicationUtils.GetChangeVectorForWrite(existing?.ChangeVector, _environment.DbId,
+                newEtag);
 
                 //precautions
                 if (newEtag < 0) throw new ArgumentException("etag must not be negative");
@@ -127,18 +139,15 @@ namespace Raven.Server.Documents
                             {(byte*) &bitSwappedId, sizeof(int)},
                             {(byte*) &bitSwappedEtag, sizeof(long)},
                             indexNameAsSlice,
-                            {(byte*)&type,1},
+                        {(byte*) &type, 1},
                             {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVectorForWrite.Length},
                         });
                     }
                 }
 
                 MergeEntryVectorWithGlobal(tx, context, changeVectorForWrite);
-
-                tx.Commit();
                 return newEtag;
             }
-        }
 
         public enum IndexEntryType : byte
         {
@@ -327,6 +336,46 @@ namespace Raven.Server.Documents
 
             int size;
             return Bits.SwapBytes(*(long*)tvr.Read((int)MetadataFields.Etag, out size));
+        }
+
+        private void DeleteIndexMetadataForRemovedIndexesAndTransformers(IndexStore indexStore,
+            TransformerStore transformerStore)
+        {
+            TransactionOperationContext context;
+            var toRemove = new List<IndexEntryMetadata>();
+
+            using (_contextPool.AllocateOperationContext(out context))
+            {
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var table = tx.InnerTransaction.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
+                    foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], 0))
+                    {
+                        var metadata = TableValueToMetadata(tvr, context, true);
+                        if (metadata == null) //noting to do if it is a tombstone
+                            continue;
+
+                        if (metadata.Type == IndexEntryType.Index &&
+                            indexStore.GetIndex(metadata.Id) == null)
+                        {
+                            toRemove.Add(metadata);
+                        }
+
+                        if (metadata.Type == IndexEntryType.Transformer &&
+                            transformerStore.GetTransformer(metadata.Id) == null)
+                        {
+                            toRemove.Add(metadata);
+                        }
+                    }
+                }
+
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    foreach (var metadata in toRemove)
+                        WriteEntry(tx.InnerTransaction, metadata.Name, metadata.Type, -1, context);
+                    tx.Commit();
+                }
+            }
         }
 
         public class IndexEntryMetadata
