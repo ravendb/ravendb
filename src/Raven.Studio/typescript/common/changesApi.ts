@@ -81,7 +81,7 @@ class changesApi {
             .execute()
             .done((tokenObject: singleAuthToken) => {
                 var token = tokenObject.Token;
-                var connectionString = "singleUseAuthToken=" + token + "&sendServerStartTime=true";
+                var connectionString = "singleUseAuthToken=" + token + "&sendServerStartTime=true&throttleConnection=true"; // always throttle in studio
                 action.call(this, connectionString);
             })
             .fail((e) => {

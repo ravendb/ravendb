@@ -59,7 +59,9 @@
                 <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
             </ul>
             <div class="inputs-container hidden-xs">
-                <div class="search-container active">
+                <div class="search-prerelease"><i class="icon-search"></i><span>search</span> <span class="text-muted"> | in development</span></div>
+                <div class="search-container active hidden">
+
                     <input type="search" class="form-control omnisearch" placeholder="search" />
                     <div class="icon-search"></div>
                     <div class="autocomplete-list box-container">
@@ -171,213 +173,211 @@
     <div class="level-0" data-level-name="Menu">
         <ul>
             <li class="arrow-right">
-                <a href="#" title="Documents"><span class="icon-documents"></span>Documents</a>
+                <a href="#" title="Documents"><i class="icon-documents"></i><span>Documents</span></a>
                 <div class="level level-1">
-                    <h2>Documents</h2>
-                    <a class="back" href="#" title="back">back</a>
+                    <h2>
+                        <a class="back" href="#" title="back"></a>
+                        Documents
+                    </h2>
+
                     <ul>
-                        <li><a href="#" title="Documents"><span class="icon-plus"></span>Documents</a></li>
-                        <li><a href="#" title="Conflicts"><span class="icon-plus"></span>Conflicts</a></li>
-                        <li><a href="#" title="Patch"><span class="icon-plus"></span>Patch</a></li>
+                        <li><a href="#" title="Documents"><i class="icon-plus"></i><span>Documents</span></a></li>
+                        <li><a href="#" title="Conflicts"><i class="icon-plus"></i><span>Conflicts</span></a></li>
+                        <li><a href="#" title="Patch"><i class="icon-plus"></i><span>Patch</span></a></li>
                     </ul>
                 </div>
             </li>
             <li class="arrow-right">
-                <a href="#" title="Indexes"><span class="icon-indexes"></span>Indexes</a>
+                <a href="#" title="Indexes"><i class="icon-indexes"></i><span>Indexes</span></a>
                 <div class="level level-1" data-level-name="Indexes">
-                    <h2>Indexes</h2>
-                    <a class="back" href="#" title="back">back</a>
+                    <h2>
+                        <a class="back" href="#" title="back"></a>
+                        Indexes
+                    </h2>
+
                     <ul>
-                        <li><a href="#" title="Indexes-list"><span class="icon-list"></span>Indexes list</a></li>
-                        <li><a href="#" title="Merge sugestions"><span class="icon-merge"></span>Merge sugestions</a></li>
+                        <li><a href="#" title="Indexes-list"><i class="icon-list"></i><span>Indexes list</span></a></li>
+                        <li><a href="#" title="Merge sugestions"><i class="icon-merge"></i><span>Merge sugestions</span></a></li>
                         <hr />
-                        <li><a href="#" title="new-index"><span class="icon-plus"></span>New index</a></li>
-                        <li><a href="#" title="Merge sugestions"><span class="icon-export"></span>Export indexes</a></li>
-                        <li><a href="#" title="Indexes-list"><span class="icon-import"></span>Import indexes</a></li>
+                        <li><a href="#" title="new-index"><i class="icon-plus"></i><span>New index</span></a></li>
+                        <li><a href="#" title="Merge sugestions"><i class="icon-export"></i><span>Export indexes</span></a></li>
+                        <li><a href="#" title="Indexes-list"><i class="icon-import"></i><span>Import indexes</span></a></li>
                     </ul>
                 </div>
             </li>
             <li class="arrow-right">
-                <a href="#" title="Query"><span class="icon-query"></span>Query</a>
+                <a href="#" title="Query"><i class="icon-query"></i><span>Query</span></a>
                 <div class="level level-1" data-level-name="Query">
-                    <h2>Query</h2>
-                    <a class="back" href="#" title="back">back</a>
+                    <h2>
+                        <a class="back" href="#" title="back"></a>
+                        Query
+                    </h2>
+
                     <ul>
-                        <li><a href="#" title="Query"><span class="icon-plus"></span>Query</a></li>
-                        <li><a href="#" title="Reporting"><span class="icon-plus"></span>Reporting</a></li>
-                        <li><a href="#" title="Data exploration"><span class="icon-plus"></span>Data exploration</a></li>
+                        <li><a href="#" title="Query"><i class="icon-plus"></i><span>Query</span></a></li>
+                        <li><a href="#" title="Reporting"><i class="icon-plus"></i><span>Reporting</span></a></li>
+                        <li><a href="#" title="Data exploration"><i class="icon-plus"></i><span>Data exploration</span></a></li>
                     </ul>
                 </div>
             </li>
             <li class="arrow-right">
-                <a href="#" title="New"><span class="icon-new"></span>New</a>
+                <a href="#" title="New"><i class="icon-new"></i><span>New</span></a>
                 <div class="level level-1" data-level-name="New">
-                    <h2>New</h2>
-                    <a class="back" href="#">back</a>
+                    <h2>
+                        <a class="back" href="#" title="back"></a>
+                        New
+                    </h2>
                     <ul>
-                        <li><a href="#"><span class="icon-plus"></span>Document</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Index</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Transformer</a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Document</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Indexes</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Transformer</span></a></li>
                     </ul>
                 </div>
             </li>
             <h3>MANAGE</h3>
             <li class="arrow-right">
-                <a href="#" title="Tasks"><span class="icon-tasks"></span>Tasks</a>
+                <a href="#" title="Tasks"><i class="icon-tasks"></i><span>Tasks</span></a>
                 <div class="level level-1" data-level-name="Tasks">
-                    <h2>Tasks</h2>
-                    <a class="back" href="#" title="back">back</a>
+                    <h2>
+                        <a class="back" href="#" title="back"></a>
+                        Tasks
+                    </h2>
                     <ul>
-                        <li><a href="#"><span class="icon-plus"></span>Import Database</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Export Database</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Toggle Indexing</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Subscriptions</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Create Sample Data</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>CSV Import</a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Import Database</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Export Database</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Toggle Indexing</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Subscriptions</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Create Sample Data</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>CSV Import</span></a></li>
                     </ul>
                 </div>
             </li>
             <li class="arrow-right">
-                <a href="#" title="Settings"><span class="icon-settings"></span>Settings</a>
+                <a href="#" title="Settings"><i class="icon-settings"></i><span>Settings</span></a>
                 <div class="level level-1" data-level-name="Settings">
-                    <h2>Settings</h2>
-                    <a class="back" href="#">back</a>
+                    <h2>
+                        <a class="back" href="#" title="back"></a>
+                        Settings
+                    </h2>
                     <ul>
-                        <li><a href="#"><span class="icon-plus"></span>Database Settings</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Replication</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>ETL</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Custom Functions</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Studio Config</a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Database Settings</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Replication</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>ETL</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Custom Functions</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Studio Config</span></a></li>
                     </ul>
                 </div>
             </li>
 
             <li class="arrow-right">
-                <a href="#" title="Stats"><span class="icon-stats"></span>Stats</a>
+                <a href="#" title="Stats"><i class="icon-stats"></i><span>Stats</span></a>
                 <div class="level level-1" data-level-name="Stats">
-                    <h2>Stats</h2>
-                    <a class="back" href="#" title="back">back</a>
+                    <h2>
+                        <a class="back" href="#" title="back"></a>
+                        Stats
+                    </h2>
                     <ul>
-                        <li><a href="#"><span class="icon-plus"></span>Stats</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Indexing</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Request Tracking</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Logs</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Running Tasks</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Alerts</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Index Errors</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Replication Stats</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>User Info</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Map/Reduce Visualizer</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Debug</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Storage</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Gather Debug Info</a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Stats</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Indexing</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Request Tracking</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Logs</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Running Tasks</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Alerts</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Index Errors</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Replication Stats</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>User Info</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Map/Reduce Visualizer</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Debug</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Storage</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Gather Debug Info</span></a></li>
                     </ul>
                 </div>
             </li>
 
             <li class="arrow-right">
-                <a href="#" title="Manage server"><span class="icon-manage-server"></span>Manage server</a>
+                <a href="#" title="Manage server"><i class="icon-manage-server"></i><span>Manage server</span></a>
                 <div class="level level-1" data-level-name="Manage server">
-                    <h2>Manage server</h2>
-                    <a class="back" href="#" title="back">back</a>
+                    <h2>
+                        <a class="back" href="#" title="back"></a>
+                        Manage server
+                    </h2>
+
                     <ul>
-                        <li><a href="#"><span class="icon-plus"></span>API Keys</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Windows Authentication</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Cluster</a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>API Keys</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Windows Authentication</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Cluster</span></a></li>
                         <li class="arrow-right">
-                            <a href="#"><span class="icon-plus"></span>Global Configuration</a>
+                            <a href="#"><i class="icon-plus"></i><span>Global Configuration</span></a>
                             <div class="level level-2" data-level-name="Global Configuration">
-                                <h2>Global Configuration</h2>
-                                <a class="back" href="#">back</a>
+                                <h2>
+                                    <a class="back" href="#" title="back"></a>
+                                    Global Configuration
+                                </h2>
                                 <ul>
-                                    <li><a href="#"><span class="icon-plus"></span>Periodic export</a></li>
-                                    <li><a href="#"><span class="icon-plus"></span>Cluster-wide database settings</a></li>
-                                    <li><a href="#"><span class="icon-plus"></span>Replication</a></li>
-                                    <li><a href="#"><span class="icon-plus"></span>SQL Replication</a></li>
-                                    <li><a href="#"><span class="icon-plus"></span>Quotas</a></li>
-                                    <li><a href="#"><span class="icon-plus"></span>Custom functions</a></li>
-                                    <li><a href="#"><span class="icon-plus"></span>Versioning</a></li>
+                                    <li><a href="#"><i class="icon-plus"></i><span>Periodic export</span></a></li>
+                                    <li><a href="#"><i class="icon-plus"></i><span>Cluster-wide database settings</span></a></li>
+                                    <li><a href="#"><i class="icon-plus"></i><span>Replication</span></a></li>
+                                    <li><a href="#"><i class="icon-plus"></i><span>SQL Replication</span></a></li>
+                                    <li><a href="#"><i class="icon-plus"></i><span>Quotas</span></a></li>
+                                    <li><a href="#"><i class="icon-plus"></i><span>Custom functions</span></a></li>
+                                    <li><a href="#"><i class="icon-plus"></i><span>Versioning</span></a></li>
                                 </ul>
                             </div>
                         </li>
-                        <li><a href="#"><span class="icon-plus"></span>Server Smuggling</a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Server Smuggling</span></a></li>
                         <li class="arrow-right">
-                            <a href="#"><span class="icon-plus"></span>Backup</a>
+                            <a href="#"><i class="icon-plus"></i><span>Backup</span></a>
                             <div class="level level-2" data-level-name="Backup">
-                                <h2>Backup</h2>
-                                <a class="back" href="#">back</a>
+                                <h2>
+                                    <a class="back" href="#" title="back"></a>
+                                    Backup
+                                </h2>
                                 <ul>
-                                    <li><a href="#"><span class="icon-plus"></span>Database</a></li>
-                                    <li><a href="#"><span class="icon-plus"></span>File System</a></li>
+                                    <li><a href="#"><i class="icon-plus"></i><span>Database</span></a></li>
+                                    <li><a href="#"><i class="icon-plus"></i><span>File System</span></a></li>
                                 </ul>
                             </div>
                         </li>
                         <li class="arrow-right">
-                            <a href="#"><span class="icon-plus"></span>Compact</a>
+                            <a href="#"><i class="icon-plus"></i><span>Compact</span></a>
                             <div class="level level-2" data-level-name="Compact">
-                                <h2>Compact</h2>
-                                <a class="back" href="#">back</a>
+                                <h2>
+                                    <a class="back" href="#" title="back"></a>
+                                    Compact
+                                </h2>
                                 <ul>
-                                    <li><a href="#"><span class="icon-plus"></span>Database</a></li>
-                                    <li><a href="#"><span class="icon-plus"></span>File System</a></li>
+                                    <li><a href="#"><i class="icon-plus"></i><span>Database</span></a></li>
+                                    <li><a href="#"><i class="icon-plus"></i><span>File System</span></a></li>
                                 </ul>
                             </div>
                         </li>
                         <li class="arrow-right">
-                            <a href="#"><span class="icon-plus"></span>Restore</a>
+                            <a href="#"><i class="icon-plus"></i>Restore</a>
                             <div class="level level-2" data-level-name="Restore">
-                                <h2>Restore</h2>
-                                <a class="back" href="#">back</a>
+                                <h2>
+                                    <a class="back" href="#" title="back"></a>
+                                    Restore
+                                </h2>
                                 <ul>
-                                    <li><a href="#"><span class="icon-plus"></span>Database</a></li>
-                                    <li><a href="#"><span class="icon-plus"></span>File System</a></li>
+                                    <li><a href="#"><i class="icon-plus"></i><span>Database</span></a></li>
+                                    <li><a href="#"><i class="icon-plus"></i><span>File System</span></a></li>
                                 </ul>
                             </div>
                         </li>
-                        <li><a href="#"><span class="icon-plus"></span>Admin Logs</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Server Topology</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Traffic Watch</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>License Information</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Gather Debug Info</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>IO Test</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Disk IO Viewer</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Administrator JS Console</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Studio Config</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>To System Database</a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Admin Logs</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Server Topology</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Traffic Watch</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>License Information</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Gather Debug Info</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>IO Test</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Disk IO Viewer</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Administrator JS Console</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>Studio Config</span></a></li>
+                        <li><a href="#"><i class="icon-plus"></i><span>To System Database</span></a></li>
                     </ul>
                 </div>
             </li>
-            <h3>SERVER</h3>
-            <li class="arrow-right">
-                <a href="#" title="Tasks"><span class="icon-resources"></span>Resources</a>
-                <div class="level level-1" data-level-name="Resources">
-                    <h2>Resources</h2>
-                    <a class="back" href="#" title="back">back</a>
-                    <ul>
-                        <li><a href="#"><span class="icon-plus"></span>Dashboard</a></li>
-                        <hr/>
-                        <li><a href="#" data-toggle="modal" data-target="#newDatabase"><span class="icon-plus"></span>New database</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>New filesystem</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>New counter</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>New time series</a></li>
-                    </ul>
-                </div>
-            </li>
-            <li class="arrow-right">
-                <a href="#" title="Settings"><span class="icon-settings"></span>Settings</a>
-                <div class="level level-1" data-level-name="Settings">
-                    <h2>Settings</h2>
-                    <a class="back" href="#">back</a>
-                    <ul>
-                        <li><a href="#"><span class="icon-plus"></span>Database Settings</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Replication</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>ETL</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Custom Functions</a></li>
-                        <li><a href="#"><span class="icon-plus"></span>Studio Config</a></li>
-                    </ul>
-                </div>
-            </li>
-            <li><a href="#" title="License"><span class="icon-license"></span>License</a></li>
+            <li><a href="#" title="License"><i class="icon-license"></i><span>License</span></a></li>
         </ul>
     </div>
 </nav>
@@ -465,9 +465,9 @@
 
     </div>
 
-    <div class="modal fade" id="newDatabase" tabindex="-1" role="dialog" aria-labelledby="newDatabaseLabel">
+    <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="newDatabaseLabel">
         <div class="modal-dialog modal-sm" role="document">
-            <div class="modal-content">
+            <div class="modal-content" id="newDatabase">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                     <h4 class="modal-title" id="newDatabaseLabel">New database</h4>

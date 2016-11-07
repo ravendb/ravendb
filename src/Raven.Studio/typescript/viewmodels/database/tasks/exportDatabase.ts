@@ -190,7 +190,10 @@ class exportDatabase extends viewModelBase {
                 $form.submit();
 
                 notificationCenter.instance.monitorOperation(db, operationId)
-                    .always(() => exportDatabase.isExporting(false));
+                    .fail((exception: Raven.Client.Data.OperationExceptionResult) => {
+                        messagePublisher.reportError("Could not export database: " + exception.Message, exception.StackTrace, null, false);
+                    }).always(() => exportDatabase.isExporting(false));
+
             });
     }
 }

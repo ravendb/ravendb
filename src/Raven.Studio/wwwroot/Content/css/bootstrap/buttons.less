@@ -38,11 +38,19 @@
     text-decoration: none;
   }
 
-  &:active,
+  &:active {
+      background-color: fadeout(@gray-base,50%);
+  }
   &.active {
     outline: 0;
     background-image: none;
     .box-shadow(inset 0 3px 5px rgba(0,0,0,.125));
+    background-color: fadeout(@gray,50%);
+    color: @gray-lighter;
+
+    &:active {
+        background-color: fadeout(@gray-dark,50%);
+    }
   }
 
   &.disabled,
