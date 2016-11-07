@@ -24,24 +24,26 @@ namespace Raven.Server
     public class RavenDbServer : IDisposable
     {
         private readonly DocumentStore documentStore;
-        private readonly FilesStore filesStore;
+        internal readonly FilesStore filesStore;
         private readonly MetricsTicker metricsTicker;
 
         private InMemoryRavenConfiguration configuration;
         private IServerThingsForTests serverThingsForTests;
         private RavenDBOptions options;
         private OwinHttpServer owinHttpServer;
-      
+
         private string url;
+
+        private bool filesStoreInitialized;
 
         public RavenDbServer()
             : this(new RavenConfiguration())
-        {}
+        { }
 
         public RavenDbServer(InMemoryRavenConfiguration configuration)
         {
             this.configuration = configuration;
-            
+
             documentStore = new DocumentStore
             {
                 Conventions =
@@ -58,7 +60,7 @@ namespace Raven.Server
             };
 
             metricsTicker = MetricsTicker.Instance;
-            
+
         }
 
         public InMemoryRavenConfiguration Configuration
@@ -88,9 +90,25 @@ namespace Raven.Server
         {
             get { return documentStore; }
         }
+
         public FilesStore FilesStore
         {
-            get { return filesStore; }
+            get
+            {
+                if (filesStoreInitialized)
+                    return filesStore;
+
+                lock (filesStore)
+                {
+                    if (filesStoreInitialized)
+                        return filesStore;
+
+                    filesStoreInitialized = true;
+                    filesStore.Initialize();
+                }
+
+                return filesStore;
+            }
         }
 
         public bool RunInMemory
@@ -112,16 +130,15 @@ namespace Raven.Server
 
             owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configure);
             options = owinHttpServer.Options;
-            
+
             serverThingsForTests = new ServerThingsForTests(options);
-            Func<HttpMessageHandler> httpMessageHandlerFactory = ()=>new OwinClientHandler(owinHttpServer.Invoke, options.SystemDatabase.Configuration.EnableResponseLoggingForEmbeddedDatabases);
+            Func<HttpMessageHandler> httpMessageHandlerFactory = () => new OwinClientHandler(owinHttpServer.Invoke, options.SystemDatabase.Configuration.EnableResponseLoggingForEmbeddedDatabases);
             documentStore.HttpMessageHandlerFactory = httpMessageHandlerFactory;
             documentStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
             documentStore.Initialize();
 
             filesStore.HttpMessageHandlerFactory = httpMessageHandlerFactory;
             filesStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
-            filesStore.Initialize();
 
             return this;
         }
@@ -196,7 +213,7 @@ namespace Raven.Server
             {
                 get { return options.RequestManager.NumberOfRequests; }
             }
-            public RavenDBOptions Options { get{return options;}}
+            public RavenDBOptions Options { get { return options; } }
 
             public void ResetNumberOfRequests()
             {

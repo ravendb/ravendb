@@ -59,7 +59,7 @@ namespace Raven.Database.Client
         {
             get
             {
-                return AsyncHelpers.RunSync(() => 
+                return AsyncHelpers.RunSync(() =>
                     server.Server.GetDatabaseInternal(DefaultDatabase ?? Constants.SystemDatabase));
             }
         }
@@ -70,15 +70,18 @@ namespace Raven.Database.Client
             get
             {
                 //Making sure FileStore has a DefaultFileSystem selected so not to throw when acessing it.
-                if (embeddedFileStoreInitiated == false && server.FilesStore.DefaultFileSystem == null)
-                    lock(this)
+                if (embeddedFileStoreInitiated == false && server.filesStore.DefaultFileSystem == null)
+                {
+                    lock (this)
                     {
-                        if (embeddedFileStoreInitiated == false && server.FilesStore.DefaultFileSystem == null)
+                        if (embeddedFileStoreInitiated == false && server.filesStore.DefaultFileSystem == null)
                         {
-                            server.FilesStore.DefaultFileSystem = "DefaultFileSystem";
+                            server.filesStore.DefaultFileSystem = "DefaultFileSystem";
                         }
+
                         embeddedFileStoreInitiated = true;
-                    }                
+                    }
+                }
                 return server.FilesStore;
             }
         }
