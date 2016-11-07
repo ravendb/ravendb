@@ -63,10 +63,25 @@ class menu {
         this.items(items);
     }
 
-    open($data: { item: intermediateMenuItem }, $event: JQueryEventObject) {
+    handleIntermediateItemClick($data: { item: intermediateMenuItem }, $event: JQueryEventObject) {
+        let { item } = $data;
+        if (item.isOpen()) {
+            item.close();
+            return;
+        }
+
+        let currentItem = this.deepestOpenItem();
+        if (currentItem && currentItem !== item) {
+            currentItem.close();
+        }
+
+        this.open(item, $event);
+    }
+
+    open(item: intermediateMenuItem, $event: JQueryEventObject) {
         $event.stopPropagation();
-        $data.item.isOpen(true);
-        this.deepestOpenItem($data.item);
+        item.open();
+        this.deepestOpenItem(item);
     }
 
     navigate($data: menuItem, $event: JQueryEventObject) {
@@ -87,9 +102,10 @@ class menu {
     }
 
     back($data: any, $event: JQueryEventObject) {
+        let { item } = $data;
         $event.stopPropagation();
-        $data.item.isOpen(false);
-        this.deepestOpenItem($data.item.parent());
+        item.isOpen(false);
+        this.deepestOpenItem(item.parent());
         $($event.target)
             .closest('.level')
             .removeClass('level-show');

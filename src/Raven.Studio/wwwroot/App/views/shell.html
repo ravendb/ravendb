@@ -92,7 +92,7 @@
 <script type="text/html" id="leafMenuItem">
     <li data-bind="with: item, css: { 'active': menu.activeItem() === item }">
         <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav === true, attr: { href: path, title: title }">
-            <span data-bind="css: css"></span>
+            <i data-bind="css: css"></i>
             <span data-bind="text: title"></span>
         </a>
     </li>
@@ -100,13 +100,16 @@
 
 <script type="text/html" id="intermediateMenuItem">
     <li class="arrow-right">
-    <a data-bind="attr: { title: item.title }, click: menu.open.bind(menu)" >
-        <span data-bind="css: item.css"></span>
-        <span data-bind="text: item.title"></span>
-    </a>
-    <div data-bind="click: menu.handleLevelClick.bind(menu), css: { 'level-show': item.isOpen, ['level-' + (item.depth() + 1) ]: true }, attr: { 'data-level-name': item.title, 'data-level': item.depth() + 1 }" class="level">
-            <h2 data-bind="text: item.title"></h2>
-            <a class="back" data-bind="click: menu.back.bind(menu)" title="back">back</a>
+        <a data-bind="attr: { title: item.title }, click: menu.handleIntermediateItemClick.bind(menu), css: { 'active': item.isOpen }">
+            <i data-bind="css: item.css"></i>
+            <span data-bind="text: item.title"></span>
+        </a>
+        <div data-bind="click: menu.handleLevelClick.bind(menu), css: { 'level-show': item.isOpen, ['level-' + (item.depth() + 1) ]: true }, attr: { 'data-level-name': item.title, 'data-level': item.depth() + 1 }" class="level">
+            <h2>
+                <a class="back" title="back" 
+                   data-bind="click: menu.back.bind(menu)" ></a>
+                <!-- ko text: item.title --><!-- /ko -->
+            </h2>
 
             <ul data-bind="foreach: item.children">
                 <!-- ko template: { name: type + 'MenuItem', data: { item: $data, level: $parent.level + 1, menu: $parent.menu }} -->
@@ -125,18 +128,18 @@
     <!-- /ko -->
 </script>
 
-<nav id="main-menu" class="main-menu" 
-     data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }" >
-        <div class="level-0"
-             data-level="0"
-             data-level-name="Menu"
-             data-bind="click: handleLevelClick">
-            <ul data-bind="foreach: items">
-                <!-- ko template: { name: type + 'MenuItem', data: { item: $data, menu: $parent }} -->
-                <!-- /ko -->
-            </ul>
-        </div>
-    </nav>
+<nav id="main-menu" class="main-menu"
+     data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }">
+    <div class="level-0"
+         data-level="0"
+         data-level-name="Menu"
+         data-bind="click: handleLevelClick">
+        <ul data-bind="foreach: items">
+            <!-- ko template: { name: type + 'MenuItem', data: { item: $data, menu: $parent }} -->
+            <!-- /ko -->
+        </ul>
+    </div>
+</nav>
 
 <div data-bind="compose: 'notifications/notificationCenter.html'"></div>
 
