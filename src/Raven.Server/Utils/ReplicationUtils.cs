@@ -7,6 +7,7 @@ using Raven.Client.Replication.Messages;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.BTrees;
@@ -28,7 +29,7 @@ namespace Raven.Server.Utils
                 foreach (var kvp in changeVector)
                 {
                     dbId = kvp.Key;
-                    etagBigEndian = IPAddress.HostToNetworkOrder(kvp.Value);
+                    etagBigEndian = Bits.SwapBytes(kvp.Value);
                     tree.Add(keySlice, valSlice);
                 }
             }           
