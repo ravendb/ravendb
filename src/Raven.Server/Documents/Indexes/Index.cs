@@ -65,9 +65,13 @@ namespace Raven.Server.Documents.Indexes
 
         private long _criticalErrors;
 
+        private long _analyzerErrors;
+
         private const long WriteErrorsLimit = 10;
 
         private const long CriticalErrorsLimit = 3;
+
+        private const long AnalyzerErrorLimit = 0;
 
         protected Logger _logger;
 
@@ -580,7 +584,7 @@ namespace Raven.Server.Documents.Indexes
                             }
                             catch (IndexAnalyzerException iae)
                             {
-                                scope.AddAnalyzerError(iae);
+                                HandleAnalyzerErrors(scope, iae);
                             }
                             catch (OperationCanceledException)
                             {
@@ -684,6 +688,21 @@ namespace Raven.Server.Documents.Indexes
         {
             Interlocked.Exchange(ref _writeErrors, 0);
             Interlocked.Exchange(ref _criticalErrors, 0);
+            Interlocked.Exchange(ref _analyzerErrors, 0);
+        }
+
+        internal void HandleAnalyzerErrors(IndexingStatsScope stats, IndexAnalyzerException iae)
+        {
+            stats.AddAnalyzerError(iae);
+
+            var analyzerErrors = Interlocked.Increment(ref _analyzerErrors);
+
+            if (Priority.HasFlag(IndexingPriority.Error) || analyzerErrors < AnalyzerErrorLimit)
+                return;
+
+            // TODO we should create notification here?
+            _errorPriorityReason = $"Priority was changed due to excessive number of analyzer errors ({analyzerErrors}).";
+            SetPriority(IndexingPriority.Error);
         }
 
         internal void HandleCriticalErrors(IndexingStatsScope stats, Exception e)
