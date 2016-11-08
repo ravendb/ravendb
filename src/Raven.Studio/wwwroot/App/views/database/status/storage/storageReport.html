@@ -22,7 +22,7 @@
     div.tooltip {	
         position: absolute;			
         text-align: center;			
-        width: 200px;
+        width: 300px;
         height: 40px;
         padding: 2px;
         font: 12px sans-serif;
@@ -42,12 +42,6 @@
 </style>
 
 <div id="storage-report">
-    <div> Current path: 
-        <span data-bind="foreach: currentPath">
-            <a href="#" data-bind="click: $root.onClick.bind($root, $data)"><span data-bind="text: name"></span></a> 
-            <span data-bind="visible: $index() < $root.currentPath().length - 1">&raquo;</span>
-        </span>
-    </div>
 
     <div id="storage-report-container">
         <div class="tooltip" style="opacity: 0">
@@ -55,6 +49,30 @@
     </div>
     
     <div>
-        <button class="btn btn-default" data-bind="click: displayDetails">Display details</button>
+        Current path:
+        <span data-bind="foreach: currentPath">
+            <a href="#" data-bind="click: $root.onClick.bind($root, $data)"><span data-bind="text: name"></span></a>
+            <span data-bind="visible: $index() < $root.currentPath().length - 1">&raquo;</span>
+        </span>
     </div>
+
+    <table class="table table-condensed table-striped" data-bind="if: node() && node().internalChildren">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Size</th>
+                <th>% Total</th>
+            </tr>
+        </thead>
+        <tbody data-bind="foreach: node().internalChildren">
+            <tr>
+                <td>
+                    <a href="#" data-bind="text: name, click: $root.onClick.bind($root, $data), visible: internalChildren != null && internalChildren.length"></a>
+                    <span href="#" data-bind="text: name, visible: internalChildren == null || !internalChildren.length"></span>
+                </td>
+                <td data-bind="text: $root.formatSize(size)"></td>
+                <td data-bind="text: (size * 100 / $root.totalSize()).toFixed(2) + '%'"></td>
+            </tr>
+        </tbody>
+    </table>
 </div>

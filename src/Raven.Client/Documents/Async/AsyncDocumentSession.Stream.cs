@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Async
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, int start = 0,
             int pageSize = Int32.MaxValue,
             RavenPagingInformation pagingInformation = null, string transformer = null,
-            Dictionary<string, RavenJToken> transformerParameters = null,
+            Dictionary<string, object> transformerParameters = null,
             CancellationToken token = new CancellationToken())
         {
             throw new NotImplementedException();
@@ -51,7 +51,7 @@ namespace Raven.Client.Documents.Async
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null,
             int start = 0, int pageSize = Int32.MaxValue,
             RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null,
-            Dictionary<string, RavenJToken> transformerParameters = null,
+            Dictionary<string, object> transformerParameters = null,
             CancellationToken token = new CancellationToken())
         {
             throw new NotImplementedException();

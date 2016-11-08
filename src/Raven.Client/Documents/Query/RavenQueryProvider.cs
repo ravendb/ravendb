@@ -15,7 +15,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Client.Linq;
@@ -37,7 +37,7 @@ namespace Raven.Client.Documents
         private readonly IDatabaseCommands databaseCommands;
         private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
         private readonly bool isMapReduce;
-        private readonly Dictionary<string, RavenJToken> transformerParamaters = new Dictionary<string, RavenJToken>();
+        private readonly Dictionary<string, object> transformerParamaters = new Dictionary<string, object>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
@@ -98,16 +98,21 @@ namespace Raven.Client.Documents
         /// Gets the results transformer to use
         /// </summary>
         public string ResultTransformer { get; private set; }
-        public Dictionary<string, RavenJToken> TransformerParameters { get { return transformerParamaters; } }
+        public Dictionary<string, object> TransformerParameters { get { return transformerParamaters; } }
 
-        public void AddQueryInput(string name, RavenJToken value)
+        public void AddQueryInput(string name, object value)
         {
             AddTransformerParameter(name, value);
         }
 
-        public void AddTransformerParameter(string name, RavenJToken value)
+        public void AddTransformerParameter(string name, object value)
         {
             transformerParamaters[name] = value;
+        }
+
+        public void AddTransformerParameter(string name, DateTime value)
+        {
+            TransformerParameters[name] = value.GetDefaultRavenFormat(isUtc: value.Kind == DateTimeKind.Utc);
         }
 
         public Type OriginalQueryType { get; set; }

@@ -44,7 +44,7 @@ namespace Raven.Client.Documents
         private string currentPath = string.Empty;
         private int subClauseDepth;
         private string resultsTransformer;
-        private readonly Dictionary<string, RavenJToken> transformerParameters;
+        private readonly Dictionary<string, object> transformerParameters;
         private Expression groupByElementSelector = null;
 
         private LinqPathProvider linqPathProvider;
@@ -77,7 +77,7 @@ namespace Raven.Client.Documents
         /// /// <param name ="originalType" >the original type of the query if TransformWith is called otherwise null</param>
         public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted,
              Action<RavenJObject> afterStreamExecuted, string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer,
-             Dictionary<string, RavenJToken> transformerParameters, Type originalType)
+             Dictionary<string, object> transformerParameters, Type originalType)
         {
             FieldsToFetch = fieldsToFetch;
             FieldsToRename = fieldsTRename;

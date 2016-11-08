@@ -84,7 +84,7 @@ namespace Raven.Client.Documents
 
         protected KeyValuePair<string, string> lastEquality;
 
-        protected Dictionary<string, RavenJToken> transformerParameters = new Dictionary<string, RavenJToken>();
+        protected Dictionary<string, object> transformerParameters = new Dictionary<string, object>();
 
         /// <summary>
         ///   The list of fields to project directly from the results
@@ -614,23 +614,29 @@ namespace Raven.Client.Documents
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize);
 
-            return DatabaseCommands.GetFacets(query);
+            // TODO iftah
+            return null;
+            //return DatabaseCommands.GetFacets(query);
         }
 
         public FacetedQueryResult GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize);
-
-            return DatabaseCommands.GetFacets(query);
+            
+            // TODO iftah
+            return null;
+            //return DatabaseCommands.GetFacets(query);
         }
 
         public Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery(true);
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize);
-
-            return AsyncDatabaseCommands.GetFacetsAsync(query, token);
+            
+            // TODO iftah
+            return null;
+            //return AsyncDatabaseCommands.GetFacetsAsync(query, token);
         }
 
         public Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
@@ -638,7 +644,9 @@ namespace Raven.Client.Documents
             var q = GetIndexQuery(true);
             var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize);
 
-            return AsyncDatabaseCommands.GetFacetsAsync(query, token);
+            // TODO iftah
+            return null;
+            //return AsyncDatabaseCommands.GetFacetsAsync(query, token);
         }
 
         /// <summary>
