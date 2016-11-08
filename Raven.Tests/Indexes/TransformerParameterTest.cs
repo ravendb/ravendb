@@ -72,6 +72,17 @@ namespace Raven.Tests.Indexes
 
                     Assert.Equal("foo+bar%20baz", results.First().Param);
                 }
+
+                using (IDocumentSession session = store.OpenSession())
+                {
+                    var results = session.Query<Employee, Employees_ByFirstName>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .TransformWith<EmployeeWithParam>("EmployeeTransformerTest")
+                        .AddTransformerParameter("param", "foo+bar baz")
+                        .ToArray();
+
+                    Assert.Equal("foo+bar baz", results.First().Param);
+                }
             }
         }
     }
