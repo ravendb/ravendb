@@ -37,7 +37,7 @@ namespace Raven.Client.Documents
         private readonly IDatabaseCommands databaseCommands;
         private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
         private readonly bool isMapReduce;
-        private readonly Dictionary<string, RavenJToken> transformerParamaters = new Dictionary<string, RavenJToken>();
+        private readonly Dictionary<string, object> transformerParamaters = new Dictionary<string, object>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
@@ -98,14 +98,14 @@ namespace Raven.Client.Documents
         /// Gets the results transformer to use
         /// </summary>
         public string ResultTransformer { get; private set; }
-        public Dictionary<string, RavenJToken> TransformerParameters { get { return transformerParamaters; } }
+        public Dictionary<string, object> TransformerParameters { get { return transformerParamaters; } }
 
-        public void AddQueryInput(string name, RavenJToken value)
+        public void AddQueryInput(string name, object value)
         {
             AddTransformerParameter(name, value);
         }
 
-        public void AddTransformerParameter(string name, RavenJToken value)
+        public void AddTransformerParameter(string name, object value)
         {
             transformerParamaters[name] = value;
         }

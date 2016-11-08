@@ -20,5 +20,7 @@ namespace Raven.Client.Documents
         /// <param name="name">name of the parameter</param>
         /// <param name="value">value of the parameter</param>
         void AddTransformerParameter(string name, object value);
+
+        void AddTransformerParameter(string name, DateTime value);
     }
 }

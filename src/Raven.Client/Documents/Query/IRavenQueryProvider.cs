@@ -123,7 +123,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Gets the query inputs being supplied to
         /// </summary>
-        Dictionary<string, RavenJToken> TransformerParameters { get; }
+        Dictionary<string, object> TransformerParameters { get; }
 
         /// <summary>
         /// Adds input to transformer via a key/value pair
@@ -131,14 +131,14 @@ namespace Raven.Client.Documents
         /// <param name="input"></param>
         /// <param name="value"></param>
         [Obsolete("Use AddTransformerParameter instead.")]
-        void AddQueryInput(string input, RavenJToken value);
+        void AddQueryInput(string input, object value);
 
         /// <summary>
         /// Adds input to transformer via a key/value pair
         /// </summary>
         /// <param name="input"></param>
         /// <param name="value"></param>
-        void AddTransformerParameter(string input, RavenJToken value);
+        void AddTransformerParameter(string input, object value);
 
         Type OriginalQueryType { get; set; }
     }

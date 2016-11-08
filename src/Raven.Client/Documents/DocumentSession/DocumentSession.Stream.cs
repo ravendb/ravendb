@@ -39,7 +39,7 @@ namespace Raven.Client.Documents
 
         public IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, int start = 0, int pageSize = Int32.MaxValue,
             RavenPagingInformation pagingInformation = null, string transformer = null,
-            Dictionary<string, RavenJToken> transformerParameters = null)
+            Dictionary<string, object> transformerParameters = null)
         {
             throw new NotImplementedException();
         }
@@ -47,7 +47,7 @@ namespace Raven.Client.Documents
         public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0,
             int pageSize = Int32.MaxValue,
             RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null,
-            Dictionary<string, RavenJToken> transformerParameters = null)
+            Dictionary<string, object> transformerParameters = null)
         {
             throw new NotImplementedException();
         }
