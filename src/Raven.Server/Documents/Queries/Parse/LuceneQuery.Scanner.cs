@@ -5,59 +5,14 @@ namespace Raven.Server.Documents.Queries.Parse
 {
     internal partial class LuceneQueryScanner
     {
-        public bool InMethod;
-
-        private static int FindUnescapedCommaIndex(string str, bool lookFromTheEnd = false)
+        private bool inMethod;
+        public bool InMethod
         {
-            int commaIndex;
-            int cutoffIndex = lookFromTheEnd ? str.Length - 1 : 0;
-
-            do
+            get { return inMethod; }
+            set
             {
-                commaIndex = lookFromTheEnd ? str.LastIndexOf(',', cutoffIndex) : str.IndexOf(',', cutoffIndex);
-                if(commaIndex == -1 || //didn't find any commas
-                   commaIndex == 0 || //first character in a string is a comma - this means we found unescaped string -> ",`" is not escaped comma
-                   commaIndex == str.Length - 1) //last character in a string is a comma - this means we found unescaped string -> "`," is not escaped comma
-                    break;
-                
-                cutoffIndex = lookFromTheEnd ? commaIndex - 1 : commaIndex + 1;
-            } while (!(str[commaIndex] == ',' &&
-                      (commaIndex == 0 || str[commaIndex - 1] != '`') &&
-                      (commaIndex == (str.Length - 1) || str[commaIndex + 1] != '`')));
-
-            return commaIndex;
-        }
-
-        public string HandleTermInMethod()
-        {
-            var commaIndex = FindUnescapedCommaIndex(yytext);
-            if (commaIndex == -1) 
-                return DiscardEscapeChar(yytext,true);
-
-            var firstTerm = DiscardEscapeChar(yytext.Substring(0, commaIndex), true);
-            var lastCommaIndex = FindUnescapedCommaIndex(yytext, true);
-
-            var newSource = yytext.Substring(commaIndex, lastCommaIndex - commaIndex);
-            var rewind = yytext.Length - lastCommaIndex - 1;
-            tokTxt = null;
-            tokECol -= rewind;
-            tokEPos -= rewind;
-            buffer.Pos -= (rewind + 1);
-            code = 44;
-            yylloc = new LexLocation(tokLin - 1, tokCol, tokELin - 1, tokECol);
-            if (lastCommaIndex != commaIndex)
-            {
-                var currentContext = MkBuffCtx();
-                SetSource(newSource,0);
-
-                var buildBuffer = buffer as StringBuffer;
-                if (buildBuffer != null)  //precaution
-                    buildBuffer.SetPaddingOn = true;
-
-                bStack.Push(currentContext);
+                ((StringBuffer)buffer).EscapeCommaMode = inMethod = value;
             }
-            //CommaPaddingStream
-            return firstTerm;
         }
 
         public void PublicSetSource(string source)
@@ -83,8 +38,9 @@ namespace Raven.Server.Documents.Queries.Parse
         /// <c>\\u0041</c> to <c>A</c>.
         /// 
         /// </summary>
-        private String DiscardEscapeChar(String input, bool shouldEscapeCommas = false)
+        private String DiscardEscapeChar(String input)
         {
+            var shouldEscapeCommas = InMethod;
             if (input.IndexOf('\\') == -1)
             {
                 return shouldEscapeCommas ? input.Replace("`,`", ",") : input;

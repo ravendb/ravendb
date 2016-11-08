@@ -70,18 +70,9 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 "Ix"{Number}					{ yylval.s = yytext; return (int)Token.INT_NUMBER;}
 "Lx"{Number}					{ yylval.s = yytext; return (int)Token.LONG_NUMBER;}
 "0x"{Number}					{ yylval.s = yytext; return (int)Token.HEX_NUMBER;}
-{UnquotedTerm}					{ 					
-								if(InMethod && bStack.Count == 0) 
-								{
-									yylval.s = HandleTermInMethod();
-								}
-								else 
-								{
-									yylval.s = DiscardEscapeChar(yytext, true);
-								}
-                                if(InMethod && yylval.s.Equals(","))
-                                    return (int)Token.COMMA;
-								return (int)Token.UNQUOTED_TERM;
+{UnquotedTerm}					{ 													
+                                    yylval.s = DiscardEscapeChar(yytext);
+								    return (int)Token.UNQUOTED_TERM;
 								}
 {PrefixTerm}					{ yylval.s = DiscardEscapeChar(yytext);  return (int)Token.PREFIX_TERM;}
 {WildCardTerm}					{ yylval.s = DiscardEscapeChar(yytext);  return (int)Token.WILDCARD_TERM;}
