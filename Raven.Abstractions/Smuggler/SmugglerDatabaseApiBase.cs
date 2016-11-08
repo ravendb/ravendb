@@ -1013,7 +1013,13 @@ namespace Raven.Abstractions.Smuggler
             var exportSectionRegistar = new Dictionary<string, Func<Task<int>>>();
 
             Options.CancelToken.Token.ThrowIfCancellationRequested();
-            exportSectionRegistar.Add("BuildVersion", null);
+            exportSectionRegistar.Add(Constants.BuildVersion, async () =>
+            {
+                Operations.ShowProgress("Importing 4.0 smuggler file, skipping import of indexes and transformers");
+                Options.OperateOnTypes &= ~(ItemType.Indexes | ItemType.Transformers);
+                return 0;
+            });
+
             exportSectionRegistar.Add("Indexes", async () =>
             {
                 Operations.ShowProgress("Begin reading indexes");
@@ -1103,7 +1109,8 @@ namespace Raven.Abstractions.Smuggler
                     continue;
                 }
 
-                if (jsonReader.TokenType != JsonToken.StartArray)
+                if (jsonReader.TokenType != JsonToken.StartArray && 
+                    !currentSection.Equals(Constants.BuildVersion))
                 {
                     if (currentAction == null) // ignore this prop
                         continue;
@@ -1297,7 +1304,7 @@ namespace Raven.Abstractions.Smuggler
                 if ((Options.OperateOnTypes & ItemType.Transformers) != ItemType.Transformers)
                     continue;
 
-                var transformerName = transformer.Value<string>("name");
+                var transformerName = transformer.Value<string>("name") ?? transformer.Value<string>("Name");
 
                 try
                 {

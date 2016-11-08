@@ -69,7 +69,7 @@ namespace QUT.GplexBuffers
         }
 #endif // !BYTEMODE
 #endif // !NOFILES
-        public bool SetPaddingOn { get; set; }
+        public bool EscapeCommaMode { get; set; }
         protected CommaState state { get; set; }
         protected enum CommaState
         {
@@ -105,7 +105,7 @@ namespace QUT.GplexBuffers
         }
         public override int Read()
         {
-            if (SetPaddingOn)
+            if (EscapeCommaMode)
             {
                 // escaping ',' into ,
                 if (bPos + 2 < sLen && str[bPos] == 96 && str[bPos] == 44 && str[bPos + 2] == 96)
@@ -113,27 +113,14 @@ namespace QUT.GplexBuffers
                     bPos += 3;
                     return 44;
                 }
-                // padding comma state
+                // Swallowing commas into space
                 if (bPos < sLen)
                 {
                     var res = str[bPos];
-                    switch (state)
+                    if (res == 44)
                     {
-                        case CommaState.None:						
-                            if (res == 44)
-                            {
-                                state = CommaState.Comma;
-                                return 32;
-                            }
-                            bPos++;
-                            return res;
-                        case CommaState.Comma:
-                            state = CommaState.AfterComma;
-                            return 44;
-                        case CommaState.AfterComma:						
-                            state = CommaState.None;
-                            bPos++;
-                        return 32;						
+                        bPos++;
+                        return 32;
                     }
                 }					
                 else if (bPos == sLen) { bPos++; return '\n'; }   // one strike, see new line
@@ -433,7 +420,7 @@ namespace QUT.GplexBuffers
         public override int Read()
         {
             int res = EndOfFile;
-            if (SetPaddingOn)
+            if (EscapeCommaMode)
             {
                 switch (state)
                 {

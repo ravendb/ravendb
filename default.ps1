@@ -549,13 +549,11 @@ task DoRelease -depends DoReleasePart1, `
     Write-Host "Done building RavenDB"
 }
 
-task UploadStable -depends Stable, DoRelease, Upload, UploadNuget, BumpVersion
+task UploadStable -depends Stable, DoRelease, Upload, BumpVersion
 
-task UploadPatch -depends Patch, DoRelease, Upload, UploadNuget
+task UploadPatch -depends Patch, DoRelease, Upload
 
-task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
-
-task UploadNuget -depends InitNuget, PushNugetPackages
+task UploadUnstable -depends Unstable, DoRelease, Upload
 
 task Upload {
     Write-Host "Starting upload"
@@ -612,38 +610,6 @@ task Upload {
 
 task InitNuget {
     $global:nugetVersion = Get-InformationalVersion $version $global:buildlabel $global:uploadCategory
-}
-
-task PushNugetPackages {
-    # Upload packages
-    $accessPath = "$base_dir\..\Nuget-Access-Key.txt"
-    $sourceFeed = "https://nuget.org/"
-
-    if ( (Test-Path $accessPath) ) {
-        $accessKey = Get-Content $accessPath
-        $accessKey = $accessKey.Trim()
-
-        $nuget_dir = "$build_dir\NuGet"
-
-        # Push to nuget repository
-        $packages = Get-ChildItem $nuget_dir *.nuspec -recurse
-
-        $packages | ForEach-Object {
-            $tries = 0
-            while ($tries -lt 10) {
-                try {
-                    &"$nuget" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed -Timeout 4800
-                    $tries = 100
-                } catch {
-                    $tries++
-                }
-            }
-        }
-
-    }
-    else {
-        Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
-    }
 }
 
 task CreateNugetPackages -depends Compile, CompileDotNet, CompileHtml5, InitNuget {
