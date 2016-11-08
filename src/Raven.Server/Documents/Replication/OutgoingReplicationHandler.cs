@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -16,12 +13,12 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using System.Net.Http;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.Server.Extensions;
-using Sparrow;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -35,10 +32,10 @@ namespace Raven.Server.Documents.Replication
         private readonly TimeSpan _minimalHeartbeatInterval = TimeSpan.FromSeconds(15);
         private Thread _sendingThread;
 
-        private long _lastSentEtag;
-        private DateTime _lastSentTime;
-        private readonly Dictionary<Guid, long> _destinationLastKnownChangeVector = new Dictionary<Guid, long>();
-        private string _destinationLastKnownChangeVectorString;
+        private readonly Reference<long> _lastSentDocumentEtag = new Reference<long>();
+        private readonly Reference<DateTime> _lastDocumentSentTime = new Reference<DateTime>();
+        private readonly Dictionary<Guid, long> _destinationLastKnownDocumentChangeVector = new Dictionary<Guid, long>();
+        private readonly Reference<string> _destinationLastKnownDocumentChangeVectorAsString = new Reference<string>();
         private TcpClient _tcpClient;
         private BlittableJsonTextWriter _writer;
         private JsonOperationContext.MultiDocumentParser _parser;
@@ -96,9 +93,25 @@ namespace Raven.Server.Documents.Replication
                 var connectionInfo = GetTcpInfo();	            
                 using (_tcpClient = new TcpClient())
                 {
-                    ConnectSocket(connectionInfo, _tcpClient);                    
+                    ConnectSocket(connectionInfo, _tcpClient);
+
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context))
-                    using (var sender = new ReplicationSender(this, _tcpClient, _log))
+                    using (var stream = _tcpClient.GetStream())
+                    using (var sender = new ReplicationDocumentSender(stream, new ReplicationDocumentSender.ReplicationContext
+                    {
+                        OperationContext = _context,
+                        DatabaseName = _database.Name,
+                        Destination = _destination,
+                        DocumentsStorage = _database.DocumentsStorage,
+                        HandleServerResponse = HandleServerResponseFromDocumentBatch,
+                        LastKnownChangeVector = _destinationLastKnownDocumentChangeVector,
+                        LastKnownChangeVectorAsString = _destinationLastKnownDocumentChangeVectorAsString,
+                        LastSentEtag = _lastSentDocumentEtag,
+                        LastSentTime = _lastDocumentSentTime,
+                        Token = _cts.Token,
+                        WriteToServerAndFlush = WriteToServerAndFlush,
+                        SendHeartbeat = SendHeartbeat                        
+                    }, _log))
                     using (_writer = new BlittableJsonTextWriter(_context, sender.Stream))
                     using (_parser = _context.ParseMultiFrom(sender.Stream))
                     {
@@ -118,21 +131,21 @@ namespace Raven.Server.Documents.Replication
                             ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
                             ["MachineName"] = Environment.MachineName,
                         });
-                        _writer.Flush();						
+                        _writer.Flush();
                         using (_context.OpenReadTransaction())
                         {
-                            HandleServerResponse();
+                            HandleServerResponseFromDocumentBatch();
                         }
 
                         while (_cts.IsCancellationRequested == false)
                         {
-                            _context.ResetAndRenew();							
+                            _context.ResetAndRenew();
                             if (sender.ExecuteReplicationOnce() == false)
                             {
                                 using (_context.OpenReadTransaction())
                                 {
                                     var currentEtag = DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
-                                    if (currentEtag < _lastSentEtag)
+                                    if (currentEtag < _lastSentDocumentEtag.Value)
                                         continue;
                                 }
                             }
@@ -164,17 +177,23 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private void WriteToServerAndFlush(DynamicJsonValue val)
+        {
+            _context.Write(_writer,val);
+            _writer.Flush();
+        }
+
         private void UpdateDestinationChangeVector(ReplicationMessageReply replicationBatchReply)
         {
-            _destinationLastKnownChangeVector.Clear();
+            _destinationLastKnownDocumentChangeVector.Clear();
 
-            _lastSentEtag = replicationBatchReply.LastEtagAccepted;
+            _lastSentDocumentEtag.Value = replicationBatchReply.LastEtagAccepted;
 
-            _destinationLastKnownChangeVectorString = replicationBatchReply.CurrentChangeVector.Format();
+            _destinationLastKnownDocumentChangeVectorAsString.Value = replicationBatchReply.CurrentChangeVector.Format();
 
             foreach (var changeVectorEntry in replicationBatchReply.CurrentChangeVector)
             {
-                _destinationLastKnownChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+                _destinationLastKnownDocumentChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
             if (DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction) >
                 replicationBatchReply.LastEtagAccepted)
@@ -184,7 +203,7 @@ namespace Raven.Server.Documents.Replication
                 // those up with the remove side, so we'll start the replication loop again.
                 // We don't care if they are locally modified or not, because we filter documents that
                 // the other side already have (based on the change vector).
-                if (DateTime.UtcNow - _lastSentTime > _minimalHeartbeatInterval)
+                if (DateTime.UtcNow - _lastDocumentSentTime.Value > _minimalHeartbeatInterval)
                     _waitForChanges.Set();
             }
         }
@@ -200,11 +219,11 @@ namespace Raven.Server.Documents.Replication
                 _context.Write(_writer, new DynamicJsonValue
                 {
                     ["Type"] = "ReplicationBatch",
-                    ["LastEtag"] = _lastSentEtag,
+                    ["LastEtag"] = _lastSentDocumentEtag.Value,
                     ["Documents"] = 0
                 });
                 _writer.Flush();
-                HandleServerResponse();
+                HandleServerResponseFromDocumentBatch();
             }
             catch (Exception e)
             {
@@ -214,306 +233,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private static unsafe bool ShouldSkipReplication(LazyStringValue str)
-        {
-            if (str.Length < 6)
-                return false;
-
-            // case insensitive 'Raven/' match without doing allocations
-
-            if ((str.Buffer[0] != (byte)'R' && str.Buffer[0] != (byte)'r') ||
-                (str.Buffer[1] != (byte)'A' && str.Buffer[1] != (byte)'a') ||
-                (str.Buffer[2] != (byte)'V' && str.Buffer[2] != (byte)'v') ||
-                (str.Buffer[3] != (byte)'E' && str.Buffer[3] != (byte)'e') ||
-                (str.Buffer[4] != (byte)'N' && str.Buffer[4] != (byte)'n') ||
-                 str.Buffer[5] != (byte)'/')
-                return false;
-
-            if (str.Length < 11)
-                return true;
-
-            // Now need to find if the next bits are 'hilo/'
-            if ((str.Buffer[6] == (byte)'H' || str.Buffer[0] == (byte)'h') &&
-                (str.Buffer[7] == (byte)'I' || str.Buffer[1] == (byte)'i') &&
-                (str.Buffer[8] == (byte)'L' || str.Buffer[2] == (byte)'l') &&
-                (str.Buffer[9] == (byte)'O' || str.Buffer[3] == (byte)'o') &&
-                str.Buffer[10] == (byte)'/')
-                return false;
-
-            return true;
-        }
-
-        private class ReplicationSender : IDisposable
-        {
-            private readonly OutgoingReplicationHandler _parent;
-            private readonly Logger _log;
-            private readonly DocumentsOperationContext _context;
-            private long _lastEtag;
-            private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems;
-            private readonly byte[] _tempBuffer = new byte[32 * 1024];
-            private readonly NetworkStream _stream;
-
-            public ReplicationSender(OutgoingReplicationHandler parent, TcpClient tcpClient, Logger log)
-            {
-                _parent = parent;
-                _log = log;
-                _context = _parent._context;
-                _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
-                _stream = tcpClient.GetStream();
-            }
-
-            public NetworkStream Stream => _stream;
-
-            public bool ExecuteReplicationOnce()
-            {
-                _orderedReplicaItems.Clear();
-                var readTx = _context.OpenReadTransaction();
-                try
-                {
-
-                    // we scan through the documents to send to the other side, we need to be careful about
-                    // filtering a lot of documents, because we need to let the other side know about this, and 
-                    // at the same time, we need to send a heartbeat to keep the tcp connection alive
-                    var sp = Stopwatch.StartNew();
-                    var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
-                    while (sp.ElapsedMilliseconds < timeout)
-                    {
-                        _lastEtag = _parent._lastSentEtag;
-
-                        _parent._cts.Token.ThrowIfCancellationRequested();
-
-                        var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(_context, _lastEtag + 1, 0, 1024)
-                            .ToList();
-                        var tombstones = _parent._database.DocumentsStorage.GetTombstonesFrom(_context, _lastEtag + 1, 0, 1024)
-                            .ToList();
-                        
-                        long maxEtag;
-                        maxEtag = _lastEtag;
-                        if (docs.Count > 0)
-                        {
-                            maxEtag = docs[docs.Count - 1].Etag;
-                        }
-
-                        if (tombstones.Count > 0)
-                        {
-                            maxEtag = Math.Max(maxEtag, tombstones[tombstones.Count - 1].Etag);
-                        }
-
-                        foreach (var doc in docs)
-                        {
-                            if (doc.Etag > maxEtag)
-                                break;
-                            AddReplicationItemToBatch(new ReplicationBatchItem
-                            {
-                                Etag = doc.Etag,
-                                ChangeVector = doc.ChangeVector,
-                                Data = doc.Data,
-                                Key = doc.Key
-                            });
-                        }
-
-                        foreach (var tombstone in tombstones)
-                        {
-                            if (tombstone.Etag > maxEtag)
-                                break;
-                            AddReplicationItemToBatch(new ReplicationBatchItem
-                            {
-                                Etag = tombstone.Etag,
-                                ChangeVector = tombstone.ChangeVector,
-                                Collection = tombstone.Collection,
-                                Key = tombstone.Key
-                            });
-                        }
-
-                        // if we are at the end, we are done
-                        if (_lastEtag <= DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction))
-                        {
-                            break;
-                        }
-                    }
-
-                    if (_log.IsInfoEnabled)
-                    {
-                        _log.Info(
-                            $"Found {_orderedReplicaItems.Count:#,#;;0} documents to replicate to {_parent._destination.Database} @ {_parent._destination.Url} in {sp.ElapsedMilliseconds:#,#;;0} ms.");
-                    }
-
-                    if (_orderedReplicaItems.Count == 0)
-                    {
-                        var hasModification = _lastEtag != _parent._lastSentEtag;
-                        _parent._lastSentEtag = _lastEtag;
-                        // ensure that the other server is aware that we skipped 
-                        // on (potentially a lot of) documents to send, and we update
-                        // the last etag they have from us on the other side
-                        _parent.SendHeartbeat();
-                        return hasModification;
-                    }
-
-                    _parent._cts.Token.ThrowIfCancellationRequested();
-
-                    SendDocuments();
-                    return true;
-                }
-                finally
-                {
-                    if (readTx.Disposed == false)
-                        readTx.Dispose();
-                }
-            }
-
-
-            private void AddReplicationItemToBatch(ReplicationBatchItem item)
-            {
-                if (ShouldSkipReplication(item.Key))
-                {
-                    if (_log.IsInfoEnabled)
-                    {
-                        _log.Info($"Skipping replication of {item.Key} because it is a system document");
-                    }
-                    return;
-                }
-                // destination already has it
-                if (item.ChangeVector.GreaterThan(_parent._destinationLastKnownChangeVector) == false)
-                {
-                    if (_log.IsInfoEnabled)
-                    {
-                        _log.Info(
-                            $"Skipping replication of {item.Key} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Dest: {_parent._destinationLastKnownChangeVectorString} ");
-                    }
-                    return;
-                }
-                _lastEtag = Math.Max(_lastEtag, item.Etag);
-                _orderedReplicaItems.Add(item.Etag, item);
-            }
-
-
-            private void SendDocuments()
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info(
-                        $"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag}");
-
-                var sw = Stopwatch.StartNew();
-                var headerJson = new DynamicJsonValue
-                {
-                    ["Type"] = "ReplicationBatch",
-                    ["LastEtag"] = _lastEtag,
-                    ["Documents"] = _orderedReplicaItems.Count
-                };
-                _context.Write(_parent._writer, headerJson);
-                _parent._writer.Flush();
-
-                foreach (var item in _orderedReplicaItems)
-                {
-                    WriteDocumentToServer(item.Value.Key, item.Value.ChangeVector, item.Value.Data, item.Value.Collection);
-                }
-
-                // we can release the read transaction while we are waiting for 
-                // reply from the server and not hold it for a long time
-                _context.Transaction.Dispose();
-
-                _stream.Flush();
-                sw.Stop();
-
-                _parent._lastSentEtag = _lastEtag;
-
-                if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
-                    _log.Info(
-                        $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. First sent etag = {_orderedReplicaItems[0].Etag}, last sent etag = {_lastEtag}");
-                _parent._lastSentTime = DateTime.UtcNow;
-                using (_context.OpenReadTransaction())
-                {
-                    _parent.HandleServerResponse();
-                }
-            }
-
-            private unsafe void WriteDocumentToServer(
-                LazyStringValue key,
-                ChangeVectorEntry[] changeVector,
-                BlittableJsonReaderObject data,
-                LazyStringValue collection)
-            {
-                var changeVectorSize = changeVector.Length * sizeof(ChangeVectorEntry);
-                var requiredSize = changeVectorSize +
-                                   sizeof(int) + // # of change vectors
-                                   sizeof(int) + // size of document key
-                                   key.Size +
-                                   sizeof(int) // size of document
-                    ;
-                if (requiredSize > _tempBuffer.Length)
-                    ThrowTooManyChangeVectorEntries(key, changeVector);
-
-                fixed (byte* pTemp = _tempBuffer)
-                {
-                    int tempBufferPos = 0;
-                    fixed (ChangeVectorEntry* pChangeVectorEntries = changeVector)
-                    {
-                        *(int*) pTemp = changeVector.Length;
-                        tempBufferPos += sizeof(int);
-                        Memory.Copy(pTemp + tempBufferPos, (byte*) pChangeVectorEntries, changeVectorSize);
-                        tempBufferPos += changeVectorSize;
-                    }
-                    *(int*) (pTemp + tempBufferPos) = key.Size;
-                    tempBufferPos += sizeof(int);
-                    Memory.Copy(pTemp + tempBufferPos, key.Buffer, key.Size);
-                    tempBufferPos += key.Size;
-
-                    //if data == null --> this is a tombstone, and a document otherwise
-                    if (data != null)
-                    {
-                        *(int*) (pTemp + tempBufferPos) = data.Size;
-                        tempBufferPos += sizeof(int);
-
-                        var docReadPos = 0;
-                        while (docReadPos < data?.Size)
-                        {
-                            var sizeToCopy = Math.Min(data.Size - docReadPos, _tempBuffer.Length - tempBufferPos);
-                            if (sizeToCopy == 0) // buffer is full, need to flush it
-                            {
-                                _stream.Write(_tempBuffer, 0, tempBufferPos);
-                                tempBufferPos = 0;
-                                continue;
-                            }
-                            Memory.Copy(pTemp + tempBufferPos, data.BasePointer + docReadPos, sizeToCopy);
-                            tempBufferPos += sizeToCopy;
-                            docReadPos += sizeToCopy;
-                        }
-                    }
-                    else
-                    {
-                        //tombstone have size == -1
-                        *(int*) (pTemp + tempBufferPos) = -1;
-                        tempBufferPos += sizeof(int);
-
-                        if (collection == null) //precaution
-                        {
-                            throw new InvalidDataException("Cannot write tombstone with empty collection name...");
-                        }
-
-                        *(int*)(pTemp + tempBufferPos) = collection.Size;
-                        tempBufferPos += sizeof(int);
-                        Memory.Copy(pTemp + tempBufferPos, collection.Buffer, collection.Size);
-                        tempBufferPos += collection.Size;
-                    }
-                    _stream.Write(_tempBuffer, 0, tempBufferPos);
-                }
-            }
-
-            public void Dispose()
-            {
-                _stream.Dispose();
-            }
-        }
-
-        private static void ThrowTooManyChangeVectorEntries(LazyStringValue key, ChangeVectorEntry[] changeVector)
-        {
-            throw new ArgumentOutOfRangeException("doc",
-                "Document " + key + " has too many change vector entries to replicate: " +
-                changeVector.Length);
-        }
-
-
-        private void HandleServerResponse()
+        private void HandleServerResponseFromDocumentBatch()
         {
             using (var replicationBatchReplyMessage = _parser.ParseToMemory("replication acknowledge message"))
             {
@@ -531,7 +251,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         case ReplicationMessageReply.ReplyType.Ok:
                             _log.Info(
-                                $"Received reply for replication batch from {_destination.Database} @ {_destination.Url}. New destination change vector is {_destinationLastKnownChangeVectorString}");
+                                $"Received reply for replication batch from {_destination.Database} @ {_destination.Url}. New destination change vector is {_destinationLastKnownDocumentChangeVectorAsString}");
                             break;
                         case ReplicationMessageReply.ReplyType.Error:
                             _log.Info(

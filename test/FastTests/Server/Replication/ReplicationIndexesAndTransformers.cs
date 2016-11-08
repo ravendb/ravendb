@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Issues;
 using FastTests.Server.Documents.Replication;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Exceptions;
 using Raven.Client.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Utils;
