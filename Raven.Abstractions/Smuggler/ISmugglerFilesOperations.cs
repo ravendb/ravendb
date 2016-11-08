@@ -15,7 +15,7 @@ namespace Raven.Abstractions.Smuggler
 
 
         Task<FileSystemStats[]> GetStats();
-        Task<string> GetVersion(FilesConnectionStringOptions server);        
+        Task<BuildNumber> GetVersion(FilesConnectionStringOptions server);        
 
         LastFilesEtagsInfo FetchCurrentMaxEtags();
 

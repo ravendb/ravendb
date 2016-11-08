@@ -54,9 +54,9 @@ namespace Raven.Database.FileSystem.Smuggler
             return new CompletedTask<FileSystemStats[]>(new [] {stats});
         }
 
-        public Task<string> GetVersion(FilesConnectionStringOptions server)
+        public Task<BuildNumber> GetVersion(FilesConnectionStringOptions server)
         {
-            return new CompletedTask<string>(DocumentDatabase.ProductVersion);
+            return new CompletedTask<BuildNumber>(new BuildNumber { BuildVersion = DocumentDatabase.BuildVersion.ToString(), ProductVersion = DocumentDatabase.ProductVersion });
         }
 
         public LastFilesEtagsInfo FetchCurrentMaxEtags()

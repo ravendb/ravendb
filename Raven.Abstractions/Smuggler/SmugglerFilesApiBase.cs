@@ -118,10 +118,10 @@ namespace Raven.Abstractions.Smuggler
             bool ownedStream = exportOptions.ToStream == null;
             var stream = exportOptions.ToStream ?? File.Create(result.FilePath);
 
-            int buildVersion;
+            ServerSupportedFeatures features;
             try
             {
-                buildVersion = await DetectServerSupportedFeatures(exportOptions.From).ConfigureAwait(false);
+                features = await DetectServerSupportedFeatures(exportOptions.From).ConfigureAwait(false);
             }
             catch (WebException e)
             {
@@ -146,7 +146,7 @@ namespace Raven.Abstractions.Smuggler
                     {
 
                         // check if bulk export is supported in current version
-                        if (buildVersion == 13 || buildVersion >= 35180)
+                        if (features.IsFilesStreamingSupported)
                         {
                             await ExportFilesStreamingBulk(archive, result.LastFileEtag, maxEtags.LastFileEtag).ConfigureAwait(false);
                         }
@@ -154,7 +154,7 @@ namespace Raven.Abstractions.Smuggler
                         {
                             await ExportFilesLegacy(archive, result.LastFileEtag, maxEtags.LastFileEtag).ConfigureAwait(false);
                         }
-                        
+
                         await ExportConfigurations(archive).ConfigureAwait(false);
                     }
                 }
@@ -333,7 +333,7 @@ namespace Raven.Abstractions.Smuggler
 
                         if (fileHeadersInBatch.Count == 0)
                             continue;
-                      
+
                         using (var batchStream = await Operations.StreamFiles(fileHeadersInBatch.Select(x => x.FullPath).ToList()).ConfigureAwait(false))
                         {
                             var binaryReader = new BinaryReader(batchStream);
@@ -552,21 +552,33 @@ namespace Raven.Abstractions.Smuggler
             return config.Value;
         }
 
-        private async Task<int> DetectServerSupportedFeatures(FilesConnectionStringOptions filesConnectionStringOptions)
+        private async Task<ServerSupportedFeatures> DetectServerSupportedFeatures(FilesConnectionStringOptions filesConnectionStringOptions)
         {
-            var serverVersion = await this.Operations.GetVersion(filesConnectionStringOptions).ConfigureAwait(false);
-            if (string.IsNullOrEmpty(serverVersion))
+            var version = await Operations.GetVersion(filesConnectionStringOptions).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(version?.ProductVersion))
                 throw new SmugglerExportException("Server version is not available.");
-
 
             var customAttributes = typeof(SmugglerDatabaseApiBase).Assembly.GetCustomAttributes(false);
             dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
             var intServerVersion = int.Parse(versionAtt.Version.Replace(".", ""));
 
             if (intServerVersion < 30)
-                throw new SmugglerExportException(string.Format("File Systems are not available on Server version: {0}. Smuggler version: {1}.", serverVersion, versionAtt.Version));
+                throw new SmugglerExportException(string.Format("File Systems are not available on Server version: {0}. Smuggler version: {1}.", version, versionAtt.Version));
 
-            return intServerVersion;
+            int build;
+            bool canParseBuildVersion = int.TryParse(version.BuildVersion, out build);
+            if (canParseBuildVersion == false)
+            {
+                return new ServerSupportedFeatures
+                {
+                    IsFilesStreamingSupported = false
+                };
+            }
+
+            return new ServerSupportedFeatures
+            {
+                IsFilesStreamingSupported = build == 13 || build >= 35180
+            };
         }
 
         private static void ReadLastEtagsFromFile(ExportFilesResult result)
