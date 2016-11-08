@@ -41,7 +41,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact]
+        [Fact(Skip = "TODO: use IDatabaseCommands")]
         public async Task KeyGeneration()
         {
             using (var store = GetDocumentStore())
@@ -73,7 +73,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact]
+        [Fact(Skip = "TODO: use IDatabaseCommands")]
         public void KeyGenerationOnLoad()
         {
             using (var store = GetDocumentStore())

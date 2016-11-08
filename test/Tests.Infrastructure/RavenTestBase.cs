@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -15,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 using Raven.Server;
@@ -25,8 +27,12 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 using Sparrow.Collections;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Xunit;
+using DocumentSession = Raven.Client.Documents.DocumentSession;
+using InMemoryDocumentSessionOperations = Raven.Client.Documents.InMemoryDocumentSessionOperations;
 using JsonTextWriter = Raven.Imports.Newtonsoft.Json.JsonTextWriter;
 
 namespace FastTests
@@ -372,6 +378,76 @@ namespace FastTests
 
                 exceptionAggregator.ThrowIfNeeded();
             }
+        }
+
+
+        /// <summary>
+        /// Get command for new client tests
+        /// </summary>
+        /// <param name="session"></param>
+        /// <param name="ids"></param>
+        /// <param name="etag"></param>
+        /// <param name="documentInfo"></param>
+        /// <returns></returns>
+        public static BlittableJsonReaderObject GetCommand(Raven.Client.Documents.DocumentSession session, string[] ids, 
+            out Raven.Client.Documents.InMemoryDocumentSessionOperations.DocumentInfo documentInfo)
+        {
+            var command = new GetDocumentCommand
+            {
+                Ids = ids
+            };
+            session.RequestExecuter.Execute(command, session.Context);
+            var document = (BlittableJsonReaderObject)command.Result.Results[0];
+            BlittableJsonReaderObject metadata;
+            if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
+                throw new InvalidOperationException("Document must have a metadata");
+            string id;
+            if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
+                throw new InvalidOperationException("Document must have an id");
+            long? etag;
+            if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
+                throw new InvalidOperationException("Document must have an etag");
+            documentInfo = new InMemoryDocumentSessionOperations.DocumentInfo
+            {
+                Id = id,
+                Document = document,
+                Metadata = metadata,
+                ETag = etag
+            };
+            return document;
+        }
+
+        /// <summary>
+        /// Put command for new client tests
+        /// </summary>
+        /// <param name="session"></param>
+        /// <param name="entity"></param>
+        /// <param name="id"></param>
+        public void PutCommand(DocumentSession session, object entity, string id)
+        {
+            var documentInfo = new InMemoryDocumentSessionOperations.DocumentInfo
+            {
+                Entity = entity,
+                Id = id
+            };
+            var tag = session.DocumentStore.Conventions.GetDynamicTagName(entity);
+
+            var metadata = new DynamicJsonValue();
+            if (tag != null)
+                metadata[Constants.Headers.RavenEntityName] = tag;
+
+            documentInfo.Metadata = session.Context.ReadObject(metadata, id);
+
+            documentInfo.Document = session.EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
+
+            var putCommand = new PutDocumentCommand()
+            {
+                Id = id,
+                Etag = documentInfo.ETag,
+                Document = documentInfo.Document,
+                Context = session.Context
+            };
+            session.RequestExecuter.Execute(putCommand, session.Context);
         }
     }
 }

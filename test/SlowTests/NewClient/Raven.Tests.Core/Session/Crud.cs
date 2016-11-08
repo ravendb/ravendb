@@ -6,7 +6,9 @@ using Raven.Client.Exceptions;
 using Xunit;
 using User = SlowTests.Core.Utils.Entities.User;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using SlowTests.Core.Utils.Entities;
+using SlowTests.Core.Utils.Transformers;
 
 namespace SlowTests.NewClient.Raven.Tests.Core.Session
 {
@@ -72,8 +74,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        //TODO - Efrat
-        /*[Fact]
+        [Fact]
         public Task CanLoadWithTransformer()
         {
             using (var store = GetDocumentStore())
@@ -100,9 +101,8 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                     Assert.Equal("Lorem ipsum...", result.Content);
                 }
             }
-
             return new CompletedTask();
-        }*/
+        }
 
         [Fact]
         public async Task CanDelete()
@@ -134,8 +134,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        //TODO - Efrat
-        /*[Fact]
+        [Fact]
         public async Task CanLoadWithInclude()
         {
             using (var store = GetDocumentStore())
@@ -175,7 +174,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                     Assert.Equal("London", address.City);
                 }
             }
-        }*/         
+        }
 
         [Fact]
         public void DeletingEntityThatIsNotTrackedShouldThrow()
