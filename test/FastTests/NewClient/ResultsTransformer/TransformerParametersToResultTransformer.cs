@@ -1,5 +1,8 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Indexes;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.NewClient.ResultsTransformer
@@ -202,6 +205,77 @@ namespace FastTests.NewClient.ResultsTransformer
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                     Assert.NotNull(category);
                 }
+            }
+        }
+
+        [Fact]
+        public void CanCastTransformerParameter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new CastTransformer().Execute(store);
+
+                using (var session = store.OpenNewSession())
+                {
+                    session.Store(new User { Id = "users/512", Name = "Tony", LastName = "Vespa"});
+                    session.SaveChanges();
+
+                    var results = session.Load<CastTransformer, CastTransformer.Result>("users/512",
+                        configuration =>
+                        {
+                            configuration.AddTransformerParameter("int", 1);
+                            configuration.AddTransformerParameter("long", 8589934592);
+                            configuration.AddTransformerParameter("float", (float) 3.14);
+                            configuration.AddTransformerParameter("decimal", (decimal) 0.5);
+                            configuration.AddTransformerParameter("double", (double) 0.59);
+                            configuration.AddTransformerParameter("bool", true);
+                            configuration.AddTransformerParameter("string", "word");
+                            configuration.AddTransformerParameter("datetime", new DateTime(1985, 6, 3));
+                        });
+
+                    Assert.Equal("Tony Vespa", results.Username);
+                    Assert.IsType<int>(results.IntValue);
+                    Assert.IsType<long>(results.LongValue);
+                    Assert.IsType<float>(results.FloatValue);
+                    Assert.IsType<decimal>(results.DecimalValue);
+                    Assert.IsType<double>(results.DoubleValue);
+                    Assert.IsType<bool>(results.BooleanValue);
+                    Assert.IsType<string>(results.StringValue);
+                    Assert.IsType<DateTime>(results.DateTimeValue);
+                }
+            }
+        }
+        
+        private class CastTransformer : AbstractTransformerCreationTask<User>
+        {
+            public class Result
+            {
+                public string Username { get; set; }
+                public int IntValue { get; set; }
+                public long LongValue { get; set; }
+                public float FloatValue { get; set; }
+                public decimal DecimalValue { get; set; }
+                public double DoubleValue { get; set; }
+                public bool BooleanValue { get; set; }
+                public string StringValue { get; set; }
+                public DateTime DateTimeValue { get; set; }
+            }
+
+            public CastTransformer()
+            {
+                TransformResults = users => from user in users
+                                           select new
+                                           {
+                                               Username = user.Name + " " + user.LastName,
+                                               IntValue = Parameter("int").Value<int>(),
+                                               LongValue = Parameter("long").Value<long>(),
+                                               FloatValue = Parameter("float").Value<float>(),
+                                               DecimalValue = Parameter("decimal").Value<decimal>(),
+                                               DoubleValue = Parameter("double").Value<double>(),
+                                               BooleanValue = Parameter("bool").Value<bool>(),
+                                               StringValue = Parameter("string").Value<string>(),
+                                               DateTimeValue = Parameter("datetime").Value<DateTime>()
+                                           };
             }
         }
     }

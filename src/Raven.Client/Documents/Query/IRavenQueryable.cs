@@ -42,12 +42,12 @@ namespace Raven.Client.Documents
         /// Inputs a key and value to the query (accessible by the transformer)
         /// </summary>
         [Obsolete("Use AddTransformerParameter instead.")]
-        IRavenQueryable<T> AddQueryInput(string name, RavenJToken value);
+        IRavenQueryable<T> AddQueryInput(string name, object value);
 
         /// <summary>
         /// Inputs a key and value to the query (accessible by the transformer)
         /// </summary>
-        IRavenQueryable<T> AddTransformerParameter(string name, RavenJToken value);
+        IRavenQueryable<T> AddTransformerParameter(string name, object value);
 
         IRavenQueryable<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
