@@ -872,7 +872,7 @@ interface requestHeaderDto {
 
 interface sqlReplicationStatsDto {
     Name: string;
-    Statistics: sqlReplicationStatisticsDto;
+    Statistics: any;
     Metrics: sqlReplicaitonMetricsDto;
 }
 interface sqlReplicaitonMetricsDto {
@@ -882,15 +882,6 @@ interface sqlReplicaitonMetricsDto {
 interface metricsDataDto {
     Type: string;
     Name:string;
-}
-interface sqlReplicationStatisticsDto {
-    Name: string;
-    LastErrorTime: string;
-    ScriptErrorCount: number;
-    ScriptSuccessCount: number;
-    WriteErrorCount: number;
-    SuccessCount: number;
-    //TODO: LastAlert: alertDto;
 }
 
 interface statusDebugIndexFieldsDto {
