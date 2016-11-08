@@ -37,16 +37,18 @@
   float: left;
   min-width: 160px;
   padding: 5px 0;
-  margin: 2px 0 0; // override default ul
+  margin: 0; // override default ul
   list-style: none;
-  font-size: @font-size-base;
+  font-size: @font-size-base - 2;
   text-align: left; // Ensures proper alignment if parent has it changed (e.g., modal footer)
   background-color: @dropdown-bg;
   border: 1px solid @dropdown-fallback-border; // IE8 fallback
   border: 1px solid @dropdown-border;
+  border-top: 1px solid @gray-darker;
   border-radius: @border-radius-base;
   .box-shadow(0 6px 12px rgba(0,0,0,.175));
   background-clip: padding-box;
+  min-width: 100%;
 
   // Aligns the dropdown menu to right
   //
@@ -68,8 +70,12 @@
     clear: both;
     font-weight: normal;
     line-height: @line-height-base;
-    color: @dropdown-link-color;
+    
     white-space: nowrap; // prevent links from randomly breaking onto new lines
+
+    &:not(.text-primary):not(.text-info):not(.text-warning):not(.text-danger):not(.text-success) {
+        color: @dropdown-link-color;
+    }
   }
 }
 

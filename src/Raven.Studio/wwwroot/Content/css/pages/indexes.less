@@ -114,13 +114,8 @@
         .properties-item {
             .properties-label,
             .properties-value {
-                [class*=" icon-"],
-                [class^="icon-"] {
+                &>button {
                     color: @brand-info;
-
-                    & + span {
-                        color: @brand-info;
-                    }
                 }
             }
             @media (min-width: @screen-xl) {

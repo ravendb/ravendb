@@ -3864,16 +3864,18 @@ tbody.collapse.in {
   float: left;
   min-width: 160px;
   padding: 5px 0;
-  margin: 2px 0 0;
+  margin: 0;
   list-style: none;
-  font-size: 15px;
+  font-size: 13px;
   text-align: left;
   background-color: #3a4242;
   border: 1px solid none;
+  border-top: 1px solid #2c3333;
   border-radius: 0px;
   -webkit-box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
   background-clip: padding-box;
+  min-width: 100%;
 }
 .dropdown-menu.pull-right {
   right: 0;
@@ -3891,8 +3893,10 @@ tbody.collapse.in {
   clear: both;
   font-weight: normal;
   line-height: 1.8;
-  color: #a9adad;
   white-space: nowrap;
+}
+.dropdown-menu > li > a:not(.text-primary):not(.text-info):not(.text-warning):not(.text-danger):not(.text-success) {
+  color: #a9adad;
 }
 .dropdown-menu > li > a:hover,
 .dropdown-menu > li > a:focus {
@@ -5025,22 +5029,26 @@ fieldset[disabled] .navbar-inverse .btn-link:focus {
   color: #444;
 }
 .breadcrumb {
-  padding: 8px 15px;
-  margin-bottom: 27px;
+  font-size: 13px;
+  padding: 0px 0px;
+  margin-bottom: 15px;
   list-style: none;
-  background-color: #f5f5f5;
+  background-color: transparent;
   border-radius: 0px;
 }
 .breadcrumb > li {
   display: inline-block;
 }
+.breadcrumb > li h3 {
+  margin: 0;
+}
 .breadcrumb > li + li:before {
   content: "/\00a0";
   padding: 0 5px;
-  color: #ccc;
+  color: #686f6f;
 }
 .breadcrumb > .active {
-  color: #a9adad;
+  color: #686f6f;
 }
 .pagination {
   display: inline-block;
@@ -10091,28 +10099,36 @@ fieldset[disabled] .editable-input-inline.edit .btn.edit-button.focus {
 .editable-input-inline.edit .btn.edit-button .text::before {
   content: 'Save';
 }
-.btn-group-justified .btn {
+.btn-group-justified.btn-tabs .btn {
   box-shadow: none;
+  border: none;
 }
-.btn-group-justified .btn.active {
+.btn-group-justified.btn-tabs .btn [class*=" icon-"],
+.btn-group-justified.btn-tabs .btn [class^="icon-"] {
+  color: inherit;
+}
+.btn-group-justified.btn-tabs .btn [class*=" icon-"]:before,
+.btn-group-justified.btn-tabs .btn [class^="icon-"]:before {
+  color: inherit;
+}
+.btn-group-justified.btn-tabs .btn.active {
   background-color: #2c3333;
 }
-.btn-group-justified .btn:not(.active) {
+.btn-group-justified.btn-tabs .btn:not(.active) {
   background-color: #1e2626;
+}
+.btn-group-justified.btn-tabs .btn:not(.active):not(:hover) {
   color: #686f6f;
 }
-.btn-group-justified .btn:not(.active):hover {
-  color: #e9eaea;
-}
-.btn-group-justified .btn-xs {
+.btn-group-justified.btn-tabs .btn-xs {
   text-transform: uppercase;
   font-size: 9px;
   letter-spacing: 0.1pt;
   text-align: center;
   padding: 7px 0 9px;
 }
-.btn-group-justified .btn-xs [class*=" icon-"],
-.btn-group-justified .btn-xs [class^="icon-"] {
+.btn-group-justified.btn-tabs .btn-xs [class*=" icon-"],
+.btn-group-justified.btn-tabs .btn-xs [class^="icon-"] {
   margin-bottom: 8px;
   margin-right: 0;
   font-size: 22px !important;
@@ -10991,7 +11007,8 @@ pre {
   top: 2px;
   line-height: 100%;
   font-size: 120%;
-  content: "\e926";
+  color: #ff5500;
+  content: "\e927";
   margin-right: 7.5px;
 }
 .objects-list a.document:before + span {
@@ -11309,25 +11326,80 @@ pre {
   height: 500px;
   padding: 10px;
 }
+.editDocument .documentId {
+  font-weight: 300;
+  font-size: 25px;
+  margin-bottom: 8px;
+  /*
+        #obj-name {
+
+            .edit-inline {
+                border: 1px solid @gray-dark;
+                margin: -1px;
+
+                &:focus {
+                    border-color: @brand-primary;
+                }
+            }
+
+            .btn.edit-button {
+                margin-left: 12px;
+
+                .text::before {
+                    content: 'Change ID';
+                }
+            }
+
+            &.edit {
+                .btn.edit-button {
+                    display: none;
+                }
+            }
+        }*/
+}
 .editDocument .documentId .fav-object {
   position: relative;
-  top: -3px;
+  top: -5px;
+  width: 50%;
 }
-.editDocument .documentId #obj-name .edit-inline {
+.editDocument .documentId input.obj-name {
+  display: block;
+  width: 100%;
+  line-height: 27px;
+  background-color: transparent;
+  padding: 4px ;
   border: 1px solid #3a4242;
-  margin: -1px;
 }
-.editDocument .documentId #obj-name .edit-inline:focus {
-  border-color: #ff5500;
+.editDocument .documentId input.obj-name::-webkit-input-placeholder {
+  color: #4f5555;
 }
-.editDocument .documentId #obj-name .btn.edit-button {
-  margin-left: 12px;
+.editDocument .documentId input.obj-name:-moz-placeholder {
+  color: #4f5555;
 }
-.editDocument .documentId #obj-name .btn.edit-button .text::before {
-  content: 'Change ID';
+.editDocument .documentId input.obj-name::-moz-placeholder {
+  color: #4f5555;
 }
-.editDocument .documentId #obj-name.edit .btn.edit-button {
-  display: none;
+.editDocument .documentId input.obj-name:-ms-input-placeholder {
+  color: #4f5555;
+}
+.editDocument .documentId input.obj-name::placeholder {
+  color: #4f5555;
+}
+.editDocument .documentId .span.obj-name {
+  display: inline-block;
+  padding: 3px;
+}
+.editDocument .btn-tabs .doc-related {
+  color: #9466d5;
+}
+.editDocument .btn-tabs .doc-collection {
+  color: #50b068;
+}
+.editDocument .btn-tabs .doc-recent {
+  color: #198fd1;
+}
+.editDocument .btn-tabs .doc-starred {
+  color: #cfa125;
 }
 .indexes .align-checkboxes {
   margin-left: 21px;
@@ -11419,16 +11491,8 @@ pre {
   top: -8px;
   float: left;
 }
-.indexes .properties-container .properties-item .properties-label [class*=" icon-"],
-.indexes .properties-container .properties-item .properties-value [class*=" icon-"],
-.indexes .properties-container .properties-item .properties-label [class^="icon-"],
-.indexes .properties-container .properties-item .properties-value [class^="icon-"] {
-  color: #4d90b3;
-}
-.indexes .properties-container .properties-item .properties-label [class*=" icon-"] + span,
-.indexes .properties-container .properties-item .properties-value [class*=" icon-"] + span,
-.indexes .properties-container .properties-item .properties-label [class^="icon-"] + span,
-.indexes .properties-container .properties-item .properties-value [class^="icon-"] + span {
+.indexes .properties-container .properties-item .properties-label > button,
+.indexes .properties-container .properties-item .properties-value > button {
   color: #4d90b3;
 }
 @media (min-width: 1600px) {

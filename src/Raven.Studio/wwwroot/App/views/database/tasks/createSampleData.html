@@ -3,23 +3,25 @@
 
     <div class="panel panel-default">
         <div class="panel-body">
-            <p class="bg-info padding padding-md">
-                <i class="icon-info"></i>
-                Creating sample data requires an empty database.
-            </p>
             <div class="row">
                 <div class="col-sm-12">
-                    <button class="btn btn-default" data-bind="click: copyClasses">
-                        <i class="icon-code"></i>&nbsp;
-                        Copy C# classes for sample data
-                    </button>
                     <button class="btn btn-primary sampleData-createBtn" data-bind="click: generateSampleData, css: { 'btn-spinner': isBusy() }">
                         <i class="icon-document-group"></i>&nbsp;
                         Create sample data
                     </button>
+                    <button class="btn btn-default" data-bind="click: copyClasses">
+                        <i class="icon-code"></i>&nbsp;
+                        Copy C# classes for sample data
+                    </button>
+                    
                 </div>
             </div>
             <br>
+            <p class="bg-info padding padding-md">
+                <i class="icon-info"></i>
+                Creating sample data requires an empty database.
+            </p>
+            
             <div class="row">
                 <div class="col-sm-12">
                     <h2>Sample data C# code</h2>

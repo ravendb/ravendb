@@ -144,7 +144,7 @@
     <div class="btn-group properties-value">
         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
                 data-bind="css: { 'btn-spinner': $root.spinners.localPriority().contains(name) }, enable: $root.indexingEnabled() && !$root.spinners.localPriority().contains(name)">
-            <span data-bind="visible: pausedUntilRestart()">
+            <span class="text-warning" data-bind="visible: pausedUntilRestart()">
                 <i class="icon-cancel"></i>
                 <span>Paused until restart</span>
             </span>
@@ -156,7 +156,7 @@
                 <i class="icon-coffee"></i>
                 <span>Idle</span>
             </span>
-            <span data-bind="visible: !pausedUntilRestart() && isDisabled()">
+            <span class="text-danger" data-bind="visible: !pausedUntilRestart() && isDisabled()">
                 <i class="icon-cancel"></i>
                 <span>Disabled</span>
             </span>
@@ -173,18 +173,18 @@
                     <i class="icon-coffee"></i><span>Idle</span>
                 </a>
             </li>
-            <li>
-                <a href="#" data-bind="click: $root.disabledPriority.bind($root, $data)" title="Disabled">
-                    <i class="icon-cancel"></i><span>Disabled</span>
+            <li data-bind="visible: canBePaused()">
+                <a href="#" class="text-warning" data-bind="click: $root.pauseUntilRestart.bind($root, $data)" title="Paused until restart">
+                    <i class="icon-pause"></i><span>Pause until restart</span>
                 </a>
             </li>
-            <li data-bind="visible: canBePaused()">
-                <a href="#" data-bind="click: $root.pauseUntilRestart.bind($root, $data)" title="Paused until restart">
-                    <i class="icon-cancel"></i><span>Pause until restart</span>
+            <li>
+                <a href="#" class="text-danger" data-bind="click: $root.disabledPriority.bind($root, $data)" title="Disabled">
+                    <i class="icon-cancel"></i><span>Disable</span>
                 </a>
             </li>
             <li data-bind="visible: canBeResumed()">
-                <a href="#" data-bind="click: $root.resumeIndexing.bind($root, $data)" title="Resume indexing">
+                <a href="#" class="text-success" data-bind="click: $root.resumeIndexing.bind($root, $data)" title="Resume indexing">
                     <i class="icon-check"></i><span>Resume indexing</span>
                 </a>
             </li>
@@ -198,7 +198,7 @@
         <button type="button" class="btn btn-block set-size dropdown-toggle" data-toggle="dropdown" 
                 data-bind="css: { 'btn-spinner': $root.spinners.localLockChanges().contains(name) }, enable: !$root.spinners.localLockChanges().contains(name)">
             <span data-bind="visible: lockMode() === 'Unlock'">
-                <i class="icon-unlock"></i><span>Unlock</span>
+                <i class="icon-unlock"></i><span>Unlocked</span>
             </span>
             <span data-bind="visible: lockMode() === 'SideBySide'">
                 <i class="icon-lock-sidebyside"></i><span>Locked (side-by-side)</span>

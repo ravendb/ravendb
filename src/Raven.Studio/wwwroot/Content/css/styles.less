@@ -401,9 +401,18 @@ hr {
     }
 }
 
-.btn-group-justified {
+.btn-group-justified.btn-tabs {
     .btn {
         box-shadow: none;
+        border:none;
+
+        [class*=" icon-"],
+        [class^="icon-"] {
+            color:inherit;
+            &:before {
+                color:inherit;
+            }
+        }
 
         &.active {
             background-color: @gray-darker;
@@ -411,11 +420,10 @@ hr {
 
         &:not(.active) {
             background-color: @gray-base;
-            color: @gray;
+        }
 
-            &:hover {
-                color: @gray-lighter;
-            }
+        &:not(.active):not(:hover) {
+            color: @gray;
         }
     }
 
@@ -1248,7 +1256,8 @@ pre {
         &.document {
             &:before {
                 .icon-style;
-                content: "\e926";
+                color:@brand-primary;
+                content: @icon-document;
                 margin-right: @grid-gutter-width/4;
             }
         }
