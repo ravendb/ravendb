@@ -44,7 +44,6 @@ function generateNoActiveResourceMenuItems() {
     let appUrls = appUrl.forCurrentDatabase();
     return [
         new separatorMenuItem('Manage'),
-        getTasksMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
         getStatsMenuItem(appUrls),
         new separatorMenuItem('Server'),
