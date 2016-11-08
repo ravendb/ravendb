@@ -118,9 +118,10 @@ namespace Raven.Abstractions.Smuggler
             bool ownedStream = exportOptions.ToStream == null;
             var stream = exportOptions.ToStream ?? File.Create(result.FilePath);
 
+            int buildVersion;
             try
             {
-                await DetectServerSupportedFeatures(exportOptions.From).ConfigureAwait(false);
+                buildVersion = await DetectServerSupportedFeatures(exportOptions.From).ConfigureAwait(false);
             }
             catch (WebException e)
             {
@@ -144,7 +145,16 @@ namespace Raven.Abstractions.Smuggler
                     using (var archive = new ZipArchive(positionStream, ZipArchiveMode.Create, leaveOpen: true))
                     {
 
-                        await ExportFiles(archive, result.LastFileEtag, maxEtags.LastFileEtag).ConfigureAwait(false);
+                        // check if bulk export is supported in current version
+                        if (buildVersion == 13 || buildVersion >= 35180)
+                        {
+                            await ExportFilesStreamingBulk(archive, result.LastFileEtag, maxEtags.LastFileEtag).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            await ExportFilesLegacy(archive, result.LastFileEtag, maxEtags.LastFileEtag).ConfigureAwait(false);
+                        }
+                        
                         await ExportConfigurations(archive).ConfigureAwait(false);
                     }
                 }
@@ -172,7 +182,113 @@ namespace Raven.Abstractions.Smuggler
             }
         }
 
-        private async Task<Etag> ExportFiles(ZipArchive archive, Etag lastEtag, Etag maxEtag, int maxSizeInBytes = 10 * 1024 * 1024)
+
+        private async Task<Etag> ExportFilesLegacy(ZipArchive archive, Etag lastEtag, Etag maxEtag)
+        {
+            var totalCount = 0;
+            var lastReport = SystemTime.UtcNow;
+            var reportInterval = TimeSpan.FromSeconds(2);
+            Operations.ShowProgress("Exporting Files");
+
+            var metadataList = new List<FileContainer>();
+
+            Exception exceptionHappened = null;
+
+            using (var cts = new CancellationTokenSource())
+            {
+                var fileHeaders = new BlockingCollection<FileHeader>();
+                var getFilesTask = Task.Run(async () => await GetFilesTask(lastEtag, maxEtag, cts, fileHeaders).ConfigureAwait(false), cts.Token);
+
+                try
+                {
+                    while (true)
+                    {
+                        FileHeader fileHeader = null;
+                        try
+                        {
+                            fileHeader = fileHeaders.Take(cts.Token);
+                        }
+                        catch (InvalidOperationException) // CompleteAdding Called
+                        {
+                            Operations.ShowProgress("Files List Retrieval Completed");
+                            break;
+                        }
+
+                        cts.Token.ThrowIfCancellationRequested();
+
+                        // Write the metadata (which includes the stream size and file container name)
+                        var fileContainer = new FileContainer
+                        {
+                            Key = Path.Combine(fileHeader.Directory.TrimStart('/'), fileHeader.Name),
+                            Metadata = fileHeader.Metadata,
+                        };
+
+                        ZipArchiveEntry fileToStore = archive.CreateEntry(fileContainer.Key);
+
+                        using (var fileStream = await Operations.DownloadFile(fileHeader).ConfigureAwait(false))
+                        using (var zipStream = fileToStore.Open())
+                        {
+                            await fileStream.CopyToAsync(zipStream).ConfigureAwait(false);
+                        }
+
+                        metadataList.Add(fileContainer);
+
+                        totalCount++;
+                        if (totalCount % 30 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                        {
+                            Operations.ShowProgress("Exported {0} files. ", totalCount);
+                            lastReport = SystemTime.UtcNow;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e);
+                    Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+
+                    cts.Cancel();
+
+                    exceptionHappened = new SmugglerExportException(e.Message, e)
+                    {
+                        LastEtag = lastEtag,
+                    };
+                }
+
+                try
+                {
+                    getFilesTask.Wait(CancellationToken.None);
+                }
+                catch (OperationCanceledException)
+                {
+                    // we are fine with this
+                }
+                catch (Exception e)
+                {
+                    Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
+                    exceptionHappened = new SmugglerExportException(e.Message, e)
+                    {
+                        LastEtag = lastEtag,
+                    };
+                }
+            }
+
+
+            var metadataEntry = archive.CreateEntry(MetadataEntry);
+            using (var metadataStream = metadataEntry.Open())
+            using (var writer = new StreamWriter(metadataStream))
+            {
+                foreach (var item in metadataList)
+                    writer.WriteLine(RavenJObject.FromObject(item));
+            }
+
+            if (exceptionHappened != null)
+                throw exceptionHappened;
+
+            Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+            return lastEtag;
+        }
+
+        private async Task<Etag> ExportFilesStreamingBulk(ZipArchive archive, Etag lastEtag, Etag maxEtag, int maxSizeInBytes = 10 * 1024 * 1024)
         {
             var totalCount = 0;
             var lastReport = SystemTime.UtcNow;
@@ -262,16 +378,6 @@ namespace Raven.Abstractions.Smuggler
                             }
 
                         }
-
-
-
-
-                        //using (var fileStream = await Operations.DownloadFile(fileHeader).ConfigureAwait(false))
-                        //using (var zipStream = fileToStore.Open())
-                        //{
-                        //    await fileStream.CopyToAsync(zipStream).ConfigureAwait(false);
-                        //}
-
 
 
                         totalCount++;
@@ -446,7 +552,7 @@ namespace Raven.Abstractions.Smuggler
             return config.Value;
         }
 
-        private async Task DetectServerSupportedFeatures(FilesConnectionStringOptions filesConnectionStringOptions)
+        private async Task<int> DetectServerSupportedFeatures(FilesConnectionStringOptions filesConnectionStringOptions)
         {
             var serverVersion = await this.Operations.GetVersion(filesConnectionStringOptions).ConfigureAwait(false);
             if (string.IsNullOrEmpty(serverVersion))
@@ -459,6 +565,8 @@ namespace Raven.Abstractions.Smuggler
 
             if (intServerVersion < 30)
                 throw new SmugglerExportException(string.Format("File Systems are not available on Server version: {0}. Smuggler version: {1}.", serverVersion, versionAtt.Version));
+
+            return intServerVersion;
         }
 
         private static void ReadLastEtagsFromFile(ExportFilesResult result)
