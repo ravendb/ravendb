@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.SqlReplication
         public readonly SqlReplicationConfiguration Configuration;
         public readonly SqlReplicationStatistics Statistics;
 
-        public string ReplicationUniqueName => "Sql replication of " + Configuration.Name;
+        public string ReplicationUniqueName => Configuration.Name;
         public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
         private bool _shouldWaitForChanges;
