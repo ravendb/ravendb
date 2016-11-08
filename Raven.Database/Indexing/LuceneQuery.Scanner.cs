@@ -44,8 +44,9 @@ namespace Raven.Database.Indexing
         /// <c>\\u0041</c> to <c>A</c>.
         /// 
         /// </summary>
-        private String DiscardEscapeChar(String input, bool shouldEscapeCommas = false)
+        private String DiscardEscapeChar(String input)
         {
+            var shouldEscapeCommas = InMethod;
             if (input.IndexOf('\\') == -1)
             {
                 return shouldEscapeCommas ? input.Replace("`,`", ",") : input;
