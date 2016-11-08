@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions.TimeSeries.Notifications;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
-using Raven.Client.Connection;
 using Raven.Json.Linq;
 using Sparrow.Collections;
 
@@ -42,7 +41,7 @@ namespace Raven.Client.TimeSeries.Changes
             }
         }
 
-        protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, TimeSeriesConnectionState>> connections)
+        protected override void NotifySubscribers(string type, RavenJObject value, List<TimeSeriesConnectionState> connections)
         {
             switch (type)
             {
@@ -50,14 +49,14 @@ namespace Raven.Client.TimeSeries.Changes
                     var changeNotification = value.JsonDeserialization<KeyChangeNotification>();
                     foreach (var timeSeries in connections)
                     {
-                        timeSeries.Value.Send(changeNotification);
+                        timeSeries.Send(changeNotification);
                     }
                     break;
                 case "BulkOperationNotification":
                     var bulkOperationNotification = value.JsonDeserialization<BulkOperationNotification>();
                     foreach (var timeSeries in connections)
                     {
-                        timeSeries.Value.Send(bulkOperationNotification);
+                        timeSeries.Send(bulkOperationNotification);
                     }
                     break;
                 default:

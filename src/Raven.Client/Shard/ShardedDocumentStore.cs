@@ -4,22 +4,19 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
+using Raven.Client.Util;
 
 namespace Raven.Client.Shard
 {
