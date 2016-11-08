@@ -34,7 +34,7 @@ namespace Raven.Database.Plugins.Builtins
             try
             {
                 var drives = DriveInfo.GetDrives()
-                    .Where(x => x.DriveType == DriveType.Fixed)
+                    .Where(x => x.DriveType == System.IO.DriveType.Fixed)
                     .ToList();
 
                 var hddDrivesWithPageFile = new List<string>();
@@ -50,14 +50,16 @@ namespace Raven.Database.Plugins.Builtins
                     var driveType = GetDriveType(driveNumber.Value);
                     switch (driveType)
                     {
-                        case RavenDriveType.SSD:
+                        case DriveType.SSD:
                             ssdDriveCount++;
                             continue;
-                        case RavenDriveType.HDD:
+                        case DriveType.HDD:
                             break;
-                        case RavenDriveType.Unknown:
-                            log.Warn($"Failed to determine if drive {currentDriveLetter} is SSD or HDD");
+                        case DriveType.Unknown:
                             //we can't figure out the drive type
+                            if (log.IsDebugEnabled)
+                                log.Debug($"Failed to determine if drive {currentDriveLetter} is SSD or HDD");
+
                             continue;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -91,24 +93,24 @@ namespace Raven.Database.Plugins.Builtins
             }
             catch (Exception e)
             {
-                log.WarnException("Failed to determine page file that is located on HDD", e);
+                log.WarnException("Failed to determine whether the page file is located on HDD", e);
             }
         }
 
         public void Dispose() { }
 
-        private enum RavenDriveType
+        private enum DriveType
         {
             SSD = 0,
             HDD = 1,
             Unknown
         }
 
-        private static RavenDriveType GetDriveType(uint physicalDriveNumber)
+        private static DriveType GetDriveType(uint physicalDriveNumber)
         {
             var sDrive = "\\\\.\\PhysicalDrive" + physicalDriveNumber;
             var driveType = HasNoSeekPenalty(sDrive);
-            return driveType != RavenDriveType.Unknown ? driveType : HasNominalMediaRotationRate(sDrive);
+            return driveType != DriveType.Unknown ? driveType : HasNominalMediaRotationRate(sDrive);
         }
 
         //for CreateFile to get handle to drive
@@ -148,7 +150,8 @@ namespace Raven.Database.Plugins.Builtins
         {
             public uint PropertyId;
             public uint QueryType;
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1)] public byte[] AdditionalParameters;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1)]
+            public byte[] AdditionalParameters;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -156,7 +159,8 @@ namespace Raven.Database.Plugins.Builtins
         {
             public uint Version;
             public uint Size;
-            [MarshalAs(UnmanagedType.U1)] public bool IncursSeekPenalty;
+            [MarshalAs(UnmanagedType.U1)]
+            public bool IncursSeekPenalty;
         }
 
         //deviceIoControl to check no seek penalty
@@ -180,15 +184,18 @@ namespace Raven.Database.Plugins.Builtins
             public uint TimeOutValue;
             private readonly uint ReservedAsUlong;
             public IntPtr DataBufferOffset;
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)] public byte[] PreviousTaskFile;
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)] public byte[] CurrentTaskFile;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+            public byte[] PreviousTaskFile;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+            public byte[] CurrentTaskFile;
         }
 
         [StructLayout(LayoutKind.Sequential)]
         private struct ATAIdentifyDeviceQuery
         {
             public ATA_PASS_THROUGH_EX header;
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 256)] public ushort[] data;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 256)]
+            public ushort[] data;
         }
 
         //deviceIoControl to check nominal media rotation rate
@@ -203,7 +210,7 @@ namespace Raven.Database.Plugins.Builtins
         private static extern uint FormatMessage(uint dwFlags, IntPtr lpSource, uint dwMessageId, uint dwLanguageId, StringBuilder lpBuffer, uint nSize, IntPtr Arguments);
 
         //method for no seek penalty
-        private static RavenDriveType HasNoSeekPenalty(string sDrive)
+        private static DriveType HasNoSeekPenalty(string sDrive)
         {
             var hDrive = CreateFileW(sDrive, 0, // No access to drive
                 FILE_SHARE_READ | FILE_SHARE_WRITE, IntPtr.Zero, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, IntPtr.Zero);
@@ -211,38 +218,45 @@ namespace Raven.Database.Plugins.Builtins
             if (hDrive == null || hDrive.IsInvalid)
             {
                 var message = GetErrorMessage(Marshal.GetLastWin32Error());
-                log.Warn("CreateFile failed. " + message);
-                return RavenDriveType.Unknown;
+
+                if (log.IsDebugEnabled)
+                    log.Debug("CreateFile failed. " + message);
+
+                return DriveType.Unknown;
             }
 
             var IOCTL_STORAGE_QUERY_PROPERTY = CTL_CODE(IOCTL_STORAGE_BASE, 0x500, METHOD_BUFFERED, FILE_ANY_ACCESS); // From winioctl.h
 
             var query_seek_penalty = new STORAGE_PROPERTY_QUERY
             {
-                PropertyId = StorageDeviceSeekPenaltyProperty, QueryType = PropertyStandardQuery
+                PropertyId = StorageDeviceSeekPenaltyProperty,
+                QueryType = PropertyStandardQuery
             };
 
             var querySeekPenaltyDesc = new DEVICE_SEEK_PENALTY_DESCRIPTOR();
 
             uint returnedQuerySeekPenaltySize;
 
-            var querySeekPenaltyResult = DeviceIoControl(hDrive, IOCTL_STORAGE_QUERY_PROPERTY, ref query_seek_penalty, (uint) Marshal.SizeOf(query_seek_penalty), ref querySeekPenaltyDesc, (uint) Marshal.SizeOf(querySeekPenaltyDesc), out returnedQuerySeekPenaltySize, IntPtr.Zero);
+            var querySeekPenaltyResult = DeviceIoControl(hDrive, IOCTL_STORAGE_QUERY_PROPERTY, ref query_seek_penalty, (uint)Marshal.SizeOf(query_seek_penalty), ref querySeekPenaltyDesc, (uint)Marshal.SizeOf(querySeekPenaltyDesc), out returnedQuerySeekPenaltySize, IntPtr.Zero);
 
             hDrive.Close();
 
             if (querySeekPenaltyResult == false)
             {
                 var message = GetErrorMessage(Marshal.GetLastWin32Error());
-                log.Warn("DeviceIoControl failed. " + message);
-                return RavenDriveType.Unknown;
+
+                if (log.IsDebugEnabled)
+                    log.Debug("DeviceIoControl failed. " + message);
+
+                return DriveType.Unknown;
             }
 
-            return querySeekPenaltyDesc.IncursSeekPenalty == false ? RavenDriveType.SSD : RavenDriveType.HDD;
+            return querySeekPenaltyDesc.IncursSeekPenalty == false ? DriveType.SSD : DriveType.HDD;
         }
 
         //method for nominal media rotation rate
         //(administrative privilege is required)
-        private static RavenDriveType HasNominalMediaRotationRate(string sDrive)
+        private static DriveType HasNominalMediaRotationRate(string sDrive)
         {
             var hDrive = CreateFileW(sDrive, GENERIC_READ | GENERIC_WRITE, //administrative privilege is required
                 FILE_SHARE_READ | FILE_SHARE_WRITE, IntPtr.Zero, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, IntPtr.Zero);
@@ -250,8 +264,11 @@ namespace Raven.Database.Plugins.Builtins
             if (hDrive == null || hDrive.IsInvalid)
             {
                 var message = GetErrorMessage(Marshal.GetLastWin32Error());
-                log.Warn("CreateFile failed. " + message);
-                return RavenDriveType.Unknown;
+
+                if (log.IsDebugEnabled)
+                    log.Debug("CreateFile failed. " + message);
+
+                return DriveType.Unknown;
             }
 
             var ioctlAtaPassThrough = CTL_CODE(IOCTL_SCSI_BASE, 0x040b, METHOD_BUFFERED, FILE_READ_ACCESS | FILE_WRITE_ACCESS); // From ntddscsi.h
@@ -259,32 +276,35 @@ namespace Raven.Database.Plugins.Builtins
             var id_query = new ATAIdentifyDeviceQuery();
             id_query.data = new ushort[256];
 
-            id_query.header.Length = (ushort) Marshal.SizeOf(id_query.header);
-            id_query.header.AtaFlags = (ushort) ATA_FLAGS_DATA_IN;
-            id_query.header.DataTransferLength = (uint) (id_query.data.Length*2); // Size of "data" in bytes
+            id_query.header.Length = (ushort)Marshal.SizeOf(id_query.header);
+            id_query.header.AtaFlags = (ushort)ATA_FLAGS_DATA_IN;
+            id_query.header.DataTransferLength = (uint)(id_query.data.Length * 2); // Size of "data" in bytes
             id_query.header.TimeOutValue = 3; // Sec
-            id_query.header.DataBufferOffset = (IntPtr) Marshal.OffsetOf(typeof (ATAIdentifyDeviceQuery), "data");
+            id_query.header.DataBufferOffset = (IntPtr)Marshal.OffsetOf(typeof(ATAIdentifyDeviceQuery), "data");
             id_query.header.PreviousTaskFile = new byte[8];
             id_query.header.CurrentTaskFile = new byte[8];
             id_query.header.CurrentTaskFile[6] = 0xec; // ATA IDENTIFY DEVICE
 
             uint retvalSize;
 
-            var result = DeviceIoControl(hDrive, ioctlAtaPassThrough, ref id_query, (uint) Marshal.SizeOf(id_query), ref id_query, (uint) Marshal.SizeOf(id_query), out retvalSize, IntPtr.Zero);
+            var result = DeviceIoControl(hDrive, ioctlAtaPassThrough, ref id_query, (uint)Marshal.SizeOf(id_query), ref id_query, (uint)Marshal.SizeOf(id_query), out retvalSize, IntPtr.Zero);
 
             hDrive.Close();
 
             if (result == false)
             {
                 var message = GetErrorMessage(Marshal.GetLastWin32Error());
-                log.Warn("DeviceIoControl failed. " + message);
-                return RavenDriveType.Unknown;
+
+                if (log.IsDebugEnabled)
+                    log.Debug("DeviceIoControl failed. " + message);
+
+                return DriveType.Unknown;
             }
 
             //word index of nominal media rotation rate
             //(1 means non-rotate device)
             const int kNominalMediaRotRateWordIndex = 217;
-            return id_query.data[kNominalMediaRotRateWordIndex] == 1 ? RavenDriveType.SSD : RavenDriveType.HDD;
+            return id_query.data[kNominalMediaRotRateWordIndex] == 1 ? DriveType.SSD : DriveType.HDD;
         }
 
         //method for error message
@@ -292,7 +312,7 @@ namespace Raven.Database.Plugins.Builtins
         {
             var message = new StringBuilder(255);
 
-            FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, IntPtr.Zero, (uint) code, 0, message, (uint) message.Capacity, IntPtr.Zero);
+            FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, IntPtr.Zero, (uint)code, 0, message, (uint)message.Capacity, IntPtr.Zero);
 
             return message.ToString();
         }
@@ -310,7 +330,8 @@ namespace Raven.Database.Plugins.Builtins
         private struct VOLUME_DISK_EXTENTS
         {
             private readonly uint NumberOfDiskExtents;
-            [MarshalAs(UnmanagedType.ByValArray)] public readonly DISK_EXTENT[] Extents;
+            [MarshalAs(UnmanagedType.ByValArray)]
+            public readonly DISK_EXTENT[] Extents;
         }
 
         // DeviceIoControl to get disk extents
@@ -329,7 +350,10 @@ namespace Raven.Database.Plugins.Builtins
             if (hDrive == null || hDrive.IsInvalid)
             {
                 var message = GetErrorMessage(Marshal.GetLastWin32Error());
-                log.Warn("CreateFile failed. " + message);
+
+                if (log.IsDebugEnabled)
+                    log.Debug("CreateFile failed. " + message);
+
                 return uint.MinValue;
             }
 
@@ -339,14 +363,17 @@ namespace Raven.Database.Plugins.Builtins
 
             uint returned_query_disk_extents_size;
 
-            bool query_disk_extents_result = DeviceIoControl(hDrive, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, IntPtr.Zero, 0, ref query_disk_extents, (uint) Marshal.SizeOf(query_disk_extents), out returned_query_disk_extents_size, IntPtr.Zero);
+            bool query_disk_extents_result = DeviceIoControl(hDrive, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, IntPtr.Zero, 0, ref query_disk_extents, (uint)Marshal.SizeOf(query_disk_extents), out returned_query_disk_extents_size, IntPtr.Zero);
 
             hDrive.Close();
 
             if (query_disk_extents_result == false || query_disk_extents.Extents.Length != 1)
             {
                 var message = GetErrorMessage(Marshal.GetLastWin32Error());
-                log.Warn("DeviceIoControl failed. " + message);
+
+                if (log.IsDebugEnabled)
+                    log.Debug("DeviceIoControl failed. " + message);
+
                 return null;
             }
 
