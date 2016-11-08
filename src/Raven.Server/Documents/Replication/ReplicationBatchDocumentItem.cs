@@ -3,7 +3,16 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Replication
 {
-    public struct ReplicationBatchItem
+    public struct ReplicationBatchIndexItem
+    {
+        public string Name;
+        public ChangeVectorEntry[] ChangeVector;
+        public BlittableJsonReaderObject Definition;
+        public long Etag;
+        public int Type;
+    }
+
+    public struct ReplicationBatchDocumentItem
     {
         public LazyStringValue Key;
         public ChangeVectorEntry[] ChangeVector;

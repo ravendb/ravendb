@@ -321,6 +321,12 @@ namespace Raven.Server.Documents
         }
 
 
+        public long ReadLastEtag(Transaction tx)
+        {
+            var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
+            return ReadLastEtag(table);
+        }
+
         //since both transformers and indexes need to store the same information,
         //this can be used for both
         private long ReadLastEtag(Table table)

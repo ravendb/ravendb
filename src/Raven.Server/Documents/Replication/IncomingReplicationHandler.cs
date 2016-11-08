@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Replication
 
         public void Start()
         {
-            _incomingThread = new Thread(ReceiveReplicatedDocuments)
+            _incomingThread = new Thread(ReceiveReplationBatches)
             {
                 IsBackground = true,
                 Name = $"Incoming replication {FromToString}"
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Replication
         [ThreadStatic]
         public static bool IsIncomingReplicationThread;
 
-        private void ReceiveReplicatedDocuments()
+        private void ReceiveReplationBatches()
         {
             IsIncomingReplicationThread = true;
 
@@ -96,22 +96,29 @@ namespace Raven.Server.Documents.Replication
                             {
                                 ValidateReplicationBatchAndGetDocsCount(message);
 
-                                long lastEtag;
-                                if (message.TryGet("LastEtag", out lastEtag) == false)
-                                    throw new InvalidDataException("The property 'LastEtag' wasn't found in replication batch, invalid data");
+                                long lastDocumentEtag;
+                                long lastIndexOrTransformerEtag;                                
 
-                                int replicatedDocsCount;
-                                if (!message.TryGet("Documents", out replicatedDocsCount))
-                                    throw new InvalidDataException($"Expected the 'Documents' field, but had no numeric field of this value, this is likely a bug");
-
-                                //replicatedDocsCount == 0 --> this is heartbeat message
-                                if (replicatedDocsCount > 0)
+                                if (message.TryGet("LastDocumentEtag", out lastDocumentEtag))
                                 {
-                                    ReceiveSingleBatch(replicatedDocsCount, lastEtag);
-                                    OnDocumentsReceived(this);
+                                    HandleReceivedDocumentBatch(message, lastDocumentEtag);
+
+                                    //return positive ack
+                                    SendStatusToSource(writer, lastDocumentEtag,"Documents");
                                 }
-                                //return positive ack
-                                SendStatusToSource(writer, lastEtag);
+                                else if (message.TryGet("LastIndexOrTransformerEtag", out lastIndexOrTransformerEtag) == false)
+                                {
+                                    HandleReceivedIndexOrTransformerBatch(message, lastIndexOrTransformerEtag);
+
+                                    //return positive ack
+                                    SendStatusToSource(writer, lastIndexOrTransformerEtag, "IndexOrTransformers");
+                                }
+                                else
+                                {
+                                    throw new InvalidDataException(
+                                        "The property 'LastDocumentEtag' and 'LastIndexOrTransformerEtag' weren't found in replication batch, invalid format");
+                                }
+
                             }
                             catch (Exception e)
                             {
@@ -148,6 +155,28 @@ namespace Raven.Server.Documents.Replication
                     OnFailed(e, this);
                 }
             }
+        }
+
+        private void HandleReceivedIndexOrTransformerBatch(BlittableJsonReaderObject message, long lastIndexOrTransformerEtag)
+        {
+            throw new NotImplementedException();
+        }
+
+        private long HandleReceivedDocumentBatch(BlittableJsonReaderObject message, long lastDocumentEtag)
+        {
+            int replicatedDocsCount;
+            if (!message.TryGet("Documents", out replicatedDocsCount))
+                throw new InvalidDataException(
+                    $"Expected the 'Documents' field, but had no numeric field of this value, this is likely a bug");
+
+            //replicatedDocsCount == 0 --> this is heartbeat message
+            if (replicatedDocsCount > 0)
+            {
+                ReceiveSingleBatch(replicatedDocsCount, lastDocumentEtag);
+                OnDocumentsReceived(this);
+            }
+
+            return lastDocumentEtag;
         }
 
         private unsafe void ReceiveSingleBatch(int replicatedDocsCount, long lastEtag)
@@ -374,9 +403,9 @@ namespace Raven.Server.Documents.Replication
                     maxReceivedChangeVectorByDatabase[_tempReplicatedChangeVector[i].DbId] = _tempReplicatedChangeVector[i].Etag;
                 }
             }
-        }
+        }      
 
-        private void SendStatusToSource(BlittableJsonTextWriter writer, long lastEtag)
+        private void SendStatusToSource(BlittableJsonTextWriter writer, long lastEtag, string handledMessageType)
         {
             var changeVector = new DynamicJsonArray();
             ChangeVectorEntry[] databaseChangeVector;
@@ -402,6 +431,7 @@ namespace Raven.Server.Documents.Replication
             _context.Write(writer, new DynamicJsonValue
             {
                 ["Type"] = "Ok",
+                ["MessageType"] = handledMessageType,
                 ["LastEtagAccepted"] = lastEtag,
                 ["Error"] = null,
                 ["CurrentChangeVector"] = changeVector

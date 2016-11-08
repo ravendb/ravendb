@@ -33,9 +33,17 @@ namespace Raven.Server.Documents.Replication
         private Thread _sendingThread;
 
         internal long _lastSentDocumentEtag;
+        internal long _lastSentIndexOrTransformerEtag;
+
         internal DateTime _lastDocumentSentTime;
+        internal DateTime _lastIndexOrTransformerSentTime;
+
         internal readonly Dictionary<Guid, long> _destinationLastKnownDocumentChangeVector = new Dictionary<Guid, long>();
+        internal readonly Dictionary<Guid, long> _destinationLastKnownIndexOrTransformerChangeVector = new Dictionary<Guid, long>();
+
         internal string _destinationLastKnownDocumentChangeVectorAsString;
+        internal string _destinationLastKnownIndexOrTransformerChangeVectorAsString;
+
         private TcpClient _tcpClient;
         private BlittableJsonTextWriter _writer;
         private JsonOperationContext.MultiDocumentParser _parser;
@@ -99,55 +107,58 @@ namespace Raven.Server.Documents.Replication
 
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context))
                     using (var stream = _tcpClient.GetStream())
-                    using (var sender = new ReplicationDocumentSender(stream, this, _log))
-                    using (_writer = new BlittableJsonTextWriter(_context, sender.Stream))
-                    using (_parser = _context.ParseMultiFrom(sender.Stream))
                     {
-                        //send initial connection information
-                        _context.Write(_writer, new DynamicJsonValue
+                        var sender = new ReplicationDocumentSender(stream, this, _log);
+                        using (_writer = new BlittableJsonTextWriter(_context, stream))
+                        using (_parser = _context.ParseMultiFrom(stream))
                         {
-                            ["DatabaseName"] = _destination.Database,
-                            ["Operation"] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
-                        });
-
-                        //start request/response for fetching last etag
-                        _context.Write(_writer, new DynamicJsonValue
-                        {
-                            ["Type"] = "GetLastEtag",
-                            ["SourceDatabaseId"] = _database.DbId.ToString(),
-                            ["SourceDatabaseName"] = _database.Name,
-                            ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
-                            ["MachineName"] = Environment.MachineName,
-                        });
-                        _writer.Flush();
-                        using (_context.OpenReadTransaction())
-                        {
-                            HandleServerResponse();
-                        }
-
-                        while (_cts.IsCancellationRequested == false)
-                        {
-                            _context.ResetAndRenew();
-                            if (sender.ExecuteReplicationOnce() == false)
+                            //send initial connection information
+                            _context.Write(_writer, new DynamicJsonValue
                             {
-                                using (_context.OpenReadTransaction())
-                                {
-                                    var currentEtag = DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
-                                    if (currentEtag < _lastSentDocumentEtag)
-                                        continue;
-                                }
+                                ["DatabaseName"] = _destination.Database,
+                                ["Operation"] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
+                            });
+
+                            //start request/response for fetching last etag
+                            _context.Write(_writer, new DynamicJsonValue
+                            {
+                                ["Type"] = "GetLastEtag",
+                                ["SourceDatabaseId"] = _database.DbId.ToString(),
+                                ["SourceDatabaseName"] = _database.Name,
+                                ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
+                                ["MachineName"] = Environment.MachineName,
+                            });
+                            _writer.Flush();
+                            using (_context.OpenReadTransaction())
+                            {
+                                HandleServerResponse();
                             }
 
-                            //if this returns false, this means either timeout or canceled token is activated                    
-                            while (_waitForChanges.Wait(_minimalHeartbeatInterval, _cts.Token) == false)
+                            while (_cts.IsCancellationRequested == false)
                             {
                                 _context.ResetAndRenew();
-                                using (_context.OpenReadTransaction())
+                                if (sender.ExecuteReplicationOnce() == false)
                                 {
-                                    SendHeartbeat();
+                                    using (_context.OpenReadTransaction())
+                                    {
+                                        var currentEtag =
+                                            DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
+                                        if (currentEtag < _lastSentDocumentEtag)
+                                            continue;
+                                    }
                                 }
+
+                                //if this returns false, this means either timeout or canceled token is activated                    
+                                while (_waitForChanges.Wait(_minimalHeartbeatInterval, _cts.Token) == false)
+                                {
+                                    _context.ResetAndRenew();
+                                    using (_context.OpenReadTransaction())
+                                    {
+                                        SendHeartbeat();
+                                    }
+                                }
+                                _waitForChanges.Reset();
                             }
-                            _waitForChanges.Reset();
                         }
                     }
                 }
@@ -207,8 +218,10 @@ namespace Raven.Server.Documents.Replication
                 _context.Write(_writer, new DynamicJsonValue
                 {
                     ["Type"] = "ReplicationBatch",
-                    ["LastEtag"] = _lastSentDocumentEtag,
-                    ["Documents"] = 0
+                    ["LastDocumentEtag"] = _lastSentDocumentEtag,
+                    ["LastIndexOrTransformerEtag"] = _lastSentIndexOrTransformerEtag,
+                    ["Documents"] = 0,
+                    ["IndexesAndTransformers"] = 0
                 });
                 _writer.Flush();
                 HandleServerResponse();

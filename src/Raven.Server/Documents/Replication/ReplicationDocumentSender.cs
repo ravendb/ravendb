@@ -4,12 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Extensions;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -17,37 +13,11 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ReplicationDocumentSender : IDisposable
+    public class ReplicationDocumentSender
     {
-        public class ReplicationContext
-        {
-            public DocumentsOperationContext OperationContext;
-
-            public Reference<long> LastSentEtag;
-
-            public CancellationToken Token;
-
-            public DocumentsStorage DocumentsStorage;
-
-            public Action SendHeartbeat;
-
-            public Dictionary<Guid, long> LastKnownChangeVector;
-
-            public Reference<string> LastKnownChangeVectorAsString;
-
-            public Action HandleServerResponse;
-
-            public Action<DynamicJsonValue> WriteToServerAndFlush;
-
-            public ReplicationDestination Destination;
-
-            public string DatabaseName;
-            public Reference<DateTime> LastSentTime;
-        }
-
         private readonly Logger _log;
         private long _lastEtag;
-        private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems;
+        private readonly SortedList<long, ReplicationBatchDocumentItem> _orderedReplicaItems;
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
         private readonly OutgoingReplicationHandler _parent;
@@ -55,16 +25,13 @@ namespace Raven.Server.Documents.Replication
         public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
         {
             _log = log;
-            _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
+            _orderedReplicaItems = new SortedList<long, ReplicationBatchDocumentItem>();
             _stream = stream;
             _parent = parent;
         }
 
-        public Stream Stream => _stream;
-
         public bool ExecuteReplicationOnce()
-        {
-            _orderedReplicaItems.Clear();
+        {            
             var readTx = _parent._context.OpenReadTransaction();
             try
             {
@@ -105,7 +72,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         if (doc.Etag > maxEtag)
                             break;
-                        AddReplicationItemToBatch(new ReplicationBatchItem
+                        AddReplicationItemToBatch(new ReplicationBatchDocumentItem
                         {
                             Etag = doc.Etag,
                             ChangeVector = doc.ChangeVector,
@@ -118,7 +85,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         if (tombstone.Etag > maxEtag)
                             break;
-                        AddReplicationItemToBatch(new ReplicationBatchItem
+                        AddReplicationItemToBatch(new ReplicationBatchDocumentItem
                         {
                             Etag = tombstone.Etag,
                             ChangeVector = tombstone.ChangeVector,
@@ -154,18 +121,22 @@ namespace Raven.Server.Documents.Replication
 
                 _parent.CancellationToken.ThrowIfCancellationRequested();
 
-                SendDocuments();
+                SendDocumentsBatch();
                 return true;
             }
             finally
             {
+                foreach(var item in _orderedReplicaItems)
+                    item.Value.Data?.Dispose(); //item.Value.Data is null if tombstone
+                _orderedReplicaItems.Clear();
+
                 if (readTx.Disposed == false)
                     readTx.Dispose();
             }
         }
 
 
-        private void AddReplicationItemToBatch(ReplicationBatchItem item)
+        private void AddReplicationItemToBatch(ReplicationBatchDocumentItem item)
         {
             if (ShouldSkipReplication(item.Key))
             {
@@ -190,7 +161,7 @@ namespace Raven.Server.Documents.Replication
         }
 
 
-        private void SendDocuments()
+        private void SendDocumentsBatch()
         {
             if (_log.IsInfoEnabled)
                 _log.Info(
@@ -200,7 +171,7 @@ namespace Raven.Server.Documents.Replication
             var headerJson = new DynamicJsonValue
             {
                 ["Type"] = "ReplicationBatch",
-                ["LastEtag"] = _lastEtag,
+                ["LastDocumentEtag"] = _lastEtag,
                 ["Documents"] = _orderedReplicaItems.Count
             };
             _parent.WriteToServerAndFlush(headerJson);
@@ -339,9 +310,5 @@ namespace Raven.Server.Documents.Replication
                 changeVector.Length);
         }
 
-        public void Dispose()
-        {
-            
-        }
     }
 }
