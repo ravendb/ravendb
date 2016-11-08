@@ -4,7 +4,7 @@ import dialog = require("plugins/dialog");
 import getSqlReplicationStatsCommand = require("commands/database/studio/getSqlReplicationStatsCommand");
 
 class sqlReplicationStatsDialog extends dialogViewModelBase {
-    repData = ko.observable<sqlReplicationStatisticsDto>();
+    repData = ko.observable<Raven.Server.Documents.SqlReplication.SqlReplicationStatistics>();
 
     constructor(private activeDatabase: database, private sqlReplicationName:string) {
         super();
@@ -18,17 +18,12 @@ class sqlReplicationStatsDialog extends dialogViewModelBase {
         dialog.close(this);
     }
 
-    fetchSqlReplicationStats(): JQueryPromise<sqlReplicationStatisticsDto> {
-        
+    fetchSqlReplicationStats(): JQueryPromise<Raven.Server.Documents.SqlReplication.SqlReplicationStatistics> {
         return new getSqlReplicationStatsCommand(this.activeDatabase, this.sqlReplicationName)
             .execute()
-            .done((result: sqlReplicationStatisticsDto) => {
+            .done((result: Raven.Server.Documents.SqlReplication.SqlReplicationStatistics) => {
                 this.repData(result);
-            }).fail(() => {
-            this.repData(null);
-        });
-        
-        
+            }).fail(() => this.repData(null));
     }
 }
 
