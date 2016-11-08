@@ -265,8 +265,14 @@ namespace Raven.Database.Server.Controllers
             }
             nvc = HttpUtility.ParseQueryString(req.RequestUri.Query);
 
-            foreach (var _key in nvc.AllKeys)
-                nvc[_key] = Uri.UnescapeDataString(nvc[_key] ?? String.Empty);
+            if (!ClientIsV3OrHigher(req))
+            {
+                var originalQuery = nvc["query"];
+                if (originalQuery != null)
+                    nvc["query"] = originalQuery.Replace("+", "%2B");
+                foreach (var queryKey in nvc.AllKeys)
+                    nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey]);
+            }
 
             req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
@@ -276,6 +282,19 @@ namespace Raven.Database.Server.Controllers
         {
             var items = InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key == key);
             return items.Select(pair => (pair.Value != null) ? Uri.UnescapeDataString(pair.Value) : null ).ToArray();
+        }
+
+        protected static bool ClientIsV3OrHigher(HttpRequestMessage req)
+        {
+            IEnumerable<string> values;
+            if (req.Headers.TryGetValues("Raven-Client-Version", out values) == false)
+                return false; // probably 1.0 client?
+            foreach (var value in values)
+            {
+                if (string.IsNullOrEmpty(value)) return false;
+                if (value[0] == '1' || value[0] == '2') return false;
+            }
+            return true;
         }
 
         public Etag GetEtagFromQueryString()
