@@ -116,18 +116,26 @@ namespace Voron.Impl
 
             foreach (var allocationInfo in AllocationInfos)
             {
+                _pager.UnprotectPageRange(allocationInfo.BaseAddress, (ulong)allocationInfo.Size);
+
                 for (int i = 0; i < allocationInfo.Size; i++)
                 {
                     var b = *(allocationInfo.BaseAddress + i);
                     *(allocationInfo.BaseAddress + i) = b;
                 }
+
+                _pager.ProtectPageRange(allocationInfo.BaseAddress, (ulong)allocationInfo.Size);
             }
+
+            _pager.UnprotectPageRange(MapBase, (ulong)size);
 
             for (int i = 0; i < size; i++)
             {
                 var b = *(MapBase + i);
                 *(MapBase + i) = b;
             }
+
+            _pager.ProtectPageRange(MapBase, (ulong)size);
         }
     }
 }

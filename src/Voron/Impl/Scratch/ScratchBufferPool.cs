@@ -182,10 +182,12 @@ namespace Voron.Impl.Scratch
             }
         }
 
-        public void Free(int scratchNumber, long page, long asOfTxId)
+        public void Free(int scratchNumber, long page, LowLevelTransaction tx)
         {
+            long asOfTxId = tx?.Id ?? -1;
+
             var scratch = _scratchBuffers[scratchNumber];
-            scratch.File.Free(page, asOfTxId);
+            scratch.File.Free(page, tx);
             if (scratch.File.CurrentlyAllocatedBytes != 0)
                 return;
 

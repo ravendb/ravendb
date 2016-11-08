@@ -95,16 +95,20 @@ namespace Voron.Impl.Journal
             {
                 if(totalRead > current->UncompressedSize)
                     throw new InvalidDataException($"Attempted to read position {totalRead} from transaction data while the transaction is size {current->UncompressedSize}");
+
                 Debug.Assert(_journalPager.Disposed == false);
                 Debug.Assert(_recoveryPager.Disposed == false);
-                _dataPager.EnsureContinuous(pageInfoPtr[i].PageNumber,
-                    GetNumberOfPagesFromSize(options, pageInfoPtr[i].Size));
+
+                _dataPager.EnsureContinuous(pageInfoPtr[i].PageNumber, GetNumberOfPagesFromSize(options, pageInfoPtr[i].Size));
                 var pagePtr = _dataPager.AcquirePagePointer(null, pageInfoPtr[i].PageNumber);
 
                 var diffPageNumber = *(long*) (outputPage + totalRead);
                 if (pageInfoPtr[i].PageNumber != diffPageNumber)
                     throw new InvalidDataException($"Expected a diff for page {pageInfoPtr[i].PageNumber} but got one for {diffPageNumber}");
                 totalRead += sizeof(long);
+
+                _dataPager.UnprotectPageRange(pagePtr, (ulong)pageInfoPtr[i].Size);
+
                 if (pageInfoPtr[i].DiffSize == 0)
                 {
                     Memory.Copy(pagePtr, outputPage + totalRead, pageInfoPtr[i].Size);
@@ -119,6 +123,8 @@ namespace Voron.Impl.Journal
                     _diffApplier.Apply();
                     totalRead += pageInfoPtr[i].DiffSize;
                 }
+
+                _dataPager.ProtectPageRange(pagePtr, (ulong)pageInfoPtr[i].Size);
             }
 
             LastTransactionHeader = current;

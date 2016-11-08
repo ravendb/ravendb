@@ -454,14 +454,18 @@ namespace Voron.Platform.Win32
             AllocationType flAllocationType, MemoryProtection flProtect);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool VirtualProtect(byte* lpAddress, UIntPtr dwSize,
+            MemoryProtection flNewProtect, out MemoryProtection lpflOldProtect);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool VirtualFree(byte* lpAddress, UIntPtr dwSize,
             FreeType dwFreeType);
 
-        [DllImport("kernel32.dll")]
+        [DllImport("kernel32.dll", SetLastError = true)]
         public static extern int VirtualQuery(
             byte* lpAddress,
             MEMORY_BASIC_INFORMATION* lpBuffer,
-            IntPtr dwLength
+            UIntPtr dwLength
         );
 
         [DllImport("Kernel32.dll", SetLastError = true)]
