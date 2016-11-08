@@ -24,22 +24,24 @@ namespace Raven.Server.Documents.Replication
 {
     public class OutgoingReplicationHandler : IDisposable
     {
-        private readonly DocumentDatabase _database;
-        private readonly ReplicationDestination _destination;
+        internal readonly DocumentDatabase _database;
+        internal readonly ReplicationDestination _destination;
         private readonly Logger _log;
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim(false);
         private readonly CancellationTokenSource _cts;
         private readonly TimeSpan _minimalHeartbeatInterval = TimeSpan.FromSeconds(15);
         private Thread _sendingThread;
 
-        private readonly Reference<long> _lastSentDocumentEtag = new Reference<long>();
-        private readonly Reference<DateTime> _lastDocumentSentTime = new Reference<DateTime>();
-        private readonly Dictionary<Guid, long> _destinationLastKnownDocumentChangeVector = new Dictionary<Guid, long>();
-        private readonly Reference<string> _destinationLastKnownDocumentChangeVectorAsString = new Reference<string>();
+        internal long _lastSentDocumentEtag;
+        internal DateTime _lastDocumentSentTime;
+        internal readonly Dictionary<Guid, long> _destinationLastKnownDocumentChangeVector = new Dictionary<Guid, long>();
+        internal string _destinationLastKnownDocumentChangeVectorAsString;
         private TcpClient _tcpClient;
         private BlittableJsonTextWriter _writer;
         private JsonOperationContext.MultiDocumentParser _parser;
-        private DocumentsOperationContext _context;
+        internal DocumentsOperationContext _context;
+
+        internal CancellationToken CancellationToken => _cts.Token;
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
 
@@ -97,21 +99,7 @@ namespace Raven.Server.Documents.Replication
 
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context))
                     using (var stream = _tcpClient.GetStream())
-                    using (var sender = new ReplicationDocumentSender(stream, new ReplicationDocumentSender.ReplicationContext
-                    {
-                        OperationContext = _context,
-                        DatabaseName = _database.Name,
-                        Destination = _destination,
-                        DocumentsStorage = _database.DocumentsStorage,
-                        HandleServerResponse = HandleServerResponseFromDocumentBatch,
-                        LastKnownChangeVector = _destinationLastKnownDocumentChangeVector,
-                        LastKnownChangeVectorAsString = _destinationLastKnownDocumentChangeVectorAsString,
-                        LastSentEtag = _lastSentDocumentEtag,
-                        LastSentTime = _lastDocumentSentTime,
-                        Token = _cts.Token,
-                        WriteToServerAndFlush = WriteToServerAndFlush,
-                        SendHeartbeat = SendHeartbeat                        
-                    }, _log))
+                    using (var sender = new ReplicationDocumentSender(stream, this, _log))
                     using (_writer = new BlittableJsonTextWriter(_context, sender.Stream))
                     using (_parser = _context.ParseMultiFrom(sender.Stream))
                     {
@@ -134,7 +122,7 @@ namespace Raven.Server.Documents.Replication
                         _writer.Flush();
                         using (_context.OpenReadTransaction())
                         {
-                            HandleServerResponseFromDocumentBatch();
+                            HandleServerResponse();
                         }
 
                         while (_cts.IsCancellationRequested == false)
@@ -145,7 +133,7 @@ namespace Raven.Server.Documents.Replication
                                 using (_context.OpenReadTransaction())
                                 {
                                     var currentEtag = DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
-                                    if (currentEtag < _lastSentDocumentEtag.Value)
+                                    if (currentEtag < _lastSentDocumentEtag)
                                         continue;
                                 }
                             }
@@ -177,7 +165,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void WriteToServerAndFlush(DynamicJsonValue val)
+        internal void WriteToServerAndFlush(DynamicJsonValue val)
         {
             _context.Write(_writer,val);
             _writer.Flush();
@@ -187,9 +175,9 @@ namespace Raven.Server.Documents.Replication
         {
             _destinationLastKnownDocumentChangeVector.Clear();
 
-            _lastSentDocumentEtag.Value = replicationBatchReply.LastEtagAccepted;
+            _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
-            _destinationLastKnownDocumentChangeVectorAsString.Value = replicationBatchReply.CurrentChangeVector.Format();
+            _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.CurrentChangeVector.Format();
 
             foreach (var changeVectorEntry in replicationBatchReply.CurrentChangeVector)
             {
@@ -203,7 +191,7 @@ namespace Raven.Server.Documents.Replication
                 // those up with the remove side, so we'll start the replication loop again.
                 // We don't care if they are locally modified or not, because we filter documents that
                 // the other side already have (based on the change vector).
-                if (DateTime.UtcNow - _lastDocumentSentTime.Value > _minimalHeartbeatInterval)
+                if (DateTime.UtcNow - _lastDocumentSentTime > _minimalHeartbeatInterval)
                     _waitForChanges.Set();
             }
         }
@@ -212,18 +200,18 @@ namespace Raven.Server.Documents.Replication
 
         public ReplicationDestination Destination => _destination;
 
-        private void SendHeartbeat()
+        internal void SendHeartbeat()
         {
             try
             {
                 _context.Write(_writer, new DynamicJsonValue
                 {
                     ["Type"] = "ReplicationBatch",
-                    ["LastEtag"] = _lastSentDocumentEtag.Value,
+                    ["LastEtag"] = _lastSentDocumentEtag,
                     ["Documents"] = 0
                 });
                 _writer.Flush();
-                HandleServerResponseFromDocumentBatch();
+                HandleServerResponse();
             }
             catch (Exception e)
             {
@@ -233,7 +221,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void HandleServerResponseFromDocumentBatch()
+        internal void HandleServerResponse()
         {
             using (var replicationBatchReplyMessage = _parser.ParseToMemory("replication acknowledge message"))
             {
@@ -272,7 +260,7 @@ namespace Raven.Server.Documents.Replication
             var host = new Uri(connection.Url).Host;
             try
             {
-                tcpClient.ConnectAsync(host, connection.Port).Wait();
+                tcpClient.ConnectAsync(host, connection.Port).Wait(CancellationToken);
             }
             catch (SocketException e)
             {

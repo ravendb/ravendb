@@ -50,14 +50,14 @@ namespace Raven.Server.Documents.Replication
         private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems;
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
-        private readonly ReplicationContext _replicationContext;
+        private readonly OutgoingReplicationHandler _parent;
 
-        public ReplicationDocumentSender(Stream stream, ReplicationContext replicationContext, Logger log)
+        public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
         {
             _log = log;
             _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
             _stream = stream;
-            _replicationContext = replicationContext;
+            _parent = parent;
         }
 
         public Stream Stream => _stream;
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Replication
         public bool ExecuteReplicationOnce()
         {
             _orderedReplicaItems.Clear();
-            var readTx = _replicationContext.OperationContext.OpenReadTransaction();
+            var readTx = _parent._context.OpenReadTransaction();
             try
             {
 
@@ -76,16 +76,16 @@ namespace Raven.Server.Documents.Replication
                 var timeout = Debugger.IsAttached ? 60*1000 : 1000;
                 while (sp.ElapsedMilliseconds < timeout)
                 {
-                    _lastEtag = _replicationContext.LastSentEtag.Value;
+                    _lastEtag = _parent._lastSentDocumentEtag;
 
-                    _replicationContext.Token.ThrowIfCancellationRequested();
+                    _parent.CancellationToken.ThrowIfCancellationRequested();
 
                     var docs =
-                        _replicationContext.DocumentsStorage.GetDocumentsFrom(_replicationContext.OperationContext,
+                        _parent._database.DocumentsStorage.GetDocumentsFrom(_parent._context,
                                 _lastEtag + 1, 0, 1024)
                             .ToList();
                     var tombstones =
-                        _replicationContext.DocumentsStorage.GetTombstonesFrom(_replicationContext.OperationContext,
+                        _parent._database.DocumentsStorage.GetTombstonesFrom(_parent._context,
                                 _lastEtag + 1, 0, 1024)
                             .ToList();
 
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Replication
 
                     // if we are at the end, we are done
                     if (_lastEtag <=
-                        DocumentsStorage.ReadLastEtag(_replicationContext.OperationContext.Transaction.InnerTransaction))
+                        DocumentsStorage.ReadLastEtag(_parent._context.Transaction.InnerTransaction))
                     {
                         break;
                     }
@@ -138,21 +138,21 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                 {
                     _log.Info(
-                        $"Found {_orderedReplicaItems.Count:#,#;;0} documents to replicate to {_replicationContext.Destination.Database} @ {_replicationContext.Destination.Url} in {sp.ElapsedMilliseconds:#,#;;0} ms.");
+                        $"Found {_orderedReplicaItems.Count:#,#;;0} documents to replicate to {_parent.Destination.Database} @ {_parent.Destination.Url} in {sp.ElapsedMilliseconds:#,#;;0} ms.");
                 }
 
                 if (_orderedReplicaItems.Count == 0)
                 {
-                    var hasModification = _lastEtag != _replicationContext.LastSentEtag.Value;
-                    _replicationContext.LastSentEtag.Value = _lastEtag;
+                    var hasModification = _lastEtag != _parent._lastSentDocumentEtag;
+                    _parent._lastSentDocumentEtag = _lastEtag;
                     // ensure that the other server is aware that we skipped 
                     // on (potentially a lot of) documents to send, and we update
                     // the last etag they have from us on the other side
-                    _replicationContext.SendHeartbeat();
+                    _parent.SendHeartbeat();
                     return hasModification;
                 }
 
-                _replicationContext.Token.ThrowIfCancellationRequested();
+                _parent.CancellationToken.ThrowIfCancellationRequested();
 
                 SendDocuments();
                 return true;
@@ -176,12 +176,12 @@ namespace Raven.Server.Documents.Replication
                 return;
             }
             // destination already has it
-            if (item.ChangeVector.GreaterThan(_replicationContext.LastKnownChangeVector) == false)
+            if (item.ChangeVector.GreaterThan(_parent._destinationLastKnownDocumentChangeVector) == false)
             {
                 if (_log.IsInfoEnabled)
                 {
                     _log.Info(
-                        $"Skipping replication of {item.Key} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Dest: {_replicationContext.LastKnownChangeVectorAsString} ");
+                        $"Skipping replication of {item.Key} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Dest: {_parent._destinationLastKnownDocumentChangeVectorAsString} ");
                 }
                 return;
             }
@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Replication
         {
             if (_log.IsInfoEnabled)
                 _log.Info(
-                    $"Starting sending replication batch ({_replicationContext.DatabaseName}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag}");
+                    $"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag}");
 
             var sw = Stopwatch.StartNew();
             var headerJson = new DynamicJsonValue
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Replication
                 ["LastEtag"] = _lastEtag,
                 ["Documents"] = _orderedReplicaItems.Count
             };
-            _replicationContext.WriteToServerAndFlush(headerJson);
+            _parent.WriteToServerAndFlush(headerJson);
 
             foreach (var item in _orderedReplicaItems)
             {
@@ -212,21 +212,21 @@ namespace Raven.Server.Documents.Replication
 
             // we can release the read transaction while we are waiting for 
             // reply from the server and not hold it for a long time
-            _replicationContext.OperationContext.Transaction.Dispose();
+            _parent._context.Transaction.Dispose();
 
             _stream.Flush();
             sw.Stop();
 
-            _replicationContext.LastSentEtag.Value = _lastEtag;
+            _parent._lastSentDocumentEtag = _lastEtag;
 
             if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
                 _log.Info(
                     $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. First sent etag = {_orderedReplicaItems[0].Etag}, last sent etag = {_lastEtag}");
 
-            _replicationContext.LastSentTime.Value = DateTime.UtcNow;
-            using (_replicationContext.OperationContext.OpenReadTransaction())
+            _parent._lastDocumentSentTime = DateTime.UtcNow;
+            using (_parent._context.OpenReadTransaction())
             {
-                _replicationContext.HandleServerResponse();
+                _parent.HandleServerResponse();
             }
         }
 
