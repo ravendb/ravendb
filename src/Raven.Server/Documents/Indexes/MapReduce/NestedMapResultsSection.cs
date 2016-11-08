@@ -42,6 +42,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public bool IsModified { get; private set; }
 
+        public Slice Name => _nestedValueKey;
+
         public void Add(long id, BlittableJsonReaderObject result)
         {
             IsModified = true;
@@ -137,9 +139,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _parent.Delete(_nestedValueKey);
         }
 
-        public int GetResults(JsonOperationContext context,List<BlittableJsonReaderObject> results)
+        public int GetResults(JsonOperationContext context, List<BlittableJsonReaderObject> results)
         {
-
             var readResult = _parent.Read(_nestedValueKey);
             if (readResult == null)
                 return 0;

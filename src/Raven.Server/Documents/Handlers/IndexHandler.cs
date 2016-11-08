@@ -87,11 +87,8 @@ namespace Raven.Server.Documents.Handlers
             var operation = GetStringQueryString("op");
 
             JsonOperationContext context;
-            TransactionOperationContext indexContext;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            using (index._contextPool.AllocateOperationContext(out indexContext))
-            using (var tx = indexContext.OpenReadTransaction())
             {
                 if (string.Equals(operation, "map-reduce-tree", StringComparison.OrdinalIgnoreCase))
                 {
@@ -107,7 +104,35 @@ namespace Raven.Server.Documents.Handlers
                         return Task.CompletedTask;
                     }
 
-                    //index.Debug.Get
+                    var docId = GetStringQueryString("docId", required: false);
+
+                    IEnumerable<ReduceTreeNode> trees;
+                    using (index.GetReduceTree(docId, out trees))
+                    {
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName("Trees");
+                        writer.WriteStartArray();
+
+                        var first = true;
+
+                        foreach (var root in trees)
+                        {
+                            if (first == false)
+                                writer.WriteComma();
+
+                            writer.WriteTreeNodesRecursively(new [] { root });
+
+                            first = false;
+                        }
+
+                        writer.WriteEndArray();
+
+                        writer.WriteEndObject();
+                        
+                    }
+
+                    return Task.CompletedTask;
                 }
 
                 if (string.Equals(operation, "source-doc-ids", StringComparison.OrdinalIgnoreCase))
@@ -123,7 +148,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (string.Equals(operation, "reduce-keys", StringComparison.OrdinalIgnoreCase))
                 {
-
+                    throw new NotImplementedException("Getting reduce keys is not implemented");
                 }
 
                 throw new NotSupportedException($"{operation} is not supported");

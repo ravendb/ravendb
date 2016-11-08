@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                    Memory.CompareInline(newResult.BasePointer, existingData.Ptr, existingData.Size) == 0;
         }
 
-        private static unsafe Queue<MapEntry> GetMapEntries(FixedSizeTree documentMapEntries)
+        internal static unsafe Queue<MapEntry> GetMapEntries(FixedSizeTree documentMapEntries)
         {
             var entries = new Queue<MapEntry>((int)documentMapEntries.NumberOfEntries);
 
@@ -224,28 +224,33 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return entries;
         }
 
-        public unsafe MapReduceResultsStore GetResultsStore(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create, PageLocator pageLocator = null)
+        public MapReduceResultsStore GetResultsStore(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create, PageLocator pageLocator = null)
         {
             MapReduceResultsStore store;
             if (MapReduceWorkContext.StoreByReduceKeyHash.TryGetValue(reduceKeyHash, out store) == false)
             {
-                Slice read;
-                using (MapReduceWorkContext.ResultsStoreTypes.Read((long)reduceKeyHash, out read))
-                {
-                    MapResultsStorageType type;
-
-                    if (read.HasValue)
-                        type = (MapResultsStorageType)(*read.CreateReader().Base);
-                    else
-                        type = MapResultsStorageType.Nested;
-
-                    store = new MapReduceResultsStore(reduceKeyHash, type, indexContext, MapReduceWorkContext, create, pageLocator);
-
-                    MapReduceWorkContext.StoreByReduceKeyHash[reduceKeyHash] = store;
-                }
+                MapReduceWorkContext.StoreByReduceKeyHash[reduceKeyHash] = store = 
+                    CreateResultsStore(MapReduceWorkContext.ResultsStoreTypes, reduceKeyHash, indexContext, create, pageLocator);
             }
 
             return store;
+        }
+
+        internal unsafe MapReduceResultsStore CreateResultsStore(FixedSizeTree typePerHash, ulong reduceKeyHash,
+            TransactionOperationContext indexContext, bool create, PageLocator pageLocator = null)
+        {
+            MapResultsStorageType type;
+            Slice read;
+            using (typePerHash.Read((long) reduceKeyHash, out read))
+            {
+                if (read.HasValue)
+                    type = (MapResultsStorageType) (*read.CreateReader().Base);
+                else
+                    type = MapResultsStorageType.Nested;
+            }
+
+            return new MapReduceResultsStore(reduceKeyHash, type, indexContext, MapReduceWorkContext, create,
+                pageLocator);
         }
 
         protected override void LoadValues()

@@ -166,12 +166,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             section.MoveTo(Tree);
         }
 
-        public NestedMapResultsSection GetNestedResultsSection()
+        public NestedMapResultsSection GetNestedResultsSection(Tree tree = null) // TODO arek
         {
             if (_nestedSection != null)
                 return _nestedSection;
 
-            _nestedSection = new NestedMapResultsSection(_indexContext.Environment, _mapReduceContext.ReducePhaseTree, _nestedValueKey);
+            _nestedSection = new NestedMapResultsSection(_indexContext.Environment, tree ?? _mapReduceContext.ReducePhaseTree, _nestedValueKey);
 
             return _nestedSection;
         }

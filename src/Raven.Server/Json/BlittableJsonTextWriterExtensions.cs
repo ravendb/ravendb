@@ -11,11 +11,13 @@ using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Data.BTrees;
 
 namespace Raven.Server.Json
 {
@@ -1053,6 +1055,68 @@ namespace Raven.Server.Json
             writer.WriteInteger(count);
 
             writer.WriteEndObject();
+        }
+
+
+        public static void WriteTreeNodesRecursively(this BlittableJsonTextWriter writer, IEnumerable<ReduceTreeNode> results)
+        {
+            var first = true;
+
+            foreach (var treeNode in results)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                writer.WriteStartObject();
+
+                var written = false;
+
+                if (treeNode.Name != null)
+                {
+                    writer.WritePropertyName(nameof(ReduceTreeNode.Name));
+                    writer.WriteString(treeNode.Name);
+
+                    written = true;
+                }
+
+                if (treeNode.Page != null)
+                {
+                    if (written)
+                        writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(TreePage.PageNumber));
+                    writer.WriteInteger(treeNode.Page.PageNumber);
+
+                    written = true;
+                }
+
+                if (treeNode.Children != null)
+                {
+                    if (written)
+                        writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(ReduceTreeNode.Children));
+                    writer.WriteStartArray();
+
+                    WriteTreeNodesRecursively(writer, treeNode.Children);
+
+                    writer.WriteEndArray();
+
+                    written = true;
+                }
+                
+                if (treeNode.Data != null)
+                {
+                    if (written)
+                        writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(ReduceTreeNode.Data));
+                    writer.WriteObject(treeNode.Data);
+                }
+
+                writer.WriteEndObject();
+                first = false;
+            }
         }
     }
 }

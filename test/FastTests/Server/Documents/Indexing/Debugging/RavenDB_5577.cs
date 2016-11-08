@@ -96,6 +96,50 @@ select new
             }
         }
 
+        [Fact]
+        public void Getting_trees()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                using (var index = MapReduceIndex.CreateNew(1, new IndexDefinition
+                {
+                    Name = "Users_ByCount_GroupByProduct",
+                    Maps = { @"from order in docs.Orders
+from line in order.Lines
+select new { Product = line.Product, Count = 1, Total = line.Price }" },
+                    Reduce = @"from result in mapResults
+group result by result.Product into g
+select new
+{
+    Product = g.Key,
+    Count = g.Sum(x=> x.Count),
+    Total = g.Sum(x=> x.Total)
+}",
+                }, database))
+                {
+                    var numberOfDocs = 100;
+
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    {
+                        for (int i = 0; i < numberOfDocs; i++)
+                        {
+                            var order = CreateOrder();
+                            PutOrder(database, order, context, i);
+                        }
+
+                        var firstRunStats = new IndexingRunStats();
+                        var scope = new IndexingStatsScope(firstRunStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
+
+                        IEnumerable<ReduceTreeNode> trees;
+                        using (index.GetReduceTree("orders/1", out trees))
+                        {
+                        }
+                    }
+                }
+            }
+        }
+
         private static DynamicJsonValue CreateOrder()
         {
             return new DynamicJsonValue
