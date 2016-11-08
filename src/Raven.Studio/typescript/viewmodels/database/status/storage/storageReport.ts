@@ -1,9 +1,13 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getStorageReportCommand = require("commands/database/debug/getStorageReportCommand");
+import generalUtils = require("common/generalUtils");
+import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
+import app = require("durandal/app");
 
 type treeMapItem = {
     name: string;
-    children?: treeMapItem[];
+    type: string;
+    internalChildren?: treeMapItem[];
     size?: number;
     x?: number;
     y?: number;
@@ -17,23 +21,74 @@ class storageReport extends viewModelBase {
 
     private rawData = [] as storageReportItem[];
 
-    private currentPath = ko.observable<string>(); //TODO: replace with array of items
+    private currentPath: KnockoutComputed<Array<treeMapItem>>;
+
+    private x: d3.scale.Linear<number, number>;
+    private y: d3.scale.Linear<number, number>;
+    private color = d3.scale.category20();
+    private root: treeMapItem;
+    private node = ko.observable<treeMapItem>();
+    private treemap: d3.layout.Treemap<any>;
+    private svg: d3.Selection<any>;
+    private g: d3.Selection<any>;
+    private tooltip: d3.Selection<any>;
+
+    private w = 1200;
+    private h = 500;
+
+    private kx: number;
+    private ky: number;
+
+    activate(args: any) {
+        super.activate(args);
+
+        this.initObservables();
+
+        new getStorageReportCommand(this.activeDatabase())
+            .execute()
+            .done(result => {
+                this.rawData = result;
+            });
+    }
+
+    private initObservables() {
+        this.currentPath = ko.pureComputed(() => {
+            const node = this.node();
+
+            const items = [] as Array<treeMapItem>;
+
+            let currentItem = node;
+            while (currentItem) {
+                items.unshift(currentItem);
+                currentItem = currentItem.parent;
+            }
+
+            return items;
+        });
+    }
 
     private processData() {
         const data = this.rawData;
 
-        this.node = this.root = {
+        this.root = {
             name: "root",
-            children: data.map(x => this.mapReport(x))
+            internalChildren: data.map(x => this.mapReport(x)),
+            type: "root"
         } as treeMapItem;
+
+        this.node(this.root);
     }
 
     private mapReport(reportItem: storageReportItem): treeMapItem {
+        const dataFile = this.mapDataFile(reportItem.Report);
+        const journals = this.mapJournals(reportItem.Report)
         return {
             name: reportItem.Type + ": " + reportItem.Name,
-            children: [
-                this.mapDataFile(reportItem.Report),
-                this.mapJournals(reportItem.Report)
+            size: dataFile.size + journals.size,
+            type: reportItem.Type.toLowerCase(),
+            internalChildren: [
+                dataFile,
+                journals
             ]
         }
     }
@@ -45,12 +100,17 @@ class storageReport extends viewModelBase {
         const trees = this.mapTrees(report.Trees, "Trees");
         const freeSpace = {
             name: "Free",
+            type: "free",
             size: dataFile.FreeSpaceInBytes
         } as treeMapItem;
 
+        const totalSize = tables.size + trees.size + freeSpace.size;
+
         return {
-            name: "datafile",
-            children: [
+            name: "Datafile",
+            type: "data",
+            size: totalSize,
+            internalChildren: [
                 tables,
                 trees,
                 freeSpace
@@ -59,23 +119,31 @@ class storageReport extends viewModelBase {
     }
 
     private mapTables(tables: Voron.Data.Tables.TableReport[]): treeMapItem {
+        const mappedTables = tables.map(x => this.mapTable(x));
         return {
             name: "Tables",
-            children: tables.map(x => this.mapTable(x))
+            type: "tables",
+            internalChildren: mappedTables,
+            size: mappedTables.reduce((p, c) => p + c.size, 0)
         }
     }
 
     private mapTable(table: Voron.Data.Tables.TableReport): treeMapItem {
         const structure = this.mapTrees(table.Structure, "Structure");
         const data = {
-            name: "Data",
+            name: "Table Data",
+            type: "table_data",
             size: table.DataSizeInBytes
         } as treeMapItem;
         const indexes = this.mapTrees(table.Indexes, "Indexes");
 
+        const totalSize = structure.size + table.DataSizeInBytes + indexes.size;
+
         return {
             name: table.Name,
-            children: [
+            type: "table",
+            size: totalSize,
+            internalChildren: [
                 structure,
                 data,
                 indexes
@@ -85,14 +153,17 @@ class storageReport extends viewModelBase {
 
     private mapTrees(trees: Voron.Debugging.TreeReport[], name: string): treeMapItem {
         return {
-            name: "Trees",
-            children: trees.map(x => this.mapTree(x))
+            name: name,
+            type: name.toLowerCase(),
+            internalChildren: trees.map(x => this.mapTree(x)),
+            size: trees.reduce((p, c) => p + c.AllocatedSpaceInBytes, 0)
         }
     }
 
     private mapTree(tree: Voron.Debugging.TreeReport): treeMapItem {
         return {
             name: tree.Name,
+            type: "tree",
             size: tree.AllocatedSpaceInBytes
         }
     }
@@ -103,36 +174,26 @@ class storageReport extends viewModelBase {
         const mappedJournals = journals.map(journal => {
             return {
                 name: "Journal #" + journal.Number,
+                type: "journal",
                 size: journal.AllocatedSpaceInBytes
             } as treeMapItem;
         });
 
         return {
             name: "journals",
-            children: mappedJournals
+            type: "journals",
+            internalChildren: mappedJournals,
+            size: mappedJournals.reduce((p, c) => p + c.size, 0)
         }
     }
-
-    private x: d3.scale.Linear<number, number>;
-    private y: d3.scale.Linear<number, number>;
-    private color = d3.scale.category20c();
-    private root: treeMapItem;
-    private node: treeMapItem;
-    private partition: d3.layout.Partition<any>;
-    private svg: d3.Selection<any>;
-    private g: d3.Selection<any>;
-
-    private w = 1280 - 80;
-    private h = 800 - 180;
-
-    private kx: number;
-    private ky: number;
 
     private transform(d: any) {
         return "translate(8," + d.dx * this.ky / 2 + ")";
     }
 
-    private draw() {
+    private initGraph() {
+        this.color.domain(["documents", "index", "subscriptions", "configuration", "free", "data", "tables", "table_data", "table", "tree", "journal", "journals", "indexes", "structure"]);
+
         this.x = d3.scale.linear().range([0, this.w]);
         this.y = d3.scale.linear().range([0, this.h]);
 
@@ -142,88 +203,114 @@ class storageReport extends viewModelBase {
             .style("height", this.h + "px")
             .append("svg:svg")
             .attr("width", this.w)
-            .attr("height", this.h);
+            .attr("height", this.h)
+            .attr("transform", "translate(.5,.5)");
 
-        this.partition = d3.layout.partition<any>()
-            .value(d => d.size);
+        this.addHashing();
+    }
 
-        this.g = this.svg.selectAll("g")
-            .data(this.partition.nodes(this.root))
-            .enter()
-            .append("svg:g")
-            .attr("transform", d => "translate(" + this.x(d.y) + "," + this.y(d.x) + ")")
-            .on('mouseover', d => this.onEnter(d))
-            .on('mouseout', d => this.onExit(d))
-            .on("click", d => this.onClick(d));
+    private addHashing() {
+        const defs = this.svg.append('defs');
+        const g = defs.append("pattern")
+            .attr('id', 'hash')
+            .attr('patternUnits', 'userSpaceOnUse')
+            .attr('width', '10')
+            .attr('height', '10')
+            .append("g").style("fill", "none")
+            .style("stroke", "grey")
+            .style("stroke-width", 1);
+        g.append("path").attr("d", "M0,0 l10,10");
+        g.append("path").attr("d", "M10,0 l-10,10");
+    }
 
-        this.kx = this.w / this.root.dx;
-        this.ky = this.h / 1;
+    private getChildren(node: any, depth: number) {
+        return depth === 0 ? node.internalChildren : [];
+    }
 
-        this.g.append("svg:rect")
-            .attr("width", this.root.dy * this.kx)
-            .attr("height", d => d.dx * this.ky)
-            .attr("class", d => d.children ? "parent" : "child");
+    private draw() {
+        this.treemap = d3.layout.treemap<any>()
+            .children((n, depth) => this.getChildren(n, depth))
+            .value(d => d.size)
+            .size([this.w, this.h]);
 
-        this.g.append("svg:text")
-            .attr("transform", d => this.transform(d))
+        this.tooltip = d3.select(".tooltip");
+
+        const nodes = this.treemap.nodes(this.node())
+            .filter(n => !n.children);
+
+        this.svg.selectAll("g.cell").remove();
+
+        const cell = this.svg.selectAll("g.cell")
+            .data(nodes)
+            .enter().append("svg:g")
+            .attr("class", d => "cell " + d.type)
+            .attr("transform", d => "translate(" + d.x + "," + d.y + ")")
+            .on("click", d => this.onClick(d))
+            .on("mouseover", d => this.onMouseOver(d))
+            .on("mouseout", d => this.onMouseOut(d))
+            .on("mousemove", d => this.onMouseMove(d));
+
+        cell.append("svg:rect")
+            .attr("width", d => d.dx - 1)
+            .attr("height", d => d.dy - 1)
+            .attr("fill", d => d.type === "free" ? "url(#hash)" : this.color(d.type));
+
+        cell.append("svg:text")
+            .attr("x", d => d.dx / 2)
+            .attr("y", d => d.dy / 2)
             .attr("dy", ".35em")
-            .style("opacity", d => d.dx * this.ky > 12 ? 1 : 0)
-            .text(d => d.name);
+            .attr("text-anchor", "middle")
+            .text(d => d.name)
+            .style("opacity", function (d) { d.w = this.getComputedTextLength(); return d.dx > d.w ? 1 : 0; });
     }
 
-    private onEnter(d: treeMapItem) {
-        const items = [] as Array<string>;
-
-        let currentItem = d;
-        while (currentItem) {
-            items.unshift(currentItem.name);
-            currentItem = currentItem.parent;
+    private onClick(d: treeMapItem) {
+        if (!d.internalChildren || !d.internalChildren.length) {
+            return;
         }
-
-        this.currentPath(items.join(" > "));
-    }
-
-    private onExit(d: treeMapItem) {
-        this.onEnter(this.node);
-    }
-
-    private onClick(d: any) {
-        this.node = d;
-
-        this.kx = (d.y ? this.w - 40 : this.w) / (1 - d.y);
-        this.ky = this.h / d.dx;
-        this.x.domain([d.y, 1]).range([d.y ? 40 : 0, this.w]);
-        this.y.domain([d.x, d.x + d.dx]);
-
-        const t = this.g.transition()
-            .duration(750)
-            .attr("transform", d => "translate(" + this.x(d.y) + "," + this.y(d.x) + ")");
-
-        t.select("rect")
-            .attr("width", d.dy * this.kx)
-            .attr("height", d => d.dx * this.ky);
-
-        t.select("text")
-            .attr("transform", d => this.transform(d))
-            .style("opacity", d => d.dx * this.ky > 12 ? 1 : 0);
+        this.node(d);
+        this.draw();
 
         (d3.event as any).stopPropagation();
     }
 
-    activate(args: any) {
-        super.activate(args);
+    //TODO: use d3-tip library
+    private onMouseMove(d: treeMapItem) {
+        const [x, y] = d3.mouse(this.svg.node());
+        this.tooltip
+            .style("left", x + "px")
+            .style("top", y + "px");
+    }
 
-        new getStorageReportCommand(this.activeDatabase())
-            .execute()
-            .done(result => {
-                this.rawData = result;
-            });
+    private onMouseOver(d: treeMapItem) {
+        this.tooltip.transition()
+            .duration(200)
+            .style("opacity", .9);
+        this.tooltip.html("Name: " + d.name + " <br /> Size: " + generalUtils.formatBytesToSize(d.size));
+        this.onMouseMove(d);
+    }
+
+    private onMouseOut(d: treeMapItem) {
+        this.tooltip.transition()
+            .duration(500)
+            .style("opacity", 0);	
     }
 
     compositionComplete() {
         super.compositionComplete();
         this.processData();
+        this.initGraph();
         this.draw();
+    }
+
+    displayDetails() {
+        const dialog = new tempStatDialog(this.node(), (key, value) => {
+            if (key === "parent" || key === "children") {
+                return undefined;
+            }
+            return value;
+        });
+        app.showBootstrapDialog(dialog);
     }
 }
 

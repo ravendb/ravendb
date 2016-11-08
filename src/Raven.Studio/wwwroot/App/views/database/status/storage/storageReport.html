@@ -2,14 +2,11 @@
     
     .chart {
       display: block;
-      margin: auto;
-      margin-top: 60px;
       font-size: 11px;
     }
 
     rect {
       stroke: #eee;
-      fill: #aaa;
       fill-opacity: .8;
     }
 
@@ -21,10 +18,43 @@
     text {
       pointer-events: none;
     }
+
+    div.tooltip {	
+        position: absolute;			
+        text-align: center;			
+        width: 200px;
+        height: 40px;
+        padding: 2px;
+        font: 12px sans-serif;
+        background: lightseagreen;
+        color: black;
+        border: 0px;
+        border-radius: 8px;			
+        pointer-events: none;			
+    }
+    .free text {
+        fill: white;
+    }
+
+    .storage-report-container {
+        position: relative;
+    }
 </style>
 
-<div>
-    <div> Current path: <span data-bind="text: currentPath"></span></div>
+<div id="storage-report">
+    <div> Current path: 
+        <span data-bind="foreach: currentPath">
+            <a href="#" data-bind="click: $root.onClick.bind($root, $data)"><span data-bind="text: name"></span></a> 
+            <span data-bind="visible: $index() < $root.currentPath().length - 1">&raquo;</span>
+        </span>
+    </div>
 
-    <div id="storage-report-container"></div>
+    <div id="storage-report-container">
+        <div class="tooltip" style="opacity: 0">
+        </div>
+    </div>
+    
+    <div>
+        <button class="btn btn-default" data-bind="click: displayDetails">Display details</button>
+    </div>
 </div>
