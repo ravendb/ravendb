@@ -63,10 +63,9 @@ namespace Raven.Smuggler
             return await PrimaryStore.AsyncFilesCommands.Admin.GetStatisticsAsync().ConfigureAwait(false);
         }
 
-        public virtual async Task<string> GetVersion(FilesConnectionStringOptions server)
+        public virtual Task<BuildNumber> GetVersion(FilesConnectionStringOptions server)
         {
-            var buildNumber = await DocumentStore.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync().ConfigureAwait(false);
-            return buildNumber.ProductVersion;
+            return DocumentStore.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
         }
 
         public virtual LastFilesEtagsInfo FetchCurrentMaxEtags()
