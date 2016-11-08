@@ -1,13 +1,12 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getStorageReportCommand = require("commands/database/debug/getStorageReportCommand");
 import generalUtils = require("common/generalUtils");
-import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 import app = require("durandal/app");
 
 type treeMapItem = {
     name: string;
     type: string;
-    internalChildren?: treeMapItem[];
+    internalChildren: treeMapItem[];
     size?: number;
     x?: number;
     y?: number;
@@ -22,6 +21,8 @@ class storageReport extends viewModelBase {
     private rawData = [] as storageReportItem[];
 
     private currentPath: KnockoutComputed<Array<treeMapItem>>;
+
+    private totalSize = ko.observable<number>();
 
     private x: d3.scale.Linear<number, number>;
     private y: d3.scale.Linear<number, number>;
@@ -44,7 +45,7 @@ class storageReport extends viewModelBase {
 
         this.initObservables();
 
-        new getStorageReportCommand(this.activeDatabase())
+        return new getStorageReportCommand(this.activeDatabase())
             .execute()
             .done(result => {
                 this.rawData = result;
@@ -76,7 +77,19 @@ class storageReport extends viewModelBase {
             type: "root"
         } as treeMapItem;
 
+        this.sortBySize(this.root);
+
+        this.totalSize(this.root.internalChildren.reduce((p, c) => p + c.size, 0));
+
         this.node(this.root);
+    }
+
+    private sortBySize(node: treeMapItem) {
+        if (node.internalChildren && node.internalChildren.length) {
+            node.internalChildren.forEach(x => this.sortBySize(x));
+
+            node.internalChildren.sort((a, b) => d3.descending(a.size, b.size));
+        }
     }
 
     private mapReport(reportItem: storageReportItem): treeMapItem {
@@ -101,7 +114,8 @@ class storageReport extends viewModelBase {
         const freeSpace = {
             name: "Free",
             type: "free",
-            size: dataFile.FreeSpaceInBytes
+            size: dataFile.FreeSpaceInBytes,
+            internalChildren: []
         } as treeMapItem;
 
         const totalSize = tables.size + trees.size + freeSpace.size;
@@ -133,7 +147,8 @@ class storageReport extends viewModelBase {
         const data = {
             name: "Table Data",
             type: "table_data",
-            size: table.DataSizeInBytes
+            size: table.DataSizeInBytes,
+            internalChildren: []
         } as treeMapItem;
         const indexes = this.mapTrees(table.Indexes, "Indexes");
 
@@ -164,7 +179,8 @@ class storageReport extends viewModelBase {
         return {
             name: tree.Name,
             type: "tree",
-            size: tree.AllocatedSpaceInBytes
+            size: tree.AllocatedSpaceInBytes,
+            internalChildren: []
         }
     }
 
@@ -175,7 +191,8 @@ class storageReport extends viewModelBase {
             return {
                 name: "Journal #" + journal.Number,
                 type: "journal",
-                size: journal.AllocatedSpaceInBytes
+                size: journal.AllocatedSpaceInBytes,
+                internalChildren: []
             } as treeMapItem;
         });
 
@@ -238,6 +255,8 @@ class storageReport extends viewModelBase {
         const nodes = this.treemap.nodes(this.node())
             .filter(n => !n.children);
 
+        const self = this;
+
         this.svg.selectAll("g.cell").remove();
 
         const cell = this.svg.selectAll("g.cell")
@@ -261,8 +280,21 @@ class storageReport extends viewModelBase {
             .attr("dy", ".35em")
             .attr("text-anchor", "middle")
             .text(d => d.name)
-            .style("opacity", function (d) { d.w = this.getComputedTextLength(); return d.dx > d.w ? 1 : 0; });
+            .each(function (d) {
+                self.wrap(this, d.dx);
+            });
     }
+
+    wrap($self: any, width: number) {
+        var self = d3.select($self),
+            textLength = (self.node() as any).getComputedTextLength(),
+            text = self.text();
+        while (textLength > (width - 6) && text.length > 0) {
+            text = text.slice(0, -1);
+            self.text(text + '...');
+            textLength = (self.node() as any).getComputedTextLength();
+        }
+    } 
 
     private onClick(d: treeMapItem) {
         if (!d.internalChildren || !d.internalChildren.length) {
@@ -279,7 +311,7 @@ class storageReport extends viewModelBase {
         const [x, y] = d3.mouse(this.svg.node());
         this.tooltip
             .style("left", x + "px")
-            .style("top", y + "px");
+            .style("top", (y - 15) + "px");
     }
 
     private onMouseOver(d: treeMapItem) {
@@ -303,14 +335,8 @@ class storageReport extends viewModelBase {
         this.draw();
     }
 
-    displayDetails() {
-        const dialog = new tempStatDialog(this.node(), (key, value) => {
-            if (key === "parent" || key === "children") {
-                return undefined;
-            }
-            return value;
-        });
-        app.showBootstrapDialog(dialog);
+    formatSize(size: number) {
+        return generalUtils.formatBytesToSize(size);
     }
 }
 
