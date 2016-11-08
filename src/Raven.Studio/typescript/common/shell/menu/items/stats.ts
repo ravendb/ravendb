@@ -249,13 +249,14 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             dynamicHash: appUrls.replicationStats
         }),
+        /* TODO
         new leafMenuItem({
             route: 'databases/status/sqlReplicationPerfStats',
             moduleId: 'viewmodels/database/status/sqlReplicationPerfStats',
             title: 'SQL Replication Stats',
             nav: true,
             dynamicHash: appUrls.sqlReplicationPerfStats
-        }),
+        }),*/
         /* TODO:
         new leafMenuItem({
             route: 'databases/status/userInfo',

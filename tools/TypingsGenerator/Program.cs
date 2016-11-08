@@ -109,6 +109,8 @@ namespace TypingsGenerator
             // sql replication 
             scripter.AddType(typeof(SqlConnections));
             scripter.AddType(typeof(SqlReplicationConfiguration));
+            scripter.AddType(typeof(SqlReplicationStatistics));
+            scripter.AddType(typeof(SimulateSqlReplication));
 
 
             // periodic export

@@ -1,4 +1,4 @@
-<div class="modal-dialog" role="document">
+<div class="modal-dialog modal-lg" role="document">
     <div class="modal-content sqlReplication-Stats" tabindex="-1">
         <div class="modal-header">
             <button type="button" class="close btn btn-default" data-bind="click: fetchSqlReplicationStats"><i class="fa fa-refresh"></i></button>
@@ -9,39 +9,41 @@
                 <!-- ko if: !!repData()  -->
                 <div class="form-horizontal" role="form" data-bind="with: repData">
                     <div class="form-group">
-                        <label class="col-lg-2 col-md-4 control-label">Last error time</label>
-                        <div class="col-lg-10 col-md-8">
+                        <label class="col-md-4 control-label">Last error time</label>
+                        <div class="col-md-8">
                             <p class="form-control-static" data-bind="text: LastErrorTime"></p>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="col-lg-2 col-md-4 control-label">Script error count</label>
-                        <div class="col-lg-10 col-md-8">
-                            <p class="form-control-static" data-bind="text: ScriptErrorCount"></p>
+                        <label class="col-md-4 control-label">Last replicated Etag</label>
+                        <div class="col-md-8">
+                            <p class="form-control-static" data-bind="text: LastReplicatedEtag"></p>
                         </div>
                     </div>
+                    
                     <div class="form-group">
-                        <label class="col-lg-2 col-md-4 control-label">Script success count</label>
-                        <div class="col-lg-10 col-md-8">
-                            <p class="form-control-static" data-bind="text: ScriptSuccessCount"></p>
+                        <label class="col-md-4 control-label">Last tombstones Etag</label>
+                        <div class="col-md-8">
+                            <p class="form-control-static" data-bind="text: LastTombstonesEtag"></p>
                         </div>
                     </div>
+
                     <div class="form-group">
-                        <label class="col-lg-2 col-md-4 control-label">Write error count</label>
-                        <div class="col-lg-10 col-md-8">
-                            <p class="form-control-static" data-bind="text: WriteErrorCount"></p>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-lg-2 col-md-4 control-label">Success count</label>
-                        <div class="col-lg-10 col-md-8">
+                        <label class="col-md-4 control-label">Script success count</label>
+                        <div class="col-md-8">
                             <p class="form-control-static" data-bind="text: SuccessCount"></p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-4 control-label">Suspend until</label>
+                        <div class="col-md-8">
+                            <p class="form-control-static" data-bind="text: SuspendUntil"></p>
                         </div>
                     </div>
 
                     <!-- ko with: LastAlert -->
                     <div class="panel-group" id="statsAccordion">
-                        <div class="panel panel-warning">
+                        <div class="panel">
                             <div class="panel-heading">
                                 <a data-toggle="collapse" data-parent="#statsAccordion" href="#collapseLastError">
                                     <h3 class="panel-title">
@@ -52,45 +54,27 @@
                             <div id="collapseLastError" class="panel-collapse collapse">
                                 <div class="panel-body">
                                     <div class="form-group">
-                                        <label class="col-lg-2 control-label">Title</label>
-                                        <div class="col-lg-10">
-                                            <p class="form-control-static" data-bind="text: Title"></p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-lg-2 control-label">Created at</label>
-                                        <div class="col-lg-10">
-                                            <p class="form-control-static" data-bind="text: CreatedAt"></p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-lg-2 control-label">Observed</label>
-                                        <div class="col-lg-10">
-                                            <p class="form-control-static" data-bind="text: Observed"></p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-lg-2 control-label">Message</label>
-                                        <div class="col-lg-10">
+                                        <label class="col-lg-4 control-label">Message</label>
+                                        <div class="col-lg-8">
                                             <p class="form-control-static" data-bind="text: Message"></p>
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label class="col-lg-2 control-label">Alert level</label>
-                                        <div class="col-lg-10">
-                                            <p class="form-control-static" data-bind="text: AlertLevel"></p>
+                                        <label class="col-lg-4 control-label">Created at</label>
+                                        <div class="col-lg-8">
+                                            <p class="form-control-static" data-bind="text: CreatedAt"></p>
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label class="col-lg-2 control-label">Exception</label>
-                                        <div class="col-lg-10">
-                                            <p class="form-control-static"><span class="exceptionText" data-bind="text: Exception"></span></p>
+                                        <label class="col-lg-4 control-label">Severity</label>
+                                        <div class="col-lg-8">
+                                            <p class="form-control-static" data-bind="text: Severity"></p>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-lg-2 control-label">Unique key</label>
-                                        <div class="col-lg-10">
-                                            <p class="form-control-static" data-bind="text: UniqueKey"></p>
+                                    <div class="form-group" data-bind="with: Content">
+                                        <label class="col-lg-4 control-label">Content</label>
+                                        <div class="col-lg-8">
+                                            <p class="form-control-static"><span class="exceptionText" data-bind="text: Message"></span></p>
                                         </div>
                                     </div>
                                 </div>
