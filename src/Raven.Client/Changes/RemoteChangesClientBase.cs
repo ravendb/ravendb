@@ -14,6 +14,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 using Raven.Client.Platform;
+using Raven.Client.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Changes
@@ -96,9 +97,9 @@ namespace Raven.Client.Changes
 
         public void WaitForAllPendingSubscriptions()
         {
-            foreach (var kvp in Counters)
+            foreach (var value in Counters.ValuesSnapshot)
             {
-                kvp.Value.Task.Wait();
+                value.Task.Wait();
             }
         }
 
@@ -179,7 +180,7 @@ namespace Raven.Client.Changes
                     throw new NotSupportedException(); // Should be deleted
                 
                 default:
-                    NotifySubscribers(type, value, Counters.Snapshot);
+                    NotifySubscribers(type, value, Counters.ValuesSnapshot);
                     break;
             }
         }
@@ -262,7 +263,7 @@ namespace Raven.Client.Changes
         }
 
         protected abstract Task SubscribeOnServer();
-        protected abstract void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, TConnectionState>> connections);
+        protected abstract void NotifySubscribers(string type, RavenJObject value, List<TConnectionState> connections);
 
         public virtual void OnCompleted()
         { }
