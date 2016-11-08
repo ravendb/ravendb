@@ -103,5 +103,31 @@ namespace SlowTests.MailingList
                 }
             }
         }
+
+        /// <summary>
+        /// This test requires us to qoute the search string and it test that we escape the comma within qoutes
+        /// </summary>
+        [Fact]
+        public void WhenElementcontainsCommasInMiddleOfListWithWhiteSpaceBeforeTheComma()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Country = "Asia ,Japan"
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var collection = session.Query<User>().Where(x => x.Country.In(new[] { "Korea", "Asia ,Japan", "China" })).ToList();
+
+                    Assert.NotEmpty(collection);
+                }
+            }
+        }
     }
 }
