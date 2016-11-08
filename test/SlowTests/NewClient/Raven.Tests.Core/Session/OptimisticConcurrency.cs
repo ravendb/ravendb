@@ -32,7 +32,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Sessiont
                     session.Store(new User { Id = entityId, Name = "User1" });
                     session.SaveChanges();
 
-                    using (var otherSession = store.OpenSession())
+                    using (var otherSession = store.OpenNewSession())
                     {
                         var otherUser = otherSession.Load<User>(entityId);
                         otherUser.Name = "OtherName";

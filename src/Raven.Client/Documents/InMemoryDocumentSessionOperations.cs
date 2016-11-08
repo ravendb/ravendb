@@ -820,7 +820,7 @@ more responsive application.
                 entity.Value.IsNewDocument = false;
                 result.Entities.Add(entity.Key);
 
-                if (entity.Value.Entity != null)
+                if (entity.Value.Id != null)
                     DocumentsById.Remove(entity.Value.Id);
 
                 entity.Value.Document = document;
