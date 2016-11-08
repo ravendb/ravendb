@@ -8,9 +8,9 @@ namespace Voron.Data.Tables
 {
     public class TableReport
     {
-        public TableReport(long ownedSizeInBytes, long usedSizeInBytes, bool calculateDensity)
+        public TableReport(long allocatedSpaceInBytes, long usedSizeInBytes, bool calculateDensity)
         {
-            OwnedSizeInBytes = DataSizeInBytes = ownedSizeInBytes;
+            AllocatedSpaceInBytes = DataSizeInBytes = allocatedSpaceInBytes;
             UsedSizeInBytes = usedSizeInBytes;
 
             if (calculateDensity == false)
@@ -36,11 +36,11 @@ namespace Voron.Data.Tables
         {
             Structure.Add(report);
 
-            var ownedSizeInBytes = report.PageCount * pageSize;
-            OwnedSizeInBytes += ownedSizeInBytes;
+            var allocatedSpaceInBytes = report.PageCount * pageSize;
+            AllocatedSpaceInBytes += allocatedSpaceInBytes;
 
             if (calculateDensity)
-                UsedSizeInBytes += (long)(ownedSizeInBytes * report.Density);
+                UsedSizeInBytes += (long)(allocatedSpaceInBytes * report.Density);
         }
 
         public void AddIndex(FixedSizeTree fst, bool calculateDensity)
@@ -59,21 +59,21 @@ namespace Voron.Data.Tables
         {
             Indexes.Add(report);
 
-            var ownedSizeInBytes = report.PageCount * pageSize;
-            OwnedSizeInBytes += ownedSizeInBytes;
+            var allocatedSpaceInBytes = report.PageCount * pageSize;
+            AllocatedSpaceInBytes += allocatedSpaceInBytes;
 
             if (calculateDensity)
-                UsedSizeInBytes += (long)(ownedSizeInBytes * report.Density);
+                UsedSizeInBytes += (long)(allocatedSpaceInBytes * report.Density);
         }
 
         public void AddData(RawDataSection section, bool calculateDensity)
         {
-            var ownedSizeInBytes = section.Size;
-            OwnedSizeInBytes += ownedSizeInBytes;
-            DataSizeInBytes += ownedSizeInBytes;
+            var allocatedSpaceInBytes = section.Size;
+            AllocatedSpaceInBytes += allocatedSpaceInBytes;
+            DataSizeInBytes += allocatedSpaceInBytes;
 
             if (calculateDensity)
-                UsedSizeInBytes += (long)(ownedSizeInBytes * section.Density);
+                UsedSizeInBytes += (long)(allocatedSpaceInBytes * section.Density);
         }
 
         public List<TreeReport> Structure { get; }
@@ -81,7 +81,7 @@ namespace Voron.Data.Tables
         public string Name { get; set; }
         public long NumberOfEntries { get; set; }
         public long DataSizeInBytes { get; private set; }
-        public long OwnedSizeInBytes { get; private set; }
+        public long AllocatedSpaceInBytes { get; private set; }
         public long UsedSizeInBytes { get; private set; }
     }
 }
