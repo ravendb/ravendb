@@ -140,6 +140,8 @@ namespace Raven.Client.Documents
         /// <param name="value"></param>
         void AddTransformerParameter(string input, object value);
 
+        void AddTransformerParameter(string input, DateTime value);
+
         Type OriginalQueryType { get; set; }
     }
 }

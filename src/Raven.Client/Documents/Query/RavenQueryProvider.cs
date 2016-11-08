@@ -15,7 +15,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 using Raven.Client.Linq;
@@ -108,6 +108,11 @@ namespace Raven.Client.Documents
         public void AddTransformerParameter(string name, object value)
         {
             transformerParamaters[name] = value;
+        }
+
+        public void AddTransformerParameter(string name, DateTime value)
+        {
+            TransformerParameters[name] = value.GetDefaultRavenFormat(isUtc: value.Kind == DateTimeKind.Utc);
         }
 
         public Type OriginalQueryType { get; set; }
