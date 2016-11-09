@@ -579,7 +579,7 @@ namespace Raven.Abstractions.Smuggler
 
             return new ServerSupportedFeatures
             {
-                IsFilesStreamingSupported = build == 13 || build >= 35180
+                IsFilesStreamingSupported = (build == 13 || build >= 35180) && Operations.IsEmbedded==false
             };
         }
 

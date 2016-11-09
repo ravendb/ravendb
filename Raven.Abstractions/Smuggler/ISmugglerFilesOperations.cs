@@ -42,5 +42,7 @@ namespace Raven.Abstractions.Smuggler
 
         RavenJObject DisableVersioning(RavenJObject metadata);
         Task<Stream> StreamFiles(List<string> toList);
+
+        bool IsEmbedded { get; }
     }
 }
