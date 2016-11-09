@@ -200,7 +200,7 @@ function getManageServerMenuItem() {
 
     return new leafMenuItem({
         route: 'admin/settings/manage',
-        moduleId: 'viewmodels/manage/underDevelopment',
+        moduleId: 'viewmodels/manage/manageServer',
         title: 'Manage server',
         nav: true,
         dynamicHash: appUrl.forTempManageServer,

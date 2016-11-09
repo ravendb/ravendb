@@ -16,7 +16,8 @@
                 <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
             </ul>
             <div class="inputs-container hidden-xs">
-                <div class="search-container">
+                <div class="search-prerelease"><i class="icon-search"></i><span>search</span> <span class="text-muted"> | in development</span></div>
+                <!--<div class="search-container">
                     <input type="search" class="form-control omnisearch" placeholder="search" />
                     <div class="icon-search"></div>
                     <div class="autocomplete-list box-container">
@@ -66,7 +67,7 @@
                             </section>
                         </div>
                     </div>
-                </div>
+                </div>-->
                 <div class="resource-switcher-container" data-bind="with: resourceSwitcher">
                     <div class="form-control btn-toggle resource-switcher">
                         <span class="database" data-bind="text: $root.activeResource() ? $root.activeResource().name:''"></span>
@@ -106,8 +107,8 @@
         </a>
         <div data-bind="click: menu.handleLevelClick.bind(menu), css: { 'level-show': item.isOpen, ['level-' + (item.depth() + 1) ]: true }, attr: { 'data-level-name': item.title, 'data-level': item.depth() + 1 }" class="level">
             <h2>
-                <a class="back" title="back" 
-                   data-bind="click: menu.back.bind(menu)" ></a>
+                <a class="back" title="back"
+                   data-bind="click: menu.back.bind(menu)"></a>
                 <!-- ko text: item.title --><!-- /ko -->
             </h2>
 
@@ -147,5 +148,11 @@
     <div class="content-container-margin">
         <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
     </div>
+</div>
+
+<div class="prerelease-alert bg-prerelease">
+    <p>
+        PRERELEASE SOFTWARE
+    </p>
 </div>
 

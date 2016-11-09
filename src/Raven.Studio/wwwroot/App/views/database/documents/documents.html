@@ -1,6 +1,9 @@
 <div id="documents-pane" class="documents-page no-outline row" tabindex="0" data-bind="enableResize: true">
 
+    <div data-bind="compose: 'common/sectionUnderDevelopment.html'"></div>
+
     <div id="documents-page-container" class="col-md-2 col-resizable-target">
+
 
         <ul class="nav nav-pills nav-stacked document-collections" data-bind="with: allDocumentsCollection">
             <li class="all-docs-collection" data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }">
