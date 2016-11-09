@@ -375,17 +375,19 @@ namespace Raven.Abstractions.Smuggler
                                 // Write the metadata (which includes the stream size and file container name)
                                 metadataList.Add(fileContainer);
 
+                                totalCount++;
+                                if (totalCount % 30 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                                {
+                                    Operations.ShowProgress("Exported {0} files. ", totalCount);
+                                    lastReport = SystemTime.UtcNow;
+                                }
+
                             }
 
                         }
 
 
-                        totalCount++;
-                        if (totalCount % 30 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-                        {
-                            Operations.ShowProgress("Exported {0} files. ", totalCount);
-                            lastReport = SystemTime.UtcNow;
-                        }
+                       
                     }
                 }
                 catch (Exception e)
