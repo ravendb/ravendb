@@ -412,7 +412,7 @@ namespace Raven.Database.Server.Controllers
             return obj.ToString();
         }
 
-        private static string UnescapeStringIfNeeded(string str)
+        private static string UnescapeStringIfNeeded(string str, bool shouldDecodeUrl = true)
         {
             if (str.StartsWith("\"") && str.EndsWith("\""))
                 str = Regex.Unescape(str.Substring(1, str.Length - 2));
@@ -422,7 +422,7 @@ namespace Raven.Database.Server.Controllers
                 return Uri.EscapeDataString(str);
             }
 
-            return str;
+            return shouldDecodeUrl ? HttpUtility.UrlDecode(str) : str;
         }
 
         public virtual HttpResponseMessage GetMessageWithObject(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
