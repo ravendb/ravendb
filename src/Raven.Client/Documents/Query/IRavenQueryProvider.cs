@@ -32,7 +32,7 @@ namespace Raven.Client.Documents
         /// Callback to get the results of the stream
         /// </summary>
 
-        void AfterStreamExecuted(Action<RavenJObject> afterStreamExecuted);
+        void AfterStreamExecuted(Action<StreamResult> afterStreamExecuted);
 
         /// <summary>
         /// Customizes the query using the specified action

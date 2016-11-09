@@ -35,7 +35,7 @@ namespace Raven.Client.Documents
         /// </summary>
         protected readonly IDocumentQueryGenerator queryGenerator;
         private readonly Action<QueryResult> afterQueryExecuted;
-        private readonly Action<RavenJObject> afterStreamExcuted;
+        private readonly Action<StreamResult> afterStreamExcuted;
         private bool chainedWhere;
         private int insideWhere;
         private IAbstractDocumentQuery<T> documentQuery;
@@ -76,7 +76,7 @@ namespace Raven.Client.Documents
         /// <param name="transformerParameters"></param>
         /// /// <param name ="originalType" >the original type of the query if TransformWith is called otherwise null</param>
         public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted,
-             Action<RavenJObject> afterStreamExecuted, string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer,
+             Action<StreamResult> afterStreamExecuted, string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer,
              Dictionary<string, object> transformerParameters, Type originalType)
         {
             FieldsToFetch = fieldsToFetch;
@@ -2010,11 +2010,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 safeToModify.EnsureCannotBeChangeAndEnableSnapshotting();
                 queryResult.Results[index] = safeToModify;
             }*/
+            throw new NotImplementedException();
         }
-
-        public bool RenameSingleResult(ref RavenJObject doc)
+        
+        public bool RenameSingleResult(ref StreamResult doc)
         {
-            var changed = false;
+            /*var changed = false;
             var values = new Dictionary<string, RavenJToken>();
             foreach (var renamedField in FieldsToRename.Select(x => x.OriginalField).Distinct())
             {
@@ -2047,7 +2048,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     doc[rename.OriginalField] = val;
                 }
             }
-            return changed;
+            return changed;*/
+            throw new NotImplementedException();
         }
 
         private object GetQueryResult<TProjection>(IDocumentQuery<TProjection> finalQuery)
