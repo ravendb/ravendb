@@ -25,6 +25,8 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public T Load<T>(string id)
         {
+            if (id == null)
+                return default(T);
             var loadOeration = new LoadOperation(this);
             loadOeration.ById(id);
 

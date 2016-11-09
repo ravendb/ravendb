@@ -43,10 +43,11 @@ namespace Raven.Client.Documents.SessionOperations
         public void ById(string id)
         {
             if (id == null)
-                throw new ArgumentNullException(nameof(id), "The document id cannot be null");
+                return;
 
             if (_ids == null)
                 _ids = new[] {id};
+
             if (_session.IsLoadedOrDeleted(id))
                 return;
 
@@ -74,6 +75,9 @@ namespace Raven.Client.Documents.SessionOperations
 
         private T GetDocument<T>(string id)
         {
+            if (id == null)
+                return default(T);
+
             if (_session.IsDeleted(id))
                 return default(T);
 
