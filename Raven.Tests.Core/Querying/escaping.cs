@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
+using Raven.Client.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
 using Xunit;
@@ -28,8 +29,22 @@ namespace Raven.Tests.Core.Querying
                     session.SaveChanges();
 
                     var employee = session.Query<Employee>().Customize(x=>x.WaitForNonStaleResults()).FirstOrDefault(x => x.WorksAt.Equals("Hibernating - Rhinos"));
-                    Assert.Equal(employee?.Name, "Grisha Kotler");
+                    Assert.Equal("Grisha Kotler", employee?.Name);
                 }                            
+            }
+        }
+        [Fact]
+        public void CanPerformInQueryWithTermsStartingWithComment()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee() { Name = "Grisha Kotler", WorksAt = "Hibernating - Rhinos" });
+                    session.SaveChanges();                    
+                    var employee = session.Query<Employee>().Customize(x => x.WaitForNonStaleResults()).FirstOrDefault(x => x.WorksAt.In( "a","//b","Hibernating - Rhinos","c"));
+                    Assert.Equal("Grisha Kotler", employee?.Name);
+                }
             }
         }
 
