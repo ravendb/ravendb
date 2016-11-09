@@ -106,30 +106,10 @@ namespace Raven.Server.Documents.Handlers
 
                     var docId = GetStringQueryString("docId", required: false);
 
-                    IEnumerable<ReduceTreeNode> trees;
+                    IEnumerable<ReduceTree> trees;
                     using (index.GetReduceTree(docId, out trees))
                     {
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName("Trees");
-                        writer.WriteStartArray();
-
-                        var first = true;
-
-                        foreach (var root in trees)
-                        {
-                            if (first == false)
-                                writer.WriteComma();
-
-                            writer.WriteTreeNodesRecursively(new [] { root });
-
-                            first = false;
-                        }
-
-                        writer.WriteEndArray();
-
-                        writer.WriteEndObject();
-                        
+                        writer.WriteReduceTrees(trees);
                     }
 
                     return Task.CompletedTask;
@@ -137,7 +117,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (string.Equals(operation, "source-doc-ids", StringComparison.OrdinalIgnoreCase))
                 {
-                    IEnumerable<LazyStringValue> ids;
+                    IEnumerable<string> ids;
                     using (index.GetIdentifiersOfMappedDocuments(GetStringQueryString("startsWith", required: false), GetStart(), GetPageSize(), out ids))
                     {
                         writer.WriteArrayOfResultsAndCount(ids);

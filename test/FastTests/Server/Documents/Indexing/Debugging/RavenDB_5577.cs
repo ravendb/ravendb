@@ -51,9 +51,9 @@ select new
                         var scope = new IndexingStatsScope(firstRunStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
 
-                        List<LazyStringValue> result;
+                        List<string> result;
 
-                        IEnumerable<LazyStringValue> ids;
+                        IEnumerable<string> ids;
                         using (index.GetIdentifiersOfMappedDocuments(null, 0, 10, out ids))
                         {
                             result = ids.ToList();
@@ -131,7 +131,7 @@ select new
                         var scope = new IndexingStatsScope(firstRunStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
 
-                        IEnumerable<ReduceTreeNode> trees;
+                        IEnumerable<ReduceTree> trees;
                         using (index.GetReduceTree("orders/1", out trees))
                         {
                         }

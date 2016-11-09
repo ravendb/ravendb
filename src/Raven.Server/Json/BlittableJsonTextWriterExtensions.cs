@@ -1028,7 +1028,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteArrayOfResultsAndCount(this BlittableJsonTextWriter writer, IEnumerable<LazyStringValue> results)
+        public static void WriteArrayOfResultsAndCount(this BlittableJsonTextWriter writer, IEnumerable<string> results)
         {
             writer.WriteStartObject();
             writer.WritePropertyName("Results");
@@ -1058,61 +1058,100 @@ namespace Raven.Server.Json
         }
 
 
-        public static void WriteTreeNodesRecursively(this BlittableJsonTextWriter writer, IEnumerable<ReduceTreeNode> results)
+        public static void WriteReduceTrees(this BlittableJsonTextWriter writer, IEnumerable<ReduceTree> trees)
         {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName("Trees");
+            writer.WriteStartArray();
+
             var first = true;
 
-            foreach (var treeNode in results)
+            foreach (var tree in trees)
             {
                 if (first == false)
                     writer.WriteComma();
 
                 writer.WriteStartObject();
 
-                var written = false;
+                writer.WritePropertyName(nameof(ReduceTree.Name));
+                writer.WriteString(tree.Name);
+                writer.WriteComma();
 
-                if (treeNode.Name != null)
+                writer.WritePropertyName("Pages");
+                writer.WriteTreePagesRecursively(new[] { tree.Root });
+
+                writer.WriteEndObject();
+
+                first = false;
+            }
+
+            writer.WriteEndArray();
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteTreePagesRecursively(this BlittableJsonTextWriter writer, IEnumerable<ReduceTreePage> pages)
+        {
+            var first = true;
+
+            foreach (var page in pages)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(TreePage.PageNumber));
+                writer.WriteInteger(page.Page.PageNumber);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReduceTreePage.AggregationResult));
+                if (page.AggregationResult != null)
+                    writer.WriteObject(page.AggregationResult);
+                else
+                    writer.WriteNull();
+
+                writer.WriteComma();
+
+                if (page.Children != null)
                 {
-                    writer.WritePropertyName(nameof(ReduceTreeNode.Name));
-                    writer.WriteString(treeNode.Name);
-
-                    written = true;
-                }
-
-                if (treeNode.Page != null)
-                {
-                    if (written)
-                        writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(TreePage.PageNumber));
-                    writer.WriteInteger(treeNode.Page.PageNumber);
-
-                    written = true;
-                }
-
-                if (treeNode.Children != null)
-                {
-                    if (written)
-                        writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(ReduceTreeNode.Children));
+                    writer.WritePropertyName(nameof(ReduceTreePage.Children));
                     writer.WriteStartArray();
 
-                    WriteTreeNodesRecursively(writer, treeNode.Children);
+                    WriteTreePagesRecursively(writer, page.Children);
 
                     writer.WriteEndArray();
-
-                    written = true;
                 }
-                
-                if (treeNode.Data != null)
+                else if (page.Entries != null)
                 {
-                    if (written)
+                    writer.WritePropertyName(nameof(ReduceTreePage.Entries));
+                    writer.WriteStartArray();
+
+                    var firstEntry = true;
+                    foreach (var entry in page.Entries)
+                    {
+                        if (firstEntry == false)
+                            writer.WriteComma();
+
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName(nameof(MapResultInLeaf.Data));
+                        writer.WriteObject(entry.Data);
                         writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(ReduceTreeNode.Data));
-                    writer.WriteObject(treeNode.Data);
+                        writer.WritePropertyName(nameof(MapResultInLeaf.Source));
+                        writer.WriteString(entry.Source ?? "unknown");
+
+                        writer.WriteEndObject();
+
+                        firstEntry = false;
+                    }
+
+                    writer.WriteEndArray();
                 }
+                else
+                    throw new InvalidOperationException("Page must have either children (branch) or entries (leaf)");
 
                 writer.WriteEndObject();
                 first = false;

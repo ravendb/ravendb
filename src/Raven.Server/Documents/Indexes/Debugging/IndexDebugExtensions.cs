@@ -13,12 +13,13 @@ using Voron;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Debugging
 {
     public static class IndexDebugExtensions
     {
-        public static IDisposable GetIdentifiersOfMappedDocuments(this Index self, string startsWith, int start, int take, out IEnumerable<LazyStringValue> docIds)
+        public static IDisposable GetIdentifiersOfMappedDocuments(this Index self, string startsWith, int start, int take, out IEnumerable<string> docIds)
         {
             if (self.Type.IsMapReduce() == false)
                 throw new NotSupportedException("Getting doc ids for map indexes is not supported");
@@ -35,20 +36,20 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
                 if (tree == null)
                 {
-                    docIds = Enumerable.Empty<LazyStringValue>();
+                    docIds = Enumerable.Empty<string>();
                     return scope;
                 }
 
                 TreeIterator it;
                 scope.EnsureDispose(it = tree.Iterate(false));
                     
-                docIds = IterateKeys(it, startsWith, start, take, indexContext);
+                docIds = IterateKeys(it, startsWith, start, take, indexContext).Select(x => x.ToString());
                     
                 return scope.Delay();
             }
         }
 
-        private static IEnumerable<LazyStringValue> IterateKeys(IIterator it, string prefix, int start, int take, TransactionOperationContext context)
+        private static IEnumerable<Slice> IterateKeys(IIterator it, string prefix, int start, int take, TransactionOperationContext context)
         {
             if (it.Seek(Slices.BeforeAllKeys) == false)
                 yield break;
@@ -73,17 +74,15 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     start--;
                     continue;
                 }
-                
-                var key = it.CurrentKey.ToString();
-
+ 
                 if (--take < 0)
                     yield break;
 
-                yield return context.GetLazyString(key);
+                yield return it.CurrentKey;
             } while (it.MoveNext());
         }
 
-        public static IDisposable GetReduceTree(this Index self, string docId, out IEnumerable<ReduceTreeNode> trees)
+        public static IDisposable GetReduceTree(this Index self, string docId, out IEnumerable<ReduceTree> trees)
         {
             using (var scope = new DisposeableScope())
             {
@@ -102,24 +101,24 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
                 if (reducePhaseTree == null)
                     throw new Exception("TODO arek");
-
-                var typePerHash = reducePhaseTree.FixedTreeFor(MapReduceIndexBase<MapReduceIndexDefinition>.ResultsStoreTypesTreeName, sizeof(byte));
-
+                
                 Slice docIdAsSlice;
                 scope.EnsureDispose(Slice.From(indexContext.Allocator, docId, out docIdAsSlice));
 
                 FixedSizeTree mapEntries;
                 scope.EnsureDispose(mapEntries = mapPhaseTree.FixedTreeFor(docId, sizeof(long)));
 
-                trees = IterateTrees(self, mapEntries, typePerHash, reducePhaseTree, indexContext);
+                trees = IterateTrees(self, mapEntries, mapPhaseTree, reducePhaseTree, indexContext);
 
                 return scope.Delay();
             }
         }
 
-        private static IEnumerable<ReduceTreeNode> IterateTrees(Index self, FixedSizeTree mapEntries, FixedSizeTree typePerHash, Tree reducePhaseTree, TransactionOperationContext indexContext)
+        private static IEnumerable<ReduceTree> IterateTrees(Index self, FixedSizeTree mapEntries, Tree mapPhaseTree, Tree reducePhaseTree, TransactionOperationContext indexContext)
         {
             HashSet<ulong> rendered = new HashSet<ulong>();
+
+            var typePerHash = reducePhaseTree.FixedTreeFor(MapReduceIndexBase<MapReduceIndexDefinition>.ResultsStoreTypesTreeName, sizeof(byte));
 
             foreach (var mapEntry in MapReduceIndexBase<MapReduceIndexDefinition>.GetMapEntries(mapEntries))
             {
@@ -142,10 +141,10 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     switch (store.Type)
                     {
                         case MapResultsStorageType.Tree:
-                            yield return RenderTreeNodes(store.Tree, indexContext);
+                            yield return RenderTree(store.Tree, mapPhaseTree, indexContext);
                             break;
                         case MapResultsStorageType.Nested:
-                            yield return RenderNestedSectionNodes(store.GetNestedResultsSection(reducePhaseTree), indexContext);
+                            yield return RenderNestedSection(store.GetNestedResultsSection(reducePhaseTree), mapPhaseTree, indexContext);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException(store.Type.ToString());
@@ -154,18 +153,18 @@ namespace Raven.Server.Documents.Indexes.Debugging
             }
         }
 
-        private static unsafe ReduceTreeNode RenderTreeNodes(Tree tree, JsonOperationContext context)
+        private static unsafe ReduceTree RenderTree(Tree tree, Tree mapPhaseTree, TransactionOperationContext context)
         {
-            var stack = new Stack<ReduceTreeNode>();
+            var stack = new Stack<ReduceTreePage>();
             var rootPage = tree.GetReadOnlyTreePage(tree.State.RootPageNumber);
 
-            var rootNode = new ReduceTreeNode(rootPage)
-            {
-                Name = "Root of " + tree.Name
-            };
+            var root = new ReduceTreePage(rootPage);
 
-            stack.Push(rootNode);
+            stack.Push(root);
 
+            var needToAssignSource = new Dictionary<long, MapResultInLeaf>();
+
+            var tx = tree.Llt;
             while (stack.Count > 0)
             {
                 var node = stack.Pop();
@@ -174,13 +173,13 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 if (page.NumberOfEntries == 0 && page != rootPage)
                     throw new InvalidOperationException($"The page {page.PageNumber} is empty");
                 
-                for (int i = 0; i < page.NumberOfEntries; i++)
+                for (var i = 0; i < page.NumberOfEntries; i++)
                 {
                     if (page.IsBranch)
                     {
                         var p = page.GetNode(i)->PageNumber;
 
-                        var childNode = new ReduceTreeNode(tree.GetReadOnlyTreePage(p));
+                        var childNode = new ReduceTreePage(tree.GetReadOnlyTreePage(p));
 
                         node.Children.Add(childNode);
 
@@ -188,39 +187,92 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     }
                     else
                     {
-                        var valueReader = TreeNodeHeader.Reader(tree.Llt, page.GetNode(i));
+                        var entry = new MapResultInLeaf();
 
-                        node.Children.Add(new ReduceTreeNode
+                        Slice s;
+                        using (page.GetNodeKey(tx, i, out s))
                         {
-                            Data = new BlittableJsonReaderObject(valueReader.Base, valueReader.Length, context)
-                        });
+                            var mapEntryId = *(long*) s.Content.Ptr;
+                            needToAssignSource[mapEntryId] = entry;
+                        }
+
+                        var valueReader = TreeNodeHeader.Reader(tx, page.GetNode(i));
+
+                        entry.Data = new BlittableJsonReaderObject(valueReader.Base, valueReader.Length, context);
+
+                        node.Entries.Add(entry);
                     }
                 }
             }
 
-            return rootNode;
+            FindAndAssignSourcesOfMapResults_Inefficiently(mapPhaseTree, context, tx, needToAssignSource);
+
+            return new ReduceTree
+            {
+                Name = tree.Name.ToString(),
+                Root = root
+            };
         }
 
-        private static ReduceTreeNode RenderNestedSectionNodes(NestedMapResultsSection section, JsonOperationContext context)
+        private static ReduceTree RenderNestedSection(NestedMapResultsSection section, Tree mapPhaseTree, TransactionOperationContext context)
         {
-            var children = new List<BlittableJsonReaderObject>();
+            var entries = new Dictionary<long, BlittableJsonReaderObject>();
+            var root = new ReduceTreePage(section.RelevantPage);
 
-            var count = section.GetResults(context, children);
+            section.GetResultsForDebug(context, entries);
 
-            var rootNode = new ReduceTreeNode(count)
+            var needToAssignSource = new Dictionary<long, MapResultInLeaf>();
+
+            foreach (var mapEntry in entries)
             {
-                Name = "Result of " + section.Name
-            };
-
-            foreach (var data in children)
-            {
-                rootNode.Children.Add(new ReduceTreeNode()
+                var entry = new MapResultInLeaf
                 {
-                    Data = data
-                });
+                    Data = mapEntry.Value
+                };
+
+                root.Entries.Add(entry);
+                needToAssignSource[mapEntry.Key] = entry;
             }
 
-            return rootNode;
+            FindAndAssignSourcesOfMapResults_Inefficiently(mapPhaseTree, context, mapPhaseTree.Llt, needToAssignSource);
+
+            return new ReduceTree
+            {
+                Name = section.Name.ToString(),
+                Root = root
+            };
+        }
+
+        private static void FindAndAssignSourcesOfMapResults_Inefficiently(Tree mapPhaseTree, TransactionOperationContext context,
+                                    LowLevelTransaction tx, Dictionary<long, MapResultInLeaf> needToAssignSource)
+        {
+            // TODO arek - some cache at least?
+
+            var mapEntriesFst = new FixedSizeTree(tx, mapPhaseTree, Slices.Empty, sizeof(ulong), clone: false);
+
+            using (var it = mapPhaseTree.Iterate(false))
+            {
+                foreach (var docId in IterateKeys(it, null, 0, int.MaxValue, context))
+                {
+                    mapEntriesFst.RepurposeInstance(docId, false);
+
+                    using (var fstIt = mapEntriesFst.Iterate())
+                    {
+                        do
+                        {
+                            MapResultInLeaf entry;
+                            if (needToAssignSource.TryGetValue(fstIt.CurrentKey, out entry))
+                            {
+                                entry.Source = docId.ToString();
+                                needToAssignSource.Remove(fstIt.CurrentKey);
+                            }
+                        } while (fstIt.MoveNext());
+                    }
+
+                    if (needToAssignSource.Count == 0)
+                        break;
+                }
+            }
         }
     }
 }
