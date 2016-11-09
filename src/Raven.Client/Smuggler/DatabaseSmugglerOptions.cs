@@ -20,6 +20,11 @@ namespace Raven.Client.Smuggler
 
         public bool RemoveAnalyzers { get; set; }
 
+        /// <summary>
+        /// If true the import process will Strip replication information from documents metadata
+        /// </summary>
+        public bool RemoveReplicationInformation { get; set; }
+
         public string TransformScript { get; set; }
 
         public string FileName { get; set; }
