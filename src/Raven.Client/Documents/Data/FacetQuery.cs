@@ -173,7 +173,7 @@ namespace Raven.Client.Documents
 
         private static string SerializeFacetsToFacetsJsonString(IReadOnlyList<Facet> facets)
         {
-            var ravenJArray = (RavenJArray)RavenJToken.FromObject(facets, new JsonSerializer
+            /*var ravenJArray = (RavenJArray)RavenJToken.FromObject(facets, new JsonSerializer
             {
                 NullValueHandling = NullValueHandling.Ignore,
                 DefaultValueHandling = DefaultValueHandling.Ignore,
@@ -187,7 +187,8 @@ namespace Raven.Client.Documents
                 if (jArray != null && jArray.Length == 0)
                     obj.Remove("Ranges");
             }
-            return ravenJArray.ToString(Formatting.None);
+            return ravenJArray.ToString(Formatting.None);*/
+            throw new NotImplementedException();
         }
     }
 }

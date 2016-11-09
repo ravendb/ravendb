@@ -28,7 +28,7 @@ namespace Raven.Client.Documents
     public class RavenQueryProvider<T> : IRavenQueryProvider
     {
         private Action<QueryResult> afterQueryExecuted;
-        private Action<RavenJObject> afterStreamExecuted;
+        private Action<StreamResult> afterStreamExecuted;
         private Action<IDocumentQueryCustomization> customizeQuery;
         private readonly string indexName;
         private readonly IDocumentQueryGenerator queryGenerator;
@@ -223,7 +223,7 @@ namespace Raven.Client.Documents
             this.afterQueryExecuted = afterQueryExecutedCallback;
         }
 
-        public void AfterStreamExecuted(Action<RavenJObject> afterStreamExecutedCallback)
+        public void AfterStreamExecuted(Action<StreamResult> afterStreamExecutedCallback)
         {
             this.afterStreamExecuted = afterStreamExecutedCallback;
         }
