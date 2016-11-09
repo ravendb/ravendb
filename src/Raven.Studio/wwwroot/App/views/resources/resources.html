@@ -65,21 +65,26 @@
                     <div class="col-xs-12 col-sm-12 col-xl-6 vertical-divider properties-container" data-bind="template: { name: 'properties-template' }, visible: online()">
 
                     </div>
+                    <div data-bind="visible: !online()" class="col-xs-12 col-sm-12 col-xl-6 vertical-divider properties-container">
+                    </div>
                     <div class="col-xs-12 col-sm-6 col-xl-2 actions-container">
                         <div class="actions">
                             <div class="btn-toolbar pull-right-sm" role="toolbar">
                                 <div class="btn-group">
                                     <button class="btn btn-default"
-                                            data-bind="visible: !online(), click: $root.loadResource.bind($root, $data), css: { 'btn-spinner': $root.spinners.resourceLoad().contains(qualifiedName) }, enable: !$root.spinners.resourceLoad().contains(qualifiedName)">
+                                            data-bind="visible: !online() && !disabled(), click: $root.loadResource.bind($root, $data), css: { 'btn-spinner': $root.spinners.resourceLoad().contains(qualifiedName) }, enable: !$root.spinners.resourceLoad().contains(qualifiedName)">
                                         <i class="icon-load" ></i>
                                         <span>Load</span>
                                     </button>
                                     <button class="btn btn-default"
-                                            data-bind="click: $root.toggleResource.bind($root, $data), css: { 'btn-spinner': $root.spinners.itemTakedowns().contains(qualifiedName) }, enable: !$root.spinners.itemTakedowns().contains(qualifiedName)">
+                                            data-bind="click: $root.toggleResource.bind($root, $data), css: { 'btn-spinner': $root.spinners.itemTakedowns().contains(qualifiedName) }, enable: !$root.spinners.itemTakedowns().contains(qualifiedName), visible: online() || disabled()">
+
                                         <i class="icon-unlock" data-bind="visible: disabled()"></i>
                                         <span data-bind="visible: disabled()">Enable</span>
+
                                         <i class="icon-lock" data-bind="visible: !disabled()"></i>
                                         <span data-bind="visible: !disabled()">Disable</span>
+
                                     </button>
                                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         <span class="caret"></span>
