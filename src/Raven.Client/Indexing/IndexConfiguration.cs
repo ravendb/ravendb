@@ -32,7 +32,7 @@ namespace Raven.Client.Indexing
 
             set
             {
-                Add(Constants.Configuration.MaxIndexOutputsPerDocument, value.ToInvariantString());
+                Add(Constants.Configuration.MaxIndexOutputsPerDocument, value?.ToInvariantString());
             }
         }
 
