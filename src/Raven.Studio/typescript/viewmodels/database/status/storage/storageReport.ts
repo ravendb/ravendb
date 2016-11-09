@@ -26,7 +26,7 @@ class storageReport extends viewModelBase {
 
     private x: d3.scale.Linear<number, number>;
     private y: d3.scale.Linear<number, number>;
-    private color = d3.scale.category20();
+    private color = d3.scale.ordinal<string>();
     private root: treeMapItem;
     private node = ko.observable<treeMapItem>();
     private treemap: d3.layout.Treemap<any>;
@@ -209,8 +209,6 @@ class storageReport extends viewModelBase {
     }
 
     private initGraph() {
-        this.color.domain(["documents", "index", "subscriptions", "configuration", "free", "data", "tables", "table_data", "table", "tree", "journal", "journals", "indexes", "structure"]);
-
         this.x = d3.scale.linear().range([0, this.w]);
         this.y = d3.scale.linear().range([0, this.h]);
 
@@ -271,8 +269,7 @@ class storageReport extends viewModelBase {
 
         cell.append("svg:rect")
             .attr("width", d => d.dx - 1)
-            .attr("height", d => d.dy - 1)
-            .attr("fill", d => d.type === "free" ? "url(#hash)" : this.color(d.type));
+            .attr("height", d => d.dy - 1);
 
         cell.append("svg:text")
             .attr("x", d => d.dx / 2)
@@ -317,8 +314,8 @@ class storageReport extends viewModelBase {
     private onMouseOver(d: treeMapItem) {
         this.tooltip.transition()
             .duration(200)
-            .style("opacity", .9);
-        this.tooltip.html("Name: " + d.name + " <br /> Size: " + generalUtils.formatBytesToSize(d.size));
+            .style("opacity", 1);
+        this.tooltip.html("Name: " + d.name + " <br /> <span class='size'>Size: <strong>" + generalUtils.formatBytesToSize(d.size) + "</strong></span>");
         this.onMouseMove(d);
     }
 

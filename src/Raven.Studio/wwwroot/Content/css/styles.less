@@ -53,7 +53,7 @@ body {
         .loading-overlay {
             opacity: 1;
 
-            .loading-info{
+            .loading-info {
                 opacity: 1;
                 -moz-transform: translateX(-50%) translateY(-50%) scale(1);
                 -webkit-transform: translateX(-50%) translateY(-50%) scale(1);
@@ -145,7 +145,7 @@ h6 {
 
     &.btn-checkable {
         &.active {
-            &>i::before {
+            & > i::before {
                 content: @tick-character;
             }
         }
@@ -168,7 +168,7 @@ a {
     }
 }
 
-.btn-group.btn-block>.dropdown-menu {
+.btn-group.btn-block > .dropdown-menu {
     min-width: 100%;
 }
 
@@ -404,13 +404,14 @@ hr {
 .btn-group-justified.btn-tabs {
     .btn {
         box-shadow: none;
-        border:none;
+        border: none;
 
         [class*=" icon-"],
         [class^="icon-"] {
-            color:inherit;
+            color: inherit;
+
             &:before {
-                color:inherit;
+                color: inherit;
             }
         }
 
@@ -607,7 +608,7 @@ input[type=file] + .form-control {
         position: absolute;
         width: 250px;
         max-width: 60%;
-        padding-top:60px;
+        padding-top: 60px;
         top: 50%;
         left: 50%;
         opacity: 0;
@@ -618,7 +619,8 @@ input[type=file] + .form-control {
         transform: translateX(-50%) translateY(-50%) scale(1.4);
         background-image: url('../img/ravendb_logo.png');
         background-image: url('../img/ravendb_logo.svg'),none;
-        background-position: top center;;
+        background-position: top center;
+        ;
         background-repeat: no-repeat;
         background-size: contain;
         -webkit-transition: all 0.3s cubic-bezier(0.70,-0.40, 0.40, 0.50);
@@ -642,6 +644,7 @@ input[type=file] + .form-control {
     background-color: @gray-base;
     height: 51px;
     border-bottom: 1px solid @layout-border;
+
     @media (min-width:@screen-md) {
         padding: 15px 0;
         height: @navbar-height;
@@ -654,6 +657,7 @@ input[type=file] + .form-control {
         -ms-transition: width @menu-transition-ease;
         -o-transition: width @menu-transition-ease;
         transition: width @menu-transition-ease;
+
         @media (min-width:@screen-md) {
             float: none;
             border-bottom: 1px solid @layout-border;
@@ -682,6 +686,7 @@ input[type=file] + .form-control {
             -o-transition: opacity @menu-transition-ease;
             transition: opacity @menu-transition-ease;
             width: 130px;
+
             @media (min-width:@screen-md) {
                 width: 230px;
             }
@@ -773,9 +778,11 @@ input[type=file] + .form-control {
         [class^="icon-"] {
             font-size: 16px;
         }
+
         @media (min-width:@screen-md) {
             float: right;
         }
+
         @media (min-width:@screen-xs) {
             [class*=" icon-"],
             [class^="icon-"] {
@@ -786,6 +793,7 @@ input[type=file] + .form-control {
 
     .menu-collapse-button {
         display: none;
+
         @media (min-width:@screen-md) {
             display: block;
             display: none; //HIDDEN WHILE IN DEVELOPMENT
@@ -910,6 +918,7 @@ input[type=file] + .form-control {
                     max-height: 0;
                     overflow: auto;
                 }
+
                 overflow-y: auto;
 
                 section {
@@ -937,6 +946,7 @@ input[type=file] + .form-control {
                         .topexpand-style;
                         max-height: 60vh;
                     }
+
                     display: block;
                 }
             }
@@ -1010,7 +1020,9 @@ input[type=file] + .form-control {
             }
         }
 
-        .database-list {}
+        .database-list {
+        }
+
         @media (min-width: @screen-md) {
             clear: none;
             background-color: transparent;
@@ -1094,6 +1106,7 @@ input[type=file] + .form-control {
     -ms-transition: left @menu-transition-ease;
     -o-transition: left @menu-transition-ease;
     transition: left @menu-transition-ease;
+
     @media (min-width:@screen-md) {
         top: @navbar-height;
         left: @menu-width;
@@ -1104,6 +1117,7 @@ input[type=file] + .form-control {
     .content-container-margin {
         margin-top: @grid-gutter-width / 2;
         margin-bottom: @grid-gutter-width / 2;
+
         @media(min-width:@screen-md) {
             margin-top: @grid-gutter-width;
             margin-bottom: @grid-gutter-width;
@@ -1149,6 +1163,7 @@ input[type=file] + .form-control {
         top: @navbar-height-xs;
         bottom: 0;
         right: 15px;
+
         @media (min-width: @screen-md) {
             top: @navbar-height;
         }
@@ -1256,7 +1271,7 @@ pre {
         &.document {
             &:before {
                 .icon-style;
-                color:@brand-primary;
+                color: @brand-primary;
                 content: @icon-document;
                 margin-right: @grid-gutter-width/4;
             }
@@ -1368,6 +1383,7 @@ pre {
             }
         }
     }
+
     @media (min-width:@screen-md) {
         top: @navbar-height;
     }
@@ -1395,6 +1411,7 @@ pre {
 .actions-container {
     display: flex;
     align-items: center;
+
     @media (min-width: @screen-sm) {
         justify-content: flex-end;
     }
@@ -1415,11 +1432,13 @@ pre {
         height: 36px;
         flex-wrap: nowrap;
         width: 100%;
+
         @media (min-width: @screen-sm) {
             max-width: 300px;
             min-width: 100px;
             width: 49%;
         }
+
         @media (min-width: @screen-lg) {
             width: 32%;
         }
@@ -1507,14 +1526,13 @@ pre {
             display: inline;
             float: right;
             padding: 0;
-            margin-top:-3px;
+            margin-top: -3px;
             margin-left: 10px;
             margin-right: -10px;
             line-height: normal;
             color: inherit;
             background: transparent;
-            border:none;
-
+            border: none;
             opacity: .5;
 
             &:hover {
@@ -1578,6 +1596,114 @@ pre {
     border-color: @input-border;
     border-left-color: @gray-dark;
 }
+
+#storage-report {
+    .tooltip {
+        box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.45);
+        position: absolute;
+        text-align: center;
+        background: @gray-darker;
+        color: @text-color;
+        border: 0px;
+        padding:8px 16px;
+        border-radius: 2px;
+        pointer-events: none;
+        opacity:1;
+        transform: translateY(-30px);
+    }
+
+
+    .storage-report-container {
+        position: relative;
+    }
+
+
+    .chart {
+        width: 100%;
+        height: 40vh;
+        font-size: 12px;
+    }
+
+    rect.parent {
+        cursor: pointer;
+        fill: steelblue;
+    }
+    
+    .free text {
+        fill: white;
+    }
+
+    .cell {
+        &.documents {
+            fill:#4c4f69;
+        }
+        &.index {
+            fill:#64414d;
+        }
+        &.subscriptions {
+            fill:#4d6d79;
+        }
+        &.configuration {
+            fill:#808080;
+        }
+        &.free {
+            fill:@gray-darker;
+        }
+        &.data {
+            fill:#62547b;
+        } 
+        &.tables {
+            fill:#77afab;
+        }
+        &.table_data {
+            fill:#956a85;
+        }
+        &.table {
+            fill:#cab77d;
+        }
+        &.tree {
+            fill:#547a5a;
+        }
+        &.trees {
+            fill:#8d9468;
+        }
+        &.journal {
+            fill:#8aaa77;
+        }
+        &.journals {
+            fill:#b29d78;
+        }
+        &.indexes {
+            fill:#693d2c;
+        } 
+        &.structure {
+            fill:#9f89b2;
+        }
+
+        rect {
+            fill-opacity: .8;
+            stroke: transparent;
+            stroke-linejoin: miter;
+        }
+
+        text {
+            font-weight: bold;
+            fill: @gray-light;
+            pointer-events: none;
+            font-size: 12px;
+        }
+
+        &:hover {
+            rect {
+                fill-opacity: 1;
+            }
+            text {
+                fill:@gray-lighter;
+            }
+        }
+    }
+}
+
 @import "pages/tasks-sampleData";
 @import "pages/tasks-csvImport";
 @import "pages/tasks-subscriptions";
