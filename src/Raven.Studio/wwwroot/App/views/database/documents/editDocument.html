@@ -61,31 +61,6 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="documentId">
-                        <!-- BACKUP
-                            <span data-bind="if: isCreatingNewDocument()">
-
-                                <span id="obj-name" class="editable-input-inline" data-bind="css: { 'edit': provideCustomNameForNewDocument() }">
-                                    <span class="value-container">
-                                        <span class="static-name padding padding-xs">
-                                            <span data-bind="visible: collectionForNewDocument(), text: collectionForNewDocument() + '/'"></span><span class="text-primary">&lt;auto-generated&gt;</span>
-                                        </span>
-                                        <input type="text" name="documentId" id="documentIdInput" required="required"
-                                               class="edit-inline padding padding-xs" placeholder="document ID"
-                                               data-bind="textInput: $root.userSpecifiedId, attr: { disabled: $root.isBusy }, customValidity: userSpecifiedIdCustomValidityError, hasFocus: userIdHasFocus()" />
-                                    </span>
-                                    <button class="edit-button btn-toggle btn btn-sm" data-bind="click: enableCustomNameProvider">
-                                        <i class="icon-edit"></i>
-                                        <span class="text"></span>
-                                    </button>
-                                </span>
-                            </span>
-                            <span data-bind="if: !isCreatingNewDocument()">
-                                <a class="reset-color btn-toggle markFavourite" data-bind="click: connectedDocuments.toggleStar.bind(connectedDocuments, $data)">
-                                    <span data-bind="attr: { class: connectedDocuments.currentDocumentIsStarred()?'icon-star-filled favorite':'icon-star' }"></span>
-                                </a>
-                                <span data-bind="text: userSpecifiedId"></span>
-                            </span>
-                        -->
                         <div data-bind="if: isCreatingNewDocument()">
                         <div class="input-group">
                             <div class="input-group-addon">key</div>
