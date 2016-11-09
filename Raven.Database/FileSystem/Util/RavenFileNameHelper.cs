@@ -70,5 +70,12 @@ namespace Raven.Database.FileSystem.Util
         {
             return CopyOperationConfigPrefix + FileHeader.Canonize(fileName);
         }
+
+
+        
+        public static string CopyOperationConfigNameForFile(string fileName, string target)
+        {
+            return $"{CopyOperationConfigPrefix} {FileHeader.Canonize(fileName)} {target}";
+        }
     }
 }
