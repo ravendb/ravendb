@@ -299,7 +299,7 @@ namespace Raven.Database.FileSystem.Actions
 
         public void ExecuteCopyOperation(CopyFileOperation operation)
         {
-            var configName = RavenFileNameHelper.CopyOperationConfigNameForFile(operation.SourceFilename);
+            var configName = RavenFileNameHelper.CopyOperationConfigNameForFile(operation.SourceFilename, operation.TargetFilename);
 
             Storage.Batch(accessor =>
             {

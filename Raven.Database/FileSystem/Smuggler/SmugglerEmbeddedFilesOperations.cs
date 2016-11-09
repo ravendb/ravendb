@@ -179,5 +179,7 @@ namespace Raven.Database.FileSystem.Smuggler
         {
             throw new NotSupportedException("Streaming bulks of files between filesystems is currently not supported in embedded version.");
         }
+
+        public bool IsEmbedded => true; 
     }
 }

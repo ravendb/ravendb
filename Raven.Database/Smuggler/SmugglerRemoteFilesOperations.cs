@@ -209,6 +209,8 @@ namespace Raven.Smuggler
             }
             
         }
+
+        public bool IsEmbedded => false;
     }
 
 

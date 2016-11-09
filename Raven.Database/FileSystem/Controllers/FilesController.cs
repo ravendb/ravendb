@@ -268,7 +268,7 @@ namespace Raven.Database.FileSystem.Controllers
                     MetadataAfterOperation = metadata
                 };
 
-                accessor.SetConfig(RavenFileNameHelper.CopyOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
+                accessor.SetConfig(RavenFileNameHelper.CopyOperationConfigNameForFile(name,targetFilename), JsonExtensions.ToJObject(operation));
                 accessor.PulseTransaction(); // commit rename operation config
 
                 Files.ExecuteCopyOperation(operation);
