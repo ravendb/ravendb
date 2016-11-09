@@ -366,7 +366,8 @@ namespace Raven.Database.Server.Controllers
                         }
                         else
                         {
-                            var value = UnescapeStringIfNeeded(header.Value.ToString(Formatting.None));
+                            //headers do not need url decoding because they might contain special symbols (like + symbol in clr type)
+                            var value = UnescapeStringIfNeeded(header.Value.ToString(Formatting.None), shouldDecodeUrl: false);
                             msg.Content.Headers.Add(header.Key, value);
                         }
                         break;
@@ -412,7 +413,7 @@ namespace Raven.Database.Server.Controllers
             return obj.ToString();
         }
 
-        private static string UnescapeStringIfNeeded(string str)
+        private static string UnescapeStringIfNeeded(string str, bool shouldDecodeUrl = true)
         {
             if (str.StartsWith("\"") && str.EndsWith("\""))
                 str = Regex.Unescape(str.Substring(1, str.Length - 2));
@@ -422,7 +423,7 @@ namespace Raven.Database.Server.Controllers
                 return Uri.EscapeDataString(str);
             }
 
-            return str;
+            return shouldDecodeUrl ? HttpUtility.UrlDecode(str) : str;
         }
 
         public virtual HttpResponseMessage GetMessageWithObject(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
