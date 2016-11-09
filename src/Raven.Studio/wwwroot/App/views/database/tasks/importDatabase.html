@@ -7,7 +7,7 @@
             <div class="row">
                 <div class="col-sm-6">
                     <div class="input-group file-input">
-                        <input required="" type="file" id="importDatabaseFilePicker"  data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }, disable: isImporting" tabindex="-1" value="filename.ravendbdump">
+                        <input required="" type="file" id="importDatabaseFilePicker"  data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }, disable: isImporting" tabindex="-1" >
                         <span class="static-name form-control">Select file...</span>
                         <span class="input-group-btn">
                             <label for="importDatabaseFilePicker" class="btn btn-default">
@@ -16,12 +16,6 @@
                             </label>
                         </span>
                     </div>
-                    <!--<div class="input-group">
-                        <input type="file" id="importDatabaseFilePicker" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }, disable: isImporting"  value="filename.ravendbdump" class="form-control">
-                        <span class="input-group-btn">
-                            <button class="btn btn-default btn-success input-group-addon-button"><span class="icon-document"></span> <span>Choose File</span></button>
-                        </span>
-                    </div>-->
                 </div>
             </div>
             <br />
@@ -108,7 +102,10 @@
                     <label class="control-label">Command</label>
                     <div class="input-group">
                         <span class="input-group-btn">
-                            <button class="btn btn-default"><i class="icon-copy"></i> <span>Copy to clipboard</span></button>
+                            <button data-bind="click: $root.copyCommandToClipboard.bind($root)" class="btn btn-default">
+                                <i class="icon-copy"></i>
+                                <span>Copy to clipboard</span>
+                            </button>
                         </span>
                         <input onClick="this.select();" class="form-control" readonly value='Raven.Smuggler out http://live-test.ravendb.net raven.dump --operate-on-types=Documents,Indexes,Transformers --database="Media" --batch-size=1024 --excludeexpired'>
                     </div>
