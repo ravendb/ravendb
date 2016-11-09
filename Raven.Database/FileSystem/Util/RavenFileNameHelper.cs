@@ -66,12 +66,6 @@ namespace Raven.Database.FileSystem.Util
         }
 
         internal const string CopyOperationConfigPrefix = "CopyOp";
-        public static string CopyOperationConfigNameForFile(string fileName)
-        {
-            return CopyOperationConfigPrefix + FileHeader.Canonize(fileName);
-        }
-
-
         
         public static string CopyOperationConfigNameForFile(string fileName, string target)
         {

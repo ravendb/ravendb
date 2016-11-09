@@ -274,7 +274,7 @@ namespace Raven.Tests.FileSystem
             await client.UploadAsync(fileName, new RandomStream(1));
 
             // create config to say to the server that rename operation performed last time were not finished
-            var copyOpConfig = RavenFileNameHelper.CopyOperationConfigNameForFile(fileName);
+            var copyOpConfig = RavenFileNameHelper.CopyOperationConfigNameForFile(fileName, newName);
             var copyOperation = new CopyFileOperation
             {
                 SourceFilename = fileName,
