@@ -49,7 +49,9 @@ namespace Raven.Abstractions.Smuggler.Data
             var buffer = new byte[1024*8];
             foreach (var fileUploadUnitOfWork in filesAndMetadata)
             {
-                binaryWriter.Write(fileUploadUnitOfWork.Header.FullPath);
+                var headerFullPath = fileUploadUnitOfWork.Header.FullPath;
+                
+                binaryWriter.Write(headerFullPath);
                 binaryWriter.Write(fileUploadUnitOfWork.Header.Metadata.ToString(Formatting.None));
                 binaryWriter.Write(fileUploadUnitOfWork.ZipEntry.Length);
 

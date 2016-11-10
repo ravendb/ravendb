@@ -183,7 +183,7 @@ namespace Raven.Database.FileSystem.Controllers
             using (var stream = await Request.Content.ReadAsStreamAsync().ConfigureAwait(false))
             {
                 var binaryReader = new BinaryReader(stream);
-
+                long count = 0;
                 while (true)
                 {
                     string name;
@@ -226,8 +226,14 @@ namespace Raven.Database.FileSystem.Controllers
                     tcs.SetResult(fileStream);
 
                     await FileSystem.Files.PutAsync(name, null, metadata, () => tcs.Task, options).ConfigureAwait(false);
-                    SynchronizationTask.Context.NotifyAboutWork();
+
+                    if (count%100==0)
+                        SynchronizationTask.Context.NotifyAboutWork();
                 }
+
+                SynchronizationTask.Context.NotifyAboutWork();
+
+
             }
                 
 
