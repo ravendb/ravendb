@@ -334,7 +334,7 @@ namespace Raven.Abstractions.Smuggler
                         if (fileHeadersInBatch.Count == 0)
                             continue;
 
-                        using (var batchStream = await Operations.StreamFiles(fileHeadersInBatch.Select(x => x.FullPath).ToList()).ConfigureAwait(false))
+                        using (var batchStream = await Operations.ReceiveFilesInStream(fileHeadersInBatch.Select(x => x.FullPath).ToList()).ConfigureAwait(false))
                         {
                             var binaryReader = new BinaryReader(batchStream);
 
@@ -668,7 +668,7 @@ namespace Raven.Abstractions.Smuggler
             }
         }
 
-        private async Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions, Stream stream)
+        private async Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions, Stream stream, int streamingBatchSize = 10*1024*1024)
         {
             Operations.Configure(Options);
             Operations.Initialize(Options);
@@ -715,44 +715,117 @@ namespace Raven.Abstractions.Smuggler
 
                 var filesCount = 0;
 
+                ServerSupportedFeatures features;
+                try
+                {
+                    features = await DetectServerSupportedFeatures(importOptions.To).ConfigureAwait(false);
+                }
+                catch (WebException e)
+                {
+                    throw new SmugglerImportException("Failed to query server for supported features. Reason : " + e.Message)
+                    {
+                        LastEtag = Etag.Empty
+                    };
+                }
+
+
                 var metadataEntry = filesLookup[MetadataEntry];
                 using (var streamReader = new StreamReader(metadataEntry.Open()))
                 {
-                    foreach (var json in streamReader.EnumerateJsonObjects())
+                    if (features.IsFilesStreamingSupported)
                     {
-                        // For each entry in the metadata file.                        
-                        var container = serializer.Deserialize<FileContainer>(new StringReader(json));
-
-                        var header = new FileHeader(container.Key, container.Metadata);
-                        if (header.IsTombstone)
-                            continue;
-
-                        var entry = filesLookup[container.Key];
-                        using (var dataStream = entry.Open())
-                        {
-                            if (Options.StripReplicationInformation)
-                                container.Metadata = Operations.StripReplicationInformationFromMetadata(container.Metadata);
-
-                            if (Options.ShouldDisableVersioningBundle)
-                                container.Metadata = Operations.DisableVersioning(container.Metadata);
-
-                            await Operations.PutFile(header, dataStream, entry.Length).ConfigureAwait(false);
-                        }
-
-                        Options.CancelToken.Token.ThrowIfCancellationRequested();
-                        filesCount++;
-
-                        if (filesCount % 100 == 0)
-                        {
-                            Operations.ShowProgress("Read {0:#,#;;0} files", filesCount);
-                        }
+                        filesCount = await ImportFilesWithStreaming(streamingBatchSize, streamReader, serializer, filesLookup).ConfigureAwait(false);
                     }
+                    else
+                    {
+                        filesCount = await ImportFilesLegacy(streamReader, serializer, filesLookup).ConfigureAwait(false);
+                    }
+                    
 
                     Options.CancelToken.Token.ThrowIfCancellationRequested();
                 }
             }
 
             sw.Stop();
+        }
+
+        private async Task<int> ImportFilesWithStreaming(int streamingBatchSize, StreamReader streamReader, JsonSerializer serializer, Dictionary<string, ZipArchiveEntry> filesLookup)
+        {
+            int filesCount = 0;
+            using (var filesMetadataEnumerator = streamReader.EnumerateJsonObjects().GetEnumerator())
+            {
+                while (filesMetadataEnumerator.MoveNext())
+                {
+                    long totalSize = 0;
+                    List<FileUploadUnitOfWork> filesAndHeaders = new List<FileUploadUnitOfWork>();
+                    do
+                    {
+                        var jsonString = filesMetadataEnumerator.Current;
+                        var container = serializer.Deserialize<FileContainer>(new StringReader(jsonString));
+                        var header = new FileHeader(container.Key, container.Metadata);
+                        if (header.IsTombstone)
+                            continue;
+
+                        var entry = filesLookup[container.Key];
+
+                        filesAndHeaders.Add(new FileUploadUnitOfWork(entry, header));
+
+                        if (Options.StripReplicationInformation)
+                            container.Metadata = Operations.StripReplicationInformationFromMetadata(container.Metadata);
+
+                        if (Options.ShouldDisableVersioningBundle)
+                            container.Metadata = Operations.DisableVersioning(container.Metadata);
+
+                        Options.CancelToken.Token.ThrowIfCancellationRequested();
+                        filesCount++;
+
+                        if (filesCount%100 == 0)
+                        {
+                            Operations.ShowProgress("Read {0:#,#;;0} files", filesCount);
+                        }
+                    } while (filesMetadataEnumerator.MoveNext() && totalSize <= streamingBatchSize);
+
+                    await Operations.UploadFilesInStream(filesAndHeaders.ToArray()).ConfigureAwait(false);
+
+                    Options.CancelToken.Token.ThrowIfCancellationRequested();
+                }
+            }
+            return filesCount;
+        }
+
+        private async Task<int> ImportFilesLegacy(StreamReader streamReader, JsonSerializer serializer, Dictionary<string,ZipArchiveEntry> filesLookup )
+        {
+            int filesCount = 0;
+            foreach (var json in streamReader.EnumerateJsonObjects())
+            {
+                // For each entry in the metadata file.                        
+                var container = serializer.Deserialize<FileContainer>(new StringReader(json));
+
+                var header = new FileHeader(container.Key, container.Metadata);
+                if (header.IsTombstone)
+                    continue;
+
+                var entry = filesLookup[container.Key];
+                using (var dataStream = entry.Open())
+                {
+                    if (Options.StripReplicationInformation)
+                        container.Metadata = Operations.StripReplicationInformationFromMetadata(container.Metadata);
+
+                    if (Options.ShouldDisableVersioningBundle)
+                        container.Metadata = Operations.DisableVersioning(container.Metadata);
+
+                    await Operations.PutFile(header, dataStream, entry.Length).ConfigureAwait(false);
+                }
+
+                Options.CancelToken.Token.ThrowIfCancellationRequested();
+                filesCount++;
+
+                if (filesCount % 100 == 0)
+                {
+                    Operations.ShowProgress("Read {0:#,#;;0} files", filesCount);
+                }
+            }
+            return filesCount;
         }
 
         public virtual async Task Between(SmugglerBetweenOptions<FilesConnectionStringOptions> betweenOptions)

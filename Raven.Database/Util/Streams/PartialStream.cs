@@ -6,9 +6,9 @@ namespace Raven.Database.Util.Streams
     public class PartialStream : Stream
     {
         private readonly Stream inner;
-        private int size;
+        private long size;
 
-        public PartialStream(Stream inner, int size)
+        public PartialStream(Stream inner, long size)
         {
             this.inner = inner;
             this.size = size;
@@ -33,7 +33,7 @@ namespace Raven.Database.Util.Streams
         {
             if (size == 0)
                 return 0;
-            var actualCount = Math.Min(size, count);
+            var actualCount = Math.Min((int)Math.Min(size, int.MaxValue), count);
             var read = inner.Read(buffer, offset, actualCount);
             size -= read;
             return read;

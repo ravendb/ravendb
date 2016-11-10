@@ -6,19 +6,25 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Actions;
+using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Plugins;
 using Raven.Database.Server.WebApi.Attributes;
+using Raven.Database.Util.Streams;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -128,12 +134,11 @@ namespace Raven.Database.FileSystem.Controllers
             };
         }
 
-        private void StreamExportToClient(Stream gzip2, string[] fileNames)
+        private void StreamExportToClient(Stream stream, string[] fileNames)
         {
-            using (var gzip = new BufferedStream(gzip2))
-       //     using (var gzip = new GZipStream(stream, CompressionMode.Compress,true))
+            using (var bufferedStream = new BufferedStream(stream))
             {
-                var binaryWriter = new BinaryWriter(gzip);
+                var binaryWriter = new BinaryWriter(bufferedStream);
 
                 var buffer = new byte[StorageConstants.MaxPageSize];
                 var pageBuffer = new byte[StorageConstants.MaxPageSize];
@@ -141,19 +146,12 @@ namespace Raven.Database.FileSystem.Controllers
                 foreach (var name in fileNames)
                 {
                     FileAndPagesInformation fileAndPages = null;
-                    var cannonizedName = FileHeader.Canonize(name); 
+                    var cannonizedName = FileHeader.Canonize(name);
 
-                    try
-                    {
-                        Storage.Batch(accessor => fileAndPages = accessor.GetFile(cannonizedName, 0, 0));
-                    }
-                    catch (Exception ex)
-                    {
+                    Storage.Batch(accessor => fileAndPages = accessor.GetFile(cannonizedName, 0, 0));
+                  
 
-                        throw;
-                    }
-
-                    // if we didn't find the document, we'll write "-1" to the stream, signaling that 
+                    // if we didn't find the document, we'll write "-1" to the sourceStream, signaling that 
                     if (fileAndPages.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
                     {
                         if (log.IsDebugEnabled)
@@ -170,22 +168,89 @@ namespace Raven.Database.FileSystem.Controllers
                     var bytesRead = 0;
                     do
                     {
-                        try
-                        {
-                            bytesRead = readingStream.ReadUsingExternalTempBuffer(buffer,0,buffer.Length,pageBuffer);
-                        }
-                        catch (Exception ex)
-                        {
-                            
-                            throw;
-                        }
-                        gzip.Write(buffer, 0, bytesRead);
+                        bytesRead = readingStream.ReadUsingExternalTempBuffer(buffer,0,buffer.Length,pageBuffer);
+                        bufferedStream.Write(buffer, 0, bytesRead);
                     } while (bytesRead > 0);
                 }
             }
-
-            //gzip2.Flush();
         }
+
+
+        [HttpPut]
+        [RavenRoute("fs/{fileSystemName}/streams/Import")]
+        public async Task<HttpResponseMessage> Import()
+        {
+            using (var stream = await Request.Content.ReadAsStreamAsync().ConfigureAwait(false))
+            {
+                var binaryReader = new BinaryReader(stream);
+
+                while (true)
+                {
+                    string name;
+                    try
+                    {
+                        name = binaryReader.ReadString();
+                    }
+                    catch (EndOfStreamException)
+                    {
+                        break; // done
+                    }
+
+                    var metadata = RavenJObject.Parse(binaryReader.ReadString());
+
+                    if (name.Length > SystemParameters.KeyMost)
+                    {
+                        if (Log.IsDebugEnabled)
+                            Log.Debug("File '{0}' was not created due to illegal name length", name);
+                        return GetMessageWithString(string.Format("File '{0}' was not created due to illegal name length", name), HttpStatusCode.BadRequest);
+                    }
+
+                    var contentSize = binaryReader.ReadInt64();
+                    var options = new FileActions.PutOperationOptions
+                    {
+                        ContentSize = contentSize
+                    };
+
+                    RavenJToken lastModifiedJToken;
+                    if (metadata.TryGetValue(Constants.RavenLastModified, out lastModifiedJToken))
+                    {
+                        DateTimeOffset lastModified;
+                        if (DateTimeOffset.TryParse(lastModifiedJToken.Value<string>(), out lastModified))
+                            options.LastModified = lastModified;
+                    }
+
+                    options.PreserveTimestamps = true;
+
+                    var fileStream = new PartialStream(stream, contentSize);
+                    var tcs = new TaskCompletionSource<Stream>();
+                    tcs.SetResult(fileStream);
+
+                    await FileSystem.Files.PutAsync(name, null, metadata, () => tcs.Task, options).ConfigureAwait(false);
+                    SynchronizationTask.Context.NotifyAboutWork();
+                }
+            }
+                
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+            };
+        }
+
+        private static void ReadFromStreamToMemoryStream(Stream sourceStream, long bytesToCopy, byte[] copyBuffer, MemoryStream destinationStream)
+        {
+            destinationStream.Position = 0;
+            int bytesRead = 0;
+            while (bytesRead< bytesToCopy)
+            {
+                var bytesReadInCurrentIteration = sourceStream.Read(copyBuffer, 0, (int) Math.Min(bytesToCopy - bytesRead, copyBuffer.Length));
+
+                destinationStream.Write(copyBuffer, 0, bytesReadInCurrentIteration);
+
+                bytesRead += bytesReadInCurrentIteration;
+            }
+            destinationStream.Position = 0;
+        }
+
 
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/streams/query")]
