@@ -886,64 +886,66 @@ namespace Raven.Database.Indexing
                     //Here we make sure that the database isn't been disposed so we won't advance the indexing etags on 
                     //aborted batches (see RavenDB-5603 related changes)
                     if (context.Database.Disposed == false)
-                    for (var i = 0; i < 10 && keepTrying; i++)
                     {
-                        keepTrying = false;
-
-                        try
+                        for (var i = 0; i < 10 && keepTrying; i++)
                         {
-                            transactionalStorage.Batch(actions =>
-                            {
-                                // whatever we succeeded in indexing or not, we have to update this
-                                // because otherwise we keep trying to re-index failed documents
-                                actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
+                            keepTrying = false;
 
-                                // if we are saving the last indexed etag
-                                // we need to make sure that the last index etag is flushed to disk
-                                // otherwise we are going to reset the index etag to the last commited one on restart 
-                                // (if we discover that the last indexed etag is different from the last commited one)
-                                // we already flush the last indexed etag when we pass a certain size in ram,
-                                // however we don't do that if we only have a few of them
-                                // it's also limited to flushing for every 10 minutes if don't have any results
-                                actions.BeforeStorageCommit += () =>
+                            try
+                            {
+                                transactionalStorage.Batch(actions =>
                                 {
-                                    batchForIndex.Index.EnsureIndexWriter(useWriteLock: true);
-                                    // we don't to flush to disk too often
-                                    batchForIndex.Index.Flush(lastEtag, considerLastCommitedTime: true);
-                                };
-                            });
-                        }
-                        catch (IndexDoesNotExistsException)
-                        {
-                            //we can ignore this, no need to retry
-                        }
-                        catch (Exception e)
-                        {
-                            if (TransactionalStorageHelper.IsOutOfMemoryException(e))
+                                    // whatever we succeeded in indexing or not, we have to update this
+                                    // because otherwise we keep trying to re-index failed documents
+                                    actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
+
+                                    // if we are saving the last indexed etag
+                                    // we need to make sure that the last index etag is flushed to disk
+                                    // otherwise we are going to reset the index etag to the last commited one on restart 
+                                    // (if we discover that the last indexed etag is different from the last commited one)
+                                    // we already flush the last indexed etag when we pass a certain size in ram,
+                                    // however we don't do that if we only have a few of them
+                                    // it's also limited to flushing for every 10 minutes if don't have any results
+                                    actions.BeforeStorageCommit += () =>
+                                    {
+                                        batchForIndex.Index.EnsureIndexWriter(useWriteLock: true);
+                                        // we don't to flush to disk too often
+                                        batchForIndex.Index.Flush(lastEtag, considerLastCommitedTime: true);
+                                    };
+                                });
+                            }
+                            catch (IndexDoesNotExistsException)
                             {
-                                batchForIndex.Index.AddOutOfMemoryDatabaseAlert(e);
-                                //if it's an esent/voron OOME we can keep trying
-                                keepTrying = true;
+                                //we can ignore this, no need to retry
+                            }
+                            catch (Exception e)
+                            {
+                                if (TransactionalStorageHelper.IsOutOfMemoryException(e))
+                                {
+                                    batchForIndex.Index.AddOutOfMemoryDatabaseAlert(e);
+                                    //if it's an esent/voron OOME we can keep trying
+                                    keepTrying = true;
+                                }
+
+                                Exception conflictException;
+                                if (TransactionalStorageHelper.IsWriteConflict(e, out conflictException))
+                                {
+                                    Log.Info($"Write conflict encountered for index '{batchForIndex.Index.PublicName}' when updating last etag. " +
+                                             $"Will retry. Details: {conflictException.Message}");
+                                    keepTrying = true;
+                                }
+
+                                if (keepTrying == false)
+                                {
+                                    //unknown error
+                                    Log.WarnException($"Failed to update last etag for index '{batchForIndex.Index.PublicName}'", e);
+                                    context.AddError(batchForIndex.IndexId, batchForIndex.Index.PublicName, null, e);
+                                }
                             }
 
-                            Exception conflictException;
-                            if (TransactionalStorageHelper.IsWriteConflict(e, out conflictException))
-                            {
-                                Log.Info($"Write conflict encountered for index '{batchForIndex.Index.PublicName}' when updating last etag. " +
-                                         $"Will retry. Details: {conflictException.Message}");
-                                keepTrying = true;
-                            }
-
-                            if (keepTrying == false)
-                            {
-                                //unknown error
-                                Log.WarnException($"Failed to update last etag for index '{batchForIndex.Index.PublicName}'", e);
-                                context.AddError(batchForIndex.IndexId, batchForIndex.Index.PublicName, null, e);
-                            }
+                            if (keepTrying)
+                                Thread.Sleep(11);
                         }
-
-                        if (keepTrying)
-                            Thread.Sleep(11);
                     }
                 }
             }
