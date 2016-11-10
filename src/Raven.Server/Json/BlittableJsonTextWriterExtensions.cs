@@ -1115,7 +1115,15 @@ namespace Raven.Server.Json
                 writer.WriteStartObject();
 
                 writer.WritePropertyName(nameof(TreePage.PageNumber));
-                writer.WriteInteger(page.Page.PageNumber);
+                writer.WriteInteger(page.PageNumber);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(TreePage.IsBranch));
+                writer.WriteBool(page.IsBranch);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(TreePage.IsLeaf));
+                writer.WriteBool(page.IsLeaf);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(ReduceTreePage.AggregationResult));
@@ -1123,21 +1131,22 @@ namespace Raven.Server.Json
                     writer.WriteObject(page.AggregationResult);
                 else
                     writer.WriteNull();
-
                 writer.WriteComma();
 
+                writer.WritePropertyName(nameof(ReduceTreePage.Children));
                 if (page.Children != null)
                 {
-                    writer.WritePropertyName(nameof(ReduceTreePage.Children));
                     writer.WriteStartArray();
-
                     WriteTreePagesRecursively(writer, page.Children);
-
                     writer.WriteEndArray();
                 }
-                else if (page.Entries != null)
+                else
+                    writer.WriteNull();
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReduceTreePage.Entries));
+                if (page.Entries != null)
                 {
-                    writer.WritePropertyName(nameof(ReduceTreePage.Entries));
                     writer.WriteStartArray();
 
                     var firstEntry = true;
@@ -1153,7 +1162,7 @@ namespace Raven.Server.Json
                         writer.WriteComma();
 
                         writer.WritePropertyName(nameof(MapResultInLeaf.Source));
-                        writer.WriteString(entry.Source ?? "unknown");
+                        writer.WriteString(entry.Source);
 
                         writer.WriteEndObject();
 
@@ -1163,7 +1172,7 @@ namespace Raven.Server.Json
                     writer.WriteEndArray();
                 }
                 else
-                    throw new InvalidOperationException("Page must have either children (branch) or entries (leaf)");
+                    writer.WriteNull();
 
                 writer.WriteEndObject();
                 first = false;

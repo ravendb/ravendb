@@ -134,6 +134,52 @@ select new
                         IEnumerable<ReduceTree> trees;
                         using (index.GetReduceTree("orders/1", out trees))
                         {
+                            var result = trees.ToList();
+
+                            Assert.Equal(2, result.Count);
+
+                            for (int i = 0; i < 2; i++)
+                            {
+                                var tree = result[0];
+
+                                Assert.Equal(2, tree.Depth);
+                                Assert.Equal(100, tree.NumberOfEntries);
+                                Assert.Equal(3, tree.PageCount);
+
+                                Assert.True(tree.Root.IsBranch);
+                                Assert.False(tree.Root.IsLeaf);
+
+                                Assert.Null(tree.Root.Entries);
+
+                                Assert.NotNull(tree.Root.AggregationResult);
+                                
+                                var left = tree.Root.Children[0];
+                                var right = tree.Root.Children[1];
+
+                                var hasSource = false;
+
+                                foreach (var leafPage in new []{left, right})
+                                {
+                                    Assert.True(leafPage.IsLeaf);
+                                    Assert.False(leafPage.IsBranch);
+                                   
+                                    Assert.Null(leafPage.Children);
+
+                                    Assert.NotNull(leafPage.AggregationResult);
+
+                                    foreach (var entry in leafPage.Entries)
+                                    {
+                                        if (string.IsNullOrEmpty(entry.Source) == false)
+                                            hasSource = true;
+
+                                        Assert.NotNull(entry.Data);
+                                    }
+                                }
+
+                                Assert.True(hasSource);
+
+                                Assert.Equal(100, right.Entries.Count + left.Entries.Count);
+                            }
                         }
                     }
                 }

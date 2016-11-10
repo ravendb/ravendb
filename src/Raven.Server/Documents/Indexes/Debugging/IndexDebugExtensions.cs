@@ -50,13 +50,13 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 TreeIterator it;
                 scope.EnsureDispose(it = tree.Iterate(false));
                     
-                docIds = IterateKeys(it, startsWith, start, take, indexContext).Select(x => x.ToString());
+                docIds = IterateKeys(it, startsWith, start, take, indexContext);
                     
                 return scope.Delay();
             }
         }
 
-        private static IEnumerable<Slice> IterateKeys(IIterator it, string prefix, int start, int take, TransactionOperationContext context)
+        private static IEnumerable<string> IterateKeys(IIterator it, string prefix, int start, int take, TransactionOperationContext context)
         {
             if (it.Seek(Slices.BeforeAllKeys) == false)
                 yield break;
@@ -85,27 +85,8 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 if (--take < 0)
                     yield break;
 
-                yield return it.CurrentKey;
+                yield return it.CurrentKey.ToString();
             } while (it.MoveNext());
-        }
-
-        public static IDisposable GetReduceKeys(this Index self, int start, int take)
-        {
-            if (self.Type.IsMapReduce() == false)
-                throw new NotSupportedException("Reduce keys can be retrieved only for a map-reduce index");
-
-            using (var scope = new DisposeableScope())
-            {
-                TransactionOperationContext indexContext;
-                scope.EnsureDispose(self._contextPool.AllocateOperationContext(out indexContext));
-
-                RavenTransaction tx;
-                scope.EnsureDispose(tx = indexContext.OpenReadTransaction());
-                
-                throw new NotImplementedException("TODO arek");
-                
-                //return scope.Delay();
-            }
         }
 
         public static IDisposable GetReduceTree(this Index self, string docId, out IEnumerable<ReduceTree> trees)
@@ -140,17 +121,19 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 FixedSizeTree mapEntries;
                 scope.EnsureDispose(mapEntries = mapPhaseTree.FixedTreeFor(docId, sizeof(long)));
 
-                trees = IterateTrees(self, mapEntries, mapPhaseTree, reducePhaseTree, indexContext);
+                FixedSizeTree typePerHash;
+                scope.EnsureDispose(typePerHash = reducePhaseTree.FixedTreeFor(MapReduceIndexBase<MapReduceIndexDefinition>.ResultsStoreTypesTreeName, sizeof(byte)));
+
+                trees = IterateTrees(self, mapEntries, reducePhaseTree, typePerHash, indexContext);
 
                 return scope.Delay();
             }
         }
 
-        private static IEnumerable<ReduceTree> IterateTrees(Index self, FixedSizeTree mapEntries, Tree mapPhaseTree, Tree reducePhaseTree, TransactionOperationContext indexContext)
+        private static IEnumerable<ReduceTree> IterateTrees(Index self, FixedSizeTree mapEntries,
+            Tree reducePhaseTree, FixedSizeTree typePerHash, TransactionOperationContext indexContext)
         {
-            HashSet<ulong> rendered = new HashSet<ulong>();
-
-            var typePerHash = reducePhaseTree.FixedTreeFor(MapReduceIndexBase<MapReduceIndexDefinition>.ResultsStoreTypesTreeName, sizeof(byte));
+            var rendered = new HashSet<ulong>();
 
             foreach (var mapEntry in MapReduceIndexBase<MapReduceIndexDefinition>.GetMapEntries(mapEntries))
             {
@@ -173,10 +156,12 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     switch (store.Type)
                     {
                         case MapResultsStorageType.Tree:
-                            yield return RenderTree(store.Tree, mapPhaseTree, self, indexContext);
+                            yield return RenderTree(store.Tree, mapEntry, mapEntries.Name.ToString(), self, indexContext);
                             break;
                         case MapResultsStorageType.Nested:
-                            yield return RenderNestedSection(store.GetNestedResultsSection(reducePhaseTree), mapPhaseTree, self, indexContext);
+                            yield return
+                                RenderNestedSection(store.GetNestedResultsSection(reducePhaseTree), mapEntry, mapEntries.Name.ToString(), self,
+                                    indexContext);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException(store.Type.ToString());
@@ -185,24 +170,16 @@ namespace Raven.Server.Documents.Indexes.Debugging
             }
         }
 
-        private static unsafe ReduceTree RenderTree(Tree tree, Tree mapPhaseTree, Index index, TransactionOperationContext context)
+        private static unsafe ReduceTree RenderTree(Tree tree, MapEntry mapEntry, string sourceDocId, Index index, TransactionOperationContext context)
         {
             var stack = new Stack<ReduceTreePage>();
             var rootPage = tree.GetReadOnlyTreePage(tree.State.RootPageNumber);
 
             var root = new ReduceTreePage(rootPage);
 
-            var reduceKeyHash = tree.Name.ToString().Split('-')[1];
-
-            root.AggregationResult = GetReduceResult(reduceKeyHash, index, context);
+            root.AggregationResult = GetReduceResult(mapEntry.ReduceKeyHash, index, context);
             
             stack.Push(root);
-
-            var needToAssignSource = new Dictionary<long, MapResultInLeaf>();
-
-            ReduceMapResultsBase<MapReduceIndexDefinition>.ReduceResultsSchema.Create(
-                context.Transaction.InnerTransaction,
-                ReduceMapResultsBase<MapReduceIndexDefinition>.PageNumberToReduceResultTableName);
 
             var table =
                 context.Transaction.InnerTransaction.OpenTable(
@@ -234,17 +211,19 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     {
                         var entry = new MapResultInLeaf();
 
+                        var valueReader = TreeNodeHeader.Reader(tx, page.GetNode(i));
+                        entry.Data = new BlittableJsonReaderObject(valueReader.Base, valueReader.Length, context);
+
                         Slice s;
                         using (page.GetNodeKey(tx, i, out s))
                         {
                             var mapEntryId = *(long*) s.Content.Ptr;
-                            needToAssignSource[mapEntryId] = entry;
+                            if (mapEntryId == mapEntry.Id)
+                            {
+                                entry.Source = sourceDocId;
+                            }
                         }
-
-                        var valueReader = TreeNodeHeader.Reader(tx, page.GetNode(i));
-
-                        entry.Data = new BlittableJsonReaderObject(valueReader.Base, valueReader.Length, context);
-
+                        
                         node.Entries.Add(entry);
                     }
                 }
@@ -252,8 +231,6 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 if (node != root)
                     node.AggregationResult = GetAggregationResult(node.PageNumber, table, context);
             }
-
-            FindAndAssignSourcesOfMapResults_Inefficiently(mapPhaseTree, context, tx, needToAssignSource);
             
             return new ReduceTree
             {
@@ -279,31 +256,28 @@ namespace Raven.Server.Documents.Indexes.Debugging
             }
         }
 
-        private static ReduceTree RenderNestedSection(NestedMapResultsSection section, Tree mapPhaseTree, Index index, TransactionOperationContext context)
+        private static ReduceTree RenderNestedSection(NestedMapResultsSection section, MapEntry mapEntry, string sourceDocId, Index index, TransactionOperationContext context)
         {
             var entries = new Dictionary<long, BlittableJsonReaderObject>();
+
             var root = new ReduceTreePage(section.RelevantPage);
 
-            var reduceKeyHash = section.Name.ToString().Split('-')[1];
-
-            root.AggregationResult = GetReduceResult(reduceKeyHash, index, context);
+            root.AggregationResult = GetReduceResult(mapEntry.ReduceKeyHash, index, context);
 
             section.GetResultsForDebug(context, entries);
 
-            var needToAssignSource = new Dictionary<long, MapResultInLeaf>();
-
-            foreach (var mapEntry in entries)
+            foreach (var item in entries)
             {
                 var entry = new MapResultInLeaf
                 {
-                    Data = mapEntry.Value
+                    Data = item.Value
                 };
 
-                root.Entries.Add(entry);
-                needToAssignSource[mapEntry.Key] = entry;
-            }
+                if (item.Key == mapEntry.Id)
+                    entry.Source = sourceDocId;
 
-            FindAndAssignSourcesOfMapResults_Inefficiently(mapPhaseTree, context, mapPhaseTree.Llt, needToAssignSource);
+                root.Entries.Add(entry);
+            }
 
             return new ReduceTree
             {
@@ -315,39 +289,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             };
         }
 
-        private static void FindAndAssignSourcesOfMapResults_Inefficiently(Tree mapPhaseTree, TransactionOperationContext context,
-                                    LowLevelTransaction tx, Dictionary<long, MapResultInLeaf> needToAssignSource)
-        {
-            // TODO arek - some cache at least?
-
-            var mapEntriesFst = new FixedSizeTree(tx, mapPhaseTree, Slices.Empty, sizeof(ulong), clone: false);
-
-            using (var it = mapPhaseTree.Iterate(false))
-            {
-                foreach (var docId in IterateKeys(it, null, 0, int.MaxValue, context))
-                {
-                    mapEntriesFst.RepurposeInstance(docId, false);
-
-                    using (var fstIt = mapEntriesFst.Iterate())
-                    {
-                        do
-                        {
-                            MapResultInLeaf entry;
-                            if (needToAssignSource.TryGetValue(fstIt.CurrentKey, out entry))
-                            {
-                                entry.Source = docId.ToString();
-                                needToAssignSource.Remove(fstIt.CurrentKey);
-                            }
-                        } while (fstIt.MoveNext());
-                    }
-
-                    if (needToAssignSource.Count == 0)
-                        break;
-                }
-            }
-        }
-
-        private static BlittableJsonReaderObject GetReduceResult(string reduceKeyHash, Index index, TransactionOperationContext context)
+        private static BlittableJsonReaderObject GetReduceResult(ulong reduceKeyHash, Index index, TransactionOperationContext context)
         {
             using (var reader = index.IndexPersistence.OpenIndexReader(context.Transaction.InnerTransaction))
             {
