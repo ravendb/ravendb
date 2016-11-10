@@ -25,12 +25,12 @@
             operateOnTypes.push("RevisionDocuments");
         }
 
-        //TODO: shouldDisableVersioningBundle - should we include this?
         return {
             IncludeExpired: this.includeExpiredDocuments(),
             TransformScript: this.transformScript(),
             RemoveAnalyzers: this.removeAnalyzers(),
             RemoveReplicationInformation: this.stripReplicationInformation(),
+            DisableVersioningBundle: this.shouldDisableVersioningBundle(),
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Smuggler.DatabaseItemType
         } as Raven.Client.Smuggler.DatabaseSmugglerOptions;
     }
