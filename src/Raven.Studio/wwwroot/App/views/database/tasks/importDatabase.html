@@ -35,6 +35,12 @@
                                     Include Indexes
                                 </label>
                             </div>
+                            <div class="toggle">
+                                <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments">
+                                <label for="toggle6">
+                                    Include revision documents
+                                </label>
+                            </div>
                         </div>
                         <div class="col-sm-6 col-lg-4">
                             <div class="toggle">
@@ -56,16 +62,6 @@
             <br />
 
             <div data-bind="collapse: showAdvancedOptions, with: model">
-                <div class="row">
-                    <div class="col-sm-6">
-                        <div class="form-group">
-                            <div class="input-group">
-                                <div class="input-group-addon">Batch size</div>
-                                <input class="form-control" type="number" min="0" data-bind="textInput: batchSize">
-                            </div>
-                        </div>
-                    </div>
-                </div>
                 <div class="toggle">
                     <input id="stripReplicationInformation" type="checkbox" data-bind="checked: stripReplicationInformation">
                     <label for="stripReplicationInformation">
