@@ -436,8 +436,9 @@ namespace Raven.Database.Storage
         public AbstractViewGenerator GetViewGenerator(string name)
         {
             int id = 0;
-            if (indexNameToId.TryGetValue(name, out id))
-                return indexCache[id];
+            AbstractViewGenerator viewGenerator;
+            if (indexNameToId.TryGetValue(name, out id) && indexCache.TryGetValue(id, out viewGenerator))
+                return viewGenerator;
             return null;
         }
 
@@ -641,7 +642,11 @@ namespace Raven.Database.Storage
         {
             int id = 0;
             if (transformNameToId.TryGetValue(name, out id))
-                return transformCache[id];
+            {
+                AbstractTransformer value;
+                if (transformCache.TryGetValue(id, out value))
+                    return value;
+            }
             return null;
         }
 

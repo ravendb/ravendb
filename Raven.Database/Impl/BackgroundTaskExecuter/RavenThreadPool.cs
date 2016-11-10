@@ -300,9 +300,14 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             try
             {
                 threadTask.Duration = Stopwatch.StartNew();
-
+              
                 try
                 {
+                    if (threadTask.Database.Disposed)
+                    {
+                        logger.Warn("Ignoring request to run threadTask because the database is been disposed.");
+                        return;
+                    }
                     _runningTasks.TryAdd(threadTask, null);
                     threadTask.Action();
                 }
@@ -503,6 +508,11 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 try
                 {
                     _runningTasks.TryAdd(threadTask, null);
+                    if (database.Disposed)
+                    {
+                        logger.Warn("Ignoring request to run a single batch because the database is been disposed.");
+                        return;
+                    }
                     threadTask.Action();
                     threadTask.BatchStats.Completed++;
                 }
@@ -655,6 +665,11 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             try
             {
                 _runningTasks.TryAdd(threadTask, null);
+                if (database.Disposed)
+                {
+                    logger.Warn("Ignoring request to run a single batch because the database is been disposed.");
+                    return;
+                }
                 threadTask.Action();
                 threadTask.BatchStats.Completed++;
             }
