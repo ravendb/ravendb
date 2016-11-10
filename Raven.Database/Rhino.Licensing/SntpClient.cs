@@ -118,6 +118,15 @@ namespace Rhino.Licensing
                             var receiveTask = udpClient.ReceiveAsync();
                             if (await Task.WhenAny(receiveTask, Task.Delay(TimeSpan.FromMilliseconds(500))).ConfigureAwait(false) != receiveTask)
                             {
+                                //The purpose of this task is just to observe and log the exception from the receiveTask
+                                //so this will not remain in the unobserved exceptions list, we do not wait for it by design.
+                                #pragma warning disable 4014
+                                receiveTask.ContinueWith(t =>
+                                 {
+                                     if (t.Exception != null && log.IsDebugEnabled)
+                                         log.DebugException($"Got an error while trying to get the time from: ({host})", t.Exception);
+                                 });
+                                #pragma warning restore 4014
                                 throw new TimeoutException("Failed to receive data to " + host + "within 500ms");
                             }
                             var result = receiveTask.Result;
