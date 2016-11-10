@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Raven.Server.Documents;
-using Raven.Server.Json;
 using Sparrow.Json;
 using Voron;
 using Sparrow;
@@ -35,8 +33,6 @@ namespace Raven.Server.ServerWide.Context
     public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext
         where TTransaction : RavenTransaction
     {
-        private List<GCHandle> _pinnedObjects;
-
         public ByteStringContext Allocator;
         public TTransaction Transaction;
         public TransactionPersistentContext PersistentContext = new TransactionPersistentContext();
@@ -78,19 +74,7 @@ namespace Raven.Server.ServerWide.Context
             Transaction?.Dispose();
             Transaction = null;
         }
-
-        public IntPtr PinObjectAndGetAddress(object obj)
-        {
-            var handle = GCHandle.Alloc(obj, GCHandleType.Pinned);
-
-             if (_pinnedObjects == null)
-                _pinnedObjects = new List<GCHandle>();
-
-             _pinnedObjects.Add(handle);
-
-            return handle.AddrOfPinnedObject();
-        }
-
+        
         public override void Dispose()
         {
             base.Dispose();
@@ -98,14 +82,6 @@ namespace Raven.Server.ServerWide.Context
             Allocator?.Dispose();
             Allocator = null;
             PersistentContext = null;
-
-            if (_pinnedObjects != null)
-            {
-                foreach (var pinnedObject in _pinnedObjects)
-                {
-                    pinnedObject.Free();
-                }
-            }
         }
 
         public override void ResetAndRenew()

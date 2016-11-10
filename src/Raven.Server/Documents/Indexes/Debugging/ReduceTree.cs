@@ -5,5 +5,11 @@
         public ReduceTreePage Root;
 
         public string Name;
+
+        public int Depth { get; set; }
+
+        public long PageCount { get; set; }
+
+        public long NumberOfEntries { get; set; }
     }
 }

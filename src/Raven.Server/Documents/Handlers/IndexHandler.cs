@@ -128,7 +128,10 @@ namespace Raven.Server.Documents.Handlers
 
                 if (string.Equals(operation, "reduce-keys", StringComparison.OrdinalIgnoreCase))
                 {
-                    throw new NotImplementedException("Getting reduce keys is not implemented");
+                    using (index.GetReduceKeys(0, 1024))
+                    {
+                        throw new NotImplementedException("Getting reduce keys is not implemented");
+                    }
                 }
 
                 throw new NotSupportedException($"{operation} is not supported");

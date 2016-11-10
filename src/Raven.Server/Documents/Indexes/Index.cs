@@ -1221,12 +1221,12 @@ namespace Raven.Server.Documents.Indexes
                                 query.Query.Contains(Constants.IntersectSeparator) == false)
                             {
                                 documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token);
+                                    GetQueryResultRetriever(documentsContext, fieldsToFetch), token.Token);
                             }
                             else
                             {
                                 documents = reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token);
+                                    GetQueryResultRetriever(documentsContext, fieldsToFetch), token.Token);
                             }
 
                             var includeDocumentsCommand = new IncludeDocumentsCommand(
@@ -1423,7 +1423,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         var documents = reader.MoreLikeThis(query, stopWords,
                             fieldsToFetch =>
-                                GetQueryResultRetriever(documentsContext, indexContext,
+                                GetQueryResultRetriever(documentsContext,
                                     new FieldsToFetch(fieldsToFetch, Definition, null)), token.Token);
                         var results = scope != null ? scope.Transform(documents) : documents;
 
@@ -1654,8 +1654,7 @@ namespace Raven.Server.Documents.Indexes
                 .ToArray();
         }
 
-        public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext,
-            TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch);
+        public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch);
 
         public abstract int? ActualMaxNumberOfIndexOutputs { get; }
 

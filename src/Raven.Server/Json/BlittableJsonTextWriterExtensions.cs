@@ -1078,6 +1078,18 @@ namespace Raven.Server.Json
                 writer.WriteString(tree.Name);
                 writer.WriteComma();
 
+                writer.WritePropertyName(nameof(ReduceTree.Depth));
+                writer.WriteInteger(tree.Depth);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReduceTree.PageCount));
+                writer.WriteInteger(tree.PageCount);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReduceTree.NumberOfEntries));
+                writer.WriteInteger(tree.NumberOfEntries);
+                writer.WriteComma();
+
                 writer.WritePropertyName("Pages");
                 writer.WriteTreePagesRecursively(new[] { tree.Root });
 

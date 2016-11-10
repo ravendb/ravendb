@@ -22,8 +22,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public abstract unsafe class ReduceMapResultsBase<T> : IIndexingWork where T : IndexDefinitionBase
     {
-        public static readonly Slice PageNumberSlice;
-        private Logger _logger;
+        internal static readonly Slice PageNumberSlice;
+        internal static readonly string PageNumberToReduceResultTableName = "PageNumberToReduceResult";
+        private readonly Logger _logger;
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
         private readonly Index _index;
         protected readonly T _indexDefinition;
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly MetricsCountersManager _metrics;
         private readonly MapReduceIndexingContext _mapReduceContext;
 
-        private readonly TableSchema _reduceResultsSchema = new TableSchema()
+        internal static readonly TableSchema ReduceResultsSchema = new TableSchema()
             .DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
@@ -67,8 +68,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             _aggregationBatch.Clear();
 
-            _reduceResultsSchema.Create(indexContext.Transaction.InnerTransaction, "PageNumberToReduceResult");
-            var table = indexContext.Transaction.InnerTransaction.OpenTable(_reduceResultsSchema, "PageNumberToReduceResult");
+            ReduceResultsSchema.Create(indexContext.Transaction.InnerTransaction, PageNumberToReduceResultTableName);
+            var table = indexContext.Transaction.InnerTransaction.OpenTable(ReduceResultsSchema, PageNumberToReduceResultTableName);
 
             var lowLevelTransaction = indexContext.Transaction.InnerTransaction.LowLevelTransaction;
 
