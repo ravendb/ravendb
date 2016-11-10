@@ -303,7 +303,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
               
                 try
                 {
-                    if (threadTask.Database.Disposed)
+                    if (threadTask.Database?.Disposed == true)
                     {
                         logger.Warn($"Ignoring request to run threadTask because the database ({threadTask.Database.Name}) is been disposed.");
                         return;
