@@ -883,6 +883,9 @@ namespace Raven.Database.Indexing
                     }
 
                     var keepTrying = true;
+                    //Here we make sure that the database isn't been disposed so we won't advance the indexing etags on 
+                    //aborted batches (see RavenDB-5603 related changes)
+                    if (context.Database.Disposed == false)
                     for (var i = 0; i < 10 && keepTrying; i++)
                     {
                         keepTrying = false;
