@@ -656,6 +656,11 @@ namespace Raven.Client.Connection
         /// Disables given index.
         /// </summary>
         void StopIndex(string name);
+
+        /// <summary>
+        /// Compacts given index.
+        /// </summary>
+        Operation CompactIndex(string name);
     }
 
     public interface IInfoDatabaseCommands

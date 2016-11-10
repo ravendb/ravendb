@@ -108,7 +108,7 @@ namespace Raven.Client.Indexing
                 return;
 
             foreach (var propertyName in json.GetPropertyNames())
-                this[propertyName] = json[propertyName].ToString();
+                this[propertyName] = json[propertyName]?.ToString();
         }
     }
 }

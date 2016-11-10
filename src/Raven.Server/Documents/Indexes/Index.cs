@@ -46,6 +46,7 @@ using Sparrow.Utils;
 using Size = Raven.Server.Config.Settings.Size;
 using Voron.Debugging;
 using Voron.Exceptions;
+using Voron.Impl.Compaction;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -76,7 +77,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected Logger _logger;
 
-        internal readonly LuceneIndexPersistence IndexPersistence;
+        internal LuceneIndexPersistence IndexPersistence;
 
         private readonly object _locker = new object();
 
@@ -132,6 +133,7 @@ namespace Raven.Server.Documents.Indexes
         private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
         private string _errorPriorityReason;
+        private bool _isCompactionInProgress;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -141,7 +143,6 @@ namespace Raven.Server.Documents.Indexes
             IndexId = indexId;
             Type = type;
             Definition = definition;
-            IndexPersistence = new LuceneIndexPersistence(this);
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
 
             if (Collections.Contains(Constants.Indexing.AllDocumentsCollection))
@@ -287,6 +288,7 @@ namespace Raven.Server.Documents.Indexes
                     _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
                     _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                     _indexStorage.Initialize(_environment);
+                    IndexPersistence = new LuceneIndexPersistence(this);
                     IndexPersistence.Initialize(_environment);
 
                     LoadValues();
@@ -405,6 +407,12 @@ namespace Raven.Server.Documents.Indexes
 
                 exceptionAggregator.Execute(() =>
                 {
+                    IndexPersistence?.Dispose();
+                    IndexPersistence = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
                     _environment?.Dispose();
                     _environment = null;
                 });
@@ -428,6 +436,9 @@ namespace Raven.Server.Documents.Indexes
         public virtual bool IsStale(DocumentsOperationContext databaseContext)
         {
             Debug.Assert(databaseContext.Transaction != null);
+
+            if (_isCompactionInProgress)
+                return false;
 
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
@@ -515,7 +526,7 @@ namespace Raven.Server.Documents.Indexes
 
             using (CultureHelper.EnsureInvariantCulture())
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown,
-                    _cancellationTokenSource.Token))
+                _cancellationTokenSource.Token))
             {
                 // if we are starting indexing e.g. manually after failure
                 // we need to reset errors to give it a chance
@@ -883,6 +894,9 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual List<IndexingError> GetErrors()
         {
+            if (_isCompactionInProgress)
+                return new List<IndexingError>();
+
             return _indexStorage.ReadErrors();
         }
 
@@ -890,6 +904,8 @@ namespace Raven.Server.Documents.Indexes
         {
             if (Priority == priority)
                 return;
+
+            AssertIndexState(assertPriority: false);
 
             lock (_locker)
             {
@@ -934,6 +950,8 @@ namespace Raven.Server.Documents.Indexes
             if (Definition.LockMode == mode)
                 return;
 
+            AssertIndexState(assertPriority: false);
+
             lock (_locker)
             {
                 if (Definition.LockMode == mode)
@@ -949,6 +967,16 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual IndexProgress GetProgress(DocumentsOperationContext documentsContext)
         {
+            if (_isCompactionInProgress)
+            {
+                return new IndexProgress
+                {
+                    Name = Name,
+                    Id = IndexId,
+                    Type = Type
+                };
+            }
+
             if (_contextPool == null)
                 throw new ObjectDisposedException("Index " + Name);
 
@@ -1000,6 +1028,16 @@ namespace Raven.Server.Documents.Indexes
         public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false,
             DocumentsOperationContext documentsContext = null)
         {
+            if (_isCompactionInProgress)
+            {
+                return new IndexStats
+                {
+                    Name = Name,
+                    Id = IndexId,
+                    Type = Type
+                };
+            }
+
             if (_contextPool == null)
                 throw new ObjectDisposedException("Index " + Name);
 
@@ -1442,18 +1480,25 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AssertIndexState()
+        private void AssertIndexState(bool assertPriority = true)
         {
+            if (_isCompactionInProgress)
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' is currently being compacted.");
+
+            if (_initialized == false)
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' was not initialized.");
+
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
 
-            if (Priority.HasFlag(IndexingPriority.Error))
+            if (assertPriority && Priority.HasFlag(IndexingPriority.Error))
             {
                 var errorPriorityReason = _errorPriorityReason;
                 if (string.IsNullOrWhiteSpace(errorPriorityReason) == false)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored. {errorPriorityReason}");
 
-                throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored. Please check index errors avaiable at '/databases/{DocumentDatabase.Name}/indexes/errors?name={Name}'.");
+                throw new InvalidOperationException(
+                    $"Index '{Name} ({IndexId})' is marked as errored. Please check index errors avaiable at '/databases/{DocumentDatabase.Name}/indexes/errors?name={Name}'.");
             }
         }
 
@@ -1598,6 +1643,9 @@ namespace Raven.Server.Documents.Indexes
 
         public long GetIndexEtag()
         {
+            if (_isCompactionInProgress)
+                return -1;
+
             DocumentsOperationContext documentsContext;
             TransactionOperationContext indexContext;
 
@@ -1692,6 +1740,66 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
             return true;
+        }
+
+        public IOperationResult Compact(Action<IOperationProgress> onProgress)
+        {
+            if (_isCompactionInProgress)
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' cannot be compacted because compaction is already in progress.");
+
+            if (_environment.Options.IncrementalBackupEnabled)
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' cannot be compacted because incremental backup is enabled.");
+
+            if (Configuration.RunInMemory)
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' cannot be compacted because it runs in memory.");
+
+            lock (_locker)
+            {
+                _isCompactionInProgress = true;
+                StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions = null;
+
+                try
+                {
+                    var progress = new DeterminateProgress();
+                    var environmentOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)_environment.Options;
+                    var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath);
+
+                    var wasRunning = _indexingThread != null;
+
+                    Dispose();
+
+                    var compactPath = Path.Combine(Configuration.IndexStoragePath, GetIndexNameSafeForFileSystem() + "_Compact");
+                    compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath);
+
+                    StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
+                    {
+                        progress.Processed = progressReport.GlobalProgress;
+                        progress.Total = progressReport.GlobalTotal;
+
+                        onProgress?.Invoke(progress);
+                    });
+
+                    Directory.Delete(environmentOptions.BasePath, recursive: true);
+                    Directory.Move(compactOptions.BasePath, environmentOptions.BasePath);
+
+                    _initialized = false;
+                    _disposed = false;
+
+                    Initialize(DocumentDatabase, Configuration);
+
+                    if (wasRunning)
+                        Start();
+
+                    return IndexCompactionResult.Instance;
+                }
+                finally
+                {
+                    if (compactOptions != null && Directory.Exists(compactOptions.BasePath))
+                        Directory.Delete(compactOptions.BasePath);
+
+                    _isCompactionInProgress = false;
+                }
+            }
         }
 
         public long GetLastDocumentEtagInCollection(DocumentsOperationContext databaseContext, string collection)

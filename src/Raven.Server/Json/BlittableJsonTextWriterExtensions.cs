@@ -1028,6 +1028,17 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
+        public static void WriteOperationId(this BlittableJsonTextWriter writer, JsonOperationContext context, long operationId)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName("OperationId");
+            writer.WriteInteger(operationId);
+
+            writer.WriteEndObject();
+        }
+    }
+
         public static void WriteArrayOfResultsAndCount(this BlittableJsonTextWriter writer, IEnumerable<string> results)
         {
             writer.WriteStartObject();

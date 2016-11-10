@@ -109,6 +109,19 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
+        public Task<Operation> CompactIndexAsync(string name, CancellationToken token = new CancellationToken())
+        {
+            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async operationMetadata =>
+            {
+                using (var req = adminRequest.CompactIndex(operationMetadata.Url, name))
+                {
+                    var json = await req.ReadResponseJsonAsync().ConfigureAwait(false);
+                    var operationId = json.Value<long>("OperationId");
+                    return new Operation(innerAsyncServerClient, operationId);
+                }
+            }, token);
+        }
+
         public Task<BuildNumber> GetBuildNumberAsync(CancellationToken token = default(CancellationToken))
         {
             return innerAsyncServerClient.GetBuildNumberAsync(token);
@@ -258,5 +271,6 @@ namespace Raven.Client.Connection.Async
         }
 
         public IAsyncDatabaseCommands Commands => innerAsyncServerClient;
+        
     }
 }

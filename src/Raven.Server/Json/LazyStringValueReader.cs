@@ -44,8 +44,8 @@ namespace Raven.Server.Json
 
         public void Dispose()
         {
-            _reader.ForceDispose();
-            _mmapStream.Dispose();
+            _reader?.ForceDispose();
+            _mmapStream?.Dispose();
         }
 
         private class LazyStringStreamReader : StreamReader
