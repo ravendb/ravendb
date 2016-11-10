@@ -13,6 +13,7 @@ type treeMapItem = {
     dx?: number;
     dy?: number;
     parent?: treeMapItem;
+    showType: boolean;
     w?: number; // used for storing text width
 }
 
@@ -34,8 +35,8 @@ class storageReport extends viewModelBase {
     private g: d3.Selection<any>;
     private tooltip: d3.Selection<any>;
 
-    private w = 1200;
-    private h = 500;
+    private w: number;
+    private h: number;
 
     private kx: number;
     private ky: number;
@@ -50,6 +51,13 @@ class storageReport extends viewModelBase {
             .done(result => {
                 this.rawData = result;
             });
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+        this.processData();
+        this.initGraph();
+        this.draw();
     }
 
     private initObservables() {
@@ -74,7 +82,8 @@ class storageReport extends viewModelBase {
         this.root = {
             name: "root",
             internalChildren: data.map(x => this.mapReport(x)),
-            type: "root"
+            type: "root",
+            showType: false
         } as treeMapItem;
 
         this.sortBySize(this.root);
@@ -96,14 +105,19 @@ class storageReport extends viewModelBase {
         const dataFile = this.mapDataFile(reportItem.Report);
         const journals = this.mapJournals(reportItem.Report)
         return {
-            name: reportItem.Type + ": " + reportItem.Name,
+            name: reportItem.Name,
             size: dataFile.size + journals.size,
             type: reportItem.Type.toLowerCase(),
             internalChildren: [
                 dataFile,
                 journals
-            ]
+            ],
+            showType: storageReport.showDisplayReportType(reportItem)
         }
+    }
+
+    private static showDisplayReportType(reportItem: storageReportItem): boolean {
+        return reportItem.Type !== "Configuration" && reportItem.Type !== "Subscriptions";
     }
 
     private mapDataFile(report: Voron.Debugging.StorageReport): treeMapItem {
@@ -114,6 +128,7 @@ class storageReport extends viewModelBase {
         const freeSpace = {
             name: "Free",
             type: "free",
+            showType: false,
             size: dataFile.FreeSpaceInBytes,
             internalChildren: []
         } as treeMapItem;
@@ -123,6 +138,7 @@ class storageReport extends viewModelBase {
         return {
             name: "Datafile",
             type: "data",
+            showType: false,
             size: totalSize,
             internalChildren: [
                 tables,
@@ -137,6 +153,7 @@ class storageReport extends viewModelBase {
         return {
             name: "Tables",
             type: "tables",
+            showType: false,
             internalChildren: mappedTables,
             size: mappedTables.reduce((p, c) => p + c.size, 0)
         }
@@ -147,6 +164,7 @@ class storageReport extends viewModelBase {
         const data = {
             name: "Table Data",
             type: "table_data",
+            showType: false,
             size: table.DataSizeInBytes,
             internalChildren: []
         } as treeMapItem;
@@ -157,6 +175,7 @@ class storageReport extends viewModelBase {
         return {
             name: table.Name,
             type: "table",
+            showType: true,
             size: totalSize,
             internalChildren: [
                 structure,
@@ -170,6 +189,7 @@ class storageReport extends viewModelBase {
         return {
             name: name,
             type: name.toLowerCase(),
+            showType: false,
             internalChildren: trees.map(x => this.mapTree(x)),
             size: trees.reduce((p, c) => p + c.AllocatedSpaceInBytes, 0)
         }
@@ -179,6 +199,7 @@ class storageReport extends viewModelBase {
         return {
             name: tree.Name,
             type: "tree",
+            showType: true,
             size: tree.AllocatedSpaceInBytes,
             internalChildren: []
         }
@@ -191,14 +212,16 @@ class storageReport extends viewModelBase {
             return {
                 name: "Journal #" + journal.Number,
                 type: "journal",
+                showType: false,
                 size: journal.AllocatedSpaceInBytes,
                 internalChildren: []
             } as treeMapItem;
         });
 
         return {
-            name: "journals",
+            name: "Journals",
             type: "journals",
+            showType: false,
             internalChildren: mappedJournals,
             size: mappedJournals.reduce((p, c) => p + c.size, 0)
         }
@@ -209,19 +232,23 @@ class storageReport extends viewModelBase {
     }
 
     private initGraph() {
+        this.detectContainerSize();
         this.x = d3.scale.linear().range([0, this.w]);
         this.y = d3.scale.linear().range([0, this.h]);
 
-        this.svg = d3.select("#storage-report-container").append("div")
-            .attr("class", "chart")
-            .style("width", this.w + "px")
-            .style("height", this.h + "px")
+        this.svg = d3.select("#storage-report-container .chart")
             .append("svg:svg")
             .attr("width", this.w)
             .attr("height", this.h)
             .attr("transform", "translate(.5,.5)");
 
         this.addHashing();
+    }
+
+    private detectContainerSize() {
+        const $chartNode = $("#storage-report-container .chart")
+        this.w = $chartNode.width();
+        this.h = $chartNode.height();
     }
 
     private addHashing() {
@@ -254,6 +281,8 @@ class storageReport extends viewModelBase {
             .filter(n => !n.children);
 
         const self = this;
+        const showTypeOffset = 7;
+        const showTypePredicate = (d: treeMapItem) => d.showType && d.dy > 14 && d.dx > 14;
 
         this.svg.selectAll("g.cell").remove();
 
@@ -272,18 +301,30 @@ class storageReport extends viewModelBase {
             .attr("height", d => d.dy - 1);
 
         cell.append("svg:text")
+            .filter(d => d.dx > 14 && d.dy > 6)
             .attr("x", d => d.dx / 2)
-            .attr("y", d => d.dy / 2)
+            .attr("y", d => showTypePredicate(d) ? d.dy/2 - showTypeOffset : d.dy / 2)
             .attr("dy", ".35em")
             .attr("text-anchor", "middle")
             .text(d => d.name)
             .each(function (d) {
                 self.wrap(this, d.dx);
             });
+
+        cell.filter(d => showTypePredicate(d))
+            .append("svg:text")
+            .attr("x", d => d.dx / 2)
+            .attr("y", d => showTypePredicate(d) ? d.dy/2 + showTypeOffset : d.dy / 2)
+            .attr("dy", ".35em")
+            .attr("text-anchor", "middle")
+            .text(d => d.type.capitalizeFirstLetter())
+            .each(function (d) {
+                self.wrap(this, d.dx);
+            });
     }
 
     wrap($self: any, width: number) {
-        var self = d3.select($self),
+        let self = d3.select($self),
             textLength = (self.node() as any).getComputedTextLength(),
             text = self.text();
         while (textLength > (width - 6) && text.length > 0) {
@@ -306,16 +347,23 @@ class storageReport extends viewModelBase {
     //TODO: use d3-tip library
     private onMouseMove(d: treeMapItem) {
         const [x, y] = d3.mouse(this.svg.node());
+        const offset = d.showType ? 38 : 15;
         this.tooltip
             .style("left", x + "px")
-            .style("top", (y - 15) + "px");
+            .style("top", (y - offset) + "px");
     }
 
     private onMouseOver(d: treeMapItem) {
         this.tooltip.transition()
             .duration(200)
             .style("opacity", 1);
-        this.tooltip.html("Name: " + d.name + " <br /> <span class='size'>Size: <strong>" + generalUtils.formatBytesToSize(d.size) + "</strong></span>");
+        let html = "Name: " + d.name;
+        if (d.showType) {
+            html += "<br />Type: " + d.type.capitalizeFirstLetter();
+        }
+        html += " <br /> <span class='size'>Size: <strong>" + generalUtils.formatBytesToSize(d.size) + "</strong></span>";
+
+        this.tooltip.html(html);
         this.onMouseMove(d);
     }
 
@@ -323,13 +371,6 @@ class storageReport extends viewModelBase {
         this.tooltip.transition()
             .duration(500)
             .style("opacity", 0);	
-    }
-
-    compositionComplete() {
-        super.compositionComplete();
-        this.processData();
-        this.initGraph();
-        this.draw();
     }
 
     formatSize(size: number) {
