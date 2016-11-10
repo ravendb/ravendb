@@ -1,59 +1,15 @@
-<!--
-    <style>
-    
-    .chart {
-      display: block;
-      font-size: 11px;
-    }
-
-    rect {
-      stroke: #eee;
-      fill-opacity: .8;
-    }
-
-    rect.parent {
-      cursor: pointer;
-      fill: steelblue;
-    }
-
-    text {
-      pointer-events: none;
-    }
-
-    div.tooltip {	
-        position: absolute;			
-        text-align: center;			
-        width: 300px;
-        height: 40px;
-        padding: 2px;
-        font: 12px sans-serif;
-        background: lightseagreen;
-        color: black;
-        border: 0px;
-        border-radius: 8px;			
-        pointer-events: none;			
-    }
-    .free text {
-        fill: white;
-    }
-
-    .storage-report-container {
-        position: relative;
-    }
-</style>
-    -->
-
 <div id="storage-report">
 
     <div id="storage-report-container">
         <div class="tooltip" style="opacity: 0">
         </div>
+        <div class="chart"></div>
     </div>
     
     <div>
         Current path:
         <span data-bind="foreach: currentPath">
-            <a href="#" data-bind="click: $root.onClick.bind($root, $data)"><span data-bind="text: name"></span></a>
+            <a href="#" data-bind="click: $root.onClick.bind($root, $data)"><span data-bind="text: name"></span><br /><small data-bind="text: type"></small></a>
             <span data-bind="visible: $index() < $root.currentPath().length - 1">&raquo;</span>
         </span>
     </div>
@@ -61,6 +17,7 @@
     <table class="table table-condensed table-striped" data-bind="if: node() && node().internalChildren">
         <thead>
             <tr>
+                <th>Type</th>
                 <th>Name</th>
                 <th>Size</th>
                 <th>% Total</th>
@@ -68,6 +25,7 @@
         </thead>
         <tbody data-bind="foreach: node().internalChildren">
             <tr>
+                <td data-bind="text: type.capitalizeFirstLetter()"></td>
                 <td>
                     <a href="#" data-bind="text: name, click: $root.onClick.bind($root, $data), visible: internalChildren != null && internalChildren.length"></a>
                     <span href="#" data-bind="text: name, visible: internalChildren == null || !internalChildren.length"></span>
