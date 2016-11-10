@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -16,6 +17,7 @@ using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
@@ -172,9 +174,9 @@ namespace Raven.Smuggler
             return metadata;
         }
           
-        public async Task<Stream> StreamFiles(List<string> fileNamesList)
+        public async Task<Stream> ReceiveFilesInStream(List<string> filePaths)
         {
-            if (fileNamesList == null || fileNamesList.Count == 0)
+            if (filePaths == null || filePaths.Count == 0)
             {
                 throw new ArgumentException("Should receive file names");
             }
@@ -195,7 +197,7 @@ namespace Raven.Smuggler
             {
                 var fileNamesJson = RavenJObject.FromObject(new
                 {
-                    FileNames = fileNamesList
+                    FileNames = filePaths
                 });
                     
                 var response = await request.ExecuteRawResponseAsync(fileNamesJson).ConfigureAwait(false);
@@ -207,9 +209,44 @@ namespace Raven.Smuggler
             {
                 throw e.SimplifyException();
             }
-            
         }
 
+        public async Task UploadFilesInStream(FileUploadUnitOfWork[] files)
+        {
+            var workload = new FilesUploadWorker(files);
+            var asyncFilesCommands = PrimaryStore.AsyncFilesCommands;
+            var commands = (AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>)PrimaryStore.AsyncFilesCommands;
+            var uri = "/streams/Import";
+
+
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(asyncFilesCommands, PrimaryStore.AsyncFilesCommands.UrlFor()  + uri, HttpMethod.Put, commands.PrimaryCredentials, commands.Conventions, timeout: TimeSpan.FromHours(12))
+            {
+                DisableRequestCompression = true
+            };
+
+
+            var request = commands.RequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).AddOperationHeaders(commands.OperationsHeaders);
+            
+            using (request.Continue100Scope())
+            {
+
+                var response = await request.ExecuteRawRequestAsync(async(stream,t)=>await workload.UploadFiles(stream, t).ConfigureAwait(false)).ConfigureAwait(false);
+
+                try
+                {
+                    await response.AssertNotFailingResponse().ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    var simplified = e.SimplifyException();
+
+                    if (simplified != e)
+                        throw simplified;
+
+                    throw;
+                }
+            }
+        }
         public bool IsEmbedded => false;
     }
 

@@ -308,6 +308,7 @@
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\MemberInfoExtensions.cs" />
     <Compile Include="Extensions\RavenDateTimeExtensions.cs" />
+    <Compile Include="Smuggler\Data\FilesUploadWorker.cs" />
     <Compile Include="Util\InterlockedLock.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\ReflectionExtensions.cs" />
