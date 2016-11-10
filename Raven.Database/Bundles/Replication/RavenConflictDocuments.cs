@@ -28,7 +28,7 @@ let id = doc[""@metadata""][""@id""]
 where doc[""@metadata""][""Raven-Replication-Conflict""] == true && (id.Length < 47 || !id.Substring(id.Length - 47).StartsWith(""/conflicts/"", StringComparison.OrdinalIgnoreCase))
 select new
 {
-    ConflictDetectedAt = (DateTime)doc[""@metadata""][""Last -Modified""]
+    ConflictDetectedAt = (DateTime)doc[""@metadata""][""Last-Modified""]
 }
 "
             };
