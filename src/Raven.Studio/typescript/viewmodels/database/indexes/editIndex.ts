@@ -216,7 +216,8 @@ class editIndex extends viewModelBase {
             .done(result => {
                 this.editedIndex(new indexDefinition(result));
                 this.originalIndexName = this.editedIndex().name();
-                this.editMaxIndexOutputsPerDocument(result.MaxIndexOutputsPerDocument ? result.MaxIndexOutputsPerDocument > 0 ? true : false : false);
+                //TODO this.editMaxIndexOutputsPerDocument(result.MaxIndexOutputsPerDocument ? result.MaxIndexOutputsPerDocument > 0 ? true : false : false);
+                this.editMaxIndexOutputsPerDocument(false);
                 deferred.resolve();
             })
             .fail(() => deferred.reject());

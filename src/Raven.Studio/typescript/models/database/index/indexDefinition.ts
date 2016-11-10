@@ -60,7 +60,8 @@ class indexDefinition {
         this.luceneFields(this.parseFields());
         this.spatialFields(this.parseSpatialFields());
 
-        this.maxIndexOutputsPerDocument(dto.MaxIndexOutputsPerDocument? dto.MaxIndexOutputsPerDocument:0);
+        this.maxIndexOutputsPerDocument(0);
+        //TODO this.maxIndexOutputsPerDocument(dto.MaxIndexOutputsPerDocument ? dto.MaxIndexOutputsPerDocument : 0);
         this.storeAllFields(this.isStoreAllFields());
     }
 
@@ -110,7 +111,8 @@ class indexDefinition {
             //SuggestionsOptions: this.luceneFields().filter(x => x.suggestionEnabled()).map(x => x.name()),
             //TermVectors: this.makeFieldObject(f => f.termVector() !== "No", f => f.termVector()),
             Type: this.type,
-            MaxIndexOutputsPerDocument: this.maxIndexOutputsPerDocument() ? this.maxIndexOutputsPerDocument() > 0 ? this.maxIndexOutputsPerDocument() : null : null
+            Configuration: null //TODO
+            //TODO MaxIndexOutputsPerDocument: this.maxIndexOutputsPerDocument() ? this.maxIndexOutputsPerDocument() > 0 ? this.maxIndexOutputsPerDocument() : null : null
         };
     }
 
@@ -122,10 +124,11 @@ class indexDefinition {
             Name: "",
             LockMode: "Unlock",
             Reduce: "",
-            IndexVersion: -1,
+            Configuration: null, //TODO
+            //TODO IndexVersion: -1,
             IsSideBySideIndex: false,
             IsTestIndex: false,
-            MaxIndexOutputsPerDocument: null,
+            //TODO MaxIndexOutputsPerDocument: null,
             Type: "Map"
         });
     }
