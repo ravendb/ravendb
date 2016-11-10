@@ -1,5 +1,9 @@
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
+using Raven.Smuggler;
 using Raven.Tests.Raft.Client;
 using Raven.Tests.Smuggler;
 using Raven.Tests.Subscriptions;
@@ -19,37 +23,98 @@ namespace Raven.Tryouts
     {
         public static void Main(string[] args)
         {
-#if !DNXCORE50
-            //TODO: finish checking this test, it seems to have race condition or sometihing
-            for (int i = 0; i < 100; i++)
+            Console.WriteLine("Press any key");
+            Console.ReadLine();
+            AsyncMain().Wait();
+        }
+
+        public static async Task AsyncMain()
+        {
+            //using (var store = new FilesStore()
+            //{
+            //    Url = "http://localhost:8080",
+            //    DefaultFileSystem = "FS1"
+            //}.Initialize())
+            //{
+            //    var ms = new MemoryStream();
+            //    var buffer = new byte[1024];
+
+            //    for (int i = 0; i < buffer.Length; i++)
+            //    {
+            //        buffer[i] = (byte)i;
+            //    }
+
+            //    ms.Write(buffer, 0, buffer.Length);
+            //    ms.Position = 0;
+            //    await store.AsyncFilesCommands.UploadAsync("file.txt", ms);
+
+            //    var tasks = new Task[50];
+
+            //    for (var i = 0; i < 15000; i += tasks.Length)
+            //    {
+            //        var sessio = store.OpenAsyncSession();
+
+            //        for (var j = 0; j < tasks.Length; j++)
+            //        {
+            //            var targetNAme = "file" + (i + j).ToString() + ".txt";
+            //            tasks[j] = store.AsyncFilesCommands.CopyAsync("file.txt", targetNAme);
+            //        }
+
+            //        Task.WaitAll(tasks);
+
+            //        Console.WriteLine(i);
+            //    }
+            //}
+
+            //var sp = Stopwatch.StartNew();
+
+            //var smugglerApi = new SmugglerFilesApi();
+
+
+            //await smugglerApi.ExportData(exportOptions: new SmugglerExportOptions<FilesConnectionStringOptions>()
+            //{
+            //    From = new FilesConnectionStringOptions()
+            //    {
+            //        DefaultFileSystem = "FS1",
+            //        Url = "http://localhost:8080",
+
+            //    },
+            //    ToFile = "c:\\Temp\\export.ravendump",
+
+            //});
+
+
+            //Console.WriteLine(sp.ElapsedMilliseconds);
+
+
+            var sp = Stopwatch.StartNew();
+            try
             {
-                Console.WriteLine(i);
-                //using (var x = new RavenDB_5390())
-                //{
-                //    x.Frequent_updates_of_document_should_not_cause_deadlock_in_prefetcher();
-                //}
-                using (var x = new SubscriptionsBasic())
+                var smugglerApi = new SmugglerFilesApi();
+                await smugglerApi.ImportData(importOptions: new SmugglerImportOptions<FilesConnectionStringOptions>()
                 {
-                    try
+                    To = new FilesConnectionStringOptions()
                     {
-                        x.ShouldNotOverrideSubscriptionAckEtag("voron");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex);
-                    }
-                    try
-                    {
-                        x.ShouldNotOverrideSubscriptionAckEtag("esent");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex);
-                    }
-                }                
+                        DefaultFileSystem = "FS2",
+                        Url = "http://localhost:8080",
+
+                    },
+                    FromFile = "c:\\Temp\\export.ravendump",
+                });
+            }
+            catch (Exception ex)
+            {
+
+                Console.WriteLine(ex);
+
+                Console.WriteLine(ex.StackTrace);
             }
 
-#endif
+            Console.ReadLine();
+
+            Console.WriteLine(sp.ElapsedMilliseconds);
+
+
         }
     }
 }

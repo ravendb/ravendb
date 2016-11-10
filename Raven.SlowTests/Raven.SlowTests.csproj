@@ -113,6 +113,7 @@
     <Compile Include="IndexationTests.cs" />
     <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
     <Compile Include="Issues\RavenDB-4750.cs" />
+    <Compile Include="Issues\RavenDB-5584.cs" />
     <Compile Include="Issues\RavenDB_1033.cs" />
     <Compile Include="Issues\RavenDB_1280.cs" />
     <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
