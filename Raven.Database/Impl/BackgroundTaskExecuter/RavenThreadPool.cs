@@ -508,7 +508,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 try
                 {
                     _runningTasks.TryAdd(threadTask, null);
-                    if (database.Disposed)
+                    if (database?.Disposed == true)
                     {
                         logger.Warn($"Ignoring request to run a single batch because the database ({database.Name}) is been disposed.");
                         return;
@@ -665,7 +665,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             try
             {
                 _runningTasks.TryAdd(threadTask, null);
-                if (database.Disposed)
+                if (database?.Disposed == true)
                 {
                     logger.Warn($"Ignoring request to run a single batch because the database ({database.Name}) is been disposed.");
                     return;
