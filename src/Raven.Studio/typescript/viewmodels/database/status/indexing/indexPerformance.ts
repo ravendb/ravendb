@@ -3,235 +3,274 @@ import app = require("durandal/app");
 import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 import getIndexesPerformance = require("commands/database/debug/getIndexesPerformance");
 import fileDownloader = require("common/fileDownloader");
+import graphHelper = require("common/helpers/graph/graphHelper");
+import d3 = require("d3");
 
 class metrics extends viewModelBase { 
 
-    data: Raven.Client.Data.Indexes.IndexPerformanceStats[] = [];
+    static readonly brushSectionHeight = 40;
+    static readonly trackHeight = 16; // height used for callstack item
+    static readonly stackPadding = 1; // space between call stacks
+    static readonly trackPadding = 3; // top / bottom padding between different tracks
+
+    private data: Raven.Client.Data.Indexes.IndexPerformanceStats[] = [];
+    private timeRange: [Date, Date];
+    private totalWidth = 700; //TODO: use dynamic value + bind on window resize
+    private totalHeight = 700; //TODO: use dynamic value + bind on windows resize
+
+    private indexNamesAndRecursion: Map<string, number>;
+    private expandedIndexes = new Set<string>();
 
     private isoParser = d3.time.format.iso;
-
-    private static readonly barHeight = 10;
-    private static readonly maxRecurseLevel = 4;
-    private static readonly pixelsPerSecond = 8;
-    private static readonly innerGroupPadding = 10;
-    private static readonly verticalPadding = 10;
-    private static readonly legendPadding = 200;
-    private static readonly singleIndexGroupHeight = metrics.barHeight + 2 * metrics.innerGroupPadding * metrics.maxRecurseLevel;
-
-    private svg: d3.Selection<Raven.Client.Data.Indexes.IndexPerformanceStats[]>;
-    private xScale: d3.time.Scale<number, number>;
-    private xAxis: d3.svg.Axis;
-
-    private yScale: d3.scale.Ordinal<string, number>;
-    private yAxis: d3.svg.Axis;
-
-    private colorScale = d3.scale.category20();
-
-    private xTickFormat = d3.time.format("%H:%M:%S");
+    private canvas: d3.Selection<any>;
+    private svg: d3.Selection<any>; // spans to canvas size (to provide brush + zoom/pan features)
+    private brush: d3.svg.Brush<number>;
+    private xBrushNumericScale: d3.scale.Linear<number, number>;
+    private xNumericScale: d3.scale.Linear<number, number>;
+    private brushSection: HTMLCanvasElement; // virtual canvas for brush section
+    private brushContainer: d3.Selection<any>;
+    private zoom: d3.behavior.Zoom<any>;
 
     activate(args: any): JQueryPromise<any> {
         super.activate(args);
+
         return new getIndexesPerformance(this.activeDatabase())
             .execute()
-            .done(result => this.data = result);
+            .done(result => this.data = result)
     }
 
     attached() {
         super.attached();
-        this.svg = d3.select("#indexPerformanceGraph");
+
+        this.initCanvas();
     }
 
     compositionComplete() {
         super.compositionComplete();
-
         this.draw();
     }
 
+    private initCanvas() {
+        const metricsContainer = d3.select("#metricsContainer");
+        this.canvas = metricsContainer
+            .append("canvas")
+            .attr("width", this.totalWidth)
+            .attr("height", this.totalHeight);
+
+        this.svg = metricsContainer
+            .append("svg")
+            .attr("width", this.totalWidth)
+            .attr("height", this.totalHeight);
+
+        this.xBrushNumericScale = d3.scale.linear<number>()
+            .range([0, this.totalWidth])
+            .domain([0, this.totalWidth]);
+
+        this.xNumericScale = d3.scale.linear<number>()
+            .range([0, this.totalWidth])
+            .domain([0, this.totalWidth]);
+
+        this.brush = d3.svg.brush()
+            .x(this.xBrushNumericScale)
+            .on("brush", () => this.onBrush());
+
+        this.zoom = d3.behavior.zoom()
+            .x(this.xNumericScale)
+            .on("zoom", () => this.onZoom());
+
+        this.svg
+            .append("svg:rect")
+            .attr("class", "pane")
+            .attr("width", this.totalWidth)
+            .attr("height", this.totalHeight - metrics.brushSectionHeight)
+            .attr("transform", "translate(" + 0 + "," + metrics.brushSectionHeight + ")")
+            .call(this.zoom);
+    }
+
     private draw() {
-        const self = this;
+        this.prepareBrushSection();
+        this.prepareMainSection();
 
-        if (this.data.length === 0) {
-            return;
+        const canvas = this.canvas.node() as HTMLCanvasElement;
+        const context = canvas.getContext("2d");
+        context.drawImage(this.brushSection, 0, 0);
+
+        this.drawMainSection();
+    }
+
+    private prepareBrushSection() {
+        const timeRanges = this.extractTimeRanges();
+        const collapsedTimeRanges = graphHelper.collapseTimeRanges(timeRanges);
+        this.timeRange = graphHelper.timeRangeFromSortedRanges(collapsedTimeRanges);
+
+        this.brushSection = document.createElement("canvas");
+        this.brushSection.width = this.totalWidth;
+        this.brushSection.height = metrics.brushSectionHeight;
+
+        const context = this.brushSection.getContext("2d");
+
+        const xBrushScale = d3.time.scale<number>()
+            .range([0, this.totalWidth])
+            .domain(this.timeRange);
+
+        this.drawBrushXaxis(context, xBrushScale);
+
+        context.fillStyle = "#e2ebfe";
+        context.strokeStyle = "#6e9cf8";
+        context.lineWidth = 1;
+
+        for (var i = 0; i < collapsedTimeRanges.length; i++) {
+            const currentRange = collapsedTimeRanges[i];
+            context.fillRect(xBrushScale(currentRange[0]), 18, xBrushScale(currentRange[1]), 28);
+            context.strokeRect(xBrushScale(currentRange[0]), 18, xBrushScale(currentRange[1]), 28);
         }
 
-        const indexNames = self.findIndexNames();
-        const [minTime, maxTime] = self.findTimeRanges();
+        this.prepareBrush();
+    }
 
-        const timeExtent = maxTime.getTime() - minTime.getTime();
+    private prepareBrush() {
+        this.brushContainer = this.svg
+            .append("g")
+            .attr("class", "x brush");
 
-        const paddingTop = 40;
+        this.brushContainer
+            .call(this.brush)
+            .selectAll("rect")
+            .attr("y", 1)
+            .attr("height", metrics.brushSectionHeight - 2);
+    }
 
-        const totalWidth = metrics.extent(timeExtent);
+    private prepareMainSection() {
+        //TODO: find index names, and max recurrsion level, compute scale for drawing indexes, init cache strucute to store info about expanded collapsed sections
+        this.indexNamesAndRecursion = this.findIndexNamesAndMaxRecursionLevel();
 
-        self.xScale = d3.time.scale<number>()
-            .range([0, totalWidth])
-            .domain([minTime, maxTime]);
+        //TODO: include support for expanding tracks
 
-        self.svg.append("g")
-            .attr("class", "x axis");
+        console.log(this.indexNamesAndRecursion);
+    }
 
-        const ticks = d3.scale.linear()
-            .domain([0, timeExtent])
-            .ticks(Math.ceil(timeExtent / 10000)).map(y => self.xScale.invert(y));
+    private findIndexNamesAndMaxRecursionLevel(): Map<string, number> {
+        const result = new Map<string, number>();
 
-        this.xAxis = d3.svg.axis()
-            .scale(self.xScale)
-            .orient("top")
-            .tickValues(ticks)
-            .tickSize(10)
-            .tickFormat(self.xTickFormat);
+        this.data.forEach(perfItem => {
+            const recursionLevels = perfItem.Performance.map(x => this.findMaxRecursionLevel(x.Details));
+            const maxRecursion = d3.max(recursionLevels);
+            result.set(perfItem.IndexName, maxRecursion); //TODO: do we need this calc this - maybe it is constant value?
+        });
 
-        const totalHeight = indexNames.length * (metrics.singleIndexGroupHeight + metrics.verticalPadding);
+        return result;
+    }
 
-        this.svg.select(".x.axis")
-            .attr("transform", "translate(" + metrics.legendPadding + "," + paddingTop + ")")
-            .call(self.xAxis);
+    private findMaxRecursionLevel(node: Raven.Client.Data.Indexes.IndexingPerformanceOperation): number {
+        if (node.Operations.length === 0) {
+            return 1;
+        }
 
-        this.yScale = d3.scale.ordinal()
-            .domain(indexNames)
-            .rangeBands([paddingTop, paddingTop + totalHeight]);
+        return 1 + d3.max(node.Operations.map(x => this.findMaxRecursionLevel(x)));
+    }
 
-        this.yAxis = d3.svg.axis()
-            .scale(this.yScale)
-            .orient("left");
+    private drawBrushXaxis(context: CanvasRenderingContext2D, xBrushScale: d3.time.Scale<number, number>) { //TODO: extract this to utils? 
+        const tickCount = Math.floor(this.totalWidth / 300);
+        const tickSize = 6;
+        const ticks = xBrushScale.ticks(tickCount);
+        const tickFormat = xBrushScale.tickFormat(tickCount);
 
-        this.svg.append('g')
-            .attr('class', 'y axis map')
-            .attr("transform", "translate(" + metrics.legendPadding + ",0)");
+        context.beginPath();
+        context.moveTo(0, tickSize);
+        context.lineTo(0, 0);
+        context.lineTo(this.totalWidth - 1, 0);
+        context.lineTo(this.totalWidth - 1, tickSize);
 
-        self.svg.select(".y.axis.map")
-            .call(self.yAxis);
+        ticks.forEach(x => {
+            context.moveTo(xBrushScale(x), 0);
+            context.lineTo(xBrushScale(x), tickSize);
+        });
+        context.strokeStyle = "white";
+        context.stroke();
 
-        $("#indexPerformanceGraph")
-            .width(300 + totalWidth)
-            .height(totalHeight + 100);
-
-        const graphData = self.svg.append("g")
-            .attr('class', 'graph_data')
-            .attr('transform', "translate(" + metrics.legendPadding + ",0)");
-
-        this.data.forEach(perfStat => {
-            this.graphForIndex(perfStat, graphData);
+        context.textAlign = "center";
+        context.textBaseline = "top";
+        context.fillStyle = "white";
+        ticks.forEach(x => {
+            context.fillText(tickFormat(x), xBrushScale(x), tickSize);
         });
     }
 
-    private findTimeRanges(): [Date, Date] {
-        let minDateStr: string;
-        let maxDateStr: string;
+    private onZoom() {
+        this.checkOffScale();
 
+        this.brush.extent(this.xNumericScale.domain() as [number, number]);
+        this.brushContainer
+            .call(this.brush);
+
+        this.drawMainSection();
+    }
+
+    private checkOffScale() {
+        var t = (d3.event as any).translate,
+            s = (d3.event as any).scale;
+        var tx = t[0],
+            ty = t[1];
+
+
+        //TODO: http://bl.ocks.org/tommct/8116740
+
+    }
+
+    private onBrush() {
+        this.xNumericScale.domain((this.brush.empty() ? this.xBrushNumericScale.domain() : this.brush.extent()) as [number, number]);
+
+        this.zoom.x(this.xNumericScale);
+        //console.log(this.xNumericScale.domain());
+        //TODO: console.log(extent.map(x => this.xBrushScale.invert(x)));
+        this.drawMainSection();
+    }
+
+    private extractTimeRanges(): Array<[Date, Date]> {
+        const result = [] as Array<[Date, Date]>;
         this.data.forEach(indexStats => {
             indexStats.Performance.forEach(perfStat => {
-                if (!minDateStr || perfStat.Started < minDateStr) {
-                    minDateStr = perfStat.Started;
+                const start = this.isoParser.parse(perfStat.Started);
+                let end: Date;
+                if (perfStat.Completed) {
+                    end = this.isoParser.parse(perfStat.Completed);
+                } else {
+                    end = new Date(start.getTime() + perfStat.DurationInMilliseconds);
                 }
-
-                if (perfStat.Completed && (!maxDateStr || perfStat.Completed > maxDateStr)) {
-                    maxDateStr = perfStat.Completed;
-                }
+                result.push([start, end]);
             });
         });
 
-        let minDate: Date = minDateStr ? this.isoParser.parse(minDateStr) : null;
-        let maxDate: Date = maxDateStr ? this.isoParser.parse(maxDateStr) : null;
-
-        // now scan in progress actions
-
-        this.data.forEach(indexStats => {
-            indexStats.Performance.forEach(perfStat => {
-                if (!perfStat.Completed) {
-                    const endDate = new Date(this.isoParser.parse(perfStat.Started).getTime() +
-                        perfStat.DurationInMilliseconds);
-                    if (!maxDate || endDate > maxDate) {
-                        maxDate = endDate;
-                    }
-                }
-            });
-        });
-
-        return [minDate, maxDate];
+        return result;
     }
 
-    private findIndexNames(): Array<string> {
-        const names: Array<string> = [];
+    private drawMainSection() {
+        const xScale = d3.time.scale<number>()
+            .range([0, this.totalWidth])
+            .domain(this.timeRange);
 
-        this.data.forEach(x => {
-            const indexName = x.IndexName;
-            if (!names.contains(indexName)) {
-                names.push(indexName);
-            }
-        });
+        const visibleTimeFrame = this.xNumericScale.domain().map(x => xScale.invert(x)) as [Date, Date];
+        console.log(visibleTimeFrame);
 
-        return names;
-    }
+        const canvas = this.canvas.node() as HTMLCanvasElement;
+        const context = canvas.getContext("2d");
 
-    private graphForIndex(stats: Raven.Client.Data.Indexes.IndexPerformanceStats, container: d3.Selection<Raven.Client.Data.Indexes.IndexPerformanceStats[]>) {
-        stats.Performance.forEach(perf => {
-            this.graphPerformanceGroup(container, stats.IndexName, perf);
-        });
-    }
+        context.save();
+        try {
+            context.translate(0, metrics.brushSectionHeight);
+            context.rect(0, 0, this.totalWidth, this.totalHeight - metrics.brushSectionHeight); //TODO: make sure it is needed
+            context.clip();
 
-    private static extent(timeExtent: number) {
-        return timeExtent / 1000.0 * metrics.pixelsPerSecond;
-    }
 
-    private graphPerformanceGroup(container: d3.Selection<Raven.Client.Data.Indexes.IndexPerformanceStats[]>,
-        indexName: string, data: Raven.Client.Data.Indexes.IndexingPerformanceStats) {
-        const self = this;
 
-        const startTime = self.isoParser.parse(data.Started);
-        const endTime = new Date(startTime.getTime() + data.DurationInMilliseconds);
+        } finally {
+            context.restore();
+        }
 
-        const perfGroup = container.append("g")
-            .attr('class', 'perf_group_item')
-            .attr("transform", "translate(" + self.xScale(startTime) + "," + (self.yScale(indexName) + metrics.verticalPadding / 2) + ")");
         
-        perfGroup.append("rect")
-            .attr("class", 'perf_group_bg')
-            .attr('x', 0)
-            .attr('y', 0)
-            .attr('height', metrics.singleIndexGroupHeight)
-            .attr('width', metrics.extent(endTime.getTime() - startTime.getTime()));
-
-        perfGroup.datum(data);
-
-        self.drawOperations([data.Details], 4, perfGroup);
     }
 
-    private drawOperations(ops: Raven.Client.Data.Indexes.IndexingPerformanceOperation[], level: number, parent: d3.Selection<any>) {
-        const self = this;
-        let xStart = 0;
-        for (let i = 0; i < ops.length; i++) {
-            const op = ops[i];
-
-            const group = parent.append("g")
-                .attr('class', 'op_group_level_' + level)
-                .attr("transform", "translate(" + xStart +"," + metrics.innerGroupPadding + ")");
-
-            const width = metrics.extent(op.DurationInMilliseconds);
-            xStart += width;
-
-            group
-                .append("rect")
-                .attr('x', 0)
-                .attr('y', 0)
-                .attr('height', metrics.singleIndexGroupHeight - (metrics.maxRecurseLevel - level + 1) * 2 * metrics.innerGroupPadding)
-                .attr('width', width)
-                .datum(op)
-                .attr('fill', (data) => self.colorScale(data.Name))
-                .on('click', (data) => self.showDetails(data));
-
-            if (op.Operations.length > 0) {
-                this.drawOperations(op.Operations, level - 1, group);
-            }
-        }
-    }
-
-    private showDetails(op: any) {
-        var dialog = new tempStatDialog(op);
-        app.showBootstrapDialog(dialog);
-    }
-
-    fileSelected() {
+    fileSelected() { //TODO:
         const fileInput = <HTMLInputElement>document.querySelector("#importFilePicker");
         const self = this;
         if (fileInput.files.length === 0) {
@@ -250,20 +289,18 @@ class metrics extends viewModelBase {
         reader.readAsText(file);
     }
 
-    private dataImported(result: string) {
+    private dataImported(result: string) { //TODO:
         const json = JSON.parse(result) as {
             data: Raven.Client.Data.Indexes.IndexPerformanceStats[];
         };
 
         this.data = json.data;
 
-        this.colorScale = d3.scale.category20();
-
         $("#indexPerformanceGraph").empty();
-        this.draw();
+        //TODO: this.draw();
     }
 
-    exportAsJson() {
+    exportAsJson() { //TODO:
         fileDownloader.downloadAsJson({
             data: this.data
         }, "perf.json", "perf");
