@@ -23,9 +23,14 @@ namespace Raven.Tryouts
     {
         public static void Main(string[] args)
         {
-            Console.WriteLine("Press any key");
-            Console.ReadLine();
-            AsyncMain().Wait();
+            for (int i = 0; i < 100; i++)
+            {
+                Console.WriteLine(i);
+                using (var x = new RavenDB_3612())
+                {
+                    x.BeforeAcknowledgment_Can_Prevent_Batch_Acknowledgment();
+                }
+            }
         }
 
         public static async Task AsyncMain()
