@@ -1,53 +1,21 @@
 <style>
-    svg {
-        background-color: white;
+    #metricsContainer {
+        position: relative;
     }
-
-    .in_progress_group_item  rect {
-        fill: black;
-        stroke: blue;
-        stroke-dasharray: 5, 5;
+    #metricsContainer canvas, #metricsContainer svg {
+        position: absolute;
+        top: 0;
+        left: 0;
     }
-
-     .axis path {
-         fill: none;
-         stroke: #000;
-         shape-rendering: crispEdges;
-     }
-
-    .perf_group_bg {
-        stroke: none;
-        fill: pink;
-    }   
-
-    .op_group_level_4 {
-        fill: red;
-        stroke: black;
-        stroke-width: 1;
+    .brush .extent {
+      fill-opacity: .3;
+      stroke: #fff;
+      shape-rendering: crispEdges;
     }
-
-    .op_group_level_3 {
-        fill: blue;
-        stroke: black;
-        stroke-width: 1;
-    }
-
-    .op_group_level_2 {
-        fill: green;
-        stroke: black;
-        stroke-width: 1;
-    }
-
-    .op_group_level_1 {
-        fill: yellow;
-        stroke: black;
-        stroke-width: 1;
-    }
-
-    .op_group_level_0 {
-        fill: white;
-        stroke: #ccc;
-        stroke-width: 1;
+    rect.pane {
+      cursor: move;
+      fill: none;
+      pointer-events: all;
     }
 </style>
 
@@ -59,7 +27,7 @@
 
 
 <section id="indexingPerformance" style="position: relative">
-    <section id="metricsContainer" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-        <svg id="indexPerformanceGraph" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
+    <section id="metricsContainer">
+        
     </section>
 </section>
