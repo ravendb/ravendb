@@ -78,7 +78,7 @@ namespace Raven.SlowTests.Issues
                             Url = store2.Url,
 
                         },
-                        FromFile = "c:\\Temp\\export.ravendump",
+                        FromFile = export,
                     });
                 }
             }
