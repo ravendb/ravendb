@@ -383,7 +383,7 @@ namespace Raven.Storage.Esent
         private static void CompactInternal(InMemoryRavenConfiguration ravenConfiguration, JET_PFNSTATUS statusCallback)
         {
             var src = Path.Combine(ravenConfiguration.DataDirectory, "Data");
-            var compactPath = Path.Combine(ravenConfiguration.DataDirectory, "Data.Compact");
+            var compactPath = Path.Combine(ravenConfiguration.DataDirectory, "Compacted.Data");
 
             if (File.Exists(compactPath))
                 File.Delete(compactPath);
@@ -404,7 +404,12 @@ namespace Raven.Storage.Esent
                     try
                     {
                         Api.JetCompact(session, src, compactPath, statusCallback, null,
-                                   CompactGrbit.None);
+                            CompactGrbit.None);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        throw;
                     }
                     finally
                     {
