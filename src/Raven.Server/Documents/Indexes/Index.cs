@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Indexes
         private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
         private string _errorPriorityReason;
-        private bool _isCompactionInProgress;
+        private volatile bool _isCompactionInProgress;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -438,7 +438,7 @@ namespace Raven.Server.Documents.Indexes
             Debug.Assert(databaseContext.Transaction != null);
 
             if (_isCompactionInProgress)
-                return false;
+                return true;
 
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
@@ -1321,6 +1321,7 @@ namespace Raven.Server.Documents.Indexes
 
             TransactionOperationContext indexContext;
 
+            using (MarkQueryAsRunning(query, token))
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
                 var result = new FacetedQueryResult();
@@ -1435,6 +1436,7 @@ namespace Raven.Server.Documents.Indexes
             }
 
             TransactionOperationContext indexContext;
+            using (MarkQueryAsRunning(query, token))
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenReadTransaction())
             {
@@ -1567,7 +1569,7 @@ namespace Raven.Server.Documents.Indexes
             result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext);
         }
 
-        private DisposableAction MarkQueryAsRunning(IndexQueryServerSide query, OperationCancelToken token)
+        private DisposableAction MarkQueryAsRunning(IIndexQuery query, OperationCancelToken token)
         {
             var queryStartTime = DateTime.UtcNow;
             var queryId = Interlocked.Increment(ref _numberOfQueries);
@@ -1756,11 +1758,22 @@ namespace Raven.Server.Documents.Indexes
             lock (_locker)
             {
                 _isCompactionInProgress = true;
+
+                var progress = new IndexCompactionProgress();
+                var currentlyRunningQueriesCount = CurrentlyRunningQueries.Count;
+                while (currentlyRunningQueriesCount > 0)
+                {
+                    progress.Message = $"Waiting for queries to end. {currentlyRunningQueriesCount} queries are still processing.";
+                    onProgress.Invoke(progress);
+
+                    Thread.Sleep(TimeSpan.FromSeconds(1));
+                    currentlyRunningQueriesCount = CurrentlyRunningQueries.Count;
+                }
+
                 StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions = null;
 
                 try
                 {
-                    var progress = new DeterminateProgress();
                     var environmentOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)_environment.Options;
                     var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath);
 
@@ -1773,13 +1786,14 @@ namespace Raven.Server.Documents.Indexes
 
                     StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                     {
+                        progress.Message = null;
                         progress.Processed = progressReport.GlobalProgress;
                         progress.Total = progressReport.GlobalTotal;
 
                         onProgress?.Invoke(progress);
                     });
 
-                    Directory.Delete(environmentOptions.BasePath, recursive: true);
+                    IOExtensions.DeleteDirectory(environmentOptions.BasePath);
                     Directory.Move(compactOptions.BasePath, environmentOptions.BasePath);
 
                     _initialized = false;
@@ -1795,7 +1809,7 @@ namespace Raven.Server.Documents.Indexes
                 finally
                 {
                     if (compactOptions != null && Directory.Exists(compactOptions.BasePath))
-                        Directory.Delete(compactOptions.BasePath);
+                        IOExtensions.DeleteDirectory(compactOptions.BasePath);
 
                     _isCompactionInProgress = false;
                 }

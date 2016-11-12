@@ -17,7 +17,7 @@ namespace Raven.Client.Data.Queries
         }
     }
 
-    public abstract class MoreLikeThisQuery<T>
+    public abstract class MoreLikeThisQuery<T> : IIndexQuery
         where T : class
     {
         private int _pageSize;

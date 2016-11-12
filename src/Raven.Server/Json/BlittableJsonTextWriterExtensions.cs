@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -14,6 +13,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -266,6 +266,48 @@ namespace Raven.Server.Json
             writer.WriteObject(context.ReadObject(djv, "index/performance"));
         }
 
+        public static void WriteIndexQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, IIndexQuery query)
+        {
+            var indexQuery = query as IndexQueryServerSide;
+            if (indexQuery != null)
+            {
+                writer.WriteIndexQuery(context, indexQuery);
+                return;
+            }
+
+            var moreLikeThisQuery = query as MoreLikeThisQueryServerSide;
+            if (moreLikeThisQuery != null)
+            {
+                writer.WriteMoreLikeThisQuery(context, moreLikeThisQuery);
+                return;
+            }
+
+            var facetQuery = query as FacetQuery;
+            if (facetQuery != null)
+            {
+                writer.WriteFacetQuery(context, facetQuery);
+                return;
+            }
+
+            throw new NotSupportedException($"Not supported query type: {query.GetType()}");
+        }
+
+        public static void WriteFacetQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, FacetQuery query)
+        {
+            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(query);
+            var json = context.ReadObject(djv, "facet-query");
+
+            writer.WriteObject(json);
+        }
+
+        public static void WriteMoreLikeThisQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, MoreLikeThisQueryServerSide query)
+        {
+            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(query);
+            var json = context.ReadObject(djv, "more-like-this-query");
+
+            writer.WriteObject(json);
+        }
+
         public static void WriteIndexQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexQueryServerSide query)
         {
             writer.WriteStartObject();
@@ -344,10 +386,6 @@ namespace Raven.Server.Json
             writer.WritePropertyName((nameof(query.Start)));
             writer.WriteInteger(query.Start);
             writer.WriteComma();
-
-            //writer.WritePropertyName((nameof(query.TotalSize)));
-            //writer.WriteInteger(query.TotalSize.Value);
-            //writer.WriteComma();
 
             writer.WritePropertyName((nameof(query.WaitForNonStaleResults)));
             writer.WriteBool(query.WaitForNonStaleResults);
@@ -802,7 +840,7 @@ namespace Raven.Server.Json
             writer.WriteObject(context.ReadObject(djv, "index/stats"));
         }
 
-        private static void WriteIndexFieldOptions(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexFieldOptions options , bool removeAnalyzers)
+        private static void WriteIndexFieldOptions(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexFieldOptions options, bool removeAnalyzers)
         {
             writer.WriteStartObject();
 
@@ -919,7 +957,7 @@ namespace Raven.Server.Json
 
                 using (document.Data)
                 {
-                    if(metadataOnly == false)
+                    if (metadataOnly == false)
                         writer.WriteDocument(context, document);
                     else
                         writer.WriteDocumentMetadata(context, document);
@@ -964,7 +1002,7 @@ namespace Raven.Server.Json
                         writer.WriteComma();
                     }
                     first = false;
-                    metadata.GetPropertyByIndex(i,ref prop);
+                    metadata.GetPropertyByIndex(i, ref prop);
                     writer.WritePropertyName(prop.Name);
                     writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                 }
@@ -1037,7 +1075,6 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
         }
-    }
 
         public static void WriteArrayOfResultsAndCount(this BlittableJsonTextWriter writer, IEnumerable<string> results)
         {
@@ -1067,7 +1104,6 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
         }
-
 
         public static void WriteReduceTrees(this BlittableJsonTextWriter writer, IEnumerable<ReduceTree> trees)
         {
