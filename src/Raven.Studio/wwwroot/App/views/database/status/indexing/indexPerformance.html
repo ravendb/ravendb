@@ -8,14 +8,27 @@
         left: 0;
     }
     .brush .extent {
-      fill-opacity: .3;
-      stroke: #fff;
-      shape-rendering: crispEdges;
+        fill-opacity: .3;
+        stroke: #ff5500;
+        shape-rendering: crispEdges;
     }
     rect.pane {
-      cursor: move;
-      fill: none;
-      pointer-events: all;
+        fill: none;
+        pointer-events: all;
+    }
+
+    .tooltip { /* copied from storare report - externalize me ! */
+        box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.45);
+        position: absolute;
+        text-align: center;
+        background: #2c3333;
+        color: #a9adad;
+        border: 0px;
+        padding:8px 16px;
+        border-radius: 2px;
+        pointer-events: none;
+        opacity:1;
+        transform: translateY(-30px);
     }
 </style>
 
@@ -28,6 +41,7 @@
 
 <section id="indexingPerformance" style="position: relative">
     <section id="metricsContainer">
-        
+        <div class="tooltip" style="opacity: 0">
+        </div>
     </section>
 </section>

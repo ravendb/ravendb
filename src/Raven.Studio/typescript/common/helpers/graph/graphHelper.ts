@@ -28,6 +28,53 @@ class graphHelper {
         return stack;
     }
 
+    static truncText(input: string, measuredWidth: number, availableWidth: number, minWidth = 5): string {
+        if (availableWidth >= measuredWidth) {
+            return input;
+        }
+        if (availableWidth < minWidth) {
+            return null;
+        }
+
+        const approxCharactersToTake = Math.floor(availableWidth * input.length / measuredWidth);
+        return input.substr(0, approxCharactersToTake);
+    }
+
+    static drawArrow(ctx: CanvasRenderingContext2D, x: number, y: number, rightArrow: boolean) {
+        ctx.beginPath();
+        if (rightArrow) {
+            ctx.fillStyle = "#a8acac";
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + 7, y + 4);
+            ctx.lineTo(x, y + 8);
+        } else {
+            ctx.fillStyle = "#ff5500";
+            ctx.moveTo(x, y + 1);
+            ctx.lineTo(x + 4, y + 8);
+            ctx.lineTo(x + 8, y + 1);
+        }
+        
+
+        ctx.fill();
+    }
+
+    /**
+     *  Returns helper function which translates milliseconds to pixels
+     */
+    static extentGenerator(scale: d3.time.Scale<number, number>): (millis: number) => number {
+        const domain = scale.domain();
+        const range = scale.range();
+
+        if (range.length !== 2) {
+            throw new Error("extractPixelsPerSecond only supports range with 2 elements");
+        }
+
+        const domainExtent = domain[1].getTime() - domain[0].getTime();
+        const rangeExtent = range[1] - range[0];
+
+        return (millis: number) => millis * rangeExtent / domainExtent;
+    }
+
     static timeRangeFromSortedRanges(input: Array<[Date, Date]>): [Date, Date] {
         if (input.length === 0) {
             return null;
