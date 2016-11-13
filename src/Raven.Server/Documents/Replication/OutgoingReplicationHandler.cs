@@ -84,8 +84,12 @@ namespace Raven.Server.Documents.Replication
             using (var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, string.Format("{0}/info/tcp",
                 MultiDatabase.GetRootDatabaseUrl(_destination.Url)),
                 HttpMethod.Get,
-                new OperationCredentials(_destination.ApiKey, CredentialCache.DefaultCredentials), convention)))
+                new OperationCredentials(_destination.ApiKey, CredentialCache.DefaultCredentials), convention)
             {
+                Timeout = TimeSpan.FromSeconds(15)
+            }))
+            {
+
                 var result = request.ReadResponseJson();
                 var tcpConnectionInfo = convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
                 if (_log.IsInfoEnabled)
