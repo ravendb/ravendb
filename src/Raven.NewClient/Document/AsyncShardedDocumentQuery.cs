@@ -1,0 +1,184 @@
+//-----------------------------------------------------------------------
+// <copyright file="ShardedDocumentQuery.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Raven.Abstractions.Data;
+using System.Threading;
+using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
+using Raven.NewClient.Client.Connection.Async;
+using Raven.NewClient.Client.Document.SessionOperations;
+using Raven.NewClient.Client.Listeners;
+using Raven.NewClient.Client.Connection;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Shard;
+
+namespace Raven.NewClient.Client.Document
+{
+    /// <summary>
+    /// A query that is executed against sharded instances
+    /// </summary>
+    public class AsyncShardedDocumentQuery<T> : AsyncDocumentQuery<T>
+    {
+        private readonly Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn;
+        private readonly ShardStrategy shardStrategy;
+
+        private List<QueryOperation> shardQueryOperations;
+
+        private IList<IAsyncDatabaseCommands> databaseCommands;
+        private IList<IAsyncDatabaseCommands> ShardDatabaseCommands
+        {
+            get
+            {
+                if (databaseCommands == null)
+                {
+                    var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData { EntityType = typeof(T), Query = IndexQuery , IndexName = indexName});
+                    databaseCommands = shardsToOperateOn.Select(x => x.Item2).ToList();
+                }
+                return databaseCommands;
+            }
+        }
+
+        private IndexQuery indexQuery;
+        private IndexQuery IndexQuery
+        {
+            get { return indexQuery ?? (indexQuery = GenerateIndexQuery(queryText.ToString())); }
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
+        /// </summary>
+        public AsyncShardedDocumentQuery(InMemoryDocumentSessionOperations session, Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn, ShardStrategy shardStrategy, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool isMapReduce)
+            : base(session, null, null, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
+        {
+            this.getShardsToOperateOn = getShardsToOperateOn;
+            this.shardStrategy = shardStrategy;
+        }
+
+        protected override Task<QueryOperation> InitAsync()
+        {
+            if (queryOperation != null)
+                return CompletedTask.With(queryOperation);
+
+            ExecuteBeforeQueryListeners();
+
+            shardQueryOperations = new List<QueryOperation>();
+
+            foreach (var commands in ShardDatabaseCommands)
+            {
+                var dbCommands = commands;
+                ClearSortHints(dbCommands);
+                shardQueryOperations.Add(InitializeQueryOperation());
+            }
+
+            theSession.IncrementRequestCount();
+            return ExecuteActualQueryAsync();
+        }
+
+        public override IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
+        {
+            var documentQuery = new AsyncShardedDocumentQuery<TProjection>(theSession,
+                getShardsToOperateOn,
+                shardStrategy,
+                indexName,
+                fields,
+                projections,
+                queryListeners,
+                isMapReduce)
+            {
+                pageSize = pageSize,
+                queryText = new StringBuilder(queryText.ToString()),
+                start = start,
+                timeout = timeout,
+                queryStats = queryStats,
+                theWaitForNonStaleResults = theWaitForNonStaleResults,
+                theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
+                orderByFields = orderByFields,
+                dynamicMapReduceFields = dynamicMapReduceFields,
+                isDistinct = isDistinct,
+                transformResultsFunc = transformResultsFunc,
+                includes = new HashSet<string>(includes),
+                highlightedFields = new List<HighlightedField>(highlightedFields),
+                highlighterPreTags = highlighterPreTags,
+                highlighterPostTags = highlighterPostTags,
+                disableEntitiesTracking = disableEntitiesTracking,
+                disableCaching = disableCaching,
+                showQueryTimings = showQueryTimings,
+                shouldExplainScores = shouldExplainScores
+            };
+            documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
+            return documentQuery;
+        }
+
+        protected override void ExecuteActualQuery()
+        {
+            throw new NotSupportedException("Async queries don't support synchronous execution");
+        }
+
+        protected override Task<QueryOperation> ExecuteActualQueryAsync()
+        {
+            var results = shardStrategy.ShardAccessStrategy.ApplyAsync(ShardDatabaseCommands,
+                new ShardRequestData
+                {
+                    EntityType = typeof(T),
+                    Query = IndexQuery,
+                    IndexName = indexName
+                }, (commands, i) =>
+                {
+                    var queryOp = shardQueryOperations[i];
+
+                    var queryContext = queryOp.EnterQueryContext();
+                    return commands.QueryAsync(indexName, queryOp.IndexQuery)
+                        .ContinueWith(task =>
+                    {
+                        if (queryContext != null)
+                            queryContext.Dispose();
+
+                        queryOp.EnsureIsAcceptable(task.Result);
+
+                        return task.Result;
+                    });
+                });
+
+            return results.ContinueWith(task =>
+            {
+                task.AssertNotFailed();
+
+                ShardedDocumentQuery<T>.AssertNoDuplicateIdsInResults(shardQueryOperations);
+
+                var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
+
+                shardQueryOperations[0].ForceResult(mergedQueryResult);
+                queryOperation = shardQueryOperations[0];
+
+                return queryOperation;
+            });
+        }
+
+        public override Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
+        {
+            throw new NotSupportedException("Lazy in not supported with the async API");
+        }
+
+        public override Lazy<int> CountLazily()
+        {
+            throw new NotSupportedException("Lazy in not supported with the async API");
+        }
+
+        public override IDatabaseCommands DatabaseCommands
+        {
+            get { throw new NotSupportedException("Sharded has more than one DatabaseCommands to operate on."); }
+        }
+
+        public override IAsyncDatabaseCommands AsyncDatabaseCommands
+        {
+            get { throw new NotSupportedException("Sharded has more than one DatabaseCommands to operate on."); }
+        }
+    }
+}
