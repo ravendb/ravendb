@@ -1175,13 +1175,6 @@ namespace Raven.Server.Documents.Indexes
             DocumentsOperationContext documentsContext, OperationCancelToken token)
             where TQueryResult : QueryResultServerSide
         {
-            AssertIndexState();
-
-            if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
-                SetPriority(IndexingPriority.Normal);
-
-            MarkQueried(DocumentDatabase.Time.GetUtcNow());
-
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, query.SortedFields);
 
             Transformer transformer = null;
@@ -1197,111 +1190,120 @@ namespace Raven.Server.Documents.Indexes
                  (transformer != null && transformer.HasInclude)))
                 throw new NotSupportedException("Includes are not supported by this type of query.");
 
-            TransactionOperationContext indexContext;
-
             using (MarkQueryAsRunning(query, token))
-            using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                var queryDuration = Stopwatch.StartNew();
-                AsyncWaitForIndexing wait = null;
+                AssertIndexState();
 
-                while (true)
+                if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
+                    SetPriority(IndexingPriority.Normal);
+
+                MarkQueried(DocumentDatabase.Time.GetUtcNow());
+
+                TransactionOperationContext indexContext;
+
+                using (_contextPool.AllocateOperationContext(out indexContext))
                 {
-                    AssertIndexState();
+                    var queryDuration = Stopwatch.StartNew();
+                    AsyncWaitForIndexing wait = null;
 
-                    // we take the awaiter _before_ the indexing transaction happens, 
-                    // so if there are any changes, it will already happen to it, and we'll 
-                    // query the index again. This is important because of: 
-                    // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
-                    var frozenAwaiter = _indexingBatchCompleted.GetFrozenAwaiter();
-
-                    using (var indexTx = indexContext.OpenReadTransaction())
+                    while (true)
                     {
-                        documentsContext.OpenReadTransaction();
-                        // we have to open read tx for mapResults _after_ we open index tx
+                        AssertIndexState();
 
-                        if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
-                            query.CutoffEtag =
-                                Collections.Max(
-                                    x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
+                        // we take the awaiter _before_ the indexing transaction happens, 
+                        // so if there are any changes, it will already happen to it, and we'll 
+                        // query the index again. This is important because of: 
+                        // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+                        var frozenAwaiter = _indexingBatchCompleted.GetFrozenAwaiter();
 
-                        var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
-                        if (WillResultBeAcceptable(isStale, query, wait) == false)
+                        using (var indexTx = indexContext.OpenReadTransaction())
                         {
-                            documentsContext.CloseTransaction();
-                            indexContext.ResetAndRenew();
+                            documentsContext.OpenReadTransaction();
+                            // we have to open read tx for mapResults _after_ we open index tx
 
-                            Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+                            if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
+                                query.CutoffEtag =
+                                    Collections.Max(
+                                        x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
 
-                            if (wait == null)
-                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value);
-
-                            await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
-                            continue;
-                        }
-
-                        FillQueryResult(resultToFill, isStale, documentsContext, indexContext);
-
-                        if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0) &&
-                            (transformer == null || transformer.MightRequireTransaction == false))
-                            documentsContext.CloseTransaction();
-                        // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
-
-                        using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
-                        {
-                            var totalResults = new Reference<int>();
-                            var skippedResults = new Reference<int>();
-
-                            var fieldsToFetch = new FieldsToFetch(query, Definition, transformer);
-                            IEnumerable<Document> documents;
-
-                            if (string.IsNullOrWhiteSpace(query.Query) ||
-                                query.Query.Contains(Constants.IntersectSeparator) == false)
+                            var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
+                            if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
-                                documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(documentsContext, fieldsToFetch), token.Token);
-                            }
-                            else
-                            {
-                                documents = reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(documentsContext, fieldsToFetch), token.Token);
+                                documentsContext.CloseTransaction();
+                                indexContext.ResetAndRenew();
+
+                                Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+
+                                if (wait == null)
+                                    wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value);
+
+                                await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
+                                continue;
                             }
 
-                            var includeDocumentsCommand = new IncludeDocumentsCommand(
-                                DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
+                            FillQueryResult(resultToFill, isStale, documentsContext, indexContext);
 
-                            using (
-                                var scope = transformer?.OpenTransformationScope(query.TransformerParameters,
-                                    includeDocumentsCommand, DocumentDatabase.DocumentsStorage,
-                                    DocumentDatabase.TransformerStore, documentsContext))
+                            if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0) &&
+                                (transformer == null || transformer.MightRequireTransaction == false))
+                                documentsContext.CloseTransaction();
+                            // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
+
+                            using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                             {
-                                var results = scope != null ? scope.Transform(documents) : documents;
+                                var totalResults = new Reference<int>();
+                                var skippedResults = new Reference<int>();
 
-                                try
+                                var fieldsToFetch = new FieldsToFetch(query, Definition, transformer);
+                                IEnumerable<Document> documents;
+
+                                if (string.IsNullOrWhiteSpace(query.Query) ||
+                                    query.Query.Contains(Constants.IntersectSeparator) == false)
                                 {
-                                    foreach (var document in results)
-                                    {
-                                        resultToFill.TotalResults = totalResults.Value;
-                                        resultToFill.AddResult(document);
+                                    documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
+                                        GetQueryResultRetriever(documentsContext, fieldsToFetch), token.Token);
+                                }
+                                else
+                                {
+                                    documents = reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults,
+                                        GetQueryResultRetriever(documentsContext, fieldsToFetch), token.Token);
+                                }
 
-                                        includeDocumentsCommand.Gather(document);
+                                var includeDocumentsCommand = new IncludeDocumentsCommand(
+                                    DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
+
+                                using (
+                                    var scope = transformer?.OpenTransformationScope(query.TransformerParameters,
+                                        includeDocumentsCommand, DocumentDatabase.DocumentsStorage,
+                                        DocumentDatabase.TransformerStore, documentsContext))
+                                {
+                                    var results = scope != null ? scope.Transform(documents) : documents;
+
+                                    try
+                                    {
+                                        foreach (var document in results)
+                                        {
+                                            resultToFill.TotalResults = totalResults.Value;
+                                            resultToFill.AddResult(document);
+
+                                            includeDocumentsCommand.Gather(document);
+                                        }
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        if (resultToFill.SupportsExceptionHandling == false)
+                                            throw;
+
+                                        resultToFill.HandleException(e);
                                     }
                                 }
-                                catch (Exception e)
-                                {
-                                    if (resultToFill.SupportsExceptionHandling == false)
-                                        throw;
 
-                                    resultToFill.HandleException(e);
-                                }
+                                includeDocumentsCommand.Fill(resultToFill.Includes);
+                                resultToFill.TotalResults = totalResults.Value;
+                                resultToFill.SkippedResults = skippedResults.Value;
                             }
 
-                            includeDocumentsCommand.Fill(resultToFill.Includes);
-                            resultToFill.TotalResults = totalResults.Value;
-                            resultToFill.SkippedResults = skippedResults.Value;
+                            return;
                         }
-
-                        return;
                     }
                 }
             }
@@ -1310,70 +1312,73 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task<FacetedQueryResult> FacetedQuery(FacetQuery query, long facetSetupEtag,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
-            AssertIndexState();
-
-            if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
-                SetPriority(IndexingPriority.Normal);
-
-            MarkQueried(DocumentDatabase.Time.GetUtcNow());
-
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, null);
 
-            TransactionOperationContext indexContext;
-
             using (MarkQueryAsRunning(query, token))
-            using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                var result = new FacetedQueryResult();
+                AssertIndexState();
 
-                var queryDuration = Stopwatch.StartNew();
-                AsyncWaitForIndexing wait = null;
+                if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
+                    SetPriority(IndexingPriority.Normal);
 
-                while (true)
+                MarkQueried(DocumentDatabase.Time.GetUtcNow());
+
+                TransactionOperationContext indexContext;
+
+                using (_contextPool.AllocateOperationContext(out indexContext))
                 {
-                    AssertIndexState();
-                    // we take the awaiter _before_ the indexing transaction happens, 
-                    // so if there are any changes, it will already happen to it, and we'll 
-                    // query the index again. This is important because of: 
-                    // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
-                    var frozenAwaiter = _indexingBatchCompleted.GetFrozenAwaiter();
+                    var result = new FacetedQueryResult();
 
-                    using (var indexTx = indexContext.OpenReadTransaction())
+                    var queryDuration = Stopwatch.StartNew();
+                    AsyncWaitForIndexing wait = null;
+
+                    while (true)
                     {
-                        documentsContext.OpenReadTransaction();
-                        // we have to open read tx for mapResults _after_ we open index tx
+                        AssertIndexState();
 
-                        if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
-                            query.CutoffEtag =
-                                Collections.Max(
-                                    x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
+                        // we take the awaiter _before_ the indexing transaction happens, 
+                        // so if there are any changes, it will already happen to it, and we'll 
+                        // query the index again. This is important because of: 
+                        // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+                        var frozenAwaiter = _indexingBatchCompleted.GetFrozenAwaiter();
 
-                        var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
-
-                        if (WillResultBeAcceptable(isStale, query, wait) == false)
+                        using (var indexTx = indexContext.OpenReadTransaction())
                         {
+                            documentsContext.OpenReadTransaction();
+                            // we have to open read tx for mapResults _after_ we open index tx
+
+                            if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
+                                query.CutoffEtag =
+                                    Collections.Max(
+                                        x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
+
+                            var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
+
+                            if (WillResultBeAcceptable(isStale, query, wait) == false)
+                            {
+                                documentsContext.CloseTransaction();
+                                indexContext.ResetAndRenew();
+
+                                Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+
+                                if (wait == null)
+                                    wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value);
+
+                                await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
+                                continue;
+                            }
+
+                            FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), facetSetupEtag,
+                                documentsContext, indexContext);
+
                             documentsContext.CloseTransaction();
-                            indexContext.ResetAndRenew();
 
-                            Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+                            using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
+                            {
+                                result.Results = reader.FacetedQuery(query, indexContext, token.Token);
 
-                            if (wait == null)
-                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value);
-
-                            await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
-                            continue;
-                        }
-
-                        FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), facetSetupEtag,
-                            documentsContext, indexContext);
-
-                        documentsContext.CloseTransaction();
-
-                        using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
-                        {
-                            result.Results = reader.FacetedQuery(query, indexContext, token.Token);
-
-                            return result;
+                                return result;
+                            }
                         }
                     }
                 }
@@ -1408,8 +1413,6 @@ namespace Raven.Server.Documents.Indexes
         public virtual MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
-            AssertIndexState();
-
             Transformer transformer = null;
             if (string.IsNullOrEmpty(query.Transformer) == false)
             {
@@ -1435,49 +1438,53 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            TransactionOperationContext indexContext;
             using (MarkQueryAsRunning(query, token))
-            using (_contextPool.AllocateOperationContext(out indexContext))
-            using (var tx = indexContext.OpenReadTransaction())
             {
-                var result = new MoreLikeThisQueryResultServerSide();
+                AssertIndexState();
 
-                var isStale = IsStale(documentsContext, indexContext);
-
-                FillQueryResult(result, isStale, documentsContext, indexContext);
-
-                if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0) &&
-                    (transformer == null || transformer.MightRequireTransaction == false))
-                    documentsContext.CloseTransaction();
-                // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
-
-                using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
+                TransactionOperationContext indexContext;
+                using (_contextPool.AllocateOperationContext(out indexContext))
+                using (var tx = indexContext.OpenReadTransaction())
                 {
-                    var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage,
-                        documentsContext, query.Includes);
+                    var result = new MoreLikeThisQueryResultServerSide();
 
-                    using (
-                        var scope = transformer?.OpenTransformationScope(query.TransformerParameters,
-                            includeDocumentsCommand, DocumentDatabase.DocumentsStorage,
-                            DocumentDatabase.TransformerStore, documentsContext))
+                    var isStale = IsStale(documentsContext, indexContext);
+
+                    FillQueryResult(result, isStale, documentsContext, indexContext);
+
+                    if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0) &&
+                        (transformer == null || transformer.MightRequireTransaction == false))
+                        documentsContext.CloseTransaction();
+                    // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
+
+                    using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                     {
-                        var documents = reader.MoreLikeThis(query, stopWords,
-                            fieldsToFetch =>
-                                GetQueryResultRetriever(documentsContext,
-                                    new FieldsToFetch(fieldsToFetch, Definition, null)), token.Token);
-                        var results = scope != null ? scope.Transform(documents) : documents;
+                        var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage,
+                            documentsContext, query.Includes);
 
-                        foreach (var document in results)
+                        using (
+                            var scope = transformer?.OpenTransformationScope(query.TransformerParameters,
+                                includeDocumentsCommand, DocumentDatabase.DocumentsStorage,
+                                DocumentDatabase.TransformerStore, documentsContext))
                         {
-                            result.Results.Add(document);
-                            includeDocumentsCommand.Gather(document);
+                            var documents = reader.MoreLikeThis(query, stopWords,
+                                fieldsToFetch =>
+                                    GetQueryResultRetriever(documentsContext,
+                                        new FieldsToFetch(fieldsToFetch, Definition, null)), token.Token);
+                            var results = scope != null ? scope.Transform(documents) : documents;
+
+                            foreach (var document in results)
+                            {
+                                result.Results.Add(document);
+                                includeDocumentsCommand.Gather(document);
+                            }
                         }
+
+                        includeDocumentsCommand.Fill(result.Includes);
                     }
 
-                    includeDocumentsCommand.Fill(result.Includes);
+                    return result;
                 }
-
-                return result;
             }
         }
 
@@ -1757,8 +1764,16 @@ namespace Raven.Server.Documents.Indexes
 
             lock (_locker)
             {
-                _isCompactionInProgress = true;
+                if (_isCompactionInProgress)
+                    throw new InvalidOperationException($"Index '{Name} ({IndexId})' cannot be compacted because compaction is already in progress.");
 
+                _isCompactionInProgress = true;
+            }
+
+            StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions = null;
+
+            try
+            {
                 var progress = new IndexCompactionProgress();
                 var currentlyRunningQueriesCount = CurrentlyRunningQueries.Count;
                 while (currentlyRunningQueriesCount > 0)
@@ -1770,9 +1785,7 @@ namespace Raven.Server.Documents.Indexes
                     currentlyRunningQueriesCount = CurrentlyRunningQueries.Count;
                 }
 
-                StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions = null;
-
-                try
+                lock (_locker)
                 {
                     var environmentOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)_environment.Options;
                     var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath);
@@ -1806,13 +1819,13 @@ namespace Raven.Server.Documents.Indexes
 
                     return IndexCompactionResult.Instance;
                 }
-                finally
-                {
-                    if (compactOptions != null && Directory.Exists(compactOptions.BasePath))
-                        IOExtensions.DeleteDirectory(compactOptions.BasePath);
+            }
+            finally
+            {
+                if (compactOptions != null && Directory.Exists(compactOptions.BasePath))
+                    IOExtensions.DeleteDirectory(compactOptions.BasePath);
 
-                    _isCompactionInProgress = false;
-                }
+                _isCompactionInProgress = false;
             }
         }
 
