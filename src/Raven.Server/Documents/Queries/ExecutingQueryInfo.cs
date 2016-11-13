@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-
+using Raven.Client.Data;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Queries
@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Queries
     {
         public DateTime StartTime { get; private set; }
 
-        public IndexQueryServerSide QueryInfo { get; private set; }
+        public IIndexQuery QueryInfo { get; private set; }
 
         public long QueryId { get; private set; }
 
@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Queries
 
         private readonly Stopwatch _stopwatch;
 
-        public ExecutingQueryInfo(DateTime startTime, IndexQueryServerSide queryInfo, long queryId, OperationCancelToken token)
+        public ExecutingQueryInfo(DateTime startTime, IIndexQuery queryInfo, long queryId, OperationCancelToken token)
         {
             StartTime = startTime;
             QueryInfo = queryInfo;

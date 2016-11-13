@@ -84,9 +84,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_initialized)
                 throw new InvalidOperationException();
 
-            if (_initialized)
-                throw new InvalidOperationException();
-
             _directory = new LuceneVoronDirectory(environment);
 
             using (var tx = environment.WriteTransaction())

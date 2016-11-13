@@ -81,6 +81,13 @@ namespace Raven.Client.Connection
             return createReplicationAwareRequest(serverUrl, url, HttpMethods.Post);
         }
 
+        public HttpJsonRequest CompactIndex(string serverUrl, string name)
+        {
+            var url = $"/admin/indexes/compact?name={name}";
+
+            return createReplicationAwareRequest(serverUrl, url, HttpMethods.Post);
+        }
+
         public HttpJsonRequest AdminStats()
         {
             return createRequestForSystemDatabase("/admin/stats", HttpMethods.Get);

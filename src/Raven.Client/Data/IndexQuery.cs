@@ -328,7 +328,7 @@ namespace Raven.Client.Data
         }
     }
 
-    public abstract class IndexQueryBase : IEquatable<IndexQueryBase>
+    public abstract class IndexQueryBase : IIndexQuery, IEquatable<IndexQueryBase>
     {
         private int _pageSize;
 
@@ -485,6 +485,10 @@ namespace Raven.Client.Data
         {
             return Equals(left, right) == false;
         }
+    }
+
+    public interface IIndexQuery
+    {
     }
 
     public enum QueryOperator
