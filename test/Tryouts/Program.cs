@@ -3,20 +3,42 @@ using System.Diagnostics;
 using FastTests.Issues;
 using FastTests.Sparrow;
 using FastTests.Voron.Bugs;
+using Voron;
 
 namespace Tryouts
 {
     public class Program
     {
-        static void Main(string[] args)
+        static unsafe void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+            var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath("D:\\bench");
+            storageEnvironmentOptions.TransactionsMode=TransactionsMode.Danger;
+            using (var env = new StorageEnvironment(storageEnvironmentOptions))
             {
-                Console.WriteLine(i);
                 var sp = Stopwatch.StartNew();
-                using (var a = new FastTests.Server.Documents.Transformers.BasicTransformers())
+                long id = 0;
+                for (int i = 0; i < 10000; i++)
                 {
-                    a.CanDelete();
+                    using (var tx = env.WriteTransaction())
+                    {
+                        long val = 5;
+                        Slice str;
+                        using (Slice.From(tx.Allocator, "vals", out str))
+                        {
+                            Slice valSlice;
+                            using (Slice.External(tx.Allocator, (byte*)&val, sizeof(long),out valSlice))
+                            {
+                                var fixedSizeTree = tx.FixedTreeFor(str, valSize: 8);
+
+                                for (int j = 0; j < 10000; j++)
+                                {
+                                    val += 5;
+                                    fixedSizeTree.Add(id, valSlice);
+                                }
+                            }
+                        }
+                        tx.Commit();
+                    }
                 }
                 Console.WriteLine(sp.Elapsed);
             }
