@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -119,6 +120,30 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
+        public void Can_replicate_index()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
+            {
+                var userByAge = new UserByAgeIndex();
+                userByAge.Execute(source);
+
+                SetupReplication(source,destination);
+
+                var sw = Stopwatch.StartNew();
+                var destIndexNames = new string[0];
+                var timeout = Debugger.IsAttached ? 60*1000000 : 3000;
+                while(sw.ElapsedMilliseconds < timeout)
+                    destIndexNames = destination.DatabaseCommands.GetIndexNames(0, 1024);
+
+                Assert.NotNull(destIndexNames); //precaution
+                Assert.Equal(1,destIndexNames.Length);
+                Assert.Equal(userByAge.IndexName,destIndexNames.First());
+            }
+        }
+
+        [
+            Fact]
         public async Task PurgeTombstonesFrom_should_work_properly()
         {
             using (var store = GetDocumentStore())

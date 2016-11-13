@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Replication
         {
             try
             {
-                var connectionInfo = GetTcpInfo();	            
+                var connectionInfo = GetTcpInfo();
                 using (_tcpClient = new TcpClient())
                 {
                     ConnectSocket(connectionInfo, _tcpClient);
@@ -108,7 +108,9 @@ namespace Raven.Server.Documents.Replication
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context))
                     using (var stream = _tcpClient.GetStream())
                     {
-                        var sender = new ReplicationDocumentSender(stream, this, _log);
+                        var documentSender = new ReplicationDocumentSender(stream, this, _log);
+                        var indexAndTransformerSender = new ReplicationIndexTransformerSender(stream, this, _log);
+
                         using (_writer = new BlittableJsonTextWriter(_context, stream))
                         using (_parser = _context.ParseMultiFrom(stream))
                         {
@@ -129,21 +131,32 @@ namespace Raven.Server.Documents.Replication
                                 ["MachineName"] = Environment.MachineName,
                             });
                             _writer.Flush();
+
                             using (_context.OpenReadTransaction())
-                            {
                                 HandleServerResponse();
-                            }
+
 
                             while (_cts.IsCancellationRequested == false)
                             {
                                 _context.ResetAndRenew();
-                                if (sender.ExecuteReplicationOnce() == false)
+
+                                using (_context.OpenReadTransaction())
+                                {
+                                    var currentEtag = _database.IndexMetadataPersistence.ReadLastEtag();
+
+                                    if (currentEtag != indexAndTransformerSender.LastEtag)
+                                    {
+                                        indexAndTransformerSender.ExecuteReplicationOnce();
+                                    }
+                                }
+
+                                if (documentSender.ExecuteReplicationOnce() == false)
                                 {
                                     using (_context.OpenReadTransaction())
                                     {
                                         var currentEtag =
                                             DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
-                                        if (currentEtag < _lastSentDocumentEtag)
+                                        if (currentEtag != _lastSentDocumentEtag)
                                             continue;
                                     }
                                 }
@@ -178,7 +191,7 @@ namespace Raven.Server.Documents.Replication
 
         internal void WriteToServerAndFlush(DynamicJsonValue val)
         {
-            _context.Write(_writer,val);
+            _context.Write(_writer, val);
             _writer.Flush();
         }
 
@@ -186,16 +199,55 @@ namespace Raven.Server.Documents.Replication
         {
             _destinationLastKnownDocumentChangeVector.Clear();
 
-            _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
+            if(replicationBatchReply.MessageType == null)
+                throw new InvalidOperationException("MessageType on replication response is null. This is likely is a symptom of an issue, and should be investigated.");
 
+            switch (replicationBatchReply.MessageType)
+            {
+                case ReplicationMessageType.Documents:
+                    UpdateDestnationChangeVectorForDocuments(replicationBatchReply);
+                    break;
+                case ReplicationMessageType.IndexesTransformers:
+                    UpdateDestinationChangeVectorForIndexesTransformers(replicationBatchReply);
+                    break;
+                case ReplicationMessageType.Heartbeat:
+                    //nothing to update
+                    break;
+                default:
+                    //if there are changes that introduce unknown message, throw
+                    throw new ArgumentOutOfRangeException();
+            }
+
+        }
+
+        private void UpdateDestinationChangeVectorForIndexesTransformers(ReplicationMessageReply replicationBatchReply)
+        {
+            _lastSentIndexOrTransformerEtag = replicationBatchReply.LastEtagAccepted;
+
+            _destinationLastKnownIndexOrTransformerChangeVectorAsString = replicationBatchReply.CurrentChangeVector.Format();
+
+            foreach (var changeVectorEntry in replicationBatchReply.CurrentChangeVector)
+            {
+                _destinationLastKnownIndexOrTransformerChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+            }
+
+            if (_database.IndexMetadataPersistence.ReadLastEtag() != replicationBatchReply.LastEtagAccepted &&
+                DateTime.UtcNow - _lastIndexOrTransformerSentTime > _minimalHeartbeatInterval)
+            {
+                _waitForChanges.Set();
+            }
+        }
+
+        private void UpdateDestnationChangeVectorForDocuments(ReplicationMessageReply replicationBatchReply)
+        {
+            _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
             _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.CurrentChangeVector.Format();
 
             foreach (var changeVectorEntry in replicationBatchReply.CurrentChangeVector)
             {
                 _destinationLastKnownDocumentChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
-            if (DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction) >
-                replicationBatchReply.LastEtagAccepted)
+            if (DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction) != replicationBatchReply.LastEtagAccepted)
             {
                 // We have changes that the other side doesn't have, this can be because we have writes
                 // or because we have documents that were replicated to us. Either way, we need to sync
@@ -217,11 +269,10 @@ namespace Raven.Server.Documents.Replication
             {
                 _context.Write(_writer, new DynamicJsonValue
                 {
-                    ["Type"] = "ReplicationBatch",
+                    ["Type"] = ReplicationMessageType.Heartbeat,
                     ["LastDocumentEtag"] = _lastSentDocumentEtag,
                     ["LastIndexOrTransformerEtag"] = _lastSentIndexOrTransformerEtag,
-                    ["Documents"] = 0,
-                    ["IndexesAndTransformers"] = 0
+                    ["ItemCount"] = 0                    
                 });
                 _writer.Flush();
                 HandleServerResponse();
@@ -236,35 +287,47 @@ namespace Raven.Server.Documents.Replication
 
         internal void HandleServerResponse()
         {
-            using (var replicationBatchReplyMessage = _parser.ParseToMemory("replication acknowledge message"))
+            try
             {
-                var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
-
-                if (replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Ok)
+                using (var replicationBatchReplyMessage = _parser.ParseToMemory("replication acknowledge message"))
                 {
-                    UpdateDestinationChangeVector(replicationBatchReply);
-                    OnSuccessfulTwoWaysCommunication();
-                }
+                    var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
 
-                if (_log.IsInfoEnabled)
-                {
-                    switch (replicationBatchReply.Type)
+                    if (replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Ok)
                     {
-                        case ReplicationMessageReply.ReplyType.Ok:
-                            _log.Info(
-                                $"Received reply for replication batch from {_destination.Database} @ {_destination.Url}. New destination change vector is {_destinationLastKnownDocumentChangeVectorAsString}");
-                            break;
-                        case ReplicationMessageReply.ReplyType.Error:
-                            _log.Info(
-                                $"Received reply for replication batch from {_destination.Database} at {_destination.Url}. There has been a failure, error string received : {replicationBatchReply.Error}");
-                            throw new InvalidOperationException(
-                                $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Error}");
-                        default:
-                            throw new ArgumentOutOfRangeException(nameof(replicationBatchReply),
-                                "Received reply for replication batch with unrecognized type... got " +
-                                replicationBatchReply.Type);
+                        UpdateDestinationChangeVector(replicationBatchReply);
+                        OnSuccessfulTwoWaysCommunication();
+                    }
+
+                    if (_log.IsInfoEnabled)
+                    {
+                        switch (replicationBatchReply.Type)
+                        {
+                            case ReplicationMessageReply.ReplyType.Ok:
+                                _log.Info(
+                                    $"Received reply for replication batch from {_destination.Database} @ {_destination.Url}. New destination change vector is {_destinationLastKnownDocumentChangeVectorAsString}");
+                                break;
+                            case ReplicationMessageReply.ReplyType.Error:
+                                _log.Info(
+                                    $"Received reply for replication batch from {_destination.Database} at {_destination.Url}. There has been a failure, error string received : {replicationBatchReply.Error}");
+                                throw new InvalidOperationException(
+                                    $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Error}");
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(replicationBatchReply),
+                                    "Received reply for replication batch with unrecognized type... got " +
+                                    replicationBatchReply.Type);
+                        }
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info("Failed to read server response.. This is not supposed to happen and should be investigated.",e);
+                }    
+
+                throw;
             }
         }
 
@@ -288,10 +351,10 @@ namespace Raven.Server.Documents.Replication
                 throw;
             }
         }
-        
+
         private void OnDocumentChange(DocumentChangeNotification notification)
         {
-            if (IncomingReplicationHandler.IsIncomingReplicationThread 
+            if (IncomingReplicationHandler.IsIncomingReplicationThread
                 && notification.Type != DocumentChangeTypes.DeleteOnTombstoneReplication)
                 return;
             _waitForChanges.Set();
@@ -316,5 +379,12 @@ namespace Raven.Server.Documents.Replication
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
 
+    }
+
+    public static class ReplicationMessageType
+    {
+        public const string Heartbeat = "Heartbeat";
+        public const string IndexesTransformers = "IndexesTransformers";
+        public const string Documents = "Documents";
     }
 }

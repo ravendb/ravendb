@@ -95,6 +95,7 @@ namespace Raven.Server.Documents.Replication
                 documentsOperationContext.Write(writer, new DynamicJsonValue
                 {
                     ["Type"] = "Ok",
+                    ["MessageType"] = ReplicationMessageType.Heartbeat,
                     ["LastEtagAccepted"] = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId),
                     ["CurrentChangeVector"] = changeVector
                 });

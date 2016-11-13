@@ -170,9 +170,9 @@ namespace Raven.Server.Documents.Replication
             var sw = Stopwatch.StartNew();
             var headerJson = new DynamicJsonValue
             {
-                ["Type"] = "ReplicationBatch",
+                ["Type"] = ReplicationMessageType.Documents,
                 ["LastDocumentEtag"] = _lastEtag,
-                ["Documents"] = _orderedReplicaItems.Count
+                ["ItemCount"] = _orderedReplicaItems.Count
             };
             _parent.WriteToServerAndFlush(headerJson);
 

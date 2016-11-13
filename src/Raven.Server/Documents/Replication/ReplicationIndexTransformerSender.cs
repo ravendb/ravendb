@@ -17,7 +17,9 @@ namespace Raven.Server.Documents.Replication
     public class ReplicationIndexTransformerSender
     {
         private readonly Logger _log;
-        private long _lastEtag;
+        public long LastEtag;
+
+
         private readonly SortedList<long, ReplicationBatchIndexItem> _orderedReplicaItems;
         private readonly Stream _stream;
         private readonly OutgoingReplicationHandler _parent;
@@ -31,21 +33,20 @@ namespace Raven.Server.Documents.Replication
             _parent = parent;
         }
 
-        public bool ExecuteReplicationOnce()
+        public void ExecuteReplicationOnce()
         {
             _orderedReplicaItems.Clear();
-            var readTx = _parent._context.OpenReadTransaction();
             try
             {
                 var sp = Stopwatch.StartNew();
                 var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
                 while (sp.ElapsedMilliseconds < timeout)
                 {
-                    _lastEtag = _parent._lastSentIndexOrTransformerEtag;
+                    LastEtag = _parent._lastSentIndexOrTransformerEtag;
 
                     _parent.CancellationToken.ThrowIfCancellationRequested();
 
-                    var indexAndTransformerMetadata = _parent._database.IndexMetadataPersistence.GetAfter(_lastEtag + 1, 0, 1024);
+                    var indexAndTransformerMetadata = _parent._database.IndexMetadataPersistence.GetAfter(LastEtag + 1, 0, 1024);
                     using (var stream = new MemoryStream())
                     {
                         foreach (var item in indexAndTransformerMetadata)
@@ -56,17 +57,19 @@ namespace Raven.Server.Documents.Replication
                             {
                                 switch (item.Type)
                                 {
-                                    case IndexesEtagsStorage.IndexEntryType.Index:
+                                    case IndexEntryType.Index:
                                         var index = _parent._database.IndexStore.GetIndex(item.Id);
-                                        if(index == null) //precaution
-                                            throw new InvalidDataException($"Index with name {item.Name} has metadata, but is not at the index store. This is not supposed to happen and is likely a bug.");
+                                        if (index == null) //precaution
+                                            throw new InvalidDataException(
+                                                $"Index with name {item.Name} has metadata, but is not at the index store. This is not supposed to happen and is likely a bug.");
 
                                         IndexProcessor.Export(writer, index, _parent._context, false);
                                         break;
-                                    case IndexesEtagsStorage.IndexEntryType.Transformer:
+                                    case IndexEntryType.Transformer:
                                         var transformer = _parent._database.TransformerStore.GetTransformer(item.Id);
                                         if (transformer == null) //precaution
-                                            throw new InvalidDataException($"Transformer with name {item.Name} has metadata, but is not at the transformer store. This is not supposed to happen and is likely a bug.");
+                                            throw new InvalidDataException(
+                                                $"Transformer with name {item.Name} has metadata, but is not at the transformer store. This is not supposed to happen and is likely a bug.");
 
                                         TransformerProcessor.Export(writer, transformer, _parent._context);
                                         break;
@@ -78,19 +81,21 @@ namespace Raven.Server.Documents.Replication
                                 writer.Flush();
 
                                 stream.Position = 0;
-                                AddReplicationItemToBatch(new ReplicationBatchIndexItem
+                                var newItem = new ReplicationBatchIndexItem
                                 {
                                     Name = item.Name,
                                     ChangeVector = item.ChangeVector,
                                     Etag = item.Etag,
                                     Type = (int) item.Type,
-                                    Definition = _parent._context.ReadForMemory(stream,"Index/Transformer Replication - Reading definition into memory")
-                                });
+                                    Definition = _parent._context.ReadForMemory(stream, "Index/Transformer Replication - Reading definition into memory")
+                                };
+
+                                AddReplicationItemToBatch(newItem);
                             }
                         }
                     }
                     // if we are at the end, we are done
-                    if (_lastEtag <= _parent._database.IndexMetadataPersistence.ReadLastEtag(_parent._context.Transaction.InnerTransaction))
+                    if (LastEtag <= _parent._database.IndexMetadataPersistence.ReadLastEtag())
                     {
                         break;
                     }
@@ -102,22 +107,9 @@ namespace Raven.Server.Documents.Replication
                         $"Found {_orderedReplicaItems.Count:#,#;;0} indexes/transformers to replicate to {_parent.Destination.Database} @ {_parent.Destination.Url} in {sp.ElapsedMilliseconds:#,#;;0} ms.");
                 }
 
-                if (_orderedReplicaItems.Count == 0)
-                {
-                    var hasModification = _lastEtag != _parent._lastSentIndexOrTransformerEtag;
-                    _parent._lastSentIndexOrTransformerEtag = _lastEtag;
-                    // ensure that the other server is aware that we skipped 
-                    // on (potentially a lot of) documents to send, and we update
-                    // the last etag they have from us on the other side
-                    _parent.SendHeartbeat();
-                    return hasModification;
-                }
-
                 _parent.CancellationToken.ThrowIfCancellationRequested();
 
                 SendIndexTransformerBatch();
-
-                return true;
             }
             finally
             {
@@ -126,9 +118,6 @@ namespace Raven.Server.Documents.Replication
                     item.Value.Definition.Dispose();
 
                 _orderedReplicaItems.Clear();
-
-                if (readTx.Disposed == false)
-                    readTx.Dispose();
             }
         }
 
@@ -144,7 +133,7 @@ namespace Raven.Server.Documents.Replication
                 }
                 return;
             }
-            _lastEtag = Math.Max(_lastEtag, item.Etag);
+            LastEtag = Math.Max(LastEtag, item.Etag);
             _orderedReplicaItems.Add(item.Etag, item);
         }
 
@@ -152,14 +141,14 @@ namespace Raven.Server.Documents.Replication
         {
             if (_log.IsInfoEnabled)
                 _log.Info(
-                    $"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} indexes/transformers, and last etag {_lastEtag}");
+                    $"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} indexes/transformers, and last etag {LastEtag}");
 
             var sw = Stopwatch.StartNew();
             var headerJson = new DynamicJsonValue
             {
-                ["Type"] = "ReplicationBatch",
-                ["LastIndexOrTransformerEtag"] = _lastEtag,
-                ["IndexesAndTransformers"] = _orderedReplicaItems.Count
+                ["Type"] = ReplicationMessageType.IndexesTransformers,
+                ["LastIndexOrTransformerEtag"] = LastEtag,
+                ["ItemCount"] = _orderedReplicaItems.Count
             };
             _parent.WriteToServerAndFlush(headerJson);
 
@@ -173,11 +162,11 @@ namespace Raven.Server.Documents.Replication
             _stream.Flush();
             sw.Stop();
 
-            _parent._lastSentIndexOrTransformerEtag = _lastEtag;
+            _parent._lastSentIndexOrTransformerEtag = LastEtag;
 
             if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
                 _log.Info(
-                    $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. First sent etag = {_orderedReplicaItems[0].Etag}, last sent etag = {_lastEtag}");
+                    $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. First sent etag = {_orderedReplicaItems[0].Etag}, last sent etag = {LastEtag}");
 
             _parent._lastIndexOrTransformerSentTime = DateTime.UtcNow;
             using (_parent._context.OpenReadTransaction())
@@ -189,11 +178,13 @@ namespace Raven.Server.Documents.Replication
         private unsafe void WriteMetadataToServer(ReplicationBatchIndexItem item)
         {
             var changeVectorSize = item.ChangeVector.Length * sizeof(ChangeVectorEntry);
-            var sizeOfNameInBytes = Encoding.UTF8.GetMaxByteCount(item.Name.Length);
+            var sizeOfNameInBytes = Encoding.UTF8.GetByteCount(item.Name);
             var requiredSize = changeVectorSize +
                                sizeof(int) + // # of change vector entries
-                               sizeof(int) + // size of type
                                sizeof(long) + //size of etag
+                               sizeof(int) + // size of type
+                               sizeof(int) + //size of name
+                               sizeof(int) + //name char count
                                sizeOfNameInBytes +
                                item.Definition.Size +
                                sizeof(int); // size of definition
@@ -219,18 +210,20 @@ namespace Raven.Server.Documents.Replication
                 *(long*) (pTemp + tempBufferPos) = item.Etag; //write etag
                 tempBufferPos += sizeof(long);
 
+                *(int*) (pTemp + tempBufferPos) = item.Type;
+                tempBufferPos += sizeof(int);
+
                 //start writing index/transformer metadata name
-                *(int*) (pTemp + tempBufferPos) = sizeOfNameInBytes; //write the size of the name string
+                * (int*) (pTemp + tempBufferPos) = sizeOfNameInBytes; //write the size of the name string
+                tempBufferPos += sizeof(int);
+
+                *(int*)(pTemp + tempBufferPos) = item.Name.Length;
                 tempBufferPos += sizeof(int);
 
                 //start writing the name string characters
                 fixed (char* pName = item.Name)
-                {
-                    var destBuffer = (char*) pTemp;
-                    int src = 0;
-                    for (int dest = tempBufferPos; dest < item.Name.Length + tempBufferPos; dest++)
-                        destBuffer[dest] = pName[src++];
-                }
+                    Encoding.UTF8.GetBytes(pName, item.Name.Length, pTemp + tempBufferPos, sizeOfNameInBytes);
+
                 tempBufferPos += sizeOfNameInBytes;
                 //end writing the name string characters
                 //end writing index/transformer metadata name
@@ -243,7 +236,7 @@ namespace Raven.Server.Documents.Replication
                 //start writing definition json data
                 var docReadPos = 0;
                 while (docReadPos < item.Definition.Size)
-                {
+                {                    
                     var sizeToCopy = Math.Min(item.Definition.Size - docReadPos, _tempBuffer.Length - tempBufferPos);
                     if (sizeToCopy == 0) // buffer is full, need to flush it
                     {

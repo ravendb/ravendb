@@ -10,6 +10,7 @@
         SqlReplicationWriteErrorRatio,
         SqlReplicationScriptError,
         SqlReplicationScriptErrorRatio,
-        PeriodicExport
+        PeriodicExport,
+        Replication
     }
 }

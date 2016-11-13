@@ -17,6 +17,8 @@ namespace Raven.Client.Replication.Messages
 
         public string Error { get; set; }
 
+        public string MessageType { get; set; }
+
         public ChangeVectorEntry[] CurrentChangeVector { get; set; }
     }
 
