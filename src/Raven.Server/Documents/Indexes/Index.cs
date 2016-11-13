@@ -410,7 +410,9 @@ namespace Raven.Server.Documents.Indexes
 
         public void Dispose()
         {
-            _currentlyRunningQueriesLock.EnterWriteLock();
+            var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
+            if(needToLock)
+                _currentlyRunningQueriesLock.EnterWriteLock();
             try
             {
                 if (_disposed)
@@ -460,7 +462,8 @@ namespace Raven.Server.Documents.Indexes
             }
             finally
             {
-                _currentlyRunningQueriesLock.ExitWriteLock();
+                if(needToLock)
+                    _currentlyRunningQueriesLock.ExitWriteLock();
             }
         }
 
