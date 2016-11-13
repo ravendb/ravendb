@@ -1833,7 +1833,12 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Index '{Name} ({IndexId})' cannot be compacted because compaction is already in progress.");
-
+            var progress = new IndexCompactionProgress
+            {
+                Message = "Draining queries for " + Name
+            };
+            onProgress?.Invoke(progress);
+            
             using (DrainRunningQueries())
             {
                 if (_environment.Options.IncrementalBackupEnabled)
@@ -1845,6 +1850,7 @@ namespace Raven.Server.Documents.Indexes
                         $"Index '{Name} ({IndexId})' cannot be compacted because it runs in memory.");
 
                 _isCompactionInProgress = true;
+                progress.Message = null;
 
                 StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions = null;
 
@@ -1864,9 +1870,13 @@ namespace Raven.Server.Documents.Indexes
                         (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
                         StorageEnvironmentOptions.ForPath(compactPath);
 
+
                     StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                     {
-                        // TODO: report this externally 
+                        progress.Processed = progressReport.GlobalProgress;
+                        progress.Total = progressReport.GlobalTotal;
+
+                        onProgress?.Invoke(progress);
                     });
 
                     IOExtensions.DeleteDirectory(environmentOptions.BasePath);
