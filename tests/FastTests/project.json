@@ -1,0 +1,52 @@
+{
+  "version": "4.0.0-*",
+
+  "buildOptions": {
+    "allowUnsafe": true,
+    "warningsAsErrors": true,
+    "compile": {
+      "include": [ "**/*.cs", "../../src/CommonAssemblyInfo.cs" ]
+    },
+    "embed": [
+      "**/*.json",
+      "Voron/Bugs/Data/*.txt",
+      "**/*.ravendump"
+    ],
+    "define": [ "DEBUG" ],
+    "copyToOutput": {
+      "include": [ "../xunit.runner.json" ]
+    }
+  },
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
+  },
+
+  "testRunner": "xunit",
+
+  "frameworks": {
+    "netcoreapp1.0": {
+      "dependencies": {
+      },
+      "imports": "dnxcore50"
+    }
+  },
+
+  "dependencies": {
+    "dotnet-test-xunit": "2.2.0-preview2-build1029",
+    "Microsoft.NETCore.App": {
+      "type": "platform",
+      "version": "1.0.1"
+    },
+    "Raven.NewClient": "4.0.0-*",
+    "Raven.Server": "4.0.0-*",
+    "Sparrow": "4.0.0-*",
+    "Tests.Base": "1.0.0-*",
+    "Voron": "4.0.0-*",
+    "xunit": "2.2.0-beta2-build3300"
+  }
+}

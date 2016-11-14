@@ -1,0 +1,46 @@
+{
+  "version": "4.0.0-*",
+
+  "buildOptions": {
+    "allowUnsafe": true,
+    "warningsAsErrors": true,
+    "compile": {
+      "include": [ "**/*.cs", "../../src/CommonAssemblyInfo.cs" ]
+    },
+    "embed": [ "Data/*.txt", "MailingList/Everett/*.txt", "Smuggler/Northwind_3.5.35168.ravendbdump", "Smuggler/Indexes_And_Transformers_3.5.ravendbdump", "Smuggler/test.ravendbdump" ],
+    "copyToOutput": {
+      "include": [ "../xunit.runner.json"]
+    }
+  },
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
+  },
+
+  "testRunner": "xunit",
+
+  "frameworks": {
+    "netcoreapp1.0": {
+      "dependencies": {
+      },
+      "imports": "dnxcore50"
+    }
+  },
+
+  "dependencies": {
+    "Microsoft.NETCore.App": {
+      "type": "platform",
+      "version": "1.0.1"
+    },
+    "dotnet-test-xunit": "2.2.0-preview2-build1029",
+    "Sparrow": "4.0.0-*",
+    "Voron": "4.0.0-*",
+    "xunit": "2.2.0-beta2-build3300",
+    "Tests.Base": "1.0.0-*",
+    "FastTests": "4.0.0-*"
+  }
+}

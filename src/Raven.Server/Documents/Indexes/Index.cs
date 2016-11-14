@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Indexes
         private NativeMemory.ThreadStats _threadAllocations;
         private string _errorPriorityReason;
         private bool _isCompactionInProgress;
-        private ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -254,7 +254,7 @@ namespace Raven.Server.Documents.Indexes
 
         private ExitWriteLock DrainRunningQueries()
         {
-            if(_currentlyRunningQueriesLock.IsWriteLockHeld)
+            if (_currentlyRunningQueriesLock.IsWriteLockHeld)
                 return new ExitWriteLock();
 
             if (_currentlyRunningQueriesLock.TryEnterWriteLock(TimeSpan.FromSeconds(10)) == false)
@@ -410,7 +410,9 @@ namespace Raven.Server.Documents.Indexes
 
         public void Dispose()
         {
-            _currentlyRunningQueriesLock.EnterWriteLock();
+            var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
+            if (needToLock)
+                _currentlyRunningQueriesLock.EnterWriteLock();
             try
             {
                 if (_disposed)
@@ -460,7 +462,8 @@ namespace Raven.Server.Documents.Indexes
             }
             finally
             {
-                _currentlyRunningQueriesLock.ExitWriteLock();
+                if (needToLock)
+                    _currentlyRunningQueriesLock.ExitWriteLock();
             }
         }
 
@@ -531,7 +534,8 @@ namespace Raven.Server.Documents.Indexes
         /// <summary>
         /// This should only be used for testing purposes.
         /// </summary>
-        internal Dictionary<string, long> GetLastMappedEtagsForDebug()
+        /// TODO iftah, change visibility of function back to internal when finished with new client
+        public Dictionary<string, long> GetLastMappedEtagsForDebug()
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -1838,7 +1842,7 @@ namespace Raven.Server.Documents.Indexes
                 Message = "Draining queries for " + Name
             };
             onProgress?.Invoke(progress);
-            
+
             using (DrainRunningQueries())
             {
                 if (_environment.Options.IncrementalBackupEnabled)
@@ -1852,7 +1856,7 @@ namespace Raven.Server.Documents.Indexes
                 _isCompactionInProgress = true;
                 progress.Message = null;
 
-                StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions compactOptions = null;
+                string compactPath = null;
 
                 try
                 {
@@ -1864,23 +1868,22 @@ namespace Raven.Server.Documents.Indexes
 
                     Dispose();
 
-                    var compactPath = Path.Combine(Configuration.IndexStoragePath,
+                    compactPath = Path.Combine(Configuration.IndexStoragePath,
                         GetIndexNameSafeForFileSystem() + "_Compact");
-                    compactOptions =
-                        (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
-                        StorageEnvironmentOptions.ForPath(compactPath);
 
-
-                    StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
+                    using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath))
                     {
-                        progress.Processed = progressReport.GlobalProgress;
-                        progress.Total = progressReport.GlobalTotal;
+                        StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
+                        {
+                            progress.Processed = progressReport.GlobalProgress;
+                            progress.Total = progressReport.GlobalTotal;
 
-                        onProgress?.Invoke(progress);
-                    });
+                            onProgress?.Invoke(progress);
+                        });
+                    }
 
                     IOExtensions.DeleteDirectory(environmentOptions.BasePath);
-                    Directory.Move(compactOptions.BasePath, environmentOptions.BasePath);
+                    IOExtensions.MoveDirectory(compactPath, environmentOptions.BasePath);
 
                     _initialized = false;
                     _disposed = false;
@@ -1894,8 +1897,8 @@ namespace Raven.Server.Documents.Indexes
                 }
                 finally
                 {
-                    if (compactOptions != null && Directory.Exists(compactOptions.BasePath))
-                        IOExtensions.DeleteDirectory(compactOptions.BasePath);
+                    if (compactPath != null)
+                        IOExtensions.DeleteDirectory(compactPath);
 
                     _isCompactionInProgress = false;
                 }
