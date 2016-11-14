@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["Index"] = name,
+                    ["Index"] = index.Name,
                     ["Source"] = source
                 });
             }
