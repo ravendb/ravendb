@@ -334,20 +334,28 @@ class query extends viewModelBase {
         if (!indexNameOrRecentQueryHash && this.indexes().length > 0) {
             var firstIndexName = this.indexes.first().name;
             this.setSelectedIndex(firstIndexName);
-        } else if (this.indexes.first(i => i.name === indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf(this.dynamicPrefix) === 0 || indexNameOrRecentQueryHash === "dynamic") {
-            this.setSelectedIndex(indexNameOrRecentQueryHash);
-        } else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
-            var hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
-            var matchingQuery = this.recentQueries.first(q => q.Hash === hash);
-            if (matchingQuery) {
-                this.runRecentQuery(matchingQuery);
-            } else {
-                this.navigate(appUrl.forQuery(this.activeDatabase()));
-            }
+        }
+        else if (!indexNameOrRecentQueryHash) {
+             // if no index exists ==> use the default dynamic/All Documents
+             this.setSelectedIndex("dynamic");
+        }
+        else if (this.indexes.first(i => i.name === indexNameOrRecentQueryHash) ||
+             indexNameOrRecentQueryHash.startsWith("dynamic")) {
+             this.setSelectedIndex(indexNameOrRecentQueryHash);
+        }
+        else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
+             var hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
+             var matchingQuery = this.recentQueries.first(q => q.Hash === hash);
+             if (matchingQuery) {
+                 this.runRecentQuery(matchingQuery);
+             }
+             else {
+                 this.navigate(appUrl.forQuery(this.activeDatabase()));
+             }
         } else if (indexNameOrRecentQueryHash) {
-            // if indexName exists and we didn't fall into any case show error and redirect to documents page
-            messagePublisher.reportError("Could not find " + indexNameOrRecentQueryHash + " index");
-            router.navigate(appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()));
+             // if indexName exists and we didn't fall into any case show error and redirect to documents page
+             messagePublisher.reportError("Could not find " + indexNameOrRecentQueryHash + " index");
+             router.navigate(appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()));
         }
     }
 
