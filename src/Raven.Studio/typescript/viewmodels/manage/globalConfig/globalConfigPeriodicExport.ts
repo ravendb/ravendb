@@ -10,6 +10,7 @@ import getEffectiveSettingsCommand = require("commands/database/globalConfig/get
 import saveGlobalSettingsCommand = require("commands/database/globalConfig/saveGlobalSettingsCommand");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import eventsCollector = require("common/eventsCollector");
 
 class globalConfigPeriodicExport extends viewModelBase {
     /* TODO
@@ -166,6 +167,10 @@ class globalConfigPeriodicExport extends viewModelBase {
                 this.syncChanges(true);
             });
     }*/
+
+    /*
+        TODO @gregolsky apply google analytics
+    */
 }
 
 export = globalConfigPeriodicExport; 

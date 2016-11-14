@@ -1,5 +1,6 @@
 import viewmodelBase = require("viewmodels/viewModelBase");
 import saveCsvFileCommand = require("commands/database/studio/saveCsvFileCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class csvImport extends viewmodelBase {
     
@@ -16,6 +17,8 @@ class csvImport extends viewmodelBase {
     }
 
     importCsv() {
+        eventsCollector.default.reportEvent("csv", "import");
+
         if (!this.isImporting()) {
             this.isImporting(true);
 

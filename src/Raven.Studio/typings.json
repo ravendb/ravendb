@@ -10,6 +10,7 @@
     "dagre-d3": "registry:dt/dagre-d3#0.0.0+20160620231311",
     "durandal": "registry:dt/durandal#0.0.0+20160705071247",
     "es6-shim": "registry:dt/es6-shim#0.31.2+20160602141504",
+    "google.analytics/ga": "registry:dt/google.analytics/ga#0.0.0+20160317120654",
     "jquery": "registry:dt/jquery#1.10.0+20160704162008",
     "jquery.blockui": "registry:dt/jquery.blockui#0.0.0+20160316155526",
     "jquery.dynatree": "registry:dt/jquery.dynatree#1.2.5+20160317120654",

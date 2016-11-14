@@ -10,6 +10,7 @@ import deleteLocalPeriodicExportSetupCommand = require("commands/database/global
 import database = require("models/resources/database");
 import getPeriodicExportSetupCommand = require("commands/database/documents/getPeriodicExportSetupCommand");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class periodicExport extends viewModelBase {
     backupSetup = ko.observable<periodicExportSetup>().extend({ required: true });
@@ -126,6 +127,7 @@ class periodicExport extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("periodic-export", "save");
         var db = this.activeDatabase();
         if (db) {
 

@@ -3,6 +3,7 @@ import getStatusStorageBreakdownCommand = require("commands/database/debug/getSt
 import killOperationComamnd = require('commands/operations/killOperationCommand');
 import shell = require('viewmodels/shell');
 import accessHelper = require("viewmodels/shell/accessHelper");
+import eventsCollector = require("common/eventsCollector");
 
 class statusStorageOnDisk extends viewModelBase {
     data = ko.observable<string[]>();
@@ -16,6 +17,8 @@ class statusStorageOnDisk extends viewModelBase {
     }
 
     cancelOperation() {
+        eventsCollector.default.reportEvent("storage", "kill-breakdown");
+
         if (this.operationId()) {
             new killOperationComamnd(this.activeDatabase(), this.operationId())
                 .execute();
@@ -23,6 +26,8 @@ class statusStorageOnDisk extends viewModelBase {
     }
 
     fetchData(): JQueryPromise<any> {
+        eventsCollector.default.reportEvent("storage", "breakdown");
+
         var db = this.activeDatabase();
         if (db && this.isGlobalAdmin()) {
             this.canSearch(false);

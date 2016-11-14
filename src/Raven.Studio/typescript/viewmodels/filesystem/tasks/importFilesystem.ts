@@ -4,6 +4,7 @@ import messagePublisher = require("common/messagePublisher");
 import importFilesystemCommand = require("commands/filesystem/importFilesystemCommand");
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 import fsCheckSufficientDiskSpaceCommand = require("commands/filesystem/fsCheckSufficientDiskSpaceCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class importDatabase extends viewModelBase {
     batchSize = ko.observable(1024);
@@ -76,6 +77,7 @@ class importDatabase extends viewModelBase {
     }
 
     importFs() {
+        eventsCollector.default.reportEvent("fs", "import");
         /* TODO
         var fs: filesystem = this.activeFilesystem();
         fs.isImporting(true);

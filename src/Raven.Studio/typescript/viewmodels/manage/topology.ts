@@ -8,6 +8,7 @@ import dagre = require('dagre');
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import shell = require("viewmodels/shell");
 import database = require("models/resources/database");
+import eventsCollector = require("common/eventsCollector");
 
 class topology extends viewModelBase {
     /*
@@ -630,6 +631,10 @@ class topology extends viewModelBase {
         this.syncGraph();
     }
 */
+
+    /*
+        TODO @gregolsky apply google analytics
+    */
 }
 
 export = topology;

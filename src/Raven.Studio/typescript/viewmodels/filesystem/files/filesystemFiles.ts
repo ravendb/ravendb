@@ -23,6 +23,7 @@ import filesystemEditFile = require("viewmodels/filesystem/files/filesystemEditF
 import fileRenameDialog = require("viewmodels/filesystem/files/fileRenameDialog");
 import queryUtil = require("common/queryUtil");
 import changeSubscription = require("common/changeSubscription");
+import eventsCollector = require("common/eventsCollector");
 
 class filesystemFiles extends viewModelBase {
 
@@ -341,6 +342,8 @@ class filesystemFiles extends viewModelBase {
     }
 
     createFolder() {
+        eventsCollector.default.reportEvent("fs-folder", "create");
+
         var createFolderVm = new createFolderInFilesystem(this.currentLevelSubdirectories());
         createFolderVm.creationTask.done((folderName: string) => {
             var parentDirectory = this.selectedFolder() ? this.selectedFolder() : "";
@@ -358,6 +361,8 @@ class filesystemFiles extends viewModelBase {
     }
 
     refresh() {
+        eventsCollector.default.reportEvent("fs-files", "refresh");
+
         var grid = this.getFilesGrid();
         if (grid) {
             grid.refreshCollectionData();
@@ -366,6 +371,8 @@ class filesystemFiles extends viewModelBase {
     }
 
     deleteSelectedFiles() {
+        eventsCollector.default.reportEvent("fs-files", "delete");
+
         if (this.hasAllFilesSelected()) {
             this.deleteFolder(false);
         } else {
@@ -377,6 +384,8 @@ class filesystemFiles extends viewModelBase {
     }
 
     downloadSelectedFiles() {
+        eventsCollector.default.reportEvent("fs-file", "download");
+
         var grid = this.getFilesGrid();
         if (grid) {
             var selectedItem = <documentBase>grid.getSelectedItems(1).first();
@@ -387,6 +396,8 @@ class filesystemFiles extends viewModelBase {
     }
 
     renameSelectedFile() {
+        eventsCollector.default.reportEvent("fs-file", "rename");
+
         var grid = this.getFilesGrid();
         if (grid) {
             var selectedItem = <file>grid.getSelectedItems(1).first();
@@ -406,6 +417,8 @@ class filesystemFiles extends viewModelBase {
     }
 
     clearUploadQueue() {
+        eventsCollector.default.reportEvent("fs-files", "clear-queue");
+
         window.localStorage.removeItem(uploadQueueHelper.localStorageUploadQueueKey + this.activeFilesystem().name);
         this.uploadQueue.removeAll();
     }
@@ -467,6 +480,8 @@ class filesystemFiles extends viewModelBase {
     }
 
     deleteFolder(recursive = true) {
+        eventsCollector.default.reportEvent("fs-folder", "delete");
+
         if (!this.selectedFolder() && recursive) {
             // delete all files from filesystem
             new getFileSystemStatsCommand(this.activeFilesystem())

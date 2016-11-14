@@ -33,6 +33,8 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import renameOrDuplicateIndexDialog = require("viewmodels/database/indexes/renameOrDuplicateIndexDialog");
 
+import eventsCollector = require("common/eventsCollector");
+
 class editIndex extends viewModelBase { 
 
     isEditingExistingIndex = ko.observable<boolean>(false);
@@ -277,6 +279,7 @@ class editIndex extends viewModelBase {
     }
 
     refreshIndex() {
+        eventsCollector.default.reportEvent("index", "refresh");
         var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the index from the server?');
         canContinue.done(() => {
             this.fetchIndexData(this.loadedIndexName())
@@ -288,6 +291,7 @@ class editIndex extends viewModelBase {
     }
 
     deleteIndex() {
+        eventsCollector.default.reportEvent("index", "delete");
         var indexName = this.loadedIndexName();
         if (indexName) {            
             var db = this.activeDatabase();
@@ -303,6 +307,7 @@ class editIndex extends viewModelBase {
     }
 
     cancelSideBySideIndex() {
+        eventsCollector.default.reportEvent("index", "cancel-side-by-side");
         var indexName = this.loadedIndexName();
         if (indexName) {
             var db = this.activeDatabase();
@@ -318,10 +323,12 @@ class editIndex extends viewModelBase {
     }
 
     addMap() {
+        eventsCollector.default.reportEvent("index", "add-map");
         this.editedIndex().maps.push(ko.observable<string>());
     }
 
     addReduce() {
+        eventsCollector.default.reportEvent("index", "add-reduce");
         if (!this.hasExistingReduce()) {
             this.editedIndex().reduce(" ");
             this.addReduceHelpPopover();
@@ -329,6 +336,7 @@ class editIndex extends viewModelBase {
     }
 
     addField() {
+        eventsCollector.default.reportEvent("index", "add-field");
         var field = new luceneField("");
         field.indexFieldNames = this.editedIndex().fields();
         field.calculateFieldNamesAutocomplete();
@@ -336,28 +344,34 @@ class editIndex extends viewModelBase {
     }
 
     removeStoreAllFields() {
+        eventsCollector.default.reportEvent("index", "remove-store-all-fields");
         this.editedIndex().setOrRemoveStoreAllFields(false);
     }
 
     removeMaxIndexOutputs() {
+        eventsCollector.default.reportEvent("index", "remove-max-index-outputs");
         this.editedIndex().maxIndexOutputsPerDocument(0);
         this.editMaxIndexOutputsPerDocument(false);
     }
 
     addSpatialField() {
+        eventsCollector.default.reportEvent("index", "add-spatial-field");
         var field = spatialIndexField.empty();
         this.editedIndex().spatialFields.push(field);
     }
     
     removeMap(mapIndex: number) {
+        eventsCollector.default.reportEvent("index", "remove-map");
         this.editedIndex().maps.splice(mapIndex, 1);
     }
 
     removeReduce() {
+        eventsCollector.default.reportEvent("index", "remove-reduce");
         this.editedIndex().reduce(null);
     }
 
     removeLuceneField(fieldIndex: number) {
+        eventsCollector.default.reportEvent("index", "remove-lucene-field");
         var fieldToRemove = this.editedIndex().luceneFields()[fieldIndex];
         this.editedIndex().luceneFields.splice(fieldIndex, 1);
         if (fieldToRemove.name() === "__all_fields") {
@@ -366,14 +380,17 @@ class editIndex extends viewModelBase {
     }
 
     removeSpatialField(fieldIndex: number) {
+        eventsCollector.default.reportEvent("index", "remove-spatial-field");
         this.editedIndex().spatialFields.splice(fieldIndex, 1);
     }
 
     copyIndex() {
+        eventsCollector.default.reportEvent("index", "copy");
         app.showBootstrapDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
     }
 
     createCSharpCode() {
+        eventsCollector.default.reportEvent("index", "generate-csharp-code");
         new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.activeDatabase())
             .execute()
             .done((data: string) => {
@@ -382,6 +399,7 @@ class editIndex extends viewModelBase {
     }
 
     formatIndex() {
+        eventsCollector.default.reportEvent("index", "format-index");
         var index: indexDefinition = this.editedIndex();
         var mapReduceObservableArray = new Array<KnockoutObservable<string>>();
         mapReduceObservableArray.pushAll(index.maps());
@@ -458,6 +476,7 @@ class editIndex extends viewModelBase {
     }
 
     makePermanent() {
+        eventsCollector.default.reportEvent("index", "make-permanent");
         if (this.editedIndex().name() && this.editedIndex().isTestIndex()) {
             this.editedIndex().isTestIndex(false);
             // trim Test prefix
@@ -477,6 +496,7 @@ class editIndex extends viewModelBase {
     }
 
     tryIndex() {
+        eventsCollector.default.reportEvent("index", "try-index");
         if (this.editedIndex().name()) {
             if (!this.editedIndex().isTestIndex()) {
                 this.editedIndex().isTestIndex(true);
@@ -494,6 +514,7 @@ class editIndex extends viewModelBase {
     }
 
     private renameIndex(existingIndexName: string, newIndexName: string): JQueryPromise<any> {
+        eventsCollector.default.reportEvent("index", "rename");
         return new renameIndexCommand(existingIndexName, newIndexName, this.activeDatabase())
             .execute()
             .done(() => {
@@ -503,6 +524,7 @@ class editIndex extends viewModelBase {
     }
 
     private saveIndex(index: any): JQueryPromise<any> { //TODO: use type
+        eventsCollector.default.reportEvent("index", "save");
         var commands: Array<JQueryPromise<any>> = [];
 
         commands.push(new saveIndexDefinitionCommand(index, this.activeDatabase()).execute());
@@ -535,6 +557,7 @@ class editIndex extends viewModelBase {
     }
 
     replaceIndex() {
+        eventsCollector.default.reportEvent("index", "replace");
         var indexToReplaceName = this.editedIndex().name();
         var replaceDialog = new replaceIndexDialog(indexToReplaceName, this.activeDatabase());
 

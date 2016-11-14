@@ -75,6 +75,7 @@ class resourceBackup {
     }
 
     toggleKeepDown() {
+
         this.keepDown.toggle();
         this.forceKeepDown();
     }

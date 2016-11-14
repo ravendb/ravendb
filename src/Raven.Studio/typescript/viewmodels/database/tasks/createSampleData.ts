@@ -3,6 +3,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import createSampleDataCommand = require("commands/database/studio/createSampleDataCommand");
 import createSampleDataClassCommand = require("commands/database/studio/createSampleDataClassCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import eventsCollector = require("common/eventsCollector");
 
 class createSampleData extends viewModelBase {
 
@@ -14,6 +15,7 @@ class createSampleData extends viewModelBase {
     }
 
     generateSampleData() {
+        eventsCollector.default.reportEvent("sample-data", "create");
         this.isBusy(true);
         
         new createSampleDataCommand(this.activeDatabase())
@@ -29,6 +31,7 @@ class createSampleData extends viewModelBase {
     }
 
     copyClasses() {
+        eventsCollector.default.reportEvent("sample-data", "copy-classes");
         copyToClipboard.copy(this.classData(), "Copied C# classes to clipboard.");
     }
 

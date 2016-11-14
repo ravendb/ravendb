@@ -10,6 +10,8 @@ import document = require("models/database/documents/document");
 import messagePublisher = require("common/messagePublisher");
 import collectionsStats = require("models/database/documents/collectionsStats");
 
+import eventsCollector = require("common/eventsCollector");
+
 class exploration extends viewModelBase {
 
     appUrls: any;
@@ -50,12 +52,14 @@ class exploration extends viewModelBase {
     }
 
     exportCsv() {
+        eventsCollector.default.reportEvent("exploration", "export-csv");
         var db = this.activeDatabase();
         var url = new dataExplorationCommand(this.explorationRequest.toDto(), db).getCsvUrl();
         this.downloader.download(db, url);
     }
 
     runExploration() {
+        eventsCollector.default.reportEvent("exploration", "run");
         this.isBusy(true);
         var requestDto = this.explorationRequest.toDto();
 
@@ -82,6 +86,7 @@ class exploration extends viewModelBase {
     }
 
     killTask() {
+        eventsCollector.default.reportEvent("exploration", "kill");
         var xhr = this.dataLoadingXhr();
         if (xhr) {
             xhr.abort();

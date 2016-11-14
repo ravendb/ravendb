@@ -10,6 +10,7 @@ import messagePublisher = require("common/messagePublisher");
 import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import eventsCollector = require("common/eventsCollector");
 
 class globalConfigSqlReplication extends viewModelBase {
     /* TODO
@@ -155,6 +156,10 @@ class globalConfigSqlReplication extends viewModelBase {
                 this.syncChanges(true);
             });
     }*/
+
+    /*
+        TODO @gregolsky apply google analytics
+    */
 }
 
 export = globalConfigSqlReplication;

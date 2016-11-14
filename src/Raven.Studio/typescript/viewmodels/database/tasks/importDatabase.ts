@@ -7,6 +7,7 @@ import copyToClipboard = require("common/copyToClipboard");
 import checksufficientdiskspaceCommand = require("commands/database/studio/checksufficientdiskspaceCommand");
 import importDatabaseModel = require("models/database/tasks/importDatabaseModel");
 import notificationCenter = require("common/notifications/notificationCenter");
+import eventsCollector = require("common/eventsCollector");
 
 class importDatabase extends viewModelBase {
 
@@ -101,6 +102,7 @@ class importDatabase extends viewModelBase {
     }
 
     importDb() {
+        eventsCollector.default.reportEvent("database", "import");
         this.isUploading(true);
         const formData = new FormData();
         const fileInput = document.querySelector(importDatabase.filePickerTag) as HTMLInputElement;

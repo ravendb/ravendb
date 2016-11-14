@@ -6,6 +6,8 @@ import getSynchronizationConfigCommand = require("commands/filesystem/getSynchro
 import saveConfigurationCommand = require("commands/filesystem/saveConfigurationCommand");
 import configurationKey = require("models/filesystem/configurationKey");
 
+import eventsCollector = require("common/eventsCollector");
+
 class synchronizationConfiguration extends viewModelBase {
 
     config = ko.observable<synchronizationConfig>();
@@ -36,6 +38,8 @@ class synchronizationConfiguration extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("fs-configuration", "save");
+
         new saveConfigurationCommand(this.activeFilesystem(), new configurationKey(this.activeFilesystem(), "Raven/Synchronization/Config"), this.config().toDto())
             .execute()
             .done(() => this.dirtyFlag().reset());
