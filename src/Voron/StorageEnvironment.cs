@@ -95,11 +95,7 @@ namespace Voron
 
                 _options.DeleteAllTempBuffers();
 
-                _decompressedPagesPool = new DecompressedPagesPool(options);
-
-                _options.DeleteAllTempBuffers();
-
-                _decompressedPagesPool = new DecompressedPagesPool(options);
+                _decompressionBuffers = new DecompressionBuffersPool(options);
                 var isNew = _headerAccessor.Initialize();
 
                 _scratchBufferPool = new ScratchBufferPool(this);
