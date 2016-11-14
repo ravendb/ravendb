@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        internal readonly StaticIndexBase _compiled;
+        protected internal readonly StaticIndexBase _compiled;
 
         private HandleReferences _handleReferences;
 
