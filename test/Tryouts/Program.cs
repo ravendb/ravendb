@@ -11,9 +11,9 @@ namespace Tryouts
     {
         static unsafe void Main(string[] args)
         {
-            using (var a = new SlowTests.Issues.RavenDB_5435())
+            using (var a = new FastTests.Server.Documents.SqlReplication.CanReplicate())
             {
-                a.CanCompact().Wait();
+                a.NullPropagation_WithExplicitNull().Wait();
             }
         }
     }

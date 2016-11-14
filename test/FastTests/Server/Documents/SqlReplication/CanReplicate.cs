@@ -137,7 +137,31 @@ CREATE TABLE [dbo].[Orders]
             }
         });
 
-        private static void CreateRdbmsDatabase(DocumentStore store)
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            using (var con = new SqlConnection())
+            {
+                con.ConnectionString = _masterDatabaseConnection.Value;
+                con.Open();
+
+                foreach (var dbName in _dbNames)
+                {
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = $@"
+ALTER DATABASE [SqlReplication-{dbName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+DROP DATABASE [SqlReplication-{dbName}]";
+                        dbCommand.ExecuteNonQuery();
+                    }
+                }
+            }
+        }
+
+        private readonly List<string> _dbNames = new List<string>();
+
+        private void CreateRdbmsDatabase(DocumentStore store)
         {
             using (var con = new SqlConnection())
             {
@@ -146,6 +170,7 @@ CREATE TABLE [dbo].[Orders]
 
                 using (var dbCommand = con.CreateCommand())
                 {
+                    _dbNames.Add(store.DefaultDatabase);
                     dbCommand.CommandText = $@"
 USE master
 IF EXISTS(select * from sys.databases where name='SqlReplication-{store.DefaultDatabase}')
