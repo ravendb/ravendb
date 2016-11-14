@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
-using FastTests.Issues;
-using FastTests.Sparrow;
-using FastTests.Voron.Bugs;
-using Voron;
+using FastTests.Server.Documents.Replication;
+using Sparrow.Logging;
 
 namespace Tryouts
 {
@@ -11,36 +8,13 @@ namespace Tryouts
     {
         static unsafe void Main(string[] args)
         {
-            var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath("D:\\bench");
-            storageEnvironmentOptions.TransactionsMode=TransactionsMode.Danger;
-            using (var env = new StorageEnvironment(storageEnvironmentOptions))
+            for (int i = 0; i < 1000; i++)
             {
-                var sp = Stopwatch.StartNew();
-                long id = 0;
-                for (int i = 0; i < 10000; i++)
+                Console.WriteLine(i);
+                using (var store = new DocumentReplication())
                 {
-                    using (var tx = env.WriteTransaction())
-                    {
-                        long val = 5;
-                        Slice str;
-                        using (Slice.From(tx.Allocator, "vals", out str))
-                        {
-                            Slice valSlice;
-                            using (Slice.External(tx.Allocator, (byte*)&val, sizeof(long),out valSlice))
-                            {
-                                var fixedSizeTree = tx.FixedTreeFor(str, valSize: 8);
-
-                                for (int j = 0; j < 10000; j++)
-                                {
-                                    val += 5;
-                                    fixedSizeTree.Add(id, valSlice);
-                                }
-                            }
-                        }
-                        tx.Commit();
-                    }
+                    store.CanReplicateDocument().Wait();
                 }
-                Console.WriteLine(sp.Elapsed);
             }
         }
     }

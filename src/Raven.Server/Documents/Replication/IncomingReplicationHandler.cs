@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -12,9 +11,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using System.Text;
 using Raven.Abstractions.Replication;
-using Raven.Client.Indexing;
 using Raven.Client.Replication.Messages;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Smuggler.Documents.Processors;
 using Raven.Server.Utils;
 using Sparrow;
@@ -93,65 +90,94 @@ namespace Raven.Server.Documents.Replication
                     while (!_cts.IsCancellationRequested)
                     {
                         _context.ResetAndRenew();
-
-                        using (var message = _multiDocumentParser.ParseToMemory("IncomingReplication/read-message"))
+                        try
                         {
-                            //note: at this point, the valid messages are heartbeat and replication batch.
-                            _cts.Token.ThrowIfCancellationRequested();
-                            string messageType = null;
-                            try
+                            using (var message = _multiDocumentParser.ParseToMemory("IncomingReplication/read-message"))
                             {
-                                messageType = ValidateReplicationMessageAndGetType(message);
-
-                                switch (messageType)
+                                //note: at this point, the valid messages are heartbeat and replication batch.
+                                _cts.Token.ThrowIfCancellationRequested();
+                                string messageType = null;
+                                try
                                 {
-                                    case ReplicationMessageType.Documents:
-                                        long lastDocumentEtag;
-                                        if (!message.TryGet("LastDocumentEtag", out lastDocumentEtag))
-                                            throw new InvalidOperationException(
-                                                "Expected LastDocumentEtag property in the replication message, but didn't find it..");
-
-                                        HandleReceivedDocumentBatch(message, lastDocumentEtag);
-                                        SendStatusToSource(writer, lastDocumentEtag, messageType);
-                                        break;
-                                    case ReplicationMessageType.IndexesTransformers:
-                                        long lastIndexOrTransformerEtag;
-                                        if (!message.TryGet("LastIndexOrTransformerEtag", out lastIndexOrTransformerEtag))
-                                            throw new InvalidOperationException(
-                                                "Expected LastIndexOrTransformerEtag property in the replication message, but didn't find it..");
-
-                                        HandleReceivedIndexOrTransformerBatch(message, lastIndexOrTransformerEtag);
-                                        SendStatusToSource(writer, lastIndexOrTransformerEtag, messageType);
-                                        break;
-                                    case ReplicationMessageType.Heartbeat:
-                                        //heartbeat, nothing to do
-                                        break;
-                                    default:
-                                        throw new ArgumentOutOfRangeException();
-                                }
-
-                            }
-                            catch (Exception e)
-                            {
-                                //if we are disposing, ignore errors
-                                if (!_cts.IsCancellationRequested && !(e is ObjectDisposedException))
-                                {
-                                    //return negative ack
-                                    _context.Write(writer, new DynamicJsonValue
+                                    messageType = ValidateReplicationMessageAndGetType(message);
+                                    switch (messageType)
                                     {
-                                        ["Type"] = ReplicationMessageReply.ReplyType.Error.ToString(),
-                                        ["MessageType"] = messageType,
-                                        ["LastEtagAccepted"] = -1,
-                                        ["Error"] = e.ToString()
-                                    });
+                                        case ReplicationMessageType.Documents:
+                                            long lastDocumentEtag;
+                                            if (!message.TryGet("LastDocumentEtag", out lastDocumentEtag))
+                                                throw new InvalidOperationException(
+                                                    "Expected LastDocumentEtag property in the replication message, but didn't find it..");
 
-                                    exceptionLogged = true;
+                                            HandleReceivedDocumentBatch(message, lastDocumentEtag);
+                                            SendStatusToSource(writer, lastDocumentEtag, messageType);
+                                            break;
+                                        case ReplicationMessageType.IndexesTransformers:
+                                            long lastIndexOrTransformerEtag;
+                                            if (
+                                                !message.TryGet("LastIndexOrTransformerEtag",
+                                                    out lastIndexOrTransformerEtag))
+                                                throw new InvalidOperationException(
+                                                    "Expected LastIndexOrTransformerEtag property in the replication message, but didn't find it..");
 
-                                    if (_log.IsInfoEnabled)
-                                        _log.Info($"Failed replicating documents from {FromToString}.", e);
+                                            HandleReceivedIndexOrTransformerBatch(message, lastIndexOrTransformerEtag);
+                                            SendStatusToSource(writer, lastIndexOrTransformerEtag, messageType);
+                                            break;
+                                        case ReplicationMessageType.Heartbeat:
+                                            if (!message.TryGet("LastDocumentEtag", out lastDocumentEtag))
+                                                throw new InvalidOperationException(
+                                                    "Expected LastDocumentEtag property in the replication message, but didn't find it..");
+
+                                            if (
+                                                !message.TryGet("LastIndexOrTransformerEtag",
+                                                    out lastIndexOrTransformerEtag))
+                                                throw new InvalidOperationException(
+                                                    "Expected LastIndexOrTransformerEtag property in the replication message, but didn't find it..");
+
+                                            SendHeartbeatStatusToSource(writer,lastDocumentEtag,lastIndexOrTransformerEtag, messageType);
+                                            break;
+                                        default:
+                                            throw new ArgumentOutOfRangeException();
+                                    }
+
+                                }
+                                catch (ObjectDisposedException)
+                                {
+                                    //we are shutting down replication, this is ok                                
+                                }
+                                catch (EndOfStreamException e)
+                                {
+                                    if(_log.IsInfoEnabled)
+                                        _log.Info("Received unexpected end of stream while receiving replication batches. This might indicate an issue with network.", e);
                                     throw;
                                 }
+                                catch (Exception e)
+                                {
+                                    //if we are disposing, ignore errors
+                                    if (!_cts.IsCancellationRequested && !(e is ObjectDisposedException))
+                                    {
+                                        //return negative ack
+                                        _context.Write(writer, new DynamicJsonValue
+                                        {
+                                            ["Type"] = ReplicationMessageReply.ReplyType.Error.ToString(),
+                                            ["MessageType"] = messageType,
+                                            ["LastEtagAccepted"] = -1,
+                                            ["Error"] = e.ToString()
+                                        });
+
+                                        exceptionLogged = true;
+
+                                        if (_log.IsInfoEnabled)
+                                            _log.Info($"Failed replicating documents from {FromToString}.", e);
+                                        throw;
+                                    }
+                                }
                             }
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Received unexpected exception while receiving replication batch. This is not supposed to happen.", e);
+                            throw;
                         }
                     }
                 }
@@ -185,6 +211,7 @@ namespace Raven.Server.Documents.Replication
         private long HandleReceivedDocumentBatch(BlittableJsonReaderObject message, long lastDocumentEtag)
         {
             var replicatedDocsCount = GetReplicationBatchItemCount(message);
+
             ReceiveSingleDocumentsBatch(replicatedDocsCount, lastDocumentEtag);
             OnDocumentsReceived(this);
 
@@ -477,10 +504,14 @@ namespace Raven.Server.Documents.Replication
                             case ConflictStatus.Update:
                                 if (json != null)
                                 {
+                                    if(_log.IsInfoEnabled)
+                                        _log.Info($"Conflict check resolved to Update operation, doing PUT on doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
                                     _database.DocumentsStorage.Put(_context, doc.Id, null, json, _tempReplicatedChangeVector);
                                 }
                                 else
-                                {									
+                                {
+                                    if (_log.IsInfoEnabled)
+                                        _log.Info($"Conflict check resolved to Update operation, writing tombstone for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
                                     _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
                                         _context,doc.Id,										
                                         _tempReplicatedChangeVector,
@@ -491,9 +522,13 @@ namespace Raven.Server.Documents.Replication
                                 _context.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_context, doc.Id);
                                 goto case ConflictStatus.Update;
                             case ConflictStatus.Conflict:
+                                if (_log.IsInfoEnabled)
+                                    _log.Info($"Conflict check resolved to Conflict operation, resolving conflict for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
                                 HandleConflict(doc, conflictingVector, json);
                                 break;
                             case ConflictStatus.AlreadyMerged:
+                                if (_log.IsInfoEnabled)
+                                    _log.Info($"Conflict check resolved to AlreadyMerged operation, nothing to do for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
                                 //nothing to do
                                 break;
                             default:
@@ -502,9 +537,8 @@ namespace Raven.Server.Documents.Replication
                     }
                     _database.DocumentsStorage.SetDatabaseChangeVector(_context,
                         maxReceivedChangeVectorByDatabase);
-
                     _database.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId,
-                        lastEtag);
+                        lastEtag);                    
                     _context.Transaction.Commit();
                 }
                 sw.Stop();
@@ -519,6 +553,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ThrowInvalidSize(int totalSize, ReplicationDocumentsPositions doc)
         {
             throw new ArgumentOutOfRangeException(
@@ -587,8 +622,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        
-
         private void RespolveConflictToRemote(ReplicationDocumentsPositions doc, 
             BlittableJsonReaderObject json, 
             ChangeVectorEntry[] conflictingVector)
@@ -634,7 +667,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-
         private void ReadChangeVector(ReplicationIndexOrTransformerPositions index, Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)
         {
             for (int i = 0; i < index.ChangeVector.Length; i++)
@@ -665,7 +697,56 @@ namespace Raven.Server.Documents.Replication
                     maxReceivedChangeVectorByDatabase[_tempReplicatedChangeVector[i].DbId] = _tempReplicatedChangeVector[i].Etag;
                 }
             }
-        }      
+        }
+
+        private void SendHeartbeatStatusToSource(BlittableJsonTextWriter writer, long lastDocumentEtag, long lastIndexOrTransformerEtag, string handledMessageType)
+        {
+            var documentChangeVectorAsDynamicJson = new DynamicJsonArray();
+            ChangeVectorEntry[] databaseChangeVector;
+
+            using (_context.OpenReadTransaction())
+            {
+                databaseChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(_context);
+            }
+
+            foreach (var changeVectorEntry in databaseChangeVector)
+            {
+                documentChangeVectorAsDynamicJson.Add(new DynamicJsonValue
+                {
+                    ["DbId"] = changeVectorEntry.DbId.ToString(),
+                    ["Etag"] = changeVectorEntry.Etag
+                });
+            }
+
+            var indexesChangeVectorAsDynamicJson = new DynamicJsonArray();
+            foreach (var changeVectorEntry in _database.IndexMetadataPersistence.GetGlobalChangeVector())
+            {
+                indexesChangeVectorAsDynamicJson.Add(new DynamicJsonValue
+                {
+                    ["DbId"] = changeVectorEntry.DbId.ToString(),
+                    ["Etag"] = changeVectorEntry.Etag
+                });
+            }
+
+
+            if (_log.IsInfoEnabled)
+            {
+                _log.Info(
+                    $"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, last index/transformer etag = {lastIndexOrTransformerEtag} and document change vector: {databaseChangeVector.Format()}");
+            }
+            _context.Write(writer, new DynamicJsonValue
+            {
+                ["Type"] = "Ok",
+                ["MessageType"] = handledMessageType,
+                ["LastEtagAccepted"] = lastDocumentEtag,
+                ["LastIndexTransformerEtagAccepted"] = lastIndexOrTransformerEtag,
+                ["Error"] = null,
+                ["CurrentChangeVector"] = documentChangeVectorAsDynamicJson,
+                ["CurrentIndexTransformerChangeVector"] = indexesChangeVectorAsDynamicJson
+            });
+
+            writer.Flush();
+        }
 
         private void SendStatusToSource(BlittableJsonTextWriter writer, long lastEtag, string handledMessageType)
         {
@@ -758,6 +839,8 @@ namespace Raven.Server.Documents.Replication
                     {
                         Position = writeBuffer.SizeInBytes
                     };
+
+                    
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
                     curDoc.ChangeVectorCount = *(int*)pTemp;
 
@@ -797,6 +880,8 @@ namespace Raven.Server.Documents.Replication
 
         public void Dispose()
         {
+            if(_log.IsInfoEnabled)
+                _log.Info($"Disposing IncomingReplicationHandler ({FromToString})");
             _cts.Cancel();
             try
             {

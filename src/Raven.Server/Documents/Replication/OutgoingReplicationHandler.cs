@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -13,7 +14,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using System.Net.Http;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Replication.Messages;
@@ -62,7 +63,7 @@ namespace Raven.Server.Documents.Replication
             _database = database;
             _destination = destination;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
-            _database.Notifications.OnDocumentChange += OnDocumentChange;
+            _database.Notifications.OnDocumentChange += OnDocumentChange;            
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
 
@@ -132,14 +133,22 @@ namespace Raven.Server.Documents.Replication
                             });
                             _writer.Flush();
 
-                            using (_context.OpenReadTransaction())
-                                HandleServerResponse();
-
+                            //handle initial response to last etag and staff
+                            try
+                            {
+                                using (_context.OpenReadTransaction())
+                                    HandleServerResponse();
+                            }
+                            catch (Exception e)
+                            {
+                                if(_log.IsInfoEnabled)
+                                    _log.Info("Failed to parse initial server response. This is definitely not supposed to happen.",e);
+                                throw;
+                            }
 
                             while (_cts.IsCancellationRequested == false)
                             {
                                 _context.ResetAndRenew();
-
                                 using (_context.OpenReadTransaction())
                                 {
                                     var currentEtag = _database.IndexMetadataPersistence.ReadLastEtag();
@@ -149,7 +158,6 @@ namespace Raven.Server.Documents.Replication
                                         indexAndTransformerSender.ExecuteReplicationOnce();
                                     }
                                 }
-
                                 if (documentSender.ExecuteReplicationOnce() == false)
                                 {
                                     using (_context.OpenReadTransaction())
@@ -211,7 +219,7 @@ namespace Raven.Server.Documents.Replication
                     UpdateDestinationChangeVectorForIndexesTransformers(replicationBatchReply);
                     break;
                 case ReplicationMessageType.Heartbeat:
-                    //nothing to update
+                    UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);                    
                     break;
                 default:
                     //if there are changes that introduce unknown message, throw
@@ -235,6 +243,44 @@ namespace Raven.Server.Documents.Replication
                 DateTime.UtcNow - _lastIndexOrTransformerSentTime > _minimalHeartbeatInterval)
             {
                 _waitForChanges.Set();
+            }
+        }
+
+        private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
+        {
+            _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
+            _lastSentIndexOrTransformerEtag = replicationBatchReply.LastIndexTransformerEtagAccepted;
+
+            _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.CurrentChangeVector.Format();
+            _destinationLastKnownIndexOrTransformerChangeVectorAsString =
+                replicationBatchReply.CurrentIndexTransformerChangeVector.Format();
+
+            foreach (var changeVectorEntry in replicationBatchReply.CurrentChangeVector)
+            {
+                _destinationLastKnownDocumentChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+            }
+
+            foreach (var changeVectorEntry in replicationBatchReply.CurrentIndexTransformerChangeVector)
+            {
+                _destinationLastKnownIndexOrTransformerChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+            }
+
+            if (DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction) != replicationBatchReply.LastEtagAccepted)
+            {
+                // We have changes that the other side doesn't have, this can be because we have writes
+                // or because we have documents that were replicated to us. Either way, we need to sync
+                // those up with the remove side, so we'll start the replication loop again.
+                // We don't care if they are locally modified or not, because we filter documents that
+                // the other side already have (based on the change vector).
+                if (DateTime.UtcNow - _lastDocumentSentTime > _minimalHeartbeatInterval)
+                    _waitForChanges.Set();
+            }
+
+            if (_database.IndexMetadataPersistence.ReadLastEtag() !=
+                replicationBatchReply.LastIndexTransformerEtagAccepted)
+            {
+                if (DateTime.UtcNow - _lastIndexOrTransformerSentTime > _minimalHeartbeatInterval)
+                    _waitForChanges.Set();
             }
         }
 
@@ -275,12 +321,22 @@ namespace Raven.Server.Documents.Replication
                     ["ItemCount"] = 0                    
                 });
                 _writer.Flush();
-                HandleServerResponse();
             }
             catch (Exception e)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Sending heartbeat failed. ({FromToString})", e);
+                throw;
+            }
+
+            try
+            {
+                HandleServerResponse();
+            }
+            catch (Exception e)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Parsing heartbeat result failed. ({FromToString})", e);
                 throw;
             }
         }
@@ -362,6 +418,8 @@ namespace Raven.Server.Documents.Replication
 
         public void Dispose()
         {
+            if(_log.IsInfoEnabled)
+                _log.Info($"Disposing OutgoingReplicationHandler ({FromToString})");
             _database.Notifications.OnDocumentChange -= OnDocumentChange;
 
             _cts.Cancel();

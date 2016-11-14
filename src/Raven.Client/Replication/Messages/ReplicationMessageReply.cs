@@ -15,11 +15,15 @@ namespace Raven.Client.Replication.Messages
 
         public long LastEtagAccepted { get; set; }
 
+        public long LastIndexTransformerEtagAccepted { get; set; }
+
         public string Error { get; set; }
 
         public string MessageType { get; set; }
 
         public ChangeVectorEntry[] CurrentChangeVector { get; set; }
+
+        public ChangeVectorEntry[] CurrentIndexTransformerChangeVector { get; set; }
     }
 
     public struct ChangeVectorEntry
