@@ -1,4 +1,5 @@
 Include ".\build_utils.ps1"
+Include ".\bumpVersion.ps1"
 
 properties {
     $base_dir  = resolve-path .
@@ -712,19 +713,30 @@ task BumpVersion {
         return
     }
 
-    $assemblyInfoFileContent = GetAssemblyInfoWithBumpedVersion
-    if (!$assemblyInfoFileContent) {
-        return
-    }
-
-    # point the repo in which to bump version
     $repoOwner = "ravendb"
     $repo = "ravendb"
     $branch = "v3.5"
-    $commitMessage = "Bump version to $global:newVersion"
-    UpdateFileInGitRepo $repoOwner $repo "CommonAssemblyInfo.cs" $assemblyInfoFileContent $commitMessage $branch
+    $filePath = "CommonAssemblyInfo.cs"
+    
+    write-host "Build file URI for: $repoOwner/$repo $filePath"
+    $fileUri = GetGitHubFileUri $repoOwner $repo $filePath
+    
+    write-host "Calculate new version"
+    $newVersion = CalcNewVersion $version
+    $newInformationalVersion = Get-InformationalVersion $newVersion $global:buildlabel $global:uploadCategory
+    write-host "New version is: $newInformationalVersion"
+    
+    write-host "Get updated file contents for $fileUri"
+    $assemblyInfoFileContent = GetAssemblyInfoWithBumpedVersion $fileUri $branch $newVersion $newInformationalVersion
 
-    write-host "Bumped version in the repository $repoOwner/$repo ($branch) to $global:newVersion."
+    if (!$assemblyInfoFileContent) {
+        return
+    }
+    
+    $commitMessage = "Bump version to $newVersion"
+    UpdateFileInGitHub $fileUri $assemblyInfoFileContent $commitMessage $branch
+
+    write-host "Bumped version in the repository $repoOwner/$repo ($branch) to $newVersion."
 }
 
 TaskTearDown {
@@ -735,80 +747,6 @@ TaskTearDown {
         # throw "TaskTearDown detected an error. Build failed."
         exit 1
     }
-}
-
-function UpdateFileInGitRepo($repoOwner, $repoName, $filePath, $fileContent, $commitMessage, $branch) {
-    if (!$repoOwner) {
-        throw "Repository owner is required."
-    }
-
-    if (!$repoName) {
-        throw "Repository name is required."
-    }
-
-    if (!$filePath) {
-        throw "File path to update is required."
-    }
-
-    if (!$commitMessage) {
-        throw "Commit message is required."
-    }
-
-    if (!$env:GITHUB_USER -or !$env:GITHUB_ACCESS_TOKEN) {
-        throw "Environment variables holding GitHub credentials GITHUB_USER or GITHUB_ACCESS_TOKEN are not set."
-    }
-
-    $updateFileUri = "https://api.github.com/repos/$repoOwner/$repoName/contents/$filepath"
-
-    if (!$branch) {
-        $branch = exec { & "git" rev-parse --abbrev-ref HEAD }
-    }
-
-
-    write-host "GET $updateFileUri`?ref=$branch"
-    
-    $contents = Invoke-RestMethod -TimeoutSec 120 "$updateFileUri`?ref=$branch"
-    
-    
-    $bodyJson = ConvertTo-Json @{
-        path = $filePath
-        branch = $branch
-        message = $commitMessage
-        content = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($fileContent))
-        sha = $contents.sha
-    }
-
-    $creds = "{0}:{1}" -f $env:GITHUB_USER,$env:GITHUB_ACCESS_TOKEN
-    $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($creds))
-    $headers = @{
-        Authorization = "Basic $encodedCreds"
-    }
-    
-    write-host "PUT $updateFileUri"
-
-    (Invoke-WebRequest -TimeoutSec 120 -Uri $updateFileUri -Method PUT -Headers $headers -ContentType "application/json" -Body $bodyJson).content | ConvertFrom-Json
-    
-    write-host "Updated content under $updateFileUri"
-}
-
-function GetAssemblyInfoWithBumpedVersion {
-    $versionStrings = $version.split('.')
-    $versionNumbers = foreach($number in $versionStrings) {
-            [int]::parse($number)
-    }
-
-    $versionNumbers[2] += 1
-    $global:newVersion = $versionNumbers -join '.'
-
-    $newInformationalVersion = Get-InformationalVersion $global:newVersion $global:buildlabel $global:uploadCategory
-
-    $assemblyInfoFileContents = (Get-Content "$base_dir\CommonAssemblyInfo.cs") |
-    Foreach-Object { $_ -replace '\[assembly: AssemblyVersion\(".*"\)\]', "[assembly: AssemblyVersion(""$global:newVersion"")]" } |
-    Foreach-Object { $_ -replace '\[assembly: AssemblyFileVersion\(".*"\)\]', "[assembly: AssemblyFileVersion(""$global:newVersion.13"")]" } |
-    Foreach-Object { $_ -replace '\[assembly: AssemblyInformationalVersion\(".*"\)\]', "[assembly: AssemblyInformationalVersion(""$newInformationalVersion"")]" } |
-    Out-String
-
-    $assemblyInfoFileContents
 }
 
 
