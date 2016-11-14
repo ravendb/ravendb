@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes
                 if (EnsureValidNumberOfOutputsForDocument(numberOfOutputs))
                     continue;
 
-                writer.Delete(key, stats); // TODO [ppekrol] we want to delete invalid doc from index?
+                writer.Delete(key, stats);
 
                 throw new InvalidOperationException($"Index '{Name}' has already produced {numberOfOutputs} map results for a source document '{key}', while the allowed max number of outputs is {MaxNumberOfIndexOutputs} per one document. Please verify this index definition and consider a re-design of your entities or index.");
             }
