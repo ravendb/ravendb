@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using  Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.Json
+namespace Raven.NewClient.Abstractions.Json
 {
     public class JsonNumericConverter<T> : JsonConverter where T : struct
     {

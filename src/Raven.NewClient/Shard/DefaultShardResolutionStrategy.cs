@@ -8,8 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
 
 namespace Raven.NewClient.Client.Shard
 {

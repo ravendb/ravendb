@@ -3,7 +3,7 @@ using  Raven.Imports.Newtonsoft.Json;
 using  Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Json
+namespace Raven.NewClient.Abstractions.Json
 {
     public class JsonDateTimeOffsetConverter : RavenJsonConverter
     {

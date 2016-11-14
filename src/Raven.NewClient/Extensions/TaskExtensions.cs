@@ -4,9 +4,9 @@ using System.Net;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Exceptions;
+using Raven.NewClient.Abstractions.Exceptions;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.NewClient.Abstractions.Extensions
 {
     public static class TaskExtensions
     {

@@ -4,10 +4,10 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Http;
 
-namespace Raven.Abstractions.Connection
+namespace Raven.NewClient.Abstractions.Connection
 {
     public class ErrorResponseException : Exception
     {

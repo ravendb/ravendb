@@ -7,11 +7,11 @@ using System.Linq.Expressions;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Exceptions;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.FileSystem;
 using Raven.NewClient.Client.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 

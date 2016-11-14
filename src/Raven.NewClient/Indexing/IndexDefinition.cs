@@ -7,9 +7,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Data.Indexes;
 using Raven.Imports.Newtonsoft.Json;
 

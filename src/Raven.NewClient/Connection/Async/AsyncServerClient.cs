@@ -4,16 +4,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Raven.Abstractions;
-using Raven.Abstractions.Cluster;
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Cluster;
+using Raven.NewClient.Abstractions.Commands;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Exceptions;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Replication;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Implementation;
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Connection.Request;

@@ -1,6 +1,6 @@
-using Raven.Abstractions.Counters.Notifications;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Counters;
+using Raven.NewClient.Abstractions.Counters.Notifications;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Counters;
 using Raven.NewClient.Client.Changes;
 using Raven.NewClient.Json.Linq;
 using Sparrow.Collections;

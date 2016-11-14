@@ -9,8 +9,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Extensions;
 
 namespace Raven.NewClient.Client.Connection
 {

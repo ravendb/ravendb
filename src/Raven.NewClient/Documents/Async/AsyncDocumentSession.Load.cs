@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Documents.SessionOperations;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Json.Linq;

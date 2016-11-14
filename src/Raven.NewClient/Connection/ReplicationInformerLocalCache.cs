@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Json.Linq;
 

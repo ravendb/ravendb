@@ -9,12 +9,12 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using  Raven.Imports.Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
 using System.Net.Http;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.NewClient.Abstractions.Extensions
 {
     /// <summary>
     /// Extensions for handling metadata

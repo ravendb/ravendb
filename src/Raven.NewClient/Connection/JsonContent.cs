@@ -12,10 +12,10 @@ using System.Text;
 using System.Threading.Tasks;
 using  Raven.Imports.Newtonsoft.Json;
 using  Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Connection
+namespace Raven.NewClient.Abstractions.Connection
 {
     public class JsonContent : HttpContent
     {

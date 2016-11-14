@@ -3,7 +3,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Net.Http;
 
-using Raven.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Metrics;
 using Raven.NewClient.Json.Linq;

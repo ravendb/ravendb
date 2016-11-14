@@ -6,7 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 
 using System.IO.Compression;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Util;
 
 namespace Raven.NewClient.Client.Connection
 {

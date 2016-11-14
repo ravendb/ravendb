@@ -4,8 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Document

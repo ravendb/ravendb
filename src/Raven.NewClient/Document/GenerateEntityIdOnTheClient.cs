@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.CSharp.RuntimeBinder;
 
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 
 namespace Raven.NewClient.Client.Document

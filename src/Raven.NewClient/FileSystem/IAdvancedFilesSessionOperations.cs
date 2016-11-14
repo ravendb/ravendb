@@ -1,4 +1,4 @@
-using Raven.Abstractions.Exceptions;
+using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Client.Exceptions;
 
 namespace Raven.NewClient.Client.FileSystem

@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     public class DatabaseOperationsStatus
     {

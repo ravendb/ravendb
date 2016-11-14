@@ -8,7 +8,7 @@ using System;
 using System.Threading.Tasks;
 using  Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.TimeSeries
+namespace Raven.NewClient.Abstractions.TimeSeries
 {
     public class TimeSeriesAppend
     {

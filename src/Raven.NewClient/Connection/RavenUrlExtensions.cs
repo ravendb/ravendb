@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Extensions;
 

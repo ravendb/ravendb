@@ -4,9 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using Raven.Abstractions.Replication;
+using Raven.NewClient.Abstractions.Replication;
 
-namespace Raven.Abstractions.FileSystem
+namespace Raven.NewClient.Abstractions.FileSystem
 {
     public class SynchronizationConfig
     {

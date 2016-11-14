@@ -1,6 +1,6 @@
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Document;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 

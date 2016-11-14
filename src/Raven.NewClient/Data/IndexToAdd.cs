@@ -3,11 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Indexing;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     public class IndexToAdd
     {

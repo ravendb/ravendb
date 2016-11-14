@@ -4,12 +4,12 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Raven.Abstractions.Linq;
+using Raven.NewClient.Abstractions.Linq;
 using Raven.NewClient.Client.Linq;
 using  Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Spatial
+namespace Raven.NewClient.Abstractions.Spatial
 {
     /// <summary>
     /// Converts shape objects to strings, if they are not already a string

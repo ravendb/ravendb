@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Specialized;
 using System.Text;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Document.SessionOperations;
 using Raven.NewClient.Client.Shard;

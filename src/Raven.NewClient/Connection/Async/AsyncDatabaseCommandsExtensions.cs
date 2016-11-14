@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Data;
 
 namespace Raven.NewClient.Client.Connection.Async

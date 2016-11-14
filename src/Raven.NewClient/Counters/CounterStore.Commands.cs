@@ -3,9 +3,9 @@ using System.Globalization;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Util;
 
 namespace Raven.NewClient.Client.Counters
 {

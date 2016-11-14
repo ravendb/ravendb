@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Changes;
 
 namespace Raven.NewClient.Client.Shard

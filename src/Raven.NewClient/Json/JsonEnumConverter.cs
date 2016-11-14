@@ -5,10 +5,10 @@
 //-----------------------------------------------------------------------
 using System;
 using  Raven.Imports.Newtonsoft.Json;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Raven.Abstractions.Json
+namespace Raven.NewClient.Abstractions.Json
 {
     /// <summary>
     /// Convert an enum to a json string

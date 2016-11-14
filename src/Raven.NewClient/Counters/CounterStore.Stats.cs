@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Counters;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Counters;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Util;
 
 namespace Raven.NewClient.Client.Counters
 {

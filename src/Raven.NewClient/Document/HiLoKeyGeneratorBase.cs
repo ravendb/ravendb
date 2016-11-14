@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Data;
 

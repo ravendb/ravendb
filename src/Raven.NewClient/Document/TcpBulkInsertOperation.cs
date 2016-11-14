@@ -7,10 +7,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog.Common;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Connection.Async;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Platform;
@@ -18,7 +18,7 @@ using Raven.NewClient.Json.Linq;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using AsyncHelpers = Raven.Abstractions.Util.AsyncHelpers;
+using AsyncHelpers = Raven.NewClient.Abstractions.Util.AsyncHelpers;
 
 namespace Raven.NewClient.Client.Document
 {

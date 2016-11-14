@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Async;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Exceptions;

@@ -1,6 +1,6 @@
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 
-namespace Raven.Abstractions.Indexing
+namespace Raven.NewClient.Abstractions.Indexing
 {
     public class SuggestionOptions
     {

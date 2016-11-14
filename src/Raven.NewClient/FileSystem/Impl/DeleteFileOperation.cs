@@ -1,5 +1,5 @@
-using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.FileSystem;
 using System;
 using System.Threading.Tasks;
 

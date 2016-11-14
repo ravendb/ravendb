@@ -4,10 +4,10 @@
 //using System.Net.Http;
 //using System.Net.Http.Headers;
 //using System.Threading.Tasks;
-//using Raven.Abstractions.Connection;
-//using Raven.Abstractions.Extensions;
+//using Raven.NewClient.Abstractions.Connection;
+//using Raven.NewClient.Abstractions.Extensions;
 
-//namespace Raven.Abstractions.OAuth
+//namespace Raven.NewClient.Abstractions.OAuth
 //{
 //    public class BasicAuthenticator : AbstractAuthenticator
 //    {

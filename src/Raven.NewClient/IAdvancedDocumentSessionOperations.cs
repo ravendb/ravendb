@@ -7,9 +7,9 @@
 using System;
 using System.Collections.Generic;
 
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
+using Raven.NewClient.Abstractions.Commands;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Json.Linq;
 

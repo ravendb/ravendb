@@ -6,9 +6,9 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.FileSystem.Changes;

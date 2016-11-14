@@ -1,7 +1,7 @@
 using System.Net.Http;
 
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Extensions;
 using System;
 using System.Collections.Specialized;
 using System.Threading;

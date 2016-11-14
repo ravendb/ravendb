@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Changes;
 
 namespace Raven.NewClient.Client.Util

@@ -7,12 +7,12 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Exceptions;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Async;
 using Raven.NewClient.Client.Connection.Implementation;

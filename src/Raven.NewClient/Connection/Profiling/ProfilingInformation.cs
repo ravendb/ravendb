@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions;
+using Raven.NewClient.Abstractions;
 
 namespace Raven.NewClient.Client.Connection.Profiling
 {

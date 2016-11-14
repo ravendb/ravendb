@@ -6,7 +6,7 @@
 
 using System.Collections.Generic;
 
-namespace Raven.Abstractions.Counters
+namespace Raven.NewClient.Abstractions.Counters
 {
     /// <summary>
     /// This class represent the list of replication destinations for the server

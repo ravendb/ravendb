@@ -5,7 +5,7 @@ using System.Text;
 using  Raven.Imports.Newtonsoft.Json;
 using System.Collections;
 
-namespace Raven.Abstractions.Json
+namespace Raven.NewClient.Abstractions.Json
 {
     /// <summary>
     /// Convert a MultiDimensional Array to a json string

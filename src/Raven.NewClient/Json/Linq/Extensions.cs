@@ -4,15 +4,15 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 
-using Raven.Abstractions;
-using Raven.Abstractions.Json;
-using Raven.Abstractions.Json.Linq;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Json;
+using Raven.NewClient.Abstractions.Json.Linq;
 using  Raven.Imports.Newtonsoft.Json.Linq;
 using  Raven.Imports.Newtonsoft.Json.Utilities;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using System.Text;
 using System.Reflection;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Json.Utilities;
 
 namespace Raven.NewClient.Json.Linq

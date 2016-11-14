@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 using Raven.NewClient.Client.Indexing;
 
-namespace Raven.Abstractions.Indexing
+namespace Raven.NewClient.Abstractions.Indexing
 {
     public class MergeSuggestions
     {

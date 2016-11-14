@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using  Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Util
+namespace Raven.NewClient.Abstractions.Util
 {
     public static class DocumentHelpers
     {

@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.NewClient.Client.Linq

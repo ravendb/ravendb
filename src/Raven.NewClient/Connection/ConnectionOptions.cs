@@ -5,8 +5,8 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Net;
-using Raven.Abstractions;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Extensions;
 
 namespace Raven.NewClient.Client.Connection
 {

@@ -1,4 +1,4 @@
-namespace Raven.Abstractions.FileSystem
+namespace Raven.NewClient.Abstractions.FileSystem
 {
     public enum FileStatus
     {

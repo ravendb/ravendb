@@ -9,11 +9,11 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 
-using Raven.Abstractions.Cluster;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Cluster;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Changes;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Profiling;

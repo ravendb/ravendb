@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Net;
 
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Json;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Exceptions;
+using Raven.NewClient.Abstractions.Json;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Async;
 
 using System;
@@ -12,10 +12,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Changes;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Implementation;
@@ -386,10 +386,10 @@ namespace Raven.NewClient.Client.Document
 //            catch (Exception e)
 //            {
 //                ReportInternal("Failed to write all results to a server, probably something happened to the server. Exception : {0}", e);
-//                if (e.Message.Contains("Raven.Abstractions.Exceptions.ConcurrencyException"))
+//                if (e.Message.Contains("Raven.NewClient.Abstractions.Exceptions.ConcurrencyException"))
 //                    throw new ConcurrencyException("ConcurrencyException while writing bulk insert items in the server. Did you run bulk insert operation with OverwriteExisting == false?. Exception returned from server: " + e.Message, e);
 //
-//                if (e.Message.Contains("Raven.Abstractions.Exceptions.OperationVetoedException"))
+//                if (e.Message.Contains("Raven.NewClient.Abstractions.Exceptions.OperationVetoedException"))
 //                    throw new OperationVetoedException(e.Message, e);
 //                throw;
 //            }

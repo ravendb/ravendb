@@ -2,15 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using  Raven.Imports.Newtonsoft.Json;
-using  Raven.Imports.Newtonsoft.Json.Linq;
-using  Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using MiscellaneousUtils = Raven.NewClient.Json.Utilities.MiscellaneousUtils;
 using StringUtils = Raven.NewClient.Json.Utilities.StringUtils;
 using System.Collections.Concurrent;
-using Raven.Abstractions;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Json;
 using Raven.Abstractions.Json;
 
 namespace Raven.NewClient.Json.Linq

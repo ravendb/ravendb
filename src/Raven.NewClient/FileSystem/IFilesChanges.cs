@@ -1,4 +1,4 @@
-using Raven.Abstractions.FileSystem.Notifications;
+using Raven.NewClient.Abstractions.FileSystem.Notifications;
 using Raven.NewClient.Client.Changes;
 
 namespace Raven.NewClient.Client.FileSystem

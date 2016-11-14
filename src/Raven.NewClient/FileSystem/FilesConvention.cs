@@ -1,6 +1,6 @@
 using System;
 
-using Raven.Abstractions.Replication;
+using Raven.NewClient.Abstractions.Replication;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.FileSystem.Connection;
 

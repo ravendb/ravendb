@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 
-namespace Raven.Abstractions.Logging.LogProviders
+namespace Raven.NewClient.Abstractions.Logging.LogProviders
 {
     public class Log4NetLogManager : LogManagerBase
     {

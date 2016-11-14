@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
-using Raven.Abstractions.Commands;
+using Raven.NewClient.Abstractions.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;

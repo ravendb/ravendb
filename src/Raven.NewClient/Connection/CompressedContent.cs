@@ -1,4 +1,4 @@
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Util;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,7 +9,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.Abstractions.Connection
+namespace Raven.NewClient.Abstractions.Connection
 {
     public class CompressedContent : HttpContent
     {

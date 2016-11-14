@@ -5,10 +5,10 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using System.Linq;
 
-namespace Raven.Abstractions.Util
+namespace Raven.NewClient.Abstractions.Util
 {
     public class ByteArrayComparer : IComparer<Guid>, IComparer<Guid?>
     {

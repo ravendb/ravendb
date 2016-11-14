@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using Raven.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.FileSystem;
 
 namespace Raven.NewClient.Client.FileSystem.Impl
 {

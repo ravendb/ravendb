@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Extensions;
-
 namespace Raven.NewClient.Client.Documents
 {
     public class RavenLoadConfiguration : ILoadConfiguration

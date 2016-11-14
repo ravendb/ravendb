@@ -7,7 +7,7 @@ using System;
 using System.Net;
 using System.Runtime.Serialization;
 
-namespace Raven.Abstractions.Exceptions.Subscriptions
+namespace Raven.NewClient.Abstractions.Exceptions.Subscriptions
 {
     public class SubscriptionDoesNotExistException : SubscriptionException
     {

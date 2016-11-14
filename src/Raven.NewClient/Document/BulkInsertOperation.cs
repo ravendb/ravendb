@@ -1,8 +1,8 @@
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Async;
 using System;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Changes;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Json.Linq;

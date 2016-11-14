@@ -8,7 +8,7 @@ using System;
 using Raven.NewClient.Client.Data;
 using Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     public class BulkInsertChangeNotification : DocumentChangeNotification
     {

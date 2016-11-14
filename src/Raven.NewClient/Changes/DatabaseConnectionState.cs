@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 
 namespace Raven.NewClient.Client.Changes

@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Raven.Abstractions.Util
+namespace Raven.NewClient.Abstractions.Util
 {
     public class UndisposableStream : Stream
     {

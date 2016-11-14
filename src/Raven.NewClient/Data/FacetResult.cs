@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using  Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     public class FacetResult
     {

@@ -1,7 +1,7 @@
 using System;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     public static class Constants
     {

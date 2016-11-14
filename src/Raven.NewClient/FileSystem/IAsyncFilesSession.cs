@@ -1,11 +1,11 @@
-using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.FileSystem;
 using Raven.NewClient.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 
 namespace Raven.NewClient.Client.FileSystem
 {

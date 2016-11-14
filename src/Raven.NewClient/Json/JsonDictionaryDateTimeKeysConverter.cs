@@ -7,7 +7,7 @@ using Raven.Abstractions.Extensions;
 using  Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Raven.Abstractions.Json
+namespace Raven.NewClient.Abstractions.Json
 {
     public class JsonDictionaryDateTimeKeysConverter : RavenJsonConverter
     {

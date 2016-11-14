@@ -5,11 +5,11 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.TimeSeries;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.TimeSeries;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.TimeSeries

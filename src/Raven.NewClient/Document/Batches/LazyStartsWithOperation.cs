@@ -13,7 +13,7 @@ namespace Raven.NewClient.Client.Document.Batches
     using System.Collections.Generic;
     using System.Linq;
 
-    using Raven.Abstractions.Data;
+    using Raven.NewClient.Abstractions.Data;
     using Raven.NewClient.Client.Connection;
     using Raven.NewClient.Client.Extensions;
     using Raven.NewClient.Client.Shard;

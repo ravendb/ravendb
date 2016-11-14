@@ -6,7 +6,7 @@
 using System;
 using System.Threading;
 
-namespace Raven.Abstractions
+namespace Raven.NewClient.Abstractions
 {
     public class SystemTime
     {

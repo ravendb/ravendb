@@ -9,7 +9,7 @@ using System.Security.Cryptography;
 
 using Sparrow;
 
-namespace Raven.Abstractions.Util.Encryptors
+namespace Raven.NewClient.Abstractions.Util.Encryptors
 {
     public sealed class DefaultEncryptor : EncryptorBase<DefaultEncryptor.DefaultHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
     {

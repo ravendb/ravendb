@@ -10,7 +10,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;

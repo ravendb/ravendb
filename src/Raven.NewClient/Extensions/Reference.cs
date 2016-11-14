@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-namespace Raven.Abstractions.Extensions
+namespace Raven.NewClient.Abstractions.Extensions
 {
     /// <summary>
     /// A reference that can be used with lambda expression

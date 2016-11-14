@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.TimeSeries;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.TimeSeries;
 using Raven.NewClient.Client.TimeSeries.Changes;
 using Raven.NewClient.Client.TimeSeries.Replication;
 

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Documents

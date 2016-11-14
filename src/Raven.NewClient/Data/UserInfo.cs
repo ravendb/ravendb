@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Security.Principal;
 using Raven.NewClient.Client.Data;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     public class UserInfo
     {

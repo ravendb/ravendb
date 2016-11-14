@@ -3,9 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.FileSystem;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     public class FilesystemBackupRequest
     {

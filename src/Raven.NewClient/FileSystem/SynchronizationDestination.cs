@@ -1,7 +1,7 @@
 using System.Net;
 using  Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.FileSystem
+namespace Raven.NewClient.Abstractions.FileSystem
 {
     public class SynchronizationDestination
     {

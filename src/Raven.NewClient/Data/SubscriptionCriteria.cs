@@ -6,10 +6,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     public class SubscriptionCriteria
     {

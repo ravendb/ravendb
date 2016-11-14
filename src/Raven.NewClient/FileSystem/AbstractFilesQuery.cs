@@ -1,8 +1,8 @@
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Logging;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;

@@ -4,12 +4,12 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Util;
 using  Raven.Imports.Newtonsoft.Json;
 using  Raven.Imports.Newtonsoft.Json.Linq;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.NewClient.Abstractions.Extensions
 {
     ///<summary>
     /// Extension methods to handle common scenarios

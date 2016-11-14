@@ -4,9 +4,9 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Counters;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Counters;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Counters.Operations;
 using Raven.NewClient.Database.Counters;
 

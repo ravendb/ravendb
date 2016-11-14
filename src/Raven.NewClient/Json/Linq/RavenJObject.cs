@@ -4,12 +4,12 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Json;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Json;
 using  Raven.Imports.Newtonsoft.Json;
 using  Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.NewClient.Json.Utilities;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using System.Runtime.CompilerServices;
 
 namespace Raven.NewClient.Json.Linq

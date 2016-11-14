@@ -1,8 +1,8 @@
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Replication;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Replication;
 
 namespace Raven.NewClient.Client
 {

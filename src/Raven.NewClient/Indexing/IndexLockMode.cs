@@ -1,4 +1,4 @@
-namespace Raven.Abstractions.Indexing
+namespace Raven.NewClient.Abstractions.Indexing
 {
     public enum IndexLockMode
     {

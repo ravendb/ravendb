@@ -5,10 +5,10 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 
-using Raven.Abstractions.Cluster;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Cluster;
+using Raven.NewClient.Abstractions.Data;
 
-namespace Raven.Abstractions.Replication
+namespace Raven.NewClient.Abstractions.Replication
 {
     /// <summary>
     /// This class represent the list of replication destinations for the server

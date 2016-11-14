@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Abstractions.Counters
+namespace Raven.NewClient.Abstractions.Counters
 {
     public class CounterSummary
     {

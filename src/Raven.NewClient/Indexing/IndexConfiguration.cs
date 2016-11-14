@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Indexing

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Raven.NewClient.Client.Connection.Implementation;
 using Raven.NewClient.Client.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Document;

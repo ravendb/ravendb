@@ -6,7 +6,7 @@
 
 using System;
 using System.Runtime.CompilerServices;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.NewClient.Json.Linq;
 

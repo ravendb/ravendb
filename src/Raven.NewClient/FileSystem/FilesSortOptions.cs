@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Abstractions.FileSystem
+namespace Raven.NewClient.Abstractions.FileSystem
 {
     [Flags]
     public enum FilesSortOptions

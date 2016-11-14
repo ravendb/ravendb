@@ -4,10 +4,10 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Counters;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Counters;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Counters

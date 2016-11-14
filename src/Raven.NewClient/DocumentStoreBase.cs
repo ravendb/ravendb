@@ -1,4 +1,4 @@
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Changes;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Async;
@@ -12,7 +12,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Util.Encryptors;
+using Raven.NewClient.Abstractions.Util.Encryptors;
 using Raven.NewClient.Client.Document;
 
 namespace Raven.NewClient.Client

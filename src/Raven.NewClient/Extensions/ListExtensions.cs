@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.NewClient.Abstractions.Extensions
 {
     public static class ListExtensions
     {

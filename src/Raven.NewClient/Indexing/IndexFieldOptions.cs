@@ -1,6 +1,6 @@
 using System;
 
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
 
 namespace Raven.NewClient.Client.Indexing
 {

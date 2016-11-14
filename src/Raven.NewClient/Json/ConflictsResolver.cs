@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text;
 using  Raven.Imports.Newtonsoft.Json;
 using  Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Abstractions.Json.Linq;
+using Raven.NewClient.Abstractions.Json.Linq;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Json
+namespace Raven.NewClient.Abstractions.Json
 {
     public class ConflictsResolver
     {

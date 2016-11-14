@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-namespace Raven.Abstractions.Counters
+namespace Raven.NewClient.Abstractions.Counters
 {
     public static class CounterUtils
     {

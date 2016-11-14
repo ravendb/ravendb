@@ -8,11 +8,11 @@ using System.Dynamic;
 using System.Linq.Expressions;
 using  Raven.Imports.Newtonsoft.Json;
 using System.Linq;
-using Raven.Abstractions.Linq;
+using Raven.NewClient.Abstractions.Linq;
 using Raven.NewClient.Client.Linq;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Json
+namespace Raven.NewClient.Abstractions.Json
 {
     /// <summary>
     /// Convert a dynamic variable to a json value and vice versa

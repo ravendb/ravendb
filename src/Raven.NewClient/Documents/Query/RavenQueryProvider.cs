@@ -9,7 +9,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection.Async;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Document;

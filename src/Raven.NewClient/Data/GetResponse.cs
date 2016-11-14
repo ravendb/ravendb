@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     public class GetResponse
     {

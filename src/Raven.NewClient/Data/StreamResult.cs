@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     public class StreamResult<TType>
     {

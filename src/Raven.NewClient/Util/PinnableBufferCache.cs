@@ -16,7 +16,7 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics;
 
 
-namespace Raven.Abstractions.Util
+namespace Raven.NewClient.Abstractions.Util
 {
     public class PinnableBufferCache
     {

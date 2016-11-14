@@ -7,7 +7,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     /// <summary>
     ///     Represent a field highlight options

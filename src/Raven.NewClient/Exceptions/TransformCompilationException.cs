@@ -1,8 +1,8 @@
 using System;
 using System.Runtime.Serialization;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 
-namespace Raven.Abstractions.Exceptions
+namespace Raven.NewClient.Abstractions.Exceptions
 {
     public class TransformCompilationException : Exception
     {

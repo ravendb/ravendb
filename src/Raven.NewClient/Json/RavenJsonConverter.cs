@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using  Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.Json
+namespace Raven.NewClient.Abstractions.Json
 {
     public abstract class RavenJsonConverter : JsonConverter
     {

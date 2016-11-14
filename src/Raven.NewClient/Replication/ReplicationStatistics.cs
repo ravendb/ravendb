@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 
-namespace Raven.Abstractions.Replication
+namespace Raven.NewClient.Abstractions.Replication
 {
     using Raven.NewClient.Json.Linq;
 

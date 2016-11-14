@@ -1,5 +1,5 @@
 ﻿using System.Net.Http;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;

@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 
 namespace Raven.NewClient.Client.Platform.Unix
 {

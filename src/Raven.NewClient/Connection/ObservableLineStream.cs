@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 
 using Sparrow.Collections;
 using System;

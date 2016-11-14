@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Database.Util;
 using Sparrow.Collections;
 

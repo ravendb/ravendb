@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Connection.Request;
 using Raven.NewClient.Client.Metrics;
 

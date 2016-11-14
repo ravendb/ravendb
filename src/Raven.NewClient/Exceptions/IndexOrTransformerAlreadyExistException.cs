@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 
-namespace Raven.Abstractions.Exceptions
+namespace Raven.NewClient.Abstractions.Exceptions
 {
     /// <summary>
     /// This exception is raised if creation of index is attempted when there is already an index with identical name

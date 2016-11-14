@@ -3,7 +3,7 @@ using System.Globalization;
 using Raven.Abstractions.Extensions;
 using  Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.Json
+namespace Raven.NewClient.Abstractions.Json
 {
     public class JsonDateTimeISO8601Converter : RavenJsonConverter
     {

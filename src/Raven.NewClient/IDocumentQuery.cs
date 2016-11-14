@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Indexes;

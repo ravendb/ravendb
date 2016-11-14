@@ -3,7 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Connection;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
 

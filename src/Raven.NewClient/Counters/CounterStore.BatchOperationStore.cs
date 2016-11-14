@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using Raven.Abstractions.Counters;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Counters;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Counters.Operations;
 
 namespace Raven.NewClient.Client.Counters

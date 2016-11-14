@@ -1,4 +1,4 @@
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 
 namespace Raven.NewClient.Client.Util
 {

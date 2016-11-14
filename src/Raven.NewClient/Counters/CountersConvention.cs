@@ -1,4 +1,4 @@
-using Raven.Abstractions.Replication;
+using Raven.NewClient.Abstractions.Replication;
 
 namespace Raven.NewClient.Client.Counters
 {

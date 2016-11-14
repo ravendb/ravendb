@@ -1,7 +1,7 @@
-using Raven.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.FileSystem;
 using System;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 
 namespace Raven.NewClient.Client.FileSystem.Impl
 {

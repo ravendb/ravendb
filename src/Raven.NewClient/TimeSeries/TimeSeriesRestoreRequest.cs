@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.Abstractions.TimeSeries
+namespace Raven.NewClient.Abstractions.TimeSeries
 {
     public class TimeSeriesRestoreRequest
     {

@@ -1,7 +1,7 @@
 using System.Net;
 
-using Raven.Abstractions.Cluster;
-using Raven.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Cluster;
+using Raven.NewClient.Abstractions.Connection;
 
 namespace Raven.NewClient.Client.Connection
 {

@@ -6,13 +6,13 @@
 using System;
 using System.Net;
 using System.Threading;
-using Raven.Abstractions.Exceptions.Subscriptions;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Exceptions.Subscriptions;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     public class SubscriptionConnectionClientMessage
     {

@@ -5,16 +5,16 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Connection;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.Imports.Newtonsoft.Json.Linq;

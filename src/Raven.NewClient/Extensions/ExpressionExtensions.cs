@@ -12,7 +12,7 @@ using System.Reflection;
 using System.Text;
 using  Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.NewClient.Abstractions.Extensions
 {
     ///<summary>
     /// Extensions for Linq expressions

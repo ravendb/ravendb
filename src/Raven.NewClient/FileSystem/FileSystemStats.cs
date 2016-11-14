@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Raven.Abstractions.FileSystem
+namespace Raven.NewClient.Abstractions.FileSystem
 {
     public class FileSystemStats
     {

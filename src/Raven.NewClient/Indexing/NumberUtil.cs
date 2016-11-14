@@ -6,7 +6,7 @@
 using System;
 using System.Globalization;
 
-namespace Raven.Abstractions.Indexing
+namespace Raven.NewClient.Abstractions.Indexing
 {
     /// <summary>
     /// Helper function for numeric to indexed string and vice versa

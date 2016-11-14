@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 
-namespace Raven.Abstractions
+namespace Raven.NewClient.Abstractions
 {
     public class ServerSmugglerRequest
     {

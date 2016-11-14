@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Net;
 
-namespace Raven.Abstractions.Connection
+namespace Raven.NewClient.Abstractions.Connection
 {
     public class OperationCredentials
     {

@@ -10,7 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 
 namespace Raven.NewClient.Client.Document
 {

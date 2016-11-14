@@ -6,9 +6,9 @@
 
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Cluster;
+using Raven.NewClient.Abstractions.Cluster;
 
-namespace Raven.Abstractions.Replication
+namespace Raven.NewClient.Abstractions.Replication
 {
     /// <summary>
     /// Data class for replication destination documents

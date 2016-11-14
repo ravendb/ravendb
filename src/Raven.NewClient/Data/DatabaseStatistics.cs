@@ -8,8 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data.Indexes;
 
 namespace Raven.NewClient.Client.Data

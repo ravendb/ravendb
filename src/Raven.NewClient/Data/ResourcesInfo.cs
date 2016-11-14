@@ -1,7 +1,7 @@
 ﻿
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data.Indexes;
 
 namespace Raven.NewClient.Client.Data

@@ -8,8 +8,8 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Util;
 
 namespace Raven.NewClient.Client.Connection.Request
 {

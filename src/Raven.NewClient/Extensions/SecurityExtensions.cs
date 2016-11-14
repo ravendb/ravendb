@@ -3,7 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security;
-using Raven.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.OAuth;
 

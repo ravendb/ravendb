@@ -3,7 +3,7 @@ using System.Net;
 using System.Security;
 using System.Threading.Tasks;
 
-namespace Raven.Abstractions.Util
+namespace Raven.NewClient.Abstractions.Util
 {
     public class CompletedTask : CompletedTask<object>
     {

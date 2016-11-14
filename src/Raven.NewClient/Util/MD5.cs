@@ -4,7 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace Raven.Abstractions.Util
+namespace Raven.NewClient.Abstractions.Util
 {
 
     // **************************************************************

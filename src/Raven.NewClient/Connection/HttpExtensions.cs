@@ -7,7 +7,7 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using System.Net.Http;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection.Implementation;
 
 namespace Raven.NewClient.Client.Connection

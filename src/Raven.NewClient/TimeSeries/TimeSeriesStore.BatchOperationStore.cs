@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using Raven.Abstractions.TimeSeries;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.TimeSeries;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.TimeSeries.Operations;
 
 namespace Raven.NewClient.Client.TimeSeries

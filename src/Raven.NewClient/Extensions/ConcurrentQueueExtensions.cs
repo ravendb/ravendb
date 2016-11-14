@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.NewClient.Abstractions.Extensions
 {
     public static class ConcurrentQueueExtensions
     {

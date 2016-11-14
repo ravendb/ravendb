@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Abstractions.Counters.Notifications
+namespace Raven.NewClient.Abstractions.Counters.Notifications
 {
     public class BulkOperationNotification : CounterStorageNotification
     {

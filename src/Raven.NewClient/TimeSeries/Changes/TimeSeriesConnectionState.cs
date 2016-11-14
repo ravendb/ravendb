@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using Raven.Abstractions.TimeSeries.Notifications;
+using Raven.NewClient.Abstractions.TimeSeries.Notifications;
 using Raven.NewClient.Client.Changes;
 
 namespace Raven.NewClient.Client.TimeSeries.Changes

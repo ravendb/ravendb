@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.NewClient.Client.Data

@@ -1,7 +1,7 @@
 using System;
 using System.Net;
 
-using Raven.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.FileSystem;
 using Raven.NewClient.Client.FileSystem.Connection;
 
 namespace Raven.NewClient.Client.FileSystem.Extensions

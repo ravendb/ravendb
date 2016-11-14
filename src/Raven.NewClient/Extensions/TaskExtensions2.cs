@@ -4,8 +4,8 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Util;
 
 namespace Raven.NewClient.Client.Extensions
 {

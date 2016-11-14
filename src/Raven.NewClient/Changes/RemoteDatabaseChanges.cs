@@ -1,8 +1,8 @@
 using System.Globalization;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Json.Linq;

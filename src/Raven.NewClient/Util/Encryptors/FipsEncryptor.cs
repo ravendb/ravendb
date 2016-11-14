@@ -7,7 +7,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 
-namespace Raven.Abstractions.Util.Encryptors
+namespace Raven.NewClient.Abstractions.Util.Encryptors
 {
     public sealed class FipsEncryptor : EncryptorBase<FipsEncryptor.FipsHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
     {

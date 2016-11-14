@@ -1,8 +1,8 @@
 using System;
 using System.Threading;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 
-namespace Raven.Abstractions.Util
+namespace Raven.NewClient.Abstractions.Util
 {
     public class EasyReaderWriterLock
     {

@@ -1,5 +1,5 @@
-using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.FileSystem;
 using Raven.NewClient.Client.Util;
 using Raven.NewClient.Json.Linq;
 using System;

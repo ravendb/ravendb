@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Replication;
+using Raven.NewClient.Abstractions.Replication;
 using Raven.NewClient.Client.Connection.Async;
 
 namespace Raven.NewClient.Client.Connection

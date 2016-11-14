@@ -5,9 +5,9 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Globalization;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 
-namespace Raven.Abstractions.Util
+namespace Raven.NewClient.Abstractions.Util
 {
     public class Base62Util
     {

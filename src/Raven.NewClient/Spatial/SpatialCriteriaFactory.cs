@@ -1,8 +1,8 @@
 using System;
 using System.Globalization;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Indexing;
 
 namespace Raven.NewClient.Client.Spatial
 {

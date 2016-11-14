@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 
-using Raven.Abstractions;
+using Raven.NewClient.Abstractions;
 
 namespace Raven.NewClient.Client.Connection.Profiling
 {

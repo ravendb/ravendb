@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using  Raven.Imports.Newtonsoft.Json;
 using  Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Raven.Abstractions.Json
+namespace Raven.NewClient.Abstractions.Json
 {
     /// <summary>
     /// This converter is used when a property is a Linq-To-Entities query, enumerating and 

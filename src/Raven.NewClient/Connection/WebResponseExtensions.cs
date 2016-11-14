@@ -11,7 +11,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.IO.Compression;
 
-namespace Raven.Abstractions.Connection
+namespace Raven.NewClient.Abstractions.Connection
 {
     /// <summary>
     /// Extensions for web requests

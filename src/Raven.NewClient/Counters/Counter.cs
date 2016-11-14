@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Raven.Abstractions.Counters
+namespace Raven.NewClient.Abstractions.Counters
 {
     public class Counter
     {

@@ -1,4 +1,4 @@
-namespace Raven.Abstractions.Logging
+namespace Raven.NewClient.Abstractions.Logging
 {
     using System;
     using System.Globalization;

@@ -6,7 +6,7 @@ using System.Linq;
 using Raven.NewClient.Client.Linq;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Linq
+namespace Raven.NewClient.Abstractions.Linq
 {
     public class DynamicList : DynamicObject, IEnumerable<object>
     {

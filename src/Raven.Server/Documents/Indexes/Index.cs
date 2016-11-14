@@ -489,7 +489,8 @@ namespace Raven.Server.Documents.Indexes
         /// <summary>
         /// This should only be used for testing purposes.
         /// </summary>
-        internal Dictionary<string, long> GetLastMappedEtagsForDebug()
+        /// TODO iftah, change visibility of function back to internal when finished with new client
+        public Dictionary<string, long> GetLastMappedEtagsForDebug()
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))

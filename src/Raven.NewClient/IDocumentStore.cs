@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Changes;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Async;

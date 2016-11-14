@@ -1,8 +1,8 @@
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Json.Linq;
 using System;
@@ -12,7 +12,7 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.NewClient.Client.Connection;
-using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
+using FileSystemInfo = Raven.NewClient.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.NewClient.Client.FileSystem
 {

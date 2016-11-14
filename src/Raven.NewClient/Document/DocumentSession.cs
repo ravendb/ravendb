@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Document.SessionOperations;

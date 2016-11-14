@@ -10,16 +10,16 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Logging;
+using Raven.NewClient.Abstractions.Replication;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Async;
 
 namespace Raven.NewClient.Client.Document
 {
-    using Raven.Abstractions.Connection;
+    using Raven.NewClient.Abstractions.Connection;
 
     public class ReplicationBehavior
     {

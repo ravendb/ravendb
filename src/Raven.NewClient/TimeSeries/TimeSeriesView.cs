@@ -6,7 +6,7 @@
 
 using System.Collections.Generic;
 
-namespace Raven.Abstractions.TimeSeries
+namespace Raven.NewClient.Abstractions.TimeSeries
 {
     //TODO: remove this!
     public class TimeSeriesView

@@ -1,7 +1,7 @@
 
 using System;
 
-namespace Raven.Abstractions.FileSystem
+namespace Raven.NewClient.Abstractions.FileSystem
 {
     public class RdcStats
     {

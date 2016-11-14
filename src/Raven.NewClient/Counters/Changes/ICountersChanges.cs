@@ -1,5 +1,5 @@
 using System;
-using Raven.Abstractions.Counters.Notifications;
+using Raven.NewClient.Abstractions.Counters.Notifications;
 using Raven.NewClient.Client.Changes;
 
 namespace Raven.NewClient.Client.Counters.Changes

@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 using System.Net.Http;
-using Raven.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Implementation;
 using Raven.Imports.Newtonsoft.Json;

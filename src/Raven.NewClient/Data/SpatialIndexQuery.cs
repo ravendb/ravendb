@@ -5,10 +5,10 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Globalization;
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     /// <summary>
     /// A query using spatial filtering

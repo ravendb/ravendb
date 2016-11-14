@@ -7,7 +7,7 @@
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     /// <summary>
     /// The result of a single operation inside a batch

@@ -5,10 +5,10 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Runtime.Serialization;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 
-namespace Raven.Abstractions.Exceptions
+namespace Raven.NewClient.Abstractions.Exceptions
 {
     /// <summary>
     /// This exception is raised when querying an index that was disabled because the error rate exceeded safety margins

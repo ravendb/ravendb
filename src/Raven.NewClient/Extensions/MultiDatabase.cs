@@ -1,10 +1,10 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
-using Raven.Abstractions.Counters;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.TimeSeries;
+using Raven.NewClient.Abstractions.Counters;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.TimeSeries;
 
 namespace Raven.NewClient.Client.Extensions
 {

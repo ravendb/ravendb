@@ -3,9 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 
-namespace Raven.Abstractions.FileSystem
+namespace Raven.NewClient.Abstractions.FileSystem
 {
     public class FileSystemMetrics
     {

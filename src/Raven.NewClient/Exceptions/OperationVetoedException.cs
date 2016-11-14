@@ -6,7 +6,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace Raven.Abstractions.Exceptions
+namespace Raven.NewClient.Abstractions.Exceptions
 {
     /// <summary>
     /// This exception is raised when an operation has been vetoed by a trigger

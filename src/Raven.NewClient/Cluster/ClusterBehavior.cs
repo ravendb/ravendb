@@ -3,7 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-namespace Raven.Abstractions.Cluster
+namespace Raven.NewClient.Abstractions.Cluster
 {
     public enum ClusterBehavior
     {

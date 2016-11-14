@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using Raven.Abstractions.Logging;
+using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
 

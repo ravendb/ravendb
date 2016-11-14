@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Documents;
 using Raven.NewClient.Client.Documents.Commands;
 using Raven.NewClient.Client.Http;

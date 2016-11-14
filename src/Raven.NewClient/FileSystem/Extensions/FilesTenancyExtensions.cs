@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.FileSystem;
 using Raven.NewClient.Client.Extensions;
 
 namespace Raven.NewClient.Client.FileSystem.Extensions

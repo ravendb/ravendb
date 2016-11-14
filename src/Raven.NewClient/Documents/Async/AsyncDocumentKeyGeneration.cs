@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Json.Linq;
 using Sparrow.Json;

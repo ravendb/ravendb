@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Concurrent;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection;
 
 namespace Raven.NewClient.Client.Document

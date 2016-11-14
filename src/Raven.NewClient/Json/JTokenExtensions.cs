@@ -10,7 +10,7 @@ using  Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.NewClient.Json.Linq;
 
 
-namespace Raven.Abstractions.Json
+namespace Raven.NewClient.Abstractions.Json
 {
     /// <summary>
     /// Extensions for RavenJToken

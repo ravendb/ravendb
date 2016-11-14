@@ -1,14 +1,14 @@
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.FileSystem.Notifications;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.FileSystem.Notifications;
 using Raven.NewClient.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Util;
 
 namespace Raven.NewClient.Client.FileSystem
 {

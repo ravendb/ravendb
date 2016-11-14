@@ -2,7 +2,7 @@ using System;
 using System.Runtime.Serialization;
 using  Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.FileSystem
+namespace Raven.NewClient.Abstractions.FileSystem
 {
     public class SynchronizationException : Exception
     {

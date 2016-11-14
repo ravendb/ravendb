@@ -3,9 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Abstractions.Counters;
+using Raven.NewClient.Abstractions.Counters;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     public class CounterStorageBackupRequest
     {

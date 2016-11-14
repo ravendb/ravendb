@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Documents.Commands;
 using Raven.Imports.Newtonsoft.Json.Linq;

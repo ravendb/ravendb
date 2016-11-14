@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
-using Raven.Abstractions.Replication;
+using Raven.NewClient.Abstractions.Replication;
 using  Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
 
     public class ConnectionStringOptions

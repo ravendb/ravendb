@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexing;
 

@@ -7,9 +7,9 @@
 
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Async;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Indexes;

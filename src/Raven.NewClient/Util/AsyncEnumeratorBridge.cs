@@ -6,7 +6,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Raven.Abstractions.Util
+namespace Raven.NewClient.Abstractions.Util
 {
     public class AsyncEnumeratorBridge<T> : IAsyncEnumerator<T>
     {

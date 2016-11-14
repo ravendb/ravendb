@@ -6,7 +6,7 @@
 using System;
 using System.Text.RegularExpressions;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Abstractions.Linq;
+using Raven.NewClient.Abstractions.Linq;
 
 namespace Raven.NewClient.Client.Connection
 {

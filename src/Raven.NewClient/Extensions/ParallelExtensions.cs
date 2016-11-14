@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;

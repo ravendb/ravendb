@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Changes;
 using System.Linq;
 using Raven.NewClient.Client.Data;

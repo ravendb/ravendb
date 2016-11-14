@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Documents;
 
 namespace Raven.NewClient.Client.Documents

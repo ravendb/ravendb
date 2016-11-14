@@ -15,19 +15,18 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Raven.Abstractions.Spatial;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Spatial;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.NewClient.Client.Document.Batches;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Document.SessionOperations;
 using Raven.NewClient.Client.Linq;
 using Raven.NewClient.Client.Listeners;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Spatial;
@@ -37,6 +36,7 @@ using Raven.NewClient.Json.Linq;
 using Raven.NewClient.Client.Document.Async;
 using Raven.NewClient.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.NewClient.Abstractions.Extensions;
 
 namespace Raven.NewClient.Client.Document
 {

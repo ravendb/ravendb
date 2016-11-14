@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
 using System.Net.Http;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Shard;

@@ -11,7 +11,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Utilities;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 
 namespace Raven.NewClient.Client.Linq
 {

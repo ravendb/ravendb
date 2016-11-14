@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Raven.Abstractions.Counters
+namespace Raven.NewClient.Abstractions.Counters
 {
 
     public class CounterStorageDocument

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Json;
 using Raven.NewClient.Client.OAuth;

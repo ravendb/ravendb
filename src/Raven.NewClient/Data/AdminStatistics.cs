@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Raven.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.FileSystem;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     /// <summary>
     /// Server-wide statistics that contain memory usage and loaded resources information.

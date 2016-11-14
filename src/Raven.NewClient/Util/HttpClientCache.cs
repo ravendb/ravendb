@@ -5,7 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 
-using Raven.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Connection;
 
 namespace Raven.NewClient.Client.Util
 {

@@ -3,7 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace Raven.Abstractions
+namespace Raven.NewClient.Abstractions
 {
     public static class NetworkUtil
     {

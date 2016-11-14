@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
+using Raven.NewClient.Abstractions;
 using Raven.NewClient.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;

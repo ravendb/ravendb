@@ -8,7 +8,7 @@ using System;
 using System.Net;
 using System.Net.Http;
 
-namespace Raven.Abstractions.Connection
+namespace Raven.NewClient.Abstractions.Connection
 {
     /// <summary>
     /// Event arguments for the event of creating a <see cref="WebRequest"/>

@@ -5,10 +5,10 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Json;
+using Raven.NewClient.Abstractions.Json;
 using  Raven.Imports.Newtonsoft.Json;
 using  Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Json.Utilities;
 
 namespace Raven.NewClient.Json.Linq

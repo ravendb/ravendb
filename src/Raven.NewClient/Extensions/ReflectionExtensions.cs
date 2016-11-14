@@ -10,7 +10,7 @@ using System.Linq;
 
 using System.Reflection;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.NewClient.Abstractions.Extensions
 {
     public static class ReflectionExtensions
     {

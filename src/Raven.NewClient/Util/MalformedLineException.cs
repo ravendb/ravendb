@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Abstractions.Util 
+namespace Raven.NewClient.Abstractions.Util 
 {
     public class MalformedLineException : Exception 
     {

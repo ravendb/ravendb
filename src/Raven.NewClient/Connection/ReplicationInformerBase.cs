@@ -5,11 +5,11 @@
 //-----------------------------------------------------------------------
 using System.Net.Http;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Logging;
+using Raven.NewClient.Abstractions.Replication;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Request;
 using Raven.NewClient.Client.Metrics;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -22,7 +22,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Data;
 
 namespace Raven.NewClient.Client.Connection

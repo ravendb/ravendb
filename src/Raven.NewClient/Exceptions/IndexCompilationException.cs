@@ -1,6 +1,6 @@
 using System;
 
-using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 
 namespace Raven.NewClient.Client.Exceptions
 {

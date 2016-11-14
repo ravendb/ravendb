@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Counters;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Counters;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Counters.Changes;
 using Raven.NewClient.Client.Counters.Replication;

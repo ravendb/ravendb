@@ -6,7 +6,7 @@
 using System;
 using System.IO;
 
-namespace Raven.Abstractions.Connection
+namespace Raven.NewClient.Abstractions.Connection
 {
     public class CountingStream : Stream
     {

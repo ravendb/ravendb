@@ -2,10 +2,10 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
-using Raven.Abstractions.Exceptions;
+using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Util;
-using Raven.Abstractions;
+using Raven.NewClient.Abstractions;
 using Raven.NewClient.Client.Exceptions;
 
 namespace Raven.NewClient.Client.Indexes

@@ -7,7 +7,7 @@
 using System.Threading.Tasks;
 using  Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.Counters
+namespace Raven.NewClient.Abstractions.Counters
 {
     public class CounterChange
     {

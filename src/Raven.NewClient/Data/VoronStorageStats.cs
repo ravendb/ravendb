@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
 
-namespace Raven.Abstractions.Data
+namespace Raven.NewClient.Abstractions.Data
 {
     public class VoronStorageStats
     {

@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 

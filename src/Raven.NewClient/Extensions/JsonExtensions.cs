@@ -10,8 +10,8 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-using Raven.Abstractions.Json;
-using Raven.Abstractions.Linq;
+using Raven.NewClient.Abstractions.Json;
+using Raven.NewClient.Abstractions.Linq;
 using  Raven.Imports.Newtonsoft.Json;
 using  Raven.Imports.Newtonsoft.Json.Bson;
 using  Raven.Imports.Newtonsoft.Json.Serialization;
@@ -19,7 +19,7 @@ using Raven.NewClient.Json.Linq;
 using System.Collections.Generic;
 using Raven.NewClient.Client.Linq;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.NewClient.Abstractions.Extensions
 {
     /// <summary>
     /// Json extensions 

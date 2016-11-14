@@ -10,12 +10,12 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using Raven.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Documents.Commands;
 using Sparrow.Json;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Exceptions;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Exceptions;
 using Sparrow.Logging;
 

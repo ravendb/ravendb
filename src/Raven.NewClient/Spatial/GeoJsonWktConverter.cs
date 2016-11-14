@@ -10,7 +10,7 @@ using System.Text;
 using  Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Spatial
+namespace Raven.NewClient.Abstractions.Spatial
 {
     public class GeoJsonWktConverter
     {

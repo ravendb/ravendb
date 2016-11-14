@@ -3,10 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.Abstractions.Commands
+namespace Raven.NewClient.Abstractions.Commands
 {
     /// <summary>
     /// A single operation inside a batch

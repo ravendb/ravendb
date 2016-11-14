@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
-using Raven.Abstractions.Replication;
+using Raven.NewClient.Abstractions.Replication;
 using Raven.NewClient.Client.Linq;
 
 namespace Raven.NewClient.Client

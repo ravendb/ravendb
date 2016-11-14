@@ -1,7 +1,7 @@
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Logging;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.FileSystem;
+using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Request;
 using Raven.Imports.Newtonsoft.Json;
@@ -12,9 +12,9 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
-using Raven.Abstractions;
-using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Replication;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Data;
 
 namespace Raven.NewClient.Client.FileSystem.Connection

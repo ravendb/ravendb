@@ -1,4 +1,4 @@
-namespace Raven.Abstractions.Util.Encryptors
+namespace Raven.NewClient.Abstractions.Util.Encryptors
 {
     using System;
 
