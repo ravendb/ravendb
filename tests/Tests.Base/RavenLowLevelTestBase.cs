@@ -38,9 +38,9 @@ namespace NewClientTests
             _pathsToDelete.Add(dataDirectory);
 
             var configuration = new RavenConfiguration();
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory), int.MaxValue.ToString());
             configuration.Initialize();
             configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true;
-            configuration.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory = int.MaxValue;
             configuration.Core.RunInMemory = runInMemory;
             configuration.Core.DataDirectory = dataDirectory;
 
