@@ -1601,18 +1601,34 @@ pre {
     border-left-color: @gray-dark;
 }
 
+@chart-documents-color: #66418c;
+@chart-index-color: #14717b;
+@chart-indexes-color: #219aa0;
+@chart-subscriptions-color: #d1711b;
+@chart-configuration-color: #c73774;
+@chart-free-color: @gray-darker;
+@chart-data-color: #8d6cab;
+@chart-tables-color: #7cb82f;
+@chart-table_data-color: #b0d775;
+@chart-table-color: #f0c23b;
+@chart-tree-color: #af1923;
+@chart-trees-color: #dd5143;
+@chart-jurnal-color: #046293;
+@chart-jurnals-color: #008cc9;
+@chart-structure-color: #80ced0;
+
 #storage-report {
-    .tooltip {
+    .chart-tooltip {
         box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.45);
         position: absolute;
         text-align: center;
         background: @gray-darker;
         color: @text-color;
         border: 0px;
-        padding:8px 16px;
+        padding: 8px 16px;
         border-radius: 2px;
         pointer-events: none;
-        opacity:1;
+        opacity: 1;
         transform: translateY(-30px);
     }
 
@@ -1632,86 +1648,298 @@ pre {
         cursor: pointer;
         fill: steelblue;
     }
-    
+
     .free text {
         fill: white;
     }
 
     .cell {
         &.documents {
-            fill:#4c4f69;
+            fill: @chart-documents-color;
+
+            &:hover {
+                fill: lighten(@chart-documents-color,5%);
+            }
         }
+
         &.index {
-            fill:#64414d;
+            fill: @chart-index-color;
+
+            &:hover {
+                fill: lighten(@chart-index-color,5%);
+            }
         }
+
         &.subscriptions {
-            fill:#4d6d79;
+            fill: @chart-subscriptions-color;
+
+            &:hover {
+                fill: lighten(@chart-subscriptions-color,5%);
+            }
         }
+
         &.configuration {
-            fill:#808080;
+            fill: @chart-configuration-color;
+
+            &:hover {
+                fill: lighten(@chart-configuration-color,5%);
+            }
         }
+
         &.free {
-            fill:@gray-darker;
+            fill: @chart-free-color;
+
+            &:hover {
+                fill: lighten(@chart-free-color,5%);
+            }
         }
+
         &.data {
-            fill:#62547b;
-        } 
+            fill: @chart-data-color;
+
+            &:hover {
+                fill: lighten(@chart-data-color,5%);
+            }
+        }
+
         &.tables {
-            fill:#77afab;
+            fill: @chart-tables-color;
+
+            &:hover {
+                fill: lighten(@chart-tables-color,5%);
+            }
         }
+
         &.table_data {
-            fill:#956a85;
+            fill: @chart-table_data-color;
+
+            &:hover {
+                fill: lighten(@chart-table_data-color,5%);
+            }
         }
+
         &.table {
-            fill:#cab77d;
+            fill: @chart-table-color;
+
+            &:hover {
+                fill: lighten(@chart-table-color,5%);
+            }
         }
+
         &.tree {
-            fill:#547a5a;
+            fill: @chart-tree-color;
+
+            &:hover {
+                fill: lighten(@chart-tree-color,5%);
+            }
         }
+
         &.trees {
-            fill:#8d9468;
+            fill: @chart-trees-color;
+
+            &:hover {
+                fill: lighten(@chart-trees-color,5%);
+            }
         }
+
         &.journal {
-            fill:#8aaa77;
+            fill: @chart-jurnal-color;
+
+            &:hover {
+                fill: lighten(@chart-jurnal-color,5%);
+            }
         }
+
         &.journals {
-            fill:#b29d78;
+            fill: @chart-jurnals-color;
+
+            &:hover {
+                fill: lighten(@chart-jurnals-color,5%);
+            }
         }
+
         &.indexes {
-            fill:#693d2c;
-        } 
+            fill: @chart-indexes-color;
+
+            &:hover {
+                fill: lighten(@chart-indexes-color,5%);
+            }
+        }
+
         &.structure {
-            fill:#9f89b2;
+            fill: @chart-structure-color;
+
+            &:hover {
+                fill: lighten(@chart-structure-color,5%);
+            }
         }
 
         rect {
-            fill-opacity: .8;
+            fill-opacity: 1;
             stroke: transparent;
             stroke-linejoin: miter;
         }
 
         text {
             font-weight: bold;
-            fill: @gray-light;
+            fill: @gray-lighter;
             pointer-events: none;
             font-size: 12px;
         }
 
         &:hover {
             rect {
-                fill-opacity: 1;
             }
+
             text {
-                fill:@gray-lighter;
+                fill: @gray-lighter;
             }
         }
     }
 }
 
+.current-path {
+    a {
+        padding: 0px 10px;
+        background-color: @gray-dark;
+        display: inline-block;
+        font-size: 12px;
+
+        &.documents {
+            background-color: @chart-documents-color;
+
+            &:hover {
+                background-color: lighten(@chart-documents-color,5%);
+            }
+        }
+
+        &.index {
+            background-color: @chart-index-color;
+
+            &:hover {
+                background-color: lighten(@chart-index-color,5%);
+            }
+        }
+
+        &.subscriptions {
+            background-color: @chart-subscriptions-color;
+
+            &:hover {
+                background-color: lighten(@chart-subscriptions-color,5%);
+            }
+        }
+
+        &.configuration {
+            background-color: @chart-configuration-color;
+
+            &:hover {
+                background-color: lighten(@chart-configuration-color,5%);
+            }
+        }
+
+        &.free {
+            background-color: @chart-free-color;
+
+            &:hover {
+                background-color: lighten(@chart-free-color,5%);
+            }
+        }
+
+        &.data {
+            background-color: @chart-data-color;
+
+            &:hover {
+                background-color: lighten(@chart-data-color,5%);
+            }
+        }
+
+        &.tables {
+            background-color: @chart-tables-color;
+
+            &:hover {
+                background-color: lighten(@chart-tables-color,5%);
+            }
+        }
+
+        &.table_data {
+            background-color: @chart-table_data-color;
+
+            &:hover {
+                background-color: lighten(@chart-table_data-color,5%);
+            }
+        }
+
+        &.table {
+            background-color: @chart-table-color;
+
+            &:hover {
+                background-color: lighten(@chart-table-color,5%);
+            }
+        }
+
+        &.tree {
+            background-color: @chart-tree-color;
+
+            &:hover {
+                background-color: lighten(@chart-tree-color,5%);
+            }
+        }
+
+        &.trees {
+            background-color: @chart-trees-color;
+
+            &:hover {
+                background-color: lighten(@chart-trees-color,5%);
+            }
+        }
+
+        &.journal {
+            background-color: @chart-jurnal-color;
+
+            &:hover {
+                background-color: lighten(@chart-jurnal-color,5%);
+            }
+        }
+
+        &.journals {
+            background-color: @chart-jurnals-color;
+
+            &:hover {
+                background-color: lighten(@chart-jurnals-color,5%);
+            }
+        }
+
+        &.indexes {
+            background-color: @chart-indexes-color;
+
+            &:hover {
+                background-color: lighten(@chart-indexes-color,5%);
+            }
+        }
+
+        &.structure {
+            background-color: @chart-structure-color;
+
+            &:hover {
+                background-color: lighten(@chart-structure-color,5%);
+            }
+        }
+    }
+
+    i {
+        font-size: 14px;
+        color: @gray-dark;
+        width: 11px;
+        display: inline-block;
+        margin-left: -7px;
+    }
+}
+
 .popover {
-    margin-left:60px;
+    margin-left: 60px;
+
     .arrow {
-        left:35% !important;
+        left: 35% !important;
     }
 }
 

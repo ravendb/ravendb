@@ -275,7 +275,7 @@ class storageReport extends viewModelBase {
             .value(d => d.size)
             .size([this.w, this.h]);
 
-        this.tooltip = d3.select(".tooltip");
+        this.tooltip = d3.select(".chart-tooltip");
 
         const nodes = this.treemap.nodes(this.node())
             .filter(n => !n.children);

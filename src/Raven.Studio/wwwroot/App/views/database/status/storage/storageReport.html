@@ -1,16 +1,16 @@
 <div id="storage-report">
 
     <div id="storage-report-container">
-        <div class="tooltip" style="opacity: 0">
+        <div class="chart-tooltip" style="opacity: 0">
         </div>
         <div class="chart"></div>
     </div>
     
-    <div>
-        Current path:
+    <div class="current-path">
+        <div class="small">Current path:</div>
         <span data-bind="foreach: currentPath">
             <a href="#" data-bind="click: $root.onClick.bind($root, $data)"><span data-bind="text: name"></span><br /><small data-bind="text: type"></small></a>
-            <span data-bind="visible: $index() < $root.currentPath().length - 1">&raquo;</span>
+            <i data-bind="visible: $index() < $root.currentPath().length - 1" class="icon-arrow-filled-right"></i>
         </span>
     </div>
 
