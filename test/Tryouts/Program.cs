@@ -8,12 +8,13 @@ namespace Tryouts
     {
         static unsafe void Main(string[] args)
         {
+            //LoggingSource.Instance.SetupLogMode(LogMode.Information, "E:\\Work");
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var store = new DocumentReplication())
+                using (var store = new FastTests.Server.Replication.ReplicationIndexesAndTransformers())
                 {
-                    store.CanReplicateDocument().Wait();
+                    store.Can_replicate_transformer();
                 }
             }
         }

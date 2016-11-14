@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -14,7 +14,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using System.Net.Http;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Json;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Replication.Messages;
@@ -63,7 +62,9 @@ namespace Raven.Server.Documents.Replication
             _database = database;
             _destination = destination;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
-            _database.Notifications.OnDocumentChange += OnDocumentChange;            
+            _database.Notifications.OnDocumentChange += OnDocumentChange;
+            _database.Notifications.OnIndexChange += OnIndexChange;
+            _database.Notifications.OnTransformerChange += OnTransformerChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
 
@@ -145,28 +146,28 @@ namespace Raven.Server.Documents.Replication
                             }
                             catch (Exception e)
                             {
-                                if(_log.IsInfoEnabled)
-                                    _log.Info("Failed to parse initial server response. This is definitely not supposed to happen.",e);
+                                if (_log.IsInfoEnabled)
+                                    _log.Info(
+                                        "Failed to parse initial server response. This is definitely not supposed to happen.",
+                                        e);
                                 throw;
                             }
 
                             while (_cts.IsCancellationRequested == false)
                             {
                                 _context.ResetAndRenew();
-                                using (_context.OpenReadTransaction())
-                                {
-                                    var currentEtag = _database.IndexMetadataPersistence.ReadLastEtag();
+                                var currentEtag = _database.IndexMetadataPersistence.ReadLastEtag();
 
-                                    if (currentEtag != indexAndTransformerSender.LastEtag)
-                                    {
-                                        indexAndTransformerSender.ExecuteReplicationOnce();
-                                    }
+                                if (currentEtag != indexAndTransformerSender.LastEtag)
+                                {
+                                    indexAndTransformerSender.ExecuteReplicationOnce();
                                 }
+
                                 if (documentSender.ExecuteReplicationOnce() == false)
                                 {
                                     using (_context.OpenReadTransaction())
                                     {
-                                        var currentEtag =
+                                        currentEtag =
                                             DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
                                         if (currentEtag != _lastSentDocumentEtag)
                                             continue;
@@ -192,6 +193,18 @@ namespace Raven.Server.Documents.Replication
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Operation canceled on replication thread ({FromToString}). Stopped the thread.");
+            }
+            catch (IOException e)
+            {
+                if (_log.IsInfoEnabled)
+                {
+                    if (e.InnerException is SocketException)
+                        _log.Info(
+                            $"SocketException was thrown from the connection to remote node ({FromToString}). This might mean that the remote node is done or there is a network issue.",
+                            e);
+                    else
+                        _log.Info($"IOException was thrown from the connection to remote node ({FromToString}).", e);
+                }
             }
             catch (Exception e)
             {
@@ -416,6 +429,34 @@ namespace Raven.Server.Documents.Replication
         {
             if (IncomingReplicationHandler.IsIncomingReplicationThread
                 && notification.Type != DocumentChangeTypes.DeleteOnTombstoneReplication)
+                return;
+            _waitForChanges.Set();
+        }
+
+        private void OnIndexChange(IndexChangeNotification notification)
+        {
+            if (notification.Type != IndexChangeTypes.IndexAdded &&
+                notification.Type != IndexChangeTypes.IndexRemoved)
+                return;            
+
+            if(_log.IsInfoEnabled)
+                _log.Info($"Received index {notification.Type} event, index name = {notification.Name}, etag = {notification.Etag}");
+
+            if (IncomingReplicationHandler.IsIncomingReplicationThread)
+                return;
+            _waitForChanges.Set();
+        }
+
+        private void OnTransformerChange(TransformerChangeNotification notification)
+        {
+            if (notification.Type != TransformerChangeTypes.TransformerAdded &&
+                notification.Type != TransformerChangeTypes.TransformerRemoved)
+                return;
+
+            if (_log.IsInfoEnabled)
+                _log.Info($"Received transformer {notification.Type} event, transformer name = {notification.Name}, etag = {notification.Etag}");
+
+            if (IncomingReplicationHandler.IsIncomingReplicationThread)
                 return;
             _waitForChanges.Set();
         }

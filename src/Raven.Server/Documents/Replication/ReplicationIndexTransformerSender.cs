@@ -63,7 +63,15 @@ namespace Raven.Server.Documents.Replication
                                             throw new InvalidDataException(
                                                 $"Index with name {item.Name} has metadata, but is not at the index store. This is not supposed to happen and is likely a bug.");
 
-                                        IndexProcessor.Export(writer, index, _parent._context, false);
+                                        try
+                                        {
+                                            IndexProcessor.Export(writer, index, _parent._context, false);
+                                        }
+                                        catch (InvalidOperationException e)
+                                        {
+                                            if(_log.IsInfoEnabled)
+                                                _log.Info($"Failed to export index definition for replication. Index name = {item.Name}",e);   
+                                        }
                                         break;
                                     case IndexEntryType.Transformer:
                                         var transformer = _parent._database.TransformerStore.GetTransformer(item.Id);
@@ -71,7 +79,15 @@ namespace Raven.Server.Documents.Replication
                                             throw new InvalidDataException(
                                                 $"Transformer with name {item.Name} has metadata, but is not at the transformer store. This is not supposed to happen and is likely a bug.");
 
-                                        TransformerProcessor.Export(writer, transformer, _parent._context);
+                                        try
+                                        {
+                                            TransformerProcessor.Export(writer, transformer, _parent._context);
+                                        }
+                                        catch (InvalidOperationException e)
+                                        {
+                                            if (_log.IsInfoEnabled)
+                                                _log.Info($"Failed to export transformer definition for replication. Transformer name = {item.Name}", e);
+                                        }
                                         break;
                                     default:
                                         throw new ArgumentOutOfRangeException(nameof(item),
@@ -109,7 +125,16 @@ namespace Raven.Server.Documents.Replication
 
                 _parent.CancellationToken.ThrowIfCancellationRequested();
 
-                SendIndexTransformerBatch();
+                try
+                {
+                    SendIndexTransformerBatch();
+                }
+                catch (Exception e)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Failed to send index/transformer replication batch", e);
+                    throw;
+                }
             }
             finally
             {
@@ -155,10 +180,6 @@ namespace Raven.Server.Documents.Replication
             foreach (var item in _orderedReplicaItems)
                 WriteMetadataToServer(item.Value);
 
-            // we can release the read transaction while we are waiting for 
-            // reply from the server and not hold it for a long time
-            _parent._context.Transaction.Dispose();
-
             _stream.Flush();
             sw.Stop();
 
@@ -166,7 +187,7 @@ namespace Raven.Server.Documents.Replication
 
             if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
                 _log.Info(
-                    $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. First sent etag = {_orderedReplicaItems[0].Etag}, last sent etag = {LastEtag}");
+                    $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {LastEtag}");
 
             _parent._lastIndexOrTransformerSentTime = DateTime.UtcNow;
             using (_parent._context.OpenReadTransaction())

@@ -118,7 +118,16 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 _parent.CancellationToken.ThrowIfCancellationRequested();
-                SendDocumentsBatch();
+                try
+                {
+                    SendDocumentsBatch();
+                }
+                catch (Exception e)
+                {
+                    if(_log.IsInfoEnabled)
+                        _log.Info("Failed to send document replication batch",e);
+                    throw;
+                }
                 return true;
             }
             finally
@@ -193,7 +202,7 @@ namespace Raven.Server.Documents.Replication
 
             if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
                 _log.Info(
-                    $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. First sent etag = {_orderedReplicaItems[0].Etag}, last sent etag = {_lastEtag}");
+                    $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
             using (_parent._context.OpenReadTransaction())

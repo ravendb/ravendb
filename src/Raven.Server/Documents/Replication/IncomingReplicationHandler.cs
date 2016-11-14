@@ -232,7 +232,17 @@ namespace Raven.Server.Documents.Replication
             var writeBuffer = _context.GetStream();
             // this will read the documents to memory from the network
             // without holding the write tx open
-            ReadIndexesTransformersFromSource(ref writeBuffer, itemCount);
+            try
+            {
+                ReadIndexesTransformersFromSource(ref writeBuffer, itemCount);
+            }
+            catch (Exception e)
+            {
+                if(_log.IsInfoEnabled)
+                    _log.Info("Failed to read transformer information from replication message. This is not supposed to happen and it is likely due to a bug.",e);
+                throw;
+            }
+
             byte* buffer;
             int totalSize;
             writeBuffer.EnsureSingleChunk(out buffer, out totalSize);
@@ -304,7 +314,7 @@ namespace Raven.Server.Documents.Replication
                                         _log.Info($"Replicated tranhsformer with name = {item.Name}");
                                     }
 
-                                    _database.TransformerStore.DeleteTransformer(item.Name);
+                                    _database.TransformerStore.TryDeleteTransformerIfExists(item.Name);
 
                                     try
                                     {
@@ -330,6 +340,12 @@ namespace Raven.Server.Documents.Replication
 
                     _context.Transaction.Commit();
                 }
+            }
+            catch (Exception e)
+            {
+                if(_log.IsInfoEnabled)
+                    _log.Info("Failed to receive transformer replication batch. This is not supposed to happen, and is likely a bug.",e);
+                throw;
             }
             finally
             {
@@ -498,22 +514,26 @@ namespace Raven.Server.Documents.Replication
                                 doc.DocumentSize, _context);
                         }
                         ChangeVectorEntry[] conflictingVector;
-                        var conflictStatus = GetConflictStatus(_context, doc.Id, _tempReplicatedChangeVector,out conflictingVector);
+                        var conflictStatus = GetConflictStatus(_context, doc.Id, _tempReplicatedChangeVector,
+                            out conflictingVector);
                         switch (conflictStatus)
                         {
                             case ConflictStatus.Update:
                                 if (json != null)
                                 {
-                                    if(_log.IsInfoEnabled)
-                                        _log.Info($"Conflict check resolved to Update operation, doing PUT on doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
-                                    _database.DocumentsStorage.Put(_context, doc.Id, null, json, _tempReplicatedChangeVector);
+                                    if (_log.IsInfoEnabled)
+                                        _log.Info(
+                                            $"Conflict check resolved to Update operation, doing PUT on doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
+                                    _database.DocumentsStorage.Put(_context, doc.Id, null, json,
+                                        _tempReplicatedChangeVector);
                                 }
                                 else
                                 {
                                     if (_log.IsInfoEnabled)
-                                        _log.Info($"Conflict check resolved to Update operation, writing tombstone for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
+                                        _log.Info(
+                                            $"Conflict check resolved to Update operation, writing tombstone for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
                                     _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
-                                        _context,doc.Id,										
+                                        _context, doc.Id,
                                         _tempReplicatedChangeVector,
                                         doc.Collection);
                                 }
@@ -523,22 +543,25 @@ namespace Raven.Server.Documents.Replication
                                 goto case ConflictStatus.Update;
                             case ConflictStatus.Conflict:
                                 if (_log.IsInfoEnabled)
-                                    _log.Info($"Conflict check resolved to Conflict operation, resolving conflict for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
+                                    _log.Info(
+                                        $"Conflict check resolved to Conflict operation, resolving conflict for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
                                 HandleConflict(doc, conflictingVector, json);
                                 break;
                             case ConflictStatus.AlreadyMerged:
                                 if (_log.IsInfoEnabled)
-                                    _log.Info($"Conflict check resolved to AlreadyMerged operation, nothing to do for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
+                                    _log.Info(
+                                        $"Conflict check resolved to AlreadyMerged operation, nothing to do for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
                                 //nothing to do
                                 break;
                             default:
-                                throw new ArgumentOutOfRangeException(nameof(conflictStatus), "Invalid ConflictStatus: " + conflictStatus);
+                                throw new ArgumentOutOfRangeException(nameof(conflictStatus),
+                                    "Invalid ConflictStatus: " + conflictStatus);
                         }
                     }
                     _database.DocumentsStorage.SetDatabaseChangeVector(_context,
                         maxReceivedChangeVectorByDatabase);
                     _database.DocumentsStorage.SetLastReplicateEtagFrom(_context, ConnectionInfo.SourceDatabaseId,
-                        lastEtag);                    
+                        lastEtag);
                     _context.Transaction.Commit();
                 }
                 sw.Stop();
@@ -546,6 +569,12 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info(
                         $"Replication connection {FromToString}: received and written {replicatedDocsCount:#,#;;0} documents to database in {sw.ElapsedMilliseconds:#,#;;0} ms, with last etag = {lastEtag}.");
+            }
+            catch (Exception e)
+            {
+                if(_log.IsInfoEnabled)
+                    _log.Info("Failed to receive documents replication batch. This is not supposed to happen, and is likely a bug.", e);
+                throw;
             }
             finally
             {
