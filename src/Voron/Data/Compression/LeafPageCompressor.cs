@@ -23,9 +23,8 @@ namespace Voron.Data.Compression
         {
             if (defrag) // TODO arek
                 page.Defrag(tx); // TODO arek no need to call it on every time probably - need to check if a page really requires defrag
-
-            var pageSize = tx.Environment.Options.PageSize;
-            var valuesSize = pageSize - page.Upper;
+            
+            var valuesSize = page.PageSize - page.Upper;
 
             TemporaryPage temp;
             var returnTempPage = tx.Environment.GetTemporaryPage(tx, out temp);
@@ -39,7 +38,7 @@ namespace Voron.Data.Compression
                 compressionInput,
                 compressionOutput,
                 valuesSize,
-                pageSize - Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize);
+                page.PageSize - Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize);
 
             if (compressedSize == 0)
             {
@@ -51,7 +50,7 @@ namespace Voron.Data.Compression
             Memory.Copy(tempPage.Base, page.Base, Constants.TreePageHeaderSize);
 
             tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize + compressedSize);
-            tempPage.Upper = (ushort)pageSize;
+            tempPage.Upper = (ushort)tempPage.PageSize;
 
             result = new CompressionResult
             {

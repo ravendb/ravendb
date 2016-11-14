@@ -454,7 +454,7 @@ namespace Voron.Data.BTrees
             var result = $"#{PageNumber} (count: {NumberOfEntries}) {TreeFlags}";
 
             if (IsCompressed)
-                result += $" Compressed (size: {CompressionHeader->CompressedSize})";
+                result += $" Compressed (size: {CompressionHeader->CompressedSize}, uncompressed: {CompressionHeader->UncompressedSize})";
 
             return result;
         }
@@ -489,6 +489,8 @@ namespace Voron.Data.BTrees
 
         internal void Defrag(LowLevelTransaction tx)
         {
+            Debug.Assert(PageSize == tx.Environment.Options.PageSize);
+
             TemporaryPage tmp;
             using (tx.Environment.GetTemporaryPage(tx, out tmp))
             {

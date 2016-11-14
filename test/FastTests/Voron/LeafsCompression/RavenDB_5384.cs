@@ -11,7 +11,8 @@ namespace FastTests.Voron.LeafsCompression
     {
         [Theory]
         [InlineData(26)]
-        [InlineData(100)]
+        [InlineData(128)]
+        [InlineData(1024)]
         public void Can_compress_leaf_pages_and_read_from_them(int iterationCount)
         {
             using (var tx = Env.WriteTransaction())
