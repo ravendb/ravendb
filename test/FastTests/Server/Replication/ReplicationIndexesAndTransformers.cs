@@ -190,6 +190,49 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
+        public void Can_replicate_multiple_indexes_and_multiple_transformers()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
+            {
+                var userByAge = new UserByAgeIndex();
+                userByAge.Execute(source);
+
+                var usernameToUpperTransformer = new UsernameToUpperTransformer();
+                usernameToUpperTransformer.Execute(source);
+
+                var userByName = new UserByNameIndex();
+                userByName.Execute(source);
+
+                var usernameToLowerTransformer = new UsernameToLowerTransformer();
+                usernameToLowerTransformer.Execute(source);
+
+                SetupReplication(source, destination);
+
+                var sw = Stopwatch.StartNew();
+                var destIndexNames = new string[0];
+                var destTransformerNames = new string[0];
+                var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
+                while (sw.ElapsedMilliseconds < timeout)
+                    destIndexNames = destination.DatabaseCommands.GetIndexNames(0, 1024);
+                
+                sw.Restart();
+                while (sw.ElapsedMilliseconds < timeout)
+                    destTransformerNames = destination.DatabaseCommands.GetTransformers(0, 1024).Select(x => x.Name).ToArray();
+
+                Assert.NotNull(destIndexNames); //precaution
+                Assert.Equal(2, destIndexNames.Length);
+                Assert.True(destIndexNames.Contains(userByAge.IndexName));
+                Assert.True(destIndexNames.Contains(userByName.IndexName));
+
+                Assert.NotNull(destTransformerNames); //precaution
+                Assert.Equal(2, destTransformerNames.Length);
+                Assert.True(destTransformerNames.Contains(usernameToUpperTransformer.TransformerName));
+                Assert.True(destTransformerNames.Contains(usernameToLowerTransformer.TransformerName));
+            }
+        }
+
+        [Fact]
         public void Can_replicate_transformer()
         {
             using (var source = GetDocumentStore())
