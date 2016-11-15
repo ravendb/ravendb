@@ -566,8 +566,9 @@ input[type=file] + .form-control {
     }
 }
 
-.btn.btn-spinner {
+.btn-spinner {
     .global-spinner;
+    pointer-events: none;
 
     [class*=" icon-"],
     [class^="icon-"] {
@@ -579,11 +580,35 @@ input[type=file] + .form-control {
         height: 18px;
         border: 3px solid rgba(255, 255, 255, 0.2);
         border-top-color: #FFF;
-        margin-right: 11px;
+        margin-right: 5px;
         margin-left: -2px;
         margin-top: -5px;
         position: relative;
         top: 4px;
+    }
+}
+
+.dropdown-menu {
+    a.btn-spinner {
+        .global-spinner;
+        pointer-events:none;
+
+        [class*=" icon-"],
+        [class^="icon-"] {
+            display: none;
+        }
+
+        &:before {
+            width: 13px;
+            height: 13px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #FFF;
+            margin-right: 0px;
+            margin-left: 2px;
+            margin-top: 0px;
+            position: relative;
+            top: 2px;
+        }
     }
 }
 
@@ -1318,10 +1343,6 @@ pre {
         margin-bottom: @grid-gutter-width / 8;
         background-color: @panel-bg;
 
-        &.active {
-            box-shadow: 0 0 0 1px #1e2626, 0 0 0 2px #ff5500;
-        }
-
         &.panel-success {
             box-shadow: 6px 0 0 0 @brand-success-dark inset;
 
@@ -1525,6 +1546,11 @@ pre {
 }
 
 .panel {
+
+    &.active {
+        box-shadow: 0 0 0 1px #1e2626, 0 0 0 2px #ff5500;
+    }
+
     .panel-heading {
         .right-action-button {
             display: inline;

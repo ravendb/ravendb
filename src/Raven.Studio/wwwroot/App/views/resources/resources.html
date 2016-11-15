@@ -47,7 +47,7 @@
     <hr />    
     
     <div data-bind="foreach: resources().sortedResources">
-        <div class="panel resource" data-bind="visible: !filteredOut(), css: { 'panel-success': isCurrentlyActiveResource() }">
+        <div class="panel resource" data-bind="visible: !filteredOut(), css: { 'active': isCurrentlyActiveResource() }">
             <div class="padding padding-sm">
                 <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                 <div class="row">

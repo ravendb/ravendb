@@ -226,7 +226,7 @@ function getManageServerMenuItem() {
         moduleId: 'viewmodels/manage/manageServer',
         title: 'Manage server',
         nav: true,
-        css: 'icon-settings',
+        css: 'icon-manage-server',
         dynamicHash: appUrl.forTempManageServer
         
     });
