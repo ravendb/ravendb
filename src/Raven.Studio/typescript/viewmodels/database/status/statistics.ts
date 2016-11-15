@@ -5,17 +5,21 @@ import changesContext = require("common/changesContext");
 import changeSubscription = require('common/changeSubscription');
 import optional = require("common/optional");
 
-class statistics extends viewModelBase {
-    stats = ko.observable<databaseStatisticsDto>();
-    indexes = ko.observableArray<KnockoutObservable<indexStatisticsDto>>();
-    noStaleIndexes = ko.computed(() => !!this.stats() && this.stats().CountOfStaleIndexesExcludingDisabledAndAbandoned == 0);
+import statsModel = require("models/database/stats/statistics");
 
+class statistics extends viewModelBase {
+
+    stats = ko.observable<statsModel>();
+
+    //TODO: noStaleIndexes = ko.computed(() => !!this.stats() && this.stats().CountOfStaleIndexesExcludingDisabledAndAbandoned == 0);
+
+    /* TODO
     disabledIndexes = ko.computed(() => {
         if (this.stats()) {
             var stats = this.stats();
             return stats.Indexes.filter(idx => idx.Priority.indexOf("Disabled") >= 0).map(idx => idx.Name);
         }
-    });
+    });*/
 
     private refreshStatsObservable = ko.observable<number>();
     private statsSubscription: KnockoutSubscription;
@@ -35,15 +39,16 @@ class statistics extends viewModelBase {
         }
     }
 
-    fetchStats(): JQueryPromise<databaseStatisticsDto> {
+    fetchStats(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {
         var db = this.activeDatabase();
         return new getDatabaseStatsCommand(db)
             .execute()
-            .done((result: databaseStatisticsDto) => this.processStatsResults(result));
+            .done((result: Raven.Client.Data.DatabaseStatistics) => this.processStatsResults(result));
 
     }
 
     createNotifications(): Array<changeSubscription> {
+        //TODO: don't bother about this now
         return [
             this.changesContext.currentResourceChangesApi().watchAllDocs((e) => this.refreshStatsObservable(new Date().getTime()))
             //TODO: this.changesContext.currentResourceChangesApi().watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime()))
@@ -51,12 +56,15 @@ class statistics extends viewModelBase {
     }
 
 
-    processStatsResults(results: databaseStatisticsDto) {
+    processStatsResults(results: Raven.Client.Data.DatabaseStatistics) {
+        this.stats(new statsModel(results));
+
 
         //TODO: create subclass of databaseStatisticsDto and cast to this
 
         // Attach some human readable dates to the indexes.
         // Attach string versions numbers with thousands separator to the indexes.
+        /* TODO:
         (<any>results)['CountOfDocumentsLocale'] = optional.val(results.CountOfDocuments).bind(v => v).bind(v => v.toLocaleString());
         (<any>results)['CurrentNumberOfItemsToIndexInSingleBatchLocale'] = optional.val(results.CurrentNumberOfItemsToIndexInSingleBatch).bind(v => v.toLocaleString());
         (<any>results)['CurrentNumberOfItemsToReduceInSingleBatchLocale'] = optional.val(results.CurrentNumberOfItemsToReduceInSingleBatch).bind(v => v.toLocaleString());
@@ -95,7 +103,7 @@ class statistics extends viewModelBase {
             var newData = results.Indexes.first(item => item.Name == idx);
             this.indexes().first(item => item().Name == idx)(newData);
         });
-
+        */
     }
 }
 

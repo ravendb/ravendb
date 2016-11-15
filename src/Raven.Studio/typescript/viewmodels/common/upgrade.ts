@@ -40,7 +40,7 @@ class upgrade extends viewModelBase {
         clearTimeout(this.timeoutHandle);
     }
 
-    fetchStats(): JQueryPromise<databaseStatisticsDto> {
+    fetchStats(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {
         var db = this.activeDatabase();
         if (db) {
             return new getDatabaseStatsCommand(db)
