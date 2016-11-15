@@ -544,6 +544,8 @@ namespace Sparrow.Json
                 ThrowObjectDisposed();
             switch (type & TypesMask)
             {
+                case BlittableJsonToken.EmbeddedBlittable:
+                    return ReadNestedObject(position);
                 case BlittableJsonToken.StartObject:
                     return new BlittableJsonReaderObject(position, _parent ?? this, type);
                 case BlittableJsonToken.StartArray:

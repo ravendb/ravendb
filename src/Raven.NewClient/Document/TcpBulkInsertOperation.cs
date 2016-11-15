@@ -138,7 +138,7 @@ namespace Raven.NewClient.Client.Document
                         jsonParser, jsonParserState))
                     {
                         _jsonOperationContext.CachedProperties.NewDocument();
-                        builder.ReadObject();
+                        builder.ReadObjectDocument();
                         while (true)
                         {
                             var read = jsonBuffer.Read(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
@@ -212,7 +212,7 @@ namespace Raven.NewClient.Client.Document
                 var writer = new BlittableJsonDocumentBuilder(context,
                     BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState);
 
-                writer.ReadObject();
+                writer.ReadObjectDocument();
 
                 var result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken).ConfigureAwait(false);
 
