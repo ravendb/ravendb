@@ -5,15 +5,18 @@
         </div>
         <div class="chart"></div>
     </div>
-    
+
+    <h4>Current path:</h4>
     <div class="current-path">
-        <div class="small">Current path:</div>
         <span data-bind="foreach: currentPath">
-            <a href="#" data-bind="click: $root.onClick.bind($root, $data)"><span data-bind="text: name"></span><br /><small data-bind="text: type"></small></a>
+            <a href="#" data-bind="click: $root.onClick.bind($root, $data), attr: { class: type }">
+                <small data-bind="text: type"></small>
+                <span data-bind="text: name"></span>
+            </a>
             <i data-bind="visible: $index() < $root.currentPath().length - 1" class="icon-arrow-filled-right"></i>
         </span>
     </div>
-
+    <hr />
     <table class="table table-condensed table-striped" data-bind="if: node() && node().internalChildren">
         <thead>
             <tr>
