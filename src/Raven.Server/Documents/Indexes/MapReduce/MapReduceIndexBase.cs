@@ -23,10 +23,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         internal const string ReducePhaseTreeName = "ReducePhaseTree";
         internal const string ResultsStoreTypesTreeName = "ResultsStoreTypes";
         
-        private readonly MapPhaseStats _stats = new MapPhaseStats();
         internal readonly MapReduceIndexingContext MapReduceWorkContext = new MapReduceIndexingContext();
 
         private IndexingStatsScope _statsInstance;
+        private readonly MapPhaseStats _stats = new MapPhaseStats();
+
         private PageLocator _pageLocator;
         
         protected MapReduceIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)

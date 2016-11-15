@@ -14,8 +14,8 @@ namespace Raven.Server.Documents.Indexes
     public abstract class MapIndexBase<T> : Index<T> where T : IndexDefinitionBase
     {
         private CollectionOfBloomFilters _filter;
-        private IndexingStatsScope _stats;
-        private IndexingStatsScope _bloomStats;
+        private IndexingStatsScope _statsInstance;
+        private MapStats _stats = new MapStats();
 
         protected MapIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Indexes
             EnsureValidStats(stats);
 
             bool mustDelete;
-            using (_bloomStats?.Start() ?? (_bloomStats = stats.For(IndexingOperation.Map.Bloom)))
+            using (_stats.BloomStats.Start())
             {
                 mustDelete = _filter.Add(key) == false;
             }
@@ -81,11 +81,16 @@ namespace Raven.Server.Documents.Indexes
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureValidStats(IndexingStatsScope stats)
         {
-            if (_stats == stats)
+            if (_statsInstance == stats)
                 return;
 
-            _stats = stats;
-            _bloomStats = null;
+            _statsInstance = stats;
+            _stats.BloomStats = stats.For(IndexingOperation.Map.Bloom, start: false);
+        }
+
+        private class MapStats
+        {
+            public IndexingStatsScope BloomStats;
         }
     }
 }
