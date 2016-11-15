@@ -593,8 +593,9 @@ class shell extends viewModelBase {
         } 
 
         var env = license.licenseStatus() && license.licenseStatus().IsCommercial ? "prod" : "dev";
+        var fullVersion = buildVersionResult.FullVersion;
         eventsCollector.default.initialize(
-            shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, shouldTrack);
+            shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, fullVersion, shouldTrack);
     }
 }
 

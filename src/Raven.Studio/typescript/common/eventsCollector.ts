@@ -1,7 +1,7 @@
 ﻿import liveTestDetector = require("common/liveTestDetector");
 
 class eventsCollector {
-    static UACode = "UA-82335022-3";// liveTestDetector.isLiveTest() ? "UA-82335022-2" : "UA-82335022-1";
+    static UACode = "UA-82335022-3"; //TODO @gregolsky liveTestDetector.isLiveTest() ? "UA-82335022-2" : "UA-82335022-1";
 
     static default = new eventsCollector();
 
@@ -12,13 +12,15 @@ class eventsCollector {
     version: string;
     build: number;
     env: string;
+    fullVersion: string;
     enabled = false;
     initialized = false;
 
-    initialize(version: string, build: number, env: string, enabled: boolean) {
+    initialize(version: string, build: number, env: string, fullVersion: string, enabled: boolean) {
         this.version = version;
         this.build = build;
         this.env = env;
+        this.fullVersion = fullVersion;
         this.enabled = enabled && eventsCollector.gaDefined();
         this.createTracker();
 
@@ -37,6 +39,7 @@ class eventsCollector {
             ga('set', 'dimension1', this.version);
             ga('set', 'dimension2', this.build);
             ga('set', 'dimension3', this.env);
+            ga('set', 'dimension4', this.fullVersion);
         }
     }
 

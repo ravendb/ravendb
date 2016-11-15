@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Reflection;
 
-[assembly: Raven.Client.RavenVersion(Build = "{build}", CommitHash = "{commit}", Version = "4.0")]
+[assembly: Raven.Client.RavenVersion(Build = "{build}", CommitHash = "{commit}", Version = "4.0", FullVersionTemplate = "4.0.0-alpha-{build}")]
 
 namespace Raven.Client
 {
@@ -12,6 +12,7 @@ namespace Raven.Client
         public string CommitHash { get; set; }
         public string Build { get; set; }
         public string Version { get; set; }
+        public string FullVersionTemplate { get; set; }
         public string BuildType { get; set; }
 
         private static int? _buildVersion;
@@ -52,6 +53,14 @@ namespace Raven.Client
                 }
 
                 return _buildVersion.Value;
+            }
+        }
+
+        public string FullVersion
+        {
+            get
+            {
+                return FullVersionTemplate.Replace("{build}", BuildVersion.ToString());
             }
         }
     }

@@ -215,6 +215,7 @@ interface serverBuildVersionDto {
     ProductVersion: string;
     BuildVersion: number;
     BuildType: buildType;
+    FullVersion: string;
 }
 
 interface latestServerBuildVersionDto {
