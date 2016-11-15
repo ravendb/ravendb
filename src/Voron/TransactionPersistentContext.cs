@@ -16,7 +16,7 @@ namespace Voron
             set
             {
                 _longLivedTransaction = value;
-                _cacheSize = _longLivedTransaction ? 128 : 16;
+                _cacheSize = _longLivedTransaction ? 512 : 128;
             }
         }
 
