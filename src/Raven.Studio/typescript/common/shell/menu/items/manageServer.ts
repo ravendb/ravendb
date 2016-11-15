@@ -34,7 +34,7 @@ function getManageServerMenuItem() {
                 title: "Replication",
                 tooltip: "Global replication settings",
                 nav: true,
-                css: 'icon-repplication',
+                css: 'icon-replication',
                 dynamicHash: appUrl.forGlobalConfigReplication
             }),
             new leafMenuItem({
