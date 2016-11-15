@@ -401,7 +401,9 @@ namespace Voron.Data.BTrees
             // this has the effect of compacting the page data and avoiding
             // internal page fragmentation
             TemporaryPage tmp;
-            using (tx.Environment.GetTemporaryPage(tx, out tmp))
+            using (PageSize == tx.Environment.Options.PageSize ? 
+                tx.Environment.GetTemporaryPage(tx, out tmp) : 
+                tx.Environment.DecompressionBuffers.GetTemporaryPage(tx, PageSize, out tmp))
             {
                 var copy = tmp.GetTempPage();
                 copy.TreeFlags = TreeFlags;
