@@ -10,7 +10,7 @@ function getQueryMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/query/query',
             title: 'Query',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-query',
             dynamicHash: appUrls.query('')
         }),
         /* TODO

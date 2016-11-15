@@ -10,7 +10,7 @@ function getTransformersMenuItem(appUrls: computedAppUrls) {
             title: 'Transformers',
             route: 'databases/transformers',
             moduleId: 'viewmodels/database/transformers/transformers',
-            css: 'icon-plus',
+            css: 'icon-list',
             nav: true,
             dynamicHash: appUrls.transformers
         }),
@@ -18,7 +18,7 @@ function getTransformersMenuItem(appUrls: computedAppUrls) {
             route: 'databases/transformers/edit(/:transformerName)',
             moduleId: 'viewmodels/database/transformers/editTransformer',
             title: 'Edit Transformer',
-            css: 'icon-plus',
+            css: 'icon-edit',
             nav: false
         }),
         new separatorMenuItem(),
@@ -32,5 +32,5 @@ function getTransformersMenuItem(appUrls: computedAppUrls) {
         })
     ];
 
-    return new intermediateMenuItem("Transformers", transformersChildren, 'icon-indexes');
+    return new intermediateMenuItem("Transformers", transformersChildren, 'icon-transformers');
 }

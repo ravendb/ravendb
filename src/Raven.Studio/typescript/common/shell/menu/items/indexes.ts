@@ -11,7 +11,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             nav: true,
             route: "databases/indexes",
             moduleId: "viewmodels/database/indexes/indexes",
-            css: 'icon-list',
+            css: 'icon-indexing',
             dynamicHash: appUrls.indexes
         }),
         new leafMenuItem({
@@ -20,6 +20,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             title: 'Indexing performance',
             tooltip: "Shows details about indexing peformance",
             nav: true,
+            css: 'icon-index-batch-size',
             dynamicHash: appUrls.indexPerformance
         }),
         new leafMenuItem({
@@ -28,6 +29,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             title: 'Index stats',
             tooltip: "Show details about indexing in/out counts",
             nav: true,
+            css: 'icon-index-stats',
             dynamicHash: appUrls.indexStats
         }),
         /* TODO
@@ -43,14 +45,14 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             title: 'Edit Index',
             route: 'databases/indexes/edit(/:indexName)',
             moduleId: 'viewmodels/database/indexes/editIndex',
-            css: 'icon-plus',
+            css: 'icon-edit',
             nav: false
         }),
         new leafMenuItem({
             title: 'Terms',
             route: 'databases/indexes/terms/(:indexName)',
             moduleId: 'viewmodels/database/indexes/indexTerms',
-            css: 'icon-plus',
+            css: 'icon-terms',
             nav: false
         }),
         new separatorMenuItem(),

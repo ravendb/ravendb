@@ -171,16 +171,16 @@
     .back {
         width: 26px;
         height: 26px;
-        padding: 8px;
+        padding: 4px;
         float: right;
         color: @brand-primary;
         text-transform: uppercase;
-        font-size: 14px;
+        line-height: 18px;
         font-weight: 700;
 
         &:before {
             content: "\e920";
-            font-size: 10px;
+            font-size: 18px;
         }
 
         &:hover {
@@ -225,7 +225,11 @@
         a {
             padding-top: 5px;
             padding-bottom: 5px;
-            cursor: pointer;
+            cursor: pointer;            
+        }
+
+        &>li.active a {
+           background-color:@brand-primary;
         }
 
         .arrow-right > a:after {
