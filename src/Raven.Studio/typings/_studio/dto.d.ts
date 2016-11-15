@@ -141,7 +141,7 @@ interface availableBundle {
 }
 
 
-interface storageReportItem {
+interface storageReportItemDto {
     Name: string;
     Type: string;
     Report: Voron.Debugging.StorageReport;
