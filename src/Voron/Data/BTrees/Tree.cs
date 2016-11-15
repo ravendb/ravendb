@@ -605,7 +605,8 @@ namespace Voron.Data.BTrees
 
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
-            AddToRecentlyFoundPages(cursor, p, leftmostPage, rightmostPage);
+            if (p.NumberOfEntries > 0) // compressed pages can have no ordinary entries
+                AddToRecentlyFoundPages(cursor, p, leftmostPage, rightmostPage);
 
             return p;
         }
