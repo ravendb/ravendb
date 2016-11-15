@@ -32,5 +32,5 @@ function getTransformersMenuItem(appUrls: computedAppUrls) {
         })
     ];
 
-    return new intermediateMenuItem("Transformers", transformersChildren, 'icon-transformers');
+    return new intermediateMenuItem("Transformers", transformersChildren, 'icon-etl');
 }

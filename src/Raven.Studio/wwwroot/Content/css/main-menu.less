@@ -19,6 +19,7 @@
         transform: translateX(0%);
     }
 }
+
 @keyframes menu-slidein {
     0% {
         opacity: 0;
@@ -52,6 +53,7 @@
         transform: rotate(-90deg) translateX(-100%) translateY(0);
     }
 }
+
 @keyframes menu-slidein-title {
     0% {
         opacity: 0;
@@ -64,7 +66,7 @@
 
     100% {
         opacity: 1;
-        transform: rotate(-90deg)  translateX(-100%) translateY(0);
+        transform: rotate(-90deg) translateX(-100%) translateY(0);
     }
 }
 
@@ -91,9 +93,11 @@
     border-right: 1px solid @layout-border;
     -webkit-transition: width @menu-transition-ease, transform @menu-transition-ease;
     transition: width @menu-transition-ease, transform @menu-transition-ease;
+
     @media (min-width:@screen-md) {
         top: @navbar-height;
     }
+
     @media (max-width:@screen-sm-max) {
         -webkit-transform: translateX(-100%);
         transform: translateX(-100%);
@@ -225,17 +229,20 @@
         a {
             padding-top: 5px;
             padding-bottom: 5px;
-            cursor: pointer;            
+            cursor: pointer;
         }
 
-        &>li.active a {
-           background-color:@brand-primary;
+        li.active a {
+            background-color: @gray-light;
+            color:@gray-dark;
+            i, i:before {
+                color:inherit;
+            }
         }
 
         .arrow-right > a:after {
             top: 12px;
         }
-
         // LEVEL 2 STYLES
         .level {
             z-index: 3;
@@ -243,8 +250,6 @@
             width: @menu-width - 80 + @slidein-distance;
             margin-right: 0;
         }
-
-
     }
 
     ul {
@@ -325,7 +330,6 @@
             top: 20px;
             left: 0;
             color: @gray;
-
             -webkit-transform-origin: 0 0;
             transform-origin: 0 0;
         }
@@ -346,7 +350,6 @@
             background-color: @gray;
         }
     }
-
     // STYLE OPEN SUBMENU (LEVEL 1 OR 2)
     &[data-level="1"],
     &[data-level="2"] {
@@ -376,7 +379,6 @@
             }
         }
     }
-
     //STYLE LEVEL 2 OPEN SUBMENU
     &[data-level="2"] {
         .level-1 {
@@ -392,6 +394,7 @@
         }
     }
 }
+
 @media (min-width:@screen-md) {
     /*
     .menu-collapse {
@@ -504,51 +507,3 @@
         border: 1px solid @gray;
     }
 */
-/* MENU ICONS */
-#main-menu,
-.inputs-container {
-    .icon-documents:before {
-        content: "\e927";
-        color: #0071bc;
-    }
-
-    .icon-indexes:before {
-        content: "\e926";
-        color: #f7931e;
-    }
-
-    .icon-query:before {
-        content: "\e923";
-        color: #c7b299;
-    }
-
-    .icon-new:before {
-        content: "\e927";
-        color: #d9e021;
-    }
-
-    .icon-tasks:before {
-        content: "\e930";
-        color: #fbb03b;
-    }
-
-    .icon-settings:before {
-        content: "\e93b";
-        color: #998675;
-    }
-
-    .icon-stats:before {
-        content: "\e927";
-        color: #0071bc;
-    }
-
-    .icon-manage-server:before {
-        content: "\e93b";
-        color: #998675;
-    }
-
-    .icon-license:before {
-        content: "\e927";
-        color: #e9eaea;
-    }
-}
