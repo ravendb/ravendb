@@ -286,11 +286,11 @@ class query extends viewModelBase {
 
         new getDatabaseStatsCommand(db)
             .execute()
-            .done((results: databaseStatisticsDto) => {
+            .done((results) => {
                 this.indexes(results.Indexes.map(i => {
                     return {
                         name: i.Name,
-                        hasReduce: !!i.LastReducedTimestamp
+                        hasReduce: false, //TODO: !!i.LastReducedTimestamp
                     };
                 }));
                 deferred.resolve();

@@ -109,8 +109,8 @@ class scriptedIndexes extends viewModelBase {
 
     private fetchAllIndexes(db: database): JQueryPromise<any> {
         return new getDatabaseStatsCommand(db)
-            .execute()
-            .done((results: databaseStatisticsDto) => this.performAllIndexesResult(results));
+            .execute();
+            //TODO: .done((results: databaseStatisticsDto) => this.performAllIndexesResult(results));
     }
 
     private performAllIndexesResult(results: databaseStatisticsDto) {

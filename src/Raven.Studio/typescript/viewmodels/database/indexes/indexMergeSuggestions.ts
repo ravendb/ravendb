@@ -44,12 +44,12 @@ class indexMergeSuggestions extends viewModelBase {
         return [ /* TODO changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchIndexMergeSuggestions()) */ ];
     }
 
-    private fetchStats(): JQueryPromise<databaseStatisticsDto> {
+    private fetchStats(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {
         var db = this.activeDatabase();
         if (db) {
             return new getDatabaseStatsCommand(db)
                 .execute()
-                .done((result: databaseStatisticsDto) => this.processStatsResults(result));
+                //TODO: .done((result: databaseStatisticsDto) => this.processStatsResults(result));
         }
 
         return null;

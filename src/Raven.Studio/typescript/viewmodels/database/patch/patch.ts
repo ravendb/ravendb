@@ -384,11 +384,11 @@ class patch extends viewModelBase {
     fetchAllIndexes(): JQueryPromise<any> {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
-            .done((results: databaseStatisticsDto) => {
+            .done((results) => {
                 this.indices(results.Indexes.map(i => {
                     return {
                         name: i.Name,
-                        isMapReduce: i.IsMapReduce
+                        isMapReduce: false, //TODO: i.IsMapReduce
                     }
                 }));
                 if (this.indices().length > 0) {
