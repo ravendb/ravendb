@@ -1,7 +1,6 @@
 const enum buildType {
     Stable = 0,
-    Unstable = 1,
-    Alpha = 2,
+    Unstable = 1
 }
 
 const enum viewType {
@@ -53,3 +52,5 @@ const enum filesystemConfigurationChangeAction {
     Set,
     Delete
 }
+
+const DEV_BUILD_NUMBER = 40;

@@ -113,21 +113,16 @@ class shell extends viewModelBase {
         helpBindingHandler.install();
 
         this.fetchClientBuildVersion();
+        this.fetchServerBuildVersion();
 
         this.clientBuildVersion.subscribe(v =>
             viewModelBase.clientVersion("4.0." + v.BuildVersion));
 
-        this.serverBuildVersion({
-            BuildType: buildType.Alpha,
-            ProductVersion: "4.0",
-            BuildVersion: 13 //TODO set BuildVersion
+        this.serverBuildVersion.subscribe(buildVersionDto => {
+            this.initAnalytics(
+                { SendUsageStats: true },
+                [ buildVersionDto ]);
         });
-
-        this.initAnalytics(
-            { SendUsageStats: true },
-            [
-                this.serverBuildVersion()
-            ]);
 
     }
 
@@ -469,18 +464,18 @@ class shell extends viewModelBase {
     }
 
     fetchServerBuildVersion() {
-        /*TODO new getServerBuildVersionCommand()
+        new getServerBuildVersionCommand()
             .execute()
             .done((serverBuildResult: serverBuildVersionDto) => {
                 this.serverBuildVersion(serverBuildResult);
 
                 var currentBuildVersion = serverBuildResult.BuildVersion;
-                if (currentBuildVersion !== 13) {
+                if (currentBuildVersion !== DEV_BUILD_NUMBER) {
                     shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
                 }
 
-                serverBuildReminder
-                 if (serverBuildReminder.isReminderNeeded() && currentBuildVersion !== 13) {
+                /*serverBuildReminder
+                 if (serverBuildReminder.isReminderNeeded() && currentBuildVersion !== DEV_BUILD_NUMBER) {
                     new getLatestServerBuildVersionCommand(true, 35000, 39999) //pass false as a parameter to get the latest unstable
                         .execute()
                         .done((latestServerBuildResult: latestServerBuildVersionDto) => {
@@ -489,9 +484,9 @@ class shell extends viewModelBase {
                                 app.showBootstrapDialog(latestBuildReminderViewModel);
                             }
                         });
-                }
+                }*/
             });
-        */
+        
     }
 
     fetchClientBuildVersion() {
@@ -590,15 +585,16 @@ class shell extends viewModelBase {
         this.trackingTask.resolve(false);
     }
 
-    private configureAnalytics(track: boolean, buildVersionResult: [serverBuildVersionDto]) {
-        var currentBuildVersion = buildVersionResult[0].BuildVersion;
-        if (currentBuildVersion !== 13) {
+    private configureAnalytics(track: boolean, [buildVersionResult]: [serverBuildVersionDto]) {
+        let currentBuildVersion = buildVersionResult.BuildVersion;
+        let shouldTrack = track && currentBuildVersion !== DEV_BUILD_NUMBER;
+        if (currentBuildVersion !== DEV_BUILD_NUMBER) {
             shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
-        }
+        } 
 
-        //var env = license.licenseStatus() && license.licenseStatus().IsCommercial ? "prod" : "dev";
+        var env = license.licenseStatus() && license.licenseStatus().IsCommercial ? "prod" : "dev";
         eventsCollector.default.initialize(
-            shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, "prerelease", track);
+            shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, shouldTrack);
     }
 }
 
