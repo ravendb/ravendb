@@ -32,7 +32,7 @@ namespace Voron.Data.Compression
             var tempPage = temp.GetTempPage();
 
             var compressionInput = page.Base + page.Upper;
-            var compressionOutput = tempPage.Base + Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize;
+            var compressionOutput = tempPage.Base + Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize; // temp compression result has compressed values at the beginning of the page
 
             var compressedSize = LZ4.Encode64(
                 compressionInput,

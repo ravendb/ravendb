@@ -42,7 +42,7 @@ namespace Voron.Data.Compression
             return new DecompressedLeafPage(treePage.Base, treePage.PageSize, original, tempPage);
         }
 
-        private IDisposable GetTemporaryPage(LowLevelTransaction tx, int pageSize, out TemporaryPage tmp)
+        public IDisposable GetTemporaryPage(LowLevelTransaction tx, int pageSize, out TemporaryPage tmp)
         {
             if (pageSize < _options.PageSize)
                 throw new ArgumentException($"Page cannot be smaller than {_options.PageSize} bytes while {pageSize} bytes were requested.");

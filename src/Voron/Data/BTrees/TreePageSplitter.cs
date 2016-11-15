@@ -84,16 +84,13 @@ namespace Voron.Data.BTrees
                     _tree.ClearPagesCache();
                 }
 
-                DecompressedLeafPage decompressed = null;
-                if (_page.IsCompressed)
-                {
-                    decompressed = _tree.DecompressPage(_page);
-                    _page = decompressed;
-                    _page.Search(_tx, _newKey);
-                }
+                var compressionMode = _page.IsCompressed;
 
-                try
+                using (compressionMode ? (DecompressedLeafPage) (_page = _tree.DecompressPage(_page).ForPageSplitter(_tx)) : null)
                 {
+                    if (compressionMode)
+                        _page.Search(_tx, _newKey);
+
                     if (_page.LastSearchPosition >= _page.NumberOfEntries)
                     {
                         // when we get a split at the end of the page, we take that as a hint that the user is doing 
@@ -142,16 +139,11 @@ namespace Voron.Data.BTrees
                         return pos;
                     }
 
-                    return SplitPageInHalf(rightPage);
-                }
-                finally
-                {
-                    if (decompressed != null)
+                    using (compressionMode
+                        ? (DecompressedLeafPage)(rightPage = _tx.Environment.DecompressionBuffers.GetPage(_tx, _page.PageSize, rightPage).ForPageSplitter(_tx))
+                        : null)
                     {
-                        using (decompressed)
-                        {
-                            decompressed.CopyToOriginalPage(_tx);
-                        }
+                        return SplitPageInHalf(rightPage);
                     }
                 }
             }
@@ -376,7 +368,7 @@ namespace Voron.Data.BTrees
                     TreeNodeHeader* node = _page.GetNode(i);
                     pageSize += node->GetNodeSize();
                     pageSize += pageSize & 1;
-                    if (pageSize > _tx.DataPager.PageMaxSpace)
+                    if (pageSize > _page.PageMaxSpace)
                     {
                         if (i <= currentIndex)
                         {
@@ -395,7 +387,7 @@ namespace Voron.Data.BTrees
                     TreeNodeHeader* node = _page.GetNode(i);
                     pageSize += node->GetNodeSize();
                     pageSize += pageSize & 1;
-                    if (pageSize > _tx.DataPager.PageMaxSpace)
+                    if (pageSize > _page.PageMaxSpace)
                     {
                         if (i >= currentIndex)
                         {
