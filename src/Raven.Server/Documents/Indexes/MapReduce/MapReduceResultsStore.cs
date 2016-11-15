@@ -12,6 +12,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public unsafe class MapReduceResultsStore : IDisposable
     {
+        public const string ReduceTreePrefix = "#reduceTree-";
+
         private readonly ulong _reduceKeyHash;
         private readonly TransactionOperationContext _indexContext;
         private readonly MapReduceIndexingContext _mapReduceContext;
@@ -43,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     InitializeTree(create);
                     break;
                 case MapResultsStorageType.Nested:
-                    _nestedValueKeyScope = Slice.From(indexContext.Allocator, "#reduceValues-" + reduceKeyHash, ByteStringType.Immutable, out _nestedValueKey);
+                    _nestedValueKeyScope = Slice.From(indexContext.Allocator, ReduceTreePrefix + reduceKeyHash, ByteStringType.Immutable, out _nestedValueKey);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(Type.ToString());
@@ -54,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             //TODO: Need better way to handle tree names
 
-            var treeName = "#reduceTree-" + _reduceKeyHash;
+            var treeName = ReduceTreePrefix + _reduceKeyHash;
             Tree = create ? _tx.CreateTree(treeName, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
 
             ModifiedPages = new HashSet<long>();
