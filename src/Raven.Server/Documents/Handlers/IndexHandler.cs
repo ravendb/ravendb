@@ -12,13 +12,14 @@ using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -69,7 +70,37 @@ namespace Raven.Server.Documents.Handlers
                 return Task.CompletedTask;
             }
 
-            throw new NotImplementedException(); // TODO [ppekrol] need static indexes
+            if (index.Type.IsStatic() == false)
+                throw new InvalidOperationException("Source can be only retrieved for static indexes.");
+
+            string source = null;
+            switch (index.Type)
+            {
+                case IndexType.Map:
+                    var staticMapIndex = (StaticMapIndex)index;
+                    source = staticMapIndex._compiled.Source;
+                    break;
+                case IndexType.MapReduce:
+                    var staticMapReduceIndex = (MapReduceIndex)index;
+                    source = staticMapReduceIndex._compiled.Source;
+                    break;
+            }
+
+            if (string.IsNullOrWhiteSpace(source))
+                throw new InvalidOperationException("Could not retrieve source for given index.");
+
+            JsonOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Index"] = index.Name,
+                    ["Source"] = source
+                });
+            }
+
+            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/indexes/debug", "GET")]
@@ -122,7 +153,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         writer.WriteArrayOfResultsAndCount(ids);
                     }
-                    
+
                     return Task.CompletedTask;
                 }
 
@@ -394,7 +425,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             if (index.Type.IsAuto())
-                throw new InvalidOperationException("Unsupported Operation - Can't create c-sharp index definition from automatic indexes ");
+                throw new InvalidOperationException("Can't create C# index definition from auto indexes");
 
             var indexDefinition = index.GetIndexDefinition();
 
@@ -655,7 +686,7 @@ namespace Raven.Server.Documents.Handlers
                         foreach (var collection in index.Collections)
                         {
                             var etag = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
-                            var document = Database.DocumentsStorage.GetDocumentsFrom(context, collection, etag,0,1).FirstOrDefault();
+                            var document = Database.DocumentsStorage.GetDocumentsFrom(context, collection, etag, 0, 1).FirstOrDefault();
                             if (document != null)
                             {
                                 if (document.LastModified > baseLine)
@@ -671,7 +702,7 @@ namespace Raven.Server.Documents.Handlers
                                     .LastOrDefault(x => x.Completed != null)
                                     ?.Completed ?? DateTime.UtcNow;
 
-                    
+
                     dja.Add(new DynamicJsonValue
                     {
                         ["Name"] = index.Name,

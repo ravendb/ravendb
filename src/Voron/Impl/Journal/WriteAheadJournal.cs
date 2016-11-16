@@ -542,19 +542,10 @@ namespace Voron.Impl.Journal
 
                     var unusedJournals = GetUnusedJournalFiles(jrnls, lastProcessedJournal, lastFlushedTransactionId);
 
-                    var timeout = TimeSpan.FromSeconds(3);
-                    bool tryEnterReadLock = false;
                     if (alreadyInWriteTx == false)
-                        tryEnterReadLock = _waj._env.FlushInProgressLock.TryEnterWriteLock(timeout);
+                        _waj._env.FlushInProgressLock.EnterWriteLock();
                     try
                     {
-                        if (alreadyInWriteTx == false && tryEnterReadLock == false)
-                        {
-                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(_waj._env);//retry
-                            return;
-                        }
-
-                        _waj._env.IncreaseTheChanceForGettingTheTransactionLock();
                         var transactionPersistentContext = new TransactionPersistentContext(true);
                         using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
                         {
@@ -594,11 +585,9 @@ namespace Voron.Impl.Journal
                     }
                     finally
                     {
-                        _waj._env.ResetTheChanceForGettingTheTransactionLock();
-                        if (tryEnterReadLock)
+                        if (alreadyInWriteTx == false)
                             _waj._env.FlushInProgressLock.ExitWriteLock();
                     }
-
 
                     QueueDataFileSync();
                 }

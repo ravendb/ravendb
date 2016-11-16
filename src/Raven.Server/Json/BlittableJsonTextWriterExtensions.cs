@@ -566,10 +566,6 @@ namespace Raven.Server.Json
             writer.WriteInteger(statistics.CountOfIndexes);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(statistics.ApproximateTaskCount)));
-            writer.WriteInteger(statistics.ApproximateTaskCount);
-            writer.WriteComma();
-
             writer.WritePropertyName((nameof(statistics.CountOfDocuments)));
             writer.WriteInteger(statistics.CountOfDocuments);
             writer.WriteComma();
@@ -583,18 +579,6 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName((nameof(statistics.CountOfTransformers)));
             writer.WriteInteger(statistics.CountOfTransformers);
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(statistics.CurrentNumberOfItemsToIndexInSingleBatch)));
-            writer.WriteInteger(statistics.CurrentNumberOfItemsToIndexInSingleBatch);
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(statistics.CurrentNumberOfItemsToReduceInSingleBatch)));
-            writer.WriteInteger(statistics.CurrentNumberOfItemsToReduceInSingleBatch);
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(statistics.CurrentNumberOfParallelTasks)));
-            writer.WriteInteger(statistics.CurrentNumberOfParallelTasks);
             writer.WriteComma();
 
             writer.WritePropertyName((nameof(statistics.DatabaseId)));
