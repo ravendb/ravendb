@@ -139,12 +139,8 @@ namespace Voron.Data.BTrees
                         return pos;
                     }
 
-                    using (compressionMode
-                        ? (DecompressedLeafPage)(rightPage = _tx.Environment.DecompressionBuffers.GetPage(_tx, _page.PageSize, rightPage).ForPageSplitter(_tx))
-                        : null)
-                    {
-                        return SplitPageInHalf(rightPage);
-                    }
+                    
+                    return SplitPageInHalf(rightPage, compressionMode);
                 }
             }
         }
@@ -166,7 +162,7 @@ namespace Voron.Data.BTrees
             }
         }
 
-        private byte* SplitPageInHalf(TreePage rightPage)
+        private byte* SplitPageInHalf(TreePage rightPage, bool compressionMode)
         {
             bool toRight;
 
@@ -210,39 +206,54 @@ namespace Voron.Data.BTrees
                     seperatorKey = currentKey;
                 }
 
-                TreePage parentOfRight;
-                AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey, out parentOfRight);
-
+                var addedAsImplicitRef = false;
                 var parentOfPage = _cursor.CurrentPage;
+                TreePage parentOfRight;
 
-                bool addedAsImplicitRef = false;
-                if (_page.IsBranch && toRight && SliceComparer.EqualsInline(seperatorKey, _newKey))
+                using (compressionMode
+                    ? (DecompressedLeafPage)
+                    (rightPage = _tx.Environment.DecompressionBuffers.GetPage(_tx, _page.PageSize, rightPage).ForPageSplitter(_tx))
+                    : null)
                 {
-                    // _newKey needs to be inserted as first key (BeforeAllKeys) to the right page, so we need to add it before we move entries from the current page
-                    AddNodeToPage(rightPage, 0, Slices.BeforeAllKeys);
-                    addedAsImplicitRef = true;
-                }
-
-                // move the actual entries from page to right page
-                ushort nKeys = _page.NumberOfEntries;
-                for (int i = splitIndex; i < nKeys; i++)
-                {
-                    TreeNodeHeader* node = _page.GetNode(i);
-                    if (_page.IsBranch && rightPage.NumberOfEntries == 0)
+                    AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey, out parentOfRight);
+                    
+                    if (_page.IsBranch && toRight && SliceComparer.EqualsInline(seperatorKey, _newKey))
                     {
-                        rightPage.CopyNodeDataToEndOfPage(node, Slices.BeforeAllKeys);
+                        // _newKey needs to be inserted as first key (BeforeAllKeys) to the right page, so we need to add it before we move entries from the current page
+                        AddNodeToPage(rightPage, 0, Slices.BeforeAllKeys);
+                        addedAsImplicitRef = true;
                     }
-                    else
+
+                    // move the actual entries from page to right page
+                    ushort nKeys = _page.NumberOfEntries;
+                    for (int i = splitIndex; i < nKeys; i++)
                     {
-                        Slice instance;
-                        using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out instance))
+                        TreeNodeHeader* node = _page.GetNode(i);
+                        if (_page.IsBranch && rightPage.NumberOfEntries == 0)
                         {
-                            rightPage.CopyNodeDataToEndOfPage(node, instance);
+                            rightPage.CopyNodeDataToEndOfPage(node, Slices.BeforeAllKeys);
+                        }
+                        else
+                        {
+                            Slice instance;
+                            using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out instance))
+                            {
+                                rightPage.CopyNodeDataToEndOfPage(node, instance);
+                            }
                         }
                     }
                 }
 
                 _page.Truncate(_tx, splitIndex);
+
+                if (compressionMode)
+                {
+                    rightPage = ((DecompressedLeafPage)rightPage).Original;
+
+                    var decompressed = (DecompressedLeafPage)_page;
+                    decompressed.Dispose();
+                    _page = decompressed.Original;
+                }
 
                 byte* pos;
 
@@ -258,7 +269,7 @@ namespace Voron.Data.BTrees
                         }
 
                         // actually insert the new key
-                        pos = toRight ? InsertNewKey(rightPage) : InsertNewKey(_page);
+                        pos = InsertNewKey(toRight ? rightPage : _page);
                     }
                     catch (InvalidOperationException e)
                     {

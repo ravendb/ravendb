@@ -180,7 +180,7 @@ namespace FastTests.Voron
         protected unsafe Tuple<Slice, Slice> ReadKey(Transaction txh, Tree tree, Slice key)
         {
             TreeNodeHeader* node;
-            var p = tree.FindPageFor(key, out node);
+            var p = tree.FindPageFor(key, decompress: true, node: out node);
 
             if (node == null)
                 return null;

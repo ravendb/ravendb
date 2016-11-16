@@ -44,7 +44,7 @@ namespace Voron.Data.BTrees
 
             TreeNodeHeader* node;
             Func<Slice, TreeCursor> constructor;
-            _currentPage = _tree.FindPageFor(key, out node, out constructor);
+            _currentPage = _tree.FindPageFor(key, decompress: true, node: out node, cursor: out constructor);
             _cursor = constructor(key);
             _cursor.Pop();
 

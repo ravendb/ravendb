@@ -14,24 +14,28 @@ namespace Voron.Data.Compression
             PageSplitter
         }
 
-        private readonly TreePage _original;
+        public readonly TreePage Original;
         private readonly TemporaryPage _tempPage;
 
         private Usage _usage;
         private LowLevelTransaction _tx;
+        private bool _disposed;
 
         public DecompressedLeafPage(byte* basePtr, int pageSize, TreePage original, TemporaryPage tempPage) : base(basePtr, pageSize)
         {
-            _original = original;
+            Original = original;
             _tempPage = tempPage;
 
-            PageNumber = _original.PageNumber;
-            TreeFlags = _original.TreeFlags;
-            Flags = _original.Flags & ~PageFlags.Compressed;
+            PageNumber = Original.PageNumber;
+            TreeFlags = Original.TreeFlags;
+            Flags = Original.Flags & ~PageFlags.Compressed;
         }
 
         public void Dispose()
         {
+            if (_disposed)
+                return;
+
             switch (_usage)
             {
                 case Usage.PageSplitter:
@@ -44,6 +48,8 @@ namespace Voron.Data.Compression
             }
             
             _tempPage.ReturnTemporaryPageToPool.Dispose();
+
+            _disposed = true;
         }
 
         public DecompressedLeafPage ForPageSplitter(LowLevelTransaction tx)
@@ -56,19 +62,19 @@ namespace Voron.Data.Compression
 
         private void CopyToOriginal(bool defragRequired)
         {
-            if (CalcSizeUsed() < _original.PageMaxSpace)
+            if (CalcSizeUsed() < Original.PageMaxSpace)
             {
                 // no need to compress
-                _original.Lower = (ushort)Constants.TreePageHeaderSize;
-                _original.Upper = (ushort)_original.PageSize;
-                _original.Flags &= ~PageFlags.Compressed;
+                Original.Lower = (ushort)Constants.TreePageHeaderSize;
+                Original.Upper = (ushort)Original.PageSize;
+                Original.Flags &= ~PageFlags.Compressed;
 
                 for (var i = 0; i < NumberOfEntries; i++)
                 {
                     var node = GetNode(i);
                     Slice slice;
                     using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out slice))
-                        _original.CopyNodeDataToEndOfPage(node, slice);
+                        Original.CopyNodeDataToEndOfPage(node, slice);
                 }
             }
             else
@@ -79,7 +85,7 @@ namespace Voron.Data.Compression
                     if (compressed == null)
                         throw new InvalidOperationException("Could not compress a page which was already compressed. Should never happen");
 
-                    LeafPageCompressor.CopyToPage(compressed, _original);
+                    LeafPageCompressor.CopyToPage(compressed, Original);
                 }
             }
         }
