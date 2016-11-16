@@ -7,7 +7,7 @@
     "tools"
   ],
   "sdk": {
-    "version": "1.0.0-preview2-003131",
+    "version": "1.0.0-preview2-1-003177",
     "runtime": "coreclr",
     "architecture": "x64"
   }

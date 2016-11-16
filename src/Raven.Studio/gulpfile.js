@@ -58,7 +58,7 @@ gulp.task('less', function() {
 });
 
 gulp.task('generate-typings', function(cb) {
-    exec('dotnet ../../tools/TypingsGenerator/bin/Debug/netcoreapp1.0/TypingsGenerator.dll', function (err, stdout, stderr) {
+    exec('dotnet ../../tools/TypingsGenerator/bin/Debug/netcoreapp1.1/TypingsGenerator.dll', function (err, stdout, stderr) {
         console.log(stdout);
         console.log(stderr);
         cb(err);

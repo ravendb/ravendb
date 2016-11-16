@@ -34,12 +34,12 @@
   },
 
   "dependencies": {
-    "Microsoft.CSharp": "4.0.1",
-    "NETStandard.Library": "1.6.0",
+    "Microsoft.CSharp": "4.3.0",
+    "NETStandard.Library": "1.6.1",
     "Sparrow": "4.0.0-*",
-    "System.Diagnostics.Process": "4.1.0",
-    "System.IO.FileSystem.DriveInfo": "4.0.0",
-    "System.IO.MemoryMappedFiles": "4.0.0",
-    "System.Threading.Overlapped": "4.0.1"
+    "System.Diagnostics.Process": "4.3.0",
+    "System.IO.FileSystem.DriveInfo": "4.3.0",
+    "System.IO.MemoryMappedFiles": "4.3.0",
+    "System.Threading.Overlapped": "4.3.0"
   }
 }
