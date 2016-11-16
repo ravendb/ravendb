@@ -16,6 +16,11 @@ namespace Raven.Database.Server.Controllers
         public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
         {
             InnerInitialization(controllerContext);
+
+            HttpResponseMessage msg;
+            if (IsClientV4OrHigher(out msg))
+                return msg;
+
             var config = DatabasesLandlord.CreateTenantConfiguration(DatabaseName);
             if (config == null || config.ActiveBundles == null ||
                 !config.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName, StringComparison.InvariantCultureIgnoreCase)))

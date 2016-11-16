@@ -113,6 +113,20 @@ namespace Raven.Database.Server.Controllers
 
         public bool WasAlreadyAuthorizedUsingSingleAuthToken { get; set; }
 
+        protected bool IsClientV4OrHigher(out HttpResponseMessage message)
+        {
+            message = null;
+            if (ClientIsV4OrHigher(Request))
+            {
+                message = GetMessageWithObject(new
+                {
+                    Error = "A 4.x RavenDB client is not compatible with 3.x RavenDB server. The request cannot continue."
+                }, HttpStatusCode.ServiceUnavailable);
+                return true;
+            }
+            return false;
+        }
+
         protected virtual void InnerInitialization(HttpControllerContext controllerContext)
         {
             request = controllerContext.Request;
@@ -294,6 +308,21 @@ namespace Raven.Database.Server.Controllers
                 if (string.IsNullOrEmpty(value) ) return false;
                 if (value[0] == '1' || value[0] == '2') return false;
             }
+            return true;
+        }
+
+        //
+        protected static bool ClientIsV4OrHigher(HttpRequestMessage req)
+        {
+            IEnumerable<string> values;
+            if (req.Headers.TryGetValues("Raven-Client-Version", out values) == false)
+                return false; // probably 1.0 client?
+            foreach (var value in values)
+            {
+                if (string.IsNullOrEmpty(value)) return false;
+                if (value[0] == '1' || value[0] == '2' || value[0] == '3') return false;
+            }
+
             return true;
         }
 
