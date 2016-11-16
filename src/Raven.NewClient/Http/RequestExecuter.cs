@@ -10,6 +10,7 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Documents.Commands;
@@ -231,6 +232,8 @@ namespace Raven.NewClient.Client.Http
             return new HttpCache.ReleaseCacheItem();
         }
 
+        public static readonly string ClientVersion = typeof(RequestExecuter).Assembly().GetName().Version.ToString();
+
         private static HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)
         {
             var request = command.CreateRequest(node, out url);
@@ -240,6 +243,8 @@ namespace Raven.NewClient.Client.Http
             if (node.CurrentToken != null)
                 request.Headers.Add("Raven-Authorization", node.CurrentToken);
 
+            if (!request.Headers.Contains("Raven-Client-Version"))
+                request.Headers.Add("Raven-Client-Version", ClientVersion);
             return request;
         }
 
