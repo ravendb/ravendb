@@ -11,7 +11,7 @@ function getResourcesMenuItem(appUrls: computedAppUrls) {
             title: "Dashboard",
             moduleId: "viewmodels/resources/resources",
             nav: true,
-            css: 'fa fa-dashboard',
+            css: 'icon-dashboard',
             dynamicHash: appUrls.resourcesManagement
         }),
         new separatorMenuItem(),

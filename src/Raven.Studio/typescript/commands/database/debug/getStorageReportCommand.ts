@@ -8,9 +8,9 @@ class getStorageReportCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<storageReportItem[]> {
+    execute(): JQueryPromise<storageReportItemDto[]> {
         const url = endpoints.databases.storage.debugStorageReport;
-        return this.query<storageReportItem[]>(url, null, this.db);
+        return this.query<storageReportItemDto[]>(url, null, this.db);
     }
 }
 

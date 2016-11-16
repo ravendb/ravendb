@@ -11,7 +11,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             route: "databases/documents",
             moduleId: "viewmodels/database/documents/documents",
             dynamicHash: appUrls.documents,
-            css: 'icon-plus'
+            css: 'icon-documents'
         }),
 /* TODO:
         new leafMenuItem({
@@ -27,7 +27,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             route: "databases/patch(/:recentPatchHash)",
             moduleId: "viewmodels/database/patch/patch",
-            css: 'icon-plus',
+            css: 'icon-patch',
             dynamicHash: appUrls.patch
         }),
         new leafMenuItem({

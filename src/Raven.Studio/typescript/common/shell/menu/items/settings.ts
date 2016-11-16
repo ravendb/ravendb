@@ -10,7 +10,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/databaseSettings',
             title: 'Database Settings',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-database-settings',
             dynamicHash: appUrls.databaseSettings
         }),
         /* TODO
@@ -27,7 +27,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/replications',
             title: 'Replication',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-replication',
             dynamicHash: appUrls.replications
         }),
         /* TODO
@@ -44,7 +44,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/sqlReplications',
             title: 'SQL Replication',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-sql-replication',
             dynamicHash: appUrls.sqlReplications
         }),
         new leafMenuItem({
@@ -52,7 +52,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/editSqlReplication',
             title: 'Edit SQL Replication',
             nav: false,
-            css: 'icon-plus',
+            css: 'icon-sql-replication',
             dynamicHash: appUrls.editSqlReplication
         }),
         new leafMenuItem({
@@ -60,7 +60,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/sqlReplicationConnectionStringsManagement',
             title: 'SQL Replication Connection Strings',
             nav: false,
-            css: 'icon-plus',
+            css: 'icon-sql-replication-connection-string',
             dynamicHash: appUrls.sqlReplicationsConnections
         }),
         new leafMenuItem({
@@ -68,7 +68,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/versioning',
             title: 'Versioning',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-versioning',
             dynamicHash: appUrls.versioning
         }),
         new leafMenuItem({
@@ -76,7 +76,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/periodicExport',
             title: 'Periodic Export',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-periodic-export',
             dynamicHash: appUrls.periodicExport
         }),
         /* TODO
@@ -85,7 +85,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/customFunctionsEditor',
             title: 'Custom Functions',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-custom-functions',
             dynamicHash: appUrls.customFunctionsEditor
         }),*/
         /*TODO
@@ -94,7 +94,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/databaseStudioConfig',
             title: 'Studio Config',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-studio-config',
             dynamicHash: appUrls.databaseStudioConfig
         })*/
     ];
