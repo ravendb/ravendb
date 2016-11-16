@@ -721,7 +721,10 @@ namespace Raven.Database.Indexing
             {
                 var old = indexindDone;
                 Interlocked.Exchange(ref indexindDone, new TaskCompletionSource<object>());
-                Task.Factory.StartNew(() => old.TrySetResult(null));
+                Task.Factory.StartNew(() =>
+                {
+                    old.TrySetResult(null);
+                });
             }
 
             if (writePerformanceStats != null)

@@ -167,7 +167,6 @@
       <SubType>Designer</SubType>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <Content Include="Raven.Tryouts.project.json" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
