@@ -27,16 +27,16 @@
   },
 
   "dependencies": {
+    "NETStandard.Library": "1.6.1",
     "Sparrow": "4.0.0-*",
-    "NETStandard.Library": "1.6.0",
-    "System.Net.WebSockets.Client": "4.0.0",
-    "System.Reflection.TypeExtensions": "4.1.0",
-    "System.ServiceModel.Primitives": "4.1.0",
-    "System.Linq.Queryable": "4.0.1",
-    "System.Security.Cryptography.Cng": "4.2.0",
-    "System.Diagnostics.Process": "4.1.0",
-    "System.Net.NameResolution": "4.0.0",
-    "System.Collections.Specialized": "4.0.1"
+    "System.Collections.Specialized": "4.3.0",
+    "System.Diagnostics.Process": "4.3.0",
+    "System.Linq.Queryable": "4.3.0",
+    "System.Net.NameResolution": "4.3.0",
+    "System.Net.WebSockets.Client": "4.3.0",
+    "System.Reflection.TypeExtensions": "4.3.0",
+    "System.Security.Cryptography.Cng": "4.3.0",
+    "System.ServiceModel.Primitives": "4.3.0"
   },
 
   "frameworks": {

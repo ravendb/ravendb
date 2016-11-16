@@ -8,6 +8,7 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Attributes.Columns;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
@@ -53,14 +54,20 @@ namespace Voron.Benchmark
             {
                 Add(new Job
                 {
-                    Runtime = Runtime.Core,
-                    Platform = BenchmarkDotNet.Jobs.Platform.X64,
-                    Jit = Jit.RyuJit,
+                    Env =
+                    {
+                        Runtime = Runtime.Core,
+                        Platform = BenchmarkDotNet.Environments.Platform.X64,
+                        Jit = Jit.RyuJit
+                    },
+                    Run =
+                    {
+                        LaunchCount = 1,
+                        WarmupCount = 1,
+                        TargetCount = 1,
+                        InvocationCount = 1
+                    },
                     // TODO: Next line is just for testing. Fine tune parameters.
-                    Mode = Mode.SingleRun,
-                    LaunchCount = 1,
-                    WarmupCount = 1,
-                    TargetCount = 1,
                 });
 
                 // Exporters for data
