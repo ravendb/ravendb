@@ -90,6 +90,13 @@ namespace Raven.Database.Server.Controllers
                         });
                 }
 
+                //take "snapshots" of NextIndexingRound TaskCompletionSource's --> prevent a race condition
+                //between NextIndexingRound completion after the Batch() execution and waiting for it's completion in WaitForIndexesAsync()
+                var nextIndexingRoundsByIndexId = new Dictionary<int, Task>();
+                var existingIndexes = Database.IndexStorage.GetAllIndexes().ToArray();
+                foreach (var index in existingIndexes)
+                    nextIndexingRoundsByIndexId.Add(index.indexId,index.NextIndexingRound);
+
                 var batchResult = Database.Batch(commands, cts.Token);
 
                 var writeAssurance = GetHeader("Raven-Write-Assurance");
@@ -101,14 +108,16 @@ namespace Raven.Database.Server.Controllers
                 var waitIndexes = GetHeader("Raven-Wait-Indexes");
                 if (waitIndexes != null)
                 {
-                    await WaitForIndexesAsync(waitIndexes, batchResult).ConfigureAwait(false);
+                    //take care to pass existing indexes, in case any index is added or removed between Database.Batch() and WaitForIndexesAsync()
+                    //(essentially create "snapshot" of indexes just before the Batch() execution)
+                    await WaitForIndexesAsync(waitIndexes, nextIndexingRoundsByIndexId, existingIndexes, batchResult).ConfigureAwait(false);
                 }
 
                 return GetMessageWithObject(batchResult);
             }
         }
 
-        private async Task WaitForIndexesAsync(string waitIndexes, BatchResult[] results)
+        private async Task WaitForIndexesAsync(string waitIndexes, Dictionary<int,Task> nextIndexingRoundsByIndexId,Index[] existingIndexes, BatchResult[] results)
         {
             var parts = waitIndexes.Split(new [] {';'},StringSplitOptions.RemoveEmptyEntries);
             var throwOnTimeout = bool.Parse(parts[0]);
@@ -137,7 +146,7 @@ namespace Raven.Database.Server.Controllers
                 return;
 
             var indexes = new List<Index>();
-            foreach (var index in Database.IndexStorage.GetAllIndexes())
+            foreach (var index in existingIndexes)
             {
                 if (specificIndexes.Count > 0)
                 {
@@ -151,9 +160,14 @@ namespace Raven.Database.Server.Controllers
                     indexes.Add(index);
             }
 
+            foreach(var trackedIndex in indexes)
+                if (nextIndexingRoundsByIndexId.ContainsKey(trackedIndex.indexId) == false)
+                    nextIndexingRoundsByIndexId.Remove(trackedIndex.indexId);
+
             var sp = Stopwatch.StartNew();
             var needToWait = true;
             var tasks = new Task[indexes.Count + 1];
+            var indexingRounds = nextIndexingRoundsByIndexId.Values.ToList();
             do
             {
                 needToWait = false;
@@ -171,9 +185,10 @@ namespace Raven.Database.Server.Controllers
 
                 if (needToWait)
                 {
+                    
                     for (int i = 0; i < indexes.Count; i++)
                     {
-                        tasks[i] = indexes[i].NextIndexingRound;
+                        tasks[i] = indexingRounds[i];
                     }
                     var timeSpan = timeout - sp.Elapsed;
                     if (timeout < TimeSpan.Zero)
