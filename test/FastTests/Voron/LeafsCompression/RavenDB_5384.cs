@@ -10,10 +10,13 @@ namespace FastTests.Voron.LeafsCompression
     public class RavenDB_5384 : StorageTest
     {
         [Theory]
-        [InlineData(26)]
-        [InlineData(128)]
-        [InlineData(1024)]
-        public void Can_compress_leaf_pages_and_read_from_them(int iterationCount)
+        [InlineData(26, 256)]
+        [InlineData(128, 256)]
+        [InlineData(1024, 256)]
+        [InlineData(26, 333)]
+        [InlineData(128, 444)]
+        [InlineData(1024, 555)]
+        public void Can_compress_leaf_pages_and_read_from_them(int iterationCount, int size)
         {
             using (var tx = Env.WriteTransaction())
             {
@@ -24,7 +27,7 @@ namespace FastTests.Voron.LeafsCompression
                 tx.Commit();
             }
 
-            var bytes = new byte[256];
+            var bytes = new byte[size];
             new Random().NextBytes(bytes);
 
             using (var tx = Env.WriteTransaction())
