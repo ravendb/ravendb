@@ -59,6 +59,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var treeName = ReduceTreePrefix + _reduceKeyHash;
             Tree = create ? _tx.CreateTree(treeName, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
 
+            Tree.State.Flags |= TreeFlags.LeafsCompressed;
+
             ModifiedPages = new HashSet<long>();
             FreedPages = new HashSet<long>();
 
