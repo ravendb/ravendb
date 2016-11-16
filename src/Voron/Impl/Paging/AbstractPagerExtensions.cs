@@ -1,8 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Sparrow;
 using Voron.Global;
 using Voron.Data.BTrees;
+using Voron.Platform.Win32;
 
 namespace Voron.Impl.Paging
 {
@@ -35,9 +38,15 @@ namespace Voron.Impl.Paging
 
                     var toWrite = pager.GetNumberOfPages(page) * pager.PageSize;
                     total += toWrite;
-                    Memory.BulkCopy(pagerState.MapBase + startPage*pager.PageSize,
+                    byte* destination = pagerState.MapBase + startPage * pager.PageSize;
+
+                    pager.UnprotectPageRange(destination, (ulong)toWrite);
+
+                    Memory.BulkCopy(destination,
                         page.Pointer,
                         toWrite);
+
+                    pager.ProtectPageRange(destination, (ulong)toWrite);
                 }
                 return total;
             }

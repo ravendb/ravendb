@@ -1022,7 +1022,7 @@ namespace Voron.Impl.Journal
         {
             lock (_writeLock)
             {
-                var pages = PrepreToWriteToJournal(tx, _compressionPager, pageCount);
+                var pages = PrepareToWriteToJournal(tx, _compressionPager, pageCount);
 
                 if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
                 {
@@ -1064,7 +1064,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private CompressedPagesResult PrepreToWriteToJournal(LowLevelTransaction tx, AbstractPager compressionPager, int pageCountIncludingAllOverflowPages)
+        private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx, AbstractPager compressionPager, int pageCountIncludingAllOverflowPages)
         {
             //TODO: comment the memory outline that we write here
 
@@ -1116,6 +1116,13 @@ namespace Voron.Impl.Journal
                 write += _diffPage.OutputSize;
                 pagesInfo[pageSequencialNumber].Size = _diffPage.OutputSize == 0 ? 0 : _diffPage.Size;
                 pagesInfo[pageSequencialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
+
+
+                // Protect pages in the scratch buffer after we are done with them
+                // This ensures no one writes to them after we have written them to the journal
+                // Write access is restored when doing freeing them.
+                tx.DataPager.ProtectPageRange(scratchPage, (ulong)(txPage.NumberOfPages * pageSize), true);
+
                 ++pageSequencialNumber;
             }
             var totalSizeWritten = (write - outputBuffer) + sizeOfPagesHeader;

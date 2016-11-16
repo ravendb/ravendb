@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             MapReduceWorkContext.ReducePhaseTree = GetReducePhaseTree(indexContext.Transaction.InnerTransaction);
             MapReduceWorkContext.ResultsStoreTypes = MapReduceWorkContext.ReducePhaseTree.FixedTreeFor(ResultsStoreTypesTreeName, sizeof(byte));
 
-            _pageLocator = new PageLocator(indexContext.Transaction.InnerTransaction.LowLevelTransaction, 128);
+            _pageLocator = new PageLocator(indexContext.Transaction.InnerTransaction.LowLevelTransaction, 1024);
 
             MapReduceWorkContext.DocumentMapEntries = new FixedSizeTree(
                    indexContext.Transaction.InnerTransaction.LowLevelTransaction,
