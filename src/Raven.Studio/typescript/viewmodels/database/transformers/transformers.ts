@@ -7,6 +7,7 @@ import deleteTransformerConfirm = require("viewmodels/database/transformers/dele
 import app = require("durandal/app");
 import changeSubscription = require("common/changeSubscription");
 import database = require("models/resources/database");
+import eventsCollector = require("common/eventsCollector");
 
 type transformerGroup = {
     entityName: string;
@@ -135,6 +136,8 @@ class transformers extends viewModelBase {
     }
 
     putTransformerIntoGroup(trans: transformer) {
+        eventsCollector.default.reportEvent("transformers", "put-into-group");
+
         const groupName = trans.name().split("/")[0];
         const group = this.transformersGroups.first(g => g.entityName === groupName);
 
@@ -154,6 +157,7 @@ class transformers extends viewModelBase {
     }
 
     deleteSelectedTransformers() {
+        eventsCollector.default.reportEvent("transformers", "delete-selected");
         this.promptDeleteTransformers(this.getSelectedTransformers());
     }
 
@@ -169,6 +173,7 @@ class transformers extends viewModelBase {
     }
 
     deleteTransformer(transformerToDelete: transformer) {
+        eventsCollector.default.reportEvent("transformers", "delete");
         this.promptDeleteTransformers([transformerToDelete]);
     }
 
@@ -193,6 +198,8 @@ class transformers extends viewModelBase {
         this.confirmationMessage("Are you sure?", `Do you want to ${localModeString} selected transformers?`)
             .done(can => {
                 if (can) {
+                    eventsCollector.default.reportEvent("transformers", "lock-selected");
+
                     this.globalLockChangesInProgress(true);
 
                     const transformers = this.getSelectedTransformers();
@@ -206,10 +213,14 @@ class transformers extends viewModelBase {
     }
 
     lockTransformer(t: transformer) {
+        eventsCollector.default.reportEvent("transformers", "lock");
+
         this.updateTransformerLockMode(t, "LockedIgnore");
     }
 
     unlockTransformer(t: transformer) {
+        eventsCollector.default.reportEvent("transformers", "unlock");
+
         this.updateTransformerLockMode(t, "Unlock");
     }
 
@@ -225,6 +236,8 @@ class transformers extends viewModelBase {
     }
 
     toggleSelectAll() {
+        eventsCollector.default.reportEvent("transformers", "toggle-select-all");
+
         const selectedCount = this.selectedTransformersName().length;
 
         if (selectedCount > 0) {

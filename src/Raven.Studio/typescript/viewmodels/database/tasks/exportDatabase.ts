@@ -16,7 +16,7 @@ import validateExportDatabaseOptionsCommand = require("commands/database/studio/
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
-
+import eventsCollector = require("common/eventsCollector");
 
 class exportDatabase extends viewModelBase {
 
@@ -146,6 +146,8 @@ class exportDatabase extends viewModelBase {
     }
 
     startExport() {
+        eventsCollector.default.reportEvent("database", "export");
+
         exportDatabase.isExporting(true);
 
         var exportArg = this.model.toDto();

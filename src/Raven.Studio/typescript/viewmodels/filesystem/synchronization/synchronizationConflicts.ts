@@ -14,6 +14,8 @@ import getFilesConflictsCommand = require("commands/filesystem/getFilesConflicts
 import resolveConflictCommand = require("commands/filesystem/resolveConflictCommand");
 import resolveConflictsCommand = require("commands/filesystem/resolveConflictsCommand");
 
+import eventsCollector = require("common/eventsCollector");
+
 class synchronizationConflicts extends viewModelBase {
 
     static gridSelector = "#synchronizationConflictsGrid";
@@ -125,6 +127,8 @@ class synchronizationConflicts extends viewModelBase {
     }
 
     resolveWithLocalVersion() {
+        eventsCollector.default.reportEvent("fs-conflict", "resolve", "local");
+
         var message: string;
         if (this.hasAllConflictsSelected()) {
             message = "Are you sure you want to resolve all conflicts by choosing the local version?";
@@ -162,6 +166,8 @@ class synchronizationConflicts extends viewModelBase {
     }
 
     resolveWithRemoteVersion() {
+        eventsCollector.default.reportEvent("fs-conflict", "resolve", "remote");
+
         var message: string;
         if (this.hasAllConflictsSelected()) {
             message = 'Are you sure you want to resolve all conflicts by choosing the remote version?';

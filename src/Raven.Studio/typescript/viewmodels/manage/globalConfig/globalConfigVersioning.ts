@@ -143,6 +143,10 @@ class globalConfigVersioning extends viewModelBase {
     makeIncluded(entry: versioningEntry) {
         entry.exclude(false);
     }*/
+
+    /*
+        TODO @gregolsky apply google analytics
+    */
 }
 
 export = globalConfigVersioning;

@@ -3,6 +3,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import debugDocumentStats = require("models/database/debug/debugDocumentStats");
 import killOperationComamnd = require('commands/operations/killOperationCommand');
 import genUtils = require("common/generalUtils");
+import eventsCollector = require("common/eventsCollector");
 
 class statusStorageCollections extends viewModelBase {
     data = ko.observable<debugDocumentStats>();
@@ -14,6 +15,7 @@ class statusStorageCollections extends viewModelBase {
     formatBytesToSize = genUtils.formatBytesToSize;
 
     cancelOperation() {
+        eventsCollector.default.reportEvent("storage", "kill-fetch-counts");
         if (this.operationId()) {
             new killOperationComamnd(this.activeDatabase(), this.operationId())
                 .execute();
@@ -33,6 +35,7 @@ class statusStorageCollections extends viewModelBase {
     }
 
     fetchDocCounts(): JQueryPromise<debugDocumentStats> {
+        eventsCollector.default.reportEvent("storage", "fetch-counts");
         var db = this.activeDatabase();
         if (db) {
             this.canSearch(false);

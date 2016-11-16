@@ -7,6 +7,7 @@ import databaseSetting = require("models/database/cluster/databaseSetting");
 import saveClusterConfigurationCommand = require("commands/database/cluster/saveClusterConfigurationCommand");
 import shell = require("viewmodels/shell");
 import database = require("models/resources/database");
+import eventsCollector = require("common/eventsCollector");
 
 class globalConfigDatabaseSettings extends viewModelBase {
     activated = ko.observable<boolean>(false);
@@ -35,6 +36,8 @@ class globalConfigDatabaseSettings extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("global-config-database-settings", "save");
+
         var customSettings: dictionary<string> = {};
         var settings = this.databaseSettings();
         settings.forEach(x => {
@@ -50,11 +53,15 @@ class globalConfigDatabaseSettings extends viewModelBase {
     }
 
     activateConfig() {
+        eventsCollector.default.reportEvent("global-config-database-settings", "activate");
+
         this.activated(true);
         this.databaseSettings([]);
     }
 
     disactivateConfig() {
+        eventsCollector.default.reportEvent("global-config-database-settings", "disactivate");
+
         this.confirmationMessage("Delete global configuration for cluster-wide database settings?", "Are you sure?")
             .done(() => {
                 this.activated(false);
@@ -68,10 +75,14 @@ class globalConfigDatabaseSettings extends viewModelBase {
     }
 
     addNewSetting() {
+        eventsCollector.default.reportEvent("global-config-database-settings", "setting", "add");
+
         this.databaseSettings.push(new databaseSetting(null, null));
     }
 
     removeSetting(itemToRemove: databaseSetting) {
+        eventsCollector.default.reportEvent("global-config-database-settings", "setting", "remove");
+
         this.databaseSettings.remove(itemToRemove);
     }
 

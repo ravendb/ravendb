@@ -23,7 +23,7 @@ import sqlReplicationConnections = require("models/database/sqlReplication/sqlRe
 import predefinedSqlConnection = require("models/database/sqlReplication/predefinedSqlConnection");
 import getEffectiveSqlReplicationConnectionStringsCommand = require("commands/database/globalConfig/getEffectiveSqlReplicationConnectionStringsCommand");
 import getSqlReplicationConnectionsCommand = require("commands/database/sqlReplication/getSqlReplicationConnectionsCommand");
-
+import eventsCollector = require("common/eventsCollector");
 
 class editSqlReplication extends viewModelBase {
     
@@ -175,11 +175,15 @@ class editSqlReplication extends viewModelBase {
     }
 
     showStats() {
+        eventsCollector.default.reportEvent("edit-sql-replication", "stats");
+
         var viewModel = new sqlReplicationStatsDialog(this.activeDatabase(), this.editedReplication().name());
         app.showBootstrapDialog(viewModel);
     }
 
     refreshSqlReplication() {
+        eventsCollector.default.reportEvent("edit-sql-replicaton", "refresh");
+
         if (this.isEditingNewReplication() === false) {
             var docId = this.initialReplicationId;
             this.loadSqlReplication(docId);
@@ -206,6 +210,8 @@ class editSqlReplication extends viewModelBase {
     }
 
     createSqlReplication(): sqlReplication {
+        eventsCollector.default.reportEvent("edit-sql-replication", "create");
+
         var newSqlReplication: sqlReplication = sqlReplication.empty();
         newSqlReplication.collections(this.collections());
         this.collections.subscribe(value => newSqlReplication.collections(value));
@@ -262,6 +268,8 @@ class editSqlReplication extends viewModelBase {
     }
 
     save() {
+        eventsCollector.default.reportEvent("edit-sql-replication", "save");
+
         var currentDocumentId = this.editedReplication().name();
         this.editedReplication().script(this.script());
 
@@ -301,6 +309,7 @@ class editSqlReplication extends viewModelBase {
     }
 
     deleteSqlReplication() {
+        eventsCollector.default.reportEvent("edit-sql-replication", "delete");
         var newDoc = new document(this.editedReplication().toDto());
 
         if (newDoc) {
@@ -314,6 +323,7 @@ class editSqlReplication extends viewModelBase {
         }
     }
     resetSqlReplication() {
+        eventsCollector.default.reportEvent("edit-sql-replication", "reset");
 
         app.showBootstrapMessage("You are about to reset this SQL Replication, forcing replication of all collection items", "SQL Replication Reset", ["Cancel", "Reset"])
             .then((dialogResult: string) => {
@@ -328,6 +338,8 @@ class editSqlReplication extends viewModelBase {
     }
 
     simulateSqlReplication() {
+        eventsCollector.default.reportEvent("edit-sql-replication", "simulate");
+
         this.editedReplication().script(this.script());
         var viewModel = new sqlReplicationSimulationDialog(this.activeDatabase(), this.editedReplication(), this.simulationDocumentId);
         app.showBootstrapDialog(viewModel);

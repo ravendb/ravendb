@@ -35,7 +35,8 @@
     "Squire.js": "squire#^0.2.0",
     "es6-shim": "^0.35.1",
     "knockout-validation": "ko-validation#^2.0.3",
-    "rbush": "git://github.com/mourner/rbush.git#^2.0.1"
+    "rbush": "git://github.com/mourner/rbush.git#^2.0.1",
+    "google-analytics": "https://www.google-analytics.com/analytics.js"
   },
   "resolutions": {
     "jquery": "^2.2.0",

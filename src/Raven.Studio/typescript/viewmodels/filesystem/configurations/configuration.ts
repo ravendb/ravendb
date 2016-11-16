@@ -13,6 +13,7 @@ import messagePublisher = require("common/messagePublisher");
 import saveConfigurationCommand = require("commands/filesystem/saveConfigurationCommand");
 import deleteConfigurationKeys = require("viewmodels/filesystem/configurations/deleteConfigurationKeys");
 import createConfigurationKey = require("viewmodels/filesystem/configurations/createConfigurationKey");
+import eventsCollector = require("common/eventsCollector");
 
 class configuration extends viewModelBase {
 
@@ -197,6 +198,8 @@ class configuration extends viewModelBase {
     }
 
     save() {
+        eventsCollector.default.reportEvent("fs-config", "save");
+
         var message = "";
         try {
             var jsonConfigDoc = JSON.parse(this.configurationKeyText());
@@ -217,10 +220,14 @@ class configuration extends viewModelBase {
     }
 
     refreshConfig() {
+        eventsCollector.default.reportEvent("fs-config", "refresh");
+
         this.selectedKeyChanged(this.currentKey());
     }
 
     deleteConfiguration() {
+        eventsCollector.default.reportEvent("fs-config", "delete");
+
         var deleteConfigurationKeyViewModel = new deleteConfigurationKeys(this.activeFilesystem(), [this.currentKey()]);
         deleteConfigurationKeyViewModel
             .deletionTask
@@ -231,6 +238,8 @@ class configuration extends viewModelBase {
     }
 
     removeKey(key: string) {
+        eventsCollector.default.reportEvent("fs-config", "create");
+
         var foundKey = this.keys().filter((configKey: configurationKey) => configKey.key === key );
 
         if (foundKey.length > 0) {

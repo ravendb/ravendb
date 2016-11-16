@@ -14,6 +14,7 @@ import resourcesManager = require("common/shell/resourcesManager");
 import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
 
 import databaseCreationModel = require("models/resources/creation/databaseCreationModel");
+import eventsCollector = require("common/eventsCollector");
 
 class createDatabase extends createResourceBase {
 
@@ -79,6 +80,8 @@ class createDatabase extends createResourceBase {
     }
 
     createResource() {
+        eventsCollector.default.reportEvent('resource', 'create');
+
         const globalValid = this.isValid(this.resourceModel.globalValidationGroup);
         const advancedValid = this.isValid(this.resourceModel.advancedValidationGroup);
         const encryptionValid = !this.bundlesEnabled.encryption() || this.isValid(this.resourceModel.encryptionValidationGroup);

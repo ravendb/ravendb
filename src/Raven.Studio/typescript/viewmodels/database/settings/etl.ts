@@ -13,6 +13,7 @@ import collectionsStats = require("models/database/documents/collectionsStats");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class etl extends viewModelBase {
     /*TODO
@@ -228,6 +229,10 @@ class etl extends viewModelBase {
                 });
             });
     }*/
+
+    /*
+        TODO @gregolsky apply google analytics
+    */
 
 }
 

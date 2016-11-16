@@ -14,6 +14,7 @@ import getIndexesStatsCommand = require("commands/database/index/getIndexesStats
 import getIndexesStatusCommand = require("commands/database/index/getIndexesStatusCommand");
 import resetIndexCommand = require("commands/database/index/resetIndexCommand");
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
+import eventsCollector = require("common/eventsCollector");
 
 type indexGroup = {
     entityName: string;
@@ -181,6 +182,8 @@ class indexes extends viewModelBase {
             .done(result => {
                 if (result.can) {
 
+                    eventsCollector.default.reportEvent("indexes", "reset");
+
                     // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
                     // let's issue marker to ignore index delete information for next few seconds because it might be caused by reset.
                     // Unfortunettely we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
@@ -198,6 +201,7 @@ class indexes extends viewModelBase {
     }
 
     deleteIndex(i: index) {
+        eventsCollector.default.reportEvent("indexes", "delete");
         this.promptDeleteIndexes([i]);
         this.resetsInProgress.delete(i.name);
     }
@@ -251,18 +255,22 @@ class indexes extends viewModelBase {
     }
 
     unlockIndex(i: index) {
+        eventsCollector.default.reportEvent("indexes", "set-lock-mode", "Unlock");
         this.updateIndexLockMode(i, "Unlock");
     }
 
     lockIndex(i: index) {
+        eventsCollector.default.reportEvent("indexes", "set-lock-mode", "LockedIgnore");
         this.updateIndexLockMode(i, "LockedIgnore");
     }
 
     lockErrorIndex(i: index) {
+        eventsCollector.default.reportEvent("indexes", "set-lock-mode", "LockedError");
         this.updateIndexLockMode(i, "LockedError");
     }
 
     lockSideBySide(i: index) {
+        eventsCollector.default.reportEvent("indexes", "set-lock-mode", "SideBySide");
         this.updateIndexLockMode(i, "SideBySide");
     }
 
@@ -278,18 +286,21 @@ class indexes extends viewModelBase {
     }
 
     idlePriority(idx: index) {
+        eventsCollector.default.reportEvent("index", "priority", "idle");
         const idle = "Idle" as Raven.Client.Data.Indexes.IndexingPriority;
         const forced = "Forced" as Raven.Client.Data.Indexes.IndexingPriority;
         this.setIndexPriority(idx, idle + "," + forced as any);
     }
 
     disabledPriority(idx: index) {
+        eventsCollector.default.reportEvent("index", "priority", "disabled");
         const disabled = "Disabled" as Raven.Client.Data.Indexes.IndexingPriority;
         const forced = "Forced" as Raven.Client.Data.Indexes.IndexingPriority;
         this.setIndexPriority(idx, disabled + "," + forced as any);
     }
 
     normalPriority(idx: index) {
+        eventsCollector.default.reportEvent("index", "priority", "normal");
         this.setIndexPriority(idx, "Normal");
     }
 
@@ -324,6 +335,7 @@ class indexes extends viewModelBase {
     }
 
     cancelSideBySideIndex(i: index) {
+        eventsCollector.default.reportEvent("index", "cancel-side-by-side");
         const cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([i.name], this.activeDatabase());
         app.showBootstrapDialog(cancelSideBySideIndexViewModel);
         cancelSideBySideIndexViewModel.cancelTask
@@ -339,6 +351,7 @@ class indexes extends viewModelBase {
     }
 
     forceSideBySide(idx: index) {
+        eventsCollector.default.reportEvent("index", "force-side-by-side");
         new forceIndexReplace(idx.name, this.activeDatabase()).execute();
     }
 
@@ -349,6 +362,8 @@ class indexes extends viewModelBase {
         this.confirmationMessage("Are you sure?", `Do you want to ${lockModeStrForTitle} selected indexes?`)
             .done(can => {
                 if (can) {
+                    eventsCollector.default.reportEvent("index", "set-lock-mode-selected", lockModeString);
+
                     this.spinners.globalLockChanges(true);
 
                     const indexes = this.getSelectedIndexes();
@@ -362,6 +377,7 @@ class indexes extends viewModelBase {
     }
 
     deleteSelectedIndexes() {
+        eventsCollector.default.reportEvent("indexes", "delete-selected");
         this.promptDeleteIndexes(this.getSelectedIndexes());
     }
 
@@ -369,6 +385,7 @@ class indexes extends viewModelBase {
         this.confirmationMessage("Are you sure?", "Do you want to resume indexing?")
             .done(result => {
                 if (result.can) {
+                    eventsCollector.default.reportEvent("indexes", "resume-all");
                     this.spinners.globalStartStop(true);
                     new toggleIndexingCommand(true, this.activeDatabase())
                         .execute()
@@ -385,6 +402,7 @@ class indexes extends viewModelBase {
         this.confirmationMessage("Are you sure?", "Do you want to pause indexing until server restart?")
             .done(result => {
                 if (result.can) {
+                    eventsCollector.default.reportEvent("indexes", "pause-all");
                     this.spinners.globalStartStop(true);
                     new toggleIndexingCommand(false, this.activeDatabase())
                         .execute()
@@ -398,6 +416,7 @@ class indexes extends viewModelBase {
     }
 
     resumeIndexing(idx: index): JQueryPromise<void> {
+        eventsCollector.default.reportEvent("indexes", "resume");
         this.spinners.localPriority.push(idx.name);
 
         return this.resumeIndexingInternal(idx)
@@ -411,6 +430,7 @@ class indexes extends viewModelBase {
     }
 
     pauseUntilRestart(idx: index) {
+        eventsCollector.default.reportEvent("indexes", "pause");
         this.spinners.localPriority.push(idx.name);
 
         new toggleIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
@@ -420,6 +440,7 @@ class indexes extends viewModelBase {
     }
 
     toggleSelectAll() {
+        eventsCollector.default.reportEvent("indexes", "toggle-select-all");
         const selectedIndexesCount = this.selectedIndexesName().length;
 
         if (selectedIndexesCount > 0) {

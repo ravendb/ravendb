@@ -6,6 +6,7 @@ import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import eventsCollector = require("common/eventsCollector");
 
 class globalConfigQuotas extends viewModelBase {
 
@@ -70,6 +71,7 @@ class globalConfigQuotas extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("global-config-quotas", "save");
         this.syncChanges(false);
     }
 
@@ -104,10 +106,12 @@ class globalConfigQuotas extends viewModelBase {
     }
 
     activateConfig() {
+        eventsCollector.default.reportEvent("global-config-quotas", "activate");
         this.activated(true);
     }
 
     disactivateConfig() {
+        eventsCollector.default.reportEvent("global-config-quotas", "disactivate");
         this.confirmationMessage("Delete global configuration for quotas?", "Please note that databases with quotas bundle enabled and without local configuration may crash.")
             .done(() => {
                 this.activated(false);
