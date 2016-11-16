@@ -103,7 +103,7 @@ namespace Raven.Server.ServerWide
                 ? StorageEnvironmentOptions.CreateMemoryOnly(Configuration.Core.DataDirectory)
                 : StorageEnvironmentOptions.ForPath(Configuration.Core.DataDirectory);
 
-            options.SchemaVersion = 1;
+            options.SchemaVersion = 2;
 
             try
             {
