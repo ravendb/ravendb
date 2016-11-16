@@ -546,7 +546,6 @@ namespace Voron.Impl.Journal
                         _waj._env.FlushInProgressLock.EnterWriteLock();
                     try
                     {
-                        _waj._env.IncreaseTheChanceForGettingTheTransactionLock();
                         var transactionPersistentContext = new TransactionPersistentContext(true);
                         using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
                         {
@@ -586,8 +585,6 @@ namespace Voron.Impl.Journal
                     }
                     finally
                     {
-                        _waj._env.ResetTheChanceForGettingTheTransactionLock();
-
                         if (alreadyInWriteTx == false)
                             _waj._env.FlushInProgressLock.ExitWriteLock();
                     }
