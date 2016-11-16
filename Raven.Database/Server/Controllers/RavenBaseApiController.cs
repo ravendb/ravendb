@@ -116,7 +116,7 @@ namespace Raven.Database.Server.Controllers
         protected bool IsClientV4OrHigher(out HttpResponseMessage message)
         {
             message = null;
-            if (ClientIsV4OrHigher(Request))
+            if (ClientIsV4OrHigher(InnerRequest))
             {
                 message = GetMessageWithObject(new
                 {
