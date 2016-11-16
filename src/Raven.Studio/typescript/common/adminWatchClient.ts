@@ -36,6 +36,10 @@ class adminWatchClient extends abstractWebSocketClient {
     }
 
     protected onMessage(e: any) {
+        if (!e.data.trim()) {
+            // it is heartbeat only
+            return;
+        }
         const eventDto: adminWatchMessage = JSON.parse(e.data);
         const eventOperation = eventDto.Operation;
 

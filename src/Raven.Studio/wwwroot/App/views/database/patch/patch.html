@@ -48,7 +48,8 @@
         </div>
 
         <div class="btn-group">
-            <button class="btn btn-default" title="Test the patch script on the selected document (Alt+T)" data-bind="click: testPatch, enable: isExecuteAllowed() && !$root.isPatchingInProgress() && !$root.isMapReduceIndexSelected()" accesskey="T"><i class="fa fa-question-circle"></i> Test</button>
+            <!-- TODO: enable: isExecuteAllowed() && !$root.isPatchingInProgress() && !$root.isMapReduceIndexSelected() -->
+            <button class="btn btn-default btn-prerelease" disabled title="Test the patch script on the selected document (Alt+T)" data-bind="click: testPatch" accesskey="T"><i class="fa fa-question-circle"></i> Test</button>
         </div>
 
         <div class="btn-group" data-bind="visible: patchDocument() && patchDocument().isDocumentPatch()">
@@ -237,7 +238,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="tabs-container">
+                <div class="tabs-container" style="display: none">
                     <ul class="nav nav-tabs" role="tablist">
                         <li class="active"><a href="#patchPut" role="tab" data-toggle="tab">Document Puts <span data-bind="text: putDocuments().length" class="badge"></span></a></li>
                         <li><a href="#patchLoad" role="tab" data-toggle="tab">Document Loads <span data-bind="text: loadedDocuments().length" class="badge"></span></a></li>

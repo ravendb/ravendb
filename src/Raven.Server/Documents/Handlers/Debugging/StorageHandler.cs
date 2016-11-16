@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         writer.WriteString(env.Type.ToString());
                         writer.WriteComma();
 
-                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(GetReport(env.Environment, details));
+                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(GetReport(env, details));
                         writer.WritePropertyName("Report");
                         writer.WriteObject(context.ReadObject(djv, env.Name));
 
@@ -54,12 +55,18 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return Task.CompletedTask;
         }
 
-        private static StorageReport GetReport(StorageEnvironment environment, bool details)
+        private StorageReport GetReport(StorageEnvironmentWithType environment, bool details)
         {
-            using (var tx = environment.ReadTransaction())
-            {
-                return environment.GenerateReport(tx, details);
-            }
+                if (environment.Type != StorageEnvironmentWithType.StorageEnvironmentType.Index)
+                {
+                    using (var tx = environment.Environment.ReadTransaction())
+                    {
+                        return environment.Environment.GenerateReport(tx, details);
+                    }
+                }
+
+            var index = Database.IndexStore.GetIndex(environment.Name);
+            return index.GenerateStorageReport(details);
         }
     }
 }

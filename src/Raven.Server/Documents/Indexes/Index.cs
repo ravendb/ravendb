@@ -20,6 +20,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -1917,6 +1918,16 @@ namespace Raven.Server.Documents.Indexes
             return collection == Constants.Indexing.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
                 : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
+        }
+
+        public virtual StorageReport GenerateStorageReport(bool details)
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                return _environment.GenerateReport(tx.InnerTransaction, details);
+            }
         }
 
         private bool TryIncreasingMemoryUsageForIndex(Size currentlyAllocated, IndexingStatsScope stats)

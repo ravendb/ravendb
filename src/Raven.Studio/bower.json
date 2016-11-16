@@ -34,7 +34,8 @@
     "chai": "^3.5.0",
     "Squire.js": "squire#^0.2.0",
     "es6-shim": "^0.35.1",
-    "knockout-validation": "ko-validation#^2.0.3"
+    "knockout-validation": "ko-validation#^2.0.3",
+    "rbush": "git://github.com/mourner/rbush.git#^2.0.1"
   },
   "resolutions": {
     "jquery": "^2.2.0",

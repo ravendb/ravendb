@@ -49,7 +49,7 @@
     <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
             <button class="btn btn-primary" title="Run the query (Alt+R)" data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
-            <button class="btn btn-default" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable, attr: { title:isCacheDisable() ? 'Enable Cache' : 'Disable Cache' }">
+            <button class="btn btn-default" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable, attr: { title:isCacheDisable() ? 'Enable Cache' : 'Disable Cache' }" style="display: none"> <!-- TODO: hidden for prerelease -->
                 <span data-bind="text: isCacheDisable() ? 'Cache Disabled' : 'Cache Enabled'"></span>
             </button>
         </div>
@@ -82,7 +82,8 @@
             <button type="button" class="btn btn-default" data-bind="click: selectColumns" title="Choose columns...">
                 <i class="fa fa-table"></i>
             </button>
-            <button data-bind="visible: isStaticIndexSelected, click: exportCsv" class="btn btn-default" title="Export CSV">
+            <!-- TODO: visible: isStaticIndexSelected-->
+            <button data-bind="visible: false, click: exportCsv" class="btn btn-default" title="Export CSV">
                 <i class="fa fa-file-excel-o"></i>
             </button>
             <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, visible: isIndexMapReduce" title="Map-Reduce visualizer">
