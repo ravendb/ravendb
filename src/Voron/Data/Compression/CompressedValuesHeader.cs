@@ -10,5 +10,8 @@ namespace Voron.Data.Compression
 
         [FieldOffset(2)]
         public short UncompressedSize;
+
+        [FieldOffset(4)]
+        public ushort NumberOfCompressedEntries;
     }
 }

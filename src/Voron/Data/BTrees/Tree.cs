@@ -801,7 +801,9 @@ namespace Voron.Data.BTrees
         {
             var compressioncHeader = p.CompressionHeader;
 
-            var necessarySize = p.SizeUsed + compressioncHeader->UncompressedSize - compressioncHeader->CompressedSize;
+            var necessarySize = p.SizeUsed - compressioncHeader->CompressedSize +
+                                compressioncHeader->UncompressedSize +
+                                Constants.NodeOffsetSize * compressioncHeader->NumberOfCompressedEntries;
 
             var decompressedPage = _llt.Environment.DecompressionBuffers.GetPage(_llt, Bits.NextPowerOf2(necessarySize), p);
 

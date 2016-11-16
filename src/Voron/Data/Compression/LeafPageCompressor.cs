@@ -59,7 +59,8 @@ namespace Voron.Data.Compression
                 Header = new CompressedValuesHeader
                 {
                     CompressedSize = (short) compressedSize,
-                    UncompressedSize = (short) valuesSize
+                    UncompressedSize = (short) valuesSize,
+                    NumberOfCompressedEntries = page.NumberOfEntries
                 }
             };
 
