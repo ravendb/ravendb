@@ -1,8 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -51,6 +55,57 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/collections/$", "DELETE")]
+        public Task Delete()
+        {
+            DocumentsOperationContext context;
+            var returnContextToPool = ContextPool.AllocateOperationContext(out context);
+
+            ExecuteCollectionOperation((runner, collectionName, onProgress, token) => Task.Run(()=>runner.ExecuteDelete(collectionName, context, onProgress, token)),
+                context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByCollection);
+            return Task.CompletedTask;
+
+        }
+
+        [RavenAction("/databases/*/collections/$", "PATCH")]
+        public Task Patch()
+        {
+            DocumentsOperationContext context;
+            var returnContextToPool = ContextPool.AllocateOperationContext(out context);
+
+            var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
+            var patch = Documents.Patch.PatchRequest.Parse(reader);
+
+            ExecuteCollectionOperation((runner, collectionName, onProgress, token) => Task.Run(() => runner.ExecutePatch(collectionName, patch, context, onProgress, token)),
+                context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByCollection);
+            return Task.CompletedTask;
+
+        }
+
+        private void ExecuteCollectionOperation(Func<CollectionRunner, string, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
+        {
+            var collectionName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+
+            var token = CreateTimeLimitedOperationToken();
+
+            var collectionRunner = new CollectionRunner(Database, context);
+
+            var operationId = Database.Operations.GetNextOperationId();
+
+            var task = Database.Operations.AddOperation(collectionName, operationType, onProgress =>
+                    operation(collectionRunner, collectionName, onProgress, token), operationId, token);
+
+            task.ContinueWith(_ => returnContextToPool.Dispose());
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("OperationId");
+                writer.WriteInteger(operationId);
+                writer.WriteEndObject();
+            }
         }
 
         [RavenAction("/databases/*/collections/docs", "DELETE", "/databases/{databaseName:string}/collections/docs?name={collectionName:string}")]

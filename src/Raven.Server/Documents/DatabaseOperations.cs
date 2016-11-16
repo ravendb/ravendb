@@ -268,9 +268,14 @@ namespace Raven.Server.Documents
 
             DatabaseExport,
 
-            IndexCompact
+            IndexCompact,
 
+            DeleteByCollection,
+
+            PatchByCollection
             //TODO: other operation types
+            ,
+            
         }
     }
 }
