@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
@@ -22,7 +23,7 @@ namespace FastTests.Server.Documents.Replication
             using (var destination = GetDocumentStore())
             {
                 SetupReplication(source, destination);
-
+                string id;
                 using (var session = source.OpenAsyncSession())
                 {
                     var user = new User { Name = "Arek" };
@@ -31,16 +32,15 @@ namespace FastTests.Server.Documents.Replication
 
                     await session.SaveChangesAsync();
 
-                    await source.Replication.WaitAsync(etag: session.Advanced.GetEtagFor(user));
+                    id = user.Id;
+                    //TODO : uncomment this when the topology endpoint is implemented
+                    //await source.Replication.WaitAsync(etag: session.Advanced.GetEtagFor(user));
                 }
 
-                using (var session = destination.OpenAsyncSession())
-                {
-                    var user = await session.LoadAsync<User>("users/1");
+                var fetchedUser = WaitForDocumentToReplicate<User>(destination, id, 2000);
+                Assert.NotNull(fetchedUser);
 
-                    Assert.NotNull(user);
-                    Assert.Equal("Arek", user.Name);
-                }
+                Assert.Equal("Arek", fetchedUser.Name);
             }
         }
 

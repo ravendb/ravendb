@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Transformers;
@@ -10,24 +11,28 @@ namespace Raven.Server.Smuggler.Documents.Processors
 {
     public class TransformerProcessor
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Import(BlittableJsonDocumentBuilder builder, DocumentDatabase database, long buildVersion)
         {
             using (var reader = builder.CreateReader())
-            {
-                TransformerDefinition transformerDefinition;
-                if (buildVersion == 0) // pre 4.0 support
-                {
-                    transformerDefinition = ReadLegacyTransformerDefinition(reader);
-                }
-                else if (buildVersion >= 40000 && buildVersion <= 44999)
-                {
-                    transformerDefinition = JsonDeserializationServer.TransformerDefinition(reader);
-                }
-                else
-                    throw new NotSupportedException($"We do not support importing transformers from '{buildVersion}' build.");
+                Import(reader, database, buildVersion);
+        }
 
-                database.TransformerStore.CreateTransformer(transformerDefinition);
+        public static void Import(BlittableJsonReaderObject transformerDefinitionDoc, DocumentDatabase database, long buildVersion)
+        {
+            TransformerDefinition transformerDefinition;
+            if (buildVersion == 0) // pre 4.0 support
+            {
+                transformerDefinition = ReadLegacyTransformerDefinition(transformerDefinitionDoc);
             }
+            else if (buildVersion >= 40000 && buildVersion <= 44999)
+            {
+                transformerDefinition = JsonDeserializationServer.TransformerDefinition(transformerDefinitionDoc);
+            }
+            else
+                throw new NotSupportedException($"We do not support importing transformers from '{buildVersion}' build.");
+
+            database.TransformerStore.CreateTransformer(transformerDefinition);
         }
 
         public static void Export(BlittableJsonTextWriter writer, Transformer transformer, DocumentsOperationContext context)

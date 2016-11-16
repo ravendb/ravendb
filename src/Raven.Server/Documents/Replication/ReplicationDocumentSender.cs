@@ -35,7 +35,6 @@ namespace Raven.Server.Documents.Replication
             var readTx = _parent._context.OpenReadTransaction();
             try
             {
-
                 // we scan through the documents to send to the other side, we need to be careful about
                 // filtering a lot of documents, because we need to let the other side know about this, and 
                 // at the same time, we need to send a heartbeat to keep the tcp connection alive
@@ -101,7 +100,6 @@ namespace Raven.Server.Documents.Replication
                         break;
                     }
                 }
-
                 if (_log.IsInfoEnabled)
                 {
                     _log.Info(
@@ -120,8 +118,16 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 _parent.CancellationToken.ThrowIfCancellationRequested();
-
-                SendDocumentsBatch();
+                try
+                {
+                    SendDocumentsBatch();
+                }
+                catch (Exception e)
+                {
+                    if(_log.IsInfoEnabled)
+                        _log.Info("Failed to send document replication batch",e);
+                    throw;
+                }
                 return true;
             }
             finally
@@ -168,23 +174,27 @@ namespace Raven.Server.Documents.Replication
                     $"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag}");
 
             var sw = Stopwatch.StartNew();
-            var headerJson = new DynamicJsonValue
+            try
             {
-                ["Type"] = "ReplicationBatch",
-                ["LastDocumentEtag"] = _lastEtag,
-                ["Documents"] = _orderedReplicaItems.Count
-            };
-            _parent.WriteToServerAndFlush(headerJson);
-
-            foreach (var item in _orderedReplicaItems)
-            {
-                WriteDocumentToServer(item.Value.Key, item.Value.ChangeVector, item.Value.Data, item.Value.Collection);
+                var headerJson = new DynamicJsonValue
+                {
+                    ["Type"] = ReplicationMessageType.Documents,
+                    ["LastDocumentEtag"] = _lastEtag,
+                    ["ItemCount"] = _orderedReplicaItems.Count
+                };
+                _parent.WriteToServerAndFlush(headerJson);
+                foreach (var item in _orderedReplicaItems)
+                {
+                    WriteDocumentToServer(item.Value.Key, item.Value.ChangeVector, item.Value.Data,
+                        item.Value.Collection);
+                }
             }
-
-            // we can release the read transaction while we are waiting for 
-            // reply from the server and not hold it for a long time
-            _parent._context.Transaction.Dispose();
-
+            finally //do try-finally as precaution
+            {
+                // we can release the read transaction while we are waiting for 
+                // reply from the server and not hold it for a long time
+                _parent._context.Transaction.Dispose();
+            }
             _stream.Flush();
             sw.Stop();
 
@@ -192,7 +202,7 @@ namespace Raven.Server.Documents.Replication
 
             if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
                 _log.Info(
-                    $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. First sent etag = {_orderedReplicaItems[0].Etag}, last sent etag = {_lastEtag}");
+                    $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
             using (_parent._context.OpenReadTransaction())

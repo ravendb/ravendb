@@ -565,7 +565,7 @@ namespace Sparrow.Json
                     {
                         var read = _stream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
                         if (read == 0)
-                            throw new EndOfStreamException("Stream ended without reaching end of json content");
+                            throw new EndOfStreamException("Stream ended without reaching end of json content.");
                         _parser.SetBuffer(_buffer, read);
                     }
                     else

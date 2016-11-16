@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -91,6 +92,26 @@ namespace FastTests.Server.Replication
             }
         }
 
+        public class UsernameToLowerTransformer : AbstractTransformerCreationTask<User>
+        {
+            private readonly string _transformerName;
+
+            public override string TransformerName =>
+                string.IsNullOrEmpty(_transformerName) ? base.TransformerName : _transformerName;
+
+            public UsernameToLowerTransformer(string transformerName = null)
+            {
+                _transformerName = transformerName;
+                TransformResults = users => from user in users
+                                            select new
+                                            {
+                                                Name = user.Name.ToLower(),
+                                                user.Age,
+                                                user.Birthday
+                                            };
+            }
+        }
+
         [Fact]
         public async Task Deleting_indexes_should_delete_relevant_metadata()
         {
@@ -115,6 +136,149 @@ namespace FastTests.Server.Replication
                 store.DatabaseCommands.DeleteIndex(userByAge.IndexName);
                 metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByAge.IndexName);
                 Assert.Null(metadata);
+            }
+        }
+
+        [Fact]
+        public void Can_replicate_index()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
+            {
+                SetupReplication(source, destination);
+
+                var userByAge = new UserByAgeIndex();
+                userByAge.Execute(source);
+
+                var sw = Stopwatch.StartNew();
+                var destIndexNames = new string[0];
+                var timeout = Debugger.IsAttached ? 60*1000000 : 3000;
+                while(sw.ElapsedMilliseconds < timeout)
+                    destIndexNames = destination.DatabaseCommands.GetIndexNames(0, 1024);
+
+                Assert.NotNull(destIndexNames); //precaution
+                Assert.Equal(1,destIndexNames.Length);
+                Assert.Equal(userByAge.IndexName,destIndexNames.First());
+            }
+        }
+
+        [Fact]
+        public void Can_replicate_multiple_indexes()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
+            {
+                var userByAge = new UserByAgeIndex();
+                userByAge.Execute(source);
+
+                var userByName = new UserByNameIndex();
+                userByName.Execute(source);
+
+                SetupReplication(source, destination);
+
+                var sw = Stopwatch.StartNew();
+                var destIndexNames = new string[0];
+                var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
+                while (sw.ElapsedMilliseconds < timeout)
+                    destIndexNames = destination.DatabaseCommands.GetIndexNames(0, 1024);
+
+                Assert.NotNull(destIndexNames); //precaution
+                Assert.Equal(2, destIndexNames.Length);
+                Assert.True(destIndexNames.Contains(userByAge.IndexName));
+                Assert.True(destIndexNames.Contains(userByName.IndexName));
+            }
+        }
+
+        [Fact]
+        public void Can_replicate_multiple_indexes_and_multiple_transformers()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
+            {
+                var userByAge = new UserByAgeIndex();
+                userByAge.Execute(source);
+
+                var usernameToUpperTransformer = new UsernameToUpperTransformer();
+                usernameToUpperTransformer.Execute(source);
+
+                var userByName = new UserByNameIndex();
+                userByName.Execute(source);
+
+                var usernameToLowerTransformer = new UsernameToLowerTransformer();
+                usernameToLowerTransformer.Execute(source);
+
+                SetupReplication(source, destination);
+
+                var sw = Stopwatch.StartNew();
+                var destIndexNames = new string[0];
+                var destTransformerNames = new string[0];
+                var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
+                while (sw.ElapsedMilliseconds < timeout)
+                    destIndexNames = destination.DatabaseCommands.GetIndexNames(0, 1024);
+                
+                sw.Restart();
+                while (sw.ElapsedMilliseconds < timeout)
+                    destTransformerNames = destination.DatabaseCommands.GetTransformers(0, 1024).Select(x => x.Name).ToArray();
+
+                Assert.NotNull(destIndexNames); //precaution
+                Assert.Equal(2, destIndexNames.Length);
+                Assert.True(destIndexNames.Contains(userByAge.IndexName));
+                Assert.True(destIndexNames.Contains(userByName.IndexName));
+
+                Assert.NotNull(destTransformerNames); //precaution
+                Assert.Equal(2, destTransformerNames.Length);
+                Assert.True(destTransformerNames.Contains(usernameToUpperTransformer.TransformerName));
+                Assert.True(destTransformerNames.Contains(usernameToLowerTransformer.TransformerName));
+            }
+        }
+
+        [Fact]
+        public void Can_replicate_transformer()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
+            {
+                SetupReplication(source, destination);
+
+                var usernameToUpperTransformer = new UsernameToUpperTransformer();
+                usernameToUpperTransformer.Execute(source);
+
+                var sw = Stopwatch.StartNew();
+                var transformerNames = new string[0];
+                var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
+                while (sw.ElapsedMilliseconds < timeout)
+                    transformerNames = destination.DatabaseCommands.GetTransformers(0, 1024).Select(x => x.Name).ToArray();
+
+                Assert.NotNull(transformerNames); //precaution
+                Assert.Equal(1, transformerNames.Length);
+                Assert.Equal(usernameToUpperTransformer.TransformerName, transformerNames.First());
+            }
+        }
+
+        [Fact]
+        public void Can_replicate_multiple_transformers()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
+            {
+                var usernameToUpperTransformer = new UsernameToUpperTransformer();
+                usernameToUpperTransformer.Execute(source);
+
+                var usernameToLowerTransformer = new UsernameToLowerTransformer();
+                usernameToLowerTransformer.Execute(source);
+                
+                SetupReplication(source, destination);
+
+                var sw = Stopwatch.StartNew();
+                var transformerNames = new string[0];
+                var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
+                while (sw.ElapsedMilliseconds < timeout)
+                    transformerNames = destination.DatabaseCommands.GetTransformers(0, 1024).Select(x => x.Name).ToArray();
+
+                Assert.NotNull(transformerNames); //precaution
+                Assert.Equal(2, transformerNames.Length);
+                Assert.True(transformerNames.Contains(usernameToUpperTransformer.TransformerName));
+                Assert.True(transformerNames.Contains(usernameToLowerTransformer.TransformerName));
             }
         }
 

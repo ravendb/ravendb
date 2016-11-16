@@ -92,11 +92,25 @@ namespace Raven.Server.Documents.Replication
                         ["Etag"] = changeVectorEntry.Etag
                     });
                 }
+
+                var indexesChangeVector = new DynamicJsonArray();
+                foreach (var changeVectorEntry in _database.IndexMetadataPersistence.GetGlobalChangeVector())
+                {
+                    indexesChangeVector.Add(new DynamicJsonValue
+                    {
+                        ["DbId"] = changeVectorEntry.DbId.ToString(),
+                        ["Etag"] = changeVectorEntry.Etag
+                    });
+                }
+
                 documentsOperationContext.Write(writer, new DynamicJsonValue
                 {
                     ["Type"] = "Ok",
+                    ["MessageType"] = ReplicationMessageType.Heartbeat,
                     ["LastEtagAccepted"] = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId),
-                    ["CurrentChangeVector"] = changeVector
+                    ["LastIndexTransformerEtagAccepted"] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(getLatestEtagMessage.SourceDatabaseId),
+                    ["CurrentChangeVector"] = changeVector,
+                    ["CurrentIndexTransformerChangeVector"] = indexesChangeVector
                 });
                 writer.Flush();
             }
