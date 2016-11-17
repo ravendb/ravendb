@@ -25,7 +25,7 @@ namespace Voron.Impl
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
-        private Dictionary<Slice, Table> _tables;
+        private Dictionary<string, Table> _tables;
 
         private Dictionary<Slice, Tree> _trees;
 
@@ -91,29 +91,31 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.NoInlining)]
         public Table OpenTable(TableSchema schema, string name, bool throwIfDoesNotExist = true)
         {
-            Slice nameSlice;
-            Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice);
-            return OpenTable(schema, nameSlice, throwIfDoesNotExist);
-        }
-
-        public Table OpenTable(TableSchema schema, Slice name, bool throwIfDoesNotExist = true)
-        {
-            if(_tables == null)
-                _tables = new Dictionary<Slice, Table>(SliceComparer.Instance);
+            if (_tables == null)
+                _tables = new Dictionary<string, Table>(StringComparer.Ordinal);
 
             Table openTable;
             if (_tables.TryGetValue(name, out openTable))
                 return openTable;
 
+            Slice nameSlice;
+            Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice);
+            // intentionally not disposing the name here, it is valid for the lifetime of the table
+            openTable = OpenTable(schema, nameSlice, throwIfDoesNotExist);
+
+            _tables.Add(name, openTable);
+
+            return openTable;
+        }
+
+        public Table OpenTable(TableSchema schema, Slice name, bool throwIfDoesNotExist = true)
+        {
             var tableTree = ReadTree(name, RootObjectType.Table);
 
             if (tableTree == null)
                 return null;
 
-            openTable = new Table(schema, name, this, tableTree);
-            _tables.Add(name, openTable);
-
-            return openTable;
+            return new Table(schema, name, this, tableTree);
         }
 
         internal void PrepareForCommit()
