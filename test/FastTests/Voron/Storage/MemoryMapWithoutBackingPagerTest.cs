@@ -85,8 +85,8 @@ namespace FastTests.Voron.Storage
         {
             if (StorageEnvironmentOptions.RunningOnPosix)
             {
-                var p = Syscall.mmap(new IntPtr(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize), 16,
-                    MmapProts.PROT_READ | MmapProts.PROT_WRITE, MmapFlags.MAP_ANONYMOUS, -1, 0);
+                var p = Syscall.mmap(new IntPtr(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize), (UIntPtr)16,
+                    MmapProts.PROT_READ | MmapProts.PROT_WRITE, MmapFlags.MAP_ANONYMOUS, -1, IntPtr.Zero);
                 if (p.ToInt64() == -1)
                 {
                     return null;
@@ -103,7 +103,7 @@ namespace FastTests.Voron.Storage
                 return;
             if (StorageEnvironmentOptions.RunningOnPosix)
             {
-                Syscall.munmap(new IntPtr(adjacentBlockAddress), 16);
+                Syscall.munmap(new IntPtr(adjacentBlockAddress), (UIntPtr)16);
                 return;
             }
             Win32NativeMethods.VirtualFree(adjacentBlockAddress, UIntPtr.Zero, Win32NativeMethods.FreeType.MEM_RELEASE);

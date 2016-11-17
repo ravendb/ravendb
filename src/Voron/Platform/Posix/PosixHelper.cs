@@ -21,7 +21,7 @@ namespace Voron.Platform.Posix
             int retries = 1024;
             while (true)
             {
-                result = Syscall.posix_fallocate(fd, 0, size);
+                result = Syscall.posix_fallocate(fd, IntPtr.Zero, (UIntPtr)size);
                 if (result != (int)Errno.EINTR)
                     break;
                 if (retries-- > 0)

@@ -3,8 +3,6 @@ using System.Runtime.InteropServices;
 
 namespace Voron.Platform.Posix
 {
-    // Take from https://github.com/mono/mono/blob/master/mcs/class/Mono.Posix/Mono.Unix.Native/Syscall.cs
-    // Used this way to avoid taking a hard dependency on the Mono.Posix.dll
     public static class Syscall
     {
         internal const string LIBC_6 = "libc.so.6";
@@ -13,7 +11,9 @@ namespace Voron.Platform.Posix
         public static extern int sysinfo(ref sysinfo_t info);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int mkdir ([MarshalAs (UnmanagedType.LPStr)] string filename, [MarshalAs (UnmanagedType.U4)] uint mode);
+        public static extern int mkdir (
+            [MarshalAs (UnmanagedType.LPStr)] string filename, 
+            [MarshalAs (UnmanagedType.U4)] uint mode);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int close(int fd);
@@ -21,28 +21,28 @@ namespace Voron.Platform.Posix
         // pread(2)
         //    ssize_t pread(int fd, void *buf, size_t count, off_t offset);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long pread(int fd, IntPtr buf, ulong count, long offset);
+        public static extern long pread(int fd, IntPtr buf, UIntPtr count, UIntPtr offset);
 
         public static unsafe long pread(int fd, void* buf, ulong count, long offset)
         {
-            return pread(fd, (IntPtr)buf, count, offset);
+            return pread(fd, (IntPtr)buf, (UIntPtr)count, (UIntPtr)offset);
         }
 
         // posix_fallocate(P)
         //    int posix_fallocate(int fd, off_t offset, size_t len);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int posix_fallocate(int fd, long offset, ulong len);
+        public static extern int posix_fallocate(int fd, IntPtr offset, UIntPtr len);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int msync(IntPtr start, ulong len, MsyncFlags flags);
+        public static extern int msync(IntPtr start, UIntPtr len, MsyncFlags flags);
 
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern IntPtr mmap(IntPtr start, ulong length,
-                MmapProts prot, MmapFlags flags, int fd, long offset);
+        public static extern IntPtr mmap(IntPtr start, UIntPtr length,
+                MmapProts prot, MmapFlags flags, int fd, IntPtr offset);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int munmap(IntPtr start, ulong length);
+        public static extern int munmap(IntPtr start, UIntPtr length);
 
 
         // getpid(2)
@@ -51,33 +51,14 @@ namespace Voron.Platform.Posix
         public static extern int getpid();
 
         [DllImport(LIBC_6, SetLastError = true)]
-        private static extern int unlink(
-                IntPtr pathname);
+        public static extern int unlink(
+                            [MarshalAs(UnmanagedType.LPStr)] string filename);
 
-        public unsafe static int unlink(string pathname)
-        {
-            byte[] pathNameBytes = System.Text.Encoding.UTF8.GetBytes(pathname);
-            fixed(byte* pPath = pathNameBytes)
-            {
-                return unlink((IntPtr)pPath);
-            }
-        }
         // open(2)
         //    int open(const char *pathname, int flags, mode_t mode);
         [DllImport(LIBC_6, SetLastError = true)]
-        private static extern int open(
-                IntPtr pathname, OpenFlags flags, FilePermissions mode);
-
-        public unsafe static int open(
-            string pathname, OpenFlags flags, FilePermissions mode)
-        {
-            byte[] pathNameBytes = System.Text.Encoding.UTF8.GetBytes(pathname);
-            fixed(byte* pPath = pathNameBytes)
-            {
-                return open((IntPtr)pPath, flags, mode);
-            }
-        }
-
+        public static extern int open(
+                [MarshalAs(UnmanagedType.LPStr)] string pathname, OpenFlags flags, FilePermissions mode);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int fsync(int fd);
@@ -86,46 +67,33 @@ namespace Voron.Platform.Posix
         // read(2)
         //    ssize_t read(int fd, void *buf, size_t count);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long read(int fd, IntPtr buf, ulong count);
+        public static extern long read(int fd, IntPtr buf, UIntPtr count);
 
         public static unsafe long read(int fd, void* buf, ulong count)
         {
-            return read(fd, (IntPtr)buf, count);
-        }
-
-        // pwritev(2)
-        //    ssize_t pwritev(int fd, const struct iovec *iov, int iovcnt, off_t offset);
-        [DllImport(LIBC_6, SetLastError = true)]
-        private unsafe static extern long pwritev(int fd, void* iov, int iovcnt, long offset);
-
-        public unsafe static long pwritev(int fd, Iovec[] iov, long offset)
-        {
-            fixed(Iovec* array = iov)
-            {
-                return pwritev(fd, array, iov.Length, offset);
-            }
+            return read(fd, (IntPtr)buf, (UIntPtr)count);
         }
 
 
         // pwrite(2)
         //    ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long pwrite(int fd, IntPtr buf, ulong count, long offset);
+        public static extern long pwrite(int fd, IntPtr buf, UIntPtr count, IntPtr offset);
 
         public static unsafe long pwrite(int fd, void* buf, ulong count, long offset)
         {
-            return pwrite(fd, (IntPtr)buf, count, offset);
+            return pwrite(fd, (IntPtr)buf, (UIntPtr)count, (IntPtr)offset);
         }
 
 
         // write(2)
         //    ssize_t write(int fd, const void *buf, size_t count);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long write(int fd, IntPtr buf, ulong count);
+        public static extern long write(int fd, IntPtr buf, UIntPtr count);
 
         public static unsafe long write(int fd, void* buf, ulong count)
         {
-            return write(fd, (IntPtr)buf, count);
+            return write(fd, (IntPtr)buf, (UIntPtr)count);
         }
 
 
@@ -141,10 +109,10 @@ namespace Voron.Platform.Posix
         public static extern int fstat(int version, int filedes, out Stat buf);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int madvise(IntPtr addr, int length, MAdvFlags madvFlags);
+        public static extern int madvise(IntPtr addr, UIntPtr length, MAdvFlags madvFlags);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int ftruncate(int fd, long size);
+        public static extern int ftruncate(int fd, IntPtr size);
     }
 
     [Flags]
@@ -162,7 +130,7 @@ namespace Voron.Platform.Posix
     }
 
     [Flags]
-    public enum MmapProts
+    public enum MmapProts : int
     {
         PROT_READ = 0x1,  // Page can be read.
         PROT_WRITE = 0x2,  // Page can be written.
@@ -175,7 +143,7 @@ namespace Voron.Platform.Posix
     }
 
 
-    public enum MmapFlags
+    public enum MmapFlags : int
     {
         MAP_SHARED = 0x01,     // Share changes.
         MAP_PRIVATE = 0x02,     // Changes are private.
@@ -196,7 +164,7 @@ namespace Voron.Platform.Posix
     }
 
 
-    public enum MsyncFlags
+    public enum MsyncFlags : int
     {
         MS_ASYNC = 0x1,  // Sync memory asynchronously.
         MS_SYNC = 0x4,  // Synchronous memory sync.
@@ -207,7 +175,7 @@ namespace Voron.Platform.Posix
     {
         public IntPtr iov_base; // Starting address
         
-        public ulong iov_len;  // Number of bytes to transfer
+        public UIntPtr iov_len;  // Number of bytes to transfer
     }
 
     // Use manually written To/From methods to handle fields st_atime_nsec etc.
