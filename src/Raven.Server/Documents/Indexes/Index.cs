@@ -2050,13 +2050,13 @@ namespace Raven.Server.Documents.Indexes
                 : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
         }
 
-        public virtual StorageReport GenerateStorageReport(bool details)
+        public virtual DetailedStorageReport GenerateStorageReport(bool calculateExactSizes)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
             {
-                return _environment.GenerateReport(tx.InnerTransaction, details);
+                return _environment.GenerateDetailedReport(tx.InnerTransaction, calculateExactSizes);
             }
         }
 
