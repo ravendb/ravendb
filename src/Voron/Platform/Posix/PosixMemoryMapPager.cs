@@ -29,7 +29,7 @@ namespace Voron.Platform.Posix
             if (_fd == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                PosixHelper.ThrowLastError(err, "when opening " + file);
             }
 
             SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
@@ -44,13 +44,13 @@ namespace Voron.Platform.Posix
                 _totalAllocationSize != GetFileSize())
             {
                 _totalAllocationSize = NearestSizeToPageSize(_totalAllocationSize);
-                PosixHelper.AllocateFileSpace(_fd, (ulong) _totalAllocationSize);
+                PosixHelper.AllocateFileSpace(_fd, (ulong) _totalAllocationSize, file);
             }
 
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(file) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                PosixHelper.ThrowLastError(err, "sync dir for " + file);
             }
 
             NumberOfAllocatedPages = _totalAllocationSize / PageSize;
@@ -94,7 +94,7 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_fd, (ulong) (_totalAllocationSize + allocationSize));
+            PosixHelper.AllocateFileSpace(_fd, (ulong) (_totalAllocationSize + allocationSize), FileName);
 
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(FileName) == -1)
             {
@@ -134,7 +134,7 @@ namespace Voron.Platform.Posix
             if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                PosixHelper.ThrowLastError(err, "mmap on " + FileName);
             }
 
             NativeMemory.RegisterFileMapping(FileName, startingBaseAddressPtr, fileSize);
@@ -171,7 +171,7 @@ namespace Voron.Platform.Posix
                         if (result == -1)
                         {
                             var err = Marshal.GetLastWin32Error();
-                            PosixHelper.ThrowLastError(err);
+                            PosixHelper.ThrowLastError(err, "msync on " + FileName);
                         }
                     }
                 }
@@ -195,7 +195,7 @@ namespace Voron.Platform.Posix
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                PosixHelper.ThrowLastError(err, "munmap " + FileName);
             }
             NativeMemory.UnregisterFileMapping(FileName, ptr, size);
         }
