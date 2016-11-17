@@ -80,6 +80,8 @@ namespace Raven.Client.Data
         /// Indicates if process is 64-bit
         /// </summary>
         public bool Is64Bit { get; set; }
+
+        public DateTime? LastIndexingTime { get; set; }
     }
 
     public class IndexInformation

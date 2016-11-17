@@ -53,6 +53,11 @@ namespace Raven.Server.Documents.Handlers
                         Type = index.Type,
                         LastIndexingTime = index.LastIndexingTime
                     };
+
+                    if (stats.LastIndexingTime.HasValue)
+                        stats.LastIndexingTime = stats.LastIndexingTime >= index.LastIndexingTime ? stats.LastIndexingTime : index.LastIndexingTime;
+                    else
+                        stats.LastIndexingTime = index.LastIndexingTime;
                 }
 
                 writer.WriteDatabaseStatistics(context, stats);
