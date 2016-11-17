@@ -4,9 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using Voron.Data;
@@ -23,6 +21,16 @@ namespace Voron.Debugging
 {
     public class ReportInput
     {
+        public long NumberOfAllocatedPages { get; set; }
+        public int NumberOfFreePages { get; set; }
+        public long NextPageNumber { get; set; }
+        public int CountOfJournals { get; set; }
+        public int CountOfTrees { get; set; }
+        public int CountOfTables { get; set; }
+    }
+
+    public class DetailedReportInput
+    {
         public long NumberOfAllocatedPages;
         public long NumberOfFreePages;
         public long NextPageNumber;
@@ -31,7 +39,7 @@ namespace Voron.Debugging
         public List<JournalFile> Journals;
         public List<Table> Tables;
 
-        public bool IsLightReport { get; set; }
+        public bool CalculateExactSizes { get; set; }
     }
 
     public unsafe class StorageReportGenerator
@@ -45,27 +53,33 @@ namespace Voron.Debugging
 
         public StorageReport Generate(ReportInput input)
         {
-            var unallocatedPagesAtEndOfFile = input.NumberOfAllocatedPages - input.NextPageNumber;
+            var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber);
 
-            var dataFile = new DataFileReport
+            return new StorageReport
             {
-                AllocatedSpaceInBytes = PagesToBytes(input.NumberOfAllocatedPages),
-                UsedSpaceInBytes = PagesToBytes(input.NextPageNumber - input.NumberOfFreePages),
-                FreeSpaceInBytes = PagesToBytes(input.NumberOfFreePages + unallocatedPagesAtEndOfFile)
+                DataFile = dataFile,
+                CountOfJournals = input.CountOfJournals,
+                CountOfTables = input.CountOfTables,
+                CountOfTrees = input.CountOfTrees
             };
+        }
+
+        public DetailedStorageReport Generate(DetailedReportInput input)
+        {
+            var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber);
 
             var trees = new List<TreeReport>();
 
             foreach (var tree in input.Trees)
             {
-                var treeReport = GetReport(tree, input.IsLightReport == false);
+                var treeReport = GetReport(tree, input.CalculateExactSizes);
 
                 trees.Add(treeReport);
             }
 
             foreach (var fst in input.FixedSizeTrees)
             {
-                var treeReport = GetReport(fst, input.IsLightReport == false);
+                var treeReport = GetReport(fst, input.CalculateExactSizes);
 
                 trees.Add(treeReport);
             }
@@ -73,7 +87,7 @@ namespace Voron.Debugging
             var tables = new List<TableReport>();
             foreach (var table in input.Tables)
             {
-                var tableReport = table.GetReport(input.IsLightReport == false);
+                var tableReport = table.GetReport(input.CalculateExactSizes);
                 tables.Add(tableReport);
             }
 
@@ -83,7 +97,7 @@ namespace Voron.Debugging
                 AllocatedSpaceInBytes = PagesToBytes(journal.JournalWriter.NumberOfAllocatedPages)
             }).ToList();
 
-            return new StorageReport
+            return new DetailedStorageReport
             {
                 DataFile = dataFile,
                 Trees = trees,
@@ -92,11 +106,23 @@ namespace Voron.Debugging
             };
         }
 
-        public static TreeReport GetReport(FixedSizeTree fst, bool calculateDensity)
+        private DataFileReport GenerateDataFileReport(long numberOfAllocatedPages, long numberOfFreePages, long nextPageNumber)
+        {
+            var unallocatedPagesAtEndOfFile = numberOfAllocatedPages - nextPageNumber;
+
+            return new DataFileReport
+            {
+                AllocatedSpaceInBytes = PagesToBytes(numberOfAllocatedPages),
+                UsedSpaceInBytes = PagesToBytes(nextPageNumber - numberOfFreePages),
+                FreeSpaceInBytes = PagesToBytes(numberOfFreePages + unallocatedPagesAtEndOfFile)
+            };
+        }
+
+        public static TreeReport GetReport(FixedSizeTree fst, bool calculateExactSizes)
         {
             List<double> pageDensities = null;
 
-            if (calculateDensity)
+            if (calculateExactSizes)
                 pageDensities = GetPageDensities(fst);
 
             var density = pageDensities?.Average() ?? -1;
@@ -113,17 +139,17 @@ namespace Voron.Debugging
                 PageCount = fst.PageCount,
                 Density = density,
                 AllocatedSpaceInBytes = fst.PageCount * fst.Llt.PageSize,
-                UsedSpaceInBytes = calculateDensity ? (long)(fst.PageCount * fst.Llt.PageSize * density) : -1,
+                UsedSpaceInBytes = calculateExactSizes ? (long)(fst.PageCount * fst.Llt.PageSize * density) : -1,
                 MultiValues = null
             };
             return treeReport;
         }
 
-        public static TreeReport GetReport(Tree tree, bool calculateDensity)
+        public static TreeReport GetReport(Tree tree, bool calculateExactSizes)
         {
             List<double> pageDensities = null;
 
-            if (calculateDensity)
+            if (calculateExactSizes)
             {
                 pageDensities = GetPageDensities(tree);
             }
@@ -149,7 +175,7 @@ namespace Voron.Debugging
                 PageCount = tree.State.PageCount,
                 Density = density,
                 AllocatedSpaceInBytes = tree.State.PageCount * tree.Llt.PageSize,
-                UsedSpaceInBytes = calculateDensity ? (long)(tree.State.PageCount * tree.Llt.PageSize * density) : -1,
+                UsedSpaceInBytes = calculateExactSizes ? (long)(tree.State.PageCount * tree.Llt.PageSize * density) : -1,
                 MultiValues = multiValues
             };
 

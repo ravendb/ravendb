@@ -588,7 +588,56 @@ namespace Voron
                 FlushInProgressLock.ExitReadLock();
         }
 
-        public unsafe StorageReport GenerateReport(Transaction tx, bool computeExactSizes = false)
+        public StorageReport GenerateReport(Transaction tx)
+        {
+            var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
+            var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
+
+            var countOfTrees = 0;
+            var countOfTables = 0;
+            using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate(false))
+            {
+                if (rootIterator.Seek(Slices.BeforeAllKeys))
+                {
+                    do
+                    {
+                        var currentKey = rootIterator.CurrentKey.Clone(tx.Allocator);
+                        var type = tx.GetRootObjectType(currentKey);
+                        switch (type)
+                        {
+                            case RootObjectType.VariableSizeTree:
+                                countOfTrees++;
+                                break;
+                            case RootObjectType.EmbeddedFixedSizeTree:
+                                break;
+                            case RootObjectType.FixedSizeTree:
+                                countOfTrees++;
+                                break;
+                            case RootObjectType.Table:
+                                countOfTables++;
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }
+                    while (rootIterator.MoveNext());
+                }
+            }
+
+            var generator = new StorageReportGenerator(tx.LowLevelTransaction);
+
+            return generator.Generate(new ReportInput
+            {
+                NumberOfAllocatedPages = numberOfAllocatedPages,
+                NumberOfFreePages = numberOfFreePages,
+                NextPageNumber = NextPageNumber,
+                CountOfJournals = Journal.Files.Count,
+                CountOfTrees = countOfTrees,
+                CountOfTables = countOfTables,
+            });
+        }
+
+        public unsafe DetailedStorageReport GenerateDetailedReport(Transaction tx, bool calculateExactSizes = false)
         {
             var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
             var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
@@ -634,7 +683,7 @@ namespace Voron
 
             var generator = new StorageReportGenerator(tx.LowLevelTransaction);
 
-            return generator.Generate(new ReportInput
+            return generator.Generate(new DetailedReportInput
             {
                 NumberOfAllocatedPages = numberOfAllocatedPages,
                 NumberOfFreePages = numberOfFreePages,
@@ -643,7 +692,7 @@ namespace Voron
                 Trees = trees,
                 FixedSizeTrees = fixedSizeTrees,
                 Tables = tables,
-                IsLightReport = !computeExactSizes
+                CalculateExactSizes = calculateExactSizes
             });
         }
 
