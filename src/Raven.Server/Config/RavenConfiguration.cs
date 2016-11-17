@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -60,12 +61,30 @@ namespace Raven.Server.Config
 
         public RavenConfiguration()
         {
-            var platformPostfix = "windows";
-            if (Platform.RunningOnPosix)
-                platformPostfix = "posix";
-            _configBuilder = new ConfigurationBuilder()
-                .AddJsonFile($"settings_{platformPostfix}.json", optional: true)
-                .AddEnvironmentVariables(prefix: "RAVEN_");
+            // TODO : Remarked because of arm32 issues.  :
+
+            // var platformPostfix = "windows";
+            // if (Platform.RunningOnPosix)
+              //  platformPostfix = "posix";
+            _configBuilder = new ConfigurationBuilder();
+
+
+            // TODO: make this nicer
+            // TODO : Remarked because of arm32 issues.  :
+            // if (Environment.GetEnvironmentVariable("RAVEN_SkipJsonConfig") != "true")
+            //    _configBuilder.AddJsonFile($"settings_{platformPostfix}.json", optional: true);
+
+            foreach (DictionaryEntry  de in Environment.GetEnvironmentVariables())
+            {
+                var s = de.Key as string;
+                if(s == null)
+                    continue;
+                if(s.StartsWith("RAVEN_") == false)
+                    continue;
+
+                _configBuilder.Properties[s.Replace("RAVEN_", "Raven/")] = de.Value;
+            }
+
             Settings = _configBuilder.Build();
             Core = new CoreConfiguration();
 

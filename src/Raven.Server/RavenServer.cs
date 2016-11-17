@@ -110,6 +110,7 @@ namespace Raven.Server
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(options =>
                     {
+                        // TODO :: options.ThreadCount = Convert.ToInt32(Environment.GetEnvironmentVariable("KESTREL_THREADS"));
                     })
                     .UseUrls(Configuration.Core.ServerUrl)
                     .UseStartup<RavenServerStartup>()
