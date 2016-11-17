@@ -75,6 +75,7 @@ namespace Voron
 
         public StorageEnvironmentState State { get; private set; }
 
+        public event Action OnLogsApplied;
 
         public StorageEnvironment(StorageEnvironmentOptions options)
         {
@@ -727,6 +728,11 @@ namespace Voron
         public override string ToString()
         {
             return Options.ToString();
+        }
+
+        public void LogsApplied()
+        {
+            OnLogsApplied?.Invoke();
         }
     }
 }
