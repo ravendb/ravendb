@@ -3,10 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Json.Linq;
 
-namespace Raven.NewClient.Abstractions.Commands
+using Sparrow.Json.Parsing;
+
+namespace Raven.NewClient.Client.Document.Commands
 {
     /// <summary>
     /// A single operation inside a batch
@@ -14,7 +14,7 @@ namespace Raven.NewClient.Abstractions.Commands
     public interface ICommandData
     {
         /// <summary>
-        /// Key of a document.
+        /// Id of a document.
         /// </summary>
         string Id { get; }
 
@@ -31,12 +31,12 @@ namespace Raven.NewClient.Abstractions.Commands
         /// <summary>
         /// Additional command data. For internal use only.
         /// </summary>
-        RavenJObject AdditionalData { get; set; }
+        DynamicJsonValue AdditionalData { get; set; }
 
         /// <summary>
         /// Translates this instance to a Json object.
         /// </summary>
         /// <returns>RavenJObject representing the command.</returns>
-        RavenJObject ToJson();
+        DynamicJsonValue ToJson();
     }
 }

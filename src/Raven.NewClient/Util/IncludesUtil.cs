@@ -1,61 +1,21 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text.RegularExpressions;
-using Raven.NewClient.Abstractions.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.NewClient.Json.Linq;
+using Raven.NewClient.Client.Document.Blittable;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Abstractions.Util
 {
     public class IncludesUtil
     {
         private readonly static Regex IncludePrefixRegex = new Regex(@"(\([^\)]+\))$",
-            RegexOptions.Compiled |
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+   RegexOptions.Compiled |
+   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         private readonly static Regex IncludeSuffixRegex = new Regex(@"(\[[\{0\}\/][^\]]+\])$",
          RegexOptions.Compiled |
          RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
-        
-
-
-        private static void ExecuteInternal(RavenJToken token, string addition, Func<string, string, bool> loadId)
-        {
-            if (token == null)
-                return; // nothing to do
-
-            switch (token.Type)
-            {
-                case JTokenType.Array:
-                    foreach (var item in (RavenJArray)token)
-                    {
-                        ExecuteInternal(item, addition, loadId);
-                    }
-                    break;
-                case JTokenType.String:
-                    var value = token.Value<string>();
-                    // we need to check on both of them, with id & without id
-                    // because people will do products/1 and detaisl/products/1 and want to be able
-                    // to include on that
-                    loadId(value, addition);
-                    if (addition != null)
-                        loadId(value, null);
-                    break;
-                case JTokenType.Integer:
-                    try
-                    {
-                        loadId(token.Value<long>().ToString(CultureInfo.InvariantCulture), addition);
-                    }
-                    catch (OverflowException)
-                    {
-                        loadId(token.Value<ulong>().ToString(CultureInfo.InvariantCulture), addition);
-                    }
-                    break;
-                    // here we ignore everything else
-                    // if it ain't a string or array, it is invalid
-                    // as an id
-            }
-        }
 
         private class IncludePath
         {
@@ -90,7 +50,10 @@ namespace Raven.NewClient.Abstractions.Util
             return result;
         }
 
-        public static void Include(RavenJObject document, string include, Func<string, bool> loadId)
+       
+
+
+        public static void Include(BlittableJsonReaderObject document, string include, Func<string, bool> loadId)
         {
             if (string.IsNullOrEmpty(include) || document == null)
                 return;
@@ -106,6 +69,65 @@ namespace Raven.NewClient.Abstractions.Util
                     return loadId(value);
                 });
             }
+        }
+
+        private static void ExecuteInternal(object token, string addition, Func<string, string, bool> loadId)
+        {
+            if (token == null)
+                return; // nothing to do
+            
+            //Convert.ToDecimal()
+            if (token is BlittableJsonReaderArray)
+            {
+                var blitArray = token as BlittableJsonReaderArray;
+
+                for (var i = 0; i < blitArray.Length; i++)
+                {
+                    ExecuteInternal(blitArray[i], addition, loadId);
+                }   
+            }
+            else if (token is string)
+            {
+                var value = token as string;
+
+                // we need to check on both of them, with id & without id
+                // because people will do products/1 and detaisl/products/1 and want to be able
+                // to include on that
+                loadId(value, addition);
+
+                if (addition != null)
+                    loadId(value, null);
+            }
+            else if (token is LazyStringValue)
+            {
+                var value = token.ToString() ;
+
+                // we need to check on both of them, with id & without id
+                // because people will do products/1 and detaisl/products/1 and want to be able
+                // to include on that
+                loadId(value, addition);
+
+                if (addition != null)
+                    loadId(value, null);
+            }
+            else if (token is long)
+            {
+                long value = (long)token;
+
+                try
+                {
+                    loadId(value.ToString(CultureInfo.InvariantCulture), addition);
+                }
+                catch (OverflowException)
+                {
+                    ulong uValue = (ulong)token;
+                    loadId(uValue.ToString(CultureInfo.InvariantCulture), addition);
+                }
+            }
+            // here we ignore everything else
+            // if it ain't a string or array, it is invalid
+            // as an id
+            
         }
     }
 }

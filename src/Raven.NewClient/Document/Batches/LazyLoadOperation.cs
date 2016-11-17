@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 
 using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document.SessionOperations;
 using Raven.NewClient.Client.Shard;
 using Raven.NewClient.Json.Linq;
 
@@ -61,7 +61,8 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
         {
-            var list = new List<LoadResult>(
+            throw new NotImplementedException();
+            /*var list = new List<LoadResult>(
                 from response in responses
                 let result = response.Result
                 select new LoadResult
@@ -92,7 +93,7 @@ namespace Raven.NewClient.Client.Document.Batches
             RequiresRetry = loadOperation.SetResult(finalResult);
             if (RequiresRetry == false)
                 Result = loadOperation.Complete<T>();
-
+*/
         }
 
         public void HandleResponse(GetResponse response)
@@ -116,14 +117,16 @@ namespace Raven.NewClient.Client.Document.Batches
 
         private void HandleResponse(LoadResult loadResult)
         {
-            RequiresRetry = loadOperation.SetResult(loadResult);
-            if (RequiresRetry == false)
-                Result = loadOperation.Complete<T>();
+            throw new NotImplementedException();
+            /*  RequiresRetry = loadOperation.SetResult(loadResult);
+              if (RequiresRetry == false)
+                  Result = loadOperation.Complete<T>();*/
         }
 
         public IDisposable EnterContext()
         {
-            return loadOperation.EnterLoadContext();
+            throw new NotImplementedException();
+            /* return loadOperation.EnterLoadContext();*/
         }
     }
 }

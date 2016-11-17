@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Client.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
 
@@ -172,7 +173,7 @@ namespace Raven.NewClient.Client.Data
 
         private static string SerializeFacetsToFacetsJsonString(IReadOnlyList<Facet> facets)
         {
-            var ravenJArray = (RavenJArray)RavenJToken.FromObject(facets, new JsonSerializer
+            /*var ravenJArray = (RavenJArray)RavenJToken.FromObject(facets, new JsonSerializer
             {
                 NullValueHandling = NullValueHandling.Ignore,
                 DefaultValueHandling = DefaultValueHandling.Ignore,
@@ -186,7 +187,8 @@ namespace Raven.NewClient.Client.Data
                 if (jArray != null && jArray.Length == 0)
                     obj.Remove("Ranges");
             }
-            return ravenJArray.ToString(Formatting.None);
+            return ravenJArray.ToString(Formatting.None);*/
+            throw new NotImplementedException();
         }
     }
 }

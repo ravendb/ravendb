@@ -9,7 +9,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Identifiers
             public long Id { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Can_load_entity()
         {
             using (var store = GetDocumentStore())

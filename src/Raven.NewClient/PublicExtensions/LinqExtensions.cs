@@ -186,13 +186,14 @@ namespace Raven.NewClient.Client
         /// <param name="queryable">The queryable interface for the function to be applied to</param>
         public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
         {
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
-            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize);
-            var lazyOperation = new LazyFacetsOperation(query);
+            throw new NotImplementedException();
+            /* var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+             var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
+             var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize);
+             var lazyOperation = new LazyFacetsOperation(query);
 
-            var documentSession = ((DocumentSession)ravenQueryInspector.Session);
-            return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
+             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
+             //return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);*/
         }
 
 
@@ -220,7 +221,8 @@ namespace Raven.NewClient.Client
         /// </summary>
         public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
         {
-            var facetsList = facets.ToList();
+            throw new NotImplementedException();
+            /*var facetsList = facets.ToList();
 
             if (facetsList.Any() == false)
                 throw new ArgumentException("Facets must contain at least one entry", "facets");
@@ -231,7 +233,7 @@ namespace Raven.NewClient.Client
             var lazyOperation = new LazyFacetsOperation(query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
-            return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
+            return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);*/
         }
 
         /// <summary>
@@ -243,13 +245,14 @@ namespace Raven.NewClient.Client
         /// <param name="query">The document query interface for the function to be applied to</param>
         public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
         {
-            var indexQuery = query.GetIndexQuery(isAsync: false);
+            throw new NotImplementedException();
+            /*var indexQuery = query.GetIndexQuery(isAsync: false);
             var documentQuery = ((DocumentQuery<T>)query);
             var facetQuery = FacetQuery.Create(documentQuery.IndexQueried, indexQuery, facetSetupDoc, null, start, pageSize);
             var lazyOperation = new LazyFacetsOperation(facetQuery);
 
             var documentSession = ((DocumentSession)documentQuery.Session);
-            return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
+            return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);*/
         }
 
         /// <summary>
@@ -261,18 +264,19 @@ namespace Raven.NewClient.Client
         /// <param name="query">The document query interface for the function to be applied to</param>
         public static Lazy<FacetedQueryResult> ToFacetsLazy<T>(this IDocumentQuery<T> query, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
         {
-            var facetsList = facets.ToList();
+            throw new NotImplementedException();
+            /* var facetsList = facets.ToList();
 
-            if (facetsList.Any() == false)
-                throw new ArgumentException("Facets must contain at least one entry", "facets");
+             if (facetsList.Any() == false)
+                 throw new ArgumentException("Facets must contain at least one entry", "facets");
 
-            var indexQuery = query.GetIndexQuery(isAsync: false);
-            var documentQuery = (DocumentQuery<T>)query;
-            var facetQuery = FacetQuery.Create(documentQuery.IndexQueried, indexQuery, null, facetsList, start, pageSize);
-            var lazyOperation = new LazyFacetsOperation(facetQuery);
+             var indexQuery = query.GetIndexQuery(isAsync: false);
+             var documentQuery = (DocumentQuery<T>)query;
+             var facetQuery = FacetQuery.Create(documentQuery.IndexQueried, indexQuery, null, facetsList, start, pageSize);
+             var lazyOperation = new LazyFacetsOperation(facetQuery);
 
-            var documentSession = ((DocumentSession)documentQuery.Session);
-            return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
+             var documentSession = ((DocumentSession)documentQuery.Session);
+             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);*/
         }
 
         /// <summary>
@@ -408,13 +412,14 @@ namespace Raven.NewClient.Client
         /// </summary>
         public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable, SuggestionQuery query)
         {
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+            throw new NotImplementedException();
+            /*var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
 
             var lazyOperation = new LazySuggestOperation(ravenQueryInspector.IndexQueried, query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
-            return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
+            return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);*/
         }
 
         private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query, bool isAsync = false)

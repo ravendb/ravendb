@@ -14,7 +14,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
     public class LastModified : RavenTestBase
     {
         //TODO : Efrat - lastModified.Kind
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void CanAccessLastModifiedAsMetadata()
         {
             using (var store = GetDocumentStore())

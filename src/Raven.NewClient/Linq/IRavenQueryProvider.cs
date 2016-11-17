@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Json.Linq;
@@ -32,7 +33,7 @@ namespace Raven.NewClient.Client.Linq
         /// Callback to get the results of the stream
         /// </summary>
 
-        void AfterStreamExecuted(Action<RavenJObject> afterStreamExecuted);
+        void AfterStreamExecuted(Action<StreamResult> afterStreamExecuted);
 
         /// <summary>
         /// Customizes the query using the specified action
@@ -123,7 +124,7 @@ namespace Raven.NewClient.Client.Linq
         /// <summary>
         /// Gets the query inputs being supplied to
         /// </summary>
-        Dictionary<string, RavenJToken> TransformerParameters { get; }
+        Dictionary<string, object> TransformerParameters { get; }
 
         /// <summary>
         /// Adds input to transformer via a key/value pair
@@ -131,14 +132,16 @@ namespace Raven.NewClient.Client.Linq
         /// <param name="input"></param>
         /// <param name="value"></param>
         [Obsolete("Use AddTransformerParameter instead.")]
-        void AddQueryInput(string input, RavenJToken value);
+        void AddQueryInput(string input, object value);
 
         /// <summary>
         /// Adds input to transformer via a key/value pair
         /// </summary>
         /// <param name="input"></param>
         /// <param name="value"></param>
-        void AddTransformerParameter(string input, RavenJToken value);
+        void AddTransformerParameter(string input, object value);
+
+        void AddTransformerParameter(string input, DateTime value);
 
         Type OriginalQueryType { get; set; }
     }

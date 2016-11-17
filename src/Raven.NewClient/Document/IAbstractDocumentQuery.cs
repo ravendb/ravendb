@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexing;
 
 namespace Raven.NewClient.Client.Document

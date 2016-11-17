@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document.SessionOperations;
 using Raven.NewClient.Client.Shard;
 using Raven.NewClient.Json.Linq;
 
@@ -80,14 +80,15 @@ namespace Raven.NewClient.Client.Document.Batches
 
         private void HandleRespose(LoadResult loadResult)
         {
-            T[] complete = loadTransformerOperation.Complete<T>(loadResult);
+            throw new NotImplementedException();
+            /*T[] complete = loadTransformerOperation.Complete<T>(loadResult);
             if (singleResult)
             {
                 Result = complete.Length > 0 ? complete[0] : (object)null;
                 return;
             }
 
-            Result = complete;
+            Result = complete;*/
         }
     }
 }

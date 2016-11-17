@@ -6,7 +6,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
 {
     public class Querying : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Can_query_metadata()
         {
             using (var DocStore = GetDocumentStore())
@@ -39,7 +39,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Index_should_take_into_account_number_of_dashes()
         {
             using (var DocStore = GetDocumentStore())

@@ -9,7 +9,7 @@ using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.NewClient.Client
+namespace Raven.NewClient.Client.Document
 {
     /// <summary>
     /// Interface for document session which holds the internal operations
@@ -20,8 +20,8 @@ namespace Raven.NewClient.Client
 
         T[] LoadInternal<T>(string[] ids);
         T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes);
-        T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters = null);
-        T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> transformerParameters = null);
+        T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, object> transformerParameters = null);
+        T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, object> transformerParameters = null);
         Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval);
     }
 }

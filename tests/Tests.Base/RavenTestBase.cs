@@ -15,9 +15,10 @@ using Newtonsoft.Json.Linq;
 
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Documents.Commands;
+using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Extensions;
 using Raven.Server;
 using Raven.Server.Config;
@@ -25,13 +26,11 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-
 using Sparrow.Collections;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using DocumentSession = Raven.NewClient.Client.Documents.DocumentSession;
-using InMemoryDocumentSessionOperations = Raven.NewClient.Client.Documents.InMemoryDocumentSessionOperations;
+using Sparrow.Json.Parsing;
+using Sparrow.Json;
+
 
 //using JsonTextWriter = Raven.Imports.Newtonsoft.Json.JsonTextWriter;
 
@@ -395,8 +394,8 @@ namespace NewClientTests
         /// <param name="etag"></param>
         /// <param name="documentInfo"></param>
         /// <returns></returns>
-        public static BlittableJsonReaderObject GetCommand(Raven.NewClient.Client.Documents.DocumentSession session, string[] ids, 
-            out InMemoryDocumentSessionOperations.DocumentInfo documentInfo)
+        public static BlittableJsonReaderObject GetCommand(DocumentSession session, string[] ids, 
+            out DocumentInfo documentInfo)
         {
             var command = new GetDocumentCommand
             {
@@ -413,7 +412,7 @@ namespace NewClientTests
             long? etag;
             if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
                 throw new InvalidOperationException("Document must have an etag");
-            documentInfo = new InMemoryDocumentSessionOperations.DocumentInfo
+            documentInfo = new DocumentInfo
             {
                 Id = id,
                 Document = document,
@@ -431,7 +430,7 @@ namespace NewClientTests
         /// <param name="id"></param>
         public void PutCommand(DocumentSession session, object entity, string id)
         {
-            var documentInfo = new InMemoryDocumentSessionOperations.DocumentInfo
+            var documentInfo = new DocumentInfo
             {
                 Entity = entity,
                 Id = id

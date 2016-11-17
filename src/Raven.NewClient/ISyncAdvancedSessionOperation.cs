@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
@@ -16,7 +17,7 @@ using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Json.Linq;
 
-namespace Raven.NewClient.Client
+namespace Raven.NewClient.Client.Document
 {
     /// <summary>
     ///     Advanced synchronous session operations
@@ -142,7 +143,7 @@ namespace Raven.NewClient.Client
         ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
         /// </summary>
         /// <param name="query">Query to stream results for</param>
-        IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query);
+        IEnumerator<StreamResult> Stream<T>(IQueryable<T> query);
 
         /// <summary>
         ///     Stream the results on the query to the client, converting them to
@@ -151,7 +152,7 @@ namespace Raven.NewClient.Client
         /// </summary>
         /// <param name="query">Query to stream results for</param>
         /// <param name="queryHeaderInformation">Information about performed query</param>
-        IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation);
+        IEnumerator<StreamResult> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation);
 
         /// <summary>
         ///     Stream the results on the query to the client, converting them to
@@ -159,7 +160,7 @@ namespace Raven.NewClient.Client
         ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
         /// </summary>
         /// <param name="query">Query to stream results for</param>
-        IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query);
+        IEnumerator<StreamResult> Stream<T>(IDocumentQuery<T> query);
 
         /// <summary>
         ///     Stream the results on the query to the client, converting them to
@@ -168,7 +169,7 @@ namespace Raven.NewClient.Client
         /// </summary>
         /// <param name="query">Query to stream results for</param>
         /// <param name="queryHeaderInformation">Information about performed query</param>
-        IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation);
+        IEnumerator<StreamResult> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation);
 
         /// <summary>
         ///     Stream the results of documents search to the client, converting them to CLR types along the way.
@@ -180,7 +181,7 @@ namespace Raven.NewClient.Client
         /// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
-        IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null);
+        IEnumerator<StreamResult> Stream<T>(long? fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, object> transformerParameters = null);
 
         /// <summary>
         ///     Stream the results of documents search to the client, converting them to CLR types along the way.
@@ -200,7 +201,7 @@ namespace Raven.NewClient.Client
         /// </param>
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
-        IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null);
+        IEnumerator<StreamResult> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null);
 
         /// <summary>
         ///     DeleteByIndex using linq expression

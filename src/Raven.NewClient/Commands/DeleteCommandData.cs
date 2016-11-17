@@ -3,10 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Json.Linq;
 
-namespace Raven.NewClient.Abstractions.Commands
+using Sparrow.Json.Parsing;
+
+namespace Raven.NewClient.Client.Document.Commands
 {
     /// <summary>
     /// A single batch operation for a document DELETE
@@ -34,21 +34,21 @@ namespace Raven.NewClient.Abstractions.Commands
         /// <summary>
         /// Additional command data. For internal use only.
         /// </summary>
-        public RavenJObject AdditionalData { get; set; }
+        public DynamicJsonValue AdditionalData { get; set; }
 
         /// <summary>
         /// Translates this instance to a Json object.
         /// </summary>
         /// <returns>RavenJObject representing the command.</returns>
-        public RavenJObject ToJson()
+        public DynamicJsonValue ToJson()
         {
-            return new RavenJObject
-                    {
-                        {"Key", Id},
-                        {"Etag", new RavenJValue(Etag != null ? (object) Etag.ToString() : null)},
-                        {"Method", Method},
-                        {"AdditionalData", AdditionalData}
-                    };
+            return new DynamicJsonValue
+            {
+                ["Key"]= Id,
+                ["Etag"] = Etag,
+                ["Method"] = Method,
+                ["AdditionalData"] = AdditionalData,
+            };
         }
     }
 }

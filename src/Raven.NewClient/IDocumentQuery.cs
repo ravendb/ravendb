@@ -43,13 +43,13 @@ namespace Raven.NewClient.Client
         /// </summary>
         /// <param name="queryInputs"></param>
         [Obsolete("Use SetTransformerParameters instead.")]
-        IDocumentQuery<T> SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
+        IDocumentQuery<T> SetQueryInputs(Dictionary<string, object> queryInputs);
 
         /// <summary>
         ///     Get the facets as per the specified facets with the given start and pageSize
         /// </summary>
         /// <param name="transformerParameters"></param>
-        IDocumentQuery<T> SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
+        IDocumentQuery<T> SetTransformerParameters(Dictionary<string, object> transformerParameters);
 
         /// <summary>
         ///     Create the index query object for this query
