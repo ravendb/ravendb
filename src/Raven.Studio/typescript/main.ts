@@ -13,6 +13,8 @@ requirejs.config({
           "jszip": "../lib/jszip/dist/jszip",
           "jszip-utils": "../lib/jszip-utils/dist/jszip-utils",
           "d3": "../lib/d3/d3",
+          "rbush": "../Content/rbush/rbush",
+          "quickselect": "../Content/rbush/quickselect",
           "dagre": "../lib/dagre/dist/dagre.core",
           "forge": "../lib/forge/js/forge",
           "moment": "../lib/moment/moment",

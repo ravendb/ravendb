@@ -5,7 +5,6 @@ using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
@@ -13,6 +12,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Impl;
 using Sparrow;
+using Voron.Debugging;
 using Voron.Util;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
@@ -23,10 +23,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         internal const string ReducePhaseTreeName = "ReducePhaseTree";
         internal const string ResultsStoreTypesTreeName = "ResultsStoreTypes";
         
-        private readonly MapPhaseStats _stats = new MapPhaseStats();
         internal readonly MapReduceIndexingContext MapReduceWorkContext = new MapReduceIndexingContext();
 
         private IndexingStatsScope _statsInstance;
+        private readonly MapPhaseStats _stats = new MapPhaseStats();
+
         private PageLocator _pageLocator;
         
         protected MapReduceIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             MapReduceWorkContext.ReducePhaseTree = GetReducePhaseTree(indexContext.Transaction.InnerTransaction);
             MapReduceWorkContext.ResultsStoreTypes = MapReduceWorkContext.ReducePhaseTree.FixedTreeFor(ResultsStoreTypesTreeName, sizeof(byte));
 
-            _pageLocator = new PageLocator(indexContext.Transaction.InnerTransaction.LowLevelTransaction, 128);
+            _pageLocator = new PageLocator(indexContext.Transaction.InnerTransaction.LowLevelTransaction, 1024);
 
             MapReduceWorkContext.DocumentMapEntries = new FixedSizeTree(
                    indexContext.Transaction.InnerTransaction.LowLevelTransaction,
@@ -268,6 +269,55 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     return;
 
                 MapReduceWorkContext.Initialize(mapEntries);
+            }
+        }
+
+        public override StorageReport GenerateStorageReport(bool details)
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var report = _indexStorage.Environment().GenerateReport(tx.InnerTransaction, details);
+
+                var treesToKeep = new List<TreeReport>();
+
+                TreeReport aggregatedTree = null;
+                var numberOfReduceTrees = 0;
+                foreach (var treeReport in report.Trees)
+                {
+                    if (treeReport.Name.StartsWith(MapReduceResultsStore.ReduceTreePrefix) == false)
+                    {
+                        treesToKeep.Add(treeReport);
+                        continue;
+                    }
+
+                    numberOfReduceTrees++;
+
+                    if (aggregatedTree == null)
+                        aggregatedTree = new TreeReport();
+
+                    aggregatedTree.AllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
+                    aggregatedTree.BranchPages += treeReport.BranchPages;
+                    aggregatedTree.Density = details ? aggregatedTree.Density + treeReport.Density : -1;
+                    aggregatedTree.Depth = Math.Max(aggregatedTree.Depth, treeReport.Depth);
+                    aggregatedTree.LeafPages += treeReport.LeafPages;
+                    aggregatedTree.NumberOfEntries += treeReport.NumberOfEntries;
+                    aggregatedTree.OverflowPages += treeReport.OverflowPages;
+                    aggregatedTree.PageCount += treeReport.PageCount;
+                    aggregatedTree.Type = treeReport.Type;
+                    aggregatedTree.UsedSpaceInBytes = details ? aggregatedTree.UsedSpaceInBytes + treeReport.UsedSpaceInBytes : -1;
+                }
+
+                if (aggregatedTree != null)
+                {
+                    aggregatedTree.Name = $"Reduce Trees (#{numberOfReduceTrees})";
+                    treesToKeep.Add(aggregatedTree);
+                }
+
+                report.Trees = treesToKeep;
+
+                return report;
             }
         }
 

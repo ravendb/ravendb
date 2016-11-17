@@ -1,3 +1,7 @@
+<aside class="top-alert prerelease-alert bg-prerelease">
+    PRERELEASE SOFTWARE
+</aside>
+
 <nav class="navbar navbar-inverse navbar-fixed-top">
     <div class="container-fluid">
         <div class="navbar-header">
@@ -154,5 +158,9 @@
     <p>
         PRERELEASE SOFTWARE
     </p>
+</div>
+
+<div data-bind="if: displayUsageStatsInfo()">
+    <div data-bind="compose: 'usageStats.html'"></div>
 </div>
 

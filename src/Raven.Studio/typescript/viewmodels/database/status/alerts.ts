@@ -6,6 +6,7 @@ import appUrl = require("common/appUrl");
 import saveAlertsCommand = require("commands/operations/saveAlertsCommand");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 import tableNavigationTrait = require("common/tableNavigationTrait");
+import eventsCollector = require("common/eventsCollector");
 
 class alerts extends viewModelBase {
 
@@ -147,6 +148,8 @@ class alerts extends viewModelBase {
     }
 
     deleteSelectedAlert() {
+        eventsCollector.default.reportEvent("alerts", "delete", "selected");
+
         this.disableAutoRefresh();
         var alert = this.selectedAlert();
         if (alert) {
@@ -155,16 +158,21 @@ class alerts extends viewModelBase {
     }
 
     deleteReadAlerts() {
+        eventsCollector.default.reportEvent("alerts", "delete", "read");
+
         this.disableAutoRefresh();
         //TODO: this.allAlerts.remove(a => a.observed());
     }
 
     deleteAllAlerts() {
+        eventsCollector.default.reportEvent("alerts", "delete", "all");
+
         this.disableAutoRefresh();
         this.allAlerts.removeAll();
     }
 
     saveAlerts() {
+        eventsCollector.default.reportEvent("alerts", "save");
         /* TODO
         var alertDoc = this.alertDoc();
         var db = this.activeDatabase();

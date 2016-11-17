@@ -69,7 +69,7 @@ namespace Raven.Server.Documents
             {
                 IndexesTableSchema.Create(tx, SchemaNameConstants.IndexMetadataTable);
                 tx.CreateTree(SchemaNameConstants.GlobalChangeVectorTree);
-
+                tx.CreateTree(SchemaNameConstants.LastReplicatedEtagsTree);
                 tx.Commit();
             }
             
@@ -149,12 +149,6 @@ namespace Raven.Server.Documents
                 return newEtag;
             }
 
-        public enum IndexEntryType : byte
-        {
-            Index = 1,
-            Transformer = 2
-        }
-
         public void PurgeTombstonesFrom(long etag, int take)
         {
             TransactionOperationContext context;
@@ -216,6 +210,62 @@ namespace Raven.Server.Documents
                 return results;
             }
         }
+
+        public ChangeVectorEntry[] GetGlobalChangeVector()
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = _environment.ReadTransaction())
+            {
+                var globalChangeVectorTree = tx.ReadTree(SchemaNameConstants.GlobalChangeVectorTree);
+                return ReplicationUtils.ReadChangeVectorFrom(globalChangeVectorTree);
+            }
+        }
+
+        public void SetGlobalChangeVector(Dictionary<Guid, long> changeVector)
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = _environment.WriteTransaction())
+            {
+                var tree = tx.ReadTree(SchemaNameConstants.GlobalChangeVectorTree);
+                ReplicationUtils.WriteChangeVectorTo(context, changeVector, tree);
+                tx.Commit();
+            }
+        }
+
+        public long GetLastReplicateEtagFrom(string dbId)
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = _environment.ReadTransaction())
+            {
+                var readTree = tx.ReadTree(SchemaNameConstants.LastReplicatedEtagsTree);
+                var readResult = readTree.Read(dbId);
+                if (readResult == null)
+                    return 0;
+                return readResult.Reader.ReadLittleEndianInt64();
+            }
+        }
+
+        public void SetLastReplicateEtagFrom(string dbId, long etag)
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = _environment.WriteTransaction())
+            {
+                var etagsTree = tx.CreateTree(SchemaNameConstants.LastReplicatedEtagsTree);
+                Slice etagSlice;
+                Slice keySlice;
+                using (Slice.From(context.Allocator, dbId, out keySlice))
+                using (Slice.External(context.Allocator, (byte*) &etag, sizeof(long), out etagSlice))
+                {
+                    etagsTree.Add(keySlice, etagSlice);
+                }
+                tx.Commit();
+            }
+        }
+
 
         private void MergeEntryVectorWithGlobal(Transaction tx,
             TransactionOperationContext context,
@@ -321,10 +371,15 @@ namespace Raven.Server.Documents
         }
 
 
-        public long ReadLastEtag(Transaction tx)
+        public long ReadLastEtag()
         {
-            var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
-            return ReadLastEtag(table);
+            JsonOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = _environment.ReadTransaction())
+            {
+                var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
+                return ReadLastEtag(table);
+            }
         }
 
         //since both transformers and indexes need to store the same information,
@@ -406,8 +461,15 @@ namespace Raven.Server.Documents
         {
             public const string IndexMetadataTable = "Indexes";
             public const string GlobalChangeVectorTree = "GlobalChangeVectorTree";
+            public const string LastReplicatedEtagsTree = "LastReplicatedEtags";
         }
 
 
+    }
+
+    public enum IndexEntryType : byte
+    {
+        Index = 1,
+        Transformer = 2
     }
 }

@@ -29,12 +29,8 @@ namespace Raven.Server.Documents.Handlers
                 var stats = new DatabaseStatistics();
                 stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 stats.CountOfRevisionDocuments = Database.BundleLoader.VersioningStorage?.GetNumberOfRevisionDocuments(context);
-                stats.ApproximateTaskCount = 0; // TODO [ppekrol]
                 stats.CountOfIndexes = indexes.Count;
                 stats.CountOfTransformers = transformersCount;
-                stats.CurrentNumberOfItemsToIndexInSingleBatch = 1; // TODO [ppekrol]
-                stats.CurrentNumberOfItemsToReduceInSingleBatch = 1; // TODO [ppekrol]
-                stats.CurrentNumberOfParallelTasks = 1; // TODO [ppekrol]
                 stats.DatabaseId = Database.DocumentsStorage.Environment.DbId;
                 stats.Is64Bit = IntPtr.Size == sizeof(long);
 

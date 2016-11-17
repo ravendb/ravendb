@@ -1200,6 +1200,9 @@ namespace Raven.Server.Documents
 
         public void DeleteConflictsFor(DocumentsOperationContext context, string key)
         {
+            if (_hasConflicts == 0)
+                return;
+
 
             byte* lowerKey;
             int lowerSize;

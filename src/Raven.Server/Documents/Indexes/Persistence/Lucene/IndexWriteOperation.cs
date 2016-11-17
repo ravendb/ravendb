@@ -27,10 +27,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
 
-        private IndexingStatsScope _stats;
-        private IndexingStatsScope _deleteStats;
-        private IndexingStatsScope _convertStats;
-        private IndexingStatsScope _addStats;
+        private IndexingStatsScope _statsInstance;
+        private IndexWriteOperationStats _stats = new IndexWriteOperationStats();
 
         public IndexWriteOperation(string indexName, Dictionary<string, IndexField> fields,
             LuceneVoronDirectory directory, LuceneDocumentConverterBase converter,
@@ -84,13 +82,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             EnsureValidStats(stats);
 
-            var convertDuration = _convertStats?.Start() ?? (_convertStats = stats.For(IndexingOperation.Lucene.Convert));
+            IDisposable setDocument;
+            using (_stats.ConvertStats.Start())
+                setDocument = _converter.SetDocument(key, document, indexContext);
 
-            using (_converter.SetDocument(key, document, indexContext))
+            using (setDocument)
             {
-                convertDuration.Dispose();
-
-                using (_addStats?.Start() ?? (_addStats = stats.For(IndexingOperation.Lucene.AddDocument)))
+                using (_stats.AddStats.Start())
                     _writer.AddDocument(_converter.Document, _analyzer);
 
                 stats.RecordIndexingOutput();
@@ -109,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             EnsureValidStats(stats);
 
-            using (_deleteStats?.Start() ?? (_deleteStats = stats.For(IndexingOperation.Lucene.Delete)))
+            using (_stats.DeleteStats.Start())
                 _writer.DeleteDocuments(_documentId.CreateTerm(key));
 
             if (_logger.IsInfoEnabled)
@@ -120,7 +118,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             EnsureValidStats(stats);
 
-            using (_deleteStats?.Start() ?? (_deleteStats = stats.For(IndexingOperation.Lucene.Delete)))
+            using (_stats.DeleteStats.Start())
                 _writer.DeleteDocuments(_reduceKeyHash.CreateTerm(reduceKeyHash));
 
             if (_logger.IsInfoEnabled)
@@ -130,13 +128,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureValidStats(IndexingStatsScope stats)
         {
-            if (_stats == stats)
+            if (_statsInstance == stats)
                 return;
 
-            _stats = stats;
-            _deleteStats = null;
-            _convertStats = null;
-            _addStats = null;
+            _statsInstance = stats;
+
+            _stats.DeleteStats = stats.For(IndexingOperation.Lucene.Delete, start: false);
+            _stats.AddStats = stats.For(IndexingOperation.Lucene.AddDocument, start: false);
+            _stats.ConvertStats = stats.For(IndexingOperation.Lucene.Convert, start: false);
+        }
+
+        private class IndexWriteOperationStats
+        {
+            public IndexingStatsScope DeleteStats;
+            public IndexingStatsScope ConvertStats;
+            public IndexingStatsScope AddStats;
         }
     }
 }

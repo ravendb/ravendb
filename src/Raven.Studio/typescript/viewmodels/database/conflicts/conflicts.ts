@@ -15,6 +15,7 @@ import getSingleTransformerCommand = require("commands/database/transformers/get
 import changeSubscription = require('common/changeSubscription');
 import conflictsResolveCommand = require("commands/database/replication/conflictsResolveCommand");
 import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");
+import eventsCollector = require("common/eventsCollector");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 
@@ -165,6 +166,7 @@ class conflicts extends viewModelBase {
     }
 
     resolveToLocal() {
+        eventsCollector.default.reportEvent("conflicts", "resolve-to-local");
         this.confirmationMessage("Sure?", "You're resolving all conflicts to local.", ["No", "Yes"])
             .done(() => {
                 this.performResolve("ResolveToLocal");
@@ -172,6 +174,7 @@ class conflicts extends viewModelBase {
     }
 
     resolveToNewestRemote() {
+        eventsCollector.default.reportEvent("conflicts", "resolve-to-newest-remote");
         this.confirmationMessage("Sure?", "You're resolving all conflicts to newest remote.", ["No", "Yes"])
             .done(() => {
             this.performResolve("ResolveToRemote");
@@ -179,6 +182,7 @@ class conflicts extends viewModelBase {
     }
 
     resolveToLatest() {
+        eventsCollector.default.reportEvent("conflicts", "resolve-to-latest");
         this.confirmationMessage("Sure?", "You're resolving all conflicts to latest.", ["No", "Yes"])
             .done(() => {
             this.performResolve("ResolveToLatest");

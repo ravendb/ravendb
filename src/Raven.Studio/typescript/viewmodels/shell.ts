@@ -39,11 +39,14 @@ import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand"
 import getSupportCoverageCommand = require("commands/auth/getSupportCoverageCommand");
 import getServerConfigsCommand = require("commands/database/studio/getServerConfigsCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
+import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 import enterApiKey = require("viewmodels/common/enterApiKey");
+
+import eventsCollector = require("common/eventsCollector");
 
 //TODO: extract cluster related logic to separate class
 //TODO: extract api key related logic to separate class 
@@ -63,6 +66,7 @@ class shell extends viewModelBase {
 
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
     static serverMainVersion = ko.observable<number>(4);
+    static serverMinorVersion = ko.observable<number>(0);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
 
     windowHeightObservable: KnockoutObservable<number>; //TODO: delete?
@@ -76,6 +80,9 @@ class shell extends viewModelBase {
     mainMenu = new menu(generateMenuItems(activeResourceTracker.default.resource()));
     searchBox = new searchBox();
     resourceSwitcher = new resourceSwitcher();
+
+    displayUsageStatsInfo = ko.observable<boolean>(false);
+    trackingTask = $.Deferred();
 
     constructor() {
         super();
@@ -105,7 +112,18 @@ class shell extends viewModelBase {
         enableResizeBindingHandler.install();
         helpBindingHandler.install();
 
-        this.clientBuildVersion.subscribe(v => viewModelBase.clientVersion("4.0." + v.BuildVersion));
+        this.fetchClientBuildVersion();
+        this.fetchServerBuildVersion();
+
+        this.clientBuildVersion.subscribe(v =>
+            viewModelBase.clientVersion("4.0." + v.BuildVersion));
+
+        this.serverBuildVersion.subscribe(buildVersionDto => {
+            this.initAnalytics(
+                { SendUsageStats: true },
+                [ buildVersionDto ]);
+        });
+
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -446,18 +464,18 @@ class shell extends viewModelBase {
     }
 
     fetchServerBuildVersion() {
-        /* TODO:
         new getServerBuildVersionCommand()
             .execute()
             .done((serverBuildResult: serverBuildVersionDto) => {
                 this.serverBuildVersion(serverBuildResult);
 
                 var currentBuildVersion = serverBuildResult.BuildVersion;
-                if (currentBuildVersion !== 13) {
+                if (currentBuildVersion !== DEV_BUILD_NUMBER) {
                     shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
                 }
 
-                if (serverBuildReminder.isReminderNeeded() && currentBuildVersion !== 13) {
+                /*serverBuildReminder
+                 if (serverBuildReminder.isReminderNeeded() && currentBuildVersion !== DEV_BUILD_NUMBER) {
                     new getLatestServerBuildVersionCommand(true, 35000, 39999) //pass false as a parameter to get the latest unstable
                         .execute()
                         .done((latestServerBuildResult: latestServerBuildVersionDto) => {
@@ -466,14 +484,17 @@ class shell extends viewModelBase {
                                 app.showBootstrapDialog(latestBuildReminderViewModel);
                             }
                         });
-                }
-            });*/
+                }*/
+            });
+        
     }
 
     fetchClientBuildVersion() {
         new getClientBuildVersionCommand()
             .execute()
-            .done((result: clientBuildVersionDto) => { this.clientBuildVersion(result); });
+            .done((result: clientBuildVersionDto) => {
+                this.clientBuildVersion(result);
+            });
     }
 
     fetchClusterTopology() {
@@ -532,6 +553,49 @@ class shell extends viewModelBase {
 
     navigateToClusterSettings() {
         this.navigate(this.appUrls.adminSettingsCluster());
+    }
+
+    private initAnalytics(config: any, buildVersionResult: [serverBuildVersionDto]) {
+        if (eventsCollector.gaDefined()) {
+            if (config == null || !("SendUsageStats" in config)) {
+                // ask user about GA
+                this.displayUsageStatsInfo(true);
+
+                this.trackingTask.done((accepted: boolean) => {
+                    this.displayUsageStatsInfo(false);
+
+                    if (accepted) {
+                        this.configureAnalytics(true, buildVersionResult);
+                    }
+                });
+            } else {
+                this.configureAnalytics(config.SendUsageStats, buildVersionResult);
+            }
+        } else {
+            // user has uBlock etc?
+            this.configureAnalytics(false, buildVersionResult);
+        }
+    }
+
+    collectUsageData() {
+        this.trackingTask.resolve(true);
+    }
+
+    doNotCollectUsageData() {
+        this.trackingTask.resolve(false);
+    }
+
+    private configureAnalytics(track: boolean, [buildVersionResult]: [serverBuildVersionDto]) {
+        let currentBuildVersion = buildVersionResult.BuildVersion;
+        let shouldTrack = track && currentBuildVersion !== DEV_BUILD_NUMBER;
+        if (currentBuildVersion !== DEV_BUILD_NUMBER) {
+            shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
+        } 
+
+        var env = license.licenseStatus() && license.licenseStatus().IsCommercial ? "prod" : "dev";
+        var fullVersion = buildVersionResult.FullVersion;
+        eventsCollector.default.initialize(
+            shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, fullVersion, shouldTrack);
     }
 }
 

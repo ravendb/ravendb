@@ -2,6 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getSubscriptionCommand = require("commands/database/subscriptions/getSubscriptionCommand");
 import setSubscriptionCommand = require("commands/database/subscriptions/setSubscriptionAckEtagCommand");
 import Subscription = require("models/database/subscription/subscription");
+import eventsCollector = require("common/eventsCollector");
 
 class SubscriptionsTask extends viewModelBase {
 
@@ -26,6 +27,8 @@ class SubscriptionsTask extends viewModelBase {
     }
 
     setSubscriptionEtag(subscription: Subscription) {
+        eventsCollector.default.reportEvent("subscription", "set-etag");
+
         var db = this.activeDatabase();
         
         if (db) {

@@ -5,6 +5,7 @@ using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
@@ -21,9 +22,12 @@ namespace Micro.Benchmark.Benchmarks.PageLocator
             {
                 Add(new Job
                 {
-                    Runtime = Runtime.Core,
-                    Platform = Platform.X64,
-                    Jit = Jit.RyuJit,
+                    Env =
+                    {
+                        Runtime = Runtime.Core,
+                        Platform = Platform.X64,
+                        Jit = Jit.RyuJit
+                    },
                     // TODO: Next line is just for testing. Fine tune parameters.
                     //Mode = Mode.SingleRun,
                     //LaunchCount = 1,

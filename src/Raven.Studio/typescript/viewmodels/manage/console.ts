@@ -5,6 +5,7 @@ import database = require("models/resources/database");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import adminJsScriptCommand = require("commands/maintenance/adminJsScriptCommand");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import eventsCollector = require("common/eventsCollector");
 
 class consoleJs extends viewModelBase {
     resourceName = ko.observable<string>('');
@@ -75,6 +76,8 @@ class consoleJs extends viewModelBase {
     }
 
     executeJs() {
+        eventsCollector.default.reportEvent("console", "execute");
+
         this.isBusy(true);
         new adminJsScriptCommand(this.script(), this.resourceName())
             .execute()

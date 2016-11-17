@@ -5,6 +5,7 @@ import database = require("models/resources/database");
 import getVersioningsCommand = require("commands/database/documents/getVersioningsCommand");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import document = require("models/database/documents/document");
+import eventsCollector = require("common/eventsCollector");
 
 class versioning extends viewModelBase {
     //TODO: introduce model!
@@ -57,6 +58,7 @@ class versioning extends viewModelBase {
 
     saveChanges() {
         //TODO: check etag
+        eventsCollector.default.reportEvent("versioning", "save");
 
         const dto = this.toDto();
         const versioningDocument = new document(dto);
@@ -67,6 +69,8 @@ class versioning extends viewModelBase {
     }
 
     createNewVersioning() {
+        eventsCollector.default.reportEvent("versioning", "create");
+
         const emptyVersioning = versioningEntry.empty();
 
         if (this.versionings().length === 0) {
@@ -77,6 +81,8 @@ class versioning extends viewModelBase {
     }
 
     removeVersioning(entry: versioningEntry) {
+        eventsCollector.default.reportEvent("versioning", "remove");
+
         this.versionings.remove(entry);
     }
 

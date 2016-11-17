@@ -21,14 +21,14 @@ namespace Voron.Benchmark.Table
         private List<TableValueBuilder>[] _valueBuilders;
 
         [Params(100)]
-        public int KeyLength { get; set; }
+        public int KeyLength { get; set; } = 100;
 
         /// <summary>
         /// Size of tree to create in order to write from (in number of nodes).
         /// This is the TOTAL SIZE after deletions
         /// </summary>
         [Params(Configuration.RecordsPerTransaction * Configuration.Transactions / 2)]
-        public int GenerationTableSize { get; set; }
+        public int GenerationTableSize { get; set; } = Configuration.RecordsPerTransaction * Configuration.Transactions / 2;
 
         /// <summary>
         /// Size of batches to divide the insertion into. A lower number will
@@ -39,20 +39,20 @@ namespace Voron.Benchmark.Table
         /// converge.
         /// </summary>
         [Params(50000)]
-        public int GenerationBatchSize { get; set; }
+        public int GenerationBatchSize { get; set; } = 50000;
 
         /// <summary>
         /// Probability that a node will be deleted after insertion.
         /// </summary>
         [Params(0.1)]
-        public double GenerationDeletionProbability { get; set; }
+        public double GenerationDeletionProbability { get; set; } = 0.1;
 
         /// <summary>
         /// Random seed used to generate values. If -1, uses time for seeding.
         /// TODO: make this nullable. See https://github.com/PerfDotNet/BenchmarkDotNet/issues/271
         /// </summary>
         [Params(-1)]
-        public int RandomSeed { get; set; }
+        public int RandomSeed { get; set; } = -1;
 
         static TableInsertRandom()
         {

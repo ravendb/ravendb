@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -34,6 +35,7 @@ namespace Raven.Server.Web.System
 
                 var dbId = Constants.Database.Prefix + name;
                 var dbDoc = ServerStore.Read(context, dbId);
+                
                 if (dbDoc == null)
                 {
                     HttpContext.Response.StatusCode = 404;
@@ -78,11 +80,14 @@ namespace Raven.Server.Web.System
             {
                 var dbId = Constants.Database.Prefix + name;
 
-                var etag = HttpContext.Request.Headers["ETag"];
+                var etagAsString = HttpContext.Request.Headers["ETag"];
+                long etag;
+                var hasEtagInRequest = long.TryParse(etagAsString, out etag);
+
                 using (context.OpenReadTransaction())
                 {
                     var existingDatabase = ServerStore.Read(context, dbId);
-                    if (DatabaseHelper.CheckExistingDatabaseName(existingDatabase, name, dbId, etag, out errorMessage) == false)
+                    if (DatabaseHelper.CheckExistingDatabaseName(existingDatabase, name, dbId, etagAsString, out errorMessage) == false)
                     {
                         HttpContext.Response.StatusCode = 400;
                         return HttpContext.Response.WriteAsync(errorMessage);

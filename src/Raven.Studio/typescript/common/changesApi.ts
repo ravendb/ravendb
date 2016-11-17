@@ -66,6 +66,10 @@ class changesApi extends abstractWebSocketClient {
     }
 
     protected onMessage(e: any) {
+        if (!e.data.trim()) {
+            // it is heartbeat only
+            return;
+        }
         const eventDto: changesApiEventDto = JSON.parse(e.data);
         const eventType = eventDto.Type;
         const value = eventDto.Value;

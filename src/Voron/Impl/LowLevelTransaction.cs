@@ -580,6 +580,8 @@ namespace Voron.Impl
                                                    // allow call to writeToJournal for flushing lazy tx
                 (IsLazyTransaction == false && _journal?.HasDataInLazyTxBuffer() == true))
             {
+                // In the case of non-lazy transactions, we must flush the data from older lazy transactions
+                // to ensure the sequentiality of the data.
                 var numberOfWrittenPages = _journal.WriteToJournal(this, totalNumberOfAllocatedPages + PagesTakenByHeader);
                 FlushedToJournal = true;
 
@@ -598,7 +600,7 @@ namespace Voron.Impl
                 ValidateAllPages();
 
                 // release scratch file page allocated for the transaction header
-                _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);
+                _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, null);
 
                 Committed = true;
                 _env.TransactionAfterCommit(this);
@@ -626,16 +628,16 @@ namespace Voron.Impl
 
             foreach (var pageFromScratch in _transactionPages)
             {
-                _env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, -1);
+                _env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, null);
             }
 
             foreach (var pageFromScratch in _unusedScratchPages)
             {
-                _env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, -1);
+                _env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, null);
             }
 
             // release scratch file page allocated for the transaction header
-            _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);
+            _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, null);
 
             _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
             _env.Journal.UpdateCacheForJournalSnapshots();

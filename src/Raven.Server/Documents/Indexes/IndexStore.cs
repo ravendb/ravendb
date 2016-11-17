@@ -209,42 +209,37 @@ namespace Raven.Server.Documents.Indexes
             return indexId;
         }
 
-        private static IndexCreationOptions GetIndexCreationOptions(IndexDefinition indexDefinition, Index existingIndex)
+        private static IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex)
         {
-            // TODO [ppekrol] remove code duplication
-
             if (existingIndex == null)
                 return IndexCreationOptions.Create;
 
             //if (existingIndex.Definition.IsTestIndex) // TODO [ppekrol]
             //    return IndexCreationOptions.Update;
 
-            var equals = existingIndex.Definition.Equals(indexDefinition, ignoreFormatting: true, ignoreMaxIndexOutputs: true);
-            if (equals)
-                return IndexCreationOptions.Noop;
+            var indexDef = indexDefinition as IndexDefinition;
+            if (indexDef != null)
+            {
+                if (existingIndex.Definition.Equals(indexDef, ignoreFormatting: true, ignoreMaxIndexOutputs: true))
+                    return IndexCreationOptions.Noop;
 
-            return existingIndex.Definition.Equals(indexDefinition, ignoreFormatting: true, ignoreMaxIndexOutputs: true)
-                       ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex
-                       : IndexCreationOptions.Update;
-        }
+                return existingIndex.Definition.Equals(indexDef, ignoreFormatting: true, ignoreMaxIndexOutputs: true)
+                           ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex
+                           : IndexCreationOptions.Update;
+            }
 
-        private static IndexCreationOptions GetIndexCreationOptions(IndexDefinitionBase indexDefinition, Index existingIndex)
-        {
-            // TODO [ppekrol] remove code duplication
+            var indexDefBase = indexDefinition as IndexDefinitionBase;
+            if (indexDefBase != null)
+            {
+                if (existingIndex.Definition.Equals(indexDefBase, ignoreFormatting: true, ignoreMaxIndexOutputs: true))
+                    return IndexCreationOptions.Noop;
 
-            if (existingIndex == null)
-                return IndexCreationOptions.Create;
-
-            //if (existingIndex.Definition.IsTestIndex) // TODO [ppekrol]
-            //    return IndexCreationOptions.Update;
-
-            var equals = existingIndex.Definition.Equals(indexDefinition, ignoreFormatting: true, ignoreMaxIndexOutputs: true);
-            if (equals)
-                return IndexCreationOptions.Noop;
-
-            return existingIndex.Definition.Equals(indexDefinition, ignoreFormatting: true, ignoreMaxIndexOutputs: true)
-                       ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex
-                       : IndexCreationOptions.Update;
+                return existingIndex.Definition.Equals(indexDefBase, ignoreFormatting: true, ignoreMaxIndexOutputs: true)
+                           ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex
+                           : IndexCreationOptions.Update;
+            }
+            
+            throw new NotSupportedException($"Not supported index definition type: {indexDefinition.GetType()}");
         }
 
         private IndexLockMode ValidateIndexDefinition(string name, out Index existingIndex)

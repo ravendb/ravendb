@@ -31,6 +31,8 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import connectedDocuments = require("viewmodels/database/documents/editDocumentConnectedDocuments");
 
+import eventsCollector = require("common/eventsCollector");
+
 class editDocument extends viewModelBase {
 
     static editDocSelector = "#editDocumentContainer";
@@ -318,6 +320,7 @@ class editDocument extends viewModelBase {
     }
 
     toggleNewlineMode() {
+        eventsCollector.default.reportEvent("document", "toggle-newline-mode");
         if (this.isNewLineFriendlyMode() === false && parseInt(this.documentSize().replace(",", "")) > 1024) {
             app.showBootstrapMessage("This operation might take long time with big documents, are you sure you want to continue?", "Toggle newline mode", ["Cancel", "Continue"])
                 .then((dialogResult: string) => {
@@ -331,6 +334,7 @@ class editDocument extends viewModelBase {
     }
 
     toggleAutoCollapse() {
+        eventsCollector.default.reportEvent("document", "toggle-auto-collapse");
         this.autoCollapseMode.toggle();
         if (this.autoCollapseMode()) {
             this.foldAll();
@@ -356,6 +360,7 @@ class editDocument extends viewModelBase {
     }
 
     saveDocument() {
+        eventsCollector.default.reportEvent("document", "save");
         this.saveInternal(this.userSpecifiedId(), false);
     }
 
@@ -472,6 +477,7 @@ class editDocument extends viewModelBase {
     }
 
     refreshDocument() {
+        eventsCollector.default.reportEvent("document", "refresh");
         this.canContinueIfNotDirty("Refresh", "You have unsaved data. Are you sure you want to continue?")
         .done(() => {
             if (this.isInDocMode()) {
@@ -489,6 +495,7 @@ class editDocument extends viewModelBase {
     }
 
     deleteDocument() {
+        eventsCollector.default.reportEvent("document", "delete");
         const doc = this.document();
         if (doc) {
             const viewModel = new deleteDocuments([doc], this.activeDatabase());
@@ -498,6 +505,7 @@ class editDocument extends viewModelBase {
     }
 
     formatDocument() {
+        eventsCollector.default.reportEvent("document", "format");
         try {
             const docEditorText = this.docEditor.getSession().getValue();
             const tempDoc = JSON.parse(docEditorText);
@@ -519,6 +527,7 @@ class editDocument extends viewModelBase {
     }
 
     resolveConflicts() {
+        eventsCollector.default.reportEvent("document", "resolve-conflicts");
         new resolveMergeCommand(this.activeDatabase(), this.editedDocId())
             .execute()
             .done((response: mergeResult) => {
@@ -528,6 +537,7 @@ class editDocument extends viewModelBase {
     }
 
     generateCode() {
+        eventsCollector.default.reportEvent("document", "generate-csharp-code");
         const doc: document = this.document();
         const generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
         const deffered = generate.execute();

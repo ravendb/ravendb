@@ -25,6 +25,8 @@ import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeigh
 import d3 = require('d3');
 import nv = require('nvd3');
 
+import eventsCollector = require("common/eventsCollector");
+
 //TODO: in v4.0 use tree, not cluster layout
 
 class visualizer extends viewModelBase {
@@ -824,6 +826,10 @@ class visualizer extends viewModelBase {
     '.link { fill: none; stroke: rgb(204, 204, 204); stroke-width: 1.5px; }\n' +
     'text { pointer-events: none; text-anchor: middle; }\n' +
     '.link.selected { fill: none; stroke: black; stroke-width: 2.5px; } \n';
+    */
+
+    /*
+        TODO @gregolsky apply google analytics
     */
 }
 

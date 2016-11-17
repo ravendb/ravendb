@@ -9,6 +9,7 @@ import environmentColor = require("models/resources/environmentColor");
 import shell = require("viewmodels/shell");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import numberFormattingStorage = require("common/numberFormattingStorage");
+import eventsCollector = require("common/eventsCollector");
 
 class studioConfig extends viewModelBase {
 
@@ -19,6 +20,7 @@ class studioConfig extends viewModelBase {
     isReadOnly: KnockoutComputed<boolean>;
     browserFormatExample = 5050.99.toLocaleString();
     rawFormat = ko.observable<boolean>();
+    sendUsageStats = ko.observable<boolean>(true);
 
     environmentColors: environmentColor[] = [
         new environmentColor("Default", "#f8f8f8"),
@@ -69,8 +71,9 @@ class studioConfig extends viewModelBase {
         if (this.isForbidden() === false) {
             new getDocumentWithMetadataCommand(this.documentId, null)
                 .execute()
-                .done((doc: documentClass) => {
+                .done((doc: any) => {
                     this.configDocument(doc);
+                    this.sendUsageStats(doc["SendUsageStats"]);
                 })
                 .fail(() => this.configDocument(documentClass.empty()))
                 .always(() => deferred.resolve({ can: true }));
@@ -105,6 +108,8 @@ class studioConfig extends viewModelBase {
     }
 
     setEnvironmentColor(envColor: environmentColor) {
+        eventsCollector.default.reportEvent("studio-config", "env-color");
+
         var newDocument = this.configDocument();
         (<any>newDocument)["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);
@@ -114,15 +119,31 @@ class studioConfig extends viewModelBase {
         }); */
     }
 
+    setSendUsageStats(setting: boolean) {
+        eventsCollector.default.reportEvent("studio-config", "usage-stats");
+
+        if (this.sendUsageStats() !== setting) {
+            var newDocument = this.configDocument() as any;
+            this.sendUsageStats(setting);
+            newDocument["SendUsageStats"] = setting;
+            var saveTask = this.saveStudioConfig(newDocument);
+            //TODO saveTask.fail(() => this.warnWhenUsingSystemDatabase(!setting));
+        }
+    }
+
     private pickColor() {
         $("#select-color button").css("backgroundColor", this.selectedColor().backgroundColor);
     }
 
     setUpgradeReminder(upgradeSetting: boolean) {
+        eventsCollector.default.reportEvent("studio-config", "upgrade-reminder");
+
         serverBuildReminder.mute(upgradeSetting);
     }
 
     setNumberFormat(raw: boolean) {
+        eventsCollector.default.reportEvent("studio-config", "number-format");
+
         this.rawFormat(raw);
         numberFormattingStorage.save(raw);
     }

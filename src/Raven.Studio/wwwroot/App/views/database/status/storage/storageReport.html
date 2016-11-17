@@ -1,25 +1,30 @@
 <div id="storage-report">
 
     <div id="storage-report-container">
-        <div class="tooltip" style="opacity: 0">
+        <div class="chart-tooltip" style="opacity: 0">
         </div>
         <div class="chart"></div>
     </div>
-    
-    <div>
-        Current path:
+
+    <h4>Current path:</h4>
+    <div class="current-path">
         <span data-bind="foreach: currentPath">
-            <a href="#" data-bind="click: $root.onClick.bind($root, $data)"><span data-bind="text: name"></span><br /><small data-bind="text: type"></small></a>
-            <span data-bind="visible: $index() < $root.currentPath().length - 1">&raquo;</span>
+            <a href="#" data-bind="click: $root.onClick.bind($root, $data), attr: { class: type }">
+                <small data-bind="text: type"></small>
+                <span data-bind="text: name"></span>
+            </a>
+            <i data-bind="visible: $index() < $root.currentPath().length - 1" class="icon-arrow-filled-right"></i>
         </span>
     </div>
-
+    <hr />
     <table class="table table-condensed table-striped" data-bind="if: node() && node().internalChildren">
         <thead>
             <tr>
                 <th>Type</th>
                 <th>Name</th>
-                <th>Size</th>
+                <th data-bind="visible: showPagesColumn()"># Pages</th>
+                <th data-bind="visible: showEntriesColumn()">Entries</th>
+                <th>Size (&sum; <span data-bind="text: node().formatSize()"></span>)</th>
                 <th>% Total</th>
             </tr>
         </thead>
@@ -27,11 +32,13 @@
             <tr>
                 <td data-bind="text: type.capitalizeFirstLetter()"></td>
                 <td>
-                    <a href="#" data-bind="text: name, click: $root.onClick.bind($root, $data), visible: internalChildren != null && internalChildren.length"></a>
-                    <span href="#" data-bind="text: name, visible: internalChildren == null || !internalChildren.length"></span>
+                    <a href="#" data-bind="text: name, click: $root.onClick.bind($root, $data), visible: hasChildren()"></a>
+                    <span href="#" data-bind="text: name, visible: !hasChildren()"></span>
                 </td>
-                <td data-bind="text: $root.formatSize(size)"></td>
-                <td data-bind="text: (size * 100 / $root.totalSize()).toFixed(2) + '%'"></td>
+                <td data-bind="visible: $root.showPagesColumn(), text: pageCount"></td>
+                <td data-bind="visible: $root.showEntriesColumn(), text: numberOfEntries"></td>
+                <td data-bind="text: formatSize()"></td>
+                <td data-bind="text: formatPercentage($parent.node().size)"></td>
             </tr>
         </tbody>
     </table>

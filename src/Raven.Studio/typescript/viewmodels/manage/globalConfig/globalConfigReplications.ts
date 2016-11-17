@@ -14,6 +14,7 @@ import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import shell = require("viewmodels/shell");
 import database = require("models/resources/database");
+import eventsCollector = require("common/eventsCollector");
 
 class globalConfigReplications extends viewModelBase {
 
@@ -246,6 +247,10 @@ class globalConfigReplications extends viewModelBase {
         this.replicationsSetupDirtyFlag().reset();
     }
 */
+
+    /*
+        TODO @gregolsky apply google analytics
+    */
 }
 
 export = globalConfigReplications; 

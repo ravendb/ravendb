@@ -9,6 +9,7 @@ import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import eventsCollector = require("common/eventsCollector");
 
 class globalConfigCustomFunctions extends viewModelBase {
 
@@ -73,6 +74,7 @@ class globalConfigCustomFunctions extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("global-config-custom-functions", "save");
         this.syncChanges(false);
     }
 
@@ -106,11 +108,15 @@ class globalConfigCustomFunctions extends viewModelBase {
     }
 
     activateConfig() {
+        eventsCollector.default.reportEvent("global-config-custom-functions", "activate");
+
         this.activated(true);
         this.docEditor.resize();
     }
 
     disactivateConfig() {
+        eventsCollector.default.reportEvent("global-config-custom-functions", "disactivate");
+
         this.confirmationMessage("Delete global configuration for custom functions?", "Are you sure?")
             .done(() => {
                 this.documentText("");

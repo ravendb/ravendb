@@ -150,6 +150,17 @@ namespace Raven.Server.Documents.Transformers
             return transformer;
         }
 
+        public bool TryDeleteTransformerIfExists(string name)
+        {
+            var transformer = GetTransformer(name);
+            if (transformer == null)
+                return false;
+
+            DeleteTransformerInternal(transformer.TransformerId);
+            return true;
+        }
+
+
         public void DeleteTransformer(string name)
         {
             var transformer = GetTransformer(name);

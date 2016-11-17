@@ -26,6 +26,8 @@ import getEffectiveCustomFunctionsCommand = require("commands/database/globalCon
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
 
+import eventsCollector = require("common/eventsCollector");
+
 class documents extends viewModelBase {
 
     displayName = "documents";
@@ -236,6 +238,7 @@ class documents extends viewModelBase {
     }
 
     exportCsv() {
+        eventsCollector.default.reportEvent("documents", "export-csv");
         this.exportCsvInternal();
     }
 
@@ -418,6 +421,7 @@ class documents extends viewModelBase {
     }
 
     selectCsvColumns() {
+        eventsCollector.default.reportEvent("documents", "export-csv-custom-columns");
         var dialog = new selectCsvColumnsDialog(this.getDocumentsGrid().getColumnsNames());
         app.showBootstrapDialog(dialog);
 
@@ -427,6 +431,7 @@ class documents extends viewModelBase {
     }
 
     selectColumns() {
+        eventsCollector.default.reportEvent("documents", "select-columns");
         // Fetch column widths from virtual table
         var virtualTable = this.getDocumentsGrid();
         var columnsNames = virtualTable.getColumnsNames();
@@ -452,6 +457,7 @@ class documents extends viewModelBase {
     }
 
     newDocument() {
+        eventsCollector.default.reportEvent("document", "new");
         router.navigate(appUrl.forNewDoc(this.activeDatabase()));
     }
 
@@ -460,6 +466,7 @@ class documents extends viewModelBase {
     }
 
     refresh() {
+        eventsCollector.default.reportEvent("documents", "refresh");
         this.getDocumentsGrid().refreshCollectionData();
         var selectedCollection = this.selectedCollection();
         selectedCollection.invalidateCache();
@@ -499,6 +506,7 @@ class documents extends viewModelBase {
     }
 
     editSelectedDoc() {
+        eventsCollector.default.reportEvent("document", "edit");
         var grid = this.getDocumentsGrid();
         if (grid) {
             grid.editLastSelectedItem();
@@ -507,8 +515,10 @@ class documents extends viewModelBase {
 
     deleteSelectedDocs() {
         if (this.selectedCollection().isSystemDocuments === false && this.hasAllDocumentsSelected()) {
+            eventsCollector.default.reportEvent("collection", "delete");
             this.deleteCollection(this.selectedCollection());
         } else {
+            eventsCollector.default.reportEvent("documents", "delete");
             var grid = this.getDocumentsGrid();
             if (grid) {
                 grid.deleteSelectedItems();
@@ -517,6 +527,7 @@ class documents extends viewModelBase {
     }
 
     copySelectedDocs() {
+        eventsCollector.default.reportEvent("documents", "copy");
         var grid = this.getDocumentsGrid();
         if (grid) {
             grid.copySelectedDocs();
@@ -524,6 +535,7 @@ class documents extends viewModelBase {
     }
 
     copySelectedDocIds() {
+        eventsCollector.default.reportEvent("documents", "copy-ids");
         var grid = this.getDocumentsGrid();
         if (grid) {
             grid.copySelectedDocIds();

@@ -9,6 +9,7 @@ import resource = require("models/resources/resource");
 import enableQueryTimings = require("commands/database/query/enableQueryTimings");
 import database = require("models/resources/database");
 import accessHelper = require("viewmodels/shell/accessHelper");
+import eventsCollector = require("common/eventsCollector");
 
 class trafficWatch extends viewModelBase {
     logConfig = ko.observable<{ Resource: resource; ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string; SingleAuthToken: singleAuthToken }>();
@@ -119,6 +120,8 @@ class trafficWatch extends viewModelBase {
     }
 
     configureConnection() {
+        eventsCollector.default.reportEvent("traffic-watch", "configure");
+
         var configDialog = new watchTrafficConfigDialog();
         app.showBootstrapDialog(configDialog);
 
@@ -137,6 +140,8 @@ class trafficWatch extends viewModelBase {
     }
 
     reconnect() {
+        eventsCollector.default.reportEvent("traffic-watch", "reconnect");
+
         if (!this.watchClient) {
             if (!this.logConfig) {
                 app.showBootstrapMessage("Cannot reconnect, please configure connection properly", "Connection Error");
@@ -151,6 +156,8 @@ class trafficWatch extends viewModelBase {
     }
 
     connect() {
+        eventsCollector.default.reportEvent("traffic-watch", "connect");
+
         if (!!this.watchClient) {
             this.reconnect();
             return;
@@ -193,6 +200,8 @@ class trafficWatch extends viewModelBase {
     }
     
     disconnect(): JQueryPromise<any> {
+        eventsCollector.default.reportEvent("traffic-watch", "disconnect");
+
         if (!!this.watchClient) {
             this.watchClient.disconnect();
             return this.watchClient.connectionClosingTask.done(() => {
@@ -323,6 +332,8 @@ class trafficWatch extends viewModelBase {
     }
 
     resetStats() {
+        eventsCollector.default.reportEvent("traffic-watch", "reset-stats");
+
         this.watchedRequests(0);
         this.averageRequestDuration("0");
         this.summedRequestsDuration = 0;
@@ -332,14 +343,20 @@ class trafficWatch extends viewModelBase {
     }
 
     exportTraffic() {
+        eventsCollector.default.reportEvent("traffic-watch", "export");
+
         fileDownloader.downloadAsJson(this.recentEntries(), "traffic.json");
     }
 
     clearLogs() {
+        eventsCollector.default.reportEvent("traffic-watch", "clear");
+
         this.recentEntries.removeAll();
     }
 
     toggleKeepDown() {
+        eventsCollector.default.reportEvent("traffic-watch", "keep-down");
+
         this.keepDown.toggle();
         if (this.keepDown()) {
             this.logRecordsElement.scrollTop = this.logRecordsElement.scrollHeight * 1.1;

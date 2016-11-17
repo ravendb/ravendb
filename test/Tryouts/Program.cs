@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
-using FastTests.Issues;
-using FastTests.Sparrow;
-using FastTests.Voron.Bugs;
-using Voron;
+using FastTests.Server.Documents.Replication;
+using Sparrow.Logging;
 
 namespace Tryouts
 {
@@ -11,9 +8,14 @@ namespace Tryouts
     {
         static unsafe void Main(string[] args)
         {
-            using (var a = new SlowTests.Issues.RavenDB_5435())
+            //LoggingSource.Instance.SetupLogMode(LogMode.Information, "E:\\Work");
+            for (int i = 0; i < 1000; i++)
             {
-                a.CanCompact().Wait();
+                Console.WriteLine(i);
+                using (var store = new FastTests.Server.Replication.ReplicationIndexesAndTransformers())
+                {
+                    store.Can_replicate_transformer();
+                }
             }
         }
     }

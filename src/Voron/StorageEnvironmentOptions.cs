@@ -190,7 +190,8 @@ namespace Voron
                     FilePath = Path.Combine(_basePath, Constants.DatabaseFilename);
                     if (RunningOnPosix)
                         return new PosixMemoryMapPager(this, FilePath, InitialFileSize);
-                    return new Win32MemoryMapPager(this, FilePath, InitialFileSize);
+
+                    return new Win32MemoryMapPager(this, FilePath, InitialFileSize, usePageProtection: true);
                 });
             }
 

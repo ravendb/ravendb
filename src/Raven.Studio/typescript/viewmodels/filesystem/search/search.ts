@@ -13,6 +13,7 @@ import searchLastModifiedBetweenClause = require("viewmodels/filesystem/files/se
 import deleteFilesMatchingQueryConfirm = require("viewmodels/filesystem/deleteFilesMatchingQueryConfirm");
 import resetIndexConfirm = require("viewmodels/filesystem/search/resetIndexConfirm");
 import queryUtil = require("common/queryUtil");
+import eventsCollector = require("common/eventsCollector");
 
 class search extends viewModelBase {
 
@@ -67,6 +68,8 @@ class search extends viewModelBase {
     }
 
     fileNameStartsWith() {
+        eventsCollector.default.reportEvent("fs-files", "search", "starts-with");
+
         var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename starts with: ");
         searchSingleInputClauseViewModel
             .applyFilterTask
@@ -75,6 +78,8 @@ class search extends viewModelBase {
     }
 
     fileNameEndsWith() {
+        eventsCollector.default.reportEvent("fs-files", "search", "ends-with");
+
         var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename ends with: ");
         searchSingleInputClauseViewModel
             .applyFilterTask
@@ -83,6 +88,8 @@ class search extends viewModelBase {
     }
 
     fileSizeBetween() {
+        eventsCollector.default.reportEvent("fs-files", "search", "size-between");
+
         var searchFileSizeRangeClauseViewModel: searchFileSizeRangeClause = new searchFileSizeRangeClause();
         searchFileSizeRangeClauseViewModel
             .applyFilterTask
@@ -91,6 +98,8 @@ class search extends viewModelBase {
     }
 
     hasMetadata() {
+        eventsCollector.default.reportEvent("fs-files", "search", "has-metadata");
+
         var searchHasMetadataClauseViewModel: searchHasMetadataClause = new searchHasMetadataClause(this.activeFilesystem());
         searchHasMetadataClauseViewModel
             .applyFilterTask
@@ -99,6 +108,8 @@ class search extends viewModelBase {
     }
 
     inFolder() {
+        eventsCollector.default.reportEvent("fs-files", "search", "in-folder");
+
         var inFolderViewModel: searchInFolderClause = new searchInFolderClause(this.activeFilesystem());
         inFolderViewModel 
             .applyFilterTask
@@ -113,6 +124,8 @@ class search extends viewModelBase {
     }
 
     lastModifiedBetween() {
+        eventsCollector.default.reportEvent("fs-files", "search", "modified-between");
+
         var searchLastModifiedBetweenClauseViewModel: searchLastModifiedBetweenClause = new searchLastModifiedBetweenClause();
         searchLastModifiedBetweenClauseViewModel
             .applyFilterTask
@@ -128,6 +141,8 @@ class search extends viewModelBase {
     }
 
     deleteFilesMatchingQuery() {
+        eventsCollector.default.reportEvent("fs-files", "delete");
+
         // Run the query so that we have an idea of what we'll be deleting.
         this.search();
         this.allFilesPagedItems()
@@ -149,6 +164,8 @@ class search extends viewModelBase {
     }
 
     resetIndex() {
+        eventsCollector.default.reportEvent("fs-index", "reset");
+
         var resetIndexVm = new resetIndexConfirm(this.activeFilesystem());
         app.showBootstrapDialog(resetIndexVm);
     }

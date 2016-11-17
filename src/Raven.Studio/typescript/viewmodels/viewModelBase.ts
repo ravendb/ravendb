@@ -14,6 +14,7 @@ import document = require("models/database/documents/document");
 import downloader = require("common/downloader");
 import resourcesManager = require("common/shell/resourcesManager");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
+import eventsCollector = require("common/eventsCollector");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active resource and providing a means to add keyboard shortcuts.
@@ -55,6 +56,8 @@ class viewModelBase {
 
     constructor() {
         this.appUrls = appUrl.forCurrentDatabase();
+
+        eventsCollector.default.reportViewModel(this);
     }
 
     canActivate(args: any): boolean | JQueryPromise<canActivateResultDto> {

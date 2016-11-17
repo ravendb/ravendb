@@ -25,7 +25,8 @@ namespace FastTests.Voron.ScratchBuffer
 
             try
             {
-                using (var pager = new FragmentedPureMemoryPager(StorageEnvironmentOptions.CreateMemoryOnly(), ImmutableAppendOnlyList<PureMemoryJournalWriter.Buffer>.Empty.Append(buffer)))
+                using (var env = StorageEnvironmentOptions.CreateMemoryOnly())
+                using (var pager = new FragmentedPureMemoryPager(env, ImmutableAppendOnlyList<PureMemoryJournalWriter.Buffer>.Empty.Append(buffer)))
                 using (var file = new ScratchBufferFile(pager, 0))
                 {
                     Assert.False(file.HasActivelyUsedBytes(2));
