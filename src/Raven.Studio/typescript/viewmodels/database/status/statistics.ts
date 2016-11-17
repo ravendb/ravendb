@@ -39,6 +39,7 @@ class statistics extends viewModelBase {
         }
     }
 
+    // Get stats from server
     fetchStats(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {
         var db = this.activeDatabase();
         return new getDatabaseStatsCommand(db)
@@ -57,9 +58,12 @@ class statistics extends viewModelBase {
 
 
     processStatsResults(results: Raven.Client.Data.DatabaseStatistics) {
+
+        var test = "test";
+
         this.stats(new statsModel(results));
 
-
+        
         //TODO: create subclass of databaseStatisticsDto and cast to this
 
         // Attach some human readable dates to the indexes.
