@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -60,12 +61,11 @@ namespace Raven.Server.Config
 
         public RavenConfiguration()
         {
-            var platformPostfix = "windows";
-            if (Platform.RunningOnPosix)
-                platformPostfix = "posix";
-            _configBuilder = new ConfigurationBuilder()
-                .AddJsonFile($"settings_{platformPostfix}.json", optional: true)
-                .AddEnvironmentVariables(prefix: "RAVEN_");
+            
+            _configBuilder = new ConfigurationBuilder();
+            AddEnvironmentVariables(_configBuilder);
+            AddJsonConfigurationVariables();
+
             Settings = _configBuilder.Build();
             Core = new CoreConfiguration();
 
@@ -88,6 +88,29 @@ namespace Raven.Server.Config
             Licensing = new LicenseConfiguration();
             Quotas = new QuotasBundleConfiguration();
             Tombstones = new TombstoneConfiguration();
+        }
+
+        private void AddJsonConfigurationVariables()
+        {
+            var platformPostfix = "windows";
+            if (Platform.RunningOnPosix)
+                platformPostfix = "posix";
+
+            _configBuilder.AddJsonFile($"settings_{platformPostfix}.json", optional: true);
+        }
+
+        private static void AddEnvironmentVariables(IConfigurationBuilder configurationBuilder)
+        {
+            foreach (DictionaryEntry  de in Environment.GetEnvironmentVariables())
+            {
+                var s = de.Key as string;
+                if (s == null)
+                    continue;
+                if (s.StartsWith("RAVEN_") == false)
+                    continue;
+
+                configurationBuilder.Properties[s.Replace("RAVEN_", "Raven/")] = de.Value;
+            }
         }
 
         public DebugLoggingConfiguration DebugLog { get; set; }
