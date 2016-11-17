@@ -678,7 +678,6 @@ namespace Raven.Server.Documents.Indexes
                             // This is because faster indexes will tend to allocate the memory faster, and we want to give them
                             // all the available resources so they can complete faster.
                             var timeToWaitForMemoryCleanup = 5000;
-                            const int timeToWaitForDiskCleanup = 15000;
                             if (_allocationCleanupNeeded)
                             {
                                 timeToWaitForMemoryCleanup = 0; // if there is nothing to do, immediately cleanup everything
@@ -698,8 +697,13 @@ namespace Raven.Server.Documents.Indexes
                                 // anytime soon
                                 ReduceMemoryUsage();
 
-                                while (_mre.Wait(timeToWaitForDiskCleanup, cts.Token) == false)
-                                    ReduceDiskUsage();
+                                _mre.Wait(cts.Token);
+
+                                if (_logsApplied)
+                                {
+                                    _logsApplied = false;
+                                    _environment.Cleanup();
+                                }
                             }
                         }
                         catch (OperationCanceledException)
@@ -719,15 +723,7 @@ namespace Raven.Server.Documents.Indexes
         private void HandleLogsApplied()
         {
             _logsApplied = true;
-        }
-
-        private void ReduceDiskUsage()
-        {
-            if (_logsApplied == false)
-                return;
-
-            _logsApplied = false;
-            _environment.Cleanup();
+            _mre.Set();
         }
 
         private void ReduceMemoryUsage()
