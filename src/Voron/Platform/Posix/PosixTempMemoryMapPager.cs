@@ -43,7 +43,7 @@ namespace Voron.Platform.Posix
             SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
 
             _totalAllocationSize = NearestSizeToPageSize(initialFileSize ?? _totalAllocationSize);
-            PosixHelper.AllocateFileSpace(_fd, (ulong)_totalAllocationSize);
+            PosixHelper.AllocateFileSpace(_fd, (ulong)_totalAllocationSize, FileName);
 
             NumberOfAllocatedPages = _totalAllocationSize / PageSize;
             SetPagerState(CreatePagerState());
@@ -79,7 +79,8 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_fd, (ulong)(_totalAllocationSize + allocationSize));
+            PosixHelper.AllocateFileSpace(_fd, (ulong)(_totalAllocationSize + allocationSize), FileName);
+
             _totalAllocationSize += allocationSize;
 
             PagerState newPagerState = CreatePagerState();
