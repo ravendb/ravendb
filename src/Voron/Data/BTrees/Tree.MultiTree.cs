@@ -48,7 +48,7 @@ namespace Voron.Data.BTrees
             State.Flags |= TreeFlags.MultiValueTrees;
 
             TreeNodeHeader* node;
-            var page = FindPageFor(key, decompress: true, node: out node);
+            var page = FindPageFor(key, out node);
             if (page == null || page.LastMatch != 0)
             {
                 MultiAddOnNewValue(key, value, version, maxNodeSize);
@@ -217,7 +217,7 @@ namespace Voron.Data.BTrees
         {
             State.IsModified = true;
             TreeNodeHeader* node;
-            var page = FindPageFor(key, decompress: true, node: out node);
+            var page = FindPageFor(key, out node);
             if (page == null || page.LastMatch != 0)
             {
                 return; //nothing to delete - key not found
@@ -271,7 +271,7 @@ namespace Voron.Data.BTrees
         public long MultiCount(Slice key)
         {
             TreeNodeHeader* node;
-            var page = FindPageFor(key, decompress: true, node: out node);
+            var page = FindPageFor(key, out node);
             if (page == null || page.LastMatch != 0)
                 return 0;
 
@@ -301,7 +301,7 @@ namespace Voron.Data.BTrees
         public IIterator MultiRead(Slice key)
         {
             TreeNodeHeader* node;
-            var page = FindPageFor(key, decompress: true, node: out node);
+            var page = FindPageFor(key, out node);
             if (page == null || page.LastMatch != 0)
                 return new EmptyIterator();
 

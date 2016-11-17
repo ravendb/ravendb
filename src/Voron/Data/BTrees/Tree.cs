@@ -239,7 +239,7 @@ namespace Voron.Data.BTrees
 
             Func<Slice, TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
-            var foundPage = FindPageFor(key, decompress: false, node: out node, cursor: out cursorConstructor);
+            var foundPage = FindPageFor(key, node: out node, cursor: out cursorConstructor, allowCompressed: true);
 
             var page = ModifyPage(foundPage);
 
@@ -450,31 +450,34 @@ namespace Voron.Data.BTrees
             return new TreePage(page.Pointer, _pageLocator.PageSize);
         }
 
-        internal TreePage FindPageFor(Slice key, bool decompress, out TreeNodeHeader* node)
+        internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node)
         {
             TreePage p;
 
-            if (TryUseRecentTransactionPage(key, decompress, out p, out node))
+            if (TryUseRecentTransactionPage(key, out p, out node))
             {
                 return p;
             }
 
-            return SearchForPage(key, decompress, out node);
+            return SearchForPage(key, out node);
         }
 
-        internal TreePage FindPageFor(Slice key, bool decompress, out TreeNodeHeader* node, out Func<Slice, TreeCursor> cursor)
+        internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, out Func<Slice, TreeCursor> cursor, bool allowCompressed = false)
         {
             TreePage p;
 
-            if (TryUseRecentTransactionPage(key, decompress, out cursor, out p, out node))
+            if (TryUseRecentTransactionPage(key, out cursor, out p, out node))
             {
+                if (allowCompressed == false && p.IsCompressed)
+                    throw new InvalidOperationException($"Page {p.PageNumber} is compressed. You need to decompress it to be able to access its content.");
+
                 return p;
             }
 
-            return SearchForPage(key, decompress, out cursor, out node);
+            return SearchForPage(key, allowCompressed, out cursor, out node);
         }
 
-        private TreePage SearchForPage(Slice key, bool decompress, out TreeNodeHeader* node)
+        private TreePage SearchForPage(Slice key, out TreeNodeHeader* node)
         {
             var p = GetReadOnlyTreePage(State.RootPageNumber);
 
@@ -533,9 +536,9 @@ namespace Voron.Data.BTrees
             if (p.IsLeaf == false)
                 VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page " + p.PageNumber);
 
-            if (p.IsCompressed && decompress)
-                p = DecompressPage(p);
-
+            if (p.IsCompressed)
+                throw new InvalidOperationException($"Page {p.PageNumber} is compressed. You need to decompress it to be able to access its content.");
+            
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
             AddToRecentlyFoundPages(cursorPath, p, leftmostPage, rightmostPage);
@@ -543,7 +546,7 @@ namespace Voron.Data.BTrees
             return p;
         }
 
-        private TreePage SearchForPage(Slice key, bool decompress, out Func<Slice, TreeCursor> cursorConstructor, out TreeNodeHeader* node)
+        private TreePage SearchForPage(Slice key, bool allowCompressed, out Func<Slice, TreeCursor> cursorConstructor, out TreeNodeHeader* node)
         {
             var p = GetReadOnlyTreePage(State.RootPageNumber);
 
@@ -603,12 +606,12 @@ namespace Voron.Data.BTrees
             if (p.IsLeaf == false)
                 VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page");
 
-            if (p.IsCompressed && decompress)
-                p = DecompressPage(p);
+            if (allowCompressed == false && p.IsCompressed)
+                throw new InvalidOperationException($"Page {p.PageNumber} is compressed. You need to decompress it to be able to access its content.");
 
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
-            if (p.NumberOfEntries > 0) // compressed pages can have no ordinary entries
+            if (p.NumberOfEntries > 0) // compressed page can have no ordinary entries
                 AddToRecentlyFoundPages(cursor, p, leftmostPage, rightmostPage);
 
             return p;
@@ -616,6 +619,8 @@ namespace Voron.Data.BTrees
 
         private void AddToRecentlyFoundPages(List<long> c, TreePage p, bool leftmostPage, bool rightmostPage)
         {
+            Debug.Assert(p.IsCompressed == false);
+
             ByteStringContext.Scope firstScope, lastScope;
             Slice firstKey;
             if (leftmostPage)
@@ -688,7 +693,7 @@ namespace Voron.Data.BTrees
             _recentlyFoundPages.Add(foundPage);
         }
 
-        private bool TryUseRecentTransactionPage(Slice key, bool decompress, out TreePage page, out TreeNodeHeader* node)
+        private bool TryUseRecentTransactionPage(Slice key, out TreePage page, out TreeNodeHeader* node)
         {
             node = null;
             page = null;
@@ -701,7 +706,7 @@ namespace Voron.Data.BTrees
             if (foundPage == null)
                 return false;
 
-            if (foundPage.Page != null && (decompress || foundPage.Page is DecompressedLeafPage == false))
+            if (foundPage.Page != null)
             {
                 // we can't share the same instance, Page instance may be modified by
                 // concurrently run iterators
@@ -715,15 +720,12 @@ namespace Voron.Data.BTrees
             if (page.IsLeaf == false)
                 VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page");
 
-            if (page.IsCompressed)
-                page = DecompressPage(page);
-
             node = page.Search(_llt, key); // will set the LastSearchPosition
 
             return true;
         }
 
-        private bool TryUseRecentTransactionPage(Slice key, bool decompress, out Func<Slice, TreeCursor> cursor, out TreePage page, out TreeNodeHeader* node)
+        private bool TryUseRecentTransactionPage(Slice key, out Func<Slice, TreeCursor> cursor, out TreePage page, out TreeNodeHeader* node)
         {
             node = null;
             page = null;
@@ -737,7 +739,7 @@ namespace Voron.Data.BTrees
 
             var lastFoundPageNumber = foundPage.Number;
 
-            if (foundPage.Page != null && (decompress || foundPage.Page is DecompressedLeafPage == false))
+            if (foundPage.Page != null)
             {
                 // we can't share the same instance, Page instance may be modified by
                 // concurrently run iterators
@@ -750,10 +752,7 @@ namespace Voron.Data.BTrees
 
             if (page.IsLeaf == false)
                 VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page");
-
-            if (page.IsCompressed && decompress)
-                page = DecompressPage(page);
-
+            
             node = page.Search(_llt, key); // will set the LastSearchPosition
 
             var cursorPath = foundPage.CursorPath;
@@ -906,7 +905,7 @@ namespace Voron.Data.BTrees
             State.IsModified = true;
             Func<Slice, TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
-            var page = FindPageFor(key, decompress: false /*TODO arek*/, node: out node, cursor: out cursorConstructor);
+            var page = FindPageFor(key, node: out node, cursor: out cursorConstructor, allowCompressed: true);
 
             if (page.LastMatch != 0)
                 return; // not an exact match, can't delete
@@ -940,7 +939,7 @@ namespace Voron.Data.BTrees
         public ReadResult Read(Slice key)
         {
             TreeNodeHeader* node;
-            var p = FindPageFor(key, decompress: true, node: out node);
+            var p = FindPageFor(key, out node);
 
             if (p.LastMatch != 0)
                 return null;
@@ -951,8 +950,9 @@ namespace Voron.Data.BTrees
         public int GetDataSize(Slice key)
         {
             TreeNodeHeader* node;
-            var p = FindPageFor(key, decompress: true, node: out node);
-            if (p == null || p.LastMatch != 0)
+            var p = FindPageFor(key, out node);
+
+            if (p.LastMatch != 0)
                 return -1;
 
             if (node == null)
@@ -980,15 +980,29 @@ namespace Voron.Data.BTrees
 
         public long GetParentPageOf(TreePage page)
         {
+            Debug.Assert(page.IsCompressed == false);
+
             TreePage p;
             Slice key;
+
             using (page.IsLeaf ? page.GetNodeKey(_llt, 0, out key) : page.GetNodeKey(_llt, 1, out key))
             {
                 Func<Slice, TreeCursor> cursorConstructor;
                 TreeNodeHeader* node;
-                p = FindPageFor(key, decompress: true, node: out node, cursor: out cursorConstructor);
-                if (p == null || p.LastMatch != 0)
-                    return -1;
+                p = FindPageFor(key, node: out node, cursor: out cursorConstructor, allowCompressed: true);
+
+                if (p.LastMatch != 0)
+                {
+                    if (p.IsCompressed == false)
+                        throw new InvalidOperationException("Could not find the exact match on a page that we retrieved a key from");
+#if DEBUG
+                    using (var decompressed = DecompressPage(p))
+                    {
+                        decompressed.Search(_llt, key);
+                        Debug.Assert(decompressed.LastMatch == 0);
+                    }
+#endif                 
+                }
 
                 using (var cursor = cursorConstructor(key))
                 {
@@ -1012,8 +1026,9 @@ namespace Voron.Data.BTrees
         public ushort ReadVersion(Slice key)
         {
             TreeNodeHeader* node;
-            var p = FindPageFor(key, decompress: true, node: out node);
-            if (p == null || p.LastMatch != 0)
+            var p = FindPageFor(key, out node);
+
+            if (p.LastMatch != 0)
                 return 0;
 
             Slice nodeKey;
@@ -1029,7 +1044,8 @@ namespace Voron.Data.BTrees
         internal byte* DirectRead(Slice key)
         {
             TreeNodeHeader* node;
-            var p = FindPageFor(key, decompress: true, node: out node);
+            var p = FindPageFor(key, out node);
+
             if (p == null || p.LastMatch != 0)
                 return null;
 

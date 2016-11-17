@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             get
             {
                 TreeNodeHeader* node;
-                return _parent.FindPageFor(_nestedValueKey, true, out node);
+                return _parent.FindPageFor(_nestedValueKey, out node);
             }
         }
 
