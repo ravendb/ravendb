@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Document;
 
 namespace Raven.NewClient.Client
 {

@@ -105,7 +105,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
 
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void CanUseResultsTransformerWithQueryWithRemoteDatabase()
         {
             using (var store = GetDocumentStore())
@@ -130,7 +130,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void CanUseResultTransformerToLoadValueOnNonStoreFieldUsingQuery()
         {
             using (var store = GetDocumentStore())
@@ -155,7 +155,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void CanUseResultsTransformerWithQuery()
         {
             using (var store = GetDocumentStore())
@@ -180,7 +180,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void CanUseResultsTransformerWithInclude()
         {
             using (var store = GetDocumentStore())

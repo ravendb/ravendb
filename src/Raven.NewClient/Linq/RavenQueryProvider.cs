@@ -15,9 +15,11 @@ using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Json.Linq;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Extensions;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Linq;
 
 namespace Raven.NewClient.Client.Linq
 {
@@ -27,7 +29,7 @@ namespace Raven.NewClient.Client.Linq
     public class RavenQueryProvider<T> : IRavenQueryProvider
     {
         private Action<QueryResult> afterQueryExecuted;
-        private Action<RavenJObject> afterStreamExecuted;
+        private Action<StreamResult> afterStreamExecuted;
         private Action<IDocumentQueryCustomization> customizeQuery;
         private readonly string indexName;
         private readonly IDocumentQueryGenerator queryGenerator;
@@ -36,7 +38,7 @@ namespace Raven.NewClient.Client.Linq
         private readonly IDatabaseCommands databaseCommands;
         private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
         private readonly bool isMapReduce;
-        private readonly Dictionary<string, RavenJToken> transformerParamaters = new Dictionary<string, RavenJToken>();
+        private readonly Dictionary<string, object> transformerParamaters = new Dictionary<string, object>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
@@ -62,16 +64,7 @@ namespace Raven.NewClient.Client.Linq
             this.asyncDatabaseCommands = asyncDatabaseCommands;
             this.isMapReduce = isMapReduce;
         }
-
-        /// <summary>
-        /// Gets the actions for customizing the generated lucene query
-        /// </summary>
-        public Action<IDocumentQueryCustomization> CustomizedQuery
-        {
-            get { return customizeQuery; }
-        }
-
-
+        
         /// <summary>
         /// Gets the name of the index.
         /// </summary>
@@ -89,6 +82,9 @@ namespace Raven.NewClient.Client.Linq
             get { return queryGenerator; }
         }
 
+        /// <summary>
+        /// Gets the actions for customizing the generated lucene query
+        /// </summary>
         public Action<IDocumentQueryCustomization> CustomizeQuery
         {
             get { return customizeQuery; }
@@ -103,16 +99,21 @@ namespace Raven.NewClient.Client.Linq
         /// Gets the results transformer to use
         /// </summary>
         public string ResultTransformer { get; private set; }
-        public Dictionary<string, RavenJToken> TransformerParameters { get { return transformerParamaters; } }
+        public Dictionary<string, object> TransformerParameters { get { return transformerParamaters; } }
 
-        public void AddQueryInput(string name, RavenJToken value)
+        public void AddQueryInput(string name, object value)
         {
             AddTransformerParameter(name, value);
         }
 
-        public void AddTransformerParameter(string name, RavenJToken value)
+        public void AddTransformerParameter(string name, object value)
         {
             transformerParamaters[name] = value;
+        }
+
+        public void AddTransformerParameter(string name, DateTime value)
+        {
+            TransformerParameters[name] = value.GetDefaultRavenFormat(isUtc: value.Kind == DateTimeKind.Utc);
         }
 
         public Type OriginalQueryType { get; set; }
@@ -223,7 +224,7 @@ namespace Raven.NewClient.Client.Linq
             this.afterQueryExecuted = afterQueryExecutedCallback;
         }
 
-        public void AfterStreamExecuted(Action<RavenJObject> afterStreamExecutedCallback)
+        public void AfterStreamExecuted(Action<StreamResult> afterStreamExecutedCallback)
         {
             this.afterStreamExecuted = afterStreamExecutedCallback;
         }

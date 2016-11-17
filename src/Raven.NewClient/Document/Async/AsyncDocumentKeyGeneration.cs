@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Json.Linq;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document.Async
 {
@@ -15,9 +16,9 @@ namespace Raven.NewClient.Client.Document.Async
     {
         private readonly LinkedList<object> entitiesStoredWithoutIDs = new LinkedList<object>();
 
-        public delegate bool TryGetValue(object key, out InMemoryDocumentSessionOperations.DocumentMetadata metadata);
+        public delegate bool TryGetValue(object key, out DocumentInfo documentInfo);
 
-        public delegate string ModifyObjectId(string id, object entity, RavenJObject metadata);
+        public delegate string ModifyObjectId(string id, object entity, BlittableJsonReaderObject metadata);
 
         private readonly InMemoryDocumentSessionOperations session;
         private readonly TryGetValue tryGetValue;
@@ -37,11 +38,11 @@ namespace Raven.NewClient.Client.Document.Async
                 var entity = entitiesStoredWithoutIDs.First.Value;
                 entitiesStoredWithoutIDs.RemoveFirst();
 
-                InMemoryDocumentSessionOperations.DocumentMetadata metadata;
-                if (tryGetValue(entity, out metadata))
+                DocumentInfo documentInfo;
+                if (tryGetValue(entity, out documentInfo))
                 {
                     return session.GenerateDocumentKeyForStorageAsync(entity)
-                        .ContinueWith(task => metadata.Key = modifyObjectId(task.Result, entity, metadata.Metadata))
+                        .ContinueWith(task => documentInfo.Id = modifyObjectId(task.Result, entity, documentInfo.Metadata))
                         .ContinueWithTask(GenerateDocumentKeysForSaveChanges);
                 }
             }

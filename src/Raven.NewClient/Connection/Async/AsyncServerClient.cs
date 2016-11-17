@@ -6,7 +6,6 @@
 
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Cluster;
-using Raven.NewClient.Abstractions.Commands;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Exceptions;
@@ -40,9 +39,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Client.Changes;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Indexing;
 
 namespace Raven.NewClient.Client.Connection.Async
@@ -516,7 +517,8 @@ namespace Raven.NewClient.Client.Connection.Async
 
         public async Task<RavenJObject> PatchAsync(string key, PatchRequest patch, bool ignoreMissing, CancellationToken token = default(CancellationToken))
         {
-            var batchResults = await BatchAsync(new ICommandData[]
+            throw new NotImplementedException();
+            /*var batchResults = await BatchAsync(new ICommandData[]
             {
                 new PatchCommandData
                 {
@@ -527,28 +529,30 @@ namespace Raven.NewClient.Client.Connection.Async
             if (!ignoreMissing && batchResults[0].PatchResult != null &&
                 batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
                 throw new DocumentDoesNotExistException("Document with key " + key + " does not exist.");
-            return batchResults[0].AdditionalData;
+            return batchResults[0].AdditionalData;*/
         }
 
         public async Task<RavenJObject> PatchAsync(string key, PatchRequest patch, long? etag, CancellationToken token = default(CancellationToken))
         {
-            var batchResults = await BatchAsync(new ICommandData[]
-            {
-                new PatchCommandData
-                {
-                    Id = key,
-                    Patch = patch,
-                    Etag = etag
-                }
-            }, token).ConfigureAwait(false);
-            return batchResults[0].AdditionalData;
+            throw new NotImplementedException();
+            /* var batchResults = await BatchAsync(new ICommandData[]
+             {
+                 new PatchCommandData
+                 {
+                     Id = key,
+                     Patch = patch,
+                     Etag = etag
+                 }
+             }, token).ConfigureAwait(false);
+             return batchResults[0].AdditionalData;*/
         }
 
         public async Task<RavenJObject> PatchAsync(string key, PatchRequest patchExisting,
                                                    PatchRequest patchDefault,
                                                    CancellationToken token = default(CancellationToken))
         {
-            var batchResults = await BatchAsync(new ICommandData[]
+            throw new NotImplementedException();
+            /*var batchResults = await BatchAsync(new ICommandData[]
             {
                 new PatchCommandData
                 {
@@ -557,7 +561,7 @@ namespace Raven.NewClient.Client.Connection.Async
                     PatchIfMissing = patchDefault,
                 }
             }, token).ConfigureAwait(false);
-            return batchResults[0].AdditionalData;
+            return batchResults[0].AdditionalData;*/
         }
 
         public Task<PutResult> PutAsync(string key, long? etag, RavenJObject document, RavenJObject metadata, CancellationToken token = default(CancellationToken))
@@ -2171,10 +2175,11 @@ namespace Raven.NewClient.Client.Connection.Async
             return false;
         }
 
-        private async Task<T> RetryOperationBecauseOfConflict<T>(OperationMetadata operationMetadata, IEnumerable<RavenJObject> docResults,
+        private async Task<T> RetryOperationBecauseOfConflict<T>(OperationMetadata operationMetadata, IEnumerable<object> docResults,
                                                                  T currentResult, Func<Task<T>> nextTry, Func<string, ConflictException> onConflictedQueryResult = null, CancellationToken token = default(CancellationToken))
         {
-            bool requiresRetry = false;
+            throw new NotImplementedException();
+            /*bool requiresRetry = false;
             foreach (var docResult in docResults)
             {
                 token.ThrowIfCancellationRequested();
@@ -2198,7 +2203,7 @@ namespace Raven.NewClient.Client.Connection.Async
             {
                 resolvingConflictRetries = false;
                 retryBecauseOfConflict = false;
-            }
+            }*/
         }
 
         public async Task<RavenJToken> GetOperationStatusAsync(long id)

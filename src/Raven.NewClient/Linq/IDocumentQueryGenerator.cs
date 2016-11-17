@@ -1,4 +1,5 @@
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Linq;
 
 namespace Raven.NewClient.Client.Linq
 {

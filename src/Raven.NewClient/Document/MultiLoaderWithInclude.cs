@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="MultiLoaderWithInclude.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 
 namespace Raven.NewClient.Client.Document
@@ -51,13 +52,13 @@ namespace Raven.NewClient.Client.Document
         /// <param name="path">The path.</param>
         public ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path)
         {
-            var fullId = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(-1, typeof (TInclude), false);
+            var fullId = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(-1, typeof(TInclude), false);
             var id = path.ToPropertyPath();
             var idPrefix = fullId.Replace("-1", string.Empty);
 
             id += "(" + idPrefix + ")";
 
-            return Include(id, typeof (TInclude));
+            return Include(id, typeof(TInclude));
         }
 
         /// <summary>
@@ -212,7 +213,7 @@ namespace Raven.NewClient.Client.Document
             return Load<TResult>(documentKeys);
         }
 
-        public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) 
+        public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null)
             where TTransformer : AbstractTransformerCreationTask, new()
         {
             var transformer = new TTransformer().TransformerName;
@@ -223,7 +224,7 @@ namespace Raven.NewClient.Client.Document
             return session.LoadInternal<TResult>(new[] { id }, includes.ToArray(), transformer, configuration.TransformerParameters).FirstOrDefault();
         }
 
-        public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) 
+        public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null)
             where TTransformer : AbstractTransformerCreationTask, new()
         {
             var transformer = new TTransformer().TransformerName;

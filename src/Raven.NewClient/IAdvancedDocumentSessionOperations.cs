@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="IAdvancedDocumentSessionOperations.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -6,14 +6,12 @@
 
 using System;
 using System.Collections.Generic;
-
-using Raven.NewClient.Abstractions.Commands;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Json.Linq;
+using Sparrow.Json.Parsing;
 
-namespace Raven.NewClient.Client
+namespace Raven.NewClient.Client.Document
 {
     /// <summary>
     ///     Advanced session operations
@@ -70,7 +68,7 @@ namespace Raven.NewClient.Client
         ///     Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="commands">Array of comands to be executed.</param>
-        void Defer(params ICommandData[] commands);
+        void Defer(params Dictionary<string, object>[] commands);
 
         /// <summary>
         ///     Evicts the specified entity from the session.
@@ -109,7 +107,7 @@ namespace Raven.NewClient.Client
         ///     and associate the current state of the entity with the metadata from the server.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        RavenJObject GetMetadataFor<T>(T instance);
+        IDictionary<string, string> GetMetadataFor<T>(T instance);
 
         /// <summary>
         ///     Determines whether the specified entity has changed.
@@ -143,5 +141,15 @@ namespace Raven.NewClient.Client
         /// Returns all changes for each entity stored within session. Including name of the field/property that changed, its old and new value and change type.
         /// </summary>
         IDictionary<string, DocumentsChanges[]> WhatChanged();
+
+        /// <summary>
+        /// SaveChanges will wait for the changes made to be replicates to `replicas` nodes
+        /// </summary>
+        void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, int replicas = 1, bool majority = false);
+
+        /// <summary>
+        /// SaveChanges will wait for the indexes to catch up with the saved changes
+        /// </summary>
+        void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false, string[] indexes = null);
     }
 }

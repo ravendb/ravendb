@@ -1,19 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Data.Queries
 {
-    public abstract class QueryResultBase<T>
+    public abstract class QueryResultBase
     {
         /// <summary>
         /// Gets or sets the document resulting from this query.
         /// </summary>
-        public List<T> Results { get; set; }
+        public BlittableJsonReaderArray Results { get; set; }
 
         /// <summary>
         /// Gets or sets the document included in the result.
         /// </summary>
-        public List<T> Includes { get; set; }
+        public BlittableJsonReaderArray Includes { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the index is stale.
@@ -45,11 +46,5 @@ namespace Raven.NewClient.Client.Data.Queries
         /// The timestamp of the last time the index was queried
         /// </summary>
         public DateTime LastQueryTime { get; set; }
-
-        protected QueryResultBase()
-        {
-            Results = new List<T>();
-            Includes = new List<T>();
-        }
     }
 }

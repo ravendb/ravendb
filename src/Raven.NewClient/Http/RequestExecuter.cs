@@ -12,10 +12,10 @@ using System.Threading.Tasks;
 using System.Xml;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Documents.Commands;
 using Sparrow.Json;
 using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Exceptions;
 using Sparrow.Logging;
 

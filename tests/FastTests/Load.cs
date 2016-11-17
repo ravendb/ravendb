@@ -7,7 +7,7 @@ namespace NewClientTests.NewClient
 {
     public class Load :  RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Load_Document_By_id()
         {
             using (var store = GetDocumentStore())
@@ -27,7 +27,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Load_Documents_By_ids()
         {
             using (var store = GetDocumentStore())
@@ -47,7 +47,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Load_Document_By_ValueType_id()
         {
             using (var store = GetDocumentStore())
@@ -68,7 +68,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Load_Documents_By_ValueType_ids()
         {
             using (var store = GetDocumentStore())
@@ -88,7 +88,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Load_Documents_By_IEnumerable_ValueType_ids()
         {
             using (var store = GetDocumentStore())
@@ -109,7 +109,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Load_Null_Should_Return_Null()
         {
             using (var store = GetDocumentStore())

@@ -1,6 +1,6 @@
-using Raven.NewClient.Json.Linq;
+using Raven.NewClient.Client.Commands;
 
-namespace Raven.NewClient.Client
+namespace Raven.NewClient.Client.Document
 {
-    public delegate bool AfterStreamExecutedDelegate(ref RavenJObject document);
+    public delegate bool AfterStreamExecutedDelegate(ref StreamResult document);
 }

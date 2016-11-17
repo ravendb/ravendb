@@ -274,7 +274,7 @@ namespace Raven.NewClient.Client.Document
         /// Opens the session.
         /// </summary>
         /// <returns></returns>
-        public Documents.DocumentSession OpenNewSession()
+        public DocumentSession OpenNewSession()
         {
             return OpenNewSession(new OpenSessionOptions());
         }
@@ -282,7 +282,7 @@ namespace Raven.NewClient.Client.Document
         /// <summary>
         /// Opens the session for a particular database
         /// </summary>
-        public Documents.DocumentSession OpenNewSession(string database)
+        public DocumentSession OpenNewSession(string database)
         {
             return OpenNewSession(new OpenSessionOptions
             {
@@ -292,7 +292,8 @@ namespace Raven.NewClient.Client.Document
 
         public override IDocumentSession OpenSession(OpenSessionOptions options)
         {
-            EnsureNotClosed();
+            throw new NotImplementedException();
+            /*EnsureNotClosed();
 
             var sessionId = Guid.NewGuid();
             currentSessionId = sessionId;
@@ -307,10 +308,10 @@ namespace Raven.NewClient.Client.Document
             finally
             {
                 currentSessionId = null;
-            }
+            }*/
         }
 
-        public Documents.DocumentSession OpenNewSession(OpenSessionOptions options)
+        public DocumentSession OpenNewSession(OpenSessionOptions options)
         {
             EnsureNotClosed();
 
@@ -320,7 +321,7 @@ namespace Raven.NewClient.Client.Document
             {
                 var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
                 var requestExecuter = GetRequestExecuter(databaseName);
-                var session = new Documents.DocumentSession(databaseName, this, sessionId,
+                var session = new DocumentSession(databaseName, this, sessionId,
                     SetupCommands(DatabaseCommands, databaseName, options.Credentials, options), requestExecuter);
                 RegisterEvents(session);
                 // AfterSessionCreated(session);
@@ -646,7 +647,7 @@ namespace Raven.NewClient.Client.Document
             });
         }
 
-        private Documents.Async.AsyncDocumentSession OpenNewAsyncSessionInternal(OpenSessionOptions options)
+        private Async.AsyncDocumentSession OpenNewAsyncSessionInternal(OpenSessionOptions options)
         {
             AssertInitialized();
             EnsureNotClosed();
@@ -661,7 +662,7 @@ namespace Raven.NewClient.Client.Document
 
                 var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
                 var requestExecuter = GetRequestExecuter(databaseName);
-                var session = new Documents.Async.AsyncDocumentSession(databaseName, this, asyncDatabaseCommands, requestExecuter, sessionId);
+                var session = new AsyncDocumentSession(databaseName, this, asyncDatabaseCommands, requestExecuter, sessionId);
                 //AfterSessionCreated(session);
                 return session;
             }
@@ -675,7 +676,7 @@ namespace Raven.NewClient.Client.Document
         /// Opens the async session.
         /// </summary>
         /// <returns></returns>
-        public Documents.Async.AsyncDocumentSession OpenNewAsyncSession(string databaseName)
+        public Async.AsyncDocumentSession OpenNewAsyncSession(string databaseName)
         {
             return OpenNewAsyncSession(new OpenSessionOptions
             {
@@ -683,12 +684,12 @@ namespace Raven.NewClient.Client.Document
             });
         }
 
-        public Documents.Async.AsyncDocumentSession OpenNewAsyncSession(OpenSessionOptions options)
+        public AsyncDocumentSession OpenNewAsyncSession(OpenSessionOptions options)
         {
             return OpenNewAsyncSessionInternal(options);
         }
 
-        public Documents.Async.AsyncDocumentSession OpenNewAsyncSession()
+        public AsyncDocumentSession OpenNewAsyncSession()
         {
             return OpenNewAsyncSessionInternal(new OpenSessionOptions());
         }
@@ -716,7 +717,8 @@ namespace Raven.NewClient.Client.Document
 
         private IAsyncDocumentSession OpenAsyncSessionInternal(OpenSessionOptions options)
         {
-            AssertInitialized();
+            throw new NotImplementedException();
+            /*AssertInitialized();
             EnsureNotClosed();
 
             var sessionId = Guid.NewGuid();
@@ -735,7 +737,7 @@ namespace Raven.NewClient.Client.Document
             finally
             {
                 currentSessionId = null;
-            }
+            }*/
         }
 
         public override IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)

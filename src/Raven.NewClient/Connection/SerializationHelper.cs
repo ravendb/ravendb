@@ -132,7 +132,8 @@ namespace Raven.NewClient.Client.Connection
         /// </summary>
         public static QueryResult ToQueryResult(RavenJObject json, long? etag, string tempRequestTime, long numberOfCharactersRead)
         {
-            //TODO arek
+            throw new NotImplementedException();
+            /*//TODO arek
             var result = new QueryResult
             {
                 IsStale = json.Value<bool>(nameof(QueryResult.IsStale)),
@@ -169,7 +170,7 @@ namespace Raven.NewClient.Client.Connection
             //    result.DurationMilliseconds = totalTime;
             //}
 
-            return result;
+            return result;*/
         }
 
         public static bool TryParseTempRequestTime(string tempRequestTime, out long result)

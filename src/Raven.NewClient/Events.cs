@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.NewClient.Client.Documents;
+using Raven.NewClient.Client.Document;
 
 namespace Raven.NewClient.Client
 {
@@ -63,7 +63,7 @@ namespace Raven.NewClient.Client
 
     public class BeforeQueryExecutedEventArgs : EventArgs
     {
-        public BeforeQueryExecutedEventArgs(InMemoryDocumentSessionOperations session, Documents.IDocumentQueryCustomization queryCustomization)
+        public BeforeQueryExecutedEventArgs(InMemoryDocumentSessionOperations session, IDocumentQueryCustomization queryCustomization)
         {
             Session = session;
             QueryCustomization = queryCustomization;
@@ -71,6 +71,6 @@ namespace Raven.NewClient.Client
 
         public InMemoryDocumentSessionOperations Session { get; }
 
-        public Documents.IDocumentQueryCustomization QueryCustomization { get; }
+        public IDocumentQueryCustomization QueryCustomization { get; }
     }
 }

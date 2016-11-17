@@ -377,7 +377,7 @@ namespace Raven.NewClient.Client
 
         public abstract void InitializeProfiling();
 
-        protected void RegisterEvents(Documents.InMemoryDocumentSessionOperations session)
+        protected void RegisterEvents(InMemoryDocumentSessionOperations session)
         {
             session.OnBeforeStore += OnBeforeStore;
             session.OnAfterStore += OnAfterStore;

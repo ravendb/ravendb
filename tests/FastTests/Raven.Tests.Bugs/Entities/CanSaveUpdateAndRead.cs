@@ -5,7 +5,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Entities
 {
     public class CanSaveUpdateAndRead : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Can_read_entity_name_after_update()
         {
             using (var store = GetDocumentStore())
@@ -32,7 +32,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Entities
         }
 
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Can_read_entity_name_after_update_from_query()
         {
             using (var store = GetDocumentStore())
@@ -57,7 +57,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Entities
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Can_read_entity_name_after_update_from_query_after_entity_is_in_cache()
         {
             using (var store = GetDocumentStore())

@@ -19,11 +19,11 @@ namespace Raven.NewClient.Client.Data
     /// <summary>
     /// All the information required to query an index
     /// </summary>
-    public class IndexQuery : IndexQuery<Dictionary<string, RavenJToken>>
+    public class IndexQuery : IndexQuery<Dictionary<string, object>>
     {
         public static int DefaultPageSize = 128;
 
-        public override bool Equals(IndexQuery<Dictionary<string, RavenJToken>> other)
+        public override bool Equals(IndexQuery<Dictionary<string, object>> other)
         {
             return base.Equals(other) && DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters);
         }

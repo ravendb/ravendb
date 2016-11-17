@@ -19,24 +19,21 @@ using Raven.NewClient.Abstractions.Spatial;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Async;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Document.Batches;
-using Raven.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Document.SessionOperations;
 using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Client.Listeners;
+using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Spatial;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.NewClient.Json.Linq;
-using Raven.NewClient.Client.Document.Async;
 using Raven.NewClient.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json.Utilities;
-using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data.Queries;
 
 namespace Raven.NewClient.Client.Document
 {
@@ -88,7 +85,7 @@ namespace Raven.NewClient.Client.Document
 
         protected KeyValuePair<string, string> lastEquality;
 
-        protected Dictionary<string, RavenJToken> transformerParameters = new Dictionary<string, RavenJToken>();
+        protected Dictionary<string, object> transformerParameters = new Dictionary<string, object>();
 
         /// <summary>
         ///   The list of fields to project directly from the results
@@ -99,11 +96,6 @@ namespace Raven.NewClient.Client.Document
         ///   The list of fields to project directly from the index on the server
         /// </summary>
         protected readonly string[] fieldsToFetch;
-
-        /// <summary>
-        /// The query listeners for this query
-        /// </summary>
-        protected readonly IDocumentQueryListener[] queryListeners;
 
         protected bool isMapReduce;
         /// <summary>
@@ -294,9 +286,8 @@ namespace Raven.NewClient.Client.Document
                                      string indexName,
                                      string[] fieldsToFetch,
                                      string[] projectionFields,
-                                     IDocumentQueryListener[] queryListeners,
                                      bool isMapReduce)
-            : this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
+            : this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, isMapReduce)
         {
         }
 
@@ -309,13 +300,12 @@ namespace Raven.NewClient.Client.Document
                                      string indexName,
                                      string[] fieldsToFetch,
                                      string[] projectionFields,
-                                     IDocumentQueryListener[] queryListeners,
                                      bool isMapReduce)
         {
             theDatabaseCommands = databaseCommands;
             this.projectionFields = projectionFields;
             this.fieldsToFetch = fieldsToFetch;
-            this.queryListeners = queryListeners;
+            //this.queryListeners = queryListeners;
             this.isMapReduce = isMapReduce;
             this.indexName = indexName;
             this.theSession = theSession;
@@ -363,7 +353,6 @@ namespace Raven.NewClient.Client.Document
             theWaitForNonStaleResults = other.theWaitForNonStaleResults;
             theWaitForNonStaleResultsAsOfNow = other.theWaitForNonStaleResultsAsOfNow;
             includes = other.includes;
-            queryListeners = other.queryListeners;
             queryStats = other.queryStats;
             defaultOperator = other.defaultOperator;
             defaultField = other.defaultField;
@@ -597,21 +586,22 @@ namespace Raven.NewClient.Client.Document
             timeout = waitTimeout;
         }
 
-        protected internal QueryOperation InitializeQueryOperation()
+        protected internal QueryOperation InitializeQueryOperation(bool isAsync = false)
         {
-            var indexQuery = GetIndexQuery(isAsync: false);
+            var indexQuery = GetIndexQuery(isAsync: isAsync);
 
             if (beforeQueryExecutionAction != null)
                 beforeQueryExecutionAction(indexQuery);
 
             return new QueryOperation(theSession,
-                                      indexName,
-                                      indexQuery,
-                                      projectionFields,
-                                      theWaitForNonStaleResults,
-                                      timeout,
-                                      transformResultsFunc,
-                                      disableEntitiesTracking);
+                indexName,
+                indexQuery,
+                projectionFields,
+                theWaitForNonStaleResults,
+                timeout,
+                transformResultsFunc,
+                includes,
+                disableEntitiesTracking);
         }
 
         public IndexQuery GetIndexQuery(bool isAsync)
@@ -625,23 +615,29 @@ namespace Raven.NewClient.Client.Document
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize);
 
-            return DatabaseCommands.GetFacets(query);
+            // TODO iftah
+            return null;
+            //return DatabaseCommands.GetFacets(query);
         }
 
         public FacetedQueryResult GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize);
-
-            return DatabaseCommands.GetFacets(query);
+            
+            // TODO iftah
+            return null;
+            //return DatabaseCommands.GetFacets(query);
         }
 
         public Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery(true);
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize);
-
-            return AsyncDatabaseCommands.GetFacetsAsync(query, token);
+            
+            // TODO iftah
+            return null;
+            //return AsyncDatabaseCommands.GetFacetsAsync(query, token);
         }
 
         public Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
@@ -649,7 +645,9 @@ namespace Raven.NewClient.Client.Document
             var q = GetIndexQuery(true);
             var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize);
 
-            return AsyncDatabaseCommands.GetFacetsAsync(query, token);
+            // TODO iftah
+            return null;
+            //return AsyncDatabaseCommands.GetFacetsAsync(query, token);
         }
 
         /// <summary>
@@ -672,7 +670,10 @@ namespace Raven.NewClient.Client.Document
             if (queryOperation != null)
                 return;
             ClearSortHints(DatabaseCommands);
-            ExecuteBeforeQueryListeners();
+
+            var beforeQueryExecutedEventArgs = new BeforeQueryExecutedEventArgs(theSession, this);
+            theSession.OnBeforeQueryExecutedInvoke(beforeQueryExecutedEventArgs);
+
             queryOperation = InitializeQueryOperation();
             ExecuteActualQuery();
         }
@@ -687,12 +688,12 @@ namespace Raven.NewClient.Client.Document
 
         protected virtual void ExecuteActualQuery()
         {
-            theSession.IncrementRequestCount();
             using (queryOperation.EnterQueryContext())
             {
                 queryOperation.LogQuery();
-                var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery);
-                queryOperation.EnsureIsAcceptable(result);
+                var command = queryOperation.CreateRequest();
+                theSession.RequestExecuter.Execute(command, theSession.Context);
+                queryOperation.SetResult(command.Result);
             }
 
             InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
@@ -732,14 +733,15 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         public virtual Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
         {
-            if (queryOperation == null)
+            throw new NotImplementedException();
+            /*if (queryOperation == null)
             {
                 ExecuteBeforeQueryListeners();
                 queryOperation = InitializeQueryOperation();
             }
 
             var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, GetOperationHeaders());
-            return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
+            return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);*/
         }
 
         /// <summary>
@@ -748,14 +750,16 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         public virtual Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval)
         {
-            if (queryOperation == null)
+            throw new NotImplementedException();
+
+            /*if (queryOperation == null)
             {
                 ExecuteBeforeQueryListeners();
                 queryOperation = InitializeQueryOperation();
             }
 
             var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, GetOperationHeaders());
-            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
+            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);*/
         }
 
 
@@ -765,7 +769,9 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         public virtual Lazy<int> CountLazily()
         {
-            if (queryOperation == null)
+            throw new NotImplementedException();
+
+            /*if (queryOperation == null)
             {
                 ExecuteBeforeQueryListeners();
                 Take(0);
@@ -774,7 +780,7 @@ namespace Raven.NewClient.Client.Document
 
             var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, GetOperationHeaders());
 
-            return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
+            return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);*/
         }
 
         /// <summary>
@@ -784,27 +790,21 @@ namespace Raven.NewClient.Client.Document
         /// <value>The query result.</value>
         public async Task<QueryResult> QueryResultAsync(CancellationToken token = default(CancellationToken))
         {
-            var result = await InitAsync().WithCancellation(token).ConfigureAwait(false);
+            var result = await InitAsync(token).ConfigureAwait(false);
             return result.CurrentQueryResults.CreateSnapshot();
         }
 
-        protected virtual async Task<QueryOperation> InitAsync()
+        protected virtual async Task<QueryOperation> InitAsync(CancellationToken token = default(CancellationToken))
         {
             if (queryOperation != null)
                 return queryOperation;
             ClearSortHints(AsyncDatabaseCommands);
-            ExecuteBeforeQueryListeners();
 
-            queryOperation = InitializeQueryOperation();
-            return await ExecuteActualQueryAsync().ConfigureAwait(false);
-        }
+            var beforeQueryExecutedEventArgs = new BeforeQueryExecutedEventArgs(theSession, this);
+            theSession.OnBeforeQueryExecutedInvoke(beforeQueryExecutedEventArgs);
 
-        protected void ExecuteBeforeQueryListeners()
-        {
-            foreach (var documentQueryListener in queryListeners)
-            {
-                documentQueryListener.BeforeQueryExecuted(this);
-            }
+            queryOperation = InitializeQueryOperation(isAsync: true);
+            return await ExecuteActualQueryAsync(token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1820,7 +1820,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Called externally to raise the after stream executed callback
         /// </summary>
-        public void InvokeAfterStreamExecuted(ref RavenJObject result)
+        public void InvokeAfterStreamExecuted(ref StreamResult result)
         {
             var streamExecuted = afterStreamExecutedCallback;
             if (streamExecuted != null)
@@ -1829,15 +1829,14 @@ If you really want to do in memory filtering on the data returned from the query
 
         #endregion
 
-        protected virtual async Task<QueryOperation> ExecuteActualQueryAsync()
+        protected virtual async Task<QueryOperation> ExecuteActualQueryAsync(CancellationToken token = new CancellationToken())
         {
-            theSession.IncrementRequestCount();
             using (queryOperation.EnterQueryContext())
             {
                 queryOperation.LogQuery();
-                var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery).ConfigureAwait(false);
-
-                queryOperation.EnsureIsAcceptable(result);
+                var command = queryOperation.CreateRequest();
+                await theSession.RequestExecuter.ExecuteAsync(command, theSession.Context, token);
+                queryOperation.SetResult(command.Result);
 
                 InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
                 return queryOperation;
@@ -1845,7 +1844,7 @@ If you really want to do in memory filtering on the data returned from the query
         }
 
         /// <summary>
-        ///   Generates the index query.
+        /// Generates the index query.
         /// </summary>
         /// <param name = "query">The query.</param>
         /// <returns></returns>
@@ -2295,7 +2294,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public async Task<IList<T>> ToListAsync(CancellationToken token = default(CancellationToken))
         {
-            var currentQueryOperation = await InitAsync().WithCancellation(token).ConfigureAwait(false);
+            var currentQueryOperation = await InitAsync(token).ConfigureAwait(false);
             var tuple = await ProcessEnumerator(currentQueryOperation).WithCancellation(token).ConfigureAwait(false);
             return tuple.Item2;
         }

@@ -80,7 +80,8 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public void HandleResponse(GetResponse response)
         {
-            if (response.RequestHasErrors())
+            throw new NotImplementedException();
+            /*if (response.RequestHasErrors())
             {
                 Result = null;
                 RequiresRetry = false;
@@ -95,12 +96,13 @@ namespace Raven.NewClient.Client.Document.Batches
 
             Result = jsonDocuments
                 .Select(sessionOperations.TrackEntity<T>)
-                .ToArray();
+                .ToArray();*/
         }
 
         public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
         {
-            if (responses.Any(x => x.RequestHasErrors()))
+            throw new NotImplementedException();
+            /*if (responses.Any(x => x.RequestHasErrors()))
             {
                 Result = null;
                 RequiresRetry = true;
@@ -122,7 +124,7 @@ namespace Raven.NewClient.Client.Document.Batches
 
             Result = jsonDocuments
                 .Select(sessionOperations.TrackEntity<T>)
-                .ToArray();
+                .ToArray();*/
         }
 
         public IDisposable EnterContext()
