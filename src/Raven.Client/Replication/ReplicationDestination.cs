@@ -21,7 +21,7 @@ namespace Raven.Abstractions.Replication
         /// Override all other properties of the destination
         /// </summary>
 
-        private string url;
+        private string _url;
 
         /// <summary>
         /// Gets or sets the URL of the replication destination
@@ -29,10 +29,10 @@ namespace Raven.Abstractions.Replication
         /// <value>The URL.</value>
         public string Url
         {
-            get { return url; }
+            get { return _url; }
             set
             {
-                url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
+                _url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
             }
         }
 
@@ -99,9 +99,9 @@ namespace Raven.Abstractions.Replication
         {
             get
             {
-                if (string.IsNullOrEmpty(url))
+                if (string.IsNullOrEmpty(_url))
                     return null;
-                return url + " " + Database;
+                return _url + " " + Database;
             }
         }
 

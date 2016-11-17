@@ -249,9 +249,9 @@ namespace Raven.Server.Documents.Replication
         {
             _lastSentIndexOrTransformerEtag = replicationBatchReply.LastEtagAccepted;
 
-            _destinationLastKnownIndexOrTransformerChangeVectorAsString = replicationBatchReply.CurrentChangeVector.Format();
+            _destinationLastKnownIndexOrTransformerChangeVectorAsString = replicationBatchReply.DocumentsChangeVector.Format();
 
-            foreach (var changeVectorEntry in replicationBatchReply.CurrentChangeVector)
+            foreach (var changeVectorEntry in replicationBatchReply.DocumentsChangeVector)
             {
                 _destinationLastKnownIndexOrTransformerChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
@@ -268,16 +268,16 @@ namespace Raven.Server.Documents.Replication
             _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
             _lastSentIndexOrTransformerEtag = replicationBatchReply.LastIndexTransformerEtagAccepted;
 
-            _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.CurrentChangeVector.Format();
+            _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.DocumentsChangeVector.Format();
             _destinationLastKnownIndexOrTransformerChangeVectorAsString =
-                replicationBatchReply.CurrentIndexTransformerChangeVector.Format();
+                replicationBatchReply.DocumentsChangeVector.Format();
 
-            foreach (var changeVectorEntry in replicationBatchReply.CurrentChangeVector)
+            foreach (var changeVectorEntry in replicationBatchReply.DocumentsChangeVector)
             {
                 _destinationLastKnownDocumentChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
 
-            foreach (var changeVectorEntry in replicationBatchReply.CurrentIndexTransformerChangeVector)
+            foreach (var changeVectorEntry in replicationBatchReply.IndexTransformerChangeVector)
             {
                 _destinationLastKnownIndexOrTransformerChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }

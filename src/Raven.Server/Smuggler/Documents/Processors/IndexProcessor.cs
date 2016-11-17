@@ -33,7 +33,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
 
                 database.IndexStore.CreateIndex(indexDefinition);
             }
-            else if (buildVersion >= 40000 && buildVersion <= 44999)
+            else if (buildVersion == 13 || buildVersion >= 40000 && buildVersion <= 44999)
             {
                 var indexType = ReadIndexType(indexDefinitionDoc);
                 var definition = ReadIndexDefinition(indexDefinitionDoc);

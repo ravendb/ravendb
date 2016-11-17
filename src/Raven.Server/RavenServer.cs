@@ -273,7 +273,11 @@ namespace Raven.Server
 
                     try
                     {
-                        var header = JsonDeserializationClient.TcpConnectionHeaderMessage(await tcp.MultiDocumentParser.ParseToMemoryAsync());
+                        TcpConnectionHeaderMessage header;
+                        using (var headerJson = await tcp.MultiDocumentParser.ParseToMemoryAsync())
+                        {
+                            header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
+                        }
                         tcp.Operation = header.Operation;
                         var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
                         if (databaseLoadingTask == null)
