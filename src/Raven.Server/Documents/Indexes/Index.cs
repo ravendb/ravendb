@@ -134,6 +134,7 @@ namespace Raven.Server.Documents.Indexes
         private string _errorPriorityReason;
         private bool _isCompactionInProgress;
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
+        private volatile bool _logsApplied;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -573,6 +574,7 @@ namespace Raven.Server.Documents.Indexes
                     _contextPool.SetMostWorkInGoingToHappenonThisThread();
 
                     DocumentDatabase.Notifications.OnDocumentChange += HandleDocumentChange;
+                    _environment.OnLogsApplied += HandleLogsApplied;
 
                     while (true)
                     {
@@ -675,10 +677,11 @@ namespace Raven.Server.Documents.Indexes
                             // and it is probably better to avoid alloc/free jitter.
                             // This is because faster indexes will tend to allocate the memory faster, and we want to give them
                             // all the available resources so they can complete faster.
-                            var timeToWaitForCleanup = 5000;
+                            var timeToWaitForMemoryCleanup = 5000;
+                            const int timeToWaitForDiskCleanup = 15000;
                             if (_allocationCleanupNeeded)
                             {
-                                timeToWaitForCleanup = 0; // if there is nothing to do, immediately cleanup everything
+                                timeToWaitForMemoryCleanup = 0; // if there is nothing to do, immediately cleanup everything
 
                                 // at any rate, we'll reduce the budget for this index to what it currently has allocated to avoid
                                 // the case where we freed memory at the end of the batch, but didn't adjust the budget accordingly
@@ -686,7 +689,7 @@ namespace Raven.Server.Documents.Indexes
                                 _currentMaximumAllowedMemory = Size.Min(_currentMaximumAllowedMemory,
                                     new Size(NativeMemory.ThreadAllocations.Value.Allocations, SizeUnit.Bytes));
                             }
-                            if (_mre.Wait(timeToWaitForCleanup, cts.Token) == false)
+                            if (_mre.Wait(timeToWaitForMemoryCleanup, cts.Token) == false)
                             {
                                 _allocationCleanupNeeded = false;
 
@@ -694,9 +697,9 @@ namespace Raven.Server.Documents.Indexes
                                 // so this is a good time to release resources we won't need 
                                 // anytime soon
                                 ReduceMemoryUsage();
-                                ReduceDiskUsage();
 
-                                _mre.Wait(cts.Token);
+                                while (_mre.Wait(timeToWaitForDiskCleanup, cts.Token) == false)
+                                    ReduceDiskUsage();
                             }
                         }
                         catch (OperationCanceledException)
@@ -707,13 +710,23 @@ namespace Raven.Server.Documents.Indexes
                 }
                 finally
                 {
+                    _environment.OnLogsApplied -= HandleLogsApplied;
                     DocumentDatabase.Notifications.OnDocumentChange -= HandleDocumentChange;
                 }
             }
         }
 
+        private void HandleLogsApplied()
+        {
+            _logsApplied = true;
+        }
+
         private void ReduceDiskUsage()
         {
+            if (_logsApplied == false)
+                return;
+
+            _logsApplied = false;
             _environment.Cleanup();
         }
 

@@ -596,6 +596,8 @@ namespace Voron.Impl.Journal
                     if (lockTaken)
                         Monitor.Exit(_flushingLock);
                 }
+
+                _waj._env.LogsApplied();
             }
 
             private List<JournalSnapshot> GetJournalSnapshots()
