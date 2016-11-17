@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.Handlers
                 var transformersCount = Database.TransformerStore.GetTransformersCount();
 
                 var stats = new DatabaseStatistics();
+                stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
                 stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 stats.CountOfRevisionDocuments = Database.BundleLoader.VersioningStorage?.GetNumberOfRevisionDocuments(context);
                 stats.ApproximateTaskCount = 0; // TODO [ppekrol]
@@ -49,7 +50,8 @@ namespace Raven.Server.Documents.Handlers
                         Name = index.Name,
                         IndexId = index.IndexId,
                         LockMode = index.Definition.LockMode,
-                        Type = index.Type
+                        Type = index.Type,
+                        LastIndexingTime = index.LastIndexingTime
                     };
                 }
 

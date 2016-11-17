@@ -95,6 +95,8 @@ namespace Raven.Client.Data
         public IndexLockMode LockMode { get; set; }
 
         public IndexType Type { get; set; }
+
+        public DateTime? LastIndexingTime { get; set; }
     }
 
     public class TriggerInfo
