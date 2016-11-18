@@ -146,3 +146,9 @@ interface storageReportItemDto {
     Type: string;
     Report: Voron.Debugging.StorageReport;
 }
+
+
+interface arrayOfResultsAndCountDto<T> {
+    Results: T[];
+    Count: number;
+}

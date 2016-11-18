@@ -1105,9 +1105,6 @@ namespace Raven.Server.Json
 
         public static void WriteReduceTrees(this BlittableJsonTextWriter writer, IEnumerable<ReduceTree> trees)
         {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName("Trees");
             writer.WriteStartArray();
 
             var first = true;
@@ -1135,7 +1132,7 @@ namespace Raven.Server.Json
                 writer.WriteInteger(tree.NumberOfEntries);
                 writer.WriteComma();
 
-                writer.WritePropertyName("Pages");
+                writer.WritePropertyName(nameof(ReduceTree.Root));
                 writer.WriteTreePagesRecursively(new[] { tree.Root });
 
                 writer.WriteEndObject();
@@ -1144,8 +1141,6 @@ namespace Raven.Server.Json
             }
 
             writer.WriteEndArray();
-
-            writer.WriteEndObject();
         }
 
         public static void WriteTreePagesRecursively(this BlittableJsonTextWriter writer, IEnumerable<ReduceTreePage> pages)
@@ -1161,14 +1156,6 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(nameof(TreePage.PageNumber));
                 writer.WriteInteger(page.PageNumber);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(TreePage.IsBranch));
-                writer.WriteBool(page.IsBranch);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(TreePage.IsLeaf));
-                writer.WriteBool(page.IsLeaf);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(ReduceTreePage.AggregationResult));
