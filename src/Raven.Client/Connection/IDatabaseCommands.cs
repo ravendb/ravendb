@@ -661,6 +661,16 @@ namespace Raven.Client.Connection
         /// Compacts given index.
         /// </summary>
         Operation CompactIndex(string name);
+
+        /// <summary>
+        /// Enables given index. This will be a no-op if index is already enabled.
+        /// </summary>
+        void EnableIndex(string name);
+
+        /// <summary>
+        /// Disables given index. This will be a no-op if index is already disabled.
+        /// </summary>
+        void DisableIndex(string name);
     }
 
     public interface IInfoDatabaseCommands

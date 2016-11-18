@@ -686,6 +686,16 @@ namespace Raven.Client.Connection.Async
         /// Compacts given index.
         /// </summary>
         Task<Operation>CompactIndexAsync(string name, CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        /// Enables given index. This will be a no-op if index is already enabled.
+        /// </summary>
+        Task EnableIndexAsync(string name, CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        /// Disables given index. This will be a no-op if index is already disabled.
+        /// </summary>
+        Task DisableIndexAsync(string name, CancellationToken token = default(CancellationToken));
     }
 
     public interface IAsyncInfoDatabaseCommands

@@ -125,6 +125,21 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
         }
 
+        public override void SetState(IndexState state)
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
+        }
+
+        public override void Enable()
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
+        }
+
+        public override void Disable()
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
+        }
+
         public override void SetLock(IndexLockMode mode)
         {
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
