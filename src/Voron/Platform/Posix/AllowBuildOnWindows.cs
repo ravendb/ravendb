@@ -21,11 +21,11 @@ namespace Voron.Platform.Posix
         // pread(2)
         //    ssize_t pread(int fd, void *buf, size_t count, off_t offset);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long pread(int fd, IntPtr buf, UIntPtr count, UIntPtr offset);
+        public static extern IntPtr pread(int fd, IntPtr buf, UIntPtr count, UIntPtr offset);
 
         public static unsafe long pread(int fd, void* buf, ulong count, long offset)
         {
-            return pread(fd, (IntPtr)buf, (UIntPtr)count, (UIntPtr)offset);
+            return (long)pread(fd, (IntPtr)buf, (UIntPtr)count, (UIntPtr)offset);
         }
 
         // posix_fallocate(P)
@@ -67,33 +67,33 @@ namespace Voron.Platform.Posix
         // read(2)
         //    ssize_t read(int fd, void *buf, size_t count);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long read(int fd, IntPtr buf, UIntPtr count);
+        public static extern IntPtr read(int fd, IntPtr buf, UIntPtr count);
 
         public static unsafe long read(int fd, void* buf, ulong count)
         {
-            return read(fd, (IntPtr)buf, (UIntPtr)count);
+            return (long)read(fd, (IntPtr)buf, (UIntPtr)count);
         }
 
 
         // pwrite(2)
         //    ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long pwrite(int fd, IntPtr buf, UIntPtr count, IntPtr offset);
+        public static extern IntPtr pwrite(int fd, IntPtr buf, UIntPtr count, IntPtr offset);
 
         public static unsafe long pwrite(int fd, void* buf, ulong count, long offset)
         {
-            return pwrite(fd, (IntPtr)buf, (UIntPtr)count, (IntPtr)offset);
+            return (long)pwrite(fd, (IntPtr)buf, (UIntPtr)count, (IntPtr)offset);
         }
 
 
         // write(2)
         //    ssize_t write(int fd, const void *buf, size_t count);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long write(int fd, IntPtr buf, UIntPtr count);
+        public static extern IntPtr write(int fd, IntPtr buf, UIntPtr count);
 
         public static unsafe long write(int fd, void* buf, ulong count)
         {
-            return write(fd, (IntPtr)buf, (UIntPtr)count);
+            return (long)write(fd, (IntPtr)buf, (UIntPtr)count);
         }
 
 
