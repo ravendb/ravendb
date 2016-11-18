@@ -510,7 +510,7 @@ namespace Raven.Server.Documents.Handlers
             var names = GetStringValuesQueryString("name");
             var priorityStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("priority");
 
-            IndexingPriority priority;
+            IndexPriority priority;
             if (Enum.TryParse(priorityStr, out priority) == false)
                 throw new InvalidOperationException("Query string value 'priority' is not a valid priority: " + priorityStr);
 

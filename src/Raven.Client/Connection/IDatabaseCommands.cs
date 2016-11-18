@@ -436,7 +436,7 @@ namespace Raven.Client.Connection
 
         void SetIndexLock(string name, IndexLockMode mode);
 
-        void SetIndexPriority(string name, IndexingPriority priority);
+        void SetIndexPriority(string name, IndexPriority priority);
 
         /// <summary>
         ///     Seeds the next identity value on the server

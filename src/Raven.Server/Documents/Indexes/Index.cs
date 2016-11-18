@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Indexes
         private bool _allocationCleanupNeeded;
         private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
-        private string _errorPriorityReason;
+        private string _errorStateReason;
         private bool _isCompactionInProgress;
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private volatile bool _logsApplied;
@@ -205,7 +205,9 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexType Type { get; }
 
-        public IndexingPriority Priority { get; protected set; }
+        public IndexPriority Priority { get; private set; }
+
+        public IndexState State { get; protected set; }
 
         public IndexDefinitionBase Definition { get; }
 
@@ -350,6 +352,7 @@ namespace Raven.Server.Documents.Indexes
             using (var tx = context.OpenReadTransaction())
             {
                 Priority = _indexStorage.ReadPriority(tx);
+                State = _indexStorage.ReadState(tx);
                 _lastQueryingTime = DocumentDatabase.Time.GetUtcNow();
                 _lastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
             }
@@ -371,8 +374,10 @@ namespace Raven.Server.Documents.Indexes
                 if (Configuration.Disabled)
                     return;
 
-                if (Priority.HasFlag(IndexingPriority.Error))
-                    SetPriority(IndexingPriority.Normal);
+                if (State == IndexState.Disabled)
+                    return;
+
+                SetState(IndexState.Normal);
 
                 _cancellationTokenSource = new CancellationTokenSource();
 
@@ -758,12 +763,12 @@ namespace Raven.Server.Documents.Indexes
 
             var analyzerErrors = Interlocked.Increment(ref _analyzerErrors);
 
-            if (Priority.HasFlag(IndexingPriority.Error) || analyzerErrors < AnalyzerErrorLimit)
+            if (State == IndexState.Error || analyzerErrors < AnalyzerErrorLimit)
                 return;
 
             // TODO we should create notification here?
-            _errorPriorityReason = $"Priority was changed due to excessive number of analyzer errors ({analyzerErrors}).";
-            SetPriority(IndexingPriority.Error);
+            _errorStateReason = $"State was changed due to excessive number of analyzer errors ({analyzerErrors}).";
+            SetState(IndexState.Error);
         }
 
         internal void HandleCriticalErrors(IndexingStatsScope stats, Exception e)
@@ -772,12 +777,12 @@ namespace Raven.Server.Documents.Indexes
 
             var criticalErrors = Interlocked.Increment(ref _criticalErrors);
 
-            if (Priority.HasFlag(IndexingPriority.Error) || criticalErrors < CriticalErrorsLimit)
+            if (State == IndexState.Error || criticalErrors < CriticalErrorsLimit)
                 return;
 
             // TODO we should create notification here?
-            _errorPriorityReason = $"Priority was changed due to excessive number of critical errors ({criticalErrors}).";
-            SetPriority(IndexingPriority.Error);
+            _errorStateReason = $"State was changed due to excessive number of critical errors ({criticalErrors}).";
+            SetState(IndexState.Error);
         }
 
         internal void HandleWriteErrors(IndexingStatsScope stats, IndexWriteException iwe)
@@ -789,12 +794,12 @@ namespace Raven.Server.Documents.Indexes
 
             var writeErrors = Interlocked.Increment(ref _writeErrors);
 
-            if (Priority.HasFlag(IndexingPriority.Error) || writeErrors < WriteErrorsLimit)
+            if (State == IndexState.Error || writeErrors < WriteErrorsLimit)
                 return;
 
             // TODO we should create notification here?
-            _errorPriorityReason = $"Priority was changed due to excessive number of write errors ({writeErrors}).";
-            SetPriority(IndexingPriority.Error);
+            _errorStateReason = $"State was changed due to excessive number of write errors ({writeErrors}).";
+            SetState(IndexState.Error);
         }
 
         private void HandleIndexCorruption(IndexingStatsScope stats, Exception e)
@@ -806,8 +811,8 @@ namespace Raven.Server.Documents.Indexes
 
             // TODO we should create notification here?
 
-            _errorPriorityReason = $"Priority was changed due to data corruption with message '{e.Message}'";
-            SetPriority(IndexingPriority.Error);
+            _errorStateReason = $"State was changed due to data corruption with message '{e.Message}'";
+            SetState(IndexState.Error);
         }
 
         private void HandleIndexFailureInformation(IndexFailureInformation failureInformation)
@@ -822,8 +827,8 @@ namespace Raven.Server.Documents.Indexes
 
             // TODO we should create notification here?
 
-            _errorPriorityReason = message;
-            SetPriority(IndexingPriority.Error);
+            _errorStateReason = message;
+            SetState(IndexState.Error);
         }
 
         public void HandleError(Exception e)
@@ -945,38 +950,59 @@ namespace Raven.Server.Documents.Indexes
             return _indexStorage.ReadErrors();
         }
 
-        public virtual void SetPriority(IndexingPriority priority)
+        public virtual void SetPriority(IndexPriority priority)
         {
             if (Priority == priority)
                 return;
 
             using (DrainRunningQueries())
             {
-                AssertIndexState(assertPriority: false);
+                AssertIndexState(assertState: false);
 
                 if (Priority == priority)
                     return;
-
-                if (priority.HasFlag(IndexingPriority.Error) == false)
-                    _errorPriorityReason = null;
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Changing priority for '{Name} ({IndexId})' from '{Priority}' to '{priority}'.");
 
                 _indexStorage.WritePriority(priority);
 
-                var oldPriority = Priority;
                 Priority = priority;
+            }
+        }
+
+        public virtual void SetState(IndexState state)
+        {
+            if (State == state)
+                return;
+
+            using (DrainRunningQueries())
+            {
+                AssertIndexState(assertState: false);
+
+                if (State == state)
+                    return;
+
+                if (state != IndexState.Error)
+                    _errorStateReason = null;
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Changing state for '{Name} ({IndexId})' from '{State}' to '{state}'.");
+
+                _indexStorage.WriteState(state);
+
+                var oldState = State;
+                State = state;
 
                 var notificationType = IndexChangeTypes.None;
 
-                if (priority.HasFlag(IndexingPriority.Disabled))
+                if (state == IndexState.Disabled)
                     notificationType = IndexChangeTypes.IndexDemotedToDisabled;
-                else if (priority.HasFlag(IndexingPriority.Error))
+                else if (state == IndexState.Error)
                     notificationType = IndexChangeTypes.IndexMarkedAsErrored;
-                else if (priority.HasFlag(IndexingPriority.Idle))
+                else if (state == IndexState.Idle)
                     notificationType = IndexChangeTypes.IndexDemotedToIdle;
-                else if (priority.HasFlag(IndexingPriority.Normal) && oldPriority.HasFlag(IndexingPriority.Idle))
+                else if (state == IndexState.Normal && oldState == IndexState.Idle)
                     notificationType = IndexChangeTypes.IndexPromotedFromIdle;
 
                 if (notificationType != IndexChangeTypes.None)
@@ -998,7 +1024,7 @@ namespace Raven.Server.Documents.Indexes
 
             using (DrainRunningQueries())
             {
-                AssertIndexState(assertPriority: false);
+                AssertIndexState(assertState: false);
 
                 if (Definition.LockMode == mode)
                     return;
@@ -1100,6 +1126,7 @@ namespace Raven.Server.Documents.Indexes
                 stats.EntriesCount = reader.EntriesCount();
                 stats.LockMode = Definition.LockMode;
                 stats.Priority = Priority;
+                stats.State = State;
                 stats.Status = Status;
 
                 stats.MappedPerSecondRate = MapsPerSec.OneMinuteRate;
@@ -1223,8 +1250,8 @@ namespace Raven.Server.Documents.Indexes
         {
             AssertIndexState();
 
-            if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
-                SetPriority(IndexingPriority.Normal);
+            if (State == IndexState.Idle)
+                SetState(IndexState.Normal);
 
             MarkQueried(DocumentDatabase.Time.GetUtcNow());
 
@@ -1362,8 +1389,8 @@ namespace Raven.Server.Documents.Indexes
         {
             AssertIndexState();
 
-            if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
-                SetPriority(IndexingPriority.Normal);
+            if (State == IndexState.Idle)
+                SetState(IndexState.Normal);
 
             MarkQueried(DocumentDatabase.Time.GetUtcNow());
 
@@ -1542,7 +1569,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AssertIndexState(bool assertPriority = true)
+        private void AssertIndexState(bool assertState = true)
         {
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Index '{Name} ({IndexId})' is currently being compacted.");
@@ -1553,11 +1580,11 @@ namespace Raven.Server.Documents.Indexes
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
 
-            if (assertPriority && Priority.HasFlag(IndexingPriority.Error))
+            if (assertState && State == IndexState.Error)
             {
-                var errorPriorityReason = _errorPriorityReason;
-                if (string.IsNullOrWhiteSpace(errorPriorityReason) == false)
-                    throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored. {errorPriorityReason}");
+                var errorStateReason = _errorStateReason;
+                if (string.IsNullOrWhiteSpace(errorStateReason) == false)
+                    throw new InvalidOperationException($"Index '{Name} ({IndexId})' is marked as errored. {errorStateReason}");
 
                 throw new InvalidOperationException(
                     $"Index '{Name} ({IndexId})' is marked as errored. Please check index errors avaiable at '/databases/{DocumentDatabase.Name}/indexes/errors?name={Name}'.");

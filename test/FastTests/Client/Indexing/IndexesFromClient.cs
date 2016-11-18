@@ -178,7 +178,7 @@ namespace FastTests.Client.Indexing
                 Assert.True(stats.LastIndexingTime.HasValue);
                 Assert.True(stats.LastQueryingTime.HasValue);
                 Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
-                Assert.Equal(IndexingPriority.Normal, stats.Priority);
+                Assert.Equal(IndexPriority.Normal, stats.Priority);
             }
         }
 
@@ -214,16 +214,16 @@ namespace FastTests.Client.Indexing
 
                 Assert.Equal(index.IndexId, stats.Id);
                 Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
-                Assert.Equal(IndexingPriority.Normal, stats.Priority);
+                Assert.Equal(IndexPriority.Normal, stats.Priority);
 
                 await store.AsyncDatabaseCommands.SetIndexLockAsync(index.Name, IndexLockMode.LockedIgnore);
-                await store.AsyncDatabaseCommands.SetIndexPriorityAsync(index.Name, IndexingPriority.Error);
+                await store.AsyncDatabaseCommands.SetIndexPriorityAsync(index.Name, IndexPriority.Low);
 
                 stats = await store.AsyncDatabaseCommands.GetIndexStatisticsAsync(index.Name);
 
                 Assert.Equal(index.IndexId, stats.Id);
                 Assert.Equal(IndexLockMode.LockedIgnore, stats.LockMode);
-                Assert.Equal(IndexingPriority.Error, stats.Priority);
+                Assert.Equal(IndexPriority.Low, stats.Priority);
             }
         }
 

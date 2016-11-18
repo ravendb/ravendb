@@ -33,7 +33,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                Assert.Equal(IndexingPriority.Normal, store.DatabaseCommands.GetStatistics().Indexes[0].Priority);
+                Assert.Equal(IndexState.Normal, store.DatabaseCommands.GetStatistics().Indexes[0].State);
 
                 var database = await GetDatabase(store.DefaultDatabase);
                 var index = database.IndexStore.GetIndex(1);
@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var result = SpinWait.SpinUntil(() => store.DatabaseCommands.GetStatistics().Indexes[0].Priority == IndexingPriority.Error, TimeSpan.FromSeconds(5));
+                var result = SpinWait.SpinUntil(() => store.DatabaseCommands.GetStatistics().Indexes[0].State == IndexState.Error, TimeSpan.FromSeconds(5));
                 Assert.True(result);
 
                 var e = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.Query(new Users_ByName().IndexName, new IndexQuery()));

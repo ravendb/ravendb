@@ -1,7 +1,6 @@
-﻿using Sparrow.Json;
-using System;
+﻿using System;
 
-namespace Raven.NewClient.Client.Data.Indexes
+namespace Raven.NewClient.Data.Indexes
 {
     public class IndexingPerformanceOperation
     {

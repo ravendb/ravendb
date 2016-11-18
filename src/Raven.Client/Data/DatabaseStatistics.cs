@@ -70,7 +70,7 @@ namespace Raven.Client.Data
 
         public bool IsStale { get; set; }
 
-        public IndexingPriority Priority { get; set; }
+        public IndexState State { get; set; }
 
         public IndexLockMode LockMode { get; set; }
 

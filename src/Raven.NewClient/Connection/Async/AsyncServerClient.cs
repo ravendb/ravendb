@@ -41,10 +41,10 @@ using System.Threading.Tasks;
 using Raven.NewClient.Client.Changes;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Data.Indexes;
 
 namespace Raven.NewClient.Client.Connection.Async
 {
@@ -230,7 +230,7 @@ namespace Raven.NewClient.Client.Connection.Async
                 }
             }, token);
         }
-        public Task SetIndexPriorityAsync(string name, IndexingPriority priority, CancellationToken token = default(CancellationToken))
+        public Task SetIndexPriorityAsync(string name, IndexPriority priority, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethod.Post, async operationMetadata =>
                 {

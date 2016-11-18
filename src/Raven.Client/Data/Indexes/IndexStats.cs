@@ -6,8 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 
 namespace Raven.Client.Data.Indexes
@@ -73,9 +71,14 @@ namespace Raven.Client.Data.Indexes
         public DateTime? LastQueryingTime { get; set; }
 
         /// <summary>
-        /// Index priority (Normal, Disabled, Idle, Abandoned, Error)
+        /// Index state (Normal, Disabled, Idle, Abandoned, Error)
         /// </summary>
-        public IndexingPriority Priority { get; set; }
+        public IndexState State { get; set; }
+
+        /// <summary>
+        /// Index priority (Low, Normal, High)
+        /// </summary>
+        public IndexPriority Priority { get; set; }
 
         /// <summary>
         /// Date of index creation.
@@ -119,13 +122,7 @@ namespace Raven.Client.Data.Indexes
         /// <summary>
         /// Determines if index is invalid. If more than 15% of attemps (map or reduce) are errors then value will be <c>true</c>.
         /// </summary>
-        public bool IsInvalidIndex
-        {
-            get
-            {
-                return IndexFailureInformation.CheckIndexInvalid(MapAttempts, MapErrors, ReduceAttempts, ReduceErrors);
-            }
-        }
+        public bool IsInvalidIndex => IndexFailureInformation.CheckIndexInvalid(MapAttempts, MapErrors, ReduceAttempts, ReduceErrors);
 
         public MemoryStats Memory { get; set; }
 
@@ -161,28 +158,5 @@ namespace Raven.Client.Data.Indexes
 
             public long TombstoneLag { get; set; }
         }
-    }
-
-    public enum IndexRunningStatus
-    {
-        Running,
-        Paused,
-        Disabled
-    }
-
-    [Flags]
-    public enum IndexingPriority
-    {
-        None = 0,
-
-        Normal = 1,
-
-        Disabled = 2,
-
-        Idle = 4,
-
-        Error = 16,
-
-        Forced = 512,
     }
 }

@@ -114,7 +114,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 var index2 = database.IndexStore.GetIndex(2);
                 index2.SetLock(IndexLockMode.LockedError);
-                index2.SetPriority(IndexingPriority.Disabled);
+                index2.SetPriority(IndexPriority.Low);
+                index2.SetState(IndexState.Disabled);
             }
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
@@ -135,7 +136,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(SortOptions.String, indexes[0].Definition.MapFields["Name1"].SortOption);
                 Assert.True(indexes[0].Definition.MapFields["Name1"].Highlighted);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
-                Assert.Equal(IndexingPriority.Normal, indexes[0].Priority);
+                Assert.Equal(IndexPriority.Normal, indexes[0].Priority);
+                Assert.Equal(IndexState.Normal, indexes[0].State);
 
                 Assert.Equal(2, indexes[1].IndexId);
                 Assert.Equal(1, indexes[1].Definition.Collections.Length);
@@ -145,7 +147,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields["Name2"].SortOption);
                 Assert.False(indexes[1].Definition.MapFields["Name2"].Highlighted);
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
-                Assert.Equal(IndexingPriority.Disabled, indexes[1].Priority);
+                Assert.Equal(IndexPriority.Low, indexes[1].Priority);
+                Assert.Equal(IndexState.Disabled, indexes[1].State);
             }
         }
 
@@ -334,7 +337,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(now, stats.LastIndexingTime);
                         Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
-                        Assert.Equal(IndexingPriority.Normal, stats.Priority);
+                        Assert.Equal(IndexPriority.Normal, stats.Priority);
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -379,7 +382,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(now, stats.LastIndexingTime);
                         Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
-                        Assert.Equal(IndexingPriority.Normal, stats.Priority);
+                        Assert.Equal(IndexPriority.Normal, stats.Priority);
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -414,7 +417,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(now, stats.LastIndexingTime);
                         Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
-                        Assert.Equal(IndexingPriority.Normal, stats.Priority);
+                        Assert.Equal(IndexPriority.Normal, stats.Priority);
                     }
                 }
             }
@@ -442,12 +445,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     for (int i = 0; i < 10; i++)
                     {
                         stats = index.GetStats();
-                        Assert.Equal(IndexingPriority.Normal, stats.Priority);
+                        Assert.Equal(IndexPriority.Normal, stats.Priority);
                         index.HandleWriteErrors(scope, iwe);
                     }
 
                     stats = index.GetStats();
-                    Assert.Equal(IndexingPriority.Error, stats.Priority);
+                    Assert.Equal(IndexState.Error, stats.State);
                     Assert.True(SpinWait.SpinUntil(() => index.Status == IndexRunningStatus.Paused, TimeSpan.FromSeconds(5)));
                 }
             }
@@ -952,7 +955,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var index0Id = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Job", Highlighted = false, Storage = FieldStorage.No } }));
                 var index0 = database.IndexStore.GetIndex(index0Id);
 
-                index0.SetPriority(IndexingPriority.Idle);
+                index0.SetState(IndexState.Idle);
 
                 database.IndexStore.RunIdleOperations(); // young idle index should be removed
 
@@ -971,16 +974,16 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     await index2.Query(new IndexQueryServerSide(), context, OperationCancelToken.None); // last querying time
                 }
 
-                Assert.Equal(IndexingPriority.Normal, index1.Priority);
-                Assert.Equal(IndexingPriority.Normal, index2.Priority);
+                Assert.Equal(IndexPriority.Normal, index1.Priority);
+                Assert.Equal(IndexPriority.Normal, index2.Priority);
 
                 database.IndexStore.RunIdleOperations(); // nothing should happen because difference between querying time between those two indexes is less than TimeToWaitBeforeMarkingAutoIndexAsIdle
 
                 index1 = database.IndexStore.GetIndex(index1Id);
                 index2 = database.IndexStore.GetIndex(index2Id);
 
-                Assert.Equal(IndexingPriority.Normal, index1.Priority);
-                Assert.Equal(IndexingPriority.Normal, index2.Priority);
+                Assert.Equal(IndexPriority.Normal, index1.Priority);
+                Assert.Equal(IndexPriority.Normal, index2.Priority);
 
                 database.Time.UtcDateTime = () => DateTime.UtcNow.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
 
@@ -994,8 +997,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 index1 = database.IndexStore.GetIndex(index1Id);
                 index2 = database.IndexStore.GetIndex(index2Id);
 
-                Assert.Equal(IndexingPriority.Normal, index1.Priority);
-                Assert.Equal(IndexingPriority.Idle, index2.Priority);
+                Assert.Equal(IndexPriority.Normal, index1.Priority);
+                Assert.Equal(IndexState.Idle, index2.State);
 
                 var now = database.Time.GetUtcNow();
                 database.Time.UtcDateTime = () => 
@@ -1007,8 +1010,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 index1 = database.IndexStore.GetIndex(index1Id);
                 index2 = database.IndexStore.GetIndex(index2Id);
 
-                Assert.Equal(IndexingPriority.Normal, index1.Priority);
-                Assert.Equal(IndexingPriority.Idle, index2.Priority);
+                Assert.Equal(IndexPriority.Normal, index1.Priority);
+                Assert.Equal(IndexState.Idle, index2.State);
 
                 now = database.Time.GetUtcNow();
                 database.Time.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan);
@@ -1018,7 +1021,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 index1 = database.IndexStore.GetIndex(index1Id);
                 index2 = database.IndexStore.GetIndex(index2Id);
 
-                Assert.Equal(IndexingPriority.Normal, index1.Priority);
+                Assert.Equal(IndexPriority.Normal, index1.Priority);
                 Assert.Null(index2);
             }
         }
@@ -1103,7 +1106,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     .GetIndex(1);
 
                 Assert.IsType<FaultyInMemoryIndex>(index);
-                Assert.Equal(IndexingPriority.Error, index.Priority);
+                Assert.Equal(IndexState.Error, index.State);
                 Assert.Equal(indexName, index.Name);
 
                 // TODO arek: verify that alert was created as well
@@ -1145,7 +1148,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     .GetIndex(1);
 
                 Assert.IsType<FaultyInMemoryIndex>(index);
-                Assert.Equal(IndexingPriority.Error, index.Priority);
+                Assert.Equal(IndexState.Error, index.State);
                 Assert.Equal(indexSafeName, index.GetIndexNameSafeForFileSystem());
 
                 database.IndexStore.DeleteIndex(index.IndexId);

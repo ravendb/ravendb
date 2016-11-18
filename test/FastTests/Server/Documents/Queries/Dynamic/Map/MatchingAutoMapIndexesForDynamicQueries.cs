@@ -342,19 +342,19 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             var index = get_index(definition.Name);
 
-            index.SetPriority(IndexingPriority.Disabled);
+            index.SetState(IndexState.Disabled);
 
             var result = _sut.Match(dynamicQuery);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
 
-            index.SetPriority(IndexingPriority.Error);
+            index.SetState(IndexState.Error);
 
             result = _sut.Match(dynamicQuery);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
 
-            index.SetPriority(IndexingPriority.Normal);
+            index.SetPriority(IndexPriority.Normal);
             index._indexStorage.UpdateStats(DateTime.UtcNow, new IndexingRunStats()
             {
                 MapAttempts = 1000,
