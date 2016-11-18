@@ -229,7 +229,7 @@ namespace Raven.Client.Connection.Async
                 }
             }, token);
         }
-        public Task SetIndexPriorityAsync(string name, IndexingPriority priority, CancellationToken token = default(CancellationToken))
+        public Task SetIndexPriorityAsync(string name, IndexPriority priority, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethod.Post, async operationMetadata =>
                 {

@@ -430,7 +430,7 @@ namespace Raven.Client.Connection.Async
 
         Task SetIndexLockAsync(string name, IndexLockMode mode, CancellationToken token = default(CancellationToken));
 
-        Task SetIndexPriorityAsync(string name, IndexingPriority priority, CancellationToken token = default(CancellationToken));
+        Task SetIndexPriorityAsync(string name, IndexPriority priority, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Creates an index with the specified name, based on an index definition that is created by the supplied

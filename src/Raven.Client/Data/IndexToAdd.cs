@@ -24,6 +24,6 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Priority of an index
         /// </summary>
-        public IndexingPriority Priority { get; set; }
+        public IndexPriority Priority { get; set; }
     }
 }

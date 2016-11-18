@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -16,10 +15,9 @@ using Newtonsoft.Json.Linq;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Extensions;
+using Raven.NewClient.Data.Indexes;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -266,7 +264,7 @@ namespace NewClientTests
                 if (databaseStatistics.Indexes.All(x => x.IsStale == false))
                     return;
 
-                if (databaseStatistics.Indexes.Any(x => x.Priority == IndexingPriority.Error))
+                if (databaseStatistics.Indexes.Any(x => x.State == IndexState.Error))
                 {
                     break;
                 }
@@ -300,7 +298,7 @@ namespace NewClientTests
 
             var stats = databaseCommands.GetStatistics();
 
-            var corrupted = stats.Indexes.Where(x => x.Priority == IndexingPriority.Error).ToList();
+            var corrupted = stats.Indexes.Where(x => x.State == IndexState.Error).ToList();
             if (corrupted.Count > 0)
             {
                 throw new InvalidOperationException(

@@ -4,8 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Data.Indexes;
 
 namespace Raven.NewClient.Abstractions.Data
 {
@@ -24,6 +24,6 @@ namespace Raven.NewClient.Abstractions.Data
         /// <summary>
         /// Priority of an index
         /// </summary>
-        public IndexingPriority Priority { get; set; }
+        public IndexPriority Priority { get; set; }
     }
 }

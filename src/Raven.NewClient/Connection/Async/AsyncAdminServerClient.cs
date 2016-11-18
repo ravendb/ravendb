@@ -17,11 +17,11 @@ using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Implementation;
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Connection.Async
