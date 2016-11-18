@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -130,6 +131,34 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 Database.IndexStore.StartIndex(names[0]);
             }
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/admin/indexes/enable", "POST")]
+        public Task Enable()
+        {
+            var name = GetStringQueryString("name");
+            var index = Database.IndexStore.GetIndex(name);
+            if (index == null)
+                throw new InvalidOperationException("There is not index with name: " + name);
+
+            index.Enable();
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/admin/indexes/disable", "POST")]
+        public Task Disable()
+        {
+            var name = GetStringQueryString("name");
+            var index = Database.IndexStore.GetIndex(name);
+            if (index == null)
+                throw new InvalidOperationException("There is not index with name: " + name);
+
+            index.Disable();
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;

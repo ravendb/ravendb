@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Indexes
                 if (_indexingThread != null)
                     return IndexRunningStatus.Running;
 
-                if (Configuration.Disabled)
+                if (Configuration.Disabled || State == IndexState.Disabled)
                     return IndexRunningStatus.Disabled;
 
                 return IndexRunningStatus.Paused;
@@ -1034,6 +1034,36 @@ namespace Raven.Server.Documents.Indexes
                         $"Changing lock mode for '{Name} ({IndexId})' from '{Definition.LockMode}' to '{mode}'.");
 
                 _indexStorage.WriteLock(mode);
+            }
+        }
+
+        public virtual void Enable()
+        {
+            if (State != IndexState.Disabled)
+                return;
+
+            using (DrainRunningQueries())
+            {
+                if (State != IndexState.Disabled)
+                    return;
+
+                SetState(IndexState.Normal);
+                Start();
+            }
+        }
+
+        public virtual void Disable()
+        {
+            if (State == IndexState.Disabled)
+                return;
+
+            using (DrainRunningQueries())
+            {
+                if (State == IndexState.Disabled)
+                    return;
+
+                SetState(IndexState.Disabled);
+                Stop();
             }
         }
 

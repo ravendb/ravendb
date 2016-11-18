@@ -88,6 +88,20 @@ namespace Raven.Client.Connection
             return createReplicationAwareRequest(serverUrl, url, HttpMethods.Post);
         }
 
+        public HttpJsonRequest EnableIndexAsync(string serverUrl, string name)
+        {
+            var url = $"/admin/indexes/enable?name={name}";
+
+            return createReplicationAwareRequest(serverUrl, url, HttpMethods.Post);
+        }
+
+        public HttpJsonRequest DisableIndexAsync(string serverUrl, string name)
+        {
+            var url = $"/admin/indexes/disable?name={name}";
+
+            return createReplicationAwareRequest(serverUrl, url, HttpMethods.Post);
+        }
+
         public HttpJsonRequest AdminStats()
         {
             return createRequestForSystemDatabase("/admin/stats", HttpMethods.Get);
