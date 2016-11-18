@@ -200,10 +200,10 @@ namespace Voron.Data.BTrees
             get { return (Header->Flags & PageFlags.Compressed) == PageFlags.Compressed; }
         }
 
-        public CompressedValuesHeader* CompressionHeader
+        public CompressedNodesHeader* CompressionHeader
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (CompressedValuesHeader*)(Base + PageSize - Constants.CompressedValuesHeaderSize); }
+            get { return (CompressedNodesHeader*)(Base + PageSize - Constants.Compression.HeaderSize); }
         }
 
         public ushort NumberOfEntries
@@ -351,7 +351,14 @@ namespace Voron.Data.BTrees
 
             TreePageHeader* header = Header;
 
-            var newNodeOffset = (ushort)(header->Upper - nodeSize);
+            int upper;
+
+            if (Upper == ushort.MaxValue && PageSize == Constants.Storage.MaxPageSize)
+                upper = Constants.Storage.MaxPageSize;
+            else
+                upper = header->Upper;
+            
+            var newNodeOffset = (ushort)(upper - nodeSize);
             Debug.Assert(newNodeOffset >= header->Lower + Constants.NodeOffsetSize);
 
             var node = (TreeNodeHeader*)(Base + newNodeOffset);
@@ -502,7 +509,7 @@ namespace Voron.Data.BTrees
                 var numberOfEntries = NumberOfEntries;
 
                 if (IsCompressed)
-                    Upper = (ushort)(PageSize - Constants.CompressedValuesHeaderSize - CompressionHeader->CompressedSize);
+                    Upper = (ushort)(PageSize - Constants.Compression.HeaderSize - CompressionHeader->CompressedSize);
                 else
                     Upper = (ushort)PageSize;
 
@@ -667,7 +674,7 @@ namespace Voron.Data.BTrees
             }
 
             if (IsCompressed)
-                size += CompressionHeader->CompressedSize + Constants.CompressedValuesHeaderSize;
+                size += CompressionHeader->CompressedSize + Constants.Compression.HeaderSize;
 
             Debug.Assert(size <= PageSize);
             Debug.Assert(SizeUsed >= size);

@@ -16,10 +16,25 @@ namespace Voron.Data.Compression
 
             public byte* CompressionOutputPtr;
 
-            public CompressedValuesHeader Header;
+            public CompressedNodesHeader Header;
         }
 
-        public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, out CompressionResult result, bool defrag = true)
+        public class UncompressedEntry
+        {
+            public Slice Key;
+
+            public int Length;
+
+            public UncompressedEntry Set(Slice key, int len)
+            {
+                Key = key;
+                Length = len;
+
+                return this;
+            }
+        }
+
+        public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, out CompressionResult result, bool defrag = true, UncompressedEntry additionalEntry = null)
         {
             if (defrag) // TODO arek
                 page.Defrag(tx); // TODO arek no need to call it on every time probably - need to check if a page really requires defrag
@@ -32,34 +47,50 @@ namespace Voron.Data.Compression
             var tempPage = temp.GetTempPage();
 
             var compressionInput = page.Base + page.Upper;
-            var compressionOutput = tempPage.Base + Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize; // temp compression result has compressed values at the beginning of the page
+            var compressionOutput = tempPage.Base + Constants.TreePageHeaderSize + Constants.Compression.HeaderSize; // temp compression result has compressed values at the beginning of the page
 
             var compressedSize = LZ4.Encode64(
                 compressionInput,
                 compressionOutput,
                 valuesSize,
-                page.PageSize - Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize);
+                page.PageSize - (Constants.TreePageHeaderSize + Constants.Compression.HeaderSize));
 
             if (compressedSize == 0)
             {
                 // output buffer size not enough
+
                 result = null;
                 return returnTempPage;
             }
 
             Memory.Copy(tempPage.Base, page.Base, Constants.TreePageHeaderSize);
 
-            tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.CompressedValuesHeaderSize + compressedSize);
+            tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressedSize);
             tempPage.Upper = (ushort)tempPage.PageSize;
+
+            if (additionalEntry != null)
+            {
+                var decompressedPageSize = page.SizeUsed + // header, node offsets, existing entries
+                                           page.GetRequiredSpace(additionalEntry.Key, additionalEntry.Length) + // uncompressed entry that we are going to insert after compression
+                                           tempPage.SizeLeft; // space that can be still used to insert next uncompressed entries
+
+                if (decompressedPageSize > Constants.Storage.MaxPageSize)
+                {
+                    // if we decompressed such page then it would exceed the maximum page size
+
+                    result = null;
+                    return returnTempPage;
+                }
+            }
 
             result = new CompressionResult
             {
                 CompressedPage = tempPage,
                 CompressionOutputPtr = compressionOutput,
-                Header = new CompressedValuesHeader
+                Header = new CompressedNodesHeader
                 {
-                    CompressedSize = (short) compressedSize,
-                    UncompressedSize = (short) valuesSize,
+                    CompressedSize = (ushort) compressedSize,
+                    UncompressedSize = (ushort) valuesSize,
                     NumberOfCompressedEntries = page.NumberOfEntries
                 }
             };
@@ -72,9 +103,9 @@ namespace Voron.Data.Compression
             // let us copy the compressed values at the end of the page
             // so we will handle next writes as usual
 
-            var writePtr = dest.Base + dest.PageSize - Constants.CompressedValuesHeaderSize;
+            var writePtr = dest.Base + dest.PageSize - Constants.Compression.HeaderSize;
 
-            var header = (CompressedValuesHeader*)writePtr;
+            var header = (CompressedNodesHeader*)writePtr;
             *header = compressed.Header;
 
             writePtr -= compressed.Header.CompressedSize;

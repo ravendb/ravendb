@@ -3,15 +3,15 @@
 namespace Voron.Data.Compression
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
-    public struct CompressedValuesHeader
+    public struct CompressedNodesHeader
     {
         [FieldOffset(0)]
-        public short CompressedSize;
+        public ushort CompressedSize;
 
         [FieldOffset(2)]
-        public short UncompressedSize;
+        public ushort UncompressedSize;
 
         [FieldOffset(4)]
-        public ushort NumberOfCompressedEntries;
+        public int NumberOfCompressedEntries;
     }
 }

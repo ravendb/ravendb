@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Voron.Global;
 using Voron.Data.BTrees;
@@ -34,9 +35,22 @@ namespace Voron.Impl.Paging
 
         public TreePage GetTempPage()
         {
+            var upper = (ushort)PageSize;
+
+            if (upper < PageSize)
+            {
+                // we have overflown Upper which is ushort 
+                // it means the page size is 64KB
+                // we have special handling for this in AllocateNewNode
+
+                Debug.Assert(PageSize == Constants.Storage.MaxPageSize);
+
+                upper = ushort.MaxValue;
+            }
+
             return new TreePage((byte*)_tempPage.ToPointer(), PageSize)
             {
-                Upper = (ushort)PageSize,
+                Upper = upper,
                 Lower = (ushort) Constants.TreePageHeaderSize,
                 TreeFlags = TreePageFlags.None,
             };

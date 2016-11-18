@@ -20,7 +20,7 @@ namespace Voron.Data.Compression
         private Usage _usage;
         private LowLevelTransaction _tx;
         private bool _disposed;
-
+        
         public DecompressedLeafPage(byte* basePtr, int pageSize, TreePage original, TemporaryPage tempPage) : base(basePtr, pageSize)
         {
             Original = original;

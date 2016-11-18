@@ -5,6 +5,8 @@
         public int NumberOfModifiedLeafs { get; set; }
 
         public int NumberOfModifiedBranches { get; set; }
+
+        public int NumberOfCompressedLeafs { get; set; }
     }
 
     public class MapRunDetails 

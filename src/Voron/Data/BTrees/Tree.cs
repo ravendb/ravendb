@@ -294,9 +294,7 @@ namespace Voron.Data.BTrees
             byte* dataPos;
             if (page.HasSpaceFor(_llt, key, len) == false)
             {
-                var canCompress = IsLeafCompressionSupported && page.IsCompressed == false;
-
-                if (canCompress == false || TryCompressPageValues(key, len, page) == false)
+                if (IsLeafCompressionSupported == false || TryCompressPageValues(key, len, page) == false)
                 {
                     using (var cursor = cursorConstructor(key))
                     {
@@ -800,11 +798,16 @@ namespace Voron.Data.BTrees
         {
             var compressioncHeader = p.CompressionHeader;
 
-            var necessarySize = p.SizeUsed - compressioncHeader->CompressedSize +
+            var decompressedPageSize = p.SizeUsed - compressioncHeader->CompressedSize +
                                 compressioncHeader->UncompressedSize +
                                 Constants.NodeOffsetSize * compressioncHeader->NumberOfCompressedEntries;
 
-            var decompressedPage = _llt.Environment.DecompressionBuffers.GetPage(_llt, Bits.NextPowerOf2(necessarySize), p);
+            if (decompressedPageSize > Constants.Storage.MaxPageSize)
+                decompressedPageSize = Constants.Storage.MaxPageSize;
+            else
+                decompressedPageSize = Bits.NextPowerOf2(decompressedPageSize);
+
+            var decompressedPage = _llt.Environment.DecompressionBuffers.GetPage(_llt, decompressedPageSize, p);
 
             for (var i = 0; i < p.NumberOfEntries; i++)
             {
@@ -1210,21 +1213,38 @@ namespace Voron.Data.BTrees
             return false;
         }
 
+        private LeafPageCompressor.UncompressedEntry _uncompressed;
+
         private bool TryCompressPageValues(Slice key, int len, TreePage page)
         {
-            LeafPageCompressor.CompressionResult compressed;
-            using (LeafPageCompressor.TryGetCompressedTempPage(_llt, page, out compressed))
+            if (_uncompressed == null)
+                _uncompressed = new LeafPageCompressor.UncompressedEntry();
+
+            var pageToCompress = page;
+
+            using (page.IsCompressed ? (DecompressedLeafPage)(pageToCompress = DecompressPage(page)) : null)
             {
-                if (compressed == null)
-                    return false;
+                LeafPageCompressor.CompressionResult result;
+                using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out result, defrag: page.IsCompressed == false, additionalEntry: _uncompressed.Set(key, len)))
+                {
+                    if (result == null)
+                        return false;
 
-                if (compressed.CompressedPage.HasSpaceFor(_llt, key, len) == false)
-                    return false;
+                    // need to check if the compressed page has space for entry that we want to insert
+                    // we don't use HasSpaceFor here intentionally because underneath CalcSizeUsed could be called
+                    // since we put compressed entries at the beginning of that page (temporarily) then props like NumberOfEntries and KeysOffsets
+                    // return incorrect values and AccessViolationException could be thrown
+                    // instead we can explicitly check SizeLeft because the page isn't fragmented
 
-                LeafPageCompressor.CopyToPage(compressed, page);
+                    if (result.CompressedPage.GetRequiredSpace(key, len) > result.CompressedPage.SizeLeft) // intentionally don't use HasSpaceFor here because the
+                        return false;
 
-                return true;
+                    LeafPageCompressor.CopyToPage(result, page);
+
+                    return true;
+                }
             }
+            
         }
 
         public Slice LastKeyOrDefault()

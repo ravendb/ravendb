@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow.Binary;
 using Voron.Data.BTrees;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 
@@ -46,6 +47,9 @@ namespace Voron.Data.Compression
         {
             if (pageSize < _options.PageSize)
                 throw new ArgumentException($"Page cannot be smaller than {_options.PageSize} bytes while {pageSize} bytes were requested.");
+
+            if (pageSize > Constants.Storage.MaxPageSize)
+                throw new ArgumentException($"Max page size is {Constants.Storage.MaxPageSize} while you requested {pageSize} bytes");
 
             Debug.Assert(pageSize == Bits.NextPowerOf2(pageSize));
 

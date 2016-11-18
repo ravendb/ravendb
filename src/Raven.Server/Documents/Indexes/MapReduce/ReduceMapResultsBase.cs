@@ -234,7 +234,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 var leafPage = page;
 
-                using (leafPage.IsCompressed ? (DecompressedLeafPage)(leafPage = tree.DecompressPage(leafPage)) : null)
+                var compressed = leafPage.IsCompressed;
+
+                if (compressed)
+                    stats.RecordCompressedLeafPage();
+
+                using (compressed ? (DecompressedLeafPage)(leafPage = tree.DecompressPage(leafPage)) : null)
                 {
                     if (leafPage.NumberOfEntries == 0)
                     {
@@ -248,9 +253,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                         var emptyPageNumber = Bits.SwapBytes(leafPage.PageNumber);
                         Slice pageNumSlice;
-                        using (
-                            Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long), out pageNumSlice)
-                        )
+                        using (Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long), out pageNumSlice))
                             table.DeleteByKey(pageNumSlice);
 
                         continue;

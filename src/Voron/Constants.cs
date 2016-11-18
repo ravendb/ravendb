@@ -14,6 +14,13 @@ namespace Voron.Global
         public static class Storage
         {
             public const int PageSize = 4 * Size.Kilobyte;
+
+            public const int MaxPageSize = 64 * Size.Kilobyte;
+        }
+
+        public static class Compression
+        {
+            public static readonly int HeaderSize = sizeof(CompressedNodesHeader);
         }
 
         public static class Size
@@ -38,8 +45,6 @@ namespace Voron.Global
         public static readonly int TreePageHeaderSize = sizeof(TreePageHeader);
 
         public static readonly int NodeHeaderSize = sizeof(TreeNodeHeader);
-
-        public static readonly int CompressedValuesHeaderSize = sizeof(CompressedValuesHeader);
 
         public const int PageNumberSize = sizeof(long);
 
