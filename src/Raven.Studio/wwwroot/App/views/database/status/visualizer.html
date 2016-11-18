@@ -1,177 +1,59 @@
+
 <style>
-
-
-    .nodeRect {
-        fill-opacity: .4 !important;
-        stroke: #777;
-        stroke-width: 1.5px;
+    #visualizerContainer {
+        position: relative;
     }
 
-
-    rect.hover {
-        stroke-width: 2px;
-        stroke: black;
-        fill-opacity: .95 !important;
-        stroke-opacity: .95 !important;
+    #visualizerContainer canvas, #visualizerContainer svg {
+        position: absolute;
+        top: 0;
+        left: 0;
     }
 
-    .nodeRect.highlight {
-        fill-opacity: 0.8 !important;
-    }
-
-    .nodeCheck {
-        stroke-width: 2px;
-        stroke: black;
-        fill: white;
-    }
-
-        .nodeCheck.selected {
-            stroke-width: 2px;
-            stroke: black;
-            fill: black;
-        }
-
-    .hidden {
-        display: none;
-    }
-
-    circle {
-        fill: #fff;
-        stroke: steelblue;
-        stroke-width: 1.5px;
-    }
-
-    g {
-        font: 10px sans-serif;
-        cursor: pointer;
-    }
-
-    .link {
+    rect.pane {
         fill: none;
-        stroke: #ccc;
-        stroke-width: 1.5px;
-    }
-
-        .link.selected {
-            fill: none;
-            stroke: black;
-            stroke-width: 2.5px;
-        }
-
-    .selectable-tooltip {
         pointer-events: all;
-        -webkit-touch-callout: all;
-        -webkit-user-select: all;
-        -khtml-user-select: all;
-        -moz-user-select: all;
-        -ms-user-select: all;
-        user-select: all;
-    }
-
-    text {
-        pointer-events: none;
-        text-anchor: middle;
     }
 </style>
 
 <section id="visualizerSection">
     <div class="form-inline" role="form">
-        <h4 class="pull-left" data-bind="visible: !onlineMode()">Offline analysis for index <strong data-bind="text: indexName"></strong>&nbsp;&nbsp;</h4>
-        <div class="btn-group" data-bind="visible: onlineMode">
+        <div class="btn-group">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                <span data-bind="text: indexName"></span>
+                <span data-bind="text: currentIndexUi"></span>
                 <span class="caret"></span>
             </button>
             <ul class="dropdown-menu" role="menu">
                 <!-- ko foreach: indexes -->
-                <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
+                <li data-bind="click: $root.setSelectedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
                 <!-- /ko -->
                 <!-- ko if: indexes().length === 0 -->
                 <li data-bind="click: function() { }"><a href="#">No indexes available</a></li>
                 <!-- /ko -->
             </ul>
         </div>
-        <div class="form-group" data-bind="visible: hasIndexSelected() && onlineMode()">
+        <div class="form-group" data-bind="visible: hasIndexSelected()">
             <div class="input-group">
-                <input id="docKey" type="text" data-bind="textInput: docKey, hasFocus: hasFocusDocKey" class="form-control" placeholder="Document Id" autocomplete="off">
+                <input id="docKey" type="text" data-bind="textInput: documents.docKey, hasFocus: documents.hasFocusDocKey" class="form-control" placeholder="Document Id" autocomplete="off">
                 <span class="input-group-btn" style="width: auto">
-                    <button data-bind="click: addDocKey.bind($root, docKey()), enable: !!docKey() && !loadingDocKeySearchResults()" class="btn btn-default" type="button">
-                        <i data-bind="visible: !loadingDocKeySearchResults()" class="fa fa-plus"></i>
-                        <i data-bind="visible: loadingDocKeySearchResults" class="fa fa-spinner fa-spin"></i>
+                    <button data-bind="click: addDocKey.bind($root, documents.docKey()), enable: !!documents.docKey() && !documents.loadingDocKeySearchResults()" class="btn btn-default" type="button">
+                        <i data-bind="visible: !documents.loadingDocKeySearchResults()" class="fa fa-plus"></i>
+                        <i data-bind="visible: documents.loadingDocKeySearchResults" class="fa fa-spinner fa-spin"></i>
                     </button>
                 </span>
             </div>
-            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#docKey', foreach: docKeysSearchResults">
+            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#docKey', foreach: documents.docKeysSearchResults">
                 <li role="presentation" data-bind="click: $root.selectDocKey.bind($root, $data)">
                     <a role="menuitem" tabindex="-1" href="#">
-                        <span class="text" data-bind="text: $data"></span>
+                        <span data-bind="text: $data"></span>
                     </a>
                 </li>
             </ul>
-        </div>
-        <div class="form-group" data-bind="visible: hasIndexSelected() && onlineMode()">
-            <div class="input-group">
-                <input id="itemKey" type="text" data-bind="textInput: reduceKey, hasFocus: hasFocusReduceKey" class="form-control" placeholder="Reduce key" autocomplete="off">
-                <span class="input-group-btn" style="width: auto">
-                    <button data-bind="click: addReduceKey.bind($root, reduceKey()), enable: !!reduceKey() && !loadingReduceKeySearchResults(), visible: hasIndexSelected" class="btn btn-default" type="button">
-                        <i data-bind="visible: !loadingReduceKeySearchResults()" class="fa fa-plus"></i>
-                        <i data-bind="visible: loadingReduceKeySearchResults" class="fa fa-spinner fa-spin"></i>
-                    </button>
-                </span>
-            </div>
-            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#itemKey', foreach: reduceKeysSearchResults">
-                <li role="presentation" data-bind="click: $root.selectReduceKey.bind($root, $data)">
-                    <a role="menuitem" tabindex="-1" href="#">
-                        <span class="text" data-bind="text: $data"></span>
-                    </a>
-                </li>
-            </ul>
-        </div>
-        <div class="btn-group">
-            <a class="btn btn-default" data-bind="attr: { href: editIndexUrl }, visible: hasIndexSelected() && onlineMode()" title="Edit index"><i class="fa fa-pencil"></i></a>
-            <a class="btn btn-default" data-bind="attr: { href: runQueryUrl }, visible: hasIndexSelected() && onlineMode()" title="Run query">
-                <i class="fa fa-play"></i>
-            </a>
-            <button id="fullScreenButton" class="btn btn-default" data-bind="visible: hasIndexSelected, click: toggleFullscreen" title="Fullscreen mode">
-                <i class="fa fa-expand"></i>
-            </button>
-            <button id="keysDialogBtn" class="btn btn-default" title="Displays information about inserted document ids and reduce keys" data-bind="visible: hasIndexSelected, click: displayKeyInfo, enable: docKeysOrReduceKeysSelected">
-                <i class="fa fa-key"></i>
-            </button>
-            <button class="btn btn-default" title="Clear" data-bind="visible: hasIndexSelected, click: clearChart">
-                <i class="fa fa-refresh"></i>
-            </button>
-        </div>
-
-        <div class="btn-group" data-bind="visible: hasIndexSelected">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                <i class="fa fa-download"></i>
-            </button>
-            <ul class="dropdown-menu" role="menu">
-                <li data-bind="click: saveAsPng, visible: hasSaveAsPngSupport"><a href="#"><i class="fa fa-file-image-o"></i> PNG</a></li>
-                <li data-bind="click: saveAsSvg"><a href="#"><i class="fa fa-file-image-o"></i> SVG</a></li>
-                <li data-bind="click: saveAsJson"><a href="#"><i class="fa fa-file-text-o"></i> JSON</a></li>
-            </ul>
-        </div>
-
-        <div class="btn-group">
-            <button type="button" class="btn btn-default" data-bind="click: chooseImportFile" title="Import visualization">
-                <i class="fa fa-upload"></i>
-            </button>
-        </div>
-
-        <div class="btn-group" data-bind="visible: hasIndexSelected">
-            <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon" style="width: 30px; height: 30px;">
-                <span class="fa fa-spinner fa-spin fa-2x"></span>
-            </div>
         </div>
     </div>
 
-    <svg data-bind="visible: hasIndexSelected" id="visHeader" style="height: 25px" height="25"></svg>
-    <div id="visualizerContainer" style="height: 600px; width: 100%; overflow-y: auto" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', container: '#visualizerSection' }" class="with-3d-shadow with-transitions">
-        <div>
-            <svg id="visualizer" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
-        </div>
+    <div id="visualizerContainer">
+
     </div>
 
 </section>

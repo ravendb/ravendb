@@ -24,10 +24,6 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
         public long PageNumber => Page.PageNumber;
 
-        public bool IsLeaf => Page.IsLeaf;
-
-        public bool IsBranch => Page.IsBranch;
-
         public readonly List<ReduceTreePage> Children;
 
         public readonly List<MapResultInLeaf> Entries;
