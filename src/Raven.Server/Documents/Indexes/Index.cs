@@ -135,6 +135,7 @@ namespace Raven.Server.Documents.Indexes
         private bool _isCompactionInProgress;
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private volatile bool _logsApplied;
+        private volatile bool _priorityChanged;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -562,9 +563,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected void ExecuteIndexing()
         {
-            // indexing threads should have lower priority than request processing threads
-            // so we let the OS know that it can schedule them appropriately.
-            Threading.TryLowerCurrentThreadPriority();
+            _priorityChanged = true;
 
             using (CultureHelper.EnsureInvariantCulture())
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown,
@@ -583,6 +582,8 @@ namespace Raven.Server.Documents.Indexes
 
                     while (true)
                     {
+                        ChangeIndexThreadPriorityIfNeeded();
+
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Starting indexing for '{Name} ({IndexId})'.");
 
@@ -723,6 +724,37 @@ namespace Raven.Server.Documents.Indexes
                     DocumentDatabase.Notifications.OnDocumentChange -= HandleDocumentChange;
                 }
             }
+        }
+
+        private void ChangeIndexThreadPriorityIfNeeded()
+        {
+            if (_priorityChanged == false)
+                return;
+
+            _priorityChanged = false;
+
+            ThreadPriority newPriority;
+            var priority = Priority;
+            switch (priority)
+            {
+                case IndexPriority.Low:
+                    newPriority = ThreadPriority.Lowest;
+                    break;
+                case IndexPriority.Normal:
+                    newPriority = ThreadPriority.BelowNormal;
+                    break;
+                case IndexPriority.High:
+                    newPriority = ThreadPriority.Normal;
+                    break;
+                default:
+                    throw new NotSupportedException($"Unknown priority: {priority}");
+            }
+
+            var currentPriority = Threading.GetCurrentThreadPriority();
+            if (currentPriority == newPriority)
+                return;
+
+            Threading.TrySettingCurrentThreadPriority(newPriority);
         }
 
         private void HandleLogsApplied()
@@ -968,6 +1000,7 @@ namespace Raven.Server.Documents.Indexes
                 _indexStorage.WritePriority(priority);
 
                 Priority = priority;
+                _priorityChanged = true;
             }
         }
 
