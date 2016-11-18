@@ -29,6 +29,7 @@ class reduceTreeItem {
     height = 0;
     x: number;
     y: number;
+    extraLeftPadding = 0; //used when text is longer than contents
 
     constructor(tree: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
         this.tree = tree;
@@ -59,6 +60,7 @@ class reduceTreeItem {
 
     filterAndLayoutVisibleItems(documentIds: Array<string>) {
         this.filterVisibleItems(documentIds);
+        this.calculatePageWidthAndHeight();
         this.layoutVisibleItems();
     }
 
@@ -82,6 +84,38 @@ class reduceTreeItem {
         };
 
         filterAsDepth(0, this.tree.Root);
+    }
+
+    private calculatePageWidthAndHeight() {
+        let height = reduceTreeItem.globalMargins.treeMargin +
+            reduceTreeItem.globalMargins.titleHeight +
+            reduceTreeItem.globalMargins.treeMargin;
+
+        height += (this.depth * reduceTreeItem.globalMargins.pageHeight) +
+            (this.depth - 1) * reduceTreeItem.globalMargins.betweenPagesVerticalPadding;
+
+        height += reduceTreeItem.globalMargins.treeMargin;
+
+        this.height = height;
+
+        const maxItems = d3.max(this.itemsCountAtDepth);
+
+        let width = reduceTreeItem.globalMargins.treeMargin +
+            visualizerGraph.totalEntriesWidth(maxItems) +
+            reduceTreeItem.globalMargins.treeMargin;
+
+        width += this.getTotalPagesWidth(maxItems);
+
+        width += reduceTreeItem.globalMargins.treeMargin;
+
+        const estimatedTextWidth = this.estimateReduceKeyWidth() + 2 * reduceTreeItem.globalMargins.treeMargin;
+
+        if (estimatedTextWidth > width) {
+            this.extraLeftPadding = (estimatedTextWidth - width) / 2;
+            width = estimatedTextWidth;
+        }
+
+        this.width = width;
     }
 
     private layoutVisibleItems() {
@@ -108,6 +142,7 @@ class reduceTreeItem {
             let xStart = reduceTreeItem.globalMargins.treeMargin +
                 visualizerGraph.totalEntriesWidth(maxItems) +
                 reduceTreeItem.globalMargins.treeMargin +
+                this.extraLeftPadding +
                 startAndOffset.start;
 
             for (let i = 0; i < items.length; i++) {
@@ -121,29 +156,8 @@ class reduceTreeItem {
         }
     }
 
-    calculateSizes() {
-        let height = reduceTreeItem.globalMargins.treeMargin +
-            reduceTreeItem.globalMargins.titleHeight +
-            reduceTreeItem.globalMargins.treeMargin;
-
-        height += (this.depth * reduceTreeItem.globalMargins.pageHeight) +
-            (this.depth - 1) * reduceTreeItem.globalMargins.betweenPagesVerticalPadding;
-
-        height += reduceTreeItem.globalMargins.treeMargin;
-
-        this.height = height;
-
-        const maxItems = d3.max(this.itemsCountAtDepth);
-
-        let width = reduceTreeItem.globalMargins.treeMargin +
-            visualizerGraph.totalEntriesWidth(maxItems) +
-            reduceTreeItem.globalMargins.treeMargin;
-
-        width += this.getTotalPagesWidth(maxItems);
-
-        width += reduceTreeItem.globalMargins.treeMargin;
-
-        this.width = width;
+    private estimateReduceKeyWidth() {
+        return this.name.length * 6;
     }
 
     private getTotalPagesWidth(maxItems: number) {
@@ -248,7 +262,6 @@ class visualizerGraph {
         for (let i = 0; i < this.reduceTrees.length; i++) {
             const tree = this.reduceTrees[i];
             tree.filterAndLayoutVisibleItems(this.documentNames);
-            tree.calculateSizes();
             tree.x = width;
             tree.y = visualizerGraph.globalMargins.globalMargin; //TODO: should we do this based on height on element?
 
@@ -298,7 +311,7 @@ class visualizerGraph {
             ctx.font = "10px Lato";
             ctx.textAlign = "center";
             ctx.fillStyle = "#686f6f";
-            ctx.fillText(tree.name, tree.width / 2, reduceTreeItem.globalMargins.treeMargin); //TODO: trim me
+            ctx.fillText(tree.name, tree.width / 2, reduceTreeItem.globalMargins.treeMargin, tree.width);
 
             // total entries
             let totalEntiresY = reduceTreeItem.globalMargins.treeMargin +
