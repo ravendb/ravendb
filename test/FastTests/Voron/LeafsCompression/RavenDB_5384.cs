@@ -19,12 +19,11 @@ namespace FastTests.Voron.LeafsCompression
         [InlineData(1024, 555)]
         public void Can_compress_leaf_pages_and_read_directly_from_them_after_decompression(int iterationCount, int size)
         {
+            //TODO arek - add test fon non sequential writes
             using (var tx = Env.WriteTransaction())
             {
-                var tree = tx.CreateTree("tree");
-
-                tree.State.Flags |= TreeFlags.LeafsCompressed;
-
+                tx.CreateTree("tree", flags: TreeFlags.LeafsCompressed);
+                
                 tx.Commit();
             }
 

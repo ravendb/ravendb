@@ -39,7 +39,7 @@ namespace Voron.Data.Compression
             switch (_usage)
             {
                 case Usage.PageSplitter:
-                    CopyToOriginal(defragRequired: false); // page was truncated during page split so it isn't fragmented
+                    CopyToOriginal(defragRequired: false); // after page splitter run the page isn't fragmented for sure, it was either truncated (left) or just created (right)
                     break;
                 case Usage.None:
                     break;
@@ -79,7 +79,7 @@ namespace Voron.Data.Compression
             }
             else
             {
-                LeafPageCompressor.CompressionResult compressed;
+                CompressionResult compressed;
                 using (LeafPageCompressor.TryGetCompressedTempPage(_tx, this, out compressed, defrag: defragRequired))
                 {
                     if (compressed == null)

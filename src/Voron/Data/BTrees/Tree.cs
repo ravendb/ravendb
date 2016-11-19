@@ -13,21 +13,21 @@ using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using System.Linq;
 
 namespace Voron.Data.BTrees
 {
     public unsafe partial class Tree : IDisposable
     {
-        private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
         private readonly TreeMutableState _state;
+        private readonly bool _isPageLocatorOwned;
+        private readonly RecentlyFoundTreePages _recentlyFoundPages;
+
+        private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
+        private PageLocator _pageLocator;
+        private UncompressedEntry _uncompressedEntry;
 
         public event Action<long> PageModified;
         public event Action<long> PageFreed;
-
-        private readonly RecentlyFoundTreePages _recentlyFoundPages;
-        private PageLocator _pageLocator;
-        private readonly bool _isPageLocatorOwned;
 
         public Slice Name { get; set; }
 
@@ -294,7 +294,7 @@ namespace Voron.Data.BTrees
             byte* dataPos;
             if (page.HasSpaceFor(_llt, key, len) == false)
             {
-                if (IsLeafCompressionSupported == false || TryCompressPageValues(key, len, page) == false)
+                if (IsLeafCompressionSupported == false || TryCompressPageNodes(key, len, page) == false)
                 {
                     using (var cursor = cursorConstructor(key))
                     {
@@ -809,17 +809,6 @@ namespace Voron.Data.BTrees
 
             var decompressedPage = _llt.Environment.DecompressionBuffers.GetPage(_llt, decompressedPageSize, p);
 
-            for (var i = 0; i < p.NumberOfEntries; i++)
-            {
-                var uncompressedNode = p.GetNode(i);
-
-                Slice slice;
-                using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, uncompressedNode, out slice))
-                {
-                    decompressedPage.CopyNodeDataToEndOfPage(uncompressedNode, slice);
-                }
-            }
-
             byte* tempBuffer;
             using (_llt.Environment.DecompressionBuffers.GetTemporaryBuffer(_llt, Bits.NextPowerOf2(compressioncHeader->UncompressedSize), out tempBuffer))
             {
@@ -828,29 +817,91 @@ namespace Voron.Data.BTrees
                     compressioncHeader->CompressedSize,
                     tempBuffer,
                     compressioncHeader->UncompressedSize, true);
+                
+                var nodes = GetNodesInOrder(p, tempBuffer, compressioncHeader->UncompressedSize);
 
-                var ptr = tempBuffer;
-
-                while (ptr - tempBuffer < compressioncHeader->UncompressedSize)
+                foreach (var node in nodes)
                 {
-                    var nodeHeader = (TreeNodeHeader*)ptr;
-
-                    Slice nodeKey;
-                    using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, nodeHeader, out nodeKey))
+                    using (node.KeyScope)
                     {
-                        var index = decompressedPage.NodePositionFor(_llt, nodeKey);
-
-                        var pos = decompressedPage.AddDataNode(index, nodeKey, nodeHeader->DataSize, (ushort) (nodeHeader->Version - 1));
-
-                        var nodeValue = TreeNodeHeader.Reader(_llt, nodeHeader);
-                        Memory.Copy(pos, nodeValue.Base, nodeValue.Length);
+                        decompressedPage.CopyNodeDataToEndOfPage(node.Node, node.Key);
                     }
-
-                    ptr += TreeSizeOf.NodeEntry(nodeHeader);
                 }
             }
 
             return decompressedPage;
+        }
+
+        private LinkedList<DecompressedPageNodeEntry> GetNodesInOrder(TreePage compressedPage, byte* decompressedPtr, int decompressedSize)
+        {
+            var nodes = new LinkedList<DecompressedPageNodeEntry>();
+
+            // add uncompressed nodes first
+
+            for (var i = 0; i < compressedPage.NumberOfEntries; i++)
+            {
+                var uncompressedNode = compressedPage.GetNode(i);
+
+                Slice nodeKey;
+                var keyScope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, uncompressedNode, out nodeKey);
+
+                nodes.AddLast(new DecompressedPageNodeEntry
+                {
+                    Key = nodeKey,
+                    Node = uncompressedNode,
+                    KeyScope = keyScope,
+                });
+            }
+
+            // then decompressed ones
+
+            var ptr = decompressedPtr;
+
+            while (ptr - decompressedPtr < decompressedSize)
+            {
+                var nodeHeader = (TreeNodeHeader*) ptr;
+
+                Slice nodeKey;
+                var keyScope = TreeNodeHeader.ToSlicePtr(_llt.Allocator, nodeHeader, out nodeKey);
+
+                var current = nodes.First;
+
+                var keyCompareResult = -1;
+
+                while (current != null && (keyCompareResult = SliceComparer.CompareInline(nodeKey, current.Value.Key)) > 0)
+                {
+                    // compressed nodes should be mostly in the right order within their own sections
+                    // it's also likely that compressed nodes will have lower keys than uncompressed ones
+                    // so we shouldn't iterate many times here
+
+                    current = current.Next;
+                }
+
+                if (keyCompareResult == 0)
+                {
+                    // update - newer version added as uncompressed
+                    keyScope.Dispose();
+                    throw new NotImplementedException("TODO arek");
+                }
+                else
+                {
+                    var node = new DecompressedPageNodeEntry
+                    {
+                        Key = nodeKey,
+                        Node = nodeHeader,
+                        KeyScope = keyScope
+                    };
+
+                    if (current != null)
+                        nodes.AddBefore(current, node);
+                    else
+                        nodes.AddLast(node);
+                }
+
+                ptr += TreeSizeOf.NodeEntry(nodeHeader);
+            }
+
+            return nodes;
         }
 
         internal TreePage NewPage(TreePageFlags flags, int num)
@@ -1213,19 +1264,22 @@ namespace Voron.Data.BTrees
             return false;
         }
 
-        private LeafPageCompressor.UncompressedEntry _uncompressed;
-
-        private bool TryCompressPageValues(Slice key, int len, TreePage page)
+        private bool TryCompressPageNodes(Slice key, int len, TreePage page)
         {
-            if (_uncompressed == null)
-                _uncompressed = new LeafPageCompressor.UncompressedEntry();
+            var alreadyCompressed = page.IsCompressed;
+
+            if (alreadyCompressed && page.NumberOfEntries == 0) // there isn't any entry what we could compress
+                return false;
 
             var pageToCompress = page;
 
-            using (page.IsCompressed ? (DecompressedLeafPage)(pageToCompress = DecompressPage(page)) : null)
+            using (alreadyCompressed ? (DecompressedLeafPage)(pageToCompress = DecompressPage(page)) : null)
             {
-                LeafPageCompressor.CompressionResult result;
-                using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out result, defrag: page.IsCompressed == false, additionalEntry: _uncompressed.Set(key, len)))
+                if (_uncompressedEntry == null)
+                    _uncompressedEntry = new UncompressedEntry();
+
+                CompressionResult result;
+                using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out result, defrag: alreadyCompressed == false, aboutToAdd: _uncompressedEntry.Set(key, len)))
                 {
                     if (result == null)
                         return false;

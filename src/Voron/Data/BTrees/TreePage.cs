@@ -463,7 +463,7 @@ namespace Voron.Data.BTrees
             var result = $"#{PageNumber} (count: {NumberOfEntries}) {TreeFlags}";
 
             if (IsCompressed)
-                result += $" Compressed (size: {CompressionHeader->CompressedSize}, uncompressed: {CompressionHeader->UncompressedSize})";
+                result += $" Compressed ({CompressionHeader->NumberOfCompressedEntries} entries [uncompressed/compressed: {CompressionHeader->UncompressedSize}/{CompressionHeader->CompressedSize}]";
 
             return result;
         }
