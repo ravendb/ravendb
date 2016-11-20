@@ -1,9 +1,6 @@
-using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
 
-namespace Raven.NewClient.Client.Data.Indexes
+namespace Raven.NewClient.Data.Indexes
 {
     public class IndexProgress
     {

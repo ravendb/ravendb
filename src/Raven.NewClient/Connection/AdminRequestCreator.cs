@@ -56,22 +56,22 @@ namespace Raven.NewClient.Client.Connection
 
         public HttpJsonRequest StartIndex(string serverUrl, string name)
         {
-            return createReplicationAwareRequest(serverUrl, "/indexes/start?name=" + name, HttpMethods.Post);
+            return createReplicationAwareRequest(serverUrl, "/admin/indexes/start?name=" + name, HttpMethods.Post);
         }
 
         public HttpJsonRequest StopIndex(string serverUrl, string name)
         {
-            return createReplicationAwareRequest(serverUrl, "/indexes/stop?name=" + name, HttpMethods.Post);
+            return createReplicationAwareRequest(serverUrl, "/admin/indexes/stop?name=" + name, HttpMethods.Post);
         }
 
         public HttpJsonRequest StopIndexing(string serverUrl)
         {
-            return createReplicationAwareRequest(serverUrl, "/indexes/stop", HttpMethods.Post);
+            return createReplicationAwareRequest(serverUrl, "/admin/indexes/stop", HttpMethods.Post);
         }
 
         public HttpJsonRequest StartIndexing(string serverUrl, int? maxNumberOfParallelIndexTasks)
         {
-            var url = "/indexes/start";
+            var url = "/admin/indexes/start";
             if (maxNumberOfParallelIndexTasks.HasValue)
             {
                 throw new NotImplementedException();

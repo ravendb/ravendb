@@ -442,7 +442,7 @@ namespace Raven.Client.Indexes
                     {
                         Definition = x.CreateIndexDefinition(),
                         Name = x.IndexName,
-                        Priority = x.Priority ?? IndexingPriority.Normal
+                        Priority = x.Priority ?? IndexPriority.Normal
                     };
                 })
                 .ToArray();

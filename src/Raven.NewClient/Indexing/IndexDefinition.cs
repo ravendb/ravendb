@@ -10,8 +10,8 @@ using System.Linq;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Data.Indexes;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.NewClient.Data.Indexes;
 
 namespace Raven.NewClient.Client.Indexing
 {

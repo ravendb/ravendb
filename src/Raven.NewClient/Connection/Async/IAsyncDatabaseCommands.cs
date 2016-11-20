@@ -23,12 +23,12 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Connection.Implementation;
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Connection.Async
@@ -431,7 +431,7 @@ namespace Raven.NewClient.Client.Connection.Async
 
         Task SetIndexLockAsync(string name, IndexLockMode mode, CancellationToken token = default(CancellationToken));
 
-        Task SetIndexPriorityAsync(string name, IndexingPriority priority, CancellationToken token = default(CancellationToken));
+        Task SetIndexPriorityAsync(string name, IndexPriority priority, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Creates an index with the specified name, based on an index definition that is created by the supplied

@@ -1,7 +1,4 @@
-﻿using System;
-using Sparrow.Json;
-
-namespace Raven.NewClient.Client.Data.Indexes
+﻿namespace Raven.NewClient.Data.Indexes
 {
     public class StorageCommitDetails 
     {

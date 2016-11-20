@@ -42,7 +42,7 @@ namespace SlowTests.Issues
 
                 new Users_ByName().Execute(store);
 
-                var result = SpinWait.SpinUntil(() => store.DatabaseCommands.GetStatistics().Indexes[0].Priority == IndexingPriority.Error, TimeSpan.FromSeconds(5));
+                var result = SpinWait.SpinUntil(() => store.DatabaseCommands.GetStatistics().Indexes[0].State == IndexState.Error, TimeSpan.FromSeconds(5));
 
                 Assert.True(result, "Index did not become errored.");
             }

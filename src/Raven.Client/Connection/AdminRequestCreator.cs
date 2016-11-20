@@ -56,22 +56,22 @@ namespace Raven.Client.Connection
 
         public HttpJsonRequest StartIndex(string serverUrl, string name)
         {
-            return createReplicationAwareRequest(serverUrl, "/indexes/start?name=" + name, HttpMethods.Post);
+            return createReplicationAwareRequest(serverUrl, "/admin/indexes/start?name=" + name, HttpMethods.Post);
         }
 
         public HttpJsonRequest StopIndex(string serverUrl, string name)
         {
-            return createReplicationAwareRequest(serverUrl, "/indexes/stop?name=" + name, HttpMethods.Post);
+            return createReplicationAwareRequest(serverUrl, "/admin/indexes/stop?name=" + name, HttpMethods.Post);
         }
 
         public HttpJsonRequest StopIndexing(string serverUrl)
         {
-            return createReplicationAwareRequest(serverUrl, "/indexes/stop", HttpMethods.Post);
+            return createReplicationAwareRequest(serverUrl, "/admin/indexes/stop", HttpMethods.Post);
         }
 
         public HttpJsonRequest StartIndexing(string serverUrl, int? maxNumberOfParallelIndexTasks)
         {
-            var url = "/indexes/start";
+            var url = "/admin/indexes/start";
             if (maxNumberOfParallelIndexTasks.HasValue)
             {
                 throw new NotImplementedException();
@@ -84,6 +84,20 @@ namespace Raven.Client.Connection
         public HttpJsonRequest CompactIndex(string serverUrl, string name)
         {
             var url = $"/admin/indexes/compact?name={name}";
+
+            return createReplicationAwareRequest(serverUrl, url, HttpMethods.Post);
+        }
+
+        public HttpJsonRequest EnableIndexAsync(string serverUrl, string name)
+        {
+            var url = $"/admin/indexes/enable?name={name}";
+
+            return createReplicationAwareRequest(serverUrl, url, HttpMethods.Post);
+        }
+
+        public HttpJsonRequest DisableIndexAsync(string serverUrl, string name)
+        {
+            var url = $"/admin/indexes/disable?name={name}";
 
             return createReplicationAwareRequest(serverUrl, url, HttpMethods.Post);
         }

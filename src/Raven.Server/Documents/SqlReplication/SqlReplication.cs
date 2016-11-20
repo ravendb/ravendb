@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.SqlReplication
             {
                 // This has lower priority than request processing, so we let the OS
                 // schedule this appropriately
-                Threading.TryLowerCurrentThreadPriority();
+                Threading.TrySettingCurrentThreadPriority(ThreadPriority.BelowNormal);
 
                 //haven't found better way to synchronize async method
                 AsyncHelpers.RunSync(ExecuteReplicationLoop);

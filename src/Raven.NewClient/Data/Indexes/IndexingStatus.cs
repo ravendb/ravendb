@@ -1,4 +1,4 @@
-﻿namespace Raven.NewClient.Client.Data.Indexes
+﻿namespace Raven.NewClient.Data.Indexes
 {
     public class IndexingStatus
     {

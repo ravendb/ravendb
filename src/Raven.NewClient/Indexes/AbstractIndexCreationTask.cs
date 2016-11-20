@@ -22,8 +22,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Data.Indexes;
 
 namespace Raven.NewClient.Client.Indexes
 {
@@ -71,7 +71,7 @@ namespace Raven.NewClient.Client.Indexes
         ///  There are four available values that you can set: Normal, Idle, Disabled, Abandoned
         /// <para>Default value: null means that the priority of the index is Normal.</para>
         /// </summary>
-        public IndexingPriority? Priority { get; set; }
+        public IndexPriority? Priority { get; set; }
 
 
         /// <summary>

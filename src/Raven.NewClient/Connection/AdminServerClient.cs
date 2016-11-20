@@ -12,8 +12,8 @@ using Raven.NewClient.Abstractions.FileSystem;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Async;
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Extensions;
+using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Connection

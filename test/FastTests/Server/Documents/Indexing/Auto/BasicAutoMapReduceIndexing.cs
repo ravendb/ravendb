@@ -266,7 +266,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 var index2 = database.IndexStore.GetIndex(2);
                 index2.SetLock(IndexLockMode.LockedError);
-                index2.SetPriority(IndexingPriority.Disabled);
+                index2.SetPriority(IndexPriority.High);
+                index2.SetState(IndexState.Disabled);
             }
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
@@ -297,8 +298,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(SortOptions.String, definition.GroupByFields["Location"].SortOption);
 
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
-                Assert.Equal(IndexingPriority.Normal, indexes[0].Priority);
-                
+                Assert.Equal(IndexPriority.Normal, indexes[0].Priority);
+                Assert.Equal(IndexState.Normal, indexes[0].State);
+
                 Assert.Equal(2, indexes[1].IndexId);
                 Assert.Equal(1, indexes[1].Definition.Collections.Length);
                 Assert.Equal("Users", indexes[1].Definition.Collections[0]);
@@ -320,7 +322,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(SortOptions.String, definition.GroupByFields["Location"].SortOption);
 
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
-                Assert.Equal(IndexingPriority.Disabled, indexes[1].Priority);
+                Assert.Equal(IndexPriority.High, indexes[1].Priority);
+                Assert.Equal(IndexState.Disabled, indexes[1].State);
             }
         }
 

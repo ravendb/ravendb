@@ -532,7 +532,7 @@ namespace Raven.Server.Documents.Indexes
             var ageThreshold = timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan.Add(timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan); // idle * 2
 
             var indexesSortedByLastQueryTime = (from index in _indexes
-                                                where index.Priority.HasFlag(IndexingPriority.Disabled) == false && index.Priority.HasFlag(IndexingPriority.Error) == false && index.Priority.HasFlag(IndexingPriority.Forced) == false
+                                                where index.State != IndexState.Disabled && index.State != IndexState.Error
                                                 let stats = index.GetStats()
                                                 let lastQueryingTime = stats.LastQueryingTime ?? DateTime.MinValue
                                                 orderby lastQueryingTime
@@ -540,7 +540,7 @@ namespace Raven.Server.Documents.Indexes
                                                 {
                                                     LastQueryingTime = lastQueryingTime,
                                                     Index = index,
-                                                    Priority = stats.Priority,
+                                                    State = stats.State,
                                                     CreationDate = stats.CreatedTimestamp
                                                 }).ToList();
 
@@ -555,7 +555,7 @@ namespace Raven.Server.Documents.Indexes
                 var age = now - item.CreationDate;
                 var lastQuery = now - item.LastQueryingTime;
 
-                if (item.Priority.HasFlag(IndexingPriority.Normal))
+                if (item.State == IndexState.Normal)
                 {
                     TimeSpan differenceBetweenNewestAndCurrentQueryingTime;
                     if (i < indexesSortedByLastQueryTime.Count - 1)
@@ -570,7 +570,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         if (lastQuery >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                         {
-                            item.Index.SetPriority(IndexingPriority.Idle);
+                            item.Index.SetState(IndexState.Idle);
                             if (_logger.IsInfoEnabled)
                                 _logger.Info($"Changed index '{item.Index.Name} ({item.Index.IndexId})' priority to idle. Age: {age}. Last query: {lastQuery}. Query difference: {differenceBetweenNewestAndCurrentQueryingTime}.");
                         }
@@ -579,7 +579,7 @@ namespace Raven.Server.Documents.Indexes
                     continue;
                 }
 
-                if (item.Priority.HasFlag(IndexingPriority.Idle))
+                if (item.State == IndexState.Idle)
                 {
                     if (age <= ageThreshold || lastQuery >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
                     {
@@ -595,7 +595,7 @@ namespace Raven.Server.Documents.Indexes
         {
             public DateTime LastQueryingTime { get; set; }
             public Index Index { get; set; }
-            public IndexingPriority Priority { get; set; }
+            public IndexState State { get; set; }
             public DateTime CreationDate { get; set; }
         }
     }
