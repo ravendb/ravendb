@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
-using Xunit;
-using System.Threading.Tasks;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Notifications;
+using Xunit;
 
-
-namespace FastTests.Client.Subscriptions
+namespace SlowTests.Core.Subscriptions
 {
     public class RavenDB_3193 : RavenTestBase
     {
