@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Versioning
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
             Slice prefixSlice;
-            using (DocumentsStorage.GetSliceFromKey(context, key, out prefixSlice))
+            using (DocumentKeyWorker.GetSliceFromKey(context, key, out prefixSlice))
             {
                 var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
                 DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount);
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Versioning
             int lowerSize;
             byte* keyPtr;
             int keySize;
-            DocumentsStorage.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             byte recordSeperator = 30;
 
@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.Versioning
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
 
             Slice prefixSlice;
-            using (DocumentsStorage.GetSliceFromKey(context, key, out prefixSlice))
+            using (DocumentKeyWorker.GetSliceFromKey(context, key, out prefixSlice))
             {
                 // ReSharper disable once LoopCanBeConvertedToQuery
                 foreach (

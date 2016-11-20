@@ -15,7 +15,7 @@ namespace Sparrow.Json.Parsing
         public readonly List<int> EscapePositions = new List<int>();
 
         private static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"', };
-
+    
         public int GetEscapePositionsSize()
         {
             int size = VariableSizeIntSize(EscapePositions.Count);
@@ -85,7 +85,7 @@ namespace Sparrow.Json.Parsing
             Long = 0;
             CurrentTokenType = JsonParserToken.None;
             Continuation = JsonParserTokenContinuation.None;
-
+            EscapePositions.Clear();
         }
     }
 }

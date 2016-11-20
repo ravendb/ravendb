@@ -12,9 +12,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var store = new FastTests.Server.Documents.Indexing.MapReduce.GroupByComplexObjects())
+                using (var store = new FastTests.Server.Documents.Indexing.Static.BasicStaticMapReduceIndexing())
                 {
-                    store.By_multiple_complex_objects().Wait();
+                    store.Static_map_reduce_index_with_multiple_outputs_per_document().Wait();
                 }
             }
         }
