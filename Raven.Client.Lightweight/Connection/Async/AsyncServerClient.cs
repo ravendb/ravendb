@@ -1282,7 +1282,7 @@ namespace Raven.Client.Connection.Async
                 var docResults = result.OfType<RavenJObject>().ToList();
                 var startsWithResults = SerializationHelper.RavenJObjectsToJsonDocuments(docResults.Select(x => (RavenJObject) x.CloneToken())).ToArray();
                 return await RetryOperationBecauseOfConflict(operationMetadata, docResults, startsWithResults, () =>
-                        StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude, transformer, transformerParameters, skipAfter, token), conflictedResultId =>
+                        StartWithAsyncInternal(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude, transformer, transformerParameters, skipAfter, token, operationMetadata), conflictedResultId =>
                     new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.OrdinalIgnoreCase)) +
                                           ", conflict must be resolved before the document will be accessible", true)
                         {ConflictedVersionIds = new[] {conflictedResultId}}, retryAfterFirstResolve: true, token: token).ConfigureAwait(false);
