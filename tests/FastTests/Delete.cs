@@ -10,7 +10,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new User { Name = "RavenDB" }, "users/1");
                     newSession.SaveChanges();
@@ -29,7 +29,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new User { Name = "RavenDB" }, "users/1");
                     newSession.SaveChanges();
@@ -49,7 +49,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new User { Name = "RavenDB" }, "users/1");
                     newSession.SaveChanges();

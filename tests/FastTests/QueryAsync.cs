@@ -14,7 +14,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var asyncSession = store.OpenNewAsyncSession())
+                using (var asyncSession = store.OpenAsyncSession())
                 {
                     await asyncSession.StoreAsync(new User { Name = "John" }, "users/1");
                     await asyncSession.StoreAsync(new User { Name = "Jane" }, "users/2");
@@ -34,7 +34,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var asyncSession = store.OpenNewAsyncSession())
+                using (var asyncSession = store.OpenAsyncSession())
                 {
                     await asyncSession.StoreAsync(new User { Name = "John" }, "users/1");
                     await asyncSession.StoreAsync(new User { Name = "Jane" }, "users/2");
@@ -62,7 +62,7 @@ namespace NewClientTests.NewClient
             {
                 new DogsIndex().Execute(store);
                 
-                using (var asyncSession = store.OpenNewAsyncSession())
+                using (var asyncSession = store.OpenAsyncSession())
                 {
                     await asyncSession.StoreAsync(new Dog { Name = "Snoopy", Breed = "Beagle", Color = "White", Age = 6, IsVaccinated = true }, "dogs/1");
                     await asyncSession.StoreAsync(new Dog { Name = "Brian", Breed = "Labrador", Color = "White", Age = 12, IsVaccinated = false }, "dogs/2");
@@ -77,7 +77,7 @@ namespace NewClientTests.NewClient
 
                     WaitForIndexing(store);
                 }
-                using (var asyncSession = store.OpenNewAsyncSession())
+                using (var asyncSession = store.OpenAsyncSession())
                 {
                     var queryResult = await asyncSession.Query<DogsIndex.Result, DogsIndex>()
                         .Where(x => x.Age > 2 && x.IsVaccinated == false)

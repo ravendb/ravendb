@@ -10,13 +10,13 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Async
         {
             using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenNewAsyncSession())
+                using (var s = store.OpenAsyncSession())
                 {
                     await s.StoreAsync(new { Name = "Ayende" });
                     await s.SaveChangesAsync();
                 }
 
-                using (var s = store.OpenNewAsyncSession())
+                using (var s = store.OpenAsyncSession())
                 {
                     var queryResultAsync = await s.Advanced.AsyncDocumentQuery<dynamic>()
                         .WhereEquals("Name", "Ayende")

@@ -270,48 +270,8 @@ namespace Raven.NewClient.Client.Document
             });
         }
 
-        /// <summary>
-        /// Opens the session.
-        /// </summary>
-        /// <returns></returns>
-        public DocumentSession OpenNewSession()
-        {
-            return OpenNewSession(new OpenSessionOptions());
-        }
-
-        /// <summary>
-        /// Opens the session for a particular database
-        /// </summary>
-        public DocumentSession OpenNewSession(string database)
-        {
-            return OpenNewSession(new OpenSessionOptions
-            {
-                Database = database
-            });
-        }
-
+       
         public override IDocumentSession OpenSession(OpenSessionOptions options)
-        {
-            throw new NotImplementedException();
-            /*EnsureNotClosed();
-
-            var sessionId = Guid.NewGuid();
-            currentSessionId = sessionId;
-            try
-            {
-                var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
-                var session = new DocumentSession(databaseName, this, Listeners, sessionId,
-                    SetupCommands(DatabaseCommands, databaseName, options.Credentials, options));
-                AfterSessionCreated(session);
-                return session;
-            }
-            finally
-            {
-                currentSessionId = null;
-            }*/
-        }
-
-        public DocumentSession OpenNewSession(OpenSessionOptions options)
         {
             EnsureNotClosed();
 
@@ -647,7 +607,7 @@ namespace Raven.NewClient.Client.Document
             });
         }
 
-        private Async.AsyncDocumentSession OpenNewAsyncSessionInternal(OpenSessionOptions options)
+        private AsyncDocumentSession OpenAsyncSessionInternal(OpenSessionOptions options)
         {
             AssertInitialized();
             EnsureNotClosed();
@@ -676,37 +636,6 @@ namespace Raven.NewClient.Client.Document
         /// Opens the async session.
         /// </summary>
         /// <returns></returns>
-        public Async.AsyncDocumentSession OpenNewAsyncSession(string databaseName)
-        {
-            return OpenNewAsyncSession(new OpenSessionOptions
-            {
-                Database = databaseName
-            });
-        }
-
-        public AsyncDocumentSession OpenNewAsyncSession(OpenSessionOptions options)
-        {
-            return OpenNewAsyncSessionInternal(options);
-        }
-
-        public AsyncDocumentSession OpenNewAsyncSession()
-        {
-            return OpenNewAsyncSessionInternal(new OpenSessionOptions());
-        }
-
-        /// <summary>
-        /// Opens the async session.
-        /// </summary>
-        /// <returns></returns>
-        public override IAsyncDocumentSession OpenAsyncSession()
-        {
-            return OpenAsyncSession(new OpenSessionOptions());
-        }
-
-        /// <summary>
-        /// Opens the async session.
-        /// </summary>
-        /// <returns></returns>
         public override IAsyncDocumentSession OpenAsyncSession(string databaseName)
         {
             return OpenAsyncSession(new OpenSessionOptions
@@ -715,35 +644,18 @@ namespace Raven.NewClient.Client.Document
             });
         }
 
-        private IAsyncDocumentSession OpenAsyncSessionInternal(OpenSessionOptions options)
-        {
-            throw new NotImplementedException();
-            /*AssertInitialized();
-            EnsureNotClosed();
-
-            var sessionId = Guid.NewGuid();
-            currentSessionId = sessionId;
-            try
-            {
-                var asyncDatabaseCommands = SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options);
-                if (AsyncDatabaseCommands == null)
-                    throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
-
-                var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
-                var session = new AsyncDocumentSession(databaseName, this, asyncDatabaseCommands, Listeners, sessionId);
-                AfterSessionCreated(session);
-                return session;
-            }
-            finally
-            {
-                currentSessionId = null;
-            }*/
-        }
-
         public override IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
         {
             return OpenAsyncSessionInternal(options);
         }
+
+        public override IAsyncDocumentSession OpenAsyncSession()
+        {
+            return OpenAsyncSessionInternal(new OpenSessionOptions());
+        }
+
+        
+
 
         /// <summary>
         /// Called after dispose is completed

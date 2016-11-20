@@ -22,7 +22,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             using (var store = GetDocumentStore())
             {
                 new Token_Id().Execute(store);
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var token = new Token
                     {
@@ -66,7 +66,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             {
                 await new Token_Id().ExecuteAsync(store);
 
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var token = new Token
                     {

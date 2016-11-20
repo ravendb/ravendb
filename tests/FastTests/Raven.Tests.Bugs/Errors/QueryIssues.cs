@@ -12,7 +12,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Errors
             using (var store = GetDocumentStore())
             {
                 new CompanyIndex().Execute(store);
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Company { Id = "CoMpAnY/1", Name = "This Company", HasParentCompany = false });
                     session.Store(new Company { Id = "CoMpAnY/2", Name = "That Company", HasParentCompany = true });
@@ -20,7 +20,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Errors
                     session.SaveChanges();
 
                 }
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     //first query to make sure we aren't stale.
                     session.Query<Company>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToList();

@@ -25,7 +25,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Fitzchak" });
                     await session.StoreAsync(new User { Name = "Arek" }, "users/arek");
@@ -33,7 +33,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     await session.SaveChangesAsync();
                 }
 
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>("users/1");
                     Assert.NotNull(user);
@@ -51,7 +51,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     dynamic user = new ExpandoObject();
                     user.Id = "users/1";
@@ -62,7 +62,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     await session.SaveChangesAsync();
                 }
 
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<dynamic>("users/1");
 
@@ -79,7 +79,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             {
                 new PostWithContentTransformer().Execute(store);
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Post
                     {
@@ -107,7 +107,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var entity1 = new User { Name = "Andy A" };
                     var entity2 = new User { Name = "Andy B" };
@@ -137,7 +137,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var address = new Address { City = "London", Country = "UK" };
                     await session.StoreAsync(address);
@@ -146,7 +146,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     await session.SaveChangesAsync();
                 }
 
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.Include<User>(x => x.AddressId).LoadAsync<User>("users/1");
 
@@ -159,7 +159,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     Assert.Equal("London", address.City);
                 }
 
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.Include("AddressId").LoadAsync<User>("users/1");
 
@@ -179,7 +179,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<InvalidOperationException>(() => session.Delete(new User()));
                     Assert.Equal("SlowTests.Core.Utils.Entities.User is not associated with the session, cannot delete unknown entity instance", e.Message);
@@ -192,21 +192,21 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new User { Id = "users/1", Name = "John" });
                     session.Store(new User { Id = "users/2", Name = "Jonathan" });
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Delete("users/1");
                     session.Delete<User>(2);
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     Assert.Null(session.Load<User>("users/1"));
                     Assert.Null(session.Load<User>("users/2"));
@@ -219,7 +219,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = new User { Id = "users/1", Name = "User1" };
 

@@ -10,7 +10,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Async
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     dynamic client = new ExpandoObject();
                     client.Name = "Test";
@@ -29,7 +29,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Async
             {
                 store.Conventions.FindDynamicTagName = (entity) => entity.EntityName;
 
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     dynamic client = new ExpandoObject();
                     client.Name = "Test";

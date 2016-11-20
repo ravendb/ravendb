@@ -21,7 +21,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = new User
                     {
@@ -44,7 +44,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     Assert.Equal(0, session.Advanced.NumberOfRequests);
 

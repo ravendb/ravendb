@@ -14,7 +14,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new User { Name = "John" }, "users/1");
                     newSession.Store(new User { Name = "Jane" }, "users/2");
@@ -34,7 +34,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new User { Name = "John" }, "users/1");
                     newSession.Store(new User { Name = "Jane" }, "users/2");
@@ -61,7 +61,7 @@ namespace NewClientTests.NewClient
             using (var store = GetDocumentStore())
             {
                 new DogsIndex().Execute(store);
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new Dog { Name = "Snoopy", Breed = "Beagle", Color = "White", Age = 6, IsVaccinated = true }, "dogs/1");
                     newSession.Store(new Dog { Name = "Brian", Breed = "Labrador", Color = "White", Age = 12, IsVaccinated = false }, "dogs/2");
@@ -74,7 +74,7 @@ namespace NewClientTests.NewClient
 
                     newSession.SaveChanges();
                 }
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     List<DogsIndex.Result> queryResult;
                     try
@@ -109,7 +109,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     var longName = new string('x', 2048);
                     newSession.Store(new User { Name = longName }, "users/1");
@@ -130,7 +130,7 @@ namespace NewClientTests.NewClient
             using (var store = GetDocumentStore())
             {
                 new DogsIndex().Execute(store);
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new Dog { Name = "Snoopy", Breed = "Beagle", Color = "White", Age = 6, IsVaccinated = true}, "dogs/1");
                     newSession.Store(new Dog { Name = "Brian", Breed = "Labrador", Color = "White", Age = 12, IsVaccinated = false }, "dogs/2");
@@ -145,7 +145,7 @@ namespace NewClientTests.NewClient
 
                     WaitForIndexing(store);
                 }
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     var queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()
                         .Where(x => x.Age > 2 && x.IsVaccinated == false)

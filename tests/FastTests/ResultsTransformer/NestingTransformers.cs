@@ -98,12 +98,12 @@ namespace NewClientTests.NewClient.ResultsTransformer
                 new ProductTransformer().Execute(store);
                 new ProductTransformer2().Execute(store);
                 new CallMultipleTransformerPerAllItems().Execute(store);
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Product() { Id = "products/1", Name = "Irrelevant" });
                     session.SaveChanges();
                 }
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var result = session.Load<CallMultipleTransformerPerAllItems, ProductTransformer.Result>("products/1",
                         configure => configure.AddTransformerParameter("transformers", "ProductTransformer;ProductTransformer2"));
@@ -119,12 +119,12 @@ namespace NewClientTests.NewClient.ResultsTransformer
             {
                 new ProductTransformer().Execute(store);
                 new CallAnotherTransformerPerItem().Execute(store);
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Product() { Id = "products/1", Name = "Irrelevant" });
                     session.SaveChanges();
                 }
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var result = session.Load<CallAnotherTransformerPerItem, CallAnotherTransformerPerItem.Result>("products/1",
                         configure => configure.AddTransformerParameter("transformer", "ProductTransformer"));
@@ -141,12 +141,12 @@ namespace NewClientTests.NewClient.ResultsTransformer
             {
                 new ProductTransformer().Execute(store);
                 new CallAnotherTransformerPerAllItems().Execute(store);
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Product() { Id = "products/1", Name = "Irrelevant" });
                     session.SaveChanges();
                 }
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var result = session.Load<CallAnotherTransformerPerAllItems, ProductTransformer.Result>("products/1",
                         configure => configure.AddTransformerParameter("transformer", "ProductTransformer"));

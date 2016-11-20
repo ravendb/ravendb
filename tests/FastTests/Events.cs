@@ -12,7 +12,7 @@ namespace NewClientTests.NewClient
             using (var store = GetDocumentStore())
             {
                 store.OnBeforeStore += eventTest1;
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new User()
                     {
@@ -21,12 +21,12 @@ namespace NewClientTests.NewClient
                     } 
                     , "users/1");
 
-                    newSession.OnBeforeStore += eventTest2;
+                    newSession.Advanced.OnBeforeStore += eventTest2;
 
-                    Assert.Equal(newSession.WhatChanged().Count, 1);
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
                     newSession.SaveChanges();
                 }
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     var user = newSession.Load<User>("users/1");
                     Assert.Equal(user.Count, 1000);
