@@ -112,9 +112,9 @@ class reduceTreeItem {
         countEntries(0, this.tree.Root);
     }
 
-    filterAndLayoutVisibleItems(documentIds: Array<string>) {
+    filterAndLayoutVisibleItems(documents: documentItem[]) {
         this.cleanCache();
-        this.filterVisibleItems(documentIds);
+        this.filterVisibleItems(documents);
         this.layout();
     }
 
@@ -122,7 +122,7 @@ class reduceTreeItem {
         this.itemsAsDepth.clear();
     }
 
-    private filterVisibleItems(documentIds: Array<string>) {
+    private filterVisibleItems(documents: documentItem[]) {
         //TODO: for now display all
         const filterAtDepth = (depth: number, node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage, parent: pageItem) => {
             if (!this.itemsAsDepth.has(depth)) {
@@ -228,6 +228,24 @@ class reduceTreeItem {
     }
 }
 
+class documentItem {
+    static readonly margins = {
+        minMarginBetweenDocumentNames: 30,
+        badgePadding: 30
+    }
+
+    name: string;
+
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+
+    constructor(name: string) {
+        this.name = name;
+    }
+}
+
 
 class visualizerGraphGlobal {
 
@@ -240,7 +258,7 @@ class visualizerGraphGlobal {
     private totalWidth = 1500; //TODO: use dynamic value
     private totalHeight = 700; //TODO: use dynamic value
 
-    private documentNames: Array<string> = [];
+    private documents: Array<documentItem> = [];
     private reduceTrees: Array<reduceTreeItem> = [];
 
     private canvas: d3.Selection<void>;
@@ -254,7 +272,8 @@ class visualizerGraphGlobal {
     private yScale: d3.scale.Linear<number, number>;
 
     addTrees(documentName: string, result: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
-        this.documentNames.push(documentName);
+        const document = new documentItem(documentName);
+        this.documents.push(document);
 
         for (let i = 0; i < result.length; i++) {
             const reduceTree = result[i];
@@ -268,12 +287,11 @@ class visualizerGraphGlobal {
         }
 
         this.layout();
-        this.zoomToDocument(documentName);
+        this.zoomToDocument(document);
     }
 
-    private zoomToDocument(documentName: string) {
-        const documentXLocation = 0; //TODO:
-        const requestedTranslation: [number, number] = [documentXLocation, 0];
+    private zoomToDocument(document: documentItem) {
+        const requestedTranslation: [number, number] = [-document.x + this.totalWidth / 2 - document.width / 2, 0];
 
         this.canvas
             .transition()
@@ -331,7 +349,7 @@ class visualizerGraphGlobal {
         // layout children first
         for (let i = 0; i < this.reduceTrees.length; i++) {
             const tree = this.reduceTrees[i];
-            tree.filterAndLayoutVisibleItems(this.documentNames);
+            tree.filterAndLayoutVisibleItems(this.documents);
         }
 
         const maxTreeHeight = d3.max(this.reduceTrees, x => x.height);
@@ -352,11 +370,54 @@ class visualizerGraphGlobal {
 
         this.dataWidth = currentX;
 
-        const height = maxTreeHeight
-            + visualizerGraphGlobal.margins.betweenPagesAndDocuments
+        const documentNamesYStart =
+            visualizerGraphGlobal.margins.globalMargin +
+                maxTreeHeight +
+                visualizerGraphGlobal.margins.betweenPagesAndDocuments;
+
+        const height = documentNamesYStart
             + 100 //TODO: it is space for document names
-            + 2 * visualizerGraphGlobal.margins.globalMargin; // top and bottom margin
+            + visualizerGraphGlobal.margins.globalMargin; // top and bottom margin
         this.dataHeight = height;
+
+        this.layoutDocuments(documentNamesYStart);
+    }
+
+    private layoutDocuments(yStart: number) {
+        let totalWidth = 0;
+
+        for (let i = 0; i < this.documents.length; i++) {
+            const doc = this.documents[i];
+
+            const documentNameWidthEstimation = (text: string) => text.length * 9;
+
+            doc.width = documentItem.margins.badgePadding * 2 + documentNameWidthEstimation(doc.name);
+            doc.height = 35;
+            doc.y = yStart;
+
+            totalWidth += doc.width;
+        }
+
+        totalWidth += this.documents.length * (documentItem.margins.minMarginBetweenDocumentNames + 1);
+
+        let extraItemPadding = 0;
+
+        if (this.documents.length > 1) {
+            if (totalWidth > this.dataWidth) {
+                //TODO: handle me!
+            } else {
+                extraItemPadding = (this.dataWidth - totalWidth) / (this.documents.length + 1);
+            }
+        }
+
+        let currentX = documentItem.margins.minMarginBetweenDocumentNames + extraItemPadding;
+
+        for (let i = 0; i < this.documents.length; i++) {
+            const doc = this.documents[i];
+            doc.x = currentX;
+
+            currentX += doc.width + documentItem.margins.minMarginBetweenDocumentNames + extraItemPadding;
+        }
     }
 
     private draw() {
@@ -372,6 +433,10 @@ class visualizerGraphGlobal {
 
         for (let i = 0; i < this.reduceTrees.length; i++) {
             this.drawTree(ctx, this.reduceTrees[i]);
+        }
+
+        for (let i = 0; i < this.documents.length; i++) {
+            this.drawDocument(ctx, this.documents[i]);
         }
         ctx.restore();
     }
@@ -430,6 +495,16 @@ class visualizerGraphGlobal {
                 }
             }
         });
+    }
+
+    private drawDocument(ctx: CanvasRenderingContext2D, docItem: documentItem) {
+        ctx.fillStyle = "#7cb82f"; //TODO: use dynamic colors
+        ctx.fillRect(docItem.x, docItem.y, docItem.width, docItem.height);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle"; 
+        ctx.font = "18px Lato";
+        ctx.fillStyle = "black";
+        ctx.fillText(docItem.name, docItem.x + docItem.width / 2, docItem.y + docItem.height / 2);
     }
 
     static totalEntriesWidth(entries: number) {
