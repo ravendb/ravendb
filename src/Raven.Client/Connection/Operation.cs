@@ -14,7 +14,6 @@ namespace Raven.Client.Connection
         private readonly long _id;
         private IDisposable _subscription;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>();
-        private bool anyStatusReceived;
 
         public Operation(long id)
         {
@@ -47,17 +46,15 @@ namespace Raven.Client.Connection
         {
             var operationStatusJson = await _asyncServerClient.GetOperationStatusAsync(_id);
             var operationStatus = _asyncServerClient.convention
-                .CreateSerializer()
-                .Deserialize<OperationState>(new RavenJTokenReader(operationStatusJson)); // using deserializer from Conventions to properly handle $type mapping
+                    .CreateSerializer()
+                    .Deserialize<OperationState>(new RavenJTokenReader(operationStatusJson));
+                // using deserializer from Conventions to properly handle $type mapping
 
-            if (anyStatusReceived == false)
+            OnNext(new OperationStatusChangeNotification
             {
-                OnNext(new OperationStatusChangeNotification
-                {
-                    OperationId = _id,
-                    State = operationStatus
-                });
-            }
+                OperationId = _id,
+                State = operationStatus
+            });
         }
 
         internal long Id => _id;
@@ -66,7 +63,6 @@ namespace Raven.Client.Connection
 
         public void OnNext(OperationStatusChangeNotification notification)
         {
-            anyStatusReceived = true;
             var onProgress = OnProgressChanged;
 
             switch (notification.State.Status)
@@ -79,19 +75,19 @@ namespace Raven.Client.Connection
                     break;
                 case OperationStatus.Completed:
                     _subscription.Dispose();
-                    _result.SetResult(notification.State.Result);
+                    _result.TrySetResult(notification.State.Result);
                     break;
                 case OperationStatus.Faulted:
                     _subscription.Dispose();
                     var exceptionResult = notification.State.Result as OperationExceptionResult;
                     if(exceptionResult?.StatusCode == 409)
-                        _result.SetException(new DocumentInConflictException(exceptionResult.Message));
+                        _result.TrySetException(new DocumentInConflictException(exceptionResult.Message));
                     else
-                        _result.SetException(new InvalidOperationException(exceptionResult?.Message));
+                        _result.TrySetException(new InvalidOperationException(exceptionResult?.Message));
                     break;
                 case OperationStatus.Canceled:
                     _subscription.Dispose();
-                    _result.SetException(new OperationCanceledException());
+                    _result.TrySetCanceled();
                     break;
             }
         }
@@ -104,9 +100,12 @@ namespace Raven.Client.Connection
         {
         }
 
-        public virtual Task<IOperationResult> WaitForCompletionAsync()
+        public virtual async Task<IOperationResult> WaitForCompletionAsync()
         {
-            return _result.Task;
+            var whenAny = await Task.WhenAny(_result.Task, Task.Delay(15*1000));
+            if(whenAny != _result.Task)
+                throw new TimeoutException("After 15 seconds, did not get a reply for operation " + _id);
+            return await _result.Task;
         }
 
         public virtual IOperationResult WaitForCompletion()
