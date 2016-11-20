@@ -660,6 +660,7 @@ namespace Voron.Impl
         private bool _isLazyTransaction;
 
         internal ActiveTransactions.Node ActiveTransactionNode;
+        internal bool FlushInProgressLockTaken;
 
         internal void EnsurePagerStateReference(PagerState state)
         {

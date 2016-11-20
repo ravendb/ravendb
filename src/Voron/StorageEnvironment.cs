@@ -54,7 +54,7 @@ namespace Voron
         internal ExceptionDispatchInfo CatastrophicFailure;
         private readonly WriteAheadJournal _journal;
         private readonly object _txWriter = new object();
-        internal readonly ReaderWriterLockSlim FlushInProgressLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+        internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
 
         private long _transactionsCounter;
@@ -387,7 +387,11 @@ namespace Voron
                 try
                 {
                     long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-                    tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling, context);
+                    tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
+                        context)
+                    {
+                        FlushInProgressLockTaken = flushInProgressReadLockTaken
+                    };
                     ActiveTransactions.Add(tx);
                 }
                 finally
@@ -478,7 +482,7 @@ namespace Voron
                 return;
 
             Monitor.Exit(_txWriter);
-            if (FlushInProgressLock.IsReadLockHeld)
+            if (tx.FlushInProgressLockTaken)
                 FlushInProgressLock.ExitReadLock();
         }
 

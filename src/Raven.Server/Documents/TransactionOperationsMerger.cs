@@ -140,7 +140,12 @@ namespace Raven.Server.Documents
                                 break;
                             pendingOps.Add(op);
                             op.Execute(context, tx);
-                        } while (sp.ElapsedMilliseconds < 150);
+
+                            if (pendingOps.Count % 128 != 0)
+                                continue;
+                            if (sp.ElapsedMilliseconds < 150)
+                                break;
+                        } while (true);
                         tx.Commit();
                     }
                 }
