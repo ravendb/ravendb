@@ -198,7 +198,6 @@ namespace Raven.Tests.Issues
             }
         }
 
-
         private class MergeConflicts : IDocumentConflictListener
         {
             public bool TryResolveConflict(string key, JsonDocument[] conflictedDocs, out JsonDocument resolvedDocument)
@@ -215,26 +214,6 @@ namespace Raven.Tests.Issues
                 resolvedDocument.Metadata.Remove("@id");
                 resolvedDocument.Metadata.Remove("@etag");
 
-                return true;
-            }
-        }
-
-        public class ResolveInFavourOfNewest : IDocumentConflictListener
-        {
-            public bool TryResolveConflict(
-                string key,
-                JsonDocument[] conflictedDocs,
-                out JsonDocument resolvedDocument)
-            {
-                DateTime? maxDate = conflictedDocs.Max(x => x.LastModified);
-                resolvedDocument = conflictedDocs
-                                    .FirstOrDefault(x => x.LastModified == maxDate);
-
-                if (resolvedDocument == null)
-                    return false;
-
-                resolvedDocument.Metadata.Remove("@id");
-                resolvedDocument.Metadata.Remove("@etag");
                 return true;
             }
         }
