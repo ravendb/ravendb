@@ -4,7 +4,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 
 import d3 = require('d3');
 
-import visualizerGraph = require("viewmodels/database/status/visualizerGraph");
+import visualizerGraphGlobal = require("viewmodels/database/status/visualizerGraphGlobal");
 
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import getIndexMapReduceTreeCommand = require("commands/database/index/getIndexMapReduceTreeCommand");
@@ -30,7 +30,7 @@ class visualizer extends viewModelBase {
         docKeysSearchResults: ko.observableArray<string>()
     }
 
-    private graph = new visualizerGraph();
+    private graph = new visualizerGraphGlobal();
 
     constructor() {
         super();

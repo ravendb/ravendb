@@ -3,17 +3,32 @@ import graphHelper = require("common/helpers/graph/graphHelper");
 
 import d3 = require('d3');
 
-class globalPageItem {
+class pageItem {
+    static readonly pageWidth = 20;
+    static readonly pageHeight = 20;
+    
     x: number;
     y: number;
+    parent?: pageItem;
+
+    
+    getSourceConnectionPoint(): [number, number] {
+        return [this.x + pageItem.pageWidth / 2, this.y];
+    }
+
+    getTargetConnectionPoint(): [number, number] {
+        return [this.x + pageItem.pageWidth / 2, this.y + pageItem.pageHeight];
+    }
 }
 
 class reduceTreeItem {
 
-    static readonly globalMargins = {
+    /*
+    Top-bottom: treeMargin, titleHeight, treeMargin, pageHeight, betweenPagesVerticalPadding, ..., pageHeight, treeMargin
+    Left-right: treeMargin, <dynamic text margin>, treeMargin, pageWidth, betweenPagesHorizontalPadding, ..., pageWidth, treeMargin
+    */
+    static readonly margins = {
         treeMargin: 20,
-        pageWidth: 20,
-        pageHeight: 20,
         betweenPagesHorizontalPadding: 13,
         betweenPagesVerticalPadding: 50,
         titleHeight: 20
@@ -22,112 +37,87 @@ class reduceTreeItem {
     private tree: Raven.Server.Documents.Indexes.Debugging.ReduceTree;
     name: string;
     depth: number;
-    itemsCountAtDepth: Array<number>;
-    itemsAsDepth = new Map<number, Array<globalPageItem>>();
+    itemsCountAtDepth: Array<number>; // this represents non-filtered count
+    itemsAsDepth = new Map<number, Array<pageItem>>(); // items after filtering
 
     width = 0;
     height = 0;
     x: number;
     y: number;
-    extraLeftPadding = 0; //used when text is longer than contents
+    extraLeftPadding = 0; //used when text (reduce key) is longer than contents
 
     constructor(tree: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
         this.tree = tree;
         this.name = tree.Name;
         this.depth = tree.Depth;
 
-        this.calcItemsAtDepth();
+        this.countItemsPerDepth();
     }
 
     mergeWith(newTree: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
         //TODO: 
     }
 
-    private calcItemsAtDepth() {
+    private countItemsPerDepth() {
         this.itemsCountAtDepth = new Array(this.depth);
-        this.countEntires(0, this.tree.Root);
-    }
 
-    private countEntires(depth: number, node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage) {
-        this.itemsCountAtDepth[depth] = (this.itemsCountAtDepth[depth] || 0) + 1;
+        const countEntries = (depth: number, node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage) => {
+            this.itemsCountAtDepth[depth] = (this.itemsCountAtDepth[depth] || 0) + 1;
 
-        if (node.Children && node.Children.length) {
-            for (let i = 0; i < node.Children.length; i++) {
-                this.countEntires(depth + 1, node.Children[i]);
+            if (node.Children && node.Children.length) {
+                for (let i = 0; i < node.Children.length; i++) {
+                    countEntries(depth + 1, node.Children[i]);
+                }
             }
-        }
+        };
+
+        countEntries(0, this.tree.Root);
     }
 
     filterAndLayoutVisibleItems(documentIds: Array<string>) {
+        this.cleanCache();
         this.filterVisibleItems(documentIds);
-        this.calculatePageWidthAndHeight();
-        this.layoutVisibleItems();
+        this.layout();
+    }
+
+    private cleanCache() {
+        this.itemsAsDepth.clear();
     }
 
     private filterVisibleItems(documentIds: Array<string>) {
         //TODO: for now display all
-        const filterAsDepth = (depth: number, node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage) => {
+        const filterAtDepth = (depth: number, node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage, parent: pageItem) => {
             if (!this.itemsAsDepth.has(depth)) {
                 this.itemsAsDepth.set(depth, []);
             }
 
             const items = this.itemsAsDepth.get(depth);
-            const item = new globalPageItem();
+            const item = new pageItem();
+            item.parent = parent;
             items.push(item);
 
-            if (node.Children && node.Children.length) {
+            if (node.Children) {
                 for (let i = 0; i < node.Children.length; i++) {
-                    filterAsDepth(depth + 1, node.Children[i]);
+                    filterAtDepth(depth + 1, node.Children[i], item);
                 }
             }
-
         };
 
-        filterAsDepth(0, this.tree.Root);
+        filterAtDepth(0, this.tree.Root, null);
     }
 
-    private calculatePageWidthAndHeight() {
-        let height = reduceTreeItem.globalMargins.treeMargin +
-            reduceTreeItem.globalMargins.titleHeight +
-            reduceTreeItem.globalMargins.treeMargin;
-
-        height += (this.depth * reduceTreeItem.globalMargins.pageHeight) +
-            (this.depth - 1) * reduceTreeItem.globalMargins.betweenPagesVerticalPadding;
-
-        height += reduceTreeItem.globalMargins.treeMargin;
-
-        this.height = height;
+    private layout() {
+        this.calculateTreeDimensions();
 
         const maxItems = d3.max(this.itemsCountAtDepth);
+        const pagesTotalWidth = this.getPagesOnlyWidth(maxItems);
 
-        let width = reduceTreeItem.globalMargins.treeMargin +
-            visualizerGraph.totalEntriesWidth(maxItems) +
-            reduceTreeItem.globalMargins.treeMargin;
+        let yStart = reduceTreeItem.margins.treeMargin +
+            reduceTreeItem.margins.titleHeight +
+            reduceTreeItem.margins.treeMargin;
 
-        width += this.getTotalPagesWidth(maxItems);
-
-        width += reduceTreeItem.globalMargins.treeMargin;
-
-        const estimatedTextWidth = this.estimateReduceKeyWidth() + 2 * reduceTreeItem.globalMargins.treeMargin;
-
-        if (estimatedTextWidth > width) {
-            this.extraLeftPadding = (estimatedTextWidth - width) / 2;
-            width = estimatedTextWidth;
-        }
-
-        this.width = width;
-    }
-
-    private layoutVisibleItems() {
-        const maxItems = d3.max(this.itemsCountAtDepth);
-        const pagesTotalWidth = this.getTotalPagesWidth(maxItems);
-
-        let yStart = reduceTreeItem.globalMargins.treeMargin +
-            reduceTreeItem.globalMargins.titleHeight +
-            reduceTreeItem.globalMargins.treeMargin;
-
-        const yOffset = reduceTreeItem.globalMargins.pageHeight +
-            reduceTreeItem.globalMargins.betweenPagesVerticalPadding;
+        const yOffset = pageItem.pageHeight +
+            reduceTreeItem.margins.betweenPagesVerticalPadding;
 
         for (let depth = 0; depth < this.depth; depth++) {
             const items = this.itemsAsDepth.get(depth);
@@ -135,13 +125,13 @@ class reduceTreeItem {
             const startAndOffset = graphHelper
                 .computeStartAndOffset(pagesTotalWidth,
                     items.length,
-                    reduceTreeItem.globalMargins.pageWidth);
+                    pageItem.pageWidth);
 
             const xOffset = startAndOffset.offset;
 
-            let xStart = reduceTreeItem.globalMargins.treeMargin +
-                visualizerGraph.totalEntriesWidth(maxItems) +
-                reduceTreeItem.globalMargins.treeMargin +
+            let xStart = reduceTreeItem.margins.treeMargin +
+                visualizerGraphGlobal.totalEntriesWidth(maxItems) +
+                reduceTreeItem.margins.treeMargin +
                 this.extraLeftPadding +
                 startAndOffset.start;
 
@@ -156,20 +146,54 @@ class reduceTreeItem {
         }
     }
 
+    private calculateTreeDimensions() {
+        let height = reduceTreeItem.margins.treeMargin +
+            reduceTreeItem.margins.titleHeight +
+            reduceTreeItem.margins.treeMargin;
+
+        height += (this.depth * pageItem.pageHeight) +
+            (this.depth - 1) * reduceTreeItem.margins.betweenPagesVerticalPadding;
+
+        height += reduceTreeItem.margins.treeMargin;
+
+        this.height = height;
+
+        const maxItems = d3.max(this.itemsCountAtDepth);
+
+        let width = reduceTreeItem.margins.treeMargin +
+            visualizerGraphGlobal.totalEntriesWidth(maxItems) +
+            reduceTreeItem.margins.treeMargin;
+
+        width += this.getPagesOnlyWidth(maxItems);
+
+        width += reduceTreeItem.margins.treeMargin;
+
+        const estimatedTextWidth = this.estimateReduceKeyWidth() + 2 * reduceTreeItem.margins.treeMargin;
+
+        if (estimatedTextWidth > width) {
+            this.extraLeftPadding = (estimatedTextWidth - width) / 2;
+            width = estimatedTextWidth;
+        } else {
+            this.extraLeftPadding = 0;
+        }
+
+        this.width = width;
+    }
+
     private estimateReduceKeyWidth() {
         return this.name.length * 6;
     }
 
-    private getTotalPagesWidth(maxItems: number) {
-        return maxItems * reduceTreeItem.globalMargins.pageWidth +
-            (maxItems + 1) * reduceTreeItem.globalMargins.betweenPagesHorizontalPadding;
+    private getPagesOnlyWidth(maxItems: number) {
+        return maxItems * pageItem.pageWidth +
+            (maxItems + 1) * reduceTreeItem.margins.betweenPagesHorizontalPadding;
     }
 }
 
 
-class visualizerGraph {
+class visualizerGraphGlobal {
 
-    static globalMargins = {
+    static margins = {
         betweenPagesWidth: 30,
         betweenPagesAndDocuments: 30,
         globalMargin: 30
@@ -185,15 +209,11 @@ class visualizerGraph {
     private svg: d3.Selection<void>;
     private zoom: d3.behavior.Zoom<void>;
 
-    private dataWidth = 0;
-    private dataHeight = 0;
+    private dataWidth = 0; // total width of all virtual elements
+    private dataHeight = 0; // total heigth of all virtual elements
 
     private xScale: d3.scale.Linear<number, number>;
     private yScale: d3.scale.Linear<number, number>;
-
-    constructor() {
-        (window as any).g = this; //TODO: delete me - temporary for easy debugging
-    }
 
     addTrees(documentName: string, result: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
         this.documentNames.push(documentName);
@@ -209,8 +229,20 @@ class visualizerGraph {
             }
         }
 
-        this.recalculate();
-        this.draw();
+        this.layout();
+        this.zoomToDocument(documentName);
+    }
+
+    private zoomToDocument(documentName: string) {
+        const documentXLocation = 0; //TODO:
+        const requestedTranslation: [number, number] = [documentXLocation, 0];
+
+        this.canvas
+            .transition()
+            .duration(500)
+            .call(this.zoom.translate(requestedTranslation).scale(1).event);
+
+        //TODO: end can use .each("end", listener) to get info about completion
     }
 
     init() {
@@ -257,28 +289,28 @@ class visualizerGraph {
         this.draw();
     }
 
-    private recalculate() {
-        let width = visualizerGraph.globalMargins.globalMargin;
+    private layout() {
+        let width = visualizerGraphGlobal.margins.globalMargin;
         for (let i = 0; i < this.reduceTrees.length; i++) {
             const tree = this.reduceTrees[i];
             tree.filterAndLayoutVisibleItems(this.documentNames);
             tree.x = width;
-            tree.y = visualizerGraph.globalMargins.globalMargin; //TODO: should we do this based on height on element?
+            tree.y = visualizerGraphGlobal.margins.globalMargin; //TODO: should we do this based on height on element?
 
             width += tree.width;
-            width += visualizerGraph.globalMargins.betweenPagesWidth;
+            width += visualizerGraphGlobal.margins.betweenPagesWidth;
         }
 
-        width -= visualizerGraph.globalMargins.betweenPagesWidth;
-        width += visualizerGraph.globalMargins.globalMargin;
+        width -= visualizerGraphGlobal.margins.betweenPagesWidth;
+        width += visualizerGraphGlobal.margins.globalMargin;
 
         this.dataWidth = width;
 
         let height = d3.max(this.reduceTrees, x => x.height);
-        height += visualizerGraph.globalMargins.betweenPagesAndDocuments;
+        height += visualizerGraphGlobal.margins.betweenPagesAndDocuments;
 
         height += 100; //TODO: it is space for document names
-        height += 2 * visualizerGraph.globalMargins.globalMargin;
+        height += 2 * visualizerGraphGlobal.margins.globalMargin;
         this.dataHeight = height;
     }
 
@@ -311,21 +343,21 @@ class visualizerGraph {
             ctx.font = "10px Lato";
             ctx.textAlign = "center";
             ctx.fillStyle = "#686f6f";
-            ctx.fillText(tree.name, tree.width / 2, reduceTreeItem.globalMargins.treeMargin, tree.width);
+            ctx.fillText(tree.name, tree.width / 2, reduceTreeItem.margins.treeMargin, tree.width);
 
             // total entries
-            let totalEntiresY = reduceTreeItem.globalMargins.treeMargin +
-                reduceTreeItem.globalMargins.titleHeight +
-                reduceTreeItem.globalMargins.treeMargin;
-            const totalEntriesOffset = reduceTreeItem.globalMargins.pageHeight +
-                reduceTreeItem.globalMargins.betweenPagesVerticalPadding;
+            let totalEntiresY = reduceTreeItem.margins.treeMargin +
+                reduceTreeItem.margins.titleHeight +
+                reduceTreeItem.margins.treeMargin;
+            const totalEntriesOffset = pageItem.pageHeight +
+                reduceTreeItem.margins.betweenPagesVerticalPadding;
 
             for (let i = 1; i < tree.depth; i++) {
                 totalEntiresY += totalEntriesOffset;
                 const items = tree.itemsCountAtDepth[i];
                 ctx.font = "18px Lato";
                 ctx.textAlign = "right";
-                ctx.fillText(items.toString(), reduceTreeItem.globalMargins.treeMargin + visualizerGraph.totalEntriesWidth(items), totalEntiresY + 18 /* font size */);
+                ctx.fillText(items.toString(), reduceTreeItem.margins.treeMargin + visualizerGraphGlobal.totalEntriesWidth(items), totalEntiresY + 18 /* font size */);
 
                 //TODO: draw vertical line
             }
@@ -338,13 +370,21 @@ class visualizerGraph {
 
     private drawPages(ctx: CanvasRenderingContext2D, tree: reduceTreeItem) {
         ctx.fillStyle = "#008cc9";
+        ctx.strokeStyle = "#686f6f";
+
         tree.itemsAsDepth.forEach(globalItems => {
             for (let i = 0; i < globalItems.length; i++) {
                 const item = globalItems[i];
-                ctx.fillRect(item.x, item.y, reduceTreeItem.globalMargins.pageWidth, reduceTreeItem.globalMargins.pageHeight);
+                ctx.fillRect(item.x, item.y, pageItem.pageWidth, pageItem.pageHeight);
+
+                if (item.parent) {
+                    const sourcePoint = item.getSourceConnectionPoint();
+                    const targetPoint = item.parent.getTargetConnectionPoint();
+
+                    graphHelper.drawBezierDiagonal(ctx, sourcePoint, targetPoint, true);
+                }
             }
         });
-
     }
 
     static totalEntriesWidth(entries: number) {
@@ -352,4 +392,4 @@ class visualizerGraph {
     }
 }
 
-export = visualizerGraph;
+export = visualizerGraphGlobal;
