@@ -10,8 +10,12 @@ class pageItem {
     x: number;
     y: number;
     parent?: pageItem;
+    pageNumber: number;
 
-    
+    constructor(pageNumber: number) {
+        this.pageNumber = pageNumber;
+    }
+
     getSourceConnectionPoint(): [number, number] {
         return [this.x + pageItem.pageWidth / 2, this.y];
     }
@@ -39,6 +43,7 @@ class reduceTreeItem {
     depth: number;
     itemsCountAtDepth: Array<number>; // this represents non-filtered count
     itemsAsDepth = new Map<number, Array<pageItem>>(); // items after filtering
+    private documentConnections = new Map<number, Set<string>>();
 
     width = 0;
     height = 0;
@@ -52,10 +57,43 @@ class reduceTreeItem {
         this.depth = tree.Depth;
 
         this.countItemsPerDepth();
+        this.documentConnections = this.extractConnectedDocuments(tree.Root);
     }
 
     mergeWith(newTree: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
-        //TODO: 
+        const newConnections = this.extractConnectedDocuments(newTree.Root);
+
+        newConnections.forEach((documents: Set<string>, pageNumber: number) => {
+            if (this.documentConnections.has(pageNumber)) {
+                const existingDocs = this.documentConnections.get(pageNumber);
+                documents.forEach(d => existingDocs.add(d));
+            } else {
+                this.documentConnections.set(pageNumber, documents);
+            }
+        });
+    }
+
+    private extractConnectedDocuments(root: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage): Map<number, Set<string>> {
+        const result = new Map<number, Set<string>>();
+
+        const extractConnections = (node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage) => {
+            if (node.Children) {
+                for (let i = 0; i < node.Children.length; i++) {
+                    extractConnections(node.Children[i]);
+                }
+            }
+
+            if (node.Entries) {
+                const documents = node.Entries.filter(x => !!x.Source).map(x => x.Source);
+                if (documents.length) {
+                    result.set(node.PageNumber, new Set<string>(documents));
+                }
+            }
+        }
+
+        extractConnections(root);
+
+        return result;
     }
 
     private countItemsPerDepth() {
@@ -92,7 +130,7 @@ class reduceTreeItem {
             }
 
             const items = this.itemsAsDepth.get(depth);
-            const item = new pageItem();
+            const item = new pageItem(node.PageNumber);
             item.parent = parent;
             items.push(item);
 
