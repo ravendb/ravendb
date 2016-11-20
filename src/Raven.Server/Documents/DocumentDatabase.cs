@@ -11,6 +11,7 @@ using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
@@ -162,7 +163,7 @@ namespace Raven.Server.Documents
             _indexStoreTask = IndexStore.InitializeAsync();
             _transformerStoreTask = TransformerStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
-            DocumentReplicationLoader.Initialize();
+            
             DocumentTombstoneCleaner.Initialize();
             BundleLoader = new BundleLoader(this);
 
@@ -185,7 +186,11 @@ namespace Raven.Server.Documents
             }
 
             SubscriptionStorage.Initialize();
-            ConfigurationStorage.Initialize(IndexStore,TransformerStore);
+
+            //Index Metadata Store shares Voron env and context pool with documents storage, 
+            //so replication of both documents and indexes/transformers can be made within one transaction
+            ConfigurationStorage.Initialize(IndexStore,TransformerStore,DocumentsStorage.Environment,DocumentsStorage.ContextPool);
+            DocumentReplicationLoader.Initialize();
         }
 
         public void Dispose()

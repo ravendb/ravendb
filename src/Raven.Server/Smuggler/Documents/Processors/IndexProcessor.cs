@@ -33,7 +33,9 @@ namespace Raven.Server.Smuggler.Documents.Processors
 
                 database.IndexStore.CreateIndex(indexDefinition);
             }
-            else if (buildVersion == 13 || buildVersion >= 40000 && buildVersion <= 44999)
+            //I think supporting only major version as a number should be here,
+            //so we can use ServerVersion.Build to get the build and not hardcode it
+            else if (buildVersion == 13 || (buildVersion >= 40000 && buildVersion <= 44999) || (buildVersion >= 40 && buildVersion <= 44))
             {
                 var indexType = ReadIndexType(indexDefinitionDoc);
                 var definition = ReadIndexDefinition(indexDefinitionDoc);

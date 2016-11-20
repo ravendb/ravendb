@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -22,11 +26,12 @@ namespace Raven.Server.Documents
 
         private StorageEnvironment _environment;
 
-        private TransactionContextPool _contextPool;
+        private DocumentsContextPool _contextPool;
 
         private static readonly TableSchema IndexesTableSchema;
         private static readonly Slice EtagIndexName;
 
+        public bool IsInitialized { get; private set; }
 
         static IndexesEtagsStorage()
         {
@@ -58,61 +63,90 @@ namespace Raven.Server.Documents
             Logger = LoggingSource.Instance.GetLogger<IndexesEtagsStorage>(resourceName);
         }
 
-        public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool, IndexStore indexStore, TransformerStore transformerStore)
+        public DocumentsContextPool ContextPool => _contextPool;
+
+        public void Initialize(StorageEnvironment environment, DocumentsContextPool contextPool, IndexStore indexStore, TransformerStore transformerStore)
         {
             _environment = environment;
             _contextPool = contextPool;
 
-            TransactionOperationContext context;
+            DocumentsOperationContext context;
             using (contextPool.AllocateOperationContext(out context))
-            using (var tx = _environment.WriteTransaction(context.PersistentContext))
+            using (var tx = context.OpenWriteTransaction())
             {
-                IndexesTableSchema.Create(tx, SchemaNameConstants.IndexMetadataTable);
-                tx.CreateTree(SchemaNameConstants.GlobalChangeVectorTree);
-                tx.CreateTree(SchemaNameConstants.LastReplicatedEtagsTree);
+                IndexesTableSchema.Create(tx.InnerTransaction, SchemaNameConstants.IndexMetadataTable);
+                tx.InnerTransaction.CreateTree(SchemaNameConstants.GlobalChangeVectorTree);
+                tx.InnerTransaction.CreateTree(SchemaNameConstants.LastReplicatedEtagsTree);
                 tx.Commit();
             }
 
-            DeleteIndexMetadataForRemovedIndexesAndTransformers(indexStore, transformerStore);
+            using (contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                DeleteIndexMetadataForRemovedIndexesAndTransformers(tx.InnerTransaction, context, indexStore, transformerStore);
+                tx.Commit();
+            }
+
+            IsInitialized = true;
         }
 
         public long OnIndexCreated(Index index)
         {
-            return WriteEntry(index.Name, IndexEntryType.Index, index.IndexId);
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var newEtag = WriteEntry(tx.InnerTransaction, index.Name, IndexEntryType.Index, index.IndexId, context);
+                var etag = newEtag;
+                tx.Commit();
+                return etag;
+            }
         }
 
         public long OnIndexDeleted(Index index)
         {
-            return WriteEntry(index.Name, IndexEntryType.Index, -1);
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var newEtag = WriteEntry(context.Transaction.InnerTransaction, index.Name, IndexEntryType.Index, -1, context);
+                var etag = newEtag;
+                tx.Commit();
+                return etag;
+            }
         }
 
         public long OnTransformerCreated(Transformer transformer)
         {
-            return WriteEntry(transformer.Name, IndexEntryType.Transformer, transformer.TransformerId);
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var newEtag = WriteEntry(context.Transaction.InnerTransaction, transformer.Name, IndexEntryType.Transformer, transformer.TransformerId, context);
+                var etag = newEtag;
+                tx.Commit();
+                return etag;
+            }
         }
 
         public long OnTransformerDeleted(Transformer transformer)
         {
-            return WriteEntry(transformer.Name, IndexEntryType.Transformer, -1);
-        }
-
-        private long WriteEntry(string indexName, IndexEntryType type, int indexIndexId)
-        {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
-            using (var tx = _environment.WriteTransaction())
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
             {
-                var newEtag = WriteEntry(tx, indexName, type, indexIndexId, context);
+                var newEtag = WriteEntry(context.Transaction.InnerTransaction, transformer.Name, IndexEntryType.Transformer, -1, context);
+                var etag = newEtag;
                 tx.Commit();
-                return newEtag;
+                return etag;
             }
         }
 
         private long WriteEntry(Transaction tx, string indexName, IndexEntryType type, int indexIndexId,
-            TransactionOperationContext context)
+            DocumentsOperationContext context)
         {
             var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
-            var existing = GetIndexMetadataByNameInternal(tx, context, indexName, false);
+            var existing = GetIndexMetadataByName(tx, context, indexName, false);
             var lastEtag = ReadLastEtag(table);
             var newEtag = lastEtag + 1;
 
@@ -145,14 +179,14 @@ namespace Raven.Server.Documents
                 }
             }
 
-            MergeEntryVectorWithGlobal(tx, context, changeVectorForWrite);
+            MergeEntryVectorWithGlobal(tx, context.Allocator, changeVectorForWrite);
             return newEtag;
         }
 
-        public void PurgeTombstonesFrom(TransactionOperationContext context, long etag, int take)
+        public void PurgeTombstonesFrom(Transaction tx, JsonOperationContext context, long etag, int take)
         {
             int taken = 0;
-            var table = context.Transaction.InnerTransaction.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
+            var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
             var idsToDelete = new List<long>();
             foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], etag))
             {
@@ -176,11 +210,11 @@ namespace Raven.Server.Documents
         /// <summary>
         /// this method will fetch all metadata entries - tombstones or otherwise
         /// </summary>
-        public List<IndexEntryMetadata> GetAfter(TransactionOperationContext context, long etag, int start, int take)
+        public List<IndexEntryMetadata> GetAfter(Transaction tx, JsonOperationContext context, long etag, int start, int take)
         {
             int taken = 0;
             int skipped = 0;
-            var table = context.Transaction.InnerTransaction.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
+            var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
 
             var results = new List<IndexEntryMetadata>();
             foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], etag))
@@ -200,34 +234,34 @@ namespace Raven.Server.Documents
             return results;
         }
 
-        public ChangeVectorEntry[] GetIndexesAndTransformersChangeVector(TransactionOperationContext context)
+        public ChangeVectorEntry[] GetIndexesAndTransformersChangeVector(Transaction tx)
         {
-            var globalChangeVectorTree = context.Transaction.InnerTransaction.ReadTree(SchemaNameConstants.GlobalChangeVectorTree);
+            var globalChangeVectorTree = tx.ReadTree(SchemaNameConstants.GlobalChangeVectorTree);
+            Debug.Assert(globalChangeVectorTree != null);
             return ReplicationUtils.ReadChangeVectorFrom(globalChangeVectorTree);
         }
 
-        public void SetGlobalChangeVector(TransactionOperationContext context, Dictionary<Guid, long> changeVector)
+        public void SetGlobalChangeVector(Transaction tx, ByteStringContext context, Dictionary<Guid, long> changeVector)
         {
-            var tree = context.Transaction.InnerTransaction.CreateTree(SchemaNameConstants.GlobalChangeVectorTree);
+            var tree = tx.CreateTree(SchemaNameConstants.GlobalChangeVectorTree);
             ReplicationUtils.WriteChangeVectorTo(context, changeVector, tree);
         }
 
-        public long GetLastReplicateEtagFrom(TransactionOperationContext context, string dbId)
+        public long GetLastReplicateEtagFrom(Transaction tx, string dbId)
         {
-            var readTree = context.Transaction.InnerTransaction.ReadTree(SchemaNameConstants.LastReplicatedEtagsTree);
+            var readTree = tx.ReadTree(SchemaNameConstants.LastReplicatedEtagsTree);
             var readResult = readTree.Read(dbId);
-            if (readResult == null)
-                return 0;
-            return readResult.Reader.ReadLittleEndianInt64();
+
+            return readResult?.Reader.ReadLittleEndianInt64() ?? 0;
         }
 
-        public void SetLastReplicateEtagFrom(TransactionOperationContext context, string dbId, long etag)
+        public void SetLastReplicateEtagFrom(Transaction tx, ByteStringContext context, string dbId, long etag)
         {
-            var etagsTree = context.Transaction.InnerTransaction.CreateTree(SchemaNameConstants.LastReplicatedEtagsTree);
+            var etagsTree = tx.CreateTree(SchemaNameConstants.LastReplicatedEtagsTree);
             Slice etagSlice;
             Slice keySlice;
-            using (Slice.From(context.Allocator, dbId, out keySlice))
-            using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
+            using (Slice.From(context, dbId, out keySlice))
+            using (Slice.External(context, (byte*)&etag, sizeof(long), out etagSlice))
             {
                 etagsTree.Add(keySlice, etagSlice);
             }
@@ -235,7 +269,7 @@ namespace Raven.Server.Documents
 
 
         private void MergeEntryVectorWithGlobal(Transaction tx,
-            TransactionOperationContext context,
+            ByteStringContext context,
             ChangeVectorEntry[] changeVectorForWrite)
         {
             var globalChangeVectorTree = tx.ReadTree(SchemaNameConstants.GlobalChangeVectorTree);
@@ -250,20 +284,13 @@ namespace Raven.Server.Documents
                 var etagBigEndian = Bits.SwapBytes(item.Etag);
                 Slice key;
                 Slice value;
-                using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out key))
-                using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out value))
+                using (Slice.External(context, (byte*)&dbId, sizeof(Guid), out key))
+                using (Slice.External(context, (byte*)&etagBigEndian, sizeof(long), out value))
                     globalChangeVectorTree.Add(key, value);
             }
         }
 
-        public IndexEntryMetadata GetIndexMetadataByName(string name, bool returnNullIfTombstone = true)
-        {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
-            using (var tx = _environment.ReadTransaction())
-                return GetIndexMetadataByNameInternal(tx, context, name, returnNullIfTombstone);
-        }
-
+       
         private void ThrowIfAlreadyExistsAndOverwriting(
             string indexName,
             IndexEntryType type,
@@ -305,7 +332,8 @@ namespace Raven.Server.Documents
             throw new IndexOrTransformerAlreadyExistException(msg);
         }
 
-        private IndexEntryMetadata GetIndexMetadataByNameInternal(Transaction tx, TransactionOperationContext context, string name, bool returnNullIfTombstone)
+        public IndexEntryMetadata GetIndexMetadataByName<TTransaction>(Transaction tx, TransactionOperationContext<TTransaction> context, string name, bool returnNullIfTombstone = true)
+            where TTransaction : RavenTransaction
         {
             var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
 
@@ -316,6 +344,7 @@ namespace Raven.Server.Documents
 
             return tvr == null ? null : TableValueToMetadata(tvr, context, returnNullIfTombstone);
         }
+
 
         private IndexEntryMetadata TableValueToMetadata(TableValueReader tvr,
             JsonOperationContext context,
@@ -338,15 +367,10 @@ namespace Raven.Server.Documents
         }
 
 
-        public long ReadLastEtag()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public long ReadLastEtag(Transaction tx)
         {
-            JsonOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
-            using (var tx = _environment.ReadTransaction())
-            {
-                var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
-                return ReadLastEtag(table);
-            }
+            return ReadLastEtag(tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable));
         }
 
         //since both transformers and indexes need to store the same information,
@@ -366,44 +390,33 @@ namespace Raven.Server.Documents
             return Bits.SwapBytes(*(long*)tvr.Read((int)MetadataFields.Etag, out size));
         }
 
-        private void DeleteIndexMetadataForRemovedIndexesAndTransformers(IndexStore indexStore,
+        private void DeleteIndexMetadataForRemovedIndexesAndTransformers(Transaction tx, DocumentsOperationContext context,IndexStore indexStore,
             TransformerStore transformerStore)
         {
-            TransactionOperationContext context;
             var toRemove = new List<IndexEntryMetadata>();
-
-            using (_contextPool.AllocateOperationContext(out context))
+            var table = tx.OpenTable(IndexesTableSchema,
+                SchemaNameConstants.IndexMetadataTable);
+            foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], 0))
             {
-                using (var tx = context.OpenReadTransaction())
+                var metadata = TableValueToMetadata(tvr, context, true);
+                if (metadata == null) //noting to do if it is a tombstone
+                    continue;
+
+                if (metadata.Type == IndexEntryType.Index &&
+                    indexStore.GetIndex(metadata.Id) == null)
                 {
-                    var table = tx.InnerTransaction.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
-                    foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], 0))
-                    {
-                        var metadata = TableValueToMetadata(tvr, context, true);
-                        if (metadata == null) //noting to do if it is a tombstone
-                            continue;
-
-                        if (metadata.Type == IndexEntryType.Index &&
-                            indexStore.GetIndex(metadata.Id) == null)
-                        {
-                            toRemove.Add(metadata);
-                        }
-
-                        if (metadata.Type == IndexEntryType.Transformer &&
-                            transformerStore.GetTransformer(metadata.Id) == null)
-                        {
-                            toRemove.Add(metadata);
-                        }
-                    }
+                    toRemove.Add(metadata);
                 }
 
-                using (var tx = context.OpenWriteTransaction())
+                if (metadata.Type == IndexEntryType.Transformer &&
+                    transformerStore.GetTransformer(metadata.Id) == null)
                 {
-                    foreach (var metadata in toRemove)
-                        WriteEntry(tx.InnerTransaction, metadata.Name, metadata.Type, -1, context);
-                    tx.Commit();
+                    toRemove.Add(metadata);
                 }
             }
+
+            foreach (var metadata in toRemove)
+                WriteEntry(tx, metadata.Name, metadata.Type, -1, context);
         }
 
         public class IndexEntryMetadata

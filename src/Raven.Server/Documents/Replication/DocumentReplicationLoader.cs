@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Replication
             DocumentsOperationContext documentsOperationContext;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
             using (var writer = new BlittableJsonTextWriter(documentsOperationContext, tcpConnectionOptions.Stream))
-            using (documentsOperationContext.OpenReadTransaction())
+            using (var tx = documentsOperationContext.OpenReadTransaction())
             {
                 var documentsChangeVector = new DynamicJsonArray();
                 foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext))
@@ -93,7 +93,8 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 var indexesChangeVector = new DynamicJsonArray();
-                foreach (var changeVectorEntry in _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector())
+                var changeVectorAsArray = _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector(tx.InnerTransaction);
+                foreach (var changeVectorEntry in changeVectorAsArray)
                 {
                     indexesChangeVector.Add(new DynamicJsonValue
                     {
@@ -107,7 +108,7 @@ namespace Raven.Server.Documents.Replication
                     [nameof(ReplicationMessageReply.Type)] = "Ok",
                     [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                     [nameof(ReplicationMessageReply.LastEtagAccepted)] = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId),
-                    [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(getLatestEtagMessage.SourceDatabaseId),
+                    [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(tx.InnerTransaction, getLatestEtagMessage.SourceDatabaseId),
                     [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector,
                     [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVector
                 });

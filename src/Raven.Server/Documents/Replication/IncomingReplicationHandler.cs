@@ -10,7 +10,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using System.Text;
-using Jint;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.Server.ServerWide;
@@ -101,16 +100,16 @@ namespace Raven.Server.Documents.Replication
                                 string messageType = null;
                                 try
                                 {
-                                    messageType = ValidateReplicationMessageAndGetType(message);
+                                    if (!message.TryGet(nameof(ReplicationMessageHeader.Type), out messageType))
+                                        throw new InvalidDataException("Expected the message to have a 'Type' field. The property was not found");
 
                                     long lastIndexOrTransformerEtag;
                                     long lastDocumentEtag;
-                                    if (!message.TryGet("LastDocumentEtag", out lastDocumentEtag))
+                                    if (!message.TryGet(nameof(ReplicationMessageHeader.LastDocumentEtag), out lastDocumentEtag))
                                         throw new InvalidOperationException(
                                             "Expected LastDocumentEtag property in the replication message, but didn't find it..");
 
-                                    if (!message.TryGet("LastIndexOrTransformerEtag",
-                                            out lastIndexOrTransformerEtag))
+                                    if (!message.TryGet(nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag), out lastIndexOrTransformerEtag))
                                         throw new InvalidOperationException(
                                             "Expected LastIndexOrTransformerEtag property in the replication message, but didn't find it..");
 
@@ -123,6 +122,7 @@ namespace Raven.Server.Documents.Replication
                                             HandleReceivedIndexOrTransformerBatch(message, lastIndexOrTransformerEtag);
                                             break;
                                         case ReplicationMessageType.Heartbeat:
+                                            //nothing to do..
                                             break;
                                         default:
                                             throw new ArgumentOutOfRangeException();
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Replication
         private void HandleReceivedIndexOrTransformerBatch(BlittableJsonReaderObject message, long lastIndexOrTransformerEtag)
         {
             int itemCount;
-            if (!message.TryGet("ItemCount", out itemCount))
+            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemCount), out itemCount))
                 throw new InvalidDataException("Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
             var replicatedIndexTransformerCount = itemCount;
 
@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Replication
         private void HandleReceivedDocumentBatch(BlittableJsonReaderObject message, long lastDocumentEtag)
         {
             int itemCount;
-            if (!message.TryGet("ItemCount", out itemCount))
+            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemCount), out itemCount))
                 throw new InvalidDataException("Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
 
             ReceiveSingleDocumentsBatch(itemCount, lastDocumentEtag);
@@ -235,10 +235,10 @@ namespace Raven.Server.Documents.Replication
 
             try
             {
-                using (_context.OpenWriteTransaction())
+                using (var tx = _context.OpenWriteTransaction())
                 {
                     var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
-                    foreach (var changeVectorEntry in _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector())
+                    foreach (var changeVectorEntry in _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector(tx.InnerTransaction))
                         maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
 
                     foreach (var item in _replicatedIndexesAndTransformers)
@@ -246,7 +246,7 @@ namespace Raven.Server.Documents.Replication
 
                         // TODO: Handle change vector just like documents
 
-                        var relevantMetadata = _database.IndexMetadataPersistence.GetIndexMetadataByName(item.Name);
+                        var relevantMetadata = _database.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, _context, item.Name);
                         var local = relevantMetadata?.ChangeVector;
 
                         ReadChangeVector(item, maxReceivedChangeVectorByDatabase);
@@ -310,11 +310,12 @@ namespace Raven.Server.Documents.Replication
                                     throw new ArgumentOutOfRangeException();
                             }
                         }
-                        _database.IndexMetadataPersistence.SetGlobalChangeVector(maxReceivedChangeVectorByDatabase);
-                        _database.IndexMetadataPersistence.SetLastReplicateEtagFrom(ConnectionInfo.SourceDatabaseId, lastEtag);
+
+                        _database.IndexMetadataPersistence.SetGlobalChangeVector(tx.InnerTransaction,_context.Allocator, maxReceivedChangeVectorByDatabase);
+                        _database.IndexMetadataPersistence.SetLastReplicateEtagFrom(tx.InnerTransaction,_context.Allocator, ConnectionInfo.SourceDatabaseId, lastEtag);
                     }
 
-                    _context.Transaction.Commit();
+                    tx.Commit();
                 }
             }
             catch (Exception e)
@@ -341,6 +342,7 @@ namespace Raven.Server.Documents.Replication
                 //this is severe enough to warrant 'operations' log entry
                 _log.Operations(msg);
             }
+
             _database.Alerts.AddAlert(new Alert
             {
                 Key = _replicationDocument.Source,
@@ -712,7 +714,12 @@ namespace Raven.Server.Documents.Replication
             }
 
             var indexesChangeVectorAsDynamicJson = new DynamicJsonArray();
-            foreach (var changeVectorEntry in _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector())
+            ChangeVectorEntry[] indexesAndTransformersChangeVector;
+            using (var tx = _context.OpenReadTransaction())
+                indexesAndTransformersChangeVector =
+                    _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector(tx.InnerTransaction);
+
+            foreach (var changeVectorEntry in indexesAndTransformersChangeVector)
             {
                 indexesChangeVectorAsDynamicJson.Add(new DynamicJsonValue
                 {
@@ -720,7 +727,6 @@ namespace Raven.Server.Documents.Replication
                     [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
                 });
             }
-
 
             if (_log.IsInfoEnabled)
             {
@@ -739,16 +745,6 @@ namespace Raven.Server.Documents.Replication
             });
 
             writer.Flush();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static string ValidateReplicationMessageAndGetType(BlittableJsonReaderObject message)
-        {
-            string messageType;
-            if (!message.TryGet(nameof(ReplicationMessageReply.Type), out messageType))
-                throw new InvalidDataException("Expected the message to have a 'Type' field. The property was not found");
-
-            return messageType;
         }
 
         public string FromToString => $"from {ConnectionInfo.SourceDatabaseName} at {ConnectionInfo.SourceUrl} (into database {_database.Name})";

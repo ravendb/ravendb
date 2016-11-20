@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -7,7 +8,9 @@ using FastTests.Server.Documents.Replication;
 using Raven.Abstractions.Connection;
 using Raven.Client.Indexes;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Server.Replication
@@ -127,15 +130,22 @@ namespace FastTests.Server.Replication
 
                 store.DatabaseCommands.DeleteIndex(userByName.IndexName);
 
-                var metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByAge.IndexName);
-                Assert.NotNull(metadata);
+                DocumentsOperationContext context;
+                IndexesEtagsStorage.IndexEntryMetadata metadata;
+                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                    using (var tx = context.OpenReadTransaction())                
+                        metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction,context, userByAge.IndexName);
+                    Assert.NotNull(metadata);
 
-                metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByName.IndexName);
-                Assert.Null(metadata);
+                    using (var tx = context.OpenReadTransaction())
+                        metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByName.IndexName);
+                    Assert.Null(metadata);
 
-                store.DatabaseCommands.DeleteIndex(userByAge.IndexName);
-                metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByAge.IndexName);
-                Assert.Null(metadata);
+                    store.DatabaseCommands.DeleteIndex(userByAge.IndexName);
+                    using (var tx = context.OpenReadTransaction())
+                        metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction,context, userByAge.IndexName);
+                    Assert.Null(metadata);
+                
             }
         }
 
@@ -299,11 +309,22 @@ namespace FastTests.Server.Replication
 
                 var databaseStore =
                     await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-                databaseStore.IndexMetadataPersistence.PurgeTombstonesFrom(0, 1024);
 
-                var metadataCollection = databaseStore.IndexMetadataPersistence.GetAfter(0, 0, 1024);
-                Assert.Equal(1, metadataCollection.Count);
-                Assert.Equal(userByAge.IndexName.ToLower(), metadataCollection[0].Name);
+                DocumentsOperationContext context;
+                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    databaseStore.IndexMetadataPersistence.PurgeTombstonesFrom(tx.InnerTransaction,context,0, 1024);
+                    tx.Commit();
+                }
+
+                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var metadataCollection = databaseStore.IndexMetadataPersistence.GetAfter(tx.InnerTransaction,context, 0, 0, 1024);
+                    Assert.Equal(1, metadataCollection.Count);
+                    Assert.Equal(userByAge.IndexName.ToLower(), metadataCollection[0].Name);
+                }
             }
         }
 
@@ -321,11 +342,18 @@ namespace FastTests.Server.Replication
 
                 var databaseStore =
                     await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-                var metadataItems = databaseStore.IndexMetadataPersistence.GetAfter(0, 0, 1024);
-                Assert.Equal(3, metadataItems.Count);
 
-                metadataItems = databaseStore.IndexMetadataPersistence.GetAfter(3, 0, 1024);
-                Assert.Equal(1, metadataItems.Count);
+                List<IndexesEtagsStorage.IndexEntryMetadata> metadataItems;
+                DocumentsOperationContext context;
+                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    metadataItems = databaseStore.IndexMetadataPersistence.GetAfter(tx.InnerTransaction,context, 0, 0, 1024);
+                    Assert.Equal(3, metadataItems.Count);
+
+                    metadataItems = databaseStore.IndexMetadataPersistence.GetAfter(tx.InnerTransaction,context, 3, 0, 1024);
+                    Assert.Equal(1, metadataItems.Count);
+                }
 
                 //this one was created last, so it has the largest etag
                 Assert.Equal(userByNameAndBirthday.IndexName.ToLower(), metadataItems[0].Name);
@@ -333,9 +361,13 @@ namespace FastTests.Server.Replication
                 store.DatabaseCommands.DeleteIndex(userByName.IndexName);
                 store.DatabaseCommands.DeleteIndex(userByNameAndBirthday.IndexName);
 
-                metadataItems = databaseStore.IndexMetadataPersistence.GetAfter(0, 0, 1024);
-                Assert.Equal(3, metadataItems.Count); //together with tombstones
-                Assert.Equal(2, metadataItems.Count(item => item.Id == -1));
+                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    metadataItems = databaseStore.IndexMetadataPersistence.GetAfter(tx.InnerTransaction,context, 0, 0, 1024);
+                    Assert.Equal(3, metadataItems.Count); //together with tombstones
+                    Assert.Equal(2, metadataItems.Count(item => item.Id == -1));
+                }
             }
         }
 
@@ -354,17 +386,25 @@ namespace FastTests.Server.Replication
                 var databaseStore =
                     await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
-                var metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByAge.IndexName,
-                    returnNullIfTombstone: false);
-                Assert.NotNull(metadata);
-                Assert.Equal(-1, metadata.Id);
-                Assert.Equal(userByAge.IndexName.ToLower(), metadata.Name);
 
-                metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByName.IndexName,
-                    returnNullIfTombstone: false);
-                Assert.NotNull(metadata);
-                Assert.Equal(-1, metadata.Id);
-                Assert.Equal(userByName.IndexName.ToLower(), metadata.Name);
+                DocumentsOperationContext context;
+                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
+
+                {
+                    var metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction,context, userByAge.IndexName,
+                        returnNullIfTombstone: false);
+                    Assert.NotNull(metadata);
+                    Assert.Equal(-1, metadata.Id);
+                    Assert.Equal(userByAge.IndexName.ToLower(), metadata.Name);
+
+
+                    metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction,context, userByName.IndexName,
+                        returnNullIfTombstone: false);
+                    Assert.NotNull(metadata);
+                    Assert.Equal(-1, metadata.Id);
+                    Assert.Equal(userByName.IndexName.ToLower(), metadata.Name);
+                }
 
             }
         }
@@ -382,17 +422,24 @@ namespace FastTests.Server.Replication
                 var databaseStore =
                     await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
-                var metadataByName = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByName.IndexName);
-                Assert.NotNull(metadataByName);
+                DocumentsOperationContext context;
+                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var metadataByName =
+                        databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction,context, userByName.IndexName);
+                    Assert.NotNull(metadataByName);
 
-                var serversideIndexMetadata = databaseStore.IndexStore.GetIndex(userByName.IndexName);
-                Assert.Equal(serversideIndexMetadata.IndexId, metadataByName.Id);
+                    var serversideIndexMetadata = databaseStore.IndexStore.GetIndex(userByName.IndexName);
+                    Assert.Equal(serversideIndexMetadata.IndexId, metadataByName.Id);
 
-                var metadataByAge = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByAge.IndexName);
-                Assert.NotNull(metadataByAge);
+                    var metadataByAge =
+                        databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction,context, userByAge.IndexName);
+                    Assert.NotNull(metadataByAge);
 
-                serversideIndexMetadata = databaseStore.IndexStore.GetIndex(userByAge.IndexName);
-                Assert.Equal(serversideIndexMetadata.IndexId, metadataByAge.Id);
+                    serversideIndexMetadata = databaseStore.IndexStore.GetIndex(userByAge.IndexName);
+                    Assert.Equal(serversideIndexMetadata.IndexId, metadataByAge.Id);
+                }
             }
         }
 
@@ -440,15 +487,21 @@ namespace FastTests.Server.Replication
                 var databaseStore =
                     await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
-                var metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(name);
-                Assert.Equal(1, metadata.ChangeVector.Length); //sanity check
+                DocumentsOperationContext context;
+                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
 
-                /*
-                 transformers and etags share the same tombstone,
-                 so if transformer created, then deleted, then index created under the same name as transformer, the change vector
-                 which represents history of the object will be preserved
-                */
-                Assert.Equal(3, metadata.ChangeVector[0].Etag); 
+                {
+                    var metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction,context, name);
+                    Assert.Equal(1, metadata.ChangeVector.Length); //sanity check
+
+                    /*
+                     transformers and etags share the same tombstone,
+                     so if transformer created, then deleted, then index created under the same name as transformer, the change vector
+                     which represents history of the object will be preserved
+                    */
+                    Assert.Equal(3, metadata.ChangeVector[0].Etag);
+                }
             }
         }
 
@@ -469,15 +522,21 @@ namespace FastTests.Server.Replication
                 var databaseStore =
                     await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
-                var metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(name);
-                Assert.Equal(1, metadata.ChangeVector.Length); //sanity check
+                DocumentsOperationContext context;
+                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
 
-                /*
-                 transformers and etags share the same tombstone,
-                 so if transformer created, then deleted, then index created under the same name as transformer, the change vector
-                 which represents history of the object will be preserved
-                */
-                Assert.Equal(3, metadata.ChangeVector[0].Etag);
+                {
+                    var metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction,context, name);
+                    Assert.Equal(1, metadata.ChangeVector.Length); //sanity check
+
+                    /*
+                     transformers and etags share the same tombstone,
+                     so if transformer created, then deleted, then index created under the same name as transformer, the change vector
+                     which represents history of the object will be preserved
+                    */
+                    Assert.Equal(3, metadata.ChangeVector[0].Etag);
+                }
             }
         }
 
@@ -503,9 +562,17 @@ namespace FastTests.Server.Replication
                     usernameToUpperTransformer.Execute(store);
                     databaseStore = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
-                    Assert.NotNull(databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByNameIndex.IndexName));
-                    Assert.NotNull(databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByAgeIndex.IndexName));
-                    Assert.NotNull(databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(usernameToUpperTransformer.TransformerName));
+                    DocumentsOperationContext context;
+                    using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        Assert.NotNull(
+                            databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction,context, userByNameIndex.IndexName));
+                        Assert.NotNull(
+                            databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAgeIndex.IndexName));
+                        Assert.NotNull(
+                            databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, usernameToUpperTransformer.TransformerName));
+                    }
                 }
 
                 indexesPath = databaseStore.Configuration.Indexing.IndexStoragePath;
@@ -517,9 +584,17 @@ namespace FastTests.Server.Replication
                 {
                     databaseStore = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
-                    Assert.Null(databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByNameIndex.IndexName));
-                    Assert.Null(databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(userByAgeIndex.IndexName));
-                    Assert.Null(databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(usernameToUpperTransformer.TransformerName));
+                    DocumentsOperationContext context;
+                    using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        Assert.Null(
+                            databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByNameIndex.IndexName));
+                        Assert.Null(
+                            databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAgeIndex.IndexName));
+                        Assert.Null(
+                            databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, usernameToUpperTransformer.TransformerName));
+                    }
                 }
             }
             finally

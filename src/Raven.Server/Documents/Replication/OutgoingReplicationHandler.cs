@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.Replication
         private TcpClient _tcpClient;
         private BlittableJsonTextWriter _writer;
         private JsonOperationContext.MultiDocumentParser _parser;
-        internal DocumentsOperationContext _context;
+        internal DocumentsOperationContext _documentsContext;
 
         internal CancellationToken CancellationToken => _cts.Token;
 
@@ -111,24 +112,24 @@ namespace Raven.Server.Documents.Replication
                 {
                     ConnectSocket(connectionInfo, _tcpClient);
 
-                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context))
+                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out _documentsContext))
                     using (var stream = _tcpClient.GetStream())
                     {
                         var documentSender = new ReplicationDocumentSender(stream, this, _log);
                         var indexAndTransformerSender = new ReplicationIndexTransformerSender(stream, this, _log);
 
-                        using (_writer = new BlittableJsonTextWriter(_context, stream))
-                        using (_parser = _context.ParseMultiFrom(stream))
+                        using (_writer = new BlittableJsonTextWriter(_documentsContext, stream))
+                        using (_parser = _documentsContext.ParseMultiFrom(stream))
                         {
                             //send initial connection information
-                            _context.Write(_writer, new DynamicJsonValue
+                            _documentsContext.Write(_writer, new DynamicJsonValue
                             {
-                                ["DatabaseName"] = _destination.Database,
-                                ["Operation"] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
+                                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = _destination.Database,
+                                [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
                             });
 
                             //start request/response for fetching last etag
-                            _context.Write(_writer, new DynamicJsonValue
+                            _documentsContext.Write(_writer, new DynamicJsonValue
                             {
                                 ["Type"] = "GetLastEtag",
                                 ["SourceDatabaseId"] = _database.DbId.ToString(),
@@ -141,7 +142,7 @@ namespace Raven.Server.Documents.Replication
                             //handle initial response to last etag and staff
                             try
                             {
-                                using (_context.OpenReadTransaction())
+                                using (_documentsContext.OpenReadTransaction())
                                     HandleServerResponse();
                             }
                             catch (Exception e)
@@ -155,8 +156,15 @@ namespace Raven.Server.Documents.Replication
 
                             while (_cts.IsCancellationRequested == false)
                             {
-                                _context.ResetAndRenew();
-                                var currentEtag = _database.IndexMetadataPersistence.ReadLastEtag();
+                                _documentsContext.ResetAndRenew();
+                                long currentEtag;
+
+                                Debug.Assert(_database.IndexMetadataPersistence.IsInitialized);
+
+                                using (_documentsContext.OpenReadTransaction())
+                                    currentEtag =
+                                        _database.IndexMetadataPersistence.ReadLastEtag(
+                                            _documentsContext.Transaction.InnerTransaction);
 
                                 if (currentEtag != indexAndTransformerSender.LastEtag)
                                 {
@@ -165,10 +173,10 @@ namespace Raven.Server.Documents.Replication
 
                                 if (documentSender.ExecuteReplicationOnce() == false)
                                 {
-                                    using (_context.OpenReadTransaction())
+                                    using (_documentsContext.OpenReadTransaction())
                                     {
                                         currentEtag =
-                                            DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction);
+                                            DocumentsStorage.ReadLastEtag(_documentsContext.Transaction.InnerTransaction);
                                         if (currentEtag != _lastSentDocumentEtag)
                                             continue;
                                     }
@@ -177,8 +185,8 @@ namespace Raven.Server.Documents.Replication
                                 //if this returns false, this means either timeout or canceled token is activated                    
                                 while (_waitForChanges.Wait(_minimalHeartbeatInterval, _cts.Token) == false)
                                 {
-                                    _context.ResetAndRenew();
-                                    using (_context.OpenReadTransaction())
+                                    _documentsContext.ResetAndRenew();
+                                    using (_documentsContext.OpenReadTransaction())
                                     {
                                         SendHeartbeat();
                                     }
@@ -216,7 +224,7 @@ namespace Raven.Server.Documents.Replication
 
         internal void WriteToServerAndFlush(DynamicJsonValue val)
         {
-            _context.Write(_writer, val);
+            _documentsContext.Write(_writer, val);
             _writer.Flush();
         }
 
@@ -227,40 +235,7 @@ namespace Raven.Server.Documents.Replication
             if(replicationBatchReply.MessageType == null)
                 throw new InvalidOperationException("MessageType on replication response is null. This is likely is a symptom of an issue, and should be investigated.");
 
-            switch (replicationBatchReply.MessageType)
-            {
-                case ReplicationMessageType.Documents:
-                    UpdateDestnationChangeVectorForDocuments(replicationBatchReply);
-                    break;
-                case ReplicationMessageType.IndexesTransformers:
-                    UpdateDestinationChangeVectorForIndexesTransformers(replicationBatchReply);
-                    break;
-                case ReplicationMessageType.Heartbeat:
-                    UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);                    
-                    break;
-                default:
-                    //if there are changes that introduce unknown message, throw
-                    throw new ArgumentOutOfRangeException();
-            }
-
-        }
-
-        private void UpdateDestinationChangeVectorForIndexesTransformers(ReplicationMessageReply replicationBatchReply)
-        {
-            _lastSentIndexOrTransformerEtag = replicationBatchReply.LastEtagAccepted;
-
-            _destinationLastKnownIndexOrTransformerChangeVectorAsString = replicationBatchReply.DocumentsChangeVector.Format();
-
-            foreach (var changeVectorEntry in replicationBatchReply.DocumentsChangeVector)
-            {
-                _destinationLastKnownIndexOrTransformerChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
-            }
-
-            if (_database.IndexMetadataPersistence.ReadLastEtag() != replicationBatchReply.LastEtagAccepted &&
-                DateTime.UtcNow - _lastIndexOrTransformerSentTime > _minimalHeartbeatInterval)
-            {
-                _waitForChanges.Set();
-            }
+            UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);
         }
 
         private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
@@ -269,8 +244,7 @@ namespace Raven.Server.Documents.Replication
             _lastSentIndexOrTransformerEtag = replicationBatchReply.LastIndexTransformerEtagAccepted;
 
             _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.DocumentsChangeVector.Format();
-            _destinationLastKnownIndexOrTransformerChangeVectorAsString =
-                replicationBatchReply.DocumentsChangeVector.Format();
+            _destinationLastKnownIndexOrTransformerChangeVectorAsString = replicationBatchReply.IndexTransformerChangeVector.Format();
 
             foreach (var changeVectorEntry in replicationBatchReply.DocumentsChangeVector)
             {
@@ -282,7 +256,7 @@ namespace Raven.Server.Documents.Replication
                 _destinationLastKnownIndexOrTransformerChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
 
-            if (DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction) != replicationBatchReply.LastEtagAccepted)
+            if (DocumentsStorage.ReadLastEtag(_documentsContext.Transaction.InnerTransaction) != replicationBatchReply.LastEtagAccepted)
             {
                 // We have changes that the other side doesn't have, this can be because we have writes
                 // or because we have documents that were replicated to us. Either way, we need to sync
@@ -293,34 +267,13 @@ namespace Raven.Server.Documents.Replication
                     _waitForChanges.Set();
             }
 
-            if (_database.IndexMetadataPersistence.ReadLastEtag() !=
+            if (_database.IndexMetadataPersistence.ReadLastEtag(_documentsContext.Transaction.InnerTransaction) !=
                 replicationBatchReply.LastIndexTransformerEtagAccepted)
             {
                 if (DateTime.UtcNow - _lastIndexOrTransformerSentTime > _minimalHeartbeatInterval)
                     _waitForChanges.Set();
             }
-        }
-
-        private void UpdateDestnationChangeVectorForDocuments(ReplicationMessageReply replicationBatchReply)
-        {
-            _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
-            _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.CurrentChangeVector.Format();
-
-            foreach (var changeVectorEntry in replicationBatchReply.CurrentChangeVector)
-            {
-                _destinationLastKnownDocumentChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
-            }
-            if (DocumentsStorage.ReadLastEtag(_context.Transaction.InnerTransaction) != replicationBatchReply.LastEtagAccepted)
-            {
-                // We have changes that the other side doesn't have, this can be because we have writes
-                // or because we have documents that were replicated to us. Either way, we need to sync
-                // those up with the remove side, so we'll start the replication loop again.
-                // We don't care if they are locally modified or not, because we filter documents that
-                // the other side already have (based on the change vector).
-                if (DateTime.UtcNow - _lastDocumentSentTime > _minimalHeartbeatInterval)
-                    _waitForChanges.Set();
-            }
-        }
+        }       
 
         private string FromToString => $"from {_database.ResourceName} to {_destination.Database} at {_destination.Url}";
 
@@ -330,12 +283,12 @@ namespace Raven.Server.Documents.Replication
         {
             try
             {
-                _context.Write(_writer, new DynamicJsonValue
+                _documentsContext.Write(_writer, new DynamicJsonValue
                 {
-                    ["Type"] = ReplicationMessageType.Heartbeat,
-                    ["LastDocumentEtag"] = _lastSentDocumentEtag,
-                    ["LastIndexOrTransformerEtag"] = _lastSentIndexOrTransformerEtag,
-                    ["ItemCount"] = 0                    
+                    [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
+                    [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
+                    [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _lastSentIndexOrTransformerEtag,
+                    [nameof(ReplicationMessageHeader.ItemCount)] = 0                    
                 });
                 _writer.Flush();
             }
@@ -360,10 +313,12 @@ namespace Raven.Server.Documents.Replication
 
         internal void HandleServerResponse()
         {
+            bool hasSucceededParsingResponse = false;
             try
             {
                 using (var replicationBatchReplyMessage = _parser.ParseToMemory("replication acknowledge message"))
                 {
+                    hasSucceededParsingResponse = true;
                     var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
 
                     if (replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Ok)
@@ -397,7 +352,14 @@ namespace Raven.Server.Documents.Replication
             {
                 if (_log.IsInfoEnabled)
                 {
-                    _log.Info("Failed to read server response.. This is not supposed to happen and should be investigated.",e);
+                    if (!hasSucceededParsingResponse && e is SocketException)
+                    {
+                        _log.Info("Got Socket exception while trying to receive response from the remote node. This is probably due to exception being thrown on the other end for some reason. This is not supposed to happen and should be investigated.",e);
+                    }
+                    else
+                    {
+                        _log.Info("Failed to read server response.. This is not supposed to happen and should be investigated.",e);
+                    }
                 }    
 
                 throw;
