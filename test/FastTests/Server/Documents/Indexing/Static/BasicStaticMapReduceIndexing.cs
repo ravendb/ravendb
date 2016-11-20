@@ -182,15 +182,10 @@ select new
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
-                        index.DoIndexingWork(scope, CancellationToken.None);
-
-                        Assert.Equal(2, batchStats.MapAttempts);
-                        Assert.Equal(2, batchStats.MapSuccesses);
-                        Assert.Equal(0, batchStats.MapErrors);
-
-                        Assert.Equal(3, batchStats.ReduceAttempts);
-                        Assert.Equal(3, batchStats.ReduceSuccesses);
-                        Assert.Equal(0, batchStats.ReduceErrors);
+                        while (index.DoIndexingWork(scope, CancellationToken.None))
+                        {
+                            
+                        }
 
                         var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
