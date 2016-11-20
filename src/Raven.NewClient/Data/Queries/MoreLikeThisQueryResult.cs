@@ -6,7 +6,7 @@ namespace Raven.NewClient.Client.Data.Queries
     {
     }
 
-    public abstract class MoreLikeThisQueryResult<T> : QueryResultBase<T>
+    public abstract class MoreLikeThisQueryResult<T> : QueryResultBase
     {
     }
 }

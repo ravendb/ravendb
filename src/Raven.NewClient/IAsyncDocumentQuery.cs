@@ -78,12 +78,12 @@ namespace Raven.NewClient.Client
         ///     Transformer parameters that will be passed to transformer if one is specified.
         /// </summary>
         [Obsolete("Use SetTransformerParameters instead.")]
-        void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
+        void SetQueryInputs(Dictionary<string, object> queryInputs);
 
         /// <summary>
         ///     Transformer parameters that will be passed to transformer if one is specified.
         /// </summary>
-        void SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters);
+        void SetTransformerParameters(Dictionary<string, object> transformerParameters);
 
         /// <summary>
         ///     Ability to use one factory to determine spatial shape that will be used in query.

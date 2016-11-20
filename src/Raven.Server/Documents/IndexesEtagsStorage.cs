@@ -158,7 +158,7 @@ namespace Raven.Server.Documents
             if (changeVectorForWrite == null) throw new ArgumentException("changeVector == null, should not be so");
 
             Slice indexNameAsSlice;
-            using (DocumentsStorage.GetSliceFromKey(context, indexName, out indexNameAsSlice))
+                using (DocumentKeyWorker.GetSliceFromKey(context, indexName, out indexNameAsSlice))
             {
                 ThrowIfAlreadyExistsAndOverwriting(indexName, type, indexIndexId, table, indexNameAsSlice, existing);
 
@@ -339,7 +339,7 @@ namespace Raven.Server.Documents
 
             Slice nameAsSlice;
             TableValueReader tvr;
-            using (DocumentsStorage.GetSliceFromKey(context, name, out nameAsSlice))
+            using (DocumentKeyWorker.GetSliceFromKey(context, name, out nameAsSlice))
                 tvr = table.ReadByKey(nameAsSlice);
 
             return tvr == null ? null : TableValueToMetadata(tvr, context, returnNullIfTombstone);

@@ -13,7 +13,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "RavenDB" }, "users/1");
                     await session.SaveChangesAsync();
@@ -30,7 +30,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "RavenDB" }, "users/1");
                     await session.StoreAsync(new User { Name = "Hibernating Rhinos" }, "users/2");
@@ -47,7 +47,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "RavenDB" }, "users/1");
                     await session.StoreAsync(new User { Name = "Hibernating Rhinos" }, "users/2");
@@ -65,7 +65,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "RavenDB" }, "users/1");
                     await session.StoreAsync(new User { Name = "Hibernating Rhinos" }, "users/2");
@@ -82,7 +82,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "RavenDB" }, "users/1");
                     await session.StoreAsync(new User { Name = "Hibernating Rhinos" }, "users/2");

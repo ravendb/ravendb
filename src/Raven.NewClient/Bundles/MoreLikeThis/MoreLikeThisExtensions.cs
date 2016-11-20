@@ -1,11 +1,10 @@
 using System;
 using System.Threading.Tasks;
-
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Document.Async;
-using Raven.NewClient.Client.Document.SessionOperations;
 using Raven.NewClient.Client.Indexes;
 
 namespace Raven.NewClient.Client.Bundles.MoreLikeThis
@@ -66,7 +65,8 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
 
         public static T[] MoreLikeThis<T>(this ISyncAdvancedSessionOperation advancedSession, string index, string transformer, MoreLikeThisQuery parameters)
         {
-            if (string.IsNullOrEmpty(index))
+            throw new NotImplementedException();
+            /*if (string.IsNullOrEmpty(index))
                 throw new ArgumentException("Index name cannot be null or empty", "index");
 
             parameters.IndexName = index;
@@ -94,7 +94,7 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
                 }
             } while (loadOperation.SetResult(loadResult));
 
-            return loadOperation.Complete<T>();
+            return loadOperation.Complete<T>();*/
         }
 
         public static Task<T[]> MoreLikeThisAsync<T, TIndexCreator>(this IAsyncAdvancedSessionOperations advancedSession, string documentId) where TIndexCreator : AbstractIndexCreationTask, new()
@@ -151,7 +151,8 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
 
         public static async Task<T[]> MoreLikeThisAsync<T>(this IAsyncAdvancedSessionOperations advancedSession, string index, string transformer, MoreLikeThisQuery parameters)
         {
-            if (string.IsNullOrEmpty(index))
+            throw new NotImplementedException();
+            /*if (string.IsNullOrEmpty(index))
                 throw new ArgumentException("Index name cannot be null or empty", "index");
 
             parameters.IndexName = index;
@@ -179,7 +180,7 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
                 }
             } while (loadOperation.SetResult(loadResult));
 
-            return loadOperation.Complete<T>();
+            return loadOperation.Complete<T>();*/
         }
     }
 }

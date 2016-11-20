@@ -624,8 +624,8 @@ namespace Raven.Server.Json
                 writer.WriteString((index.LockMode.ToString()));
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(index.Priority)));
-                writer.WriteString((index.Priority.ToString()));
+                writer.WritePropertyName(nameof(index.State));
+                writer.WriteString(index.State.ToString());
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(index.Type));

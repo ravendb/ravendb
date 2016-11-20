@@ -13,7 +13,7 @@ using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
 
-namespace Raven.NewClient.Client
+namespace Raven.NewClient.Client.Document
 {
     /// <summary>
     ///     Interface for document session

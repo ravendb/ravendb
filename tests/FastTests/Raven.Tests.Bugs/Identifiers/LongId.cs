@@ -9,13 +9,13 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Identifiers
             public long Id { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Can_load_entity()
         {
             using (var store = GetDocumentStore())
             {
                 object id;
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var entity = new Entity();
                     session.Store(entity);
@@ -23,7 +23,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Identifiers
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var entity1 = session.Load<Entity>("entities/" + id);
                     Assert.NotNull(entity1);

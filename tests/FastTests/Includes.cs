@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Linq;
-using Raven.NewClient.Client.Documents;
+using Raven.NewClient.Client.Document;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -9,12 +9,12 @@ namespace NewClientTests.NewClient
 {
     public class Includes :  RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Can_Load_With_Include()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var address = new Address { City = "London", Country = "UK" };
                     session.Store(address);
@@ -23,7 +23,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = session.Include<User>(x => x.AddressId).Load<User>("users/1");
 
@@ -36,7 +36,7 @@ namespace NewClientTests.NewClient
                     Assert.Equal("London", address.City);
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = session.Include("AddressId").Load<User>("users/1");
 
@@ -51,12 +51,12 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Can_Use_Includes_Within_Multi_Load()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Customer {Id = "users/1", Name = "Daniel Lang"});
                     session.Store(new Customer {Id = "users/2", Name = "Oren Eini"});
@@ -68,7 +68,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var orders = session.Query<Order>()
                         .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
@@ -91,7 +91,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Customer {Id = "customers/1"});
                     session.Store(new Order {CustomerId = "customers/1"}, "orders/1234");
@@ -99,7 +99,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var order = session.Include<Order>(x => x.CustomerId)
                         .Load("orders/1234");
@@ -118,7 +118,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Customer2 {Id = 1});
                     session.Store(new Order2 {Customer2Id = 1}, "orders/1234");
@@ -126,7 +126,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var order = session.Include<Order2, Customer2>(x => x.Customer2Id)
                         .Load("orders/1234");
@@ -145,7 +145,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Customer2 {Id = 1});
                     session.Store(new Order2 {Customer2Id = 1}, "orders/1234");
@@ -153,7 +153,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var order = session.Include<Order2, Customer2>(x => x.Customer2IdString)
                         .Load("orders/1234");
@@ -172,7 +172,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Customer {Id = "customers/1", Name = "1"});
                     session.Store(new Customer {Id = "customers/2", Name = "2"});
@@ -184,7 +184,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var orders = session.Query<Order>()
                         .Customize(x => x.Include<Order>(o => o.CustomerId))
@@ -210,7 +210,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Customer2 {Id = 1, Name = "1"});
                     session.Store(new Customer2 {Id = 2, Name = "2"});
@@ -222,7 +222,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var orders = session.Query<Order2>()
                         .Customize(x => x.Include<Order2, Customer2>(o => o.Customer2Id))
@@ -243,12 +243,12 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Can_Include_By_Primary_List_Of_Strings()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Supplier {Name = "1"});
                     session.Store(new Supplier {Name = "2"});
@@ -259,7 +259,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var order = session.Include<Order>(x => x.SupplierIds)
                         .Load("orders/1234");
@@ -283,7 +283,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var guid1 = Guid.NewGuid();
                     var guid2 = Guid.NewGuid();
@@ -296,7 +296,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var order = session.Include<Order2, Supplier2>(x => x.Supplier2Ids)
                         .Load("orders/1234");
@@ -315,12 +315,12 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Can_Include_By_Secondary_String_Property()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Customer());
                     session.Store(new Order {Refferal = new Referral {CustomerId = "customers/1"}}, "orders/1234");
@@ -328,7 +328,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var order = session.Include<Order>(x => x.Refferal.CustomerId)
                         .Load("orders/1234");
@@ -347,7 +347,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Customer2 {Id = 1});
                     session.Store(new Order2 {Refferal2 = new Referral2 {Customer2Id = 1}}, "orders/1234");
@@ -355,7 +355,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var order = session.Include<Order2, Customer2>(x => x.Refferal2.Customer2Id)
                         .Load("orders/1234");
@@ -369,12 +369,12 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Can_Include_By_List_Of_Secondary_String_Property()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Product {Name = "1"});
                     session.Store(new Product {Name = "2"});
@@ -393,7 +393,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var order = session.Include<Order>(x => x.LineItems.Select(li => li.ProductId))
                         .Load("orders/1234");
@@ -415,7 +415,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var guid1 = Guid.NewGuid();
                     var guid2 = Guid.NewGuid();
@@ -437,7 +437,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var order = session.Include<Order2, Product2>(x => x.LineItem2s.Select(li => li.Product2Id))
                         .Load("orders/1234");
@@ -459,7 +459,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Customer2 {Id = 1});
                     session.Store(new Order3 {Customer = new DenormalizedCustomer {Id = 1}}, "orders/1234");
@@ -467,7 +467,7 @@ namespace NewClientTests.NewClient
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var order = session.Include<Order3, Customer2>(x => x.Customer.Id)
                         .Load("orders/1234");

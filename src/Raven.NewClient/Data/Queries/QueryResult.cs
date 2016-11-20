@@ -8,13 +8,14 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Raven.NewClient.Json.Linq;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Data.Queries
 {
     /// <summary>
     /// The result of a query
     /// </summary>
-    public class QueryResult<T> : QueryResultBase<T>
+    public class QueryResult : QueryResultBase
     {
         /// <summary>
         /// Gets or sets the total results for this query
@@ -51,22 +52,19 @@ namespace Raven.NewClient.Client.Data.Queries
         /// This value is the _uncompressed_ size. 
         /// </summary>
         public long ResultSize { get; set; }
-    }
 
-    public class QueryResult : QueryResult<RavenJObject>
-    {
         /// <summary>
         /// Ensures that the query results can be used in snapshots
         /// </summary>
         public void EnsureSnapshot()
         {
-            foreach (var result in Results.Where(x => x != null))
+            foreach (BlittableJsonReaderObject result in Results.Items)
             {
-                result.EnsureCannotBeChangeAndEnableSnapshotting();
+                //result.EnsureCannotBeChangeAndEnableSnapshotting();
             }
-            foreach (var result in Includes)
+            foreach (BlittableJsonReaderObject result in Includes)
             {
-                result.EnsureCannotBeChangeAndEnableSnapshotting();
+                //result.EnsureCannotBeChangeAndEnableSnapshotting();
             }
         }
 
@@ -77,18 +75,18 @@ namespace Raven.NewClient.Client.Data.Queries
         {
             return new QueryResult
             {
-                Results = new List<RavenJObject>(Results.Select(x => x != null ? (RavenJObject)x.CreateSnapshot() : null)),
-                Includes = new List<RavenJObject>(Includes.Select(x => (RavenJObject)x.CreateSnapshot())),
+                Results = Results,
+                Includes = Includes,
                 IndexName = IndexName,
                 IndexTimestamp = IndexTimestamp,
                 IsStale = IsStale,
                 SkippedResults = SkippedResults,
                 TotalResults = TotalResults,
-                Highlightings = Highlightings == null ? null : Highlightings.ToDictionary(
+                Highlightings = Highlightings?.ToDictionary(
                     pair => pair.Key,
                     x => new Dictionary<string, string[]>(x.Value)),
-                ScoreExplanations = ScoreExplanations == null ? null : ScoreExplanations.ToDictionary(x => x.Key, x => x.Value),
-                TimingsInMilliseconds = TimingsInMilliseconds == null ? null : TimingsInMilliseconds.ToDictionary(x => x.Key, x => x.Value),
+                ScoreExplanations = ScoreExplanations?.ToDictionary(x => x.Key, x => x.Value),
+                TimingsInMilliseconds = TimingsInMilliseconds?.ToDictionary(x => x.Key, x => x.Value),
                 LastQueryTime = LastQueryTime,
                 DurationMilliseconds = DurationMilliseconds,
                 ResultEtag = ResultEtag

@@ -18,7 +18,9 @@ using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Client.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Linq
@@ -34,7 +36,7 @@ namespace Raven.NewClient.Client.Linq
         /// </summary>
         protected readonly IDocumentQueryGenerator queryGenerator;
         private readonly Action<QueryResult> afterQueryExecuted;
-        private readonly Action<RavenJObject> afterStreamExcuted;
+        private readonly Action<StreamResult> afterStreamExcuted;
         private bool chainedWhere;
         private int insideWhere;
         private IAbstractDocumentQuery<T> documentQuery;
@@ -43,7 +45,7 @@ namespace Raven.NewClient.Client.Linq
         private string currentPath = string.Empty;
         private int subClauseDepth;
         private string resultsTransformer;
-        private readonly Dictionary<string, RavenJToken> transformerParameters;
+        private readonly Dictionary<string, object> transformerParameters;
         private Expression groupByElementSelector = null;
 
         private LinqPathProvider linqPathProvider;
@@ -75,8 +77,8 @@ namespace Raven.NewClient.Client.Linq
         /// <param name="transformerParameters"></param>
         /// /// <param name ="originalType" >the original type of the query if TransformWith is called otherwise null</param>
         public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted,
-             Action<RavenJObject> afterStreamExecuted, string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer,
-             Dictionary<string, RavenJToken> transformerParameters, Type originalType)
+             Action<StreamResult> afterStreamExecuted, string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer,
+             Dictionary<string, object> transformerParameters, Type originalType)
         {
             FieldsToFetch = fieldsToFetch;
             FieldsToRename = fieldsTRename;
@@ -1999,7 +2001,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         public void RenameResults(QueryResult queryResult)
         {
-            for (int index = 0; index < queryResult.Results.Count; index++)
+            /*for (int index = 0; index < queryResult.Results.Items.Count(); index++)
             {
                 var result = queryResult.Results[index];
                 var safeToModify = (RavenJObject)result.CreateSnapshot();
@@ -2008,12 +2010,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     continue;
                 safeToModify.EnsureCannotBeChangeAndEnableSnapshotting();
                 queryResult.Results[index] = safeToModify;
-            }
+            }*/
+            throw new NotImplementedException();
         }
-
-        public bool RenameSingleResult(ref RavenJObject doc)
+        
+        public bool RenameSingleResult(ref StreamResult doc)
         {
-            var changed = false;
+            /*var changed = false;
             var values = new Dictionary<string, RavenJToken>();
             foreach (var renamedField in FieldsToRename.Select(x => x.OriginalField).Distinct())
             {
@@ -2046,7 +2049,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     doc[rename.OriginalField] = val;
                 }
             }
-            return changed;
+            return changed;*/
+            throw new NotImplementedException();
         }
 
         private object GetQueryResult<TProjection>(IDocumentQuery<TProjection> finalQuery)

@@ -68,12 +68,12 @@ namespace NewClientTests.NewClient.ResultsTransformer
             using (var store = GetDocumentStore())
             {
                 new ProductWithParameter().Execute(store);
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Product() { Id = "products/1", Name = "Irrelevant" });
                     session.SaveChanges();
                 }
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var result = session.Load<ProductWithParameter, ProductWithParameter.Result>("products/1",
                         configure => configure.AddTransformerParameter("input", "Foo"));
@@ -90,12 +90,12 @@ namespace NewClientTests.NewClient.ResultsTransformer
             using (var store = GetDocumentStore())
             {
                 new ProductWithParameter().Execute(store);
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Product() { Id = "products/1", Name = "Irrelevant" });
                     session.SaveChanges();
                 }
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var result = session.Load<ProductWithParameter, ProductWithParameter.Result>("products/1",
                         configure => configure.AddTransformerParameter("input", "Foo"));
@@ -105,18 +105,18 @@ namespace NewClientTests.NewClient.ResultsTransformer
 
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void CanUseResultsTransformerWithQueryWithRemoteDatabase()
         {
             using (var store = GetDocumentStore())
             {
                 new ProductWithParameter().Execute(store);
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Product() { Name = "Irrelevant" });
                     session.SaveChanges();
                 }
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var result = session.Query<Product>()
                                 .Customize(x => x.WaitForNonStaleResults())
@@ -130,18 +130,18 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void CanUseResultTransformerToLoadValueOnNonStoreFieldUsingQuery()
         {
             using (var store = GetDocumentStore())
             {
                 new ProductWithParameter().Execute(store);
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Product() { Name = "Irrelevant" });
                     session.SaveChanges();
                 }
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var result = session.Query<Product>()
                                 .Customize(x => x.WaitForNonStaleResults())
@@ -155,18 +155,18 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void CanUseResultsTransformerWithQuery()
         {
             using (var store = GetDocumentStore())
             {
                 new ProductWithParameter().Execute(store);
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Product() { Name = "Irrelevant" });
                     session.SaveChanges();
                 }
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var result = session.Query<Product>()
                                 .Customize(x => x.WaitForNonStaleResults())
@@ -180,19 +180,19 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void CanUseResultsTransformerWithInclude()
         {
             using (var store = GetDocumentStore())
             {
                 new ProductWithParametersAndInclude().Execute(store);
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Product { Name = "Irrelevant", CategoryId = "Category/1" });
                     session.Store(new Category { Id = "Category/1", Name = "don't know" });
                     session.SaveChanges();
                 }
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var result = session.Query<Product>()
                                 .Customize(x => x.WaitForNonStaleResults())
@@ -214,7 +214,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             {
                 new CastTransformer().Execute(store);
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new User { Id = "users/512", Name = "Tony", LastName = "Vespa"});
                     session.SaveChanges();

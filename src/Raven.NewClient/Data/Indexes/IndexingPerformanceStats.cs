@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.NewClient.Client.Data.Indexes
+namespace Raven.NewClient.Data.Indexes
 {
     public class IndexingPerformanceStats : IndexingPerformanceBasicStats
     {

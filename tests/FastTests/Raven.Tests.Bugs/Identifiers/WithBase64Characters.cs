@@ -18,14 +18,14 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Identifiers
             {
                 store.Initialize();
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var entity = new Entity() { Id = specialId };
                     session.Store(entity);
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var entity1 = session.Load<object>(specialId);
                     Assert.NotNull(entity1);

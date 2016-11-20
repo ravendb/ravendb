@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Client.Data;
-using Raven.Database.Util;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -40,7 +39,7 @@ namespace Raven.Server.Documents.Handlers
                     var index = indexes[i];
                     stats.Indexes[i] = new IndexInformation
                     {
-                        Priority = index.Priority,
+                        State = index.State,
                         IsStale = index.IsStale(context),
                         Name = index.Name,
                         IndexId = index.IndexId,

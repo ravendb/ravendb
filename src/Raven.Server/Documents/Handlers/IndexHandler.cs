@@ -319,100 +319,6 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes/stop", "POST")]
-        public Task Stop()
-        {
-            var types = HttpContext.Request.Query["type"];
-            var names = HttpContext.Request.Query["name"];
-            if (types.Count == 0 && names.Count == 0)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-                Database.IndexStore.StopIndexing();
-                return Task.CompletedTask;
-            }
-
-            if (types.Count != 0 && names.Count != 0)
-                throw new ArgumentException("Query string value 'type' and 'names' are mutually exclusive.");
-
-            if (types.Count != 0)
-            {
-                if (types.Count != 1)
-                    throw new ArgumentException("Query string value 'type' must appear exactly once");
-                if (string.IsNullOrWhiteSpace(types[0]))
-                    throw new ArgumentException("Query string value 'type' must have a non empty value");
-
-                if (string.Equals(types[0], "map", StringComparison.OrdinalIgnoreCase))
-                {
-                    Database.IndexStore.StopMapIndexes();
-                }
-                else if (string.Equals(types[0], "map-reduce", StringComparison.OrdinalIgnoreCase))
-                {
-                    Database.IndexStore.StopMapReduceIndexes();
-                }
-                else
-                {
-                    throw new ArgumentException("Query string value 'type' can only be 'map' or 'map-reduce' but was " + types[0]);
-                }
-            }
-            else if (names.Count != 0)
-            {
-                if (names.Count != 1)
-                    throw new ArgumentException("Query string value 'name' must appear exactly once");
-                if (string.IsNullOrWhiteSpace(names[0]))
-                    throw new ArgumentException("Query string value 'name' must have a non empty value");
-
-                Database.IndexStore.StopIndex(names[0]);
-            }
-
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/databases/*/indexes/start", "POST")]
-        public Task Start()
-        {
-            var types = HttpContext.Request.Query["type"];
-            var names = HttpContext.Request.Query["name"];
-            if (types.Count == 0 && names.Count == 0)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-                Database.IndexStore.StartIndexing();
-                return Task.CompletedTask;
-            }
-
-            if (types.Count != 0 && names.Count != 0)
-                throw new ArgumentException("Query string value 'type' and 'names' are mutually exclusive.");
-
-            if (types.Count != 0)
-            {
-                if (types.Count != 1)
-                    throw new ArgumentException("Query string value 'type' must appear exactly once");
-                if (string.IsNullOrWhiteSpace(types[0]))
-                    throw new ArgumentException("Query string value 'type' must have a non empty value");
-
-                if (string.Equals(types[0], "map", StringComparison.OrdinalIgnoreCase))
-                {
-                    Database.IndexStore.StartMapIndexes();
-                }
-                else if (string.Equals(types[0], "map-reduce", StringComparison.OrdinalIgnoreCase))
-                {
-                    Database.IndexStore.StartMapReduceIndexes();
-                }
-            }
-            else if (names.Count != 0)
-            {
-                if (names.Count != 1)
-                    throw new ArgumentException("Query string value 'name' must appear exactly once");
-                if (string.IsNullOrWhiteSpace(names[0]))
-                    throw new ArgumentException("Query string value 'name' must have a non empty value");
-
-                Database.IndexStore.StartIndex(names[0]);
-            }
-
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET")]
         public Task GenerateCSharpIndexDefinition()
         {
@@ -510,7 +416,7 @@ namespace Raven.Server.Documents.Handlers
             var names = GetStringValuesQueryString("name");
             var priorityStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("priority");
 
-            IndexingPriority priority;
+            IndexPriority priority;
             if (Enum.TryParse(priorityStr, out priority) == false)
                 throw new InvalidOperationException("Query string value 'priority' is not a valid priority: " + priorityStr);
 

@@ -7,9 +7,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document.SessionOperations;
 using Raven.NewClient.Client.Shard;
 using Raven.NewClient.Json.Linq;
 
@@ -58,49 +58,52 @@ namespace Raven.NewClient.Client.Document.Batches
 
         private void HandleResponse(LoadResult loadResult)
         {
-            RequiresRetry = _loadOperation.SetResult(loadResult);
-            if (RequiresRetry == false)
-                Result = _loadOperation.Complete<T>();
+            throw new NotImplementedException();
+            /* RequiresRetry = _loadOperation.SetResult(loadResult);
+             if (RequiresRetry == false)
+                 Result = _loadOperation.Complete<T>();*/
         }
 
         public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
         {
-            var list = new List<LoadResult>(
-                from response in responses
-                let result = response.Result
-                select new LoadResult
-                {
-                    Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-                    Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
-                });
+            throw new NotImplementedException();
+            /* var list = new List<LoadResult>(
+                 from response in responses
+                 let result = response.Result
+                 select new LoadResult
+                 {
+                     Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
+                     Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
+                 });
 
-            var capacity = list.Max(x => x.Results.Count);
+             var capacity = list.Max(x => x.Results.Count);
 
-            var finalResult = new LoadResult
-            {
-                Includes = new List<RavenJObject>(),
-                Results = new List<RavenJObject>(Enumerable.Range(0, capacity).Select(x => (RavenJObject)null))
-            };
+             var finalResult = new LoadResult
+             {
+                 Includes = new List<RavenJObject>(),
+                 Results = new List<RavenJObject>(Enumerable.Range(0, capacity).Select(x => (RavenJObject)null))
+             };
 
 
-            foreach (var multiLoadResult in list)
-            {
-                finalResult.Includes.AddRange(multiLoadResult.Includes);
+             foreach (var multiLoadResult in list)
+             {
+                 finalResult.Includes.AddRange(multiLoadResult.Includes);
 
-                for (int i = 0; i < multiLoadResult.Results.Count; i++)
-                {
-                    if (finalResult.Results[i] == null)
-                        finalResult.Results[i] = multiLoadResult.Results[i];
-                }
-            }
-            RequiresRetry = _loadOperation.SetResult(finalResult);
-            if (RequiresRetry == false)
-                Result = _loadOperation.Complete<T>();
+                 for (int i = 0; i < multiLoadResult.Results.Count; i++)
+                 {
+                     if (finalResult.Results[i] == null)
+                         finalResult.Results[i] = multiLoadResult.Results[i];
+                 }
+             }
+             RequiresRetry = _loadOperation.SetResult(finalResult);
+             if (RequiresRetry == false)
+                 Result = _loadOperation.Complete<T>();*/
         }
 
         public IDisposable EnterContext()
         {
-            return _loadOperation.EnterLoadContext();
+            throw new NotImplementedException();
+            /*return _loadOperation.EnterLoadContext();*/
         }
     }
 }

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Globalization;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data;
 

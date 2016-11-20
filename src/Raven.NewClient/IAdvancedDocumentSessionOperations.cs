@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="IAdvancedDocumentSessionOperations.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -6,14 +6,12 @@
 
 using System;
 using System.Collections.Generic;
-
-using Raven.NewClient.Abstractions.Commands;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Exceptions;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Json.Linq;
+using Raven.NewClient.Client.Blittable;
+using Raven.NewClient.Client.Http;
+using Sparrow.Json;
 
-namespace Raven.NewClient.Client
+namespace Raven.NewClient.Client.Document
 {
     /// <summary>
     ///     Advanced session operations
@@ -29,6 +27,14 @@ namespace Raven.NewClient.Client
         ///     Allow extensions to provide additional state per session
         /// </summary>
         IDictionary<string, object> ExternalState { get; }
+
+        RequestExecuter RequestExecuter { get; }
+        JsonOperationContext Context { get; }
+
+        event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
+        event EventHandler<AfterStoreEventArgs> OnAfterStore;
+        event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
+        event EventHandler<BeforeQueryExecutedEventArgs> OnBeforeQueryExecuted;
 
         /// <summary>
         ///     Gets a value indicating whether any of the entities tracked by the session has changes.
@@ -53,6 +59,7 @@ namespace Raven.NewClient.Client
         ///     The store identifier is the identifier for the particular RavenDB instance.
         /// </summary>
         string StoreIdentifier { get; }
+
         /// <summary>
         ///     Gets or sets a value indicating whether the session should use optimistic concurrency.
         ///     When set to <c>true</c>, a check is made so that a change made behind the session back would fail
@@ -70,7 +77,7 @@ namespace Raven.NewClient.Client
         ///     Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="commands">Array of comands to be executed.</param>
-        void Defer(params ICommandData[] commands);
+        void Defer(params Dictionary<string, object>[] commands);
 
         /// <summary>
         ///     Evicts the specified entity from the session.
@@ -109,7 +116,7 @@ namespace Raven.NewClient.Client
         ///     and associate the current state of the entity with the metadata from the server.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        RavenJObject GetMetadataFor<T>(T instance);
+        IDictionary<string, string> GetMetadataFor<T>(T instance);
 
         /// <summary>
         ///     Determines whether the specified entity has changed.
@@ -143,5 +150,26 @@ namespace Raven.NewClient.Client
         /// Returns all changes for each entity stored within session. Including name of the field/property that changed, its old and new value and change type.
         /// </summary>
         IDictionary<string, DocumentsChanges[]> WhatChanged();
+
+        /// <summary>
+        /// SaveChanges will wait for the changes made to be replicates to `replicas` nodes
+        /// </summary>
+        void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, int replicas = 1, bool majority = false);
+
+        /// <summary>
+        /// SaveChanges will wait for the indexes to catch up with the saved changes
+        /// </summary>
+        void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false, string[] indexes = null);
+
+        /// <summary>
+        /// Convert blittable to entity
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <param name="id"></param>
+        /// <param name="documentFound"></param>
+        /// <returns></returns>
+        object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject documentFound);
+
+        EntityToBlittable EntityToBlittable { get; }
     }
 }

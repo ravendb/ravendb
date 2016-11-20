@@ -6,7 +6,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
 {
     public class Querying : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Can_query_metadata()
         {
             using (var DocStore = GetDocumentStore())
@@ -15,7 +15,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
                 // This test succeeds if I use "Test-Property1" as the  property name.
                 const string propertyName1 = "Test-Property-1";
                 const string propertyValue1 = "Test-Value-1";
-                using (var session = DocStore.OpenNewSession())
+                using (var session = DocStore.OpenSession())
                 {
                     session.Store(user1);
                     var metadata1 = session.Advanced.GetMetadataFor(user1);
@@ -24,7 +24,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
                     session.SaveChanges();
                 }
 
-                using (var session = DocStore.OpenNewSession())
+                using (var session = DocStore.OpenSession())
                 {
                     var result = session.Advanced.DocumentQuery<User>()
                         .WaitForNonStaleResultsAsOfNow()
@@ -39,13 +39,13 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void Index_should_take_into_account_number_of_dashes()
         {
             using (var DocStore = GetDocumentStore())
             {
                 var user1 = new User { Name = "Joe Schmoe" };
-                using (var session = DocStore.OpenNewSession())
+                using (var session = DocStore.OpenSession())
                 {
                     session.Store(user1);
                     var metadata1 = session.Advanced.GetMetadataFor(user1);
@@ -54,7 +54,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
                     session.SaveChanges();
                 }
 
-                using (var session = DocStore.OpenNewSession())
+                using (var session = DocStore.OpenSession())
                 {
                     Assert.Empty(session.Advanced.DocumentQuery<User>()
                                     .WaitForNonStaleResultsAsOfNow()

@@ -13,11 +13,12 @@ using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Async;
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Document.Async;
 using Raven.NewClient.Client.Document.Batches;
-using Raven.NewClient.Client.Listeners;
 using Raven.NewClient.Client.Spatial;
 using Raven.NewClient.Json.Linq;
+using Raven.NewClient.Client;
 
 namespace Raven.NewClient.Client.Document
 {
@@ -30,8 +31,8 @@ namespace Raven.NewClient.Client.Document
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
         /// </summary>
         public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, IDatabaseCommands databaseCommands,
-            IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool  isMapReduce)
-            : base(session, databaseCommands, asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
+            IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, bool  isMapReduce)
+            : base(session, databaseCommands, asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, isMapReduce)
         {
         }
 
@@ -748,7 +749,7 @@ namespace Raven.NewClient.Client.Document
             var asyncDocumentQuery = new AsyncDocumentQuery<TProjection>(theSession,
                                                                          theDatabaseCommands,
                                                                          theAsyncDatabaseCommands,
-                                                                         indexName, fields, projections, queryListeners,
+                                                                         indexName, fields, projections,
                                                                          isMapReduce)
                                         {
                                             pageSize = pageSize,
@@ -803,12 +804,12 @@ namespace Raven.NewClient.Client.Document
             return GenerateSpatialQueryData(fieldName, criteria);
         }
 
-        public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+        public void SetQueryInputs(Dictionary<string, object> queryInputs)
         {
             SetTransformerParameters(queryInputs);
         }
 
-        public void SetTransformerParameters(Dictionary<string, RavenJToken> parameters)
+        public void SetTransformerParameters(Dictionary<string, object> parameters)
         {
             transformerParameters = parameters;
         }
@@ -820,7 +821,8 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         public Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default (CancellationToken))
         {
-            if (queryOperation == null)
+            throw new NotImplementedException();
+            /*if (queryOperation == null)
             {
                 ExecuteBeforeQueryListeners();
                 Take(0);
@@ -829,7 +831,7 @@ namespace Raven.NewClient.Client.Document
 
             var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, AsyncDatabaseCommands.OperationsHeaders);
 
-            return ((AsyncDocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation,token);
+            return ((AsyncDocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation,token);*/
         }
 
         /// <summary>
@@ -1036,5 +1038,6 @@ namespace Raven.NewClient.Client.Document
         {
             base.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
             return this;
-}	}
+        }
+    }
 }

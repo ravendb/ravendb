@@ -11,16 +11,16 @@ namespace Sparrow.Utils
         private const int SCHED_OTHER = 0;
         private const int SCHED_RR = 2;
 
-        public static void TryLowerCurrentThreadPriority()
+        public static void TrySettingCurrentThreadPriority(ThreadPriority priority)
         {
             try
             {
-                SetCurrentThreadPriority(ThreadPriority.BelowNormal);
+                SetCurrentThreadPriority(priority);
             }
             catch (Exception e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info("Could not reduce the thread priority", e);
+                    _log.Info($"Could not change the thread priority to {priority}", e);
             }
         }
 

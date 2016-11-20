@@ -54,7 +54,7 @@ namespace Voron
         internal ExceptionDispatchInfo CatastrophicFailure;
         private readonly WriteAheadJournal _journal;
         private readonly object _txWriter = new object();
-        internal readonly ReaderWriterLockSlim FlushInProgressLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+        internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
 
         private long _transactionsCounter;
@@ -65,6 +65,7 @@ namespace Voron
         private readonly ScratchBufferPool _scratchBufferPool;
         private EndOfDiskSpaceEvent _endOfDiskSpace;
         internal int SizeOfUnflushedTransactionsInJournalFile;
+        internal DateTime LastFlushTime;
 
         private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
         public bool Disposed;
@@ -75,6 +76,7 @@ namespace Voron
 
         public StorageEnvironmentState State { get; private set; }
 
+        public event Action OnLogsApplied;
 
         public StorageEnvironment(StorageEnvironmentOptions options)
         {
@@ -386,7 +388,11 @@ namespace Voron
                 try
                 {
                     long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-                    tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling, context);
+                    tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
+                        context)
+                    {
+                        FlushInProgressLockTaken = flushInProgressReadLockTaken
+                    };
                     ActiveTransactions.Add(tx);
                 }
                 finally
@@ -477,7 +483,7 @@ namespace Voron
                 return;
 
             Monitor.Exit(_txWriter);
-            if (FlushInProgressLock.IsReadLockHeld)
+            if (tx.FlushInProgressLockTaken)
                 FlushInProgressLock.ExitReadLock();
         }
 
@@ -727,6 +733,11 @@ namespace Voron
         public override string ToString()
         {
             return Options.ToString();
+        }
+
+        public void LogsApplied()
+        {
+            OnLogsApplied?.Invoke();
         }
     }
 }

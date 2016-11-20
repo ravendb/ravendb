@@ -16,22 +16,23 @@ using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Cluster;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Abstractions.Replication;
-using Raven.NewClient.Abstractions.Commands;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Connection.Async;
 using Raven.NewClient.Client.Connection.Implementation;
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Connection.Request;
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Connection
@@ -167,7 +168,7 @@ namespace Raven.NewClient.Client.Connection
         {
             AsyncHelpers.RunSync(() => asyncServerClient.SetIndexLockAsync(name, mode));
         }
-        public void SetIndexPriority(string name, IndexingPriority priority)
+        public void SetIndexPriority(string name, IndexPriority priority)
         {
             AsyncHelpers.RunSync(() => asyncServerClient.SetIndexPriorityAsync(name, priority));
         }

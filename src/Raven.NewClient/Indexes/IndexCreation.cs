@@ -12,9 +12,10 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Async;
-using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Exceptions;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Data.Indexes;
 
 namespace Raven.NewClient.Client.Indexes
 {
@@ -442,7 +443,7 @@ namespace Raven.NewClient.Client.Indexes
                     {
                         Definition = x.CreateIndexDefinition(),
                         Name = x.IndexName,
-                        Priority = x.Priority ?? IndexingPriority.Normal
+                        Priority = x.Priority ?? IndexPriority.Normal
                     };
                 })
                 .ToArray();

@@ -10,9 +10,9 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Listeners;
 using Raven.NewClient.Client.Connection.Async;
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Spatial;
 using Raven.NewClient.Json.Linq;
@@ -29,10 +29,10 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         public DocumentQuery(InMemoryDocumentSessionOperations session
             , IDatabaseCommands databaseCommands
-            , IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool isMapReduce)
+            , IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, bool isMapReduce)
             : base(session
             , databaseCommands
-            , asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
+            , asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, isMapReduce)
         {
         }
 
@@ -85,7 +85,6 @@ namespace Raven.NewClient.Client.Document
                                                                      indexName,
                                                                      fieldsToFetch,
                                                                      projectionFields,
-                                                                     queryListeners,
                                                                      isMapReduce)
             {
                 pageSize = pageSize,
@@ -144,13 +143,13 @@ namespace Raven.NewClient.Client.Document
             return this;
         }
 
-        public IDocumentQuery<T> SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+        public IDocumentQuery<T> SetQueryInputs(Dictionary<string, object> queryInputs)
         {
             SetTransformerParameters(queryInputs);
             return this;
         }
 
-        public IDocumentQuery<T> SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters)
+        public IDocumentQuery<T> SetTransformerParameters(Dictionary<string, object> transformerParameters)
         {
             this.transformerParameters = transformerParameters;
             return this;
@@ -179,7 +178,6 @@ namespace Raven.NewClient.Client.Document
                                                                indexName,
                                                                fields,
                                                                projections,
-                                                               queryListeners,
                                                                isMapReduce)
             {
                 pageSize = pageSize,

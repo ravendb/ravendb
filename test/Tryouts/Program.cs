@@ -12,9 +12,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var store = new FastTests.Server.Replication.ReplicationIndexesAndTransformers())
+                using (var store = new FastTests.Server.Documents.Indexing.Static.BasicStaticMapReduceIndexing())
                 {
-                    store.Can_replicate_transformer();
+                    store.Static_map_reduce_index_with_multiple_outputs_per_document().Wait();
                 }
             }
         }

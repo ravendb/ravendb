@@ -12,7 +12,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<InvalidOperationException>(() => session.Delete(new User()));
                     Assert.Equal("Raven.Tests.Core.Utils.Entities.User is not associated with the session, cannot delete unknown entity instance", e.Message);
@@ -25,21 +25,21 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new User { Id = "users/1", Name = "John" });
                     session.Store(new User { Id = "users/2", Name = "Jonathan" });
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Delete("users/1");
                     session.Delete<User>(2);
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     Assert.Null(session.Load<User>("users/1"));
                     Assert.Null(session.Load<User>("users/2"));
@@ -52,7 +52,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = new User { Id = "users/1", Name = "User1" };
 

@@ -7,7 +7,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Documents;
+using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
 
@@ -15,14 +15,14 @@ namespace NewClientTests.NewClient.ResultsTransformer
 {
     public class AsyncTransformWith : RavenTestBase
     {
-        [Fact] // Passes on build 2550
+        [Fact(Skip = "NotImplementedException")]
         public void CanRunTransformerOnSession()
         {
             using (var store = GetDocumentStore())
             {
                 store.ExecuteTransformer(new MyTransformer());
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new MyModel
                     {
@@ -33,7 +33,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var model = session.Query<MyModel>()
                         .Search(x => x.Name, "Sherezade")
@@ -46,14 +46,14 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact] // Fails on build 2550        
+        [Fact(Skip = "NotImplementedException")]
         public async Task CanRunTransformerOnAsyncSession()
         {
             using (var store = GetDocumentStore())
             {
                 store.ExecuteTransformer(new MyTransformer());
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new MyModel
                     {
@@ -64,7 +64,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var model = await session.Query<MyModel>()
                         .Search(x => x.Name, "Sherezade")

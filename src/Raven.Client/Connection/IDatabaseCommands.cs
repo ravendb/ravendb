@@ -436,7 +436,7 @@ namespace Raven.Client.Connection
 
         void SetIndexLock(string name, IndexLockMode mode);
 
-        void SetIndexPriority(string name, IndexingPriority priority);
+        void SetIndexPriority(string name, IndexPriority priority);
 
         /// <summary>
         ///     Seeds the next identity value on the server
@@ -661,6 +661,16 @@ namespace Raven.Client.Connection
         /// Compacts given index.
         /// </summary>
         Operation CompactIndex(string name);
+
+        /// <summary>
+        /// Enables given index. This will be a no-op if index is already enabled.
+        /// </summary>
+        void EnableIndex(string name);
+
+        /// <summary>
+        /// Disables given index. This will be a no-op if index is already disabled.
+        /// </summary>
+        void DisableIndex(string name);
     }
 
     public interface IInfoDatabaseCommands

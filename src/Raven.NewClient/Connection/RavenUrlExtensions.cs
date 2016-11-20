@@ -3,8 +3,9 @@ using System.Collections.Generic;
 
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Extensions;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Data.Indexes;
 
 namespace Raven.NewClient.Client.Connection
 {
@@ -49,7 +50,7 @@ namespace Raven.NewClient.Client.Connection
             return $"{url}/indexes/set-lock?name={index}&mode={mode}";
         }
 
-        public static string SetIndexPriority(this string url, string index, IndexingPriority priority)
+        public static string SetIndexPriority(this string url, string index, IndexPriority priority)
         {
             return $"{url}/indexes/set-priority?name={index}&priority={priority}";
         }

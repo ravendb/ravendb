@@ -11,12 +11,12 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
 {
     public class EscapeQuotes : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void CanProperlyEscapeQuotesInMetadata_Local_1()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = new User();
                     session.Store(user);
@@ -24,7 +24,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);
@@ -33,12 +33,12 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
             }
         }
 
-        [Fact]
+        [Fact(Skip = "NotImplementedException")]
         public void CanProperlyEscapeQuotesInMetadata_Local_2()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = new User();
                     session.Store(user);
@@ -46,7 +46,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);

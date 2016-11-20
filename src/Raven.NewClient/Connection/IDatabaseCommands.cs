@@ -12,20 +12,21 @@ using System.Net;
 using System.Net.Http;
 
 using Raven.NewClient.Abstractions.Cluster;
-using Raven.NewClient.Abstractions.Commands;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Abstractions.Replication;
 using Raven.NewClient.Client.Changes;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Connection.Implementation;
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Connection
@@ -436,7 +437,7 @@ namespace Raven.NewClient.Client.Connection
 
         void SetIndexLock(string name, IndexLockMode mode);
 
-        void SetIndexPriority(string name, IndexingPriority priority);
+        void SetIndexPriority(string name, IndexPriority priority);
 
         /// <summary>
         ///     Seeds the next identity value on the server

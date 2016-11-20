@@ -39,7 +39,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err, "when opening " + filename);
             }
 
-            var result = Syscall.posix_fallocate(_fd, 0, (ulong)journalSize);
+            var result = Syscall.posix_fallocate(_fd, IntPtr.Zero, (UIntPtr)journalSize);
             if (result != 0)
                 PosixHelper.ThrowLastError(result, "when allocating " + filename);
 
@@ -173,7 +173,7 @@ namespace Voron.Platform.Posix
 
         public void Truncate(long size)
         {
-            var result = Syscall.ftruncate(_fd, size);
+            var result = Syscall.ftruncate(_fd, (IntPtr)size);
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();

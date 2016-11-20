@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -15,23 +14,21 @@ using Newtonsoft.Json.Linq;
 
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client;
-using Raven.NewClient.Client.Data.Indexes;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Documents.Commands;
 using Raven.NewClient.Client.Extensions;
+using Raven.NewClient.Data.Indexes;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-
 using Sparrow.Collections;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using DocumentSession = Raven.NewClient.Client.Documents.DocumentSession;
-using InMemoryDocumentSessionOperations = Raven.NewClient.Client.Documents.InMemoryDocumentSessionOperations;
+using Sparrow.Json.Parsing;
+using Sparrow.Json;
+
 
 //using JsonTextWriter = Raven.Imports.Newtonsoft.Json.JsonTextWriter;
 
@@ -267,7 +264,7 @@ namespace NewClientTests
                 if (databaseStatistics.Indexes.All(x => x.IsStale == false))
                     return;
 
-                if (databaseStatistics.Indexes.Any(x => x.Priority == IndexingPriority.Error))
+                if (databaseStatistics.Indexes.Any(x => x.State == IndexState.Error))
                 {
                     break;
                 }
@@ -301,7 +298,7 @@ namespace NewClientTests
 
             var stats = databaseCommands.GetStatistics();
 
-            var corrupted = stats.Indexes.Where(x => x.Priority == IndexingPriority.Error).ToList();
+            var corrupted = stats.Indexes.Where(x => x.State == IndexState.Error).ToList();
             if (corrupted.Count > 0)
             {
                 throw new InvalidOperationException(
@@ -395,14 +392,16 @@ namespace NewClientTests
         /// <param name="etag"></param>
         /// <param name="documentInfo"></param>
         /// <returns></returns>
-        public static BlittableJsonReaderObject GetCommand(Raven.NewClient.Client.Documents.DocumentSession session, string[] ids, 
-            out InMemoryDocumentSessionOperations.DocumentInfo documentInfo)
+        public static BlittableJsonReaderObject GetCommand(IDocumentSession session, string[] ids, 
+            out DocumentInfo documentInfo)
         {
             var command = new GetDocumentCommand
             {
                 Ids = ids
             };
-            session.RequestExecuter.Execute(command, session.Context);
+            if (session.Advanced.RequestExecuter == null)
+                Console.WriteLine();
+            session.Advanced.RequestExecuter.Execute(command, session.Advanced.Context);
             var document = (BlittableJsonReaderObject)command.Result.Results[0];
             BlittableJsonReaderObject metadata;
             if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
@@ -413,7 +412,7 @@ namespace NewClientTests
             long? etag;
             if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
                 throw new InvalidOperationException("Document must have an etag");
-            documentInfo = new InMemoryDocumentSessionOperations.DocumentInfo
+            documentInfo = new DocumentInfo
             {
                 Id = id,
                 Document = document,
@@ -429,31 +428,31 @@ namespace NewClientTests
         /// <param name="session"></param>
         /// <param name="entity"></param>
         /// <param name="id"></param>
-        public void PutCommand(DocumentSession session, object entity, string id)
+        public void PutCommand(IDocumentSession session, object entity, string id)
         {
-            var documentInfo = new InMemoryDocumentSessionOperations.DocumentInfo
+            var documentInfo = new DocumentInfo
             {
                 Entity = entity,
                 Id = id
             };
-            var tag = session.DocumentStore.Conventions.GetDynamicTagName(entity);
+            var tag = session.Advanced.DocumentStore.Conventions.GetDynamicTagName(entity);
 
             var metadata = new DynamicJsonValue();
             if (tag != null)
                 metadata[Constants.Headers.RavenEntityName] = tag;
 
-            documentInfo.Metadata = session.Context.ReadObject(metadata, id);
+            documentInfo.Metadata = session.Advanced.Context.ReadObject(metadata, id);
 
-            documentInfo.Document = session.EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
+            documentInfo.Document = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
 
             var putCommand = new PutDocumentCommand()
             {
                 Id = id,
                 Etag = documentInfo.ETag,
                 Document = documentInfo.Document,
-                Context = session.Context
+                Context = session.Advanced.Context
             };
-            session.RequestExecuter.Execute(putCommand, session.Context);
+            session.Advanced.RequestExecuter.Execute(putCommand, session.Advanced.Context);
         }
     }
 }
