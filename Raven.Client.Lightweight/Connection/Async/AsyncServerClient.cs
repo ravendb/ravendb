@@ -2863,7 +2863,14 @@ namespace Raven.Client.Connection.Async
                         if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
                         {
                             resolvedDocument.Metadata.Remove(Constants.RavenReplicationConflictDocument);
-                            await DirectPutAsync(operationMetadata, requestTimeMetric, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata, token).ConfigureAwait(false);
+                            try
+                            {
+                                await DirectPutAsync(operationMetadata, requestTimeMetric, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata, token).ConfigureAwait(false);
+                            }
+                            catch (ConcurrencyException)
+                            {
+                                // we are racing the changes API here, so that is fine
+                            }
                             return true;
                         }
                     }
