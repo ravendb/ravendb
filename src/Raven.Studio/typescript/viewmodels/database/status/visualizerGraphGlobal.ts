@@ -290,27 +290,34 @@ class visualizerGraphGlobal {
     }
 
     private layout() {
-        let width = visualizerGraphGlobal.margins.globalMargin;
+        // layout children first
         for (let i = 0; i < this.reduceTrees.length; i++) {
             const tree = this.reduceTrees[i];
             tree.filterAndLayoutVisibleItems(this.documentNames);
-            tree.x = width;
-            tree.y = visualizerGraphGlobal.margins.globalMargin; //TODO: should we do this based on height on element?
-
-            width += tree.width;
-            width += visualizerGraphGlobal.margins.betweenPagesWidth;
         }
 
-        width -= visualizerGraphGlobal.margins.betweenPagesWidth;
-        width += visualizerGraphGlobal.margins.globalMargin;
+        const maxTreeHeight = d3.max(this.reduceTrees, x => x.height);
 
-        this.dataWidth = width;
+        let currentX = visualizerGraphGlobal.margins.globalMargin;
+        for (let i = 0; i < this.reduceTrees.length; i++) {
+            const tree = this.reduceTrees[i];
+            
+            tree.x = currentX;
+            tree.y = visualizerGraphGlobal.margins.globalMargin + (maxTreeHeight - tree.height);
 
-        let height = d3.max(this.reduceTrees, x => x.height);
-        height += visualizerGraphGlobal.margins.betweenPagesAndDocuments;
+            currentX += tree.width;
+            currentX += visualizerGraphGlobal.margins.betweenPagesWidth;
+        }
 
-        height += 100; //TODO: it is space for document names
-        height += 2 * visualizerGraphGlobal.margins.globalMargin;
+        currentX -= visualizerGraphGlobal.margins.betweenPagesWidth;
+        currentX += visualizerGraphGlobal.margins.globalMargin;
+
+        this.dataWidth = currentX;
+
+        const height = maxTreeHeight
+            + visualizerGraphGlobal.margins.betweenPagesAndDocuments
+            + 100 //TODO: it is space for document names
+            + 2 * visualizerGraphGlobal.margins.globalMargin; // top and bottom margin
         this.dataHeight = height;
     }
 
