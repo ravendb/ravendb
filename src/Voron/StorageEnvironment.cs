@@ -65,6 +65,7 @@ namespace Voron
         private readonly ScratchBufferPool _scratchBufferPool;
         private EndOfDiskSpaceEvent _endOfDiskSpace;
         internal int SizeOfUnflushedTransactionsInJournalFile;
+        internal DateTime LastFlushTime;
 
         private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
         public bool Disposed;
