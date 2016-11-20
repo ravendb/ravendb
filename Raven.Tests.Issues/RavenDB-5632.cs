@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Client.Document;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
@@ -199,7 +198,6 @@ namespace Raven.Tests.Issues
             }
         }
 
-
         private class MergeConflicts : IDocumentConflictListener
         {
             public bool TryResolveConflict(string key, JsonDocument[] conflictedDocs, out JsonDocument resolvedDocument)
@@ -218,39 +216,6 @@ namespace Raven.Tests.Issues
 
                 return true;
             }
-        }
-
-        public class ResolveInFavourOfNewest : IDocumentConflictListener
-        {
-            public bool TryResolveConflict(
-                string key,
-                JsonDocument[] conflictedDocs,
-                out JsonDocument resolvedDocument)
-            {
-                DateTime? maxDate = conflictedDocs.Max(x => x.LastModified);
-                resolvedDocument = conflictedDocs
-                                    .FirstOrDefault(x => x.LastModified == maxDate);
-
-                if (resolvedDocument == null)
-                    return false;
-
-                resolvedDocument.Metadata.Remove("@id");
-                resolvedDocument.Metadata.Remove("@etag");
-                return true;
-            }
-        }
-
-        private static DocumentStore CreateStoreFor(int port)
-        {
-            return new DocumentStore
-            {
-                Url = $"http://localhost:{port}",
-                DefaultDatabase = DefaultDatabase,
-                Conventions = new DocumentConvention
-                {
-                    DefaultQueryingConsistency = ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite
-                }
-            };
         }
 
         private class User
