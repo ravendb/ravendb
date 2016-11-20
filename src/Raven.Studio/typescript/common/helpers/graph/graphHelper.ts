@@ -104,6 +104,31 @@ class graphHelper {
         };
     }
 
+
+    private static readonly arrowConfig = {
+        halfWidth: 6,
+        height: 8   
+    }
+
+    static drawBezierDiagonal(ctx: CanvasRenderingContext2D, source: [number, number], target: [number, number], withArrow = false) {
+        ctx.beginPath();
+
+        const m = (source[1] + target[1]) / 2;
+
+        ctx.moveTo(source[0], source[1]);
+        ctx.bezierCurveTo(source[0], m, target[0], m, target[0], target[1]);
+        ctx.stroke();
+
+        if (withArrow) {
+            ctx.beginPath();
+            ctx.moveTo(target[0] - graphHelper.arrowConfig.halfWidth, target[1] + graphHelper.arrowConfig.height);
+            ctx.lineTo(target[0], target[1]);
+            ctx.lineTo(target[0] + graphHelper.arrowConfig.halfWidth, target[1] + graphHelper.arrowConfig.height);
+            ctx.stroke();
+        }
+    }
+
+
 }
 
 export = graphHelper;
