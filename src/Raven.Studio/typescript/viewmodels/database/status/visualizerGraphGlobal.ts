@@ -9,11 +9,13 @@ class pageItem {
     
     x: number;
     y: number;
-    parent?: pageItem;
+    aggregation?: pageItem;
     pageNumber: number;
+    parent: reduceTreeItem;
 
-    constructor(pageNumber: number) {
+    constructor(pageNumber: number, parent: reduceTreeItem) {
         this.pageNumber = pageNumber;
+        this.parent = parent;
     }
 
     getSourceConnectionPoint(): [number, number] {
@@ -23,6 +25,12 @@ class pageItem {
     getTargetConnectionPoint(): [number, number] {
         return [this.x + pageItem.pageWidth / 2, this.y + pageItem.pageHeight];
     }
+
+    getGlobalTargetConnectionPoint(): [number, number] {
+        const localConnectionPoint = this.getTargetConnectionPoint();
+        return [localConnectionPoint[0] + this.parent.x, localConnectionPoint[1] + this.parent.y];
+    }
+
 }
 
 class reduceTreeItem {
@@ -43,7 +51,6 @@ class reduceTreeItem {
     depth: number;
     itemsCountAtDepth: Array<number>; // this represents non-filtered count
     itemsAsDepth = new Map<number, Array<pageItem>>(); // items after filtering
-    private documentConnections = new Map<number, Set<string>>();
 
     width = 0;
     height = 0;
@@ -57,43 +64,10 @@ class reduceTreeItem {
         this.depth = tree.Depth;
 
         this.countItemsPerDepth();
-        this.documentConnections = this.extractConnectedDocuments(tree.Root);
     }
 
     mergeWith(newTree: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
-        const newConnections = this.extractConnectedDocuments(newTree.Root);
-
-        newConnections.forEach((documents: Set<string>, pageNumber: number) => {
-            if (this.documentConnections.has(pageNumber)) {
-                const existingDocs = this.documentConnections.get(pageNumber);
-                documents.forEach(d => existingDocs.add(d));
-            } else {
-                this.documentConnections.set(pageNumber, documents);
-            }
-        });
-    }
-
-    private extractConnectedDocuments(root: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage): Map<number, Set<string>> {
-        const result = new Map<number, Set<string>>();
-
-        const extractConnections = (node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage) => {
-            if (node.Children) {
-                for (let i = 0; i < node.Children.length; i++) {
-                    extractConnections(node.Children[i]);
-                }
-            }
-
-            if (node.Entries) {
-                const documents = node.Entries.filter(x => !!x.Source).map(x => x.Source);
-                if (documents.length) {
-                    result.set(node.PageNumber, new Set<string>(documents));
-                }
-            }
-        }
-
-        extractConnections(root);
-
-        return result;
+        //TODO: (merge on existing DTO!)
     }
 
     private countItemsPerDepth() {
@@ -113,31 +87,39 @@ class reduceTreeItem {
     }
 
     filterAndLayoutVisibleItems(documents: documentItem[]) {
-        this.cleanCache();
+        this.cleanCache(documents);
         this.filterVisibleItems(documents);
         this.layout();
     }
 
-    private cleanCache() {
+    private cleanCache(documents: documentItem[]) {
         this.itemsAsDepth.clear();
     }
 
     private filterVisibleItems(documents: documentItem[]) {
         //TODO: for now display all
-        const filterAtDepth = (depth: number, node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage, parent: pageItem) => {
+        const filterAtDepth = (depth: number, node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage, aggregation: pageItem) => {
             if (!this.itemsAsDepth.has(depth)) {
                 this.itemsAsDepth.set(depth, []);
             }
 
             const items = this.itemsAsDepth.get(depth);
-            const item = new pageItem(node.PageNumber);
-            item.parent = parent;
+            const item = new pageItem(node.PageNumber, this);
+            item.aggregation = aggregation;
             items.push(item);
 
             if (node.Children) {
                 for (let i = 0; i < node.Children.length; i++) {
                     filterAtDepth(depth + 1, node.Children[i], item);
                 }
+            }
+
+            if (node.Entries) {
+                const uniqueSources = new Set<string>(node.Entries.filter(x => x.Source).map(x => x.Source));
+                uniqueSources.forEach(source => {
+                    const matchingDoc = documents.find(d => d.name === source);
+                    matchingDoc.connectedPages.push(item);
+                });
             }
         };
 
@@ -240,9 +222,16 @@ class documentItem {
     y: number;
     width: number;
     height: number;
+    color: string;
+
+    connectedPages = [] as Array<pageItem>;
 
     constructor(name: string) {
         this.name = name;
+    }
+
+    getSourceConnectionPoint(): [number, number] {
+        return [this.x + this.width / 2, this.y];
     }
 }
 
@@ -251,14 +240,17 @@ class visualizerGraphGlobal {
 
     static margins = {
         betweenPagesWidth: 30,
-        betweenPagesAndDocuments: 30,
+        betweenPagesAndDocuments: 80,
         globalMargin: 30
     }
+
+    static readonly documentColors = ["#7cb82f", "#1a858e", "#ef6c5a"];
+    private nextColorIndex = 0;
 
     private totalWidth = 1500; //TODO: use dynamic value
     private totalHeight = 700; //TODO: use dynamic value
 
-    private documents: Array<documentItem> = [];
+    private documents = [] as Array<documentItem>;
     private reduceTrees: Array<reduceTreeItem> = [];
 
     private canvas: d3.Selection<void>;
@@ -273,6 +265,7 @@ class visualizerGraphGlobal {
 
     addTrees(documentName: string, result: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
         const document = new documentItem(documentName);
+        document.color = this.getNextColor();
         this.documents.push(document);
 
         for (let i = 0; i < result.length; i++) {
@@ -288,6 +281,12 @@ class visualizerGraphGlobal {
 
         this.layout();
         this.zoomToDocument(document);
+    }
+
+    private getNextColor() {
+        const color = visualizerGraphGlobal.documentColors[this.nextColorIndex % visualizerGraphGlobal.documentColors.length];
+        this.nextColorIndex++;
+        return color;
     }
 
     private zoomToDocument(document: documentItem) {
@@ -345,7 +344,15 @@ class visualizerGraphGlobal {
         this.draw();
     }
 
+    private cleanLayoutCache() {
+        for (let i = 0; i < this.documents.length; i++) {
+            this.documents[i].connectedPages = [];
+        }
+    }
+
     private layout() {
+        this.cleanLayoutCache();
+
         // layout children first
         for (let i = 0; i < this.reduceTrees.length; i++) {
             const tree = this.reduceTrees[i];
@@ -388,7 +395,6 @@ class visualizerGraphGlobal {
 
         for (let i = 0; i < this.documents.length; i++) {
             const doc = this.documents[i];
-
             const documentNameWidthEstimation = (text: string) => text.length * 9;
 
             doc.width = documentItem.margins.badgePadding * 2 + documentNameWidthEstimation(doc.name);
@@ -402,12 +408,10 @@ class visualizerGraphGlobal {
 
         let extraItemPadding = 0;
 
-        if (this.documents.length > 1) {
-            if (totalWidth > this.dataWidth) {
-                //TODO: handle me!
-            } else {
-                extraItemPadding = (this.dataWidth - totalWidth) / (this.documents.length + 1);
-            }
+        if (totalWidth > this.dataWidth) {
+            //TODO: handle me!
+        } else {
+            extraItemPadding = (this.dataWidth - totalWidth) / (this.documents.length + 1);
         }
 
         let currentX = documentItem.margins.minMarginBetweenDocumentNames + extraItemPadding;
@@ -436,8 +440,11 @@ class visualizerGraphGlobal {
         }
 
         for (let i = 0; i < this.documents.length; i++) {
-            this.drawDocument(ctx, this.documents[i]);
+            const doc = this.documents[i];
+            this.drawDocument(ctx, doc);
         }
+
+        this.drawDocumentConnections(ctx);
         ctx.restore();
     }
 
@@ -487,9 +494,9 @@ class visualizerGraphGlobal {
                 const item = globalItems[i];
                 ctx.fillRect(item.x, item.y, pageItem.pageWidth, pageItem.pageHeight);
 
-                if (item.parent) {
+                if (item.aggregation) {
                     const sourcePoint = item.getSourceConnectionPoint();
-                    const targetPoint = item.parent.getTargetConnectionPoint();
+                    const targetPoint = item.aggregation.getTargetConnectionPoint();
 
                     graphHelper.drawBezierDiagonal(ctx, sourcePoint, targetPoint, true);
                 }
@@ -497,8 +504,23 @@ class visualizerGraphGlobal {
         });
     }
 
+    private drawDocumentConnections(ctx: CanvasRenderingContext2D) {
+        ctx.lineWidth = 2;
+        for (let i = 0; i < this.documents.length; i++) {
+            const doc = this.documents[i];
+
+            ctx.strokeStyle = doc.color;
+
+            for (let j = 0; j < doc.connectedPages.length; j++) {
+                const page = doc.connectedPages[j];
+
+                graphHelper.drawBezierDiagonal(ctx, doc.getSourceConnectionPoint(), page.getGlobalTargetConnectionPoint(), true);
+            }
+        }
+    }
+
     private drawDocument(ctx: CanvasRenderingContext2D, docItem: documentItem) {
-        ctx.fillStyle = "#7cb82f"; //TODO: use dynamic colors
+        ctx.fillStyle = docItem.color; 
         ctx.fillRect(docItem.x, docItem.y, docItem.width, docItem.height);
         ctx.textAlign = "center";
         ctx.textBaseline = "middle"; 
