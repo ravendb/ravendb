@@ -136,6 +136,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private volatile bool _logsApplied;
         private volatile bool _priorityChanged;
+        private volatile bool _hadRealIndexingWorkToDo;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -619,6 +620,8 @@ namespace Raven.Server.Documents.Indexes
                                 if (didWork)
                                     ResetErrors();
 
+                                _hadRealIndexingWorkToDo |= didWork;
+
                                 if (_logger.IsInfoEnabled)
                                     _logger.Info($"Finished indexing for '{Name} ({IndexId})'.'");
                             }
@@ -708,6 +711,7 @@ namespace Raven.Server.Documents.Indexes
                                 if (_logsApplied)
                                 {
                                     _logsApplied = false;
+                                    _hadRealIndexingWorkToDo = false;
                                     _environment.Cleanup();
                                 }
                             }
@@ -760,7 +764,8 @@ namespace Raven.Server.Documents.Indexes
         private void HandleLogsApplied()
         {
             _logsApplied = true;
-            _mre.Set();
+            if (_hadRealIndexingWorkToDo)
+                _mre.Set();
         }
 
         private void ReduceMemoryUsage()
