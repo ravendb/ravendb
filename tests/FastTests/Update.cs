@@ -10,7 +10,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new User { Name = "User1", Age = 1 }, "users/1");
                     newSession.SaveChanges();

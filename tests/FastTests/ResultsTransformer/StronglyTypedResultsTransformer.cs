@@ -158,7 +158,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
         {
             new OrderWithProductInformationMultipleReturns().Execute(store);
 
-            using (var session = store.OpenNewSession())
+            using (var session = store.OpenSession())
             {
                 session.Store(new Product { Name = "Milk", Id = "products/milk" });
                 session.Store(new Product { Name = "Bear", Id = "products/bear" });
@@ -172,7 +172,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
                 session.SaveChanges();
             }
 
-            using (var session = store.OpenNewSession())
+            using (var session = store.OpenSession())
             {
                 var products = session.Load<OrderWithProductInformationMultipleReturns, OrderWithProductInformationMultipleReturns.Result>("orders/1");
             }
@@ -182,7 +182,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
         {
             new OrderWithFullProductMultipleReturns().Execute(store);
 
-            using (var session = store.OpenNewSession())
+            using (var session = store.OpenSession())
             {
                 session.Store(new ProductWithoutId() { Name = "Milk" }, "products/milk");
                 session.Store(new ProductWithoutId() { Name = "Bear" }, "products/bear");
@@ -196,7 +196,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
                 session.SaveChanges();
             }
 
-            using (var session = store.OpenNewSession())
+            using (var session = store.OpenSession())
             {
                 var products = session.Load<OrderWithFullProductMultipleReturns, OrderWithFullProductMultipleReturns.Result[]>("orders/1");
                 Assert.Equal(products[0].FullProduct.Id, "products/milk");
@@ -209,7 +209,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
         {
             new OrderWithProductInformationMultipleReturns().Execute(store);
 
-            using (var session = store.OpenNewSession())
+            using (var session = store.OpenSession())
             {
                 session.Store(new Product { Name = "Milk", Id = "products/milk" });
                 session.Store(new Product { Name = "Bear", Id = "products/bear" });
@@ -223,7 +223,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
                 session.SaveChanges();
             }
 
-            using (var session = store.OpenNewSession())
+            using (var session = store.OpenSession())
             {
                 var products = session.Load<OrderWithProductInformationMultipleReturns, OrderWithProductInformationMultipleReturns.Result[]>("orders/1");
                 products = products.OrderBy(x => x.ProductId).ToArray();
@@ -238,7 +238,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
 
             new OrderWithProductInformation().Execute(store);
 
-            using (var session = store.OpenNewSession())
+            using (var session = store.OpenSession())
             {
                 session.Store(new Product { Name = "Milk", Id = "products/milk" });
                 session.Store(new Product { Name = "Bear", Id = "products/bear" });
@@ -252,7 +252,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
                 session.SaveChanges();
             }
 
-            using (var session = store.OpenNewSession())
+            using (var session = store.OpenSession())
             {
                 var order = session.Load<OrderWithProductInformation, OrderWithProductInformation.Result>("orders/1");
 
@@ -267,7 +267,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
         {
             new OrderWithProductInformation().Execute(store);
 
-            using (var session = store.OpenNewSession())
+            using (var session = store.OpenSession())
             {
                 session.Store(new Product { Name = "Milk", Id = "products/milk" });
                 session.Store(new Product { Name = "Bear", Id = "products/bear" });
@@ -282,7 +282,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
                 session.SaveChanges();
             }
 
-            using (var session = store.OpenNewSession())
+            using (var session = store.OpenSession())
             {
                 //TODO - iftah
                /* var customer = session.Query<Order>()

@@ -10,7 +10,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new BasicName()
                     {
@@ -18,14 +18,14 @@ namespace NewClientTests.NewClient
                     } 
                     , "users/1");
                   
-                    Assert.Equal(newSession.WhatChanged().Count, 1);
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
                     newSession.SaveChanges();
                 }
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     var user = newSession.Load<NameAndAge>("users/1");
                     user.Age = 5;
-                    var changes = newSession.WhatChanged();
+                    var changes = newSession.Advanced.WhatChanged();
                     Assert.Equal(changes["users/1"].Length, 1);
                     Assert.Equal(changes["users/1"][0].Change, DocumentsChanges.ChangeType.NewField);
                     newSession.SaveChanges();
@@ -38,7 +38,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new NameAndAge()
                     {
@@ -47,14 +47,14 @@ namespace NewClientTests.NewClient
                     }
                     , "users/1");
 
-                    Assert.Equal(newSession.WhatChanged().Count, 1);
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
                     newSession.SaveChanges();
                 }
 
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Load<BasicAge>("users/1");
-                    var changes = newSession.WhatChanged();
+                    var changes = newSession.Advanced.WhatChanged();
                     Assert.Equal(changes["users/1"].Length, 1);
                     Assert.Equal(changes["users/1"][0].Change, DocumentsChanges.ChangeType.RemovedField);
                     newSession.SaveChanges();
@@ -67,7 +67,7 @@ namespace NewClientTests.NewClient
         {
             using (var store = GetDocumentStore())
             {
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new BasicAge()
                     {
@@ -75,14 +75,14 @@ namespace NewClientTests.NewClient
                     }
                     , "users/1");
 
-                    Assert.Equal(newSession.WhatChanged().Count, 1);
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
                     newSession.SaveChanges();
                 }
 
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = store.OpenSession())
                 {
                     newSession.Load<Number>("users/1");
-                    var changes = newSession.WhatChanged();
+                    var changes = newSession.Advanced.WhatChanged();
                     Assert.Equal(changes["users/1"].Length, 2);
                     Assert.Equal(changes["users/1"][0].Change, DocumentsChanges.ChangeType.RemovedField);
                     Assert.Equal(changes["users/1"][1].Change, DocumentsChanges.ChangeType.NewField);

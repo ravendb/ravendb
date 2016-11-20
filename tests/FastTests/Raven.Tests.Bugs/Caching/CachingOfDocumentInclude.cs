@@ -31,21 +31,21 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
         {
             using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende" });
                     s.Store(new User { PartnerId = "users/1" });
                     s.SaveChanges();
                 }
 
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
                     s.SaveChanges();
                 }
 
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
@@ -59,14 +59,14 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
         {
             using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende" });
                     s.Store(new User { PartnerId = "users/1" });
                     s.SaveChanges();
                 }
 
-                using (var s = store.OpenNewAsyncSession())
+                using (var s = store.OpenAsyncSession())
                 {
                     var u = await s.LoadAsync<User>("users/2");
 
@@ -86,14 +86,14 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
         {
             using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende" });
                     s.Store(new User { PartnerId = "users/1" });
                     s.SaveChanges();
                 }
 
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Advanced.Lazily.Load<User>("users/2");
                     s.Advanced.Lazily.Load<User>("users/1");
@@ -114,14 +114,14 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
         {
             using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende" });
                     s.Store(new User { PartnerId = "users/1" });
                     s.SaveChanges();
                 }
 
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     var u = s.Load<User>("users/2");
 
@@ -141,7 +141,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
         {
             using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Additional" });
                     s.Store(new User { Name = "Ayende" });
@@ -152,7 +152,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
                     s.SaveChanges();
                 }
 
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     var u2 = s.Load<User>("users/2");
                     var u6 = s.Load<User>("users/6");
@@ -181,21 +181,21 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
         {
             using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende" });
                     s.Store(new User { PartnerId = "users/1" });
                     s.SaveChanges();
                 }
 
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
                     s.SaveChanges();
                 }
 
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     var user = s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
@@ -205,7 +205,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
                 }
 
 
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
@@ -219,7 +219,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
         {
             using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende", Email = "same.email@example.com" });
                    /* store.DatabaseCommands.PutIndex("index",
@@ -233,7 +233,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
 
                 DateTime firstTime = SystemTime.UtcNow;
 
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                    /* var results = s.Query<User>("index")
                         .Customize(q => q.WaitForNonStaleResultsAsOf(firstTime))
@@ -260,7 +260,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
                 }
 
 
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     /*var results = s.Query<User>("index")
                         .Customize(q => q.WaitForNonStaleResultsAsOf(secondTime))
@@ -284,20 +284,20 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
         {
             using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende" });
                     s.Store(new User { PartnerId = "users/1" });
                     s.SaveChanges();
                 }
 
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
                 }
 
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
@@ -307,7 +307,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
                 }
 
 
-                using (var s = store.OpenNewSession())
+                using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");

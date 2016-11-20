@@ -394,14 +394,16 @@ namespace NewClientTests
         /// <param name="etag"></param>
         /// <param name="documentInfo"></param>
         /// <returns></returns>
-        public static BlittableJsonReaderObject GetCommand(DocumentSession session, string[] ids, 
+        public static BlittableJsonReaderObject GetCommand(IDocumentSession session, string[] ids, 
             out DocumentInfo documentInfo)
         {
             var command = new GetDocumentCommand
             {
                 Ids = ids
             };
-            session.RequestExecuter.Execute(command, session.Context);
+            if (session.Advanced.RequestExecuter == null)
+                Console.WriteLine();
+            session.Advanced.RequestExecuter.Execute(command, session.Advanced.Context);
             var document = (BlittableJsonReaderObject)command.Result.Results[0];
             BlittableJsonReaderObject metadata;
             if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
@@ -428,31 +430,31 @@ namespace NewClientTests
         /// <param name="session"></param>
         /// <param name="entity"></param>
         /// <param name="id"></param>
-        public void PutCommand(DocumentSession session, object entity, string id)
+        public void PutCommand(IDocumentSession session, object entity, string id)
         {
             var documentInfo = new DocumentInfo
             {
                 Entity = entity,
                 Id = id
             };
-            var tag = session.DocumentStore.Conventions.GetDynamicTagName(entity);
+            var tag = session.Advanced.DocumentStore.Conventions.GetDynamicTagName(entity);
 
             var metadata = new DynamicJsonValue();
             if (tag != null)
                 metadata[Constants.Headers.RavenEntityName] = tag;
 
-            documentInfo.Metadata = session.Context.ReadObject(metadata, id);
+            documentInfo.Metadata = session.Advanced.Context.ReadObject(metadata, id);
 
-            documentInfo.Document = session.EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
+            documentInfo.Document = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
 
             var putCommand = new PutDocumentCommand()
             {
                 Id = id,
                 Etag = documentInfo.ETag,
                 Document = documentInfo.Document,
-                Context = session.Context
+                Context = session.Advanced.Context
             };
-            session.RequestExecuter.Execute(putCommand, session.Context);
+            session.Advanced.RequestExecuter.Execute(putCommand, session.Advanced.Context);
         }
     }
 }

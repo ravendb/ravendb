@@ -20,7 +20,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     Assert.False(session.Advanced.HasChanges);
 
@@ -63,7 +63,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = new User { Id = "users/1", Name = "John" };
 
@@ -71,7 +71,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     Assert.Equal(0, session.Advanced.NumberOfRequests);
 
@@ -105,7 +105,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     Assert.Equal(0, session.Advanced.NumberOfRequests);
 
@@ -131,7 +131,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = new User { Id = "users/1", Name = "John" };
 
@@ -139,7 +139,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     Assert.False(session.Advanced.IsLoaded("users/1"));
 
@@ -160,7 +160,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = new User { Id = "users/1", Name = "John" };
 
@@ -168,7 +168,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
 
@@ -178,7 +178,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     DocumentInfo documentInfo;
                     var document = GetCommand(session, new[] { "users/1" }, out documentInfo);
 
-                    documentInfo.Entity = session.ConvertToEntity(typeof(User), "users/1", document);
+                    documentInfo.Entity = session.Advanced.ConvertToEntity(typeof(User), "users/1", document);
                     ((User)documentInfo.Entity).Name = "Jonathan";
                     PutCommand(session, documentInfo.Entity, "users/1");
 
@@ -202,7 +202,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
 
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     Assert.False(session.Advanced.UseOptimisticConcurrency);
                     session.Advanced.UseOptimisticConcurrency = true;
@@ -210,7 +210,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     session.Store(new User { Id = entityId, Name = "User1" });
                     session.SaveChanges();
 
-                    using (var otherSession = store.OpenNewSession())
+                    using (var otherSession = store.OpenSession())
                     {
                         var otherUser = otherSession.Load<User>(entityId);
                         otherUser.Name = "OtherName";
@@ -231,7 +231,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Company { Id = "companies/1" });
                     session.SaveChanges();
@@ -260,7 +260,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     new RavenJObject { { attrKey, attrVal } }
                     );
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>(companyId);
                     var result = session.Advanced.GetMetadataFor<Company>(company);
@@ -277,7 +277,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
 
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Company { Id = "companies/1" });
                     session.SaveChanges();
@@ -304,7 +304,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     Assert.Equal(0, session.Advanced.NumberOfRequests);
 
@@ -329,7 +329,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Advanced.MaxNumberOfRequestsPerSession = 2;
 
@@ -362,7 +362,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     PutCommand(session, new Company { Id = "companies/1" }, "companies/1");
                     var company = session.Load<Company>("companies/1");
@@ -454,7 +454,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var commands = new []
                     {
@@ -495,13 +495,13 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new User { Id = "users/1", Name = "Name" });
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     Assert.Equal(0, session.Advanced.NumberOfRequests);
                     session.Load<User>("users/1");
@@ -509,7 +509,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Load<User>("users/1");
                     //Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);

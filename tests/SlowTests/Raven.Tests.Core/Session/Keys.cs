@@ -24,7 +24,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = new UserWithoutId { Name = "John" };
                     session.Store(user);
@@ -33,7 +33,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                     Assert.Equal("UserWithoutIds/1", id);
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = new UserWithoutId { Name = "John" };
                     Assert.Null(session.Advanced.GetDocumentId(user));
@@ -49,7 +49,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                 store.Conventions.RegisterIdConvention<User>((databaseName, commands, entity) => "abc");
                 store.Conventions.RegisterAsyncIdConvention<User>((databaseName, commands, entity) => new CompletedTask<string>("def"));
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var user = new User { Name = "John" };
                     session.Store(user);
@@ -57,7 +57,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                     Assert.Equal("abc", user.Id);
                 }
 
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var user = new User { Name = "John" };
                     await session.StoreAsync(user);
@@ -81,14 +81,14 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                 store.Conventions.RegisterIdConvention<TShirt>((databaseName, commands, entity) => "ts/" + entity.ReleaseYear);
                 store.Conventions.RegisterIdLoadConvention<TShirt>(id => "ts/" + id);
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var shirt = new TShirt { Manufacturer = "Test1", ReleaseYear = 1999 };
                     session.Store(shirt);
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var shirt = session.Load<TShirt>(1999);
                     Assert.Equal(shirt.Manufacturer, "Test1");

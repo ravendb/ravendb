@@ -15,7 +15,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Identifiers
             using (var store = GetDocumentStore())
             {
                 object id;
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var entity = new Entity();
                     session.Store(entity);
@@ -23,7 +23,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Identifiers
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var entity1 = session.Load<Entity>("entities/" + id);
                     Assert.NotNull(entity1);

@@ -22,7 +22,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             {
                 store.ExecuteTransformer(new MyTransformer());
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new MyModel
                     {
@@ -33,7 +33,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     var model = session.Query<MyModel>()
                         .Search(x => x.Name, "Sherezade")
@@ -53,7 +53,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             {
                 store.ExecuteTransformer(new MyTransformer());
 
-                using (var session = store.OpenNewSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new MyModel
                     {
@@ -64,7 +64,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenNewAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var model = await session.Query<MyModel>()
                         .Search(x => x.Name, "Sherezade")
