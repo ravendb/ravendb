@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Client.Data;
 using Raven.Client.Json;
 using Raven.Database.Util;
@@ -20,6 +21,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -38,13 +40,15 @@ namespace Raven.Server
         public ConcurrentDictionary<string, AccessToken> AccessTokensById = new ConcurrentDictionary<string, AccessToken>();
         public ConcurrentDictionary<string, AccessToken> AccessTokensByName = new ConcurrentDictionary<string, AccessToken>();
         
-        public Timer Timer;
+        public Timer ServerMaintenanceTimer;
 
         public readonly ServerStore ServerStore;
 
         private IWebHost _webHost;
         private Task<List<TcpListener>> _tcpListenerTask;
         private readonly Logger _tcpLogger;
+
+        private readonly LatestVersionCheck _latestVersionCheck;
 
         public RavenServer(RavenConfiguration configuration)
         {
@@ -56,9 +60,12 @@ namespace Raven.Server
 
             ServerStore = new ServerStore(Configuration);
             Metrics = new MetricsCountersManager();
-            Timer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            ServerMaintenanceTimer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+
             _logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
+
+            _latestVersionCheck = new LatestVersionCheck(ServerStore);
         }
 
         public async Task<int> GetTcpServerPortAsync()
@@ -143,6 +150,16 @@ namespace Raven.Server
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations("Could not start server", e);
                 throw;
+            }
+
+            try
+            {
+                _latestVersionCheck.Initialize();
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Could not setup latest version check.", e);
             }
         }
 
@@ -372,8 +389,10 @@ namespace Raven.Server
                     }
                 }
             }
+
             ServerStore?.Dispose();
-            Timer?.Dispose();
+            ServerMaintenanceTimer?.Dispose();
+            _latestVersionCheck?.Dispose();
         }
 
         private void CloseTcpListeners(List<TcpListener> listeners)

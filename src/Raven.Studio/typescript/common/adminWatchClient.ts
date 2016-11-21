@@ -6,6 +6,8 @@ import changesCallback = require("common/changesCallback");
 
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 
+import globalAlertNotification = Raven.Server.Alerts.GlobalAlertNotification;
+
 /**
  * A.K.A. Global Changes API
  */
@@ -15,11 +17,11 @@ class adminWatchClient extends abstractWebSocketClient {
         super(null);
     }
 
-    private allAlertsHandlers = ko.observableArray<changesCallback<adminWatchMessage>>();
-    private allItemsHandlers = ko.observableArray<changesCallback<adminWatchMessage>>();
+    private allAlertsHandlers = ko.observableArray<changesCallback<globalAlertNotification>>();
+    private allItemsHandlers = ko.observableArray<changesCallback<globalAlertNotification>>();
 
-    private watchedItems = new Map<string, KnockoutObservableArray<changesCallback<adminWatchMessage>>>();
-    private watchedItemPrefixes = new Map<string, KnockoutObservableArray<changesCallback<adminWatchMessage>>>();
+    private watchedItems = new Map<string, KnockoutObservableArray<changesCallback<globalAlertNotification>>>();
+    private watchedItemPrefixes = new Map<string, KnockoutObservableArray<changesCallback<globalAlertNotification>>>();
 
     get connectionDescription() {
         return "Global Changes API";
@@ -40,34 +42,35 @@ class adminWatchClient extends abstractWebSocketClient {
             // it is heartbeat only
             return;
         }
-        const eventDto: adminWatchMessage = JSON.parse(e.data);
+
+        const eventDto: globalAlertNotification = JSON.parse(e.data);
         const eventOperation = eventDto.Operation;
 
         switch (eventOperation) {
             case "Write":
             case "Delete":
-                this.fireEvents<adminWatchMessage>(this.allItemsHandlers(), eventDto, () => true);
+                this.fireEvents<globalAlertNotification>(this.allItemsHandlers(), eventDto, () => true);
 
                 this.watchedItems.forEach((callbacks, key) => {
-                    this.fireEvents<adminWatchMessage>(callbacks(), eventDto, (event) => event.Id != null && event.Id === key);
+                    this.fireEvents<globalAlertNotification>(callbacks(), eventDto, (event) => event.Id != null && event.Id === key);
                 });
 
                 this.watchedItemPrefixes.forEach((callbacks, key) => {
-                    this.fireEvents<adminWatchMessage>(callbacks(), eventDto, (event) => event.Id != null && event.Id.startsWith(key));
+                    this.fireEvents<globalAlertNotification>(callbacks(), eventDto, (event) => event.Id != null && event.Id.startsWith(key));
                 });
                 break;
 
             case "AlertRaised":
             case "AlertDeleted":
-                this.fireEvents<adminWatchMessage>(this.allAlertsHandlers(), eventDto, () => true);
+                this.fireEvents<globalAlertNotification>(this.allAlertsHandlers(), eventDto, () => true);
                 break;
             default:
                 console.log("Unhandled Changes API notification type: " + eventDto.Id);
         }
     }
 
-    watchAlerts(onChange: (e: adminWatchMessage) => void) {
-        const callback = new changesCallback<adminWatchMessage>(onChange);
+    watchAlerts(onChange: (e: globalAlertNotification) => void) {
+        const callback = new changesCallback<globalAlertNotification>(onChange);
 
         this.allAlertsHandlers.push(callback);
 
@@ -76,8 +79,8 @@ class adminWatchClient extends abstractWebSocketClient {
         });
     }
 
-    watchAllItems(onChange: (e: adminWatchMessage) => void) {
-        var callback = new changesCallback<adminWatchMessage>(onChange);
+    watchAllItems(onChange: (e: globalAlertNotification) => void) {
+        var callback = new changesCallback<globalAlertNotification>(onChange);
 
         this.allItemsHandlers.push(callback);
 
@@ -86,11 +89,11 @@ class adminWatchClient extends abstractWebSocketClient {
         });
     }
 
-    watchItem(itemId: string, onChange: (e: adminWatchMessage) => void): changeSubscription {
-        const callback = new changesCallback<adminWatchMessage>(onChange);
+    watchItem(itemId: string, onChange: (e: globalAlertNotification) => void): changeSubscription {
+        const callback = new changesCallback<globalAlertNotification>(onChange);
 
         if (!this.watchedItems.has(itemId)) {
-            this.watchedItems.set(itemId, ko.observableArray<changesCallback<adminWatchMessage>>());
+            this.watchedItems.set(itemId, ko.observableArray<changesCallback<globalAlertNotification>>());
         }
 
         const callbacks = this.watchedItems.get(itemId);
@@ -104,11 +107,11 @@ class adminWatchClient extends abstractWebSocketClient {
         });
     }
 
-    watchItemsStartingWith(itemIdPrefix: string, onChange: (e: adminWatchMessage) => void): changeSubscription {
-        const callback = new changesCallback<adminWatchMessage>(onChange);
+    watchItemsStartingWith(itemIdPrefix: string, onChange: (e: globalAlertNotification) => void): changeSubscription {
+        const callback = new changesCallback<globalAlertNotification>(onChange);
 
         if (!this.watchedItemPrefixes.has(itemIdPrefix)) {
-            this.watchedItemPrefixes.set(itemIdPrefix, ko.observableArray<changesCallback<adminWatchMessage>>());
+            this.watchedItemPrefixes.set(itemIdPrefix, ko.observableArray<changesCallback<globalAlertNotification>>());
         }
 
         const callbacks = this.watchedItemPrefixes.get(itemIdPrefix);

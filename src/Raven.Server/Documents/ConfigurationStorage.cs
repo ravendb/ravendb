@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Raven.Server.Alerts;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;

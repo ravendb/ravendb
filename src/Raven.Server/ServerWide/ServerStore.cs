@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
+using Raven.Server.Alerts;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -13,7 +14,6 @@ using Sparrow.Json;
 using Voron;
 using Sparrow;
 using Sparrow.Collections;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Data.Tables;
 using Voron.Exceptions;
@@ -48,8 +48,7 @@ namespace Raven.Server.ServerWide
         // this is only modified by write transactions under lock
         // no need to use thread safe ops
         private long _lastEtag;
-
-        private readonly ConcurrentSet<AsyncQueue<DynamicJsonValue>> _changes = new ConcurrentSet<AsyncQueue<DynamicJsonValue>>();
+        private readonly ConcurrentSet<AsyncQueue<GlobalAlertNotification>> _changes = new ConcurrentSet<AsyncQueue<GlobalAlertNotification>>();
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 
@@ -396,7 +395,7 @@ namespace Raven.Server.ServerWide
             return true;
         }
 
-        public IDisposable TrackChanges(AsyncQueue<DynamicJsonValue> asyncQueue)
+        public IDisposable TrackChanges(AsyncQueue<GlobalAlertNotification> asyncQueue)
         {
             _changes.TryAdd(asyncQueue);
             return new DisposableAction(() => _changes.TryRemove(asyncQueue));
@@ -415,10 +414,10 @@ namespace Raven.Server.ServerWide
             {
                 if (llt.Committed == false)
                     return;
-                var djv = new DynamicJsonValue
+                var djv = new GlobalAlertNotification
                 {
-                    ["Operation"] = operation,
-                    ["Id"] = id
+                    Operation = operation,
+                    Id = id
                 };
                 foreach (var asyncQueue in _changes)
                 {

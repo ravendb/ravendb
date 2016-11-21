@@ -9,6 +9,7 @@ using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Client.Smuggler;
 using Raven.Json.Linq;
+using Raven.Server.Alerts;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.SqlReplication;
@@ -78,10 +79,11 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexChangeNotification));
             scripter.AddType(typeof(TransformerChangeNotification));
             scripter.AddType(typeof(DatabaseOperations.PendingOperation));
-            scripter.AddType(typeof(AlertNotification));
 
             // alerts
             scripter.AddType(typeof(Alert));
+            scripter.AddType(typeof(GlobalAlertNotification));
+            scripter.AddType(typeof(AlertNotification));
             
             // indexes
             scripter.AddType(typeof(IndexStats));

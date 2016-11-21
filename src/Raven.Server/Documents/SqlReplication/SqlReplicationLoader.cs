@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Server.Alerts;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;

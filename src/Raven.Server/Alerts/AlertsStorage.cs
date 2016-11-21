@@ -1,12 +1,11 @@
-﻿using Raven.Abstractions;
-using Raven.Server.ServerWide;
+﻿using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Alerts
 {
     public class AlertsStorage
     {
@@ -103,7 +102,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void ReadAlerts(BlittableJsonTextWriter writer)
+        public void WriteAlerts(BlittableJsonTextWriter writer)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))

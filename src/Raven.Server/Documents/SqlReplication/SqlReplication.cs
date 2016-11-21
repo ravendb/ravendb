@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Server.Alerts;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;

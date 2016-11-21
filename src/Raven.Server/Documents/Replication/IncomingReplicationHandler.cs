@@ -12,6 +12,7 @@ using Sparrow.Logging;
 using System.Text;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
+using Raven.Server.Alerts;
 using Raven.Server.Smuggler.Documents.Processors;
 using Raven.Server.Utils;
 using Sparrow;

@@ -7,7 +7,7 @@ class latestBuildReminder extends dialogViewModelBase {
     public dialogTask = $.Deferred();
     mute = ko.observable<boolean>(false);
 
-    constructor(private latestServerBuildResult: latestServerBuildVersionDto, elementToFocusOnDismissal?: string) {
+    constructor(private latestServerBuild: serverBuildVersionDto, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
 
         this.mute.subscribe(() => {

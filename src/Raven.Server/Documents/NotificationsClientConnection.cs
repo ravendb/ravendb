@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
+using Raven.Server.Alerts;
 using Raven.Server.Web.Operations;
 using Sparrow.Collections;
 using Sparrow.Json;
