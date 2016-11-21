@@ -10,6 +10,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Client.Data.Collection;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -63,7 +64,7 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             var returnContextToPool = ContextPool.AllocateOperationContext(out context);
 
-            ExecuteCollectionOperation((runner, collectionName, onProgress, token) => Task.Run(()=>runner.ExecuteDelete(collectionName, context, onProgress, token)),
+            ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(()=>runner.ExecuteDelete(collectionName, options, context, onProgress, token)),
                 context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByCollection);
             return Task.CompletedTask;
 
@@ -78,13 +79,13 @@ namespace Raven.Server.Documents.Handlers
             var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
             var patch = Documents.Patch.PatchRequest.Parse(reader);
 
-            ExecuteCollectionOperation((runner, collectionName, onProgress, token) => Task.Run(() => runner.ExecutePatch(collectionName, patch, context, onProgress, token)),
+            ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(() => runner.ExecutePatch(collectionName, options, patch, context, onProgress, token)),
                 context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByCollection);
             return Task.CompletedTask;
 
         }
 
-        private void ExecuteCollectionOperation(Func<CollectionRunner, string, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
+        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOpertaionOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
         {
             var collectionName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
@@ -94,17 +95,16 @@ namespace Raven.Server.Documents.Handlers
 
             var operationId = Database.Operations.GetNextOperationId();
 
+            var options = GetCollectionOperationOptions();
+
             var task = Database.Operations.AddOperation(collectionName, operationType, onProgress =>
-                    operation(collectionRunner, collectionName, onProgress, token), operationId, token);
+                    operation(collectionRunner, collectionName, options ,onProgress, token), operationId, token);
 
             task.ContinueWith(_ => returnContextToPool.Dispose());
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteStartObject();
-                writer.WritePropertyName("OperationId");
-                writer.WriteInteger(operationId);
-                writer.WriteEndObject();
+                writer.WriteOperationId(context, operationId);
             }
         }
 
@@ -166,6 +166,14 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
             return Task.CompletedTask;
+        }
+
+        private CollectionOpertaionOptions GetCollectionOperationOptions()
+        {
+            return new CollectionOpertaionOptions
+            {
+                MaxOpsPerSecond = GetIntValueQueryString("maxOpsPerSec", required: false),
+            };
         }
     }
 }
