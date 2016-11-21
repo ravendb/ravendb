@@ -265,6 +265,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
+                var importOptsString = HttpContext.Request.Form["importOptions"][0];
                 var tuple = await GetImportStream();
                 using (tuple.Item2)
                 using (var stream = new GZipStream(tuple.Item1, CompressionMode.Decompress))

@@ -6,6 +6,7 @@ import importDatabaseCommand = require("commands/database/studio/importDatabaseC
 import importDatabaseModel = require("models/database/tasks/importDatabaseModel");
 import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
+import copyToClipboard = require("common/copyToClipboard");
 
 class importDatabase extends viewModelBase {
 
@@ -83,18 +84,17 @@ class importDatabase extends viewModelBase {
     fileSelected(fileName: string) {
         const isFileSelected = fileName ? !!fileName.trim() : false;
         const importFileName = $(importDatabase.filePickerTag).val().split(/(\\|\/)/g).pop();
-		this.hasFileSelected(isFileSelected);
-		this.importedFileName(importFileName ? importFileName : null);
+        this.hasFileSelected(isFileSelected);
+        this.importedFileName(importFileName ? importFileName : null);
     }
 
     importDb() {
         eventsCollector.default.reportEvent("database", "import");
         this.isUploading(true);
-        const formData = new FormData();
+        
         const fileInput = document.querySelector(importDatabase.filePickerTag) as HTMLInputElement;
-        formData.append("file", fileInput.files[0]);
 
-        new importDatabaseCommand(formData, this.model, this.activeDatabase())
+        new importDatabaseCommand(fileInput.files[0], this.model, this.activeDatabase())
             .execute()
             .done((result: operationIdDto) => {
                 const operationId = result.OperationId;
