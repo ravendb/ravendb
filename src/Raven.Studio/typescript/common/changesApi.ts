@@ -25,6 +25,7 @@ class changesApi extends abstractWebSocketClient {
     private watchedDocuments = new Map<string, KnockoutObservableArray<changesCallback<Raven.Abstractions.Data.DocumentChangeNotification>>>();
     private watchedPrefixes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Abstractions.Data.DocumentChangeNotification>>>();
     private watchedOperations = new Map<number, KnockoutObservableArray<changesCallback<Raven.Client.Data.OperationStatusChangeNotification>>>();
+    private watchedIndexes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Abstractions.Data.IndexChangeNotification>>>();
 
     /* TODO:
     private allFsSyncHandlers = ko.observableArray<changesCallback<synchronizationUpdateNotification>>();
@@ -93,6 +94,10 @@ class changesApi extends abstractWebSocketClient {
                 break;
             case "IndexChangeNotification":
                 this.fireEvents<Raven.Abstractions.Data.IndexChangeNotification>(this.allIndexesHandlers(), value, () => true);
+
+                this.watchedIndexes.forEach((callbacks, key) => {
+                    this.fireEvents<Raven.Abstractions.Data.IndexChangeNotification>(callbacks(), value, (event) => event.Name != null && event.Name === key);
+                });
                 break;
             case "TransformerChangeNotification":
                 this.fireEvents<Raven.Abstractions.Data.TransformerChangeNotification>(this.allTransformersHandlers(), value, () => true);
@@ -151,6 +156,26 @@ class changesApi extends abstractWebSocketClient {
             this.allIndexesHandlers.remove(callback);
             if (this.allIndexesHandlers().length === 0) {
                 this.send("unwatch-indexes");
+            }
+        });
+    }
+
+    watchIndex(indexName: string, onChange: (e: Raven.Abstractions.Data.IndexChangeNotification) => void): changeSubscription {
+        let callback = new changesCallback<Raven.Abstractions.Data.IndexChangeNotification>(onChange);
+
+        if (!this.watchedIndexes.has(indexName)) {
+            this.send("watch-index", indexName);
+            this.watchedIndexes.set(indexName, ko.observableArray<changesCallback<Raven.Abstractions.Data.IndexChangeNotification>>());
+        }
+
+        let callbacks = this.watchedIndexes.get(indexName);
+        callbacks.push(callback);
+
+        return new changeSubscription(() => {
+            callbacks.remove(callback);
+            if (callbacks().length === 0) {
+                this.watchedIndexes.delete(indexName);
+                this.send("unwatch-index", indexName);
             }
         });
     }

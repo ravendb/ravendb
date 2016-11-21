@@ -48,6 +48,8 @@ namespace Raven.Server.Documents
         private int _watchAllDocuments;
         private int _watchAllOperations;
         private int _watchAllAlerts;
+        private int _watchAllIndexes;
+        private int _watchAllTransformers;
 
         public class NotificationValue
         {
@@ -116,6 +118,36 @@ namespace Raven.Server.Documents
             _matchingDocumentsOfType.TryRemove(name);
         }
 
+        public void WatchAllIndexes()
+        {
+            Interlocked.Increment(ref _watchAllIndexes);
+        }
+
+        public void UnwatchAllIndexes()
+        {
+            Interlocked.Decrement(ref _watchAllIndexes);
+        }
+
+        public void WatchIndex(string name)
+        {
+            _matchingIndexes.TryAdd(name);
+        }
+
+        public void UnwatchIndex(string name)
+        {
+            _matchingIndexes.TryRemove(name);
+        }
+
+        public void WatchAllTransformers()
+        {
+            Interlocked.Increment(ref _watchAllTransformers);
+        }
+
+        public void UnwatchAllTransformers()
+        {
+            Interlocked.Decrement(ref _watchAllTransformers);
+        }
+
         public void SendDocumentChanges(DocumentChangeNotification notification)
         {
             if (_watchAllDocuments > 0)
@@ -160,6 +192,30 @@ namespace Raven.Server.Documents
             }
         }
 
+        public void SendIndexChanges(IndexChangeNotification notification)
+        {
+            if (_watchAllIndexes > 0)
+            {
+                Send(notification);
+                return;
+            }
+
+            if (notification.Name != null && _matchingIndexes.Contains(notification.Name))
+            {
+                Send(notification);
+                return;
+            }
+        }
+
+        public void SendTransformerChanges(TransformerChangeNotification notification)
+        {
+            if (_watchAllTransformers > 0)
+            {
+                Send(notification);
+                return;
+            }
+        }
+
         private void Send(DocumentChangeNotification notification)
         {
             var value = new DynamicJsonValue
@@ -180,6 +236,48 @@ namespace Raven.Server.Documents
                 {
                     ValueToSend = value,
                     AllowSkip = true
+                });
+        }
+
+        private void Send(IndexChangeNotification notification)
+        {
+            var value = new DynamicJsonValue
+            {
+                ["Type"] = "IndexChangeNotification",
+                ["Value"] = new DynamicJsonValue
+                {
+                    [nameof(IndexChangeNotification.Etag)] = notification.Etag,
+                    [nameof(IndexChangeNotification.Name)] = notification.Name,
+                    [nameof(IndexChangeNotification.Type)] = notification.Type.ToString()
+                }
+            };
+
+            if (_disposeToken.IsCancellationRequested == false)
+                _sendQueue.Enqueue(new NotificationValue
+                {
+                    ValueToSend = value,
+                    AllowSkip = notification.Type == IndexChangeTypes.BatchCompleted //TODO: make sure it makes sense
+                });
+        }
+
+        private void Send(TransformerChangeNotification notification)
+        {
+            var value = new DynamicJsonValue
+            {
+                ["Type"] = "TransformerChangeNotification",
+                ["Value"] = new DynamicJsonValue
+                {
+                    [nameof(TransformerChangeNotification.Etag)] = notification.Etag,
+                    [nameof(TransformerChangeNotification.Name)] = notification.Name,
+                    [nameof(TransformerChangeNotification.Type)] = notification.Type.ToString()
+                }
+            };
+
+            if (_disposeToken.IsCancellationRequested == false)
+                _sendQueue.Enqueue(new NotificationValue
+                {
+                    ValueToSend = value,
+                    AllowSkip = false //TODO: are you sure?
                 });
         }
 
@@ -325,7 +423,7 @@ namespace Raven.Server.Documents
 
                                 context.Write(writer, value);
                                 writer.WriteNewLine();
-                                if (ms.Length > 16*1024)
+                                if (ms.Length > 16 * 1024)
                                     break;
                             } while (_sendQueue.Count > 0 && sp.Elapsed < TimeSpan.FromSeconds(5));
                         }
@@ -398,32 +496,31 @@ namespace Raven.Server.Documents
             long commandParameterAsLong;
             long.TryParse(commandParameter, out commandParameterAsLong);
 
-            /* if (Match(command, "watch-index"))
-             {
-                 WatchIndex(commandParameter);
-             }
-             else if (Match(command, "unwatch-index"))
-             {
-                 UnwatchIndex(commandParameter);
-             }
-             else if (Match(command, "watch-indexes"))
-             {
-                 WatchAllIndexes();
-             }
-             else if (Match(command, "unwatch-indexes"))
-             {
-                 UnwatchAllIndexes();
-             }
-             else if (Match(command, "watch-transformers"))
-             {
-                 WatchTransformers();
-             }
-             else if (Match(command, "unwatch-transformers"))
-             {
-                 UnwatchTransformers();
-             }
-             else*/
-            if (Match(command, "watch-doc"))
+            if (Match(command, "watch-index"))
+            {
+                WatchIndex(commandParameter);
+            }
+            else if (Match(command, "unwatch-index"))
+            {
+                UnwatchIndex(commandParameter);
+            }
+            else if (Match(command, "watch-indexes"))
+            {
+                WatchAllIndexes();
+            }
+            else if (Match(command, "unwatch-indexes"))
+            {
+                UnwatchAllIndexes();
+            }
+            else if (Match(command, "watch-transformers"))
+            {
+                WatchAllTransformers();
+            }
+            else if (Match(command, "unwatch-transformers"))
+            {
+                UnwatchAllTransformers();
+            }
+            else if (Match(command, "watch-doc"))
             {
                 WatchDocument(commandParameter);
             }
