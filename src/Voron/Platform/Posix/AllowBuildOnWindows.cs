@@ -58,7 +58,9 @@ namespace Voron.Platform.Posix
         //    int open(const char *pathname, int flags, mode_t mode);
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int open(
-                [MarshalAs(UnmanagedType.LPStr)] string pathname, OpenFlags flags, FilePermissions mode);
+                [MarshalAs(UnmanagedType.LPStr)] string pathname,
+                [MarshalAs(UnmanagedType.I4)] OpenFlags flags,
+                [MarshalAs(UnmanagedType.U2)] FilePermissions mode);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int fsync(int fd);
@@ -490,7 +492,7 @@ namespace Voron.Platform.Posix
     // mode_t
     [Flags]
     
-    public enum FilePermissions : uint
+    public enum FilePermissions : ushort
     {
         S_ISUID = 0x0800, // Set user ID on execution
         S_ISGID = 0x0400, // Set group ID on execution
