@@ -107,3 +107,7 @@ test/Studio/setup/tests.js
 test/Studio/js/
 /Databases/
 /Logs
+
+release
+build
+out

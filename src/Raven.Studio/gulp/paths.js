@@ -40,7 +40,6 @@ var paths = {
         'wwwroot/lib/bootstrap-multiselect/dist/css/bootstrap-multiselect.css',
         'wwwroot/lib/font-awesome/css/font-awesome.css',
         'wwwroot/lib/Durandal/css/durandal.css',
-        'wwwroot/lib/nprogress/nprogress.css',
         'wwwroot/lib/jquery-ui/themes/base-wo-comments/all.css',
         'wwwroot/lib/jquery.dynatree/dist/skin/ui.dynatree.css',
         'wwwroot/lib/nvd3/build/nv.d3.css',
@@ -51,7 +50,6 @@ var paths = {
     externalLibs: [
         'jquery/dist/jquery.min.js',
         'blockUI/jquery.blockUI.js',
-        'nprogress/nprogress.js',
         'knockout/dist/knockout.js',
         'knockout.dirtyFlag/index.js',
         'knockout-delegatedEvents/build/knockout-delegatedEvents.min.js',

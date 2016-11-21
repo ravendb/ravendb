@@ -27,7 +27,7 @@ gulp.task('clean', ['clean:js'], function () {
     del.sync(PATHS.releaseTarget);
     del.sync(['./typings/*', '!./typings/_studio/**', '!./typings/tsd.d.ts']);
     del.sync([PATHS.bowerSource]);
-    
+
 });
 
 gulp.task('clean:js', function() {
@@ -228,6 +228,13 @@ gulp.task('release', function (cb) {
             'release:durandal'
         ],
         cb);
+});
+
+gulp.task('release-package', ['release'], function () {
+    return gulp.src(PATHS.releaseTarget + "/**/*.*", {
+    })
+    .pipe(plugins.zip("Raven.Studio.zip"))
+    .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
 gulp.task('build', function (cb) {
