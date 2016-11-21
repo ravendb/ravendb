@@ -107,7 +107,8 @@ class graphHelper {
 
     private static readonly arrowConfig = {
         halfWidth: 6,
-        height: 8   
+        height: 8,
+        straightLine: 7  
     }
 
     static drawBezierDiagonal(ctx: CanvasRenderingContext2D, source: [number, number], target: [number, number], withArrow = false) {
@@ -115,9 +116,21 @@ class graphHelper {
 
         const m = (source[1] + target[1]) / 2;
 
-        ctx.moveTo(source[0], source[1]);
-        ctx.bezierCurveTo(source[0], m, target[0], m, target[0], target[1]);
-        ctx.stroke();
+        if (source[1] < target[1]) {
+            ctx.moveTo(source[0], source[1]);
+            ctx.lineTo(source[0], source[1] + graphHelper.arrowConfig.straightLine);
+            ctx.bezierCurveTo(source[0], m, target[0], m, target[0], target[1] - graphHelper.arrowConfig.straightLine);
+            ctx.lineTo(target[0], target[1]);
+            ctx.stroke();
+        } else {
+            ctx.moveTo(source[0], source[1]);
+            ctx.lineTo(source[0], source[1] - graphHelper.arrowConfig.straightLine);
+            ctx.bezierCurveTo(source[0], m, target[0], m, target[0], target[1] + graphHelper.arrowConfig.straightLine);
+            ctx.lineTo(target[0], target[1]);
+            ctx.stroke();
+        }
+
+        
 
         if (withArrow) {
             ctx.beginPath();

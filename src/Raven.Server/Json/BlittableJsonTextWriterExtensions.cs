@@ -1120,6 +1120,10 @@ namespace Raven.Server.Json
                 writer.WriteString(tree.Name);
                 writer.WriteComma();
 
+                writer.WritePropertyName(nameof(ReduceTree.DisplayName));
+                writer.WriteString(tree.DisplayName);
+                writer.WriteComma();
+
                 writer.WritePropertyName(nameof(ReduceTree.Depth));
                 writer.WriteInteger(tree.Depth);
                 writer.WriteComma();
