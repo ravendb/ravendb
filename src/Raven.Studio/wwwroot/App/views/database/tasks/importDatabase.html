@@ -8,7 +8,7 @@
                 <div class="col-sm-6">
                     <div class="input-group file-input">
                         <input required="" type="file" id="importDatabaseFilePicker"  data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }, disable: isImporting" tabindex="-1" >
-                        <span class="static-name form-control">Select file...</span>
+                        <span class="static-name form-control" data-bind="text: importedFileName() || 'Select file...'" ></span>
                         <span class="input-group-btn">
                             <label for="importDatabaseFilePicker" class="btn btn-default">
                                 <i class="icon-document"></i>

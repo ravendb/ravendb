@@ -83,9 +83,8 @@ class importDatabase extends viewModelBase {
 
     fileSelected(fileName: string) {
         const isFileSelected = fileName ? !!fileName.trim() : false;
-        const importFileName = $(importDatabase.filePickerTag).val().split(/(\\|\/)/g).pop();
         this.hasFileSelected(isFileSelected);
-        this.importedFileName(importFileName ? importFileName : null);
+        this.importedFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
     }
 
     importDb() {
