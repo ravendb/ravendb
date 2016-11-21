@@ -235,7 +235,8 @@ namespace Raven.Server.Documents.Indexes.Debugging
             
             return new ReduceTree
             {
-                Name = GetTreeName(root.AggregationResult, index.Definition, context),
+                DisplayName = GetTreeName(root.AggregationResult, index.Definition, context),
+                Name = tree.Name.ToString(),
                 Root = root,
                 Depth = tree.State.Depth,
                 PageCount = tree.State.PageCount,
@@ -309,7 +310,8 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
             return new ReduceTree
             {
-                Name = GetTreeName(root.AggregationResult, index.Definition, context),
+                DisplayName = GetTreeName(root.AggregationResult, index.Definition, context),
+                Name = section.Name.ToString(),
                 Root = root,
                 Depth = 1,
                 PageCount = 1,

@@ -48,6 +48,7 @@ class reduceTreeItem {
 
     private tree: Raven.Server.Documents.Indexes.Debugging.ReduceTree;
     name: string;
+    displayName: string;
     depth: number;
     itemsCountAtDepth: Array<number>; // this represents non-filtered count
     itemsAsDepth = new Map<number, Array<pageItem>>(); // items after filtering
@@ -61,6 +62,7 @@ class reduceTreeItem {
     constructor(tree: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
         this.tree = tree;
         this.name = tree.Name;
+        this.displayName = tree.DisplayName;
         this.depth = tree.Depth;
 
         this.countItemsPerDepth();
@@ -201,7 +203,7 @@ class reduceTreeItem {
     }
 
     private estimateReduceKeyWidth() {
-        return this.name.length * 6;
+        return this.displayName.length * 6;
     }
 
     private getPagesOnlyWidth(maxItems: number) {
@@ -460,7 +462,7 @@ class visualizerGraphGlobal {
             ctx.font = "10px Lato";
             ctx.textAlign = "center";
             ctx.fillStyle = "#686f6f";
-            ctx.fillText(tree.name, tree.width / 2, reduceTreeItem.margins.treeMargin, tree.width);
+            ctx.fillText(tree.displayName, tree.width / 2, reduceTreeItem.margins.treeMargin, tree.width);
 
             // total entries
             let totalEntiresY = reduceTreeItem.margins.treeMargin +
@@ -518,6 +520,29 @@ class visualizerGraphGlobal {
             }
         }
     }
+
+    /* TODO striped curves
+
+    ctx.lineWidth = 2;
+ctx.strokeStyle = "black";
+ctx.setLineDash([16, 16]);
+ctx.lineDashOffset = 0;
+
+ctx.beginPath();
+ctx.moveTo(20,20);
+
+ctx.bezierCurveTo(20,100,200,100,200,20);
+ctx.stroke();
+
+
+ctx.strokeStyle = "red"
+ctx.setLineDash([16, 16]);
+ctx.lineDashOffset = 16;
+
+ctx.beginPath();
+ctx.moveTo(20,20);
+ctx.bezierCurveTo(20,100,200,100,200,20);
+ctx.stroke();*/
 
     private drawDocument(ctx: CanvasRenderingContext2D, docItem: documentItem) {
         ctx.fillStyle = docItem.color; 
