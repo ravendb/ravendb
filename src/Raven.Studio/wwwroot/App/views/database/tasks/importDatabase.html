@@ -117,10 +117,10 @@
                 <div class="progress-bar progress-bar-primary progress-bar-striped" role="progressbar" data-bind="style: { width: uploadStatus() + '%' }"> <span class="sr-only" data-bind="text: uploadStatus() + '%'"></span> </div>
             </div>
 
-            <button class="btn btn-info" type="button" data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions)">
+            <button class="btn btn-default" type="button" data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions)">
                 Advanced
             </button>
-            <button class="btn btn-success" type="submit" download data-bind="css: { 'btn-spinner': isImporting() }"><span class="icon-import"></span> <span>Import Database</span></button>
+            <button class="btn btn-primary" type="submit" download data-bind="css: { 'btn-spinner': isImporting() }"><span class="icon-import"></span> <span>Import Database</span></button>
         </form>
     </div>
 </div>
