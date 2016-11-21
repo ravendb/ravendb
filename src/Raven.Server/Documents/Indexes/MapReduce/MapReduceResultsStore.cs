@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
@@ -77,13 +78,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Delete(long id)
         {
-            var entryId = id;
+            id = Bits.SwapBytes(id);
 
             switch (Type)
             {
                 case MapResultsStorageType.Tree:
                     Slice entrySlice;
-                    using (Slice.External(_indexContext.Allocator, (byte*) &entryId, sizeof(long), out entrySlice))
+                    using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
                         Tree.Delete(entrySlice);
                     break;
                 case MapResultsStorageType.Nested:
@@ -101,10 +102,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Add(long id, BlittableJsonReaderObject result)
         {
+            id = Bits.SwapBytes(id);
+
             switch (Type)
             {
                 case MapResultsStorageType.Tree:
                     Slice entrySlice;
+                    
                     using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
                     {
                         var pos = Tree.DirectAdd(entrySlice, result.Size);
@@ -133,6 +137,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public PtrSize Get(long id)
         {
+            id = Bits.SwapBytes(id);
+
             switch (Type)
             {
                 case MapResultsStorageType.Tree:
