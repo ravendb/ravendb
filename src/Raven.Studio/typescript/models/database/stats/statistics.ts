@@ -1,54 +1,66 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-
 import indexStatistics = require("models/database/stats/indexStatistics");
 
 class statistics {
-
-    storageEngine: string;
     dataBaseId: string;
     lastDocEtag?: number;
-    lastAttachmentEtag: number;
-    staleIndexes: string[];
-    countOfIndexes: number;
-    countOfDocuments: number;
-    countOfTransformers: number;
-    //lastIndexingDateTime: number; // ??
+    countOfIndexes: string;
+    countOfDocuments: string;
+    countOfTransformers: string;
     is64Bit: boolean;
+    indexPerformanceURL: string;
 
-    indexes = ko.observableArray<indexStatistics>();
-
+    // The observable indexes array, ordered by type
+    indexesByType = ko.observableArray<indexesWithType>(); 
+    
     constructor(dto: Raven.Client.Data.DatabaseStatistics) {
-        this.storageEngine = "Voron";
         this.dataBaseId = dto.DatabaseId; 
         this.lastDocEtag = dto.LastDocEtag;
-        this.countOfIndexes = dto.CountOfIndexes;
-        this.countOfDocuments = dto.CountOfDocuments;
-        this.staleIndexes = dto.StaleIndexes;
-        //this.lastIndexingDateTime = dto.?? need to do in different issue
-        this.countOfTransformers = dto.CountOfTransformers;
+        this.countOfIndexes = dto.CountOfIndexes.toLocaleString();
+        this.countOfDocuments = dto.CountOfDocuments.toLocaleString();
+        this.countOfTransformers = dto.CountOfTransformers.toLocaleString();
         this.is64Bit = dto.Is64Bit;
+        
+        // 1. The array with all indexes from endpint
+        const allIndexes = dto.Indexes.map(x => new indexStatistics(x)); 
 
-        // TODO: work on other props
+        // 2. Create an array where indexes are ordered by type
+        let indexesByTypeTemp = Array<indexesWithType>();
+        allIndexes.forEach(index => {
+            let existingEntry = indexesByTypeTemp.find(x => x.indexType === index.type);
+            if (!existingEntry) {
+                // A new type encountered
+                let newType = new indexesWithType(index.type);
+                newType.add(index);
+                indexesByTypeTemp.push(newType);
+            }
+            else {
+                // Type already exists, only add the index
+                existingEntry.add(index);
+            }
+        });
 
-        this.indexes(dto.Indexes.map(x => new indexStatistics(x)));
+        // 3. Sort by index name & type
+        indexesByTypeTemp.forEach(x => { x.indexes.sort((a, b) => a.name > b.name ? 1 : -1); });
+        indexesByTypeTemp.sort((a, b) => a.indexType > b.indexType ? 1 : -1);
+
+        // 4. Update the observable array 
+        this.indexesByType(indexesByTypeTemp);
+    }
+}
+
+class indexesWithType {
+    indexType: string;
+    indexes: indexStatistics[];
+
+    constructor(type: string) {
+        this.indexType = type;
+        this.indexes = [];
     }
 
+    add(index: indexStatistics) {
+        this.indexes.push(index);
+    }
 }
 
 export = statistics;
-
-//interface DatabaseStatistics {
-//    ApproximateTaskCount: number;
-//    CountOfDocuments: number;
-//    CountOfIndexes: number;
-//    CountOfRevisionDocuments?: number;
-//    CountOfTransformers: number;
-//    CurrentNumberOfItemsToIndexInSingleBatch: number;
-//    CurrentNumberOfItemsToReduceInSingleBatch: number;
-//    CurrentNumberOfParallelTasks: number;
-//    DatabaseId: string;
-//    Indexes: Raven.Client.Data.IndexInformation[];
-//    Is64Bit: boolean;
-//    LastDocEtag?: number;
-//    StaleIndexes: string[];
-//}
