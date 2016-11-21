@@ -15,9 +15,10 @@ namespace Voron.Benchmark
             //BenchmarkRunner.Run<Table.TableReadAndIterate>();
             //BenchmarkRunner.Run<Table.TableInsertRandom>();
 
-            var bench = new BTree.BTreeInsertRandom();
+            var bench = new BTree.BTreeFillRandom { RandomSeed = 0 };
             bench.Setup();
-            bench.InsertRandomOneTransaction();
+            bench.FillRandomOneTransaction();
+            bench.Cleanup();
         }
     }
 }
