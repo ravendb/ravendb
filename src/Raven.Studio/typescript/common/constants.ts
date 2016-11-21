@@ -1,6 +1,9 @@
 const enum buildType {
-    Stable = 0,
-    Unstable = 1
+    Alpha = 1,
+    Beta = 2,
+    Rc = 3,
+    Stable = 4,
+    Patch = 5
 }
 
 const enum viewType {

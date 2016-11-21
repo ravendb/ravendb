@@ -10,6 +10,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Smuggler;
+using Raven.Server.Alerts;
 using Raven.Server.Documents.PeriodicExport.Aws;
 using Raven.Server.Documents.PeriodicExport.Azure;
 using Raven.Server.Json;

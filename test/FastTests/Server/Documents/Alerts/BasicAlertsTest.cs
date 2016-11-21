@@ -4,6 +4,7 @@ using System.IO;
 using Raven.Abstractions;
 using Raven.Client.Document;
 using Raven.Json.Linq;
+using Raven.Server.Alerts;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -30,7 +31,7 @@ namespace FastTests.Server.Documents.Alerts
                 {
                     using (var writer = new BlittableJsonTextWriter(_ctx, ms))
                     {
-                        database.Alerts.ReadAlerts(writer);
+                        database.Alerts.WriteAlerts(writer);
                     }
 
                     ms.Position = 0;
@@ -75,7 +76,7 @@ namespace FastTests.Server.Documents.Alerts
                 {
                     using (var writer = new BlittableJsonTextWriter(_ctx, ms))
                     {
-                        database.Alerts.ReadAlerts(writer);
+                        database.Alerts.WriteAlerts(writer);
                     }
 
                     ms.Position = 0;
@@ -109,7 +110,7 @@ namespace FastTests.Server.Documents.Alerts
                 {
                     using (var writer = new BlittableJsonTextWriter(_ctx, ms))
                     {
-                        database.Alerts.ReadAlerts(writer);
+                        database.Alerts.WriteAlerts(writer);
                     }
 
                     ms.Position = 0;
@@ -141,7 +142,7 @@ namespace FastTests.Server.Documents.Alerts
                 {
                     using (var writer = new BlittableJsonTextWriter(_ctx, ms))
                     {
-                        database.Alerts.ReadAlerts(writer);
+                        database.Alerts.WriteAlerts(writer);
                     }
 
                     ms.Position = 0;

@@ -1,7 +1,6 @@
 ﻿using Raven.Client.Data;
-using Raven.Server.Documents;
 
-namespace Raven.Server.Web.Operations
+namespace Raven.Server.Alerts
 {
     public class AlertNotification : Notification
     {

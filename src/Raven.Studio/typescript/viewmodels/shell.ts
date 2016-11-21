@@ -5,7 +5,6 @@ import app = require("durandal/app");
 import sys = require("durandal/system");
 import viewLocator = require("durandal/viewLocator");
 
-import MENU_BASED_ROUTER_CONFIGURATION = require("common/shell/routerConfiguration");
 import menu = require("common/shell/menu");
 import generateMenuItems = require("common/shell/menu/generateMenuItems");
 import activeResourceTracker = require("common/shell/activeResourceTracker");
@@ -20,6 +19,7 @@ import topology = require("models/database/replication/topology");
 import environmentColor = require("models/resources/environmentColor");
 import changesContext = require("common/changesContext");
 import changesApi = require("common/changesApi");
+import allRoutes = require("common/shell/routes");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
@@ -40,11 +40,15 @@ import getSupportCoverageCommand = require("commands/auth/getSupportCoverageComm
 import getServerConfigsCommand = require("commands/database/studio/getServerConfigsCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
+import getLatestServerBuildVersionCommand = require("commands/database/studio/getLatestServerBuildVersionCommand");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 import enterApiKey = require("viewmodels/common/enterApiKey");
+
+import serverBuildReminder = require("common/serverBuildReminder");
+import latestBuildReminder = require("viewmodels/common/latestBuildReminder")
 
 import eventsCollector = require("common/eventsCollector");
 
@@ -112,18 +116,12 @@ class shell extends viewModelBase {
         enableResizeBindingHandler.install();
         helpBindingHandler.install();
 
-        this.fetchClientBuildVersion();
-        this.fetchServerBuildVersion();
-
         this.clientBuildVersion.subscribe(v =>
             viewModelBase.clientVersion("4.0." + v.BuildVersion));
 
         this.serverBuildVersion.subscribe(buildVersionDto => {
-            this.initAnalytics(
-                { SendUsageStats: true },
-                [ buildVersionDto ]);
+            this.initAnalytics({ SendUsageStats: true }, [ buildVersionDto ]);
         });
-
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -149,10 +147,12 @@ class shell extends viewModelBase {
         $(window).resize(() => self.activeResource.valueHasMutated());
         //TODO: return shell.fetchLicenseStatus();
 
+        this.fetchClientBuildVersion();
+        this.fetchServerBuildVersion();
     }
 
     private setupRouting() {
-        let routes = this.getRoutesForNewLayout();
+        let routes = allRoutes.get(this.appUrls);
         routes.pushAll(routes);
         router.map(routes).buildNavigationModel();
         //TODO: do we indicate this? router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
@@ -218,149 +218,6 @@ class shell extends viewModelBase {
         });
     }*/
 
-    private getRoutesForNewLayout() {
-        let routes = [
-            {
-                route: "databases/upgrade",
-                title: "Upgrade in progress",
-                moduleId: "viewmodels/common/upgrade",
-                nav: false,
-                dynamicHash: this.appUrls.upgrade
-            },
-            {
-                route: "databases/edit",
-                title: "Edit Document",
-                moduleId: "viewmodels/database/documents/editDocument",
-                nav: false
-            },
-            {
-                route: "filesystems/files",
-                title: "Files",
-                moduleId: "viewmodels/filesystem/files/filesystemFiles",
-                nav: true,
-                dynamicHash: this.appUrls.filesystemFiles
-            },
-            {
-                route: "filesystems/search",
-                title: "Search",
-                moduleId: "viewmodels/filesystem/search/search",
-                nav: true,
-                dynamicHash: this.appUrls.filesystemSearch
-            },
-            {
-                route: "filesystems/synchronization*details",
-                title: "Synchronization",
-                moduleId: "viewmodels/filesystem/synchronization/synchronization",
-                nav: true,
-                dynamicHash: this.appUrls.filesystemSynchronization
-            },
-            {
-                route: "filesystems/status*details",
-                title: "Status",
-                moduleId: "viewmodels/filesystem/status/status",
-                nav: true,
-                dynamicHash: this.appUrls.filesystemStatus
-            },
-            {
-                route: "filesystems/tasks*details",
-                title: "Tasks",
-                moduleId: "viewmodels/filesystem/tasks/tasks",
-                nav: true,
-                dynamicHash: this.appUrls.filesystemTasks
-            },
-            {
-                route: "filesystems/settings*details",
-                title: "Settings",
-                moduleId: "viewmodels/filesystem/settings/settings",
-                nav: true,
-                dynamicHash: this.appUrls.filesystemSettings
-            },
-            {
-                route: "filesystems/configuration",
-                title: "Configuration",
-                moduleId: "viewmodels/filesystem/configurations/configuration",
-                nav: true,
-                dynamicHash: this.appUrls.filesystemConfiguration
-            },
-            {
-                route: "filesystems/edit",
-                title: "Edit File",
-                moduleId: "viewmodels/filesystem/files/filesystemEditFile",
-                nav: false
-            },
-            {
-                route: "counterstorages/counters",
-                title: "Counters",
-                moduleId: "viewmodels/counter/counters",
-                nav: true,
-                dynamicHash: this.appUrls.counterStorageCounters
-            },
-            {
-                route: "counterstorages/replication",
-                title: "Replication",
-                moduleId: "viewmodels/counter/counterStorageReplication",
-                nav: true,
-                dynamicHash: this.appUrls.counterStorageReplication
-            },
-            {
-                route: "counterstorages/tasks*details",
-                title: "Stats",
-                moduleId: "viewmodels/counter/tasks/tasks",
-                nav: true,
-                dynamicHash: this.appUrls.counterStorageStats
-            },
-            {
-                route: "counterstorages/stats",
-                title: "Stats",
-                moduleId: "viewmodels/counter/counterStorageStats",
-                nav: true,
-                dynamicHash: this.appUrls.counterStorageStats
-            },
-            {
-                route: "counterstorages/configuration",
-                title: "Configuration",
-                moduleId: "viewmodels/counter/counterStorageConfiguration",
-                nav: true,
-                dynamicHash: this.appUrls.counterStorageConfiguration
-            },
-            {
-                route: "counterstorages/edit",
-                title: "Edit Counter",
-                moduleId: "viewmodels/counter/editCounter",
-                nav: false
-            },
-            {
-                route: "timeseries/types",
-                title: "Types",
-                moduleId: "viewmodels/timeSeries/timeSeriesTypes",
-                nav: true,
-                dynamicHash: this.appUrls.timeSeriesType
-            },
-            {
-                route: "timeseries/points",
-                title: "Points",
-                moduleId: "viewmodels/timeSeries/timeSeriesPoints",
-                nav: true,
-                dynamicHash: this.appUrls.timeSeriesPoints
-            },
-            {
-                route: "timeseries/stats",
-                title: "Stats",
-                moduleId: "viewmodels/timeSeries/timeSeriesStats",
-                nav: true,
-                dynamicHash: this.appUrls.timeSeriesStats
-            },
-            {
-                route: "timeseries/configuration*details",
-                title: "Configuration",
-                moduleId: "viewmodels/timeSeries/configuration/configuration",
-                nav: true,
-                dynamicHash: this.appUrls.timeSeriesConfiguration
-            }
-        ] as Array<DurandalRouteConfiguration>;
-
-        return routes.concat(MENU_BASED_ROUTER_CONFIGURATION);
-    }
 
     setupApiKey() {
         // try to find api key as studio hash parameter
@@ -469,22 +326,11 @@ class shell extends viewModelBase {
             .done((serverBuildResult: serverBuildVersionDto) => {
                 this.serverBuildVersion(serverBuildResult);
 
-                var currentBuildVersion = serverBuildResult.BuildVersion;
+                var currentBuildVersion = serverBuildResult.BuildNumber;
                 if (currentBuildVersion !== DEV_BUILD_NUMBER) {
                     shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
                 }
 
-                /*serverBuildReminder
-                 if (serverBuildReminder.isReminderNeeded() && currentBuildVersion !== DEV_BUILD_NUMBER) {
-                    new getLatestServerBuildVersionCommand(true, 35000, 39999) //pass false as a parameter to get the latest unstable
-                        .execute()
-                        .done((latestServerBuildResult: latestServerBuildVersionDto) => {
-                            if (latestServerBuildResult.LatestBuild > currentBuildVersion) { //
-                                var latestBuildReminderViewModel = new latestBuildReminder(latestServerBuildResult);
-                                app.showBootstrapDialog(latestBuildReminderViewModel);
-                            }
-                        });
-                }*/
             });
         
     }
@@ -586,16 +432,16 @@ class shell extends viewModelBase {
     }
 
     private configureAnalytics(track: boolean, [buildVersionResult]: [serverBuildVersionDto]) {
-        let currentBuildVersion = buildVersionResult.BuildVersion;
+        let currentBuildVersion = buildVersionResult.BuildNumber;
         let shouldTrack = track && currentBuildVersion !== DEV_BUILD_NUMBER;
         if (currentBuildVersion !== DEV_BUILD_NUMBER) {
             shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
         } 
 
         var env = license.licenseStatus() && license.licenseStatus().IsCommercial ? "prod" : "dev";
-        var fullVersion = buildVersionResult.FullVersion;
+        var version = buildVersionResult.Version;
         eventsCollector.default.initialize(
-            shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, fullVersion, shouldTrack);
+            shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, version, shouldTrack);
     }
 }
 

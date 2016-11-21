@@ -1,5 +1,6 @@
 using System;
 using Raven.Abstractions;
+using Raven.Server.Alerts;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.SqlReplication

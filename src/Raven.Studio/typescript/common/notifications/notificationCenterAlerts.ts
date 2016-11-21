@@ -13,48 +13,73 @@ import dismissOperationCommand = require("commands/operations/dismissOperationCo
 import getRunningTasksCommand = require("commands/operations/getRunningTasksCommand");
 import killOperationCommand = require("commands/operations/killOperationCommand");
 
-import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
+import getDatabaseAlertsCommand = require("commands/alerts/getDatabaseAlertsCommand");
+import getGlobalAlertsCommand = require("commands/alerts/getGlobalAlertsCommand");
+import adminWatchClient = require("common/adminWatchClient");
 
 class notificationCenterAlerts {
 
     alerts = ko.observableArray<alert>();
 
-    activeChangesApi: KnockoutObservable<changesApi>;
+    activeResourceChangesApi: KnockoutObservable<changesApi>;
 
     constructor() {
-        this.activeChangesApi = changesContext.default.currentResourceChangesApi;
-        ko.postbox.subscribe("ChangesApiReconnected", () => this.onReconnect());
+        this.activeResourceChangesApi = changesContext.default.currentResourceChangesApi;
+
+        this.onNewGlobalAlert();
+        let globalAlertsSubscription = changesContext.default.globalChangesApi.subscribe(api => {
+            api.watchAlerts(globalAlertEvent => {
+                this.onNewGlobalAlert(globalAlertEvent);
+            });
+
+            globalAlertsSubscription.dispose();
+        });
+
+        ko.postbox.subscribe("ChangesApiReconnected",
+            () => this.onReconnectWatchAndShowActiveResourceAlerts());
         $(window).bind("storage", (event) => this.onStorageEvent(event));
     }
-    
 
     private onStorageEvent(event: JQueryEventObject) {
         const storageEvent = event.originalEvent as StorageEvent;
 
-        const rs = this.activeChangesApi().getResource();
+        const rs = this.activeResourceChangesApi().getResource();
 
         //TODO: match key
 
         //TODO: handle action
     }
 
-    private onReconnect() {
-        const changes = this.activeChangesApi();
+    private onReconnectWatchAndShowActiveResourceAlerts() {
+        const changes = this.activeResourceChangesApi();
         const rs = changes.getResource();
 
-        changes.watchAlerts(this.onStatus);
+        changes.watchAlerts(newAlertEvent => {
+            this.retrieveDatabaseAlerts(rs as database);
+        });
 
-        new getOperationAlertsCommand(rs as database)
-            .execute()
-            .done((alerts: alert[]) => {
-                this.alerts(alerts); //TODO: filter alerts
-            })
-            .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to get alerts", response.responseText, response.statusText));
     }
 
-    private onStatus(status: Raven.Server.Web.Operations.AlertNotification) {
-        
-        //TODO:
+    private onNewGlobalAlert(msg?: Raven.Server.Alerts.GlobalAlertNotification) {
+        new getGlobalAlertsCommand()
+            .execute()
+            .done((alerts: alert[]) => this.consolidateAlerts(alerts))
+            .fail((response: JQueryXHR) =>
+                messagePublisher.reportError("Failed to get alerts", response.responseText, response.statusText));
+    }
+
+    private retrieveDatabaseAlerts(resource: database) {
+        new getDatabaseAlertsCommand(resource)
+            .execute()
+            .done((alerts: alert[]) => this.consolidateAlerts(alerts))
+            .fail((response: JQueryXHR) =>
+                messagePublisher.reportError("Failed to get alerts", response.responseText, response.statusText));
+    }
+
+    private consolidateAlerts(alerts: alert[]) {
+        const currentAlertKeys = new Set(this.alerts().map(x => x.key));
+        const newAlerts = alerts.filter(a => !currentAlertKeys.has(a.key));
+        this.alerts.push(...newAlerts);
     }
 
 }
