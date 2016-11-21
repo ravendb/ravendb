@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Sparrow;
@@ -38,7 +39,7 @@ namespace FastTests.Voron.LeafsCompression
 
                 for (int i = 0; i < iterationCount; i++)
                 {
-                    tree.Add($"items/{i}", new MemoryStream(bytes));
+                    tree.Add($"items/{i:D5}", new MemoryStream(bytes));
                 }
 
                 var compressedLeafs =
@@ -61,7 +62,7 @@ namespace FastTests.Voron.LeafsCompression
                     Slice key;
                     byte[] result;
 
-                    using (Slice.From(tx.Allocator, $"items/{i}", ByteStringType.Immutable, out key))
+                    using (Slice.From(tx.Allocator, $"items/{i:D5}", ByteStringType.Immutable, out key))
                     {
                         unsafe
                         {

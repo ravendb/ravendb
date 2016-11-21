@@ -39,7 +39,7 @@ namespace Voron.Data.Compression
             switch (_usage)
             {
                 case Usage.PageSplitter:
-                    CopyToOriginal(defragRequired: false); // after page splitter run the page isn't fragmented for sure, it was either truncated (left) or just created (right)
+                    CopyToOriginal(defragRequired: false /* TODO arek - temp*/); // after page splitter run the page isn't fragmented for sure, it was either truncated (left) or just created (right)
                     break;
                 case Usage.None:
                     break;

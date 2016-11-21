@@ -24,7 +24,6 @@ namespace Voron.Data.BTrees
 
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
         private PageLocator _pageLocator;
-        private UncompressedEntry _uncompressedEntry;
 
         public event Action<long> PageModified;
         public event Action<long> PageFreed;
@@ -536,7 +535,7 @@ namespace Voron.Data.BTrees
 
             if (p.IsCompressed)
                 throw new InvalidOperationException($"Page {p.PageNumber} is compressed. You need to decompress it to be able to access its content.");
-            
+
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
             AddToRecentlyFoundPages(cursorPath, p, leftmostPage, rightmostPage);
@@ -750,7 +749,7 @@ namespace Voron.Data.BTrees
 
             if (page.IsLeaf == false)
                 VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page");
-            
+
             node = page.Search(_llt, key); // will set the LastSearchPosition
 
             var cursorPath = foundPage.CursorPath;
@@ -793,117 +792,7 @@ namespace Voron.Data.BTrees
             }
             return c;
         }
-
-        public DecompressedLeafPage DecompressPage(TreePage p)
-        {
-            var compressioncHeader = p.CompressionHeader;
-
-            var decompressedPageSize = p.SizeUsed - compressioncHeader->CompressedSize +
-                                compressioncHeader->UncompressedSize +
-                                Constants.NodeOffsetSize * compressioncHeader->NumberOfCompressedEntries;
-
-            if (decompressedPageSize > Constants.Storage.MaxPageSize)
-                decompressedPageSize = Constants.Storage.MaxPageSize;
-            else
-                decompressedPageSize = Bits.NextPowerOf2(decompressedPageSize);
-
-            var decompressedPage = _llt.Environment.DecompressionBuffers.GetPage(_llt, decompressedPageSize, p);
-
-            byte* tempBuffer;
-            using (_llt.Environment.DecompressionBuffers.GetTemporaryBuffer(_llt, Bits.NextPowerOf2(compressioncHeader->UncompressedSize), out tempBuffer))
-            {
-                LZ4.Decode64LongBuffers(
-                    (byte*)compressioncHeader - compressioncHeader->CompressedSize,
-                    compressioncHeader->CompressedSize,
-                    tempBuffer,
-                    compressioncHeader->UncompressedSize, true);
-                
-                var nodes = GetNodesInOrder(p, tempBuffer, compressioncHeader->UncompressedSize);
-
-                foreach (var node in nodes)
-                {
-                    using (node.KeyScope)
-                    {
-                        decompressedPage.CopyNodeDataToEndOfPage(node.Node, node.Key);
-                    }
-                }
-            }
-
-            return decompressedPage;
-        }
-
-        private LinkedList<DecompressedPageNodeEntry> GetNodesInOrder(TreePage compressedPage, byte* decompressedPtr, int decompressedSize)
-        {
-            var nodes = new LinkedList<DecompressedPageNodeEntry>();
-
-            // add uncompressed nodes first
-
-            for (var i = 0; i < compressedPage.NumberOfEntries; i++)
-            {
-                var uncompressedNode = compressedPage.GetNode(i);
-
-                Slice nodeKey;
-                var keyScope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, uncompressedNode, out nodeKey);
-
-                nodes.AddLast(new DecompressedPageNodeEntry
-                {
-                    Key = nodeKey,
-                    Node = uncompressedNode,
-                    KeyScope = keyScope,
-                });
-            }
-
-            // then decompressed ones
-
-            var ptr = decompressedPtr;
-
-            while (ptr - decompressedPtr < decompressedSize)
-            {
-                var nodeHeader = (TreeNodeHeader*) ptr;
-
-                Slice nodeKey;
-                var keyScope = TreeNodeHeader.ToSlicePtr(_llt.Allocator, nodeHeader, out nodeKey);
-
-                var current = nodes.First;
-
-                var keyCompareResult = -1;
-
-                while (current != null && (keyCompareResult = SliceComparer.CompareInline(nodeKey, current.Value.Key)) > 0)
-                {
-                    // compressed nodes should be mostly in the right order within their own sections
-                    // it's also likely that compressed nodes will have lower keys than uncompressed ones
-                    // so we shouldn't iterate many times here
-
-                    current = current.Next;
-                }
-
-                if (keyCompareResult == 0)
-                {
-                    // update - newer version added as uncompressed
-                    keyScope.Dispose();
-                    throw new NotImplementedException("TODO arek");
-                }
-                else
-                {
-                    var node = new DecompressedPageNodeEntry
-                    {
-                        Key = nodeKey,
-                        Node = nodeHeader,
-                        KeyScope = keyScope
-                    };
-
-                    if (current != null)
-                        nodes.AddBefore(current, node);
-                    else
-                        nodes.AddLast(node);
-                }
-
-                ptr += TreeSizeOf.NodeEntry(nodeHeader);
-            }
-
-            return nodes;
-        }
-
+        
         internal TreePage NewPage(TreePageFlags flags, int num)
         {
             var page = AllocateNewPage(_llt, flags, num);
@@ -920,7 +809,7 @@ namespace Voron.Data.BTrees
             var page = new TreePage(newPage.Pointer, tx.PageSize)
             {
                 Flags = PageFlags.VariableSizeTreePage | (num == 1 ? PageFlags.Single : PageFlags.Overflow),
-                Lower = (ushort) Constants.TreePageHeaderSize,
+                Lower = (ushort)Constants.TreePageHeaderSize,
                 TreeFlags = flags,
                 Upper = (ushort)tx.PageSize,
                 Dirty = true
@@ -1188,7 +1077,7 @@ namespace Voron.Data.BTrees
                 }
             }
 
-            if (_pageLocator != null && _isPageLocatorOwned )
+            if (_pageLocator != null && _isPageLocatorOwned)
             {
                 _llt.PersistentContext.FreePageLocator(_pageLocator);
                 _pageLocator = null;
@@ -1263,44 +1152,7 @@ namespace Voron.Data.BTrees
             pos = null;
             return false;
         }
-
-        private bool TryCompressPageNodes(Slice key, int len, TreePage page)
-        {
-            var alreadyCompressed = page.IsCompressed;
-
-            if (alreadyCompressed && page.NumberOfEntries == 0) // there isn't any entry what we could compress
-                return false;
-
-            var pageToCompress = page;
-
-            using (alreadyCompressed ? (DecompressedLeafPage)(pageToCompress = DecompressPage(page)) : null)
-            {
-                if (_uncompressedEntry == null)
-                    _uncompressedEntry = new UncompressedEntry();
-
-                CompressionResult result;
-                using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out result, defrag: alreadyCompressed == false, aboutToAdd: _uncompressedEntry.Set(key, len)))
-                {
-                    if (result == null)
-                        return false;
-
-                    // need to check if the compressed page has space for entry that we want to insert
-                    // we don't use HasSpaceFor here intentionally because underneath CalcSizeUsed could be called
-                    // since we put compressed entries at the beginning of that page (temporarily) then props like NumberOfEntries and KeysOffsets
-                    // return incorrect values and AccessViolationException could be thrown
-                    // instead we can explicitly check SizeLeft because the page isn't fragmented
-
-                    if (result.CompressedPage.GetRequiredSpace(key, len) > result.CompressedPage.SizeLeft) // intentionally don't use HasSpaceFor here because the
-                        return false;
-
-                    LeafPageCompressor.CopyToPage(result, page);
-
-                    return true;
-                }
-            }
-            
-        }
-
+        
         public Slice LastKeyOrDefault()
         {
             using (var it = Iterate(false))
