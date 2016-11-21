@@ -4,7 +4,7 @@
     
     <div class="row" data-bind="with: stats">
         
-        <div class="visible-sm visible-xs">
+        <div class="col-xs-12 visible-sm visible-xs">
             <table class="table table-condensed table-striped table-responsive bg-info">
                 <tbody>
                 <tr>
@@ -73,11 +73,11 @@
                 <div class="col-sm-4">
                     <div class="panel panel-success">
                         <div class="panel-body">
-                            <a href="#" data-bind="click: $root.navigateToPerformance.bind($root, name)">
+                            <a href="#" data-bind="attr: { href: $root.urlForIndexPerformance(name) } ">
                                 <span class="text" data-bind="text: name"></span>
                             </a><br/>
                             Id: <span data-bind="text: indexId"></span>
-                            <span class="badge badge-warning" data-bind="visible: isStale == true">Stale</span> <!-- TODO: How to move to the right side ? -->
+                            <span class="badge badge-warning" data-bind="visible: isStale">Stale</span> <!-- TODO: How to move to the right side ? -->
                         </div>
                     </div>
                 </div>

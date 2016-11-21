@@ -30,7 +30,7 @@ class statistics {
             let existingEntry = indexesByTypeTemp.find(x => x.indexType === index.type);
             if (!existingEntry) {
                 // A new type encountered
-                let newType = new indexesWithType(index.type);
+                const newType = new indexesWithType(index.type);
                 newType.add(index);
                 indexesByTypeTemp.push(newType);
             }

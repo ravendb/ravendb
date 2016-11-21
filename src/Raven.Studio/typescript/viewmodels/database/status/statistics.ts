@@ -29,8 +29,7 @@ class statistics extends viewModelBase {
             this.statsSubscription.dispose();
         }
     }
-
-    // Get stats from server
+   
     fetchStats(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {
         var db = this.activeDatabase();
         return new getDatabaseStatsCommand(db)
@@ -50,11 +49,9 @@ class statistics extends viewModelBase {
     processStatsResults(results: Raven.Client.Data.DatabaseStatistics) {
         this.stats(new statsModel(results));
     }
-
-    // Navigate to index performance page
-    navigateToPerformance(indexName: string) {
-        var url = appUrl.forIndexPerformance(this.activeDatabase(), indexName);
-        this.navigate(url);
+    
+    urlForIndexPerformance(indexName: string) {
+        return appUrl.forIndexPerformance(this.activeDatabase(), indexName);
     }
 }
 
