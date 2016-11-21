@@ -421,7 +421,7 @@ class appUrl {
     }
 
     static forIndexPerformance(db: database, indexName?: string): string {
-        return "#databases/status/indexing?" + appUrl.getEncodedDbPart(db) + appUrl.getEncodedIndexNamePart(indexName);
+        return `#databases/status/indexing?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
     }
 
     static forIndexStats(db: database): string {
@@ -992,7 +992,7 @@ class appUrl {
     }
 
     private static getEncodedIndexNamePart(indexName?: string) {
-        return indexName ? "&indexName=" + encodeURIComponent(indexName) : "";
+        return indexName ? "indexName=" + encodeURIComponent(indexName) : "";
     }
 
     static mapUnknownRoutes(router: DurandalRouter) {
