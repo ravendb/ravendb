@@ -751,9 +751,6 @@ namespace Voron.Platform.Posix
         public ulong freehigh;  /* Available high memory size */
         public uint mem_unit; /* Memory unit size in bytes */
 
-        public fixed byte _f [20 - 2 * sizeof(long) - sizeof(int)]; /* Padding to 64 bytes */
-
-
         public ulong AvailableRam {
             get { return freeram; }
             set { freeram =  value; }
