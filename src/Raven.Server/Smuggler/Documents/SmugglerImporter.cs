@@ -20,15 +20,13 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly DocumentDatabase _database;
 
-        public DatabaseItemType OperateOnTypes;
+        public DatabaseSmugglerOptions Options;
 
-        public SmugglerImporter(DocumentDatabase database)
+        public SmugglerImporter(DocumentDatabase database, DatabaseSmugglerOptions options = null)
         {
             _database = database;
             _batchPutCommand = new MergedBatchPutCommand(_database, 0);
-            OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers
-                             | DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments |
-                             DatabaseItemType.Identities;
+            Options = options ?? new DatabaseSmugglerOptions();
         }
 
         private MergedBatchPutCommand _batchPutCommand;
@@ -100,7 +98,7 @@ namespace Raven.Server.Smuggler.Documents
                             }
                             builder.FinalizeDocument();
 
-                            if (operateOnType == "Docs" && OperateOnTypes.HasFlag(DatabaseItemType.Documents))
+                            if (operateOnType == "Docs" && Options.OperateOnTypes.HasFlag(DatabaseItemType.Documents))
                             {
                                 result.DocumentsCount++;
                                 using (var reader = builder.CreateReader())
@@ -108,7 +106,7 @@ namespace Raven.Server.Smuggler.Documents
                                 await HandleBatchOfDocuments(context, parser, buildVersion);
                             }
                             else if (operateOnType == "RevisionDocuments" &&
-                                     OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
+                                     Options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
                             {
                                 if (versioningStorage == null)
                                     break;
@@ -128,7 +126,7 @@ namespace Raven.Server.Smuggler.Documents
                                             result.Warnings.Add("Attachments are not supported anymore. Use RavenFS isntead. Skipping.");
                                             break;
                                         case "Indexes":
-                                            if (OperateOnTypes.HasFlag(DatabaseItemType.Indexes) == false)
+                                            if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Indexes) == false)
                                                 continue;
 
                                             result.IndexesCount++;
@@ -143,7 +141,7 @@ namespace Raven.Server.Smuggler.Documents
 
                                             break;
                                         case "Transformers":
-                                            if (OperateOnTypes.HasFlag(DatabaseItemType.Transformers) == false)
+                                            if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Transformers) == false)
                                                 continue;
 
                                             result.TransformersCount++;
@@ -158,7 +156,7 @@ namespace Raven.Server.Smuggler.Documents
                                             }
                                             break;
                                         case "Identities":
-                                            if (OperateOnTypes.HasFlag(DatabaseItemType.Identities))
+                                            if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Identities))
                                             {
                                                 result.IdentitiesCount++;
 
