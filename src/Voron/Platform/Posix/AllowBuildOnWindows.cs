@@ -13,7 +13,7 @@ namespace Voron.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mkdir (
             [MarshalAs (UnmanagedType.LPStr)] string filename, 
-            [MarshalAs (UnmanagedType.U4)] uint mode);
+            [MarshalAs (UnmanagedType.U2)] ushort mode);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int close(int fd);
@@ -118,7 +118,7 @@ namespace Voron.Platform.Posix
     }
 
     [Flags]
-    public enum MAdvFlags
+    public enum MAdvFlags : int
     {
         MADV_NORMAL = 0x0,  /* No further special treatment */
         MADV_RANDOM = 0x1, /* Expect random page references */
@@ -527,7 +527,7 @@ namespace Voron.Platform.Posix
     }
 
 
-    public enum SysconfName
+    public enum SysconfName : int
     {
         _SC_ARG_MAX,
         _SC_CHILD_MAX,
@@ -736,31 +736,33 @@ namespace Voron.Platform.Posix
     }
 
     [StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-    public struct sysinfo_t
+    public unsafe struct sysinfo_t
     {
-        public System.UIntPtr  uptime;             /* Seconds since boot */
-        [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValArray, SizeConst=3)]
-        public System.UIntPtr [] loads;  /* 1, 5, and 15 minute load averages */
-        public System.UIntPtr totalram;  /* Total usable main memory size */
+        public long  uptime;             /* Seconds since boot */
+        public fixed ulong loads[3];  /* 1, 5, and 15 minute load averages */
+        public ulong totalram;  /* Total usable main memory size */
+        public ulong freeram;   /* Available memory size */
+        public ulong sharedram; /* Amount of shared memory */
+        public ulong bufferram; /* Memory used by buffers */
+        public ulong totalswap; /* Total swap space size */
+        public ulong freeswap;  /* swap space still available */
+        public ushort procs;    /* Number of current processes */
+        public ulong totalhigh; /* Total high memory size */
+        public ulong freehigh;  /* Available high memory size */
+        public uint mem_unit; /* Memory unit size in bytes */
 
-        public System.UIntPtr freeram;   /* Available memory size */
+        public fixed byte _f [20 - 2 * sizeof(long) - sizeof(int)]; /* Padding to 64 bytes */
+
+
         public ulong AvailableRam {
-            get { return (ulong)freeram; }
-            set { freeram = new UIntPtr (value); }
+            get { return freeram; }
+            set { freeram =  value; }
         }
         public ulong TotalRam
         {
-            get { return (ulong)totalram; }
-            set { totalram = new UIntPtr(value); }
+            get { return totalram; }
+            set { totalram = value; }
         }
-
-        public System.UIntPtr sharedram; /* Amount of shared memory */
-        public System.UIntPtr bufferram; /* Memory used by buffers */
-        public System.UIntPtr totalswap; /* Total swap space size */
-        public System.UIntPtr freeswap;  /* swap space still available */
-        public ushort procs;    /* Number of current processes */
-        [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValArray, SizeConst=22)]
-        public char[] _f; /* Pads structure to 64 bytes */
     }
 
 }
