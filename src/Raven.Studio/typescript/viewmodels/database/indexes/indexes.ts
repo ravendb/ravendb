@@ -15,6 +15,8 @@ import getIndexesStatusCommand = require("commands/database/index/getIndexesStat
 import resetIndexCommand = require("commands/database/index/resetIndexCommand");
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 import eventsCollector = require("common/eventsCollector");
+import enableIndexCommand = require("commands/database/index/enableIndexCommand");
+import disableIndexCommand = require("commands/database/index/disableIndexCommand");
 
 type indexGroup = {
     entityName: string;
@@ -36,7 +38,8 @@ class indexes extends viewModelBase {
         globalStartStop: ko.observable<boolean>(false),
         globalLockChanges: ko.observable<boolean>(false),
         localPriority: ko.observableArray<string>([]),
-        localLockChanges: ko.observableArray<string>([])
+        localLockChanges: ko.observableArray<string>([]),
+        localState: ko.observableArray<string>([])
     }
 
     indexingEnabled = ko.observable<boolean>(true);
@@ -285,18 +288,35 @@ class indexes extends viewModelBase {
         }
     }
 
-    idlePriority(idx: index) {
-        eventsCollector.default.reportEvent("index", "priority", "idle");
-        const idle = "Idle" as Raven.Client.Data.Indexes.IndexingPriority;
-        const forced = "Forced" as Raven.Client.Data.Indexes.IndexingPriority;
-        this.setIndexPriority(idx, idle + "," + forced as any);
+    enableIndex(idx: index) {
+        eventsCollector.default.reportEvent("indexes", "set-state", "enabled");
+
+        if (idx.canBeEnabled()) {
+
+            this.spinners.localState.push(idx.name);
+
+            new enableIndexCommand(idx.name, this.activeDatabase())
+                .execute()
+                .done(() => idx.state("Normal"))
+                .always(() => this.spinners.localState.remove(idx.name));
+                
+        }
     }
 
-    disabledPriority(idx: index) {
-        eventsCollector.default.reportEvent("index", "priority", "disabled");
-        const disabled = "Disabled" as Raven.Client.Data.Indexes.IndexingPriority;
-        const forced = "Forced" as Raven.Client.Data.Indexes.IndexingPriority;
-        this.setIndexPriority(idx, disabled + "," + forced as any);
+    disableIndex(idx: index) {
+        eventsCollector.default.reportEvent("indexes", "set-state", "disabled");
+
+        if (idx.canBeDisabled()) {
+            this.spinners.localState.push(idx.name);
+
+            new disableIndexCommand(idx.name, this.activeDatabase())
+                .execute()
+                .done(() => {
+                    idx.state("Disabled");
+                    idx.pausedUntilRestart(false);
+                })
+                .always(() => this.spinners.localState.remove(idx.name));
+        }
     }
 
     normalPriority(idx: index) {
@@ -304,7 +324,17 @@ class indexes extends viewModelBase {
         this.setIndexPriority(idx, "Normal");
     }
 
-    private setIndexPriority(idx: index, newPriority: Raven.Client.Data.Indexes.IndexingPriority) {
+    lowPriority(idx: index) {
+        eventsCollector.default.reportEvent("index", "priority", "low");
+        this.setIndexPriority(idx, "Low");
+    }
+
+    highPriority(idx: index) {
+        eventsCollector.default.reportEvent("index", "priority", "high");
+        this.setIndexPriority(idx, "High");
+    }
+
+    private setIndexPriority(idx: index, newPriority: Raven.Client.Data.Indexes.IndexPriority) {
         const originalPriority = idx.priority();
         if (originalPriority !== newPriority) {
             this.spinners.localPriority.push(idx.name);
@@ -417,10 +447,10 @@ class indexes extends viewModelBase {
 
     resumeIndexing(idx: index): JQueryPromise<void> {
         eventsCollector.default.reportEvent("indexes", "resume");
-        this.spinners.localPriority.push(idx.name);
+        this.spinners.localState.push(idx.name);
 
         return this.resumeIndexingInternal(idx)
-            .always(() => this.spinners.localPriority.remove(idx.name));
+            .always(() => this.spinners.localState.remove(idx.name));
     }
 
     private resumeIndexingInternal(idx: index): JQueryPromise<void> {
@@ -431,12 +461,12 @@ class indexes extends viewModelBase {
 
     pauseUntilRestart(idx: index) {
         eventsCollector.default.reportEvent("indexes", "pause");
-        this.spinners.localPriority.push(idx.name);
+        this.spinners.localState.push(idx.name);
 
         new toggleIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
             .execute()
             .done(() => idx.pausedUntilRestart(true))
-            .always(() => this.spinners.localPriority.remove(idx.name));
+            .always(() => this.spinners.localState.remove(idx.name));
     }
 
     toggleSelectAll() {

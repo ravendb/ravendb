@@ -1,12 +1,14 @@
 import appUrl = require("common/appUrl");
 
 class index {
-    static readonly priorityNormal: Raven.Client.Data.Indexes.IndexingPriority = "Normal";
-    static readonly priorityIdle: Raven.Client.Data.Indexes.IndexingPriority = "Idle";
-    static readonly priorityDisabled: Raven.Client.Data.Indexes.IndexingPriority = "Disabled";
-    static readonly priorityErrored: Raven.Client.Data.Indexes.IndexingPriority = "Error";
-    static readonly priorityIdleForced: Raven.Client.Data.Indexes.IndexingPriority = "Idle,Forced" as any;
-    static readonly priorityDisabledForced: Raven.Client.Data.Indexes.IndexingPriority = "Disabled,Forced" as any;
+    static readonly priorityLow: Raven.Client.Data.Indexes.IndexPriority = "Low";
+    static readonly priorityNormal: Raven.Client.Data.Indexes.IndexPriority = "Normal";
+    static readonly priorityHigh: Raven.Client.Data.Indexes.IndexPriority = "High";
+
+    static readonly stateDisabled: Raven.Client.Data.Indexes.IndexState = "Disabled";
+    static readonly stateError: Raven.Client.Data.Indexes.IndexState = "Error";
+    static readonly stateIdle: Raven.Client.Data.Indexes.IndexState = "Idle";
+    static readonly stateNormal: Raven.Client.Data.Indexes.IndexState = "Normal";
 
     static readonly SideBySideIndexPrefix = "ReplacementOf/";
     static readonly TestIndexPrefix = "Test/";
@@ -30,7 +32,8 @@ class index {
     mapSuccesses: number;
     memory: Raven.Client.Data.Indexes.MemoryStats;
     name: string;
-    priority = ko.observable<Raven.Client.Data.Indexes.IndexingPriority>();
+    priority = ko.observable<Raven.Client.Data.Indexes.IndexPriority>();
+    state = ko.observable<Raven.Client.Data.Indexes.IndexState>();
     reduceAttempts?: number;
     reduceErrors?: number;
     reduceSuccesses?: number;
@@ -43,12 +46,20 @@ class index {
     queryUrl: KnockoutComputed<string>;
 
     isNormalPriority: KnockoutComputed<boolean>;
-    isDisabled: KnockoutComputed<boolean>;
-    isIdle: KnockoutComputed<boolean>;
+    isLowPriority: KnockoutComputed<boolean>;
+    isHighPriority: KnockoutComputed<boolean>;
+
+    isDisabledState: KnockoutComputed<boolean>;
+    isIdleState: KnockoutComputed<boolean>;
+    isErrorState: KnockoutComputed<boolean>;
+    isNormalState: KnockoutComputed<boolean>;
+
     isFaulty: KnockoutComputed<boolean>;
     pausedUntilRestart = ko.observable<boolean>();
     canBePaused: KnockoutComputed<boolean>;
     canBeResumed: KnockoutComputed<boolean>;
+    canBeEnabled: KnockoutComputed<boolean>;
+    canBeDisabled: KnockoutComputed<boolean>;
 
     constructor(dto: Raven.Client.Data.Indexes.IndexStats) {
         this.collections = dto.Collections;
@@ -73,6 +84,7 @@ class index {
         this.reduceErrors = dto.ReduceErrors;
         this.reduceSuccesses = dto.ReduceSuccesses;
         this.type = dto.Type;
+        this.state(dto.State);
 
         this.initializeObservables();
     }
@@ -97,18 +109,30 @@ class index {
         this.queryUrl = urls.query(this.name);
         this.editUrl = urls.editIndex(this.name);
 
-        this.isNormalPriority = ko.pureComputed((() => this.priority() === index.priorityNormal));
-        this.isDisabled = ko.pureComputed(() => this.priority().contains(index.priorityDisabled));
-        this.isIdle = ko.pureComputed(() => this.priority().contains(index.priorityIdle));
+        this.isNormalPriority = ko.pureComputed(() => this.priority() === index.priorityNormal);
+        this.isLowPriority = ko.pureComputed(() => this.priority() === index.priorityLow);
+        this.isHighPriority = ko.pureComputed(() => this.priority() === index.priorityHigh);
+
+        this.isIdleState = ko.pureComputed(() => this.state() === index.stateIdle);
+        this.isDisabledState = ko.pureComputed(() => this.state() === index.stateDisabled);
+        this.isErrorState = ko.pureComputed(() => this.state() === index.stateError);
+        this.isNormalState = ko.pureComputed(() => this.state() === index.stateNormal);
+
         this.canBePaused = ko.pureComputed(() => {
-            const disabled = this.isDisabled();
+            const disabled = this.isDisabledState();
             const paused = this.pausedUntilRestart();
             return !disabled && !paused;
         });
         this.canBeResumed = ko.pureComputed(() => {
-            const disabled = this.isDisabled();
+            const disabled = this.isDisabledState();
             const paused = this.pausedUntilRestart();
             return !disabled && paused;
+        });
+        this.canBeDisabled = ko.pureComputed(() => {
+            return !this.isDisabledState();
+        });
+        this.canBeEnabled = ko.pureComputed(() => {
+            return this.isDisabledState();
         });
 
         this.isFaulty = ko.pureComputed(() => {
@@ -117,8 +141,6 @@ class index {
         });
 
         this.badgeClass = ko.pureComputed(() => {
-            const priority = this.priority();
-
             if (this.isFaulty()) {
                 return "state-danger";
             }
@@ -126,16 +148,16 @@ class index {
             if (this.pausedUntilRestart()) {
                 return "state-warning";
             }
-            
-            if (priority.contains("Disabled")) {
+
+            if (this.isDisabledState()) {
                 return "state-warning";
             }
 
-            if (priority.contains("Idle")) {
+            if (this.isIdleState()) {
                 return "state-warning";
             }
 
-            if (priority.contains("Error")) {
+            if (this.isErrorState()) {
                 return "state-danger";
             }
 
@@ -143,8 +165,6 @@ class index {
         });
 
         this.badgeText = ko.pureComputed(() => {
-            const priority = this.priority();
-
             if (this.isFaulty()) {
                 return "Faulty";
             }
@@ -153,15 +173,15 @@ class index {
                 return "Paused";
             }
 
-            if (priority.contains("Disabled")) {
+            if (this.isDisabledState()) {
                 return "Disabled";
             }
 
-            if (priority.contains("Idle")) {
+            if (this.isIdleState()) {
                 return "Idle";
             }
 
-            if (priority.contains("Error")) {
+            if (this.isErrorState()) {
                 return "Error";
             }
 
