@@ -1,33 +1,18 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 class indexStatistics {
-    indexId: number;
-    isStale: boolean;
-    name: string;
-    lockMode: Raven.Abstractions.Indexing.IndexLockMode;
-    priority: Raven.Client.Data.Indexes.IndexingPriority;
-    type: Raven.Client.Data.Indexes.IndexType;
+    indexId:  number;
+    isStale:  boolean;
+    name:     string;
+    type:     Raven.Client.Data.Indexes.IndexType;
+    queryURL: string;
 
     constructor(dto: Raven.Client.Data.IndexInformation) {
-        this.indexId = dto.IndexId;
-
-        //TODO: work on other props
-
-        this.isStale = dto.IsStale;
         this.name = dto.Name;
-        this.lockMode = dto.LockMode;
-        this.priority = dto.Priority;
         this.type = dto.Type;
+        this.indexId  = dto.IndexId;
+        this.isStale = dto.IsStale;
     }
 }
 
 export = indexStatistics;
-
-//interface IndexInformation {
-//    IndexId: number;
-//    IsStale: boolean;
-//    LockMode: Raven.Abstractions.Indexing.IndexLockMode;
-//    Name: string;
-//    Priority: Raven.Client.Data.Indexes.IndexingPriority;
-//    Type: Raven.Client.Data.Indexes.IndexType;
-//}

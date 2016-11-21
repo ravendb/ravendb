@@ -420,8 +420,8 @@ class appUrl {
         return "#databases/status/requests/tracing?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forIndexPerformance(db: database): string {
-        return "#databases/status/indexing?" + appUrl.getEncodedDbPart(db);
+    static forIndexPerformance(db: database, indexName?: string): string {
+        return "#databases/status/indexing?" + appUrl.getEncodedDbPart(db) + appUrl.getEncodedIndexNamePart(indexName);
     }
 
     static forIndexStats(db: database): string {
@@ -989,6 +989,10 @@ class appUrl {
 
     private static getEncodedCounterPart(cs?: counterStorage) {
         return cs ? "&counterstorage=" + encodeURIComponent(cs.name) : "";
+    }
+
+    private static getEncodedIndexNamePart(indexName?: string) {
+        return indexName ? "&indexName=" + encodeURIComponent(indexName) : "";
     }
 
     static mapUnknownRoutes(router: DurandalRouter) {
