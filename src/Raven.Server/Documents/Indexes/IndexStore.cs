@@ -104,6 +104,8 @@ namespace Raven.Server.Documents.Indexes
                 if (lockMode == IndexLockMode.LockedIgnore)
                     return existingIndex.IndexId;
 
+                definition.RemoveDefaultValues();
+
                 switch (GetIndexCreationOptions(definition, existingIndex))
                 {
                     case IndexCreationOptions.Noop:
