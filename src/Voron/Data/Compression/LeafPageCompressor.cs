@@ -23,13 +23,16 @@ namespace Voron.Data.Compression
             var tempPage = temp.GetTempPage();
 
             var compressionInput = page.Base + page.Upper;
-            var compressionOutput = tempPage.Base + Constants.TreePageHeaderSize + Constants.Compression.HeaderSize; // temp compression result has compressed values at the beginning of the page
+            var compressionResult = tempPage.Base + Constants.TreePageHeaderSize + Constants.Compression.HeaderSize; // temp compression result has compressed values at the beginning of the page
+            var offsetsSize = page.NumberOfEntries * Constants.NodeOffsetSize;
+
+            var compressionOutput = compressionResult + offsetsSize;
 
             var compressedSize = LZ4.Encode64(
                 compressionInput,
                 compressionOutput,
                 valuesSize,
-                tempPage.PageSize - (Constants.TreePageHeaderSize + Constants.Compression.HeaderSize));
+                tempPage.PageSize - (Constants.TreePageHeaderSize + Constants.Compression.HeaderSize) - offsetsSize);
 
             if (compressedSize == 0)
             {
@@ -39,9 +42,17 @@ namespace Voron.Data.Compression
                 return returnTempPage;
             }
 
+            var compressedOffsets = (ushort*) compressionResult;
+            var offsets = page.KeysOffsets;
+
+            for (var i = 0; i < page.NumberOfEntries; i++)
+            {
+                compressedOffsets[i] = (ushort) (offsets[i] - page.Upper);
+            }
+            
             Memory.Copy(tempPage.Base, page.Base, Constants.TreePageHeaderSize);
 
-            tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressedSize);
+            tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressedSize + offsetsSize);
             tempPage.Upper = (ushort)tempPage.PageSize;
 
             if (aboutToAdd != null)
@@ -62,12 +73,12 @@ namespace Voron.Data.Compression
             result = new CompressionResult
             {
                 CompressedPage = tempPage,
-                CompressionOutputPtr = compressionOutput,
+                CompressionOutputPtr = compressionResult,
                 Header = new CompressedNodesHeader
                 {
                     CompressedSize = (ushort) compressedSize,
                     UncompressedSize = (ushort) valuesSize,
-                    NumberOfCompressedEntries = page.NumberOfEntries
+                    NumberOfCompressedEntries = page.NumberOfEntries,
                 }
             };
 
@@ -84,13 +95,15 @@ namespace Voron.Data.Compression
             var header = (CompressedNodesHeader*)writePtr;
             *header = compressed.Header;
 
-            writePtr -= compressed.Header.CompressedSize;
+            var offsetsSize = compressed.Header.NumberOfCompressedEntries * Constants.NodeOffsetSize;
 
-            Memory.Copy(writePtr, compressed.CompressionOutputPtr, compressed.Header.CompressedSize);
+            writePtr -= compressed.Header.CompressedSize + offsetsSize;
+
+            Memory.Copy(writePtr, compressed.CompressionOutputPtr, compressed.Header.CompressedSize + offsetsSize);
 
             dest.Flags |= PageFlags.Compressed;
             dest.Lower = (ushort)Constants.TreePageHeaderSize;
-            dest.Upper = (ushort)(writePtr - dest.Base);
+            dest.Upper = (ushort)(writePtr - dest.Base); // TODO arek - alignment
         }
     }
 }

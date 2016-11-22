@@ -13,10 +13,9 @@ namespace FastTests.Voron.LeafsCompression
     {
         [Theory]
         [InlineData(26, 256)]
-        [InlineData(128, 256)]
         [InlineData(1024, 256)]
+        [InlineData(8192, 512)]
         [InlineData(26, 333)]
-        [InlineData(128, 444)]
         [InlineData(1024, 555)]
         public void Can_compress_leaf_pages_and_read_directly_from_them_after_decompression(int iterationCount, int size)
         {

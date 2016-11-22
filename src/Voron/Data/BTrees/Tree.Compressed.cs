@@ -74,35 +74,35 @@ namespace Voron.Data.BTrees
                     compressionHeader->CompressedSize,
                     decompressedPtr,
                     compressionHeader->UncompressedSize, true);
-
+                
                 var decompressedSize = compressionHeader->UncompressedSize;
 
-                var nodeOffset = (ushort)(decompressedPage.PageSize - decompressedSize);
+                var offsetsSize = compressionHeader->NumberOfCompressedEntries * Constants.NodeOffsetSize;
+
+                var decompressedOffsets = (short*) ((byte*) compressionHeader - compressionHeader->CompressedSize -
+                                                       offsetsSize);
+
+                var nodeOffset = (ushort)(decompressedPage.PageSize - decompressedSize); // TODO arek - aligntment
+
+                // copy all decompressed nodes at once
 
                 Memory.Copy(decompressedPage.Base + nodeOffset, decompressedPtr, decompressedSize);
 
-                decompressedPage.Lower += (ushort)(compressionHeader->NumberOfCompressedEntries * Constants.NodeOffsetSize);
+                decompressedPage.Lower += (ushort)offsetsSize;
                 decompressedPage.Upper = nodeOffset;
 
-                var currentNodeIndex = compressionHeader->NumberOfCompressedEntries - 1;
-
-                var ptr = decompressedPtr;
-
-                // here we assume that compressed entries are in proper order - that must be the case
-                while (ptr - decompressedPtr < decompressedSize)
+                for (var i = 0; i < compressionHeader->NumberOfCompressedEntries; i++)
                 {
-                    var nodeHeader = (TreeNodeHeader*)ptr;
-
-                    decompressedPage.KeysOffsets[currentNodeIndex] = nodeOffset;
-
-                    var nodeSize = TreeSizeOf.NodeEntry(nodeHeader);
-
-                    ptr += nodeSize;
-                    nodeOffset += (ushort)nodeSize;
-                    currentNodeIndex--;
+                    decompressedPage.KeysOffsets[i] = (ushort) (decompressedOffsets[i] + decompressedPage.Upper);
                 }
 
-                Debug.Assert(currentNodeIndex == -1);
+                if (p.NumberOfEntries == 0)
+                {
+                    decompressedPage.DebugValidate(this, State.RootPageNumber);
+                    return decompressedPage;
+                }
+                
+                // copy uncompressed nodes
 
                 for (var i = 0; i < p.NumberOfEntries; i++)
                 {
@@ -119,10 +119,21 @@ namespace Voron.Data.BTrees
                         Slice lastKey;
                         using (decompressedPage.GetNodeKey(_llt, decompressedPage.NumberOfEntries - 1, out lastKey))
                         {
-                            if (SliceComparer.CompareInline(nodeKey, lastKey) > 0)
-                                index = decompressedPage.NumberOfEntries - 1;
+                            // optimization: it's very likely that uncompressed nodes have greater keys than compressed ones 
+                            // when we insert sequential keys
+
+                            var cmp = SliceComparer.CompareInline(nodeKey, lastKey);
+
+                            if (cmp > 0)
+                                index = decompressedPage.NumberOfEntries;
                             else
                             {
+                                if (cmp == 0)
+                                {
+                                    // update
+                                    throw new NotImplementedException("TODO arek");
+                                }
+
                                 index = decompressedPage.NodePositionFor(_llt, nodeKey);
 
                                 if (decompressedPage.LastMatch == 0)
@@ -144,10 +155,10 @@ namespace Voron.Data.BTrees
                                 Memory.Copy(pos, nodeValue.Base, nodeValue.Length);
                                 break;
                             case TreeNodeFlags.MultiValuePageRef:
-                                throw new NotImplementedException("TODO arek");
+                                throw new NotSupportedException("Multi trees do not support compression");
 
                             default:
-                                throw new NotSupportedException("Invalid node type to move: " + uncompressedNode->Flags);
+                                throw new NotSupportedException("Invalid node type to copye: " + uncompressedNode->Flags);
                         }
                     }
                 }

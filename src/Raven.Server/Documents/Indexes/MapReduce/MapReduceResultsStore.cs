@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         // would result in an overflow, that would be a space waste anyway, let's move to tree mode
                         MoveExistingResultsToTree(section);
-                        Add(id, result); // now re-add the value
+                        Add(Bits.SwapBytes(id), result); // now re-add the value
                     }
                     else
                     {
