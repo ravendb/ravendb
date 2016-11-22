@@ -14,7 +14,8 @@ var gulp = require('gulp'),
     parseConfiguration = require('./gulp/parseConfiguration'),
     findNewestFile = require('./gulp/findNewestFile'),
     checkAllFilesExist = require('./gulp/checkAllFilesExist'),
-    gutil = require('gulp-util');
+    gutil = require('gulp-util'),
+    autoPrefixer = require('gulp-autoprefixer');
 
 var PATHS = require('./gulp/paths');
 
@@ -48,11 +49,10 @@ gulp.task('parse-configuration', function() {
 
 gulp.task('less', function() {
     return gulp.src(PATHS.lessSource, { base: './wwwroot/Content/' })
-       // .pipe(plugins.newy(findNewestFile(PATHS.lessTargetSelector)))
+         // .pipe(plugins.newy(findNewestFile(PATHS.lessTargetSelector)))
         .pipe(plugins.sourcemaps.init())
-        .pipe(plugins.less({
-            sourceMap: true
-        }))
+        .pipe(plugins.less({ sourceMap: true }))
+        .pipe(autoPrefixer()) 
         .pipe(plugins.sourcemaps.write("."))
         .pipe(gulp.dest(PATHS.lessTarget));
 });
