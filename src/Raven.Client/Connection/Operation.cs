@@ -15,6 +15,10 @@ namespace Raven.Client.Connection
         private IDisposable _subscription;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>();
 
+        public Action<IOperationProgress> OnProgressChanged;
+
+        internal long Id => _id;
+
         public Operation(long id)
         {
             _id = id;
@@ -25,15 +29,24 @@ namespace Raven.Client.Connection
         {
             _asyncServerClient = asyncServerClient;
             _id = id;
-            Task.Run(Initialize);
+
+            Task.Factory.StartNew(Initialize);
         }
 
         private async Task Initialize()
         {
-            await _asyncServerClient.changes.Value.ConnectionTask.ConfigureAwait(false);
-            var observableWithTask = _asyncServerClient.changes.Value.ForOperationId(_id);
-            _subscription = observableWithTask.Subscribe(this);
-            await FetchOperationStatus();
+            try
+            {
+                await _asyncServerClient.changes.Value.ConnectionTask.ConfigureAwait(false);
+                var observableWithTask = _asyncServerClient.changes.Value.ForOperationId(_id);
+                _subscription = observableWithTask.Subscribe(this);
+                await FetchOperationStatus().ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                _result.TrySetException(e);
+                throw;
+            }
         }
 
         /// <summary>
@@ -44,11 +57,11 @@ namespace Raven.Client.Connection
         /// </summary>
         private async Task FetchOperationStatus()
         {
-            var operationStatusJson = await _asyncServerClient.GetOperationStatusAsync(_id);
+            var operationStatusJson = await _asyncServerClient.GetOperationStatusAsync(_id).ConfigureAwait(false);
             var operationStatus = _asyncServerClient.convention
                     .CreateSerializer()
                     .Deserialize<OperationState>(new RavenJTokenReader(operationStatusJson));
-                // using deserializer from Conventions to properly handle $type mapping
+            // using deserializer from Conventions to properly handle $type mapping
 
             OnNext(new OperationStatusChangeNotification
             {
@@ -56,10 +69,6 @@ namespace Raven.Client.Connection
                 State = operationStatus
             });
         }
-
-        internal long Id => _id;
-
-        public Action<IOperationProgress> OnProgressChanged;
 
         public void OnNext(OperationStatusChangeNotification notification)
         {
@@ -80,7 +89,7 @@ namespace Raven.Client.Connection
                 case OperationStatus.Faulted:
                     _subscription.Dispose();
                     var exceptionResult = notification.State.Result as OperationExceptionResult;
-                    if(exceptionResult?.StatusCode == 409)
+                    if (exceptionResult?.StatusCode == 409)
                         _result.TrySetException(new DocumentInConflictException(exceptionResult.Message));
                     else
                         _result.TrySetException(new InvalidOperationException(exceptionResult?.Message));
@@ -102,10 +111,10 @@ namespace Raven.Client.Connection
 
         public virtual async Task<IOperationResult> WaitForCompletionAsync()
         {
-            var whenAny = await Task.WhenAny(_result.Task, Task.Delay(15*1000));
-            if(whenAny != _result.Task)
+            var whenAny = await Task.WhenAny(_result.Task, Task.Delay(15 * 1000)).ConfigureAwait(false); ;
+            if (whenAny != _result.Task)
                 throw new TimeoutException("After 15 seconds, did not get a reply for operation " + _id);
-            return await _result.Task;
+            return await _result.Task.ConfigureAwait(false);
         }
 
         public virtual IOperationResult WaitForCompletion()
