@@ -13,7 +13,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
@@ -166,7 +165,6 @@ namespace Raven.Server.Documents
         private UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
         private int _hasConflicts;
-        private static readonly Encoding Utf8 = Encoding.UTF8;
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {
@@ -271,44 +269,13 @@ namespace Raven.Server.Documents
             AssertTransaction(context);
 
             var tree = context.Transaction.InnerTransaction.ReadTree("ChangeVector");
-            var changeVector = new ChangeVectorEntry[tree.State.NumberOfEntries];
-            using (var iter = tree.Iterate(false))
-            {
-                if (iter.Seek(Slices.BeforeAllKeys) == false)
-                    return changeVector;
-                var buffer = new byte[sizeof(Guid)];
-                int index = 0;
-                do
-                {
-                    var read = iter.CurrentKey.CreateReader().Read(buffer, 0, sizeof(Guid));
-                    if (read != sizeof(Guid))
-                        throw new InvalidDataException($"Expected guid, but got {read} bytes back for change vector");
-
-                    changeVector[index].DbId = new Guid(buffer);
-                    changeVector[index].Etag = iter.CreateReaderForCurrent().ReadBigEndianInt64();
-                    index++;
-                } while (iter.MoveNext());
-            }
-            return changeVector;
+            return ReplicationUtils.ReadChangeVectorFrom(tree);
         }
 
         public void SetDatabaseChangeVector(DocumentsOperationContext context, Dictionary<Guid, long> changeVector)
         {
-            var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
-            Guid dbId;
-            long etagBigEndian;
-            Slice keySlice; ;
-            Slice valSlice;
-            using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out keySlice))
-            using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out valSlice))
-            {
-                foreach (var kvp in changeVector)
-                {
-                    dbId = kvp.Key;
-                    etagBigEndian = IPAddress.HostToNetworkOrder(kvp.Value);
-                    tree.Add(keySlice, valSlice);
-                }
-            }
+            var tree = context.Transaction.InnerTransaction.ReadTree("ChangeVector");
+            ReplicationUtils.WriteChangeVectorTo(context, changeVector, tree);
         }
 
         public static long ReadLastDocumentEtag(Transaction tx)
@@ -373,7 +340,7 @@ namespace Raven.Server.Documents
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             Slice prefixSlice;
-            using (GetSliceFromKey(context, prefix, out prefixSlice))
+            using (DocumentKeyWorker.GetSliceFromKey(context, prefix, out prefixSlice))
             {
                 // ReSharper disable once LoopCanBeConvertedToQuery
                 foreach (var result in table.SeekByPrimaryKey(prefixSlice, startsWith: true))
@@ -551,7 +518,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
 
             Slice loweredKey;
-            using (GetSliceFromKey(context, key, out loweredKey))
+            using (DocumentKeyWorker.GetSliceFromKey(context, key, out loweredKey))
             {
                 return GetDocumentOrTombstone(context, loweredKey, throwOnConflict);
             }
@@ -588,7 +555,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
 
             Slice loweredKey;
-            using (GetSliceFromKey(context, key, out loweredKey))
+            using (DocumentKeyWorker.GetSliceFromKey(context, key, out loweredKey))
             {
                 return Get(context, loweredKey);
             }
@@ -741,130 +708,7 @@ namespace Raven.Server.Documents
                     .Count();
         }
 
-        public static ByteStringContext.ExternalScope GetSliceFromKey<TTransaction>(TransactionOperationContext<TTransaction> context, string key, out Slice keySlice)
-            where TTransaction : RavenTransaction
-        {
-            var byteCount = Utf8.GetMaxByteCount(key.Length);
-
-            var buffer = context.GetNativeTempBuffer(
-                byteCount // this buffer is allocated to also serve the GetSliceFromUnicodeKey
-                + sizeof(char) * key.Length);
-
-
-            if (key.Length > 512)
-                ThrowKeyTooBig(key);
-
-
-            for (int i = 0; i < key.Length; i++)
-            {
-                char ch = key[i];
-                if (ch > 127) // not ASCII, use slower mode
-                    goto UnlikelyUnicode;
-                if (ch >= 65 && ch <= 90)
-                    buffer[i] = (byte)(ch | 0x20);
-                else
-                    buffer[i] = (byte)ch;
-            }
-
-            return Slice.External(context.Allocator, buffer, (ushort)key.Length, out keySlice);
-
-          UnlikelyUnicode:
-            return GetSliceFromUnicodeKey(context, key, out keySlice, buffer, byteCount);
-        }
-
-        private static ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromUnicodeKey<TTransaction>(
-            TransactionOperationContext<TTransaction> context,
-            string key, 
-            out Slice keySlice,
-            byte* buffer, int byteCount)
-              where TTransaction : RavenTransaction
-        {
-            fixed (char* pChars = key)
-            {
-                var destChars = (char*) buffer;
-                for (var i = 0; i < key.Length; i++)
-                {
-                    destChars[i] = char.ToLowerInvariant(pChars[i]);
-                }
-
-                var keyBytes = buffer + key.Length*sizeof(char);
-
-                var size = Utf8.GetBytes(destChars, key.Length, keyBytes, byteCount);
-
-                if (size > 512)
-                    ThrowKeyTooBig(key);
-
-                return Slice.External(context.Allocator, keyBytes, (ushort) size, out keySlice);
-            }
-        }
-
-        public static void GetLowerKeySliceAndStorageKey(JsonOperationContext context, string str, out byte* lowerKey, out int lowerSize,
-            out byte* key, out int keySize)
-        {
-            // Because we need to also store escape positions for the key when we store it
-            // we need to store it as a lazy string value.
-            // But lazy string value has two lengths, one is the string length, and the other 
-            // is the actual data size with the escape positions
-
-            // In order to resolve this, we process the key to find escape positions, then store it 
-            // in the table using the following format:
-            //
-            // [var int - string len, string bytes, number of escape positions, escape positions]
-            //
-            // The total length of the string is stored in the actual table (and include the var int size 
-            // prefix.
-
-            var byteCount = Utf8.GetMaxByteCount(str.Length);
-            var jsonParserState = new JsonParserState();
-            jsonParserState.FindEscapePositionsIn(str);
-            var maxKeyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
-            var escapePositionsSize = jsonParserState.GetEscapePositionsSize();
-            var buffer = context.GetNativeTempBuffer(
-                sizeof(char) * str.Length // for the lower calls
-                + byteCount // lower key
-                + maxKeyLenSize // the size of var int for the len of the key
-                + byteCount // actual key
-                + escapePositionsSize);
-
-            fixed (char* pChars = str)
-            {
-                var destChars = (char*)buffer;
-                for (var i = 0; i < str.Length; i++)
-                {
-                    destChars[i] = char.ToLowerInvariant(pChars[i]);
-                }
-
-                lowerKey = buffer + str.Length * sizeof(char);
-
-                lowerSize = Utf8.GetBytes(destChars, str.Length, lowerKey, byteCount);
-
-                if (lowerSize > 512)
-                    ThrowKeyTooBig(str);
-
-                key = buffer + str.Length * sizeof(char) + byteCount;
-                var writePos = key;
-                keySize = Utf8.GetBytes(pChars, str.Length, writePos + maxKeyLenSize, byteCount);
-
-                var actualKeyLenSize = JsonParserState.VariableSizeIntSize(keySize);
-                if (actualKeyLenSize < maxKeyLenSize)
-                {
-                    var movePtr = maxKeyLenSize - actualKeyLenSize;
-                    key += movePtr;
-                    writePos += movePtr;
-                }
-
-                JsonParserState.WriteVariableSizeInt(ref writePos, keySize);
-                jsonParserState.WriteEscapePositionsTo(writePos + keySize);
-                keySize += escapePositionsSize + maxKeyLenSize;
-            }
-        }
-
-        private static void ThrowKeyTooBig(string str)
-        {
-            throw new ArgumentException(
-                $"Key cannot exceed 512 bytes, but the key was {Utf8.GetByteCount(str)} bytes. The invalid key is '{str}'.",
-                nameof(str));
-        }
+       
 
         public static Document TableValueToDocument(JsonOperationContext context, TableValueReader tvr)
         {
@@ -961,14 +805,15 @@ namespace Raven.Server.Documents
         public bool Delete(DocumentsOperationContext context, string key, long? expectedEtag)
         {
             Slice keySlice;
-            using (GetSliceFromKey(context, key, out keySlice))
+            using (DocumentKeyWorker.GetSliceFromKey(context, key, out keySlice))
             {
-                return Delete(context, keySlice, expectedEtag);
+                return Delete(context, keySlice, key, expectedEtag);
             }
         }
 
         public bool Delete(DocumentsOperationContext context,
             Slice loweredKey,
+            string key,
             long? expectedEtag,
             ChangeVectorEntry[] changeVector = null)
         {
@@ -1035,6 +880,7 @@ namespace Raven.Server.Documents
                 Etag = expectedEtag,
                 MaterializeKey = state => ((Slice)state).ToString(),
                 MaterializeKeyState = loweredKey,
+                Key = key ?? loweredKey.ToString(),
                 CollectionName = collectionName.Name,
                 IsSystemDocument = collectionName.IsSystem,
             });
@@ -1079,7 +925,7 @@ namespace Raven.Server.Documents
             int lowerSize;
             byte* keyPtr;
             int keySize;
-            GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
             Slice loweredKey;
             using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
             {
@@ -1229,12 +1075,15 @@ namespace Raven.Server.Documents
 
         public void DeleteConflictsFor(DocumentsOperationContext context, string key)
         {
+            if (_hasConflicts == 0)
+                return;
+
 
             byte* lowerKey;
             int lowerSize;
             byte* keyPtr;
             int keySize;
-            GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             Slice keySlice;
             using (Slice.External(context.Allocator, lowerKey, keySize, out keySlice))
@@ -1294,7 +1143,7 @@ namespace Raven.Server.Documents
             int lowerSize;
             byte* keyPtr;
             int keySize;
-            GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             Slice loweredKeySlice;
             using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKeySlice))
@@ -1343,7 +1192,7 @@ namespace Raven.Server.Documents
             int lowerSize;
             byte* keyPtr;
             int keySize;
-            GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
             Slice loweredKey;
             using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
             {
@@ -1389,7 +1238,7 @@ namespace Raven.Server.Documents
             int lowerSize;
             byte* keyPtr;
             int keySize;
-            GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             // ReSharper disable once ArgumentsStyleLiteral
             var existing = GetDocumentOrTombstone(context, key, throwOnConflict: false);
@@ -1487,7 +1336,7 @@ namespace Raven.Server.Documents
             int lowerSize;
             byte* keyPtr;
             int keySize;
-            GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             if(_hasConflicts != 0)
                 ThrowDocumentConflictIfNeeded(context, key);
@@ -1606,7 +1455,7 @@ namespace Raven.Server.Documents
             if (oldValue != null)
             {
                 var changeVector = GetChangeVectorEntriesFromTableValueReader(oldValue, 4);
-                return UpdateChangeVectorWithLocalChange(newEtag, changeVector);
+                return ReplicationUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, changeVector);
             }
 
             return GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredKey, newEtag);
@@ -1622,7 +1471,7 @@ namespace Raven.Server.Documents
             if (conflictChangeVectors.Count == 0)
             {
                 if (existing != null)
-                    return UpdateChangeVectorWithLocalChange(newEtag, existing);
+                    return ReplicationUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, existing);
 
                 return new[]
                 {
@@ -1663,23 +1512,6 @@ namespace Raven.Server.Documents
             return changeVector;
         }
 
-        private ChangeVectorEntry[] UpdateChangeVectorWithLocalChange(long newEtag, ChangeVectorEntry[] changeVector)
-        {
-            var length = changeVector.Length;
-            for (int i = 0; i < length; i++)
-            {
-                if (changeVector[i].DbId == Environment.DbId)
-                {
-                    changeVector[i].Etag = newEtag;
-                    return changeVector;
-                }
-            }
-            Array.Resize(ref changeVector, length + 1);
-            changeVector[length].DbId = Environment.DbId;
-            changeVector[length].Etag = newEtag;
-            return changeVector;
-        }
-
         public IEnumerable<KeyValuePair<string, long>> GetIdentities(DocumentsOperationContext context)
         {
             var identities = context.Transaction.InnerTransaction.ReadTree("Identities");
@@ -1705,7 +1537,7 @@ namespace Raven.Server.Documents
 
             var finalKey = key + nextIdentityValue;
             Slice finalKeySlice;
-            using (GetSliceFromKey(context, finalKey, out finalKeySlice))
+            using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
             {
                 if (table.ReadByKey(finalKeySlice) == null)
                 {
@@ -1724,7 +1556,7 @@ namespace Raven.Server.Documents
             while (true)
             {
                 finalKey = key + maybeFree;
-                using (GetSliceFromKey(context, finalKey, out finalKeySlice))
+                using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
                 {
                     if (table.ReadByKey(finalKeySlice) == null)
                     {
@@ -1966,11 +1798,16 @@ namespace Raven.Server.Documents
                 TombstonesSchema.Create(context.Transaction.InnerTransaction,
                     name.GetTableName(CollectionTableType.Tombstones));
 
-                // safe to do, other transactions will see it, but we are under write lock here
-                _collectionsCache = new Dictionary<string, CollectionName>(_collectionsCache,
-                    StringComparer.OrdinalIgnoreCase)
+                // Add to cache ONLY if the transaction was committed. 
+                // this would prevent NREs next time a PUT is run,since if a transaction
+                // is not commited, DocsSchema and TombstonesSchema will not be actually created..
+                // has to happen after the commit, but while we are holding the write tx lock
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += _ =>
                 {
-                    {name.Name, name}
+                    var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache,
+                        StringComparer.OrdinalIgnoreCase);
+                    collectionNames[name.Name] = name;
+                    _collectionsCache=collectionNames;
                 };
             }
             return name;

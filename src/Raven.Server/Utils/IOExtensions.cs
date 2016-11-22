@@ -8,12 +8,12 @@ namespace Raven.Server.Utils
 {
     public static class IOExtensions
     {
-        const int retries = 10;
+        private const int Retries = 10;
 
         public static string ToFullPath(this string path, string basePath = null)
         {
-            if (String.IsNullOrWhiteSpace(path))
-                return String.Empty;
+            if (string.IsNullOrWhiteSpace(path))
+                return string.Empty;
             path = Environment.ExpandEnvironmentVariables(path);
             if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))
             {
@@ -42,25 +42,42 @@ namespace Raven.Server.Utils
             }
         }
 
+        public static void MoveDirectory(string src, string dst)
+        {
+            for (var i = 0; i < Retries; i++)
+            {
+                try
+                {
+                    SetDirectoryAttributes(src, FileAttributes.Normal);
+                    SetDirectoryAttributes(dst, FileAttributes.Normal);
+
+                    Directory.Move(src, dst);
+                    return;
+                }
+                catch (Exception)
+                {
+                    if (i == Retries - 1)
+                        throw;
+
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                    Thread.Sleep(100);
+                }
+            }
+        }
+
         public static void DeleteDirectory(string directory)
         {
-            for (int i = 0; i < retries; i++)
+            for (var i = 0; i < Retries; i++)
             {
                 try
                 {
                     if (Directory.Exists(directory) == false)
                         return;
 
-                    try
-                    {
-                        File.SetAttributes(directory, FileAttributes.Normal);
-                    }
-                    catch (IOException)
-                    {
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                    }
+                    SetDirectoryAttributes(directory, FileAttributes.Normal);
+
                     Directory.Delete(directory, true);
                     return;
                 }
@@ -70,16 +87,7 @@ namespace Raven.Server.Utils
                     {
                         foreach (var childDir in Directory.GetDirectories(directory, "*", SearchOption.AllDirectories))
                         {
-                            try
-                            {
-                                File.SetAttributes(childDir, FileAttributes.Normal);
-                            }
-                            catch (IOException)
-                            {
-                            }
-                            catch (UnauthorizedAccessException)
-                            {
-                            }
+                            SetDirectoryAttributes(childDir, FileAttributes.Normal);
                         }
                     }
                     catch (IOException)
@@ -100,7 +108,7 @@ namespace Raven.Server.Utils
 
         private static void TryHandlingError(string directory, int i, Exception e)
         {
-            if (i == retries - 1) // last try also failed
+            if (i == Retries - 1) // last try also failed
             {
                 foreach (var file in Directory.GetFiles(directory, "*", SearchOption.AllDirectories))
                 {
@@ -135,5 +143,21 @@ namespace Raven.Server.Utils
             Thread.Sleep(100);
         }
 
+        private static void SetDirectoryAttributes(string path, FileAttributes attributes)
+        {
+            if (Directory.Exists(path) == false)
+                return;
+
+            try
+            {
+                File.SetAttributes(path, attributes);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
     }
 }

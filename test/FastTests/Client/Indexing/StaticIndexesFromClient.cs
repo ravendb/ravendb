@@ -42,7 +42,7 @@ namespace FastTests.Client.Indexing
                     .GetIndexAsync("Users_ByName");
 
                 Assert.Equal(1, output.IndexId);
-                Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutput: false));
+                Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutputs: false));
             }
         }
     }

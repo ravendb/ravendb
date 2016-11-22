@@ -21,7 +21,7 @@
 %start main
 
 %token NOT OR AND INTERSECT PLUS MINUS EOF OPEN_CURLY_BRACKET CLOSE_CURLY_BRACKET OPEN_SQUARE_BRACKET CLOSE_SQUARE_BRACKET 
-%token TILDA BOOST QUOTE TO COLON OPEN_PAREN CLOSE_PAREN COMMA ALL_DOC
+%token TILDA BOOST QUOTE TO COLON OPEN_PAREN CLOSE_PAREN ALL_DOC
 %token <s> UNANALIZED_TERM METHOD UNQUOTED_TERM QUOTED_TERM QUOTED_WILDCARD_TERM FLOAT_NUMBER INT_NUMBER DOUBLE_NUMBER LONG_NUMBER DATETIME NULL PREFIX_TERM WILDCARD_TERM HEX_NUMBER
 
 %type <s> prefix_operator methodName fieldname  fuzzy_modifier boost_modifier proximity_modifier
@@ -136,18 +136,7 @@ method_exp: methodName OPEN_PAREN term_match_list CLOSE_PAREN{
 }
 ;
 
-term_match_list: term_exp COMMA term_exp
-{
-	//Console.WriteLine("Found rule term_match_list -> term_exp COMMA term_exp");
-	$$ = new List<TermLuceneASTNode>(){$1,$3};
-}
-| term_exp COMMA term_match_list
-{
-	//Console.WriteLine("Found rule term_match_list -> term_exp COMMA term_match_list");
-	$3.Add($1);
-	$$ = $3;
-}
-| term_exp term_exp 
+term_match_list: term_exp term_exp 
 {
 	//Console.WriteLine("Found rule term_match_list -> term_exp term_exp");
 	$$ = new List<TermLuceneASTNode>(){$1,$2};

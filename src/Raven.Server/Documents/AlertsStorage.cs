@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -9,6 +10,7 @@ namespace Raven.Server.Documents
 {
     public class AlertsStorage
     {
+        private readonly ServerStore _store;
         protected readonly Logger Logger;
 
         private StorageEnvironment _environment;
@@ -17,8 +19,9 @@ namespace Raven.Server.Documents
 
         private readonly TableSchema _alertsSchema = new TableSchema();
 
-        public AlertsStorage(string resourceName)
+        public AlertsStorage(string resourceName, ServerStore store)
         {
+            _store = store;
             Logger = LoggingSource.Instance.GetLogger<AlertsStorage>(resourceName);
             _alertsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -56,6 +59,8 @@ namespace Raven.Server.Documents
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
+                _store?.TrackChange(context, "AlertRaised", alert.Key);
+
                 var table = tx.InnerTransaction.OpenTable(_alertsSchema, AlertsSchema.AlertsTree);
 
                 var alertId = alert.Id;
@@ -134,6 +139,8 @@ namespace Raven.Server.Documents
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
+                _store?.TrackChange(context, "AlertDeleted", key);
+
                 var table = tx.InnerTransaction.OpenTable(_alertsSchema, AlertsSchema.AlertsTree);
 
                 var alertId = Alert.CreateId(type, key);

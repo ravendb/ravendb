@@ -10,6 +10,7 @@ import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import messagePublisher = require("common/messagePublisher");
 import resetSqlReplicationCommand = require("commands/database/sqlReplication/resetSqlReplicationCommand");
 import toggleDisable = require("commands/database/sqlReplication/toggleDisable");
+import eventsCollector = require("common/eventsCollector");
 
 class sqlReplications extends viewModelBase {
 
@@ -93,6 +94,8 @@ class sqlReplications extends viewModelBase {
     }
 
     showStats(replicationName:string) {
+        eventsCollector.default.reportEvent("sql-replications", "stats");
+
         var viewModel = new sqlReplicationStatsDialog(this.activeDatabase(), replicationName);
         app.showBootstrapDialog(viewModel);
     }
@@ -123,6 +126,8 @@ class sqlReplications extends viewModelBase {
     }
 
     removeSqlReplication(sr: sqlReplication) {
+        eventsCollector.default.reportEvent("sql-replications", "remove");
+
         var newDoc = new document(sr);
 
         if (newDoc) {
@@ -137,6 +142,8 @@ class sqlReplications extends viewModelBase {
     }
 
     resetSqlReplication(replicationId: string) {
+        eventsCollector.default.reportEvent("sql-replications", "reset");
+
         app.showBootstrapMessage("You are about to reset this SQL Replication, forcing replication of all collection items", "SQL Replication Reset", ["Cancel", "Reset"])
             .then((dialogResult: string) => {
                 if (dialogResult === "Reset") {

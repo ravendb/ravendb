@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Expiration
                                     if (currentTime < date)
                                         continue;
 
-                                    var deleted = _database.DocumentsStorage.Delete(context, clonedKey, null);
+                                    var deleted = _database.DocumentsStorage.Delete(context, clonedKey, key: null, expectedEtag: null);
                                     count++;
                                     if (_logger.IsInfoEnabled && deleted == false)
                                         _logger.Info($"Tried to delete expired document '{clonedKey}' but document was not found.");

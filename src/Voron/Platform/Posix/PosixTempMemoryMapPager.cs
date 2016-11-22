@@ -43,7 +43,7 @@ namespace Voron.Platform.Posix
             SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
 
             _totalAllocationSize = NearestSizeToPageSize(initialFileSize ?? _totalAllocationSize);
-            PosixHelper.AllocateFileSpace(_fd, (ulong)_totalAllocationSize);
+            PosixHelper.AllocateFileSpace(_fd, (ulong)_totalAllocationSize, FileName);
 
             NumberOfAllocatedPages = _totalAllocationSize / PageSize;
             SetPagerState(CreatePagerState());
@@ -79,7 +79,8 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_fd, (ulong)(_totalAllocationSize + allocationSize));
+            PosixHelper.AllocateFileSpace(_fd, (ulong)(_totalAllocationSize + allocationSize), FileName);
+
             _totalAllocationSize += allocationSize;
 
             PagerState newPagerState = CreatePagerState();
@@ -103,9 +104,9 @@ namespace Voron.Platform.Posix
 
         private PagerState CreatePagerState()
         {
-            var startingBaseAddressPtr = Syscall.mmap(IntPtr.Zero, (ulong)_totalAllocationSize,
+            var startingBaseAddressPtr = Syscall.mmap(IntPtr.Zero, (UIntPtr)_totalAllocationSize,
                                                       MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                                                      MmapFlags.MAP_SHARED, _fd, 0);
+                                                      MmapFlags.MAP_SHARED, _fd, IntPtr.Zero);
 
             if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
             {
@@ -143,7 +144,7 @@ namespace Voron.Platform.Posix
         public override void ReleaseAllocationInfo(byte* baseAddress, long size)
         {
             var ptr = new IntPtr(baseAddress);
-            var result = Syscall.munmap(ptr, (ulong)size);
+            var result = Syscall.munmap(ptr, (UIntPtr)size);
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();

@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Queries
             var index = GetIndex(indexName);
 
             if (index.Type.IsMapReduce())
-                throw new InvalidOperationException("Cannot execute Delete operation on Map-Reduce indexes.");
+                throw new InvalidOperationException("Cannot execute bulk operation on Map-Reduce indexes.");
 
             query = ConvertToOperationQuery(query, options);
 
@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var results = await index.Query(query, context, token).ConfigureAwait(false);
                 if (options.AllowStale == false && results.IsStale)
-                    throw new InvalidOperationException("Cannot perform delete operation. Query is stale.");
+                    throw new InvalidOperationException("Cannot perform bulk operation. Query is stale.");
 
                 resultKeys = new List<string>(results.Results.Count);
                 foreach (var document in results.Results)

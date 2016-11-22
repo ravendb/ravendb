@@ -430,7 +430,7 @@ namespace Raven.Client.Connection.Async
 
         Task SetIndexLockAsync(string name, IndexLockMode mode, CancellationToken token = default(CancellationToken));
 
-        Task SetIndexPriorityAsync(string name, IndexingPriority priority, CancellationToken token = default(CancellationToken));
+        Task SetIndexPriorityAsync(string name, IndexPriority priority, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Creates an index with the specified name, based on an index definition that is created by the supplied
@@ -681,6 +681,21 @@ namespace Raven.Client.Connection.Async
         /// Disables given index.
         /// </summary>
         Task StopIndexAsync(string name, CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        /// Compacts given index.
+        /// </summary>
+        Task<Operation>CompactIndexAsync(string name, CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        /// Enables given index. This will be a no-op if index is already enabled.
+        /// </summary>
+        Task EnableIndexAsync(string name, CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        /// Disables given index. This will be a no-op if index is already disabled.
+        /// </summary>
+        Task DisableIndexAsync(string name, CancellationToken token = default(CancellationToken));
     }
 
     public interface IAsyncInfoDatabaseCommands

@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.SqlReplication
         public readonly SqlReplicationConfiguration Configuration;
         public readonly SqlReplicationStatistics Statistics;
 
-        public string ReplicationUniqueName => "Sql replication of " + Configuration.Name;
+        public string ReplicationUniqueName => Configuration.Name;
         public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
         private bool _shouldWaitForChanges;
@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.SqlReplication
             {
                 // This has lower priority than request processing, so we let the OS
                 // schedule this appropriately
-                Threading.TryLowerCurrentThreadPriority();
+                Threading.TrySettingCurrentThreadPriority(ThreadPriority.BelowNormal);
 
                 //haven't found better way to synchronize async method
                 AsyncHelpers.RunSync(ExecuteReplicationLoop);

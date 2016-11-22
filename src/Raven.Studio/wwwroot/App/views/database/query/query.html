@@ -1,4 +1,7 @@
 <div id="queryContainer" class="no-outline" tabindex="0">
+
+    <div data-bind="compose: 'common/sectionUnderDevelopment.html'"></div>
+
     <ul class="breadcrumb">
         <li>
             <h3>
@@ -46,7 +49,7 @@
     <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
             <button class="btn btn-primary" title="Run the query (Alt+R)" data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
-            <button class="btn btn-default" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable, attr: { title:isCacheDisable() ? 'Enable Cache' : 'Disable Cache' }">
+            <button class="btn btn-default" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable, attr: { title:isCacheDisable() ? 'Enable Cache' : 'Disable Cache' }" style="display: none"> <!-- TODO: hidden for prerelease -->
                 <span data-bind="text: isCacheDisable() ? 'Cache Disabled' : 'Cache Enabled'"></span>
             </button>
         </div>
@@ -79,7 +82,8 @@
             <button type="button" class="btn btn-default" data-bind="click: selectColumns" title="Choose columns...">
                 <i class="fa fa-table"></i>
             </button>
-            <button data-bind="visible: isStaticIndexSelected, click: exportCsv" class="btn btn-default" title="Export CSV">
+            <!-- TODO: visible: isStaticIndexSelected-->
+            <button data-bind="visible: false, click: exportCsv" class="btn btn-default" title="Export CSV">
                 <i class="fa fa-file-excel-o"></i>
             </button>
             <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, visible: isIndexMapReduce" title="Map-Reduce visualizer">
@@ -161,7 +165,7 @@
             <label class="col-sm-1 control-label">
                 Sort By
             </label>
-            <div class="col-md-9" >
+            <div class="col-md-9">
                 <div class="row" data-bind="foreach: sortBys">
                     <div class="col-xs-12 col-sm-9 col-md-6 col-lg-5">
                         <div class="panel panel-default">
@@ -235,7 +239,7 @@
                                 </button>
                             </div>
                         </div>
-                        
+
                         <div class="clearfix"></div>
                     </div>
                     <!-- ko if: typeof transformer() !== "undefined" && transformer() != null && transformer().extractInputs().length > 0 -->
@@ -260,15 +264,15 @@
             <span class="col-md-offset-1 col-md-10 text-danger"><i class="fa fa-warning"></i>  The Query contains '*.*', did you intend to use '*:*' ?</span>
         </div>
         <div class="form-group" data-bind="visible:isWarning()">
-            <span class="col-md-offset-1 col-md-10 text-danger" ><i class="fa fa-warning"></i> <span data-bind="text:warningText()"></span></span>
+            <span class="col-md-offset-1 col-md-10 text-danger"><i class="fa fa-warning"></i> <span data-bind="text:warningText()"></span></span>
         </div>
 
         <!-- query predefined filters should apear here -->
         <div class="form-group">
             <label class="col-sm-1 control-label" data-placement="auto right" data-original-title="Index Query Search Filters" data-trigger="hover">
-                <span  class="help-cursor">
+                <span class="help-cursor">
                     Query Filters
-                </span>            
+                </span>
             </label>
             <div class="col-md-11">
                 <div class="btn-group">
@@ -285,8 +289,8 @@
                     <button id="inCollection" type="button" class="btn btn-default" data-bind="click: fieldValueInMethod, enable: searchField() !=='Select field'">In filter</button>
                 </div>
             </div>
-           
-        </div>            
+
+        </div>
         <div class="form-group">
             <div class="form-group" data-bind="if:(isTestIndex() == false && !!$root.queryStats() && $root.queryStats().IsStale == true)">
                 <span class="col-md-offset-1 text-danger">Index is stale, possibly not all results presented</span>

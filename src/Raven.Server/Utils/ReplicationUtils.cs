@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.BTrees;
@@ -14,6 +17,63 @@ namespace Raven.Server.Utils
 {
     public static unsafe class ReplicationUtils
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string ChangeVectorToString(Dictionary<Guid, long> changeVector)
+        {
+            var sb = new StringBuilder();
+            foreach (var kvp in changeVector)
+                sb.Append($"{kvp.Key}:{kvp.Value};");
+
+            return sb.ToString();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string ChangeVectorToString(ChangeVectorEntry[] changeVector)
+        {
+            var sb = new StringBuilder();
+            foreach (var kvp in changeVector)
+                sb.Append($"{kvp.DbId}:{kvp.Etag};");
+
+            return sb.ToString();
+        }
+
+
+        public static void WriteChangeVectorTo(DocumentsOperationContext context, Dictionary<Guid, long> changeVector, Tree tree)
+        {
+            Guid dbId;
+            long etagBigEndian;
+            Slice keySlice;
+            Slice valSlice;
+            using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out keySlice))
+            using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out valSlice))
+            {
+                foreach (var kvp in changeVector)
+                {
+                    dbId = kvp.Key;
+                    etagBigEndian = Bits.SwapBytes(kvp.Value);
+                    tree.Add(keySlice, valSlice);
+                }
+            }
+        }
+
+        public static void WriteChangeVectorTo(TransactionOperationContext context, Dictionary<Guid, long> changeVector, Tree tree)
+        {
+            Guid dbId;
+            long etagBigEndian;
+            Slice keySlice;
+            Slice valSlice;
+            using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out keySlice))
+            using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out valSlice))
+            {
+                foreach (var kvp in changeVector)
+                {
+                    dbId = kvp.Key;
+                    etagBigEndian = Bits.SwapBytes(kvp.Value);
+                    tree.Add(keySlice, valSlice);
+                }
+            }           
+        }
+
         public static TEnum GetEnumFromTableValueReader<TEnum>(TableValueReader tvr, int index)
         {
             int size;

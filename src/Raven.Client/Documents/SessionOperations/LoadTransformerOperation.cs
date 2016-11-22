@@ -78,15 +78,11 @@ namespace Raven.Client.Documents.SessionOperations
             _transformer = transformer;
             _transformerParameters = transformerParameters;
         }
-
-        public object DeserializeFromTransformer(Type entityType, string id, BlittableJsonReaderObject document)
-        {
-            _session.HandleInternalMetadata(document);
-            return _session.EntityToBlittable.ConvertToEntity(entityType, id, document);
-        }
-
+        
         public T[] GetTransformedDocuments<T>(GetDocumentResult result)
         {
+            if (result == null)
+                return null;
             if (typeof(T).IsArray)
             {
                 var arrayOfArrays = result.Results
@@ -101,7 +97,7 @@ namespace Raven.Client.Documents.SessionOperations
 
                         var elementType = typeof(T).GetElementType();
 
-                        var array = values.Select(value => DeserializeFromTransformer(elementType, null, value as BlittableJsonReaderObject)).ToArray();
+                        var array = values.Select(value => _session.DeserializeFromTransformer(elementType, null, value as BlittableJsonReaderObject)).ToArray();
                         var newArray = Array.CreateInstance(elementType, array.Length);
                         Array.Copy(array, newArray, array.Length);
                         return newArray;
@@ -151,29 +147,15 @@ namespace Raven.Client.Documents.SessionOperations
                     continue;
                 }
 
-                //EnsureNotReadVetoed(result); Do we need this?
-
                 BlittableJsonReaderArray values;
                 if (result.TryGet("$values", out values) == false)
                     throw new InvalidOperationException("Transformed document must have a $values property");
 
                 foreach (BlittableJsonReaderObject value in values)
                 {
-                    yield return (T)_session.EntityToBlittable.ConvertToEntity(typeof(T), null, value);
+                    yield return (T)_session.DeserializeFromTransformer(typeof(T), null, value);
                 }
             }
         }
-
-        /*private bool EnsureNotReadVetoed(BlittableJsonReaderObject result)
-        {
-            BlittableJsonReaderObject metadata;
-            if (result.TryGet(Constants.Metadata.Key, out metadata) == false)
-                throw new InvalidOperationException("Document must have a metadata");
-
-            if (metadata != null)
-                _session.EnsureNotReadVetoed(metadata); // this will throw on read veto
-
-            return true;
-        }*/
     }
 }

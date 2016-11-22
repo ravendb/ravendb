@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Client.Data;
-using Raven.Database.Util;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -27,14 +26,11 @@ namespace Raven.Server.Documents.Handlers
                 var transformersCount = Database.TransformerStore.GetTransformersCount();
 
                 var stats = new DatabaseStatistics();
+                stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
                 stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 stats.CountOfRevisionDocuments = Database.BundleLoader.VersioningStorage?.GetNumberOfRevisionDocuments(context);
-                stats.ApproximateTaskCount = 0; // TODO [ppekrol]
                 stats.CountOfIndexes = indexes.Count;
                 stats.CountOfTransformers = transformersCount;
-                stats.CurrentNumberOfItemsToIndexInSingleBatch = 1; // TODO [ppekrol]
-                stats.CurrentNumberOfItemsToReduceInSingleBatch = 1; // TODO [ppekrol]
-                stats.CurrentNumberOfParallelTasks = 1; // TODO [ppekrol]
                 stats.DatabaseId = Database.DocumentsStorage.Environment.DbId;
                 stats.Is64Bit = IntPtr.Size == sizeof(long);
 
@@ -44,13 +40,19 @@ namespace Raven.Server.Documents.Handlers
                     var index = indexes[i];
                     stats.Indexes[i] = new IndexInformation
                     {
-                        Priority = index.Priority,
+                        State = index.State,
                         IsStale = index.IsStale(context),
                         Name = index.Name,
                         IndexId = index.IndexId,
                         LockMode = index.Definition.LockMode,
-                        Type = index.Type
+                        Type = index.Type,
+                        LastIndexingTime = index.LastIndexingTime
                     };
+
+                    if (stats.LastIndexingTime.HasValue)
+                        stats.LastIndexingTime = stats.LastIndexingTime >= index.LastIndexingTime ? stats.LastIndexingTime : index.LastIndexingTime;
+                    else
+                        stats.LastIndexingTime = index.LastIndexingTime;
                 }
 
                 writer.WriteDatabaseStatistics(context, stats);

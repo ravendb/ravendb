@@ -86,14 +86,10 @@ namespace FastTests.NewClient.ResultsTransformer
                     await session.StoreAsync(token2);
                     await session.SaveChangesAsync();
                     WaitForIndexing(store);
+                    
+                    var fooTokens = (await session.Advanced.LoadStartingWithAsync<Token_Id, string>("Token/foo")).OrderBy(x => x).ToArray();
 
-                }
-                using (var session = store.OpenNewSession())
-                {
-                    //TODO iftah, change the session back to Async when Async session is fully implemented
-                    var fooTokens = (session.Advanced.LoadStartingWith<Token_Id, string>("Token/foo")).OrderBy(x => x).ToArray();
-
-                    var fromQuery = (session.Query<Token>().TransformWith<Token_Id, string>().ToList()).OrderBy(x => x).ToArray();
+                    var fromQuery = (await session.Query<Token>().TransformWith<Token_Id, string>().ToListAsync()).OrderBy(x => x).ToArray();
 
                     Assert.Equal(fooTokens, fromQuery, StringComparer.OrdinalIgnoreCase);
 

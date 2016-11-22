@@ -68,10 +68,10 @@ namespace Raven.Client.Indexes
 
         /// <summary>
         ///  index can have a priority that controls how much power of the indexing process it is allowed to consume. index priority can be forced by the user.
-        ///  There are four available values that you can set: Normal, Idle, Disabled, Abandoned
+        ///  There are four available values that you can set: Low, Normal, High
         /// <para>Default value: null means that the priority of the index is Normal.</para>
         /// </summary>
-        public IndexingPriority? Priority { get; set; }
+        public IndexPriority? Priority { get; set; }
 
 
         /// <summary>
@@ -334,7 +334,7 @@ namespace Raven.Client.Indexes
                 // now we need to check if this is a legacy index...
                 var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
 
-                return serverDef.Equals(legacyIndexDefinition, compareIndexIds: false, ignoreFormatting: true, ignoreMaxIndexOutput: true);
+                return serverDef.Equals(legacyIndexDefinition, compareIndexIds: false, ignoreFormatting: true, ignoreMaxIndexOutputs: true);
             }
             finally
             {

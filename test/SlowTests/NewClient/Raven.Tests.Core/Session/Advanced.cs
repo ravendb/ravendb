@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client.Documents;
@@ -6,6 +7,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -175,14 +177,12 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                     Assert.NotNull(user);
                     Assert.Equal("John", user.Name);
 
-                    //TODO - Change when we have new DatabaseCommands.Get and Put
-                    long etag;
-                    InMemoryDocumentSessionOperations.DocumentInfo newMetadata;
-                    var document = TempGetCommand(session, out etag, out newMetadata);
+                    InMemoryDocumentSessionOperations.DocumentInfo documentInfo;
+                    var document = GetCommand(session, new[] { "users/1" }, out documentInfo);
 
-                    newMetadata.Entity = session.ConvertToEntity(typeof(User), "users/1", document);
-                    ((User)newMetadata.Entity).Name = "Jonathan";
-                    TempPutCommand(session, newMetadata, etag);
+                    documentInfo.Entity = session.ConvertToEntity(typeof(User), "users/1", document);
+                    ((User)documentInfo.Entity).Name = "Jonathan";
+                    PutCommand(session, documentInfo.Entity, "users/1");
 
                     user = session.Load<User>("users/1");
 
@@ -195,46 +195,6 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                     Assert.Equal("Jonathan", user.Name);
                 }
             }
-        }
-
-        private static void TempPutCommand(DocumentSession session, InMemoryDocumentSessionOperations.DocumentInfo newMetadata, long etag)
-        {
-            var newDocument = session.EntityToBlittable.ConvertEntityToBlittable(newMetadata.Entity, newMetadata);
-            var putCommand = new PutDocumentCommand()
-            {
-                Id = "users/1",
-                Etag = etag,
-                Document = newDocument,
-                Context = session.Context
-            };
-            session.RequestExecuter.Execute(putCommand, session.Context);
-        }
-
-        private static BlittableJsonReaderObject TempGetCommand(DocumentSession session, out long etag,
-            out InMemoryDocumentSessionOperations.DocumentInfo newMetadata)
-        {
-            var command = new GetDocumentCommand
-            {
-                Ids = new[] {"users/1"}
-            };
-            session.RequestExecuter.Execute(command, session.Context);
-            var document = (BlittableJsonReaderObject) command.Result.Results[0];
-            BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
-                throw new InvalidOperationException("Document must have a metadata");
-            string id;
-            if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
-                throw new InvalidOperationException("Document must have an id");
-            if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                throw new InvalidOperationException("Document must have an etag");
-            newMetadata = new InMemoryDocumentSessionOperations.DocumentInfo
-            {
-                Id = id,
-                Document = document,
-                Metadata = metadata,
-                ETag = etag
-            };
-            return document;
         }
 
         [Fact]
@@ -264,6 +224,24 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                     user.Name = "Name";
                     session.Store(user);
                     var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+                }
+            }
+        }
+
+        [Fact( Skip = "TODO: GetDocumentUrl Not Implemented")]
+        public void CanGetDocumentUrl()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenNewSession())
+                {
+                    session.Store(new Company { Id = "companies/1" });
+                    session.SaveChanges();
+
+                    var company = session.Load<Company>("companies/1");
+                    Assert.NotNull(company);
+                    var uri = new Uri(session.Advanced.GetDocumentUrl(company));
+                    Assert.Equal("/databases/" + store.DefaultDatabase + "/docs/companies/1", uri.AbsolutePath);
                 }
             }
         }
@@ -381,29 +359,21 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        //TODO - Efrat
-        /*[Fact]
+        [Fact]
         public void CanGetEtagFor()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put(
-                    "companies/1",
-                    null,
-                    RavenJObject.FromObject(new Company { Id = "companies/1" }),
-                    new RavenJObject()
-                    );
-
-                using (var session = store.OpenSession())
+                using (var session = store.OpenNewSession())
                 {
+                    PutCommand(session, new Company { Id = "companies/1" }, "companies/1");
                     var company = session.Load<Company>("companies/1");
-                    Assert.Equal("01000000-0000-0001-0000-000000000001", session.Advanced.GetEtagFor<Company>(company).ToString());
+                    Assert.Equal(1, session.Advanced.GetEtagFor<Company>(company));
                 }
             }
-        }*/
+        }
 
-        //TODO - Efrat
-        /*[Fact]
+        [Fact (Skip = "TODO:Lazy Not Implemented")]
         public void CanLazilyLoadEntity()
         {
             const string COMPANY1_ID = "companies/1";
@@ -439,10 +409,9 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                     Assert.Equal(COMPANY2_ID, orders[1].Id);
                 }
             }
-        }*/
+        }
 
-        //TODO - Efrat
-        /*[Fact]
+        [Fact(Skip = "TODO: Lazy Not Implemented")]
         public void CanExecuteAllPendingLazyOperations()
         {
             const string COMPANY1_ID = "companies/1";
@@ -480,50 +449,50 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                     Assert.Equal(COMPANY2_ID, company2.Id);
                 }
             }
-        }*/
+        }
 
-
-        //TODO - Efrat
-        /*[Fact]
+        [Fact]
         public void CanUseDefer()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenNewSession())
                 {
-                    var commands = new ICommandData[]
+                    var commands = new []
                     {
-                        new PutCommandData
+                        new Dictionary<string, object>()
                         {
-                            Document =
-                                RavenJObject.FromObject(new Company {Name = "company 1"}),
-                            Etag = null,
-                            Key = "company1",
-                            Metadata = new RavenJObject(),
+                            [Constants.Command.Key] = "company1",
+                            [Constants.Command.Method] = "PUT",
+                            [Constants.Command.Document] = new DynamicJsonValue() { ["Name"] = "company 1" },
+                            [Constants.Command.Etag] = null
                         },
-                        new PutCommandData
+                        new Dictionary<string, object>()
                         {
-                            Document =
-                                RavenJObject.FromObject(new Company {Name = "company 2"}),
-                            Etag = null,
-                            Key = "company2",
-                            Metadata = new RavenJObject(),
+                            [Constants.Command.Key] = "company2",
+                            [Constants.Command.Method] = "PUT",
+                            [Constants.Command.Document] = new DynamicJsonValue() { ["Name"] = "company 2" },
+                            [Constants.Command.Etag] = null
+                        },
+                        new Dictionary<string, object>()
+                        {
+                            [Constants.Command.Key] = "company1",
+                            [Constants.Command.Method] = "DELETE",
+                            [Constants.Command.Document] = null,
+                            [Constants.Command.Etag] = null
                         }
                     };
 
                     session.Advanced.Defer(commands);
-                    session.Advanced.Defer(new DeleteCommandData { Key = "company1" });
 
                     session.SaveChanges();
-
                     Assert.Null(session.Load<Company>("company1"));
                     Assert.NotNull(session.Load<Company>("company2"));
                 }
             }
-        }*/
+        }
 
-        //TODO - Efrat
-        /*[Fact]
+        [Fact(Skip = "TODO: AggressivelyCacheFor Not Implemented without json")]
         public void CanAggressivelyCacheFor()
         {
             using (var store = GetDocumentStore())
@@ -534,22 +503,18 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                     session.SaveChanges();
                 }
 
-#if !DNXCORE50
-                Server.Server.ResetNumberOfRequests();
-#endif
-
-                using (var session = store.OpenSession())
+                using (var session = store.OpenNewSession())
                 {
                     Assert.Equal(0, session.Advanced.NumberOfRequests);
                     session.Load<User>("users/1");
-                    Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                    //Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenNewSession())
                 {
                     session.Load<User>("users/1");
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+                    //Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     for (var i = 0; i <= 20; i++)
@@ -563,6 +528,6 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
-        }*/
+        }
     }
 }

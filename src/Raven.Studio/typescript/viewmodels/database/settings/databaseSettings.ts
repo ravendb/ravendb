@@ -10,6 +10,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import viewSystemDatabaseConfirm = require("viewmodels/common/viewSystemDatabaseConfirm");
 import messagePublisher = require("common/messagePublisher");
 import accessHelper = require("viewmodels/shell/accessHelper");
+import eventsCollector = require("common/eventsCollector");
 
 class databaseSettings extends viewModelBase {
     document = ko.observable<document>();
@@ -103,6 +104,8 @@ class databaseSettings extends viewModelBase {
     }
 
     editDatabaseSettings() {
+        eventsCollector.default.reportEvent("database-settings", "edit");
+
         var editDbConfirm = new viewSystemDatabaseConfirm("Meddling with the database settings document could cause irreversible damage!");
         editDbConfirm
             .viewTask
@@ -113,6 +116,8 @@ class databaseSettings extends viewModelBase {
     }
 
     refreshFromServer() {
+        eventsCollector.default.reportEvent("database-settings", "refresh");
+
         var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the data from the server?');
         canContinue.done(() => {
             this.fetchDatabaseSettings(this.activeDatabase(), true)
@@ -126,6 +131,8 @@ class databaseSettings extends viewModelBase {
     }
 
     formatDocument() {
+        eventsCollector.default.reportEvent("database-settings", "format");
+
         var text = this.isEditingMetadata() ? this.metadataText() : this.documentText();
         var observableToUpdate = this.isEditingMetadata() ? this.metadataText : this.documentText;
         try {
@@ -145,6 +152,8 @@ class databaseSettings extends viewModelBase {
     }
 
     saveChanges() {
+        eventsCollector.default.reportEvent("database-settings", "save");
+
         var editDbConfirm = new viewSystemDatabaseConfirm("Meddling with the database settings document could cause irreversible damage!");
         editDbConfirm
             .viewTask

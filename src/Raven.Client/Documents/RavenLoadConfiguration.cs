@@ -1,5 +1,6 @@
-﻿using System.Collections.Generic;
-
+﻿using System;
+using System.Collections.Generic;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Documents
 {
@@ -20,6 +21,10 @@ namespace Raven.Client.Documents
         public void AddTransformerParameter(string name, object value)
         {
             TransformerParameters[name] = value;
+        }
+        public void AddTransformerParameter(string name, DateTime value)
+        {
+            TransformerParameters[name] = value.GetDefaultRavenFormat(isUtc: value.Kind == DateTimeKind.Utc);
         }
     }
 }

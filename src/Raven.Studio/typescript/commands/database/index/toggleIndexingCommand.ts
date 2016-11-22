@@ -30,7 +30,7 @@ class toggleIndexingCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        const basicUrl = this.start ? endpoints.databases.index.indexesStart : endpoints.databases.index.indexesStop;
+        const basicUrl = this.start ? endpoints.databases.adminIndex.adminIndexesStart : endpoints.databases.adminIndex.adminIndexesStop;
 
         let args: optsNames | optsType = null;
         if (this.names) {

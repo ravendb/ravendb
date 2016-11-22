@@ -23,6 +23,8 @@ namespace Sparrow.Json
         private readonly ArenaMemoryAllocator _arenaAllocator;
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
+        private List<GCHandle> _pinnedObjects;
+
 
         private readonly Dictionary<string, LazyStringValue> _fieldNames =
             new Dictionary<string, LazyStringValue>(StringComparer.Ordinal);
@@ -199,6 +201,14 @@ namespace Sparrow.Json
                     managedPinnedBuffer.Dispose();
                 }
                 _managedBuffers = null;
+            }
+
+            if (_pinnedObjects != null)
+            {
+                foreach (var pinnedObject in _pinnedObjects)
+                {
+                    pinnedObject.Free();
+                }
             }
 
 
@@ -555,7 +565,7 @@ namespace Sparrow.Json
                     {
                         var read = _stream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
                         if (read == 0)
-                            throw new EndOfStreamException("Stream ended without reaching end of json content");
+                            throw new EndOfStreamException("Stream ended without reaching end of json content.");
                         _parser.SetBuffer(_buffer, read);
                     }
                     else
@@ -777,6 +787,18 @@ namespace Sparrow.Json
         public void ReturnMemory(AllocatedMemoryData allocation)
         {
             _arenaAllocator.Return(allocation);
+        }
+
+        public IntPtr PinObjectAndGetAddress(object obj)
+        {
+            var handle = GCHandle.Alloc(obj, GCHandleType.Pinned);
+
+            if (_pinnedObjects == null)
+                _pinnedObjects = new List<GCHandle>();
+
+            _pinnedObjects.Add(handle);
+
+            return handle.AddrOfPinnedObject();
         }
     }
 }

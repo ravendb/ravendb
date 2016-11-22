@@ -49,7 +49,7 @@ namespace Raven.Client.Connection
             return $"{url}/indexes/set-lock?name={index}&mode={mode}";
         }
 
-        public static string SetIndexPriority(this string url, string index, IndexingPriority priority)
+        public static string SetIndexPriority(this string url, string index, IndexPriority priority)
         {
             return $"{url}/indexes/set-priority?name={index}&priority={priority}";
         }

@@ -11,6 +11,7 @@ import getDocumentsLeftToReplicate = require("commands/database/replication/getD
 import d3 = require("d3");
 import nv = require("nvd3");
 import dagre = require("dagre");
+import eventsCollector = require("common/eventsCollector");
 
 class replicationStats extends viewModelBase {
     /*
@@ -842,6 +843,10 @@ class replicationStats extends viewModelBase {
     replicationStatToggle() {
         setTimeout(() => this.redrawGraph(), 1);
     }
+    */
+
+    /*
+        TODO apply google analytics
     */
 }
 

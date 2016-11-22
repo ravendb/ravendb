@@ -16,7 +16,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private readonly Queue<long> _idsOfDeletedEntries = new Queue<long>();
 
-        public Tree MapEntries;
+        public Tree MapPhaseTree;
+        public Tree ReducePhaseTree;
+        
         public FixedSizeTree ResultsStoreTypes;
         public Dictionary<ulong, MapReduceResultsStore> StoreByReduceKeyHash = new Dictionary<ulong, MapReduceResultsStore>(); // TODO arek NumericEqualityComparer.Instance
         public Dictionary<string, long> ProcessedDocEtags = new Dictionary<string, long>();
@@ -34,7 +36,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             StoreLastMapResultId();
             DocumentMapEntries?.Dispose();
             DocumentMapEntries = null;
-            MapEntries = null;
+            MapPhaseTree = null;
+            ReducePhaseTree = null;
             ProcessedDocEtags.Clear();
             ProcessedTombstoneEtags.Clear();
             StoreByReduceKeyHash.Clear();
@@ -55,7 +58,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public unsafe void StoreLastMapResultId()
         {
-            *(long*)MapEntries.DirectAdd(LastMapResultIdKey, sizeof(long)) = LastMapResultId;
+            *(long*)MapPhaseTree.DirectAdd(LastMapResultIdKey, sizeof(long)) = LastMapResultId;
         }
 
         public unsafe void Initialize(Tree mapEntriesTree)

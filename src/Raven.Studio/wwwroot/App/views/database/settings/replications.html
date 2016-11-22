@@ -1,3 +1,6 @@
+
+<div data-bind="compose: 'common/sectionUnderDevelopment.html'"></div>
+
 <form data-bind="submit: $root.saveChanges" class="form-horizontal" role="form">
 
     <div class="panel-group">
@@ -12,7 +15,7 @@
                     <label for="conflictResolutionSelector" class="col-sm-2 control-label">Client failover behaviour</label>
                     <div class="col-sm-5">
                         <div class="btn-group" data-bind="with: replicationsSetup">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                            <button type="button" class="btn btn-default dropdown-toggle btn-prerelease" disabled="disabled" data-toggle="dropdown">
                                 <span data-bind="visible: !clientFailoverBehaviour()">Let client decide</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached'">Allow reads from secondaries when request time SLA threshold is reached</span>
@@ -60,7 +63,7 @@
                     <label for="conflictResolutionSelector" class="col-sm-2 control-label">Conflict resolution</label>
                     <div class="col-sm-5">
                         <div class="btn-group" data-bind="with: replicationConfig">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                            <button type="button" class="btn btn-default dropdown-toggle btn-prerelease" disabled data-toggle="dropdown">
                                 <span data-bind="visible: documentConflictResolution() === 'None'">None</span>
                                 <span data-bind="visible: documentConflictResolution() === 'ResolveToLocal'">Resolve to <strong>local</strong></span>
                                 <span data-bind="visible: documentConflictResolution() === 'ResolveToRemote'">Resolve to <strong>remote</strong></span>

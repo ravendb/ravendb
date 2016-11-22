@@ -8,6 +8,7 @@ import getInfoPackage = require('commands/database/debug/getInfoPackage');
 import viewModelBase = require("viewmodels/viewModelBase");
 import infoPackageImport = require("viewmodels/manage/infoPackageImport");
 import shell = require("viewmodels/shell");
+import eventsCollector = require("common/eventsCollector");
 
 const enum parserState {
   pid,
@@ -448,6 +449,10 @@ class infoPackage extends viewModelBase {/*
         " .box { fill: rgb(21, 140, 186); fill-opacity: 0.2; stroke: rgb(21, 140, 186); stroke-width: 1.5px; }\n" +
         " .notUserCode { fill-opacity: 0.4; }\n" +
         " .headerLine { stroke: rgb(21, 140, 186); stroke-width: 1.5px; }";
+    */
+
+    /*
+        TODO @gregolsky apply google analytics
     */
 }
 

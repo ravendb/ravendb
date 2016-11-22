@@ -3,9 +3,11 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
 import importDatabaseCommand = require("commands/database/studio/importDatabaseCommand");
+import copyToClipboard = require("common/copyToClipboard");
 import checksufficientdiskspaceCommand = require("commands/database/studio/checksufficientdiskspaceCommand");
 import importDatabaseModel = require("models/database/tasks/importDatabaseModel");
 import notificationCenter = require("common/notifications/notificationCenter");
+import eventsCollector = require("common/eventsCollector");
 
 class importDatabase extends viewModelBase {
 
@@ -25,6 +27,8 @@ class importDatabase extends viewModelBase {
     isUploading = ko.observable<boolean>(false);
     uploadStatus = ko.observable<number>();
 
+    importCommand: KnockoutComputed<string>;
+
     constructor() {
         super();
         aceEditorBindingHandler.install();
@@ -33,6 +37,8 @@ class importDatabase extends viewModelBase {
                 this.uploadStatus(0);
             }
         });
+
+        this.importCommand = ko.pureComputed(() => 'TODO impl actual command generation');
     }
 
     attached() {
@@ -96,6 +102,7 @@ class importDatabase extends viewModelBase {
     }
 
     importDb() {
+        eventsCollector.default.reportEvent("database", "import");
         this.isUploading(true);
         const formData = new FormData();
         const fileInput = document.querySelector(importDatabase.filePickerTag) as HTMLInputElement;
@@ -108,6 +115,10 @@ class importDatabase extends viewModelBase {
                 notificationCenter.instance.monitorOperation(this.activeDatabase(), operationId);
             })
             .always(() => this.isUploading(false));
+    }
+
+    copyCommandToClipboard() {
+        copyToClipboard.copy(this.importCommand(), "Command was copied to clipboard.");
     }
 
 }

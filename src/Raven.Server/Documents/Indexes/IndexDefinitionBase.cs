@@ -157,8 +157,6 @@ namespace Raven.Server.Documents.Indexes
             indexDefinition.Type = index.Type;
             indexDefinition.LockMode = LockMode;
 
-            indexDefinition.IndexVersion = -1; // TODO [ppekrol]
-
             return indexDefinition;
         }
 

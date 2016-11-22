@@ -98,8 +98,8 @@ namespace Voron.Impl.Backup
             try
             {
                 long allocatedPages;
-                using (var writePesistentContext = new TransactionPersistentContext(true))
-                using (var readPesistentContext = new TransactionPersistentContext(true))
+                var writePesistentContext = new TransactionPersistentContext(true);
+                var readPesistentContext = new TransactionPersistentContext(true);
                 using (var txw = env.NewLowLevelTransaction(writePesistentContext, TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
                 {
                     txr = env.NewLowLevelTransaction(readPesistentContext, TransactionFlags.Read);// now have snapshot view

@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import sqlReplication = require("models/database/sqlReplication/sqlReplication");
+import endpoints = require("endpoints");
 
 
 class simulateSqlReplicationCommand extends  commandBase{
@@ -10,7 +11,7 @@ class simulateSqlReplicationCommand extends  commandBase{
     }
 
     execute(): JQueryPromise<sqlReplicationSimulationResultDto> {
-        var args = {
+        const args = {
             documentId: this.documentId,
             performRolledBackTransaction: this.performRolledbackTransaction,
             sqlReplication: JSON.stringify(this.simulatedSqlReplication.toDto())

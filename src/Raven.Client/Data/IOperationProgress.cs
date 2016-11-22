@@ -17,7 +17,7 @@ namespace Raven.Client.Data
         public long Processed { get; set; }
         public long Total { get; set; }
 
-        public DynamicJsonValue ToJson()
+        public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue(GetType())
             {

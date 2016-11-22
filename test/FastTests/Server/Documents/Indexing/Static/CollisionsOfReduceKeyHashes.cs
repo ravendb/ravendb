@@ -88,7 +88,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
                 {
                     var indexStorage = new IndexStorage(index, contextPool, database);
-                    var reducer = new ReduceMapResultsOfStaticIndex(index,index.Compiled.Reduce, index.Definition, indexStorage, new MetricsCountersManager(), mapReduceContext);
+                    var reducer = new ReduceMapResultsOfStaticIndex(index,index._compiled.Reduce, index.Definition, indexStorage, new MetricsCountersManager(), mapReduceContext);
 
                     await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database);
                 }
@@ -105,7 +105,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
-                    mapReduceContext.MapEntries = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapEntriesTreeName);
+                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapPhaseTreeName);
+                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.ReducePhaseTreeName);
 
                     var store = new MapReduceResultsStore(hashOfReduceKey, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
 
@@ -161,7 +162,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
-                    mapReduceContext.MapEntries = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapEntriesTreeName);
+                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapPhaseTreeName);
+                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.ReducePhaseTreeName);
 
                     var store = new MapReduceResultsStore(hashOfReduceKey, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
 
@@ -215,7 +217,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
-                    mapReduceContext.MapEntries = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapEntriesTreeName);
+                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapPhaseTreeName);
+                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.ReducePhaseTreeName);
 
                     var store = new MapReduceResultsStore(hashOfReduceKey, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
 

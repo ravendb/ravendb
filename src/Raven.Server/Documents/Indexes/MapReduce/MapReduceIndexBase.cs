@@ -12,38 +12,42 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Impl;
 using Sparrow;
+using Voron.Debugging;
 using Voron.Util;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public abstract class MapReduceIndexBase<T> : Index<T> where T : IndexDefinitionBase
     {
-        internal const string MapEntriesTreeName = "MapEntries";
+        internal const string MapPhaseTreeName = "MapPhaseTree";
+        internal const string ReducePhaseTreeName = "ReducePhaseTree";
         internal const string ResultsStoreTypesTreeName = "ResultsStoreTypes";
-
-        private PageLocator _pageLocator;
+        
         internal readonly MapReduceIndexingContext MapReduceWorkContext = new MapReduceIndexingContext();
 
         private IndexingStatsScope _statsInstance;
-        private MapPhaseStats _stats = new MapPhaseStats();
+        private readonly MapPhaseStats _stats = new MapPhaseStats();
 
+        private PageLocator _pageLocator;
+        
         protected MapReduceIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
         }
 
         public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
         {
-            MapReduceWorkContext.MapEntries = GetMapEntriesTree(indexContext.Transaction.InnerTransaction);
-            MapReduceWorkContext.ResultsStoreTypes = MapReduceWorkContext.MapEntries.FixedTreeFor(ResultsStoreTypesTreeName, sizeof(byte));
+            MapReduceWorkContext.MapPhaseTree = GetMapPhaseTree(indexContext.Transaction.InnerTransaction);
+            MapReduceWorkContext.ReducePhaseTree = GetReducePhaseTree(indexContext.Transaction.InnerTransaction);
+            MapReduceWorkContext.ResultsStoreTypes = MapReduceWorkContext.ReducePhaseTree.FixedTreeFor(ResultsStoreTypesTreeName, sizeof(byte));
 
-            _pageLocator = new PageLocator(indexContext.Transaction.InnerTransaction.LowLevelTransaction, 128);
+            _pageLocator = new PageLocator(indexContext.Transaction.InnerTransaction.LowLevelTransaction, 1024);
 
             MapReduceWorkContext.DocumentMapEntries = new FixedSizeTree(
                    indexContext.Transaction.InnerTransaction.LowLevelTransaction,
-                   MapReduceWorkContext.MapEntries,
+                   MapReduceWorkContext.MapPhaseTree,
                    Slices.Empty,
                    sizeof(ulong),
-                   clone: false, 
+                   clone: false,
                    pageLocator: _pageLocator);
 
             return MapReduceWorkContext;
@@ -52,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public override unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            Slice docKeyAsSlice;            
+            Slice docKeyAsSlice;
             using (Slice.External(indexContext.Allocator, tombstone.LoweredKey.Buffer, tombstone.LoweredKey.Length, out docKeyAsSlice))
             {
                 MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
@@ -67,36 +71,42 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     store.Delete(mapEntry.Id);
                 }
 
-                MapReduceWorkContext.MapEntries.DeleteFixedTreeFor(tombstone.LoweredKey, sizeof(ulong));
+                MapReduceWorkContext.MapPhaseTree.DeleteFixedTreeFor(tombstone.LoweredKey, sizeof(ulong));
             }
 
-            
+
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch)
+        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch)
         {
             return new MapReduceQueryResultRetriever(documentsContext, fieldsToFetch);
         }
 
-        private static Tree GetMapEntriesTree(Transaction tx)
+        private static Tree GetMapPhaseTree(Transaction tx)
         {
-            // map entries structure
-            // MapEntries tree has the following entries
-            // 1) { document key, fixed size tree }
-            // each fixed size tree stores records like 
+            // MapPhase tree has the following entries
+            // 1) { document key, fixed size tree } where each fixed size tree stores records like 
             //   |----> { identifier of a map result, hash of a reduce key for the map result }
-            // 2) entry to keep track of the identifier of last stored entry { #LastMapResultId, long_value }
-            // 3) { ResultsStoreTypes, fixed size tree } where the fixed size tree stores records like
-            //   |----> { reduce key hash, MapResultsStorageType enum } 
+            // 2) entry to keep track the identifier of a last stored entry { #LastMapResultId, long_value }
 
-            return tx.CreateTree(MapEntriesTreeName);
+            return tx.CreateTree(MapPhaseTreeName);
+        }
+
+        private static Tree GetReducePhaseTree(Transaction tx)
+        {
+            // ReducePhase tree has the following entries
+            // 1) fixed size tree called which stores records like
+            //    |----> { reduce key hash, MapResultsStorageType enum } 
+            // 2) { #reduceValues- hash of a reduce key, nested values section } 
+
+            return tx.CreateTree(ReducePhaseTreeName);
         }
 
         protected unsafe int PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 
-            Slice docKeyAsSlice;            
+            Slice docKeyAsSlice;
             using (Slice.External(indexContext.Allocator, documentKey.Buffer, documentKey.Length, out docKeyAsSlice))
             {
                 Queue<MapEntry> existingEntries = null;
@@ -183,7 +193,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
 
                 return resultsCount;
-            }            
+            }
         }
 
         private static unsafe bool ResultsBinaryEqual(BlittableJsonReaderObject newResult, PtrSize existingData)
@@ -192,7 +202,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                    Memory.CompareInline(newResult.BasePointer, existingData.Ptr, existingData.Size) == 0;
         }
 
-        private static unsafe Queue<MapEntry> GetMapEntries(FixedSizeTree documentMapEntries)
+        internal static unsafe Queue<MapEntry> GetMapEntries(FixedSizeTree documentMapEntries)
         {
             var entries = new Queue<MapEntry>((int)documentMapEntries.NumberOfEntries);
 
@@ -216,28 +226,33 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return entries;
         }
 
-        public unsafe MapReduceResultsStore GetResultsStore(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create, PageLocator pageLocator = null)
+        public MapReduceResultsStore GetResultsStore(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create, PageLocator pageLocator = null)
         {
             MapReduceResultsStore store;
             if (MapReduceWorkContext.StoreByReduceKeyHash.TryGetValue(reduceKeyHash, out store) == false)
             {
-                Slice read;
-                using (MapReduceWorkContext.ResultsStoreTypes.Read((long)reduceKeyHash, out read))
-                {
-                    MapResultsStorageType type;
-
-                    if (read.HasValue)
-                        type = (MapResultsStorageType)(*read.CreateReader().Base);
-                    else
-                        type = MapResultsStorageType.Nested;
-
-                    store = new MapReduceResultsStore(reduceKeyHash, type, indexContext, MapReduceWorkContext, create, pageLocator);
-
-                    MapReduceWorkContext.StoreByReduceKeyHash[reduceKeyHash] = store;
-                }
+                MapReduceWorkContext.StoreByReduceKeyHash[reduceKeyHash] = store = 
+                    CreateResultsStore(MapReduceWorkContext.ResultsStoreTypes, reduceKeyHash, indexContext, create, pageLocator);
             }
 
             return store;
+        }
+
+        internal unsafe MapReduceResultsStore CreateResultsStore(FixedSizeTree typePerHash, ulong reduceKeyHash,
+            TransactionOperationContext indexContext, bool create, PageLocator pageLocator = null)
+        {
+            MapResultsStorageType type;
+            Slice read;
+            using (typePerHash.Read((long) reduceKeyHash, out read))
+            {
+                if (read.HasValue)
+                    type = (MapResultsStorageType) (*read.CreateReader().Base);
+                else
+                    type = MapResultsStorageType.Nested;
+            }
+
+            return new MapReduceResultsStore(reduceKeyHash, type, indexContext, MapReduceWorkContext, create,
+                pageLocator);
         }
 
         protected override void LoadValues()
@@ -248,12 +263,61 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
             {
-                var mapEntries = tx.InnerTransaction.ReadTree(MapEntriesTreeName);
+                var mapEntries = tx.InnerTransaction.ReadTree(MapPhaseTreeName);
 
                 if (mapEntries == null)
                     return;
 
                 MapReduceWorkContext.Initialize(mapEntries);
+            }
+        }
+
+        public override StorageReport GenerateStorageReport(bool details)
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var report = _indexStorage.Environment().GenerateReport(tx.InnerTransaction, details);
+
+                var treesToKeep = new List<TreeReport>();
+
+                TreeReport aggregatedTree = null;
+                var numberOfReduceTrees = 0;
+                foreach (var treeReport in report.Trees)
+                {
+                    if (treeReport.Name.StartsWith(MapReduceResultsStore.ReduceTreePrefix) == false)
+                    {
+                        treesToKeep.Add(treeReport);
+                        continue;
+                    }
+
+                    numberOfReduceTrees++;
+
+                    if (aggregatedTree == null)
+                        aggregatedTree = new TreeReport();
+
+                    aggregatedTree.AllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
+                    aggregatedTree.BranchPages += treeReport.BranchPages;
+                    aggregatedTree.Density = details ? aggregatedTree.Density + treeReport.Density : -1;
+                    aggregatedTree.Depth = Math.Max(aggregatedTree.Depth, treeReport.Depth);
+                    aggregatedTree.LeafPages += treeReport.LeafPages;
+                    aggregatedTree.NumberOfEntries += treeReport.NumberOfEntries;
+                    aggregatedTree.OverflowPages += treeReport.OverflowPages;
+                    aggregatedTree.PageCount += treeReport.PageCount;
+                    aggregatedTree.Type = treeReport.Type;
+                    aggregatedTree.UsedSpaceInBytes = details ? aggregatedTree.UsedSpaceInBytes + treeReport.UsedSpaceInBytes : -1;
+                }
+
+                if (aggregatedTree != null)
+                {
+                    aggregatedTree.Name = $"Reduce Trees (#{numberOfReduceTrees})";
+                    treesToKeep.Add(aggregatedTree);
+                }
+
+                report.Trees = treesToKeep;
+
+                return report;
             }
         }
 

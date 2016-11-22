@@ -1,11 +1,53 @@
 .editDocument {
 
     .documentId {
+        font-weight: 300;
+        font-size: 25px;
+        margin-bottom: 8px;
+
         .fav-object {
             position: relative;
-            top: -3px;
+            top: -5px;
+            width: 50%;
         }
 
+        @obj-name-placeholder-color: darken(@gray,10%);
+
+        input.obj-name {
+            display:block;
+            width:100%;
+            line-height:@line-height-computed;
+            background-color:transparent;
+            padding:4px ;
+            border:1px solid @input-border;
+
+            &::-webkit-input-placeholder {
+               color: @obj-name-placeholder-color;
+            }
+
+            &:-moz-placeholder { 
+               color: @obj-name-placeholder-color;  
+            }
+
+            &::-moz-placeholder {
+               color: @obj-name-placeholder-color;
+            }
+
+            &:-ms-input-placeholder {  
+               color: @obj-name-placeholder-color; 
+            }
+
+            &::placeholder {
+                color: @obj-name-placeholder-color;                
+            }
+        }
+
+        .span.obj-name {
+            display:inline-block;
+            padding:3px;
+        }
+
+        /*
         #obj-name {
 
             .edit-inline {
@@ -30,6 +72,22 @@
                     display: none;
                 }
             }
+        }*/
+    }
+
+    .btn-tabs {
+        .doc-related {
+            color:#9466d5;
+        }
+        .doc-collection {
+            color:#50b068;;
+        }
+        .doc-recent {
+            color: #198fd1;
+        }
+
+        .doc-starred {
+            color:#cfa125;
         }
     }
 }

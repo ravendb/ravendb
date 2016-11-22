@@ -32,7 +32,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Sessiont
                     session.Store(new User { Id = entityId, Name = "User1" });
                     session.SaveChanges();
 
-                    using (var otherSession = store.OpenSession())
+                    using (var otherSession = store.OpenNewSession())
                     {
                         var otherUser = otherSession.Load<User>(entityId);
                         otherUser.Name = "OtherName";
@@ -138,7 +138,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Sessiont
             }
         }
 
-        [Fact(Skip = "Efrat - currently failing , AsyncSession WIP")]
+        [Fact]
         public async Task CanBypassOptmisticConcurrencyCheckByExplicitlyProvidingAnEtagOfNullToStoreAsync()
         {
             const string entityId = "users/1";
@@ -168,7 +168,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Sessiont
             }
         }
 
-        [Fact(Skip = "Efrat - currently failing , AsyncSession WIP")]
+        [Fact]
         public async Task CanBypassOptmisticConcurrencyCheckByExplicitlyProvidingAnEtagAndAnIdOfNullToStoreAsync()
         {
             const string entityId = "users/1";

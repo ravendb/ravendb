@@ -9,18 +9,16 @@ namespace Raven.Server.Documents.Indexes
     {
         private readonly Stopwatch _queryDuration;
         private readonly TimeSpan _waitTimeout;
-        private readonly AsyncManualResetEvent _indexingBatchCompleted;
-
-        public AsyncWaitForIndexing(Stopwatch queryDuration, TimeSpan waitTimeout, AsyncManualResetEvent indexingBatchCompleted)
+        
+        public AsyncWaitForIndexing(Stopwatch queryDuration, TimeSpan waitTimeout)
         {
             _queryDuration = queryDuration;
             _waitTimeout = waitTimeout;
-            _indexingBatchCompleted = indexingBatchCompleted;
         }
 
         public bool TimeoutExceeded;
 
-        public Task WaitForIndexingAsync()
+        public Task WaitForIndexingAsync(AsyncManualResetEvent.FrozenAwaiter indexingBatchCompleted)
         {
             var remainingTime = _waitTimeout - _queryDuration.Elapsed;
 
@@ -30,7 +28,8 @@ namespace Raven.Server.Documents.Indexes
                 return Task.CompletedTask;
             }
 
-            return _indexingBatchCompleted.WaitAsync(remainingTime);
+            var waitForIndexingAsync = indexingBatchCompleted.WaitAsync(TimeSpan.FromSeconds(15));
+            return waitForIndexingAsync;
         }
     }
 }

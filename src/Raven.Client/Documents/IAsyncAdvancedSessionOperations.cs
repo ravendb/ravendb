@@ -10,17 +10,14 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
-using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents
 {
@@ -219,7 +216,7 @@ namespace Raven.Client.Documents
         /// <param name="token">The cancellation token.</param>
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
-        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken));
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Stream the results of documents search to the client, converting them to CLR types along the way.
@@ -240,15 +237,13 @@ namespace Raven.Client.Documents
         /// <param name="token">The cancellation token.</param>
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
-        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken));
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Gets the metadata for the specified entity.
-        ///     If the entity is transient, it will load the metadata from the store
-        ///     and associate the current state of the entity with the metadata from the server.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        Task<IDictionary<string, string>> GetMetadataForAsync<T>(T instance);
+        IDictionary<string, string> GetMetadataForAsync<T>(T instance);
 
         /// <summary>
         ///     DeleteByIndexAsync using linq expression

@@ -109,6 +109,7 @@ class appUrl {
         statusStorageOnDisk: ko.computed(() => appUrl.forStatusStorageOnDisk(appUrl.currentDatabase())),
         statusStorageBreakdown: ko.computed(() => appUrl.forStatusStorageBreakdown(appUrl.currentDatabase())),
         statusStorageCollections: ko.computed(() => appUrl.forStatusStorageCollections(appUrl.currentDatabase())),
+        statusStorageReport: ko.computed(() => appUrl.forStatusStorageReport(appUrl.currentDatabase())),
 
         isAreaActive: (routeRoot: string) => ko.pureComputed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.pureComputed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
@@ -419,8 +420,8 @@ class appUrl {
         return "#databases/status/requests/tracing?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forIndexPerformance(db: database): string {
-        return "#databases/status/indexing?" + appUrl.getEncodedDbPart(db);
+    static forIndexPerformance(db: database, indexName?: string): string {
+        return `#databases/status/indexing?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
     }
 
     static forIndexStats(db: database): string {
@@ -513,6 +514,10 @@ class appUrl {
 
     static forStatusStorageCollections(db: database): string {
         return '#databases/status/storage/collections?' + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusStorageReport(db: database): string {
+        return '#databases/status/storage/report?' + appUrl.getEncodedDbPart(db);
     }
 
     static forSettings(db: database): string {
@@ -984,6 +989,10 @@ class appUrl {
 
     private static getEncodedCounterPart(cs?: counterStorage) {
         return cs ? "&counterstorage=" + encodeURIComponent(cs.name) : "";
+    }
+
+    private static getEncodedIndexNamePart(indexName?: string) {
+        return indexName ? "indexName=" + encodeURIComponent(indexName) : "";
     }
 
     static mapUnknownRoutes(router: DurandalRouter) {

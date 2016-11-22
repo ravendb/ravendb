@@ -107,7 +107,7 @@ namespace Raven.Server.Documents
             try
             {
                 var sp = Stopwatch.StartNew();
-                var documentDatabase = new DocumentDatabase(config.DatabaseName, config, ServerStore.IoMetrics);
+                var documentDatabase = new DocumentDatabase(config.DatabaseName, config, ServerStore);
                 documentDatabase.Initialize();
 
                 if (Logger.IsInfoEnabled)

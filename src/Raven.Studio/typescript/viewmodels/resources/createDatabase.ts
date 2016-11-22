@@ -14,6 +14,7 @@ import resourcesManager = require("common/shell/resourcesManager");
 import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
 
 import databaseCreationModel = require("models/resources/creation/databaseCreationModel");
+import eventsCollector = require("common/eventsCollector");
 
 class createDatabase extends createResourceBase {
 
@@ -27,49 +28,11 @@ class createDatabase extends createResourceBase {
             displayName: "Encryption",
             name: "Encryption",
             hasAdvancedConfiguration: true
-        },
-        {
-            displayName: "Expiration",
-            name: "DocumentExpiration",
-            hasAdvancedConfiguration: false
-        },
-        {
-            displayName: "Periodic Export",
-            name: "PeriodicExport",
-            hasAdvancedConfiguration: false
-        },
-        {
-            displayName: "Quotas",
-            name: "Quotas",
-            hasAdvancedConfiguration: true
-        },
-        {
-            displayName: "Replication",
-            name: "Replication",
-            hasAdvancedConfiguration: false
-        },
-        {
-            displayName: "Scripted Index",
-            name: "ScriptedIndexResults",
-            hasAdvancedConfiguration: false
-        },
-        {
-            displayName: "SQL Replication",
-            name: "SqlReplication",
-            hasAdvancedConfiguration: true
-        },
-        {
-            displayName: "Versioning",
-            name: "Versioning", 
-            hasAdvancedConfiguration: true
         }
     ];
 
     bundlesEnabled = {
-        quotas: this.isBundleActiveComputed("Quotas"),
-        encryption: this.isBundleActiveComputed("Encryption"),
-        sqlReplication: this.isBundleActiveComputed("SqlReplication"),
-        versioning: this.isBundleActiveComputed("Versioning")
+        encryption: this.isBundleActiveComputed("Encryption")
     }
 
     resourceModel = new databaseCreationModel();
@@ -108,10 +71,7 @@ class createDatabase extends createResourceBase {
     }
 
     advancedVisibility = {
-        quotas: ko.pureComputed(() => this.advancedBundleConfigurationVisible() === "Quotas"),
-        encryption: ko.pureComputed(() => this.advancedBundleConfigurationVisible() === "Encryption"),
-        versioning: ko.pureComputed(() => this.advancedBundleConfigurationVisible() === "Versioning"),
-        sqlReplication: ko.pureComputed(() => this.advancedBundleConfigurationVisible() === "SqlReplication")
+        encryption: ko.pureComputed(() => this.advancedBundleConfigurationVisible() === "Encryption")
     }
 
     getAvailableBundles() {
@@ -120,6 +80,8 @@ class createDatabase extends createResourceBase {
     }
 
     createResource() {
+        eventsCollector.default.reportEvent('resource', 'create');
+
         const globalValid = this.isValid(this.resourceModel.globalValidationGroup);
         const advancedValid = this.isValid(this.resourceModel.advancedValidationGroup);
         const encryptionValid = !this.bundlesEnabled.encryption() || this.isValid(this.resourceModel.encryptionValidationGroup);

@@ -8,6 +8,7 @@ import ioTestCommand = require("commands/database/debug/ioTestCommand");
 import d3 = require('d3');
 import nv = require('nvd3');
 import shell = require("viewmodels/shell");
+import eventsCollector = require("common/eventsCollector");
 
 class ioTest extends viewModelBase {
     /*
@@ -202,6 +203,10 @@ class ioTest extends viewModelBase {
         super.detached();
         window.onresize = null; // FIX nvd3 event attached globally
     }*/
+
+    /*
+        TODO @gregolsky apply google analytics
+    */
 }
 
 export = ioTest;  

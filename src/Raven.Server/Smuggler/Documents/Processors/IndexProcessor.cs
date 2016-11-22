@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
@@ -14,44 +15,49 @@ namespace Raven.Server.Smuggler.Documents.Processors
 {
     public static class IndexProcessor
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Import(BlittableJsonDocumentBuilder builder, DocumentDatabase database, long buildVersion)
         {
             using (var reader = builder.CreateReader())
-            {
-                if (buildVersion == 0) // pre 4.0 support
-                {
-                    var indexDefinition = ReadLegacyIndexDefinition(reader);
-                    if (string.Equals(indexDefinition.Name, "Raven/DocumentsByEntityName", StringComparison.OrdinalIgnoreCase)) // skipping not needed old default index
-                        return;
+                Import(reader, database, buildVersion);
+        }
 
-                    database.IndexStore.CreateIndex(indexDefinition);
-                }
-                else if (buildVersion >= 40000 && buildVersion <= 44999)
-                {
-                    var indexType = ReadIndexType(reader);
-                    var definition = ReadIndexDefinition(reader);
-                    switch (indexType)
-                    {
-                        case IndexType.AutoMap:
-                            var autoMapIndexDefinition = AutoMapIndexDefinition.LoadFromJson(definition);
-                            database.IndexStore.CreateIndex(autoMapIndexDefinition);
-                            break;
-                        case IndexType.AutoMapReduce:
-                            var autoMapReduceIndexDefinition = AutoMapReduceIndexDefinition.LoadFromJson(definition);
-                            database.IndexStore.CreateIndex(autoMapReduceIndexDefinition);
-                            break;
-                        case IndexType.Map:
-                        case IndexType.MapReduce:
-                            var indexDefinition = JsonDeserializationServer.IndexDefinition(definition);
-                            database.IndexStore.CreateIndex(indexDefinition);
-                            break;
-                        default:
-                            throw new NotSupportedException(indexType.ToString());
-                    }
-                }
-                else
-                    throw new NotSupportedException($"We do not support importing indexes from '{buildVersion}' build.");
+        public static void Import(BlittableJsonReaderObject indexDefinitionDoc, DocumentDatabase database, long buildVersion)
+        {
+            if (buildVersion == 0) // pre 4.0 support
+            {
+                var indexDefinition = ReadLegacyIndexDefinition(indexDefinitionDoc);
+                if (string.Equals(indexDefinition.Name, "Raven/DocumentsByEntityName", StringComparison.OrdinalIgnoreCase))
+                    // skipping not needed old default index
+                    return;
+
+                database.IndexStore.CreateIndex(indexDefinition);
             }
+            else if (buildVersion >= 40000 && buildVersion <= 44999)
+            {
+                var indexType = ReadIndexType(indexDefinitionDoc);
+                var definition = ReadIndexDefinition(indexDefinitionDoc);
+                switch (indexType)
+                {
+                    case IndexType.AutoMap:
+                        var autoMapIndexDefinition = AutoMapIndexDefinition.LoadFromJson(definition);
+                        database.IndexStore.CreateIndex(autoMapIndexDefinition);
+                        break;
+                    case IndexType.AutoMapReduce:
+                        var autoMapReduceIndexDefinition = AutoMapReduceIndexDefinition.LoadFromJson(definition);
+                        database.IndexStore.CreateIndex(autoMapReduceIndexDefinition);
+                        break;
+                    case IndexType.Map:
+                    case IndexType.MapReduce:
+                        var indexDefinition = JsonDeserializationServer.IndexDefinition(definition);
+                        database.IndexStore.CreateIndex(indexDefinition);
+                        break;
+                    default:
+                        throw new NotSupportedException(indexType.ToString());
+                }
+            }
+            else
+                throw new NotSupportedException($"We do not support importing indexes from '{buildVersion}' build.");
         }
 
         public static void Export(BlittableJsonTextWriter writer, Index index, JsonOperationContext context, bool removeAnalyzers)
@@ -117,13 +123,14 @@ namespace Raven.Server.Smuggler.Documents.Processors
             var indexDefinition = new IndexDefinition
             {
                 IndexId = legacyIndexDefinition.IndexId,
-                IndexVersion = legacyIndexDefinition.IndexVersion,
                 LockMode = legacyIndexDefinition.LockMode,
                 Maps = legacyIndexDefinition.Maps,
-                MaxIndexOutputsPerDocument = legacyIndexDefinition.MaxIndexOutputsPerDocument,
                 Name = name,
                 Reduce = legacyIndexDefinition.Reduce
             };
+
+            if (legacyIndexDefinition.MaxIndexOutputsPerDocument.HasValue)
+                indexDefinition.Configuration.MaxIndexOutputsPerDocument = legacyIndexDefinition.MaxIndexOutputsPerDocument;
 
             foreach (var kvp in legacyIndexDefinition.Analyzers)
             {

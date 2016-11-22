@@ -25,6 +25,7 @@ import queryUtil = require("common/queryUtil");
 import recentPatchesStorage = require("common/recentPatchesStorage");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 import killOperationComamnd = require('commands/operations/killOperationCommand');
+import eventsCollector = require("common/eventsCollector");
 
 type indexInfo = {
     name: string;
@@ -384,11 +385,11 @@ class patch extends viewModelBase {
     fetchAllIndexes(): JQueryPromise<any> {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
-            .done((results: databaseStatisticsDto) => {
+            .done((results) => {
                 this.indices(results.Indexes.map(i => {
                     return {
                         name: i.Name,
-                        isMapReduce: i.IsMapReduce
+                        isMapReduce: false, //TODO: i.IsMapReduce
                     }
                 }));
                 if (this.indices().length > 0) {
@@ -427,6 +428,8 @@ class patch extends viewModelBase {
     }
 
     savePatch() {
+        eventsCollector.default.reportEvent("patch", "save");
+
         var savePatchViewModel: savePatch = new savePatch();
         app.showBootstrapDialog(savePatchViewModel);
         savePatchViewModel.onExit().done((patchName) => {
@@ -462,6 +465,8 @@ class patch extends viewModelBase {
     }
 
     testPatch() {
+        eventsCollector.default.reportEvent("patch", "test");
+
         var values: dictionary<string> = {};
         this.patchDocument().parameters().map(param => {
             var dto = param.toDto();
@@ -533,6 +538,7 @@ class patch extends viewModelBase {
     }
 
     useRecentPatch(patchToUse: storedPatchDto) {
+        eventsCollector.default.reportEvent("patch", "use-recent");
         var patchDoc = new patchDocument(patchToUse);
         this.usePatch(patchDoc);
     }
@@ -543,16 +549,19 @@ class patch extends viewModelBase {
     }
 
     executePatchOnSingle() {
+        eventsCollector.default.reportEvent("patch", "run", "single");
         var keys: string[] = [];
         keys.push(this.patchDocument().selectedItem());
         this.confirmAndExecutePatch(keys);
     }
 
     executePatchOnSelected() {
+        eventsCollector.default.reportEvent("patch", "run", "selected");
         this.confirmAndExecutePatch(this.getDocumentsGrid().getSelectedItems().map(doc => doc.__metadata.id));
     }
 
     executePatchOnAll() {
+        eventsCollector.default.reportEvent("patch", "run", "all");
         var confirmExec = new executePatchConfirm();
         confirmExec.viewTask.done(() => this.executePatchByIndex());
         app.showBootstrapDialog(confirmExec);
@@ -745,6 +754,7 @@ class patch extends viewModelBase {
                                     this.patchKillInProgress(true);
                                 }
                             });
+                        eventsCollector.default.reportEvent("patch", "kill");
                     }
                 });
         }

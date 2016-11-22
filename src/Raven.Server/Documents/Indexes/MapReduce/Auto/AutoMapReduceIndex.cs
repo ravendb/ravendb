@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -20,6 +21,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
     {
         private ReduceKeyProcessor _reduceKeyProcessor;
 
+        private IndexingStatsScope _statsInstance;
+        private readonly MapPhaseStats _stats = new MapPhaseStats();
+
         private readonly MapResult[] _singleOutputList = new MapResult[1]
         {
             new MapResult()
@@ -36,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             DocumentDatabase documentDatabase)
         {
             var instance = new AutoMapReduceIndex(indexId, definition);
-            instance.Initialize(documentDatabase);
+            instance.Initialize(documentDatabase, documentDatabase.Configuration.Indexing);
 
             return instance;
         }
@@ -46,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             var definition = AutoMapReduceIndexDefinition.Load(environment);
             var instance = new AutoMapReduceIndex(indexId, definition);
-            instance.Initialize(environment, documentDatabase);
+            instance.Initialize(environment, documentDatabase, documentDatabase.Configuration.Indexing);
 
             return instance;
         }
@@ -60,8 +64,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             return new IIndexingWork[]
             {
-                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, MapReduceWorkContext),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, MapReduceWorkContext, DocumentDatabase.Configuration.Indexing),
+                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, MapReduceWorkContext, Configuration),
                 new ReduceMapResultsOfAutoIndex(this, Definition, _indexStorage, DocumentDatabase.Metrics, MapReduceWorkContext),
             };
         }
@@ -73,9 +77,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
+            EnsureValidStats(stats);
+
             var mappedResult = new DynamicJsonValue();
 
-            using (stats.For(IndexingOperation.Reduce.BlittableJsonAggregation))
+            using (_stats.BlittableJsonAggregation.Start())
             {
                 var document = ((Document[])mapResults)[0];
                 Debug.Assert(key == document.LoweredKey);
@@ -152,7 +158,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             }
 
             BlittableJsonReaderObject mr;
-            using (stats.For(IndexingOperation.Reduce.CreateBlittableJson))
+            using (_stats.CreateBlittableJson.Start())
                 mr = indexContext.ReadObject(mappedResult, key);
 
             var mapResult = _singleOutputList[0];
@@ -169,5 +175,23 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public override int? ActualMaxNumberOfIndexOutputs { get; }
         public override int MaxNumberOfIndexOutputs { get; }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureValidStats(IndexingStatsScope stats)
+        {
+            if (_statsInstance == stats)
+                return;
+
+            _statsInstance = stats;
+
+            _stats.BlittableJsonAggregation = stats.For(IndexingOperation.Reduce.BlittableJsonAggregation, start: false);
+            _stats.CreateBlittableJson = stats.For(IndexingOperation.Reduce.CreateBlittableJson, start: false);
+        }
+
+        private class MapPhaseStats
+        {
+            public IndexingStatsScope BlittableJsonAggregation;
+            public IndexingStatsScope CreateBlittableJson;
+        }
     }
 }

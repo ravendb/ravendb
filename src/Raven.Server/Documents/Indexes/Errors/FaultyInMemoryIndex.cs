@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Errors
                    IndexLockMode.Unlock, new IndexField[0]))
         {
             _e = e;
-            Priority = IndexingPriority.Error;
+            State = IndexState.Error;
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch)
+        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch)
         {
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
         }
@@ -120,7 +120,22 @@ namespace Raven.Server.Documents.Indexes.Errors
             // no-op
         }
 
-        public override void SetPriority(IndexingPriority priority)
+        public override void SetPriority(IndexPriority priority)
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
+        }
+
+        public override void SetState(IndexState state)
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
+        }
+
+        public override void Enable()
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
+        }
+
+        public override void Disable()
         {
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
         }

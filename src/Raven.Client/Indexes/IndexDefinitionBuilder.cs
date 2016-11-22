@@ -169,10 +169,11 @@ namespace Raven.Client.Indexes
                 var indexDefinition = new IndexDefinition
                 {
                     Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
-
-                    MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
-                    LockMode = LockMode,
+                    LockMode = LockMode
                 };
+
+                if (MaxIndexOutputsPerDocument.HasValue)
+                    indexDefinition.Configuration.MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument;
 
                 var indexes = ConvertToStringDictionary(Indexes);
                 var stores = ConvertToStringDictionary(Stores);

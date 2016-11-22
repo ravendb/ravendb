@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Queries.Parse
         }
 #endif // !BYTEMODE
 #endif // !NOFILES
-        public bool SetPaddingOn { get; set; }
+        public bool EscapeCommaMode { get; set; }
         protected CommaState state { get; set; }
         protected enum CommaState
         {
@@ -99,45 +99,28 @@ namespace Raven.Server.Documents.Queries.Parse
             this.sLen = source.Length;
             this.FileName = null;
         }
+
         public override int Read()
         {
-            if (SetPaddingOn)
+            if (EscapeCommaMode)
             {
-                // escaping ',' into ,
-                if (bPos + 2 < sLen && str[bPos] == 96 && str[bPos] == 44 && str[bPos + 2] == 96)
-                {
-                    bPos += 3;
-                    return 44;
-                }
-                // padding comma state
+                // Swallowing commas into space
                 if (bPos < sLen)
                 {
                     var res = str[bPos];
-                    switch (state)
-                    {
-                        case CommaState.None:						
-                            if (res == 44)
-                            {
-                                state = CommaState.Comma;
-                                return 32;
-                            }
-                            bPos++;
-                            return res;
-                        case CommaState.Comma:
-                            state = CommaState.AfterComma;
-                            return 44;
-                        case CommaState.AfterComma:						
-                            state = CommaState.None;
-                            bPos++;
-                        return 32;						
-                    }
-                }					
-                else if (bPos == sLen) { bPos++; return '\n'; }   // one strike, see new line
-                else { bPos++; return EndOfFile; }                // two strikes and you're out!
+                    var pos = bPos;
+                    bPos++;
+                    //making sure not to swallow ',' when it is escaped 
+                    if (res == 44 && !(pos > 1 && pos + 1 < sLen && str[pos - 1] == 96 && str[pos + 1] == 96))
+                        return 32;
+                    return res;
+                }
+                if (bPos == sLen) { bPos++; return '\n'; }   // one strike, see new line
+                bPos++; return EndOfFile;
             }
             if (bPos < sLen) return str[bPos++];
-            else if (bPos == sLen) { bPos++; return '\n'; }   // one strike, see new line
-            else { bPos++; return EndOfFile; }                // two strikes and you're out!
+            if (bPos == sLen) { bPos++; return '\n'; }   // one strike, see new line
+            bPos++; return EndOfFile;
         }
 
         public override string GetString(int begin, int limit)
@@ -429,7 +412,7 @@ namespace Raven.Server.Documents.Queries.Parse
         public override int Read()
         {
             int res = EndOfFile;
-            if (SetPaddingOn)
+            if (EscapeCommaMode)
             {
                 switch (state)
                 {

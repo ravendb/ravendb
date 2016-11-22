@@ -8,14 +8,11 @@ namespace Raven.Client.Smuggler
         {
             OperateOnTypes = OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers
                 | DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Identities;
-            BatchSize = 1024;
             MaxStepsForTransformScript = 10 * 1000;
             CollectionsToExport = new List<string>();
         }
 
         public DatabaseItemType OperateOnTypes { get; set; }
-
-        public int BatchSize { get; set; }
 
         public int? RevisionDocumentsLimit { get; set; }
 

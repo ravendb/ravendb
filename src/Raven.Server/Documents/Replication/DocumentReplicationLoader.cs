@@ -92,11 +92,25 @@ namespace Raven.Server.Documents.Replication
                         ["Etag"] = changeVectorEntry.Etag
                     });
                 }
+
+                var indexesChangeVector = new DynamicJsonArray();
+                foreach (var changeVectorEntry in _database.IndexMetadataPersistence.GetGlobalChangeVector())
+                {
+                    indexesChangeVector.Add(new DynamicJsonValue
+                    {
+                        ["DbId"] = changeVectorEntry.DbId.ToString(),
+                        ["Etag"] = changeVectorEntry.Etag
+                    });
+                }
+
                 documentsOperationContext.Write(writer, new DynamicJsonValue
                 {
                     ["Type"] = "Ok",
+                    ["MessageType"] = ReplicationMessageType.Heartbeat,
                     ["LastEtagAccepted"] = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId),
-                    ["CurrentChangeVector"] = changeVector
+                    ["LastIndexTransformerEtagAccepted"] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(getLatestEtagMessage.SourceDatabaseId),
+                    ["CurrentChangeVector"] = changeVector,
+                    ["CurrentIndexTransformerChangeVector"] = indexesChangeVector
                 });
                 writer.Flush();
             }
@@ -199,8 +213,13 @@ namespace Raven.Server.Documents.Replication
         private void InitializeOutgoingReplications()
         {
             _replicationDocument = GetReplicationDocument();
-            if (_replicationDocument?.Destinations == null) //precaution
+            if (_replicationDocument?.Destinations == null || //precaution
+                _replicationDocument.Destinations.Count == 0) 
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info("Tried to initialize outgoing replications, but there is no replication document or destinations are empty. Nothing to do...");
                 return;
+            }
 
             if (_log.IsInfoEnabled)
                 _log.Info("Initializing outgoing replications..");
@@ -288,7 +307,10 @@ namespace Raven.Server.Documents.Replication
         {
             if (!notification.Key.Equals(Constants.Replication.DocumentReplicationConfiguration, StringComparison.OrdinalIgnoreCase))
                 return;
-            // TODO: logging
+            
+            if(_log.IsInfoEnabled)
+                _log.Info("System document change detected. Starting and stopping outgoing replication threads.");
+
             var outgoing = _outgoing.ToList();
             _outgoing.Clear();
 

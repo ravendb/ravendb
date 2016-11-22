@@ -47,7 +47,7 @@
     <hr />    
     
     <div data-bind="foreach: resources().sortedResources">
-        <div class="panel resource" data-bind="visible: !filteredOut(), css: { 'panel-success': isCurrentlyActiveResource() }">
+        <div class="panel resource" data-bind="visible: !filteredOut(), css: { 'active': isCurrentlyActiveResource() }">
             <div class="padding padding-sm">
                 <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                 <div class="row">
@@ -57,7 +57,7 @@
                             <label></label>
                         </div>
                         <h3 class="resource-name">
-                            <i class="icon-database text-danger"></i>
+                            <i class="icon-database"></i>
                             <span data-bind="visible: !canNavigateToResource(), text: name"></span>
                             <a data-bind="attr: { title: name, href: $root.resourceUrl($data) }, text: name, visible: canNavigateToResource()" href="#"></a>
                         </h3>
@@ -65,18 +65,26 @@
                     <div class="col-xs-12 col-sm-12 col-xl-6 vertical-divider properties-container" data-bind="template: { name: 'properties-template' }, visible: online()">
 
                     </div>
+                    <div data-bind="visible: !online()" class="col-xs-12 col-sm-12 col-xl-6 vertical-divider properties-container">
+                    </div>
                     <div class="col-xs-12 col-sm-6 col-xl-2 actions-container">
                         <div class="actions">
                             <div class="btn-toolbar pull-right-sm" role="toolbar">
                                 <div class="btn-group">
-                                    <button class="btn btn-default" 
-                                            data-bind="visible: !online(), click: $root.loadResource.bind($root, $data), css: { 'btn-spinner': $root.spinners.resourceLoad().contains(qualifiedName) }, enable: !$root.spinners.resourceLoad().contains(qualifiedName)">Load</button>
                                     <button class="btn btn-default"
-                                            data-bind="click: $root.toggleResource.bind($root, $data), css: { 'btn-spinner': $root.spinners.itemTakedowns().contains(qualifiedName) }, enable: !$root.spinners.itemTakedowns().contains(qualifiedName)">
+                                            data-bind="visible: !online() && !disabled(), click: $root.loadResource.bind($root, $data), css: { 'btn-spinner': $root.spinners.resourceLoad().contains(qualifiedName) }, enable: !$root.spinners.resourceLoad().contains(qualifiedName)">
+                                        <i class="icon-load" ></i>
+                                        <span>Load</span>
+                                    </button>
+                                    <button class="btn btn-default"
+                                            data-bind="click: $root.toggleResource.bind($root, $data), css: { 'btn-spinner': $root.spinners.itemTakedowns().contains(qualifiedName) }, enable: !$root.spinners.itemTakedowns().contains(qualifiedName), visible: online() || disabled()">
+
                                         <i class="icon-unlock" data-bind="visible: disabled()"></i>
                                         <span data-bind="visible: disabled()">Enable</span>
+
                                         <i class="icon-lock" data-bind="visible: !disabled()"></i>
                                         <span data-bind="visible: !disabled()">Disable</span>
+
                                     </button>
                                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         <span class="caret"></span>
@@ -94,7 +102,7 @@
                                             </a>
                                         </li>
                                         <li>
-                                            <a href="#" data-bind="click: $root.toggleRejectDatabaseClients.bind($root, $data)">
+                                            <a href="#" class="btn-prerelease" data-bind="click: $root.toggleRejectDatabaseClients.bind($root, $data)">
                                                 <i class="icon-umbrella"></i> Reject clients mode
                                             </a>
                                         </li>

@@ -1,5 +1,4 @@
 ﻿using Sparrow;
-using Sparrow.Collections;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -47,26 +46,6 @@ namespace Voron
         /// </summary>
         public static readonly ByteStringContext LabelsContext = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes);
 
-        /// <summary>
-        /// This value is here to control fairness in the access to the write transaction lock,
-        /// when we are flushing to the data file, there is a need to take the write tx lock to mutate
-        /// some of our in memory data structures safely. However, if there is a thread, such as tx merger thread,
-        /// that is doing high frequency transactions, the unfairness in the lock will automatically ensure that we'll
-        /// have very hard time actually getting the write lock in the flushing thread.
-        ///
-        /// When this value is set to a non negative number, we check if the current thread id equals to this number, and if not
-        /// we'll yield the thread for 1 ms. The idea is that this will allow the flushing thread, which doesn't have this limitation
-        /// to actually capture the lock, do its work, and then reset it.
-        /// </summary>
-        private int _otherThreadsShouldWaitBeforeGettingWriteTxLock = -1;
-
-        /// <summary>
-        /// Accessing the Thread.CurrentThread.ManagedThreadId can be expensive,
-        /// so we cache it.
-        /// </summary>
-        [ThreadStatic]
-        private static int _localThreadIdCopy;
-
         private readonly StorageEnvironmentOptions _options;
 
         public readonly ActiveTransactions ActiveTransactions = new ActiveTransactions();
@@ -75,7 +54,7 @@ namespace Voron
         internal ExceptionDispatchInfo CatastrophicFailure;
         private readonly WriteAheadJournal _journal;
         private readonly object _txWriter = new object();
-        internal readonly ReaderWriterLockSlim FlushInProgressLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+        internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
 
         private long _transactionsCounter;
@@ -86,6 +65,7 @@ namespace Voron
         private readonly ScratchBufferPool _scratchBufferPool;
         private EndOfDiskSpaceEvent _endOfDiskSpace;
         internal int SizeOfUnflushedTransactionsInJournalFile;
+        internal DateTime LastFlushTime;
 
         private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
         public bool Disposed;
@@ -96,6 +76,7 @@ namespace Voron
 
         public StorageEnvironmentState State { get; private set; }
 
+        public event Action OnLogsApplied;
 
         public StorageEnvironment(StorageEnvironmentOptions options)
         {
@@ -186,7 +167,7 @@ namespace Voron
 
             _transactionsCounter = (header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
 
-            using (var transactionPersistentContext = new TransactionPersistentContext(true))
+            var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
                 using (var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root))
@@ -244,7 +225,8 @@ namespace Voron
             {
                 Options = Options
             };
-            using (var transactionPersistentContext = new TransactionPersistentContext())
+
+            var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             using (var root = Tree.Create(tx, null))
             {
@@ -352,7 +334,6 @@ namespace Voron
         {
             var transactionPersistentContext = new TransactionPersistentContext();
             var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read, context);
-            newLowLevelTransaction.AlsoDispose = new List<IDisposable>(1) {transactionPersistentContext};
             return new Transaction(newLowLevelTransaction);
         }
 
@@ -365,7 +346,6 @@ namespace Voron
         {
             var transactionPersistentContext = new TransactionPersistentContext();
             var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null);
-            newLowLevelTransaction.AlsoDispose = new List<IDisposable>(1) { transactionPersistentContext };
             return new Transaction(newLowLevelTransaction);
         }
 
@@ -379,10 +359,9 @@ namespace Voron
                 {
                     var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
 
-                    GiveFlusherChanceToRunIfNeeded();
-
                     if (FlushInProgressLock.IsWriteLockHeld == false)
                         flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
+
                     Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
                     if (txLockTaken == false || (flushInProgressReadLockTaken == false && FlushInProgressLock.IsWriteLockHeld == false))
                     {
@@ -409,7 +388,11 @@ namespace Voron
                 try
                 {
                     long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-                    tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling, context);
+                    tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
+                        context)
+                    {
+                        FlushInProgressLockTaken = flushInProgressReadLockTaken
+                    };
                     ActiveTransactions.Add(tx);
                 }
                 finally
@@ -434,20 +417,6 @@ namespace Voron
                 }
                 throw;
             }
-        }
-
-        private void GiveFlusherChanceToRunIfNeeded()
-        {
-            // See comment on the _otherThreadsShouldWaitBeforeGettingWriteTxLock variable for the details
-            var localCopy = Volatile.Read(ref _otherThreadsShouldWaitBeforeGettingWriteTxLock);
-            if (localCopy == -1)
-                return;
-            if (_localThreadIdCopy == 0)
-            {
-                _localThreadIdCopy = Thread.CurrentThread.ManagedThreadId;
-            }
-            if (_localThreadIdCopy != localCopy)
-                Thread.Sleep(1);
         }
 
         public long CurrentReadTransactionId => Volatile.Read(ref _transactionsCounter);
@@ -514,7 +483,7 @@ namespace Voron
                 return;
 
             Monitor.Exit(_txWriter);
-            if (FlushInProgressLock.IsReadLockHeld)
+            if (tx.FlushInProgressLockTaken)
                 FlushInProgressLock.ExitReadLock();
         }
 
@@ -579,7 +548,7 @@ namespace Voron
 
         public EnvironmentStats Stats()
         {
-            using (var transactionPersistentContext = new TransactionPersistentContext())
+            var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read))
             {
                 var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
@@ -699,7 +668,7 @@ namespace Voron
 
         public TransactionsModeResult SetTransactionMode(TransactionsMode mode, TimeSpan duration)
         {
-            using (var transactionPersistentContext = new TransactionPersistentContext())
+            var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
                 var oldMode = Options.TransactionsMode;
@@ -755,16 +724,6 @@ namespace Voron
             }
         }
 
-        internal void IncreaseTheChanceForGettingTheTransactionLock()
-        {
-            Volatile.Write(ref _otherThreadsShouldWaitBeforeGettingWriteTxLock, Thread.CurrentThread.ManagedThreadId);
-        }
-
-        internal void ResetTheChanceForGettingTheTransactionLock()
-        {
-            Volatile.Write(ref _otherThreadsShouldWaitBeforeGettingWriteTxLock, -1);
-        }
-
         public void Cleanup()
         {
             Journal.Cleanup();
@@ -774,6 +733,11 @@ namespace Voron
         public override string ToString()
         {
             return Options.ToString();
+        }
+
+        public void LogsApplied()
+        {
+            OnLogsApplied?.Invoke();
         }
     }
 }

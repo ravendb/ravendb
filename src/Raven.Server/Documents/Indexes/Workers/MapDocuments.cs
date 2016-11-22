@@ -186,14 +186,51 @@ namespace Raven.Server.Documents.Indexes.Workers
             return false;
         }
 
+        private DateTime _lastCheckedFlushLock;
+
+        private bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
+        {
+            var now = DateTime.UtcNow;
+            if ((now - _lastCheckedFlushLock).TotalSeconds < 1)
+                return false;
+
+            _lastCheckedFlushLock = now;
+
+            var gotLock = _index._indexStorage.Environment().FlushInProgressLock.TryEnterReadLock(0);
+            try
+            {
+                if (gotLock == false)
+                {
+                    stats.RecordMapCompletedReason(
+                        $"Map duration of ({stats.Duration}) exceeded configured limit ({_configuration.MapTimeoutAfterEtagReached.AsTimeSpan}) and environment flush is waiting for us");
+                    return true;
+                }
+            }
+            finally
+            {
+                if (gotLock)
+                    _index._indexStorage.Environment().FlushInProgressLock.ExitReadLock();
+            }
+            return false;
+        }
+
         public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
         {
-            if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
+            if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
             {
-                stats.RecordMapCompletedReason($"Reached maximum etag that was seen when batch started ({maxEtag}) and batch duration ({stats.Duration}) exceeded configured limit ({_configuration.MapTimeout.AsTimeSpan})");
+                stats.RecordMapCompletedReason($"Exceeded maximum configured map duration ({_configuration.MapTimeout.AsTimeSpan}). Was {stats.Duration}");
                 return false;
             }
 
+            if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
+            {
+                stats.RecordMapCompletedReason($"Reached maximum etag that was seen when batch started ({maxEtag}) and map duration ({stats.Duration}) exceeded configured limit ({_configuration.MapTimeoutAfterEtagReached.AsTimeSpan})");
+                return false;
+            }
+
+            if (ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
+                return false;
+           
             if (_index.CanContinueBatch(stats) == false)
                 return false;
 

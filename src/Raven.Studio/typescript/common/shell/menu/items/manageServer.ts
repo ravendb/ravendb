@@ -16,6 +16,7 @@ function getManageServerMenuItem() {
                 title: "Periodic export",
                 tooltip: "",
                 nav: true,
+                css: 'icon-periodic-export',
                 dynamicHash: appUrl.forGlobalConfigPeriodicExport
             }),
             new leafMenuItem({
@@ -24,6 +25,7 @@ function getManageServerMenuItem() {
                 title: "Cluster-wide database settings",
                 tooltip: "Global cluster-wide database settings",
                 nav: true,
+                css: 'icon-cluster-wide-database-settings',
                 dynamicHash: appUrl.forGlobalConfigDatabaseSettings
             }),
             new leafMenuItem({
@@ -32,6 +34,7 @@ function getManageServerMenuItem() {
                 title: "Replication",
                 tooltip: "Global replication settings",
                 nav: true,
+                css: 'icon-replication',
                 dynamicHash: appUrl.forGlobalConfigReplication
             }),
             new leafMenuItem({
@@ -40,6 +43,7 @@ function getManageServerMenuItem() {
                 title: "SQL Replication",
                 tooltip: "Global SQL replication settings",
                 nav: true,
+                css: 'icon-sql-replication',
                 dynamicHash: appUrl.forGlobalConfigSqlReplication
             }),
             new leafMenuItem({
@@ -48,6 +52,7 @@ function getManageServerMenuItem() {
                 title: "Quotas",
                 tooltip: "Global quotas settings",
                 nav: true,
+                css: 'icon-quotas',
                 dynamicHash: appUrl.forGlobalConfigQuotas
             }),
             new leafMenuItem({
@@ -56,6 +61,7 @@ function getManageServerMenuItem() {
                 title: "Custom functions",
                 tooltip: "Global custom functions settings",
                 nav: true,
+                css: 'icon-custom-functions',
                 dynamicHash: appUrl.forGlobalConfigCustomFunctions
             }),
             new leafMenuItem({
@@ -64,6 +70,7 @@ function getManageServerMenuItem() {
                 title: "Versioning",
                 tooltip: "Global versioning settings",
                 nav: true,
+                css: 'icon-versioning',
                 dynamicHash: appUrl.forGlobalConfigVersioning
             })     
         ]),
@@ -72,6 +79,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/apiKeys',
             title: 'API Keys',
             nav: true,
+            css: 'icon-api-keys',
             dynamicHash: appUrl.forApiKeys,
             enabled: canReadOrWrite
         }),
@@ -80,6 +88,7 @@ function getManageServerMenuItem() {
             moduleId: "viewmodels/manage/cluster",
             title: "Cluster",
             nav: true,
+            css: 'icon-cluster',
             dynamicHash: appUrl.forCluster,
             enabled: canReadOrWrite
         }),
@@ -88,6 +97,7 @@ function getManageServerMenuItem() {
             moduleId: "viewmodels/manage/serverSmuggling",
             title: "Server Smuggling",
             nav: true,
+            css: 'icon-server-smugling',
             dynamicHash: appUrl.forServerSmugging,
             enabled: accessHelper.isGlobalAdmin
         }),
@@ -96,6 +106,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/backup',
             title: 'Backup',
             nav: true,
+            css: 'icon-backup',
             dynamicHash: appUrl.forBackup,
             enabled: accessHelper.isGlobalAdmin
         }),
@@ -104,6 +115,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/compact',
             title: 'Compact',
             nav: true,
+            css: 'icon-compact',
             dynamicHash: appUrl.forCompact,
             enabled: accessHelper.isGlobalAdmin
         }),
@@ -112,6 +124,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/restore',
             title: 'Restore',
             nav: true,
+            css: 'icon-restore',
             dynamicHash: appUrl.forRestore,
             enabled: accessHelper.isGlobalAdmin
         }),
@@ -120,6 +133,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/adminLogs',
             title: 'Admin Logs',
             nav: true,
+            css: 'icon-admin-logs',
             dynamicHash: appUrl.forAdminLogs,
             enabled: accessHelper.isGlobalAdmin
         }),
@@ -128,6 +142,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/topology',
             title: 'Server Topology',
             nav: true,
+            css: 'icon-server-topology',
             dynamicHash: appUrl.forServerTopology,
             enabled: accessHelper.isGlobalAdmin
         }),
@@ -136,6 +151,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/trafficWatch',
             title: 'Traffic Watch',
             nav: true,
+            css: 'icon-trafic-watch',
             dynamicHash: appUrl.forTrafficWatch,
             enabled: accessHelper.isGlobalAdmin
         }),
@@ -144,6 +160,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/licenseInformation',
             title: 'License Information',
             nav: true,
+            css: 'icon-license-information',
             dynamicHash: appUrl.forLicenseInformation,
             enabled: canReadOrWrite
         }),
@@ -152,6 +169,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/infoPackage',
             title: 'Gather Debug Info',
             nav: true,
+            css: 'icon-gather-debug-information',
             dynamicHash: appUrl.forDebugInfo,
             enabled: accessHelper.isGlobalAdmin
         }),
@@ -160,6 +178,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/ioTest',
             title: 'IO Test',
             nav: true,
+            css: 'icon-io-test',
             dynamicHash: appUrl.forIoTest,
             enabled: accessHelper.isGlobalAdmin
         }),
@@ -168,6 +187,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/diskIoViewer',
             title: 'Disk IO Viewer',
             nav: true,
+            css: 'icon-disk-io-viewer',
             dynamicHash: appUrl.forDiskIoViewer,
             enabled: canReadOrWrite
         }),
@@ -176,6 +196,7 @@ function getManageServerMenuItem() {
             moduleId: "viewmodels/manage/console",
             title: "Administrator JS Console",
             nav: true,
+            css: 'icon-administrator-js-console',
             dynamicHash: appUrl.forAdminJsConsole,
             enabled: accessHelper.isGlobalAdmin
         }),
@@ -184,6 +205,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/studioConfig',
             title: 'Studio Config',
             nav: true,
+            css: 'icon-studio-config',
             dynamicHash: appUrl.forStudioConfig,
             enabled: canReadOrWrite
         }),
@@ -192,6 +214,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/hotSpare',
             title: 'Hot Spare',
             nav: true,
+            css: 'icon-hot-spare',
             dynamicHash: appUrl.forHotSpare,
             enabled: accessHelper.isGlobalAdmin
         })
@@ -200,12 +223,13 @@ function getManageServerMenuItem() {
 
     return new leafMenuItem({
         route: 'admin/settings/manage',
-        moduleId: 'viewmodels/manage/underDevelopment',
+        moduleId: 'viewmodels/manage/manageServer',
         title: 'Manage server',
         nav: true,
-        dynamicHash: appUrl.forTempManageServer,
-        css: 'icon-settings'
+        css: 'icon-manage-server',
+        dynamicHash: appUrl.forTempManageServer
+        
     });
-    //TODO: return new intermediateMenuItem('Manage server', items, 'icon-settings');
+    //TODO: return new intermediateMenuItem('Manage server', items, 'icon-manage-server');
 }
 

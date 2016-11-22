@@ -1,14 +1,13 @@
 ﻿using Raven.Abstractions.Data;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Results
 {
     public class MapReduceQueryResultRetriever : QueryResultRetrieverBase
     {
-        private readonly DocumentsOperationContext _context;
+        private readonly JsonOperationContext _context;
 
-        public MapReduceQueryResultRetriever(DocumentsOperationContext context, FieldsToFetch fieldsToFetch)
+        public MapReduceQueryResultRetriever(JsonOperationContext context, FieldsToFetch fieldsToFetch)
             : base(fieldsToFetch, context)
         {
             _context = context;

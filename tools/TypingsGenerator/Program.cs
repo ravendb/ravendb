@@ -18,6 +18,7 @@ using Raven.Server.Web.Operations;
 using Sparrow.Json;
 using TypeScripter;
 using TypeScripter.TypeScript;
+using Voron.Debugging;
 
 namespace TypingsGenerator
 {
@@ -72,6 +73,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OperationStatusChangeNotification));
             scripter.AddType(typeof(DeterminateProgress));
             scripter.AddType(typeof(IndeterminateProgress));
+            scripter.AddType(typeof(OperationExceptionResult));
             scripter.AddType(typeof(DocumentChangeNotification));
             scripter.AddType(typeof(IndexChangeNotification));
             scripter.AddType(typeof(TransformerChangeNotification));
@@ -107,10 +109,16 @@ namespace TypingsGenerator
             // sql replication 
             scripter.AddType(typeof(SqlConnections));
             scripter.AddType(typeof(SqlReplicationConfiguration));
+            scripter.AddType(typeof(SqlReplicationStatistics));
+            scripter.AddType(typeof(SimulateSqlReplication));
 
 
             // periodic export
             scripter.AddType(typeof(PeriodicExportConfiguration));
+
+            // storage report
+            scripter.AddType(typeof(StorageReport));
+
             return scripter;
         }
     }

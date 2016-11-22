@@ -17,6 +17,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
                     title: 'Index batch size',
                     tooltip: "Index batch sizes",
                     nav: true,
+                    css: 'icon-index-batch-size',
                     dynamicHash: appUrls.indexBatchSize
                 }),
                 new leafMenuItem({
@@ -25,17 +26,19 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
                     title: 'Prefetches',
                     tooltip: "Prefetches",
                     nav: true,
+                    css: 'icon-prefetches',
                     dynamicHash: appUrls.indexPrefetches
                 })
             ],
             'icon-indexes'),*/
         new leafMenuItem({
-            route: 'databases/status/storage/stats',
-            moduleId: 'viewmodels/database/status/storage/stats',
-            title: 'Storage Breakdown',
+            route: 'databases/status/storage/report',
+            moduleId: 'viewmodels/database/status/storage/storageReport',
+            title: 'Storage Report',
             tooltip: "TODO", //TODO:
-            nav: accessHelper.isGlobalAdmin(),
-            dynamicHash: appUrls.statusStorageStats
+            nav: true,
+            css: 'icon-storage',
+            dynamicHash: appUrls.statusStorageReport
         }),
         /* TODO
         new intermediateMenuItem('Storage', [
@@ -185,6 +188,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             title: 'IO Stats',
             tooltip: "Displays IO metrics statatus",
             nav: true,
+            css: 'icon-io-test',
             dynamicHash: appUrls.ioStats
         }),
         /* TODO:
@@ -209,6 +213,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/status/statistics',
             title: 'Stats',
             nav: true,
+            css: 'icon-stats',
             dynamicHash: appUrls.status
         }),
         /* TODO: 
@@ -240,6 +245,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/status/indexErrors',
             title: 'Index Errors',
             nav: true,
+            css: 'icon-index-errors',
             dynamicHash: appUrls.indexErrors
         }),
         new leafMenuItem({
@@ -247,15 +253,17 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/status/replicationStats',
             title: 'Replication Stats',
             nav: true,
+            css: 'icon-versioning',
             dynamicHash: appUrls.replicationStats
         }),
+        /* TODO
         new leafMenuItem({
             route: 'databases/status/sqlReplicationPerfStats',
             moduleId: 'viewmodels/database/status/sqlReplicationPerfStats',
             title: 'SQL Replication Stats',
             nav: true,
             dynamicHash: appUrls.sqlReplicationPerfStats
-        }),
+        }),*/
         /* TODO:
         new leafMenuItem({
             route: 'databases/status/userInfo',
@@ -269,6 +277,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/status/visualizer',
             title: 'Map/Reduce Visualizer',
             nav: true,
+            css: 'icon-map-reduce-visualizer',
             dynamicHash: appUrls.visualizer
         }),
         new leafMenuItem({
@@ -276,15 +285,17 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/status/debug/statusDebug',
             title: 'Debug',
             nav: false,
+            css: 'icon-debug',
             dynamicHash: appUrls.statusDebug
         }),
+        /* TODO
         new leafMenuItem({
             route: 'databases/status/storage*details',
             moduleId: 'viewmodels/database/status/storage/statusStorage',
             title: 'Storage',
             nav: false,
             dynamicHash: appUrls.statusStorageOnDisk
-        }),
+        }),*/
         /* TODO
         new leafMenuItem({
             route: 'databases/status/infoPackage',

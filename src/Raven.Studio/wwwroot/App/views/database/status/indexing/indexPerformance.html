@@ -1,53 +1,34 @@
 <style>
-    svg {
-        background-color: white;
+    #metricsContainer {
+        position: relative;
+    }
+    #metricsContainer canvas, #metricsContainer svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+    .brush .extent {
+        fill-opacity: .3;
+        stroke: #ff5500;
+        shape-rendering: crispEdges;
+    }
+    rect.pane {
+        fill: none;
+        pointer-events: all;
     }
 
-    .in_progress_group_item  rect {
-        fill: black;
-        stroke: blue;
-        stroke-dasharray: 5, 5;
-    }
-
-     .axis path {
-         fill: none;
-         stroke: #000;
-         shape-rendering: crispEdges;
-     }
-
-    .perf_group_bg {
-        stroke: none;
-        fill: pink;
-    }   
-
-    .op_group_level_4 {
-        fill: red;
-        stroke: black;
-        stroke-width: 1;
-    }
-
-    .op_group_level_3 {
-        fill: blue;
-        stroke: black;
-        stroke-width: 1;
-    }
-
-    .op_group_level_2 {
-        fill: green;
-        stroke: black;
-        stroke-width: 1;
-    }
-
-    .op_group_level_1 {
-        fill: yellow;
-        stroke: black;
-        stroke-width: 1;
-    }
-
-    .op_group_level_0 {
-        fill: white;
-        stroke: #ccc;
-        stroke-width: 1;
+    .tooltip { /* copied from storare report - externalize me ! */
+        box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.45);
+        position: absolute;
+        text-align: center;
+        background: #2c3333;
+        color: #a9adad;
+        border: 0px;
+        padding:8px 16px;
+        border-radius: 2px;
+        pointer-events: none;
+        opacity:1;
+        transform: translateY(-30px);
     }
 </style>
 
@@ -59,7 +40,8 @@
 
 
 <section id="indexingPerformance" style="position: relative">
-    <section id="metricsContainer" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-        <svg id="indexPerformanceGraph" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
+    <section id="metricsContainer">
+        <div class="tooltip" style="opacity: 0">
+        </div>
     </section>
 </section>

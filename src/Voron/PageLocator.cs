@@ -1,22 +1,34 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sparrow;
+using Sparrow.Binary;
 using Voron.Impl;
 
 namespace Voron
 {
+
     public unsafe class PageLocator
     {
-        private const ushort Invalid = 0;
-        private LowLevelTransaction _tx;
-        private ushort* _fingerprints; // we use pointer here to avoid bound checking
-        private PageHandlePtr* _cache;
+        [StructLayout(LayoutKind.Explicit, Size = 20)]
+        private struct PageData
+        {
+            [FieldOffset(0)]
+            public long PageNumber;
+            [FieldOffset(8)]
+            public Page Page;
+            [FieldOffset(16)]
+            public bool IsWritable;
+        }
 
-        private int _cacheSize;
-        private int _current;
-        private ByteString _fingerprintsMemory;
+        private const long Invalid = -1;
+        private LowLevelTransaction _tx;
+
+        private PageData* _cache;
         private ByteString _cacheMemory;
+
+        private int _andMask;
 
         public int PageSize
         {
@@ -30,38 +42,32 @@ namespace Voron
                 return;
 
             _tx.Allocator.Release(ref _cacheMemory);
-            _tx.Allocator.Release(ref _fingerprintsMemory);
             _tx = null;
             _cache = null;
-            _fingerprints = null;
         }
 
         public void Renew(LowLevelTransaction tx, int cacheSize)
         {
             Debug.Assert(tx != null);
             Debug.Assert(cacheSize > 0);
-            Debug.Assert(cacheSize <= 512);
+            Debug.Assert(cacheSize <= 1024);
 
-            if (cacheSize > 512)
-                cacheSize = 512;
+            cacheSize = Bits.NextPowerOf2(cacheSize);
+            if (cacheSize > 1024)
+                cacheSize = 1024;
 
-            // Align cache size to 8 for loop unrolling
-            _cacheSize = cacheSize;
+            int shiftRight = Bits.CeilLog2(cacheSize);
+            _andMask = (int) (0xFFFFFFFF >> (sizeof(uint) * 8 - shiftRight));
 
-            if (_cacheSize % 8 != 0)
-            {
-                _cacheSize += 8 - _cacheSize % 8;
-            }
-
-            _current = -1;
             _tx = tx;
 
-            _fingerprintsMemory = tx.Allocator.Allocate(_cacheSize * sizeof(ushort));
-            _cacheMemory = tx.Allocator.Allocate(_cacheSize * sizeof(PageHandlePtr));
-            _fingerprints = (ushort*)_fingerprintsMemory.Ptr;
-            _cache = (PageHandlePtr*)_cacheMemory.Ptr;
+            _cacheMemory = tx.Allocator.Allocate(cacheSize * sizeof(PageData));
+            _cache = (PageData*)_cacheMemory.Ptr;
 
-            Memory.Set((byte*)_fingerprints, 0, _cacheSize * sizeof(ushort));
+            for (var i = 0; i < cacheSize; i++)
+            {
+                _cache[i].PageNumber = Invalid;
+            }
         }
 
         public PageLocator(LowLevelTransaction tx, int cacheSize = 8)
@@ -69,176 +75,50 @@ namespace Voron
             Renew(tx, cacheSize);
         }
 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Page GetReadOnlyPage(long pageNumber)
         {
-            ushort sfingerprint = (ushort)pageNumber;
-            if (sfingerprint == Invalid) sfingerprint++;
-            int fingerprint = sfingerprint;
+            var position = pageNumber & _andMask;
 
-            int i = 0;
-            int size = _cacheSize;
-            while (i < size)
-            {
-                int f1 = _fingerprints[i + 0];
-                int f2 = _fingerprints[i + 1];
-                int f3 = _fingerprints[i + 2];
-                int f4 = _fingerprints[i + 3];
+            PageData* node = &_cache[position];
+            if (node->PageNumber == pageNumber)
+                return node->Page;
 
-                // This is used to force the JIT to layout the code as if unlikely() compiler directive existed.
-                if (f1 == fingerprint) goto Found;
-                if (f2 == fingerprint) goto Found1;
-                if (f3 == fingerprint) goto Found2;
-                if (f4 == fingerprint) goto Found3;
+            var page = _tx.GetPage(pageNumber);
+            node->PageNumber = pageNumber;
+            node->Page = page;
+            node->IsWritable = false;
 
-                int f5 = _fingerprints[i + 4];
-                int f6 = _fingerprints[i + 5];
-                int f7 = _fingerprints[i + 6];
-                int f8 = _fingerprints[i + 7];
-
-                if (f5 == fingerprint) goto Found4;
-                if (f6 == fingerprint) goto Found5;
-                if (f7 == fingerprint) goto Found6;
-                if (f8 == fingerprint) goto Found7;
-
-                i += 8;
-            }
-
-            // If we got here, there was a cache miss
-            _current = (_current + 1) % _cacheSize;
-            _cache[_current] = new PageHandlePtr(pageNumber, _tx.GetPage(pageNumber), false);
-            _fingerprints[_current] = sfingerprint;
-
-            return _cache[_current].Value;
-
-            Found1: i += 1; goto Found;
-            Found2: i += 2; goto Found;
-            Found3: i += 3; goto Found;
-            Found4: i += 4; goto Found;
-            Found5: i += 5; goto Found;
-            Found6: i += 6; goto Found;
-            Found7: i += 7;
-
-            Found:
-            // This is not the common case on the loop and we are returning anyways. It doesn't matter the jump is far.
-            if (_cache[i].PageNumber == pageNumber)
-                return _cache[i].Value;
-
-            _cache[i] = new PageHandlePtr(pageNumber, _tx.GetPage(pageNumber), false);
-            return _cache[i].Value;
+            return page;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Page GetWritablePage(long pageNumber)
         {
-            ushort sfingerprint = (ushort)pageNumber;
-            if (sfingerprint == Invalid) sfingerprint++;
-            int fingerprint = sfingerprint;
+            var position = pageNumber & _andMask;
 
-            int i = 0;
-            int size = _cacheSize;
-            while (i < size)
-            {
-                int f1 = _fingerprints[i + 0];
-                int f2 = _fingerprints[i + 1];
-                int f3 = _fingerprints[i + 2];
-                int f4 = _fingerprints[i + 3];
+            PageData* node = &_cache[position];
 
-                // This is used to force the JIT to layout the code as if unlikely() compiler directive existed.
-                if (f1 == fingerprint) goto Found;
-                if (f2 == fingerprint) goto Found1;
-                if (f3 == fingerprint) goto Found2;
-                if (f4 == fingerprint) goto Found3;
+            if (node->IsWritable && node->PageNumber == pageNumber)
+                return node->Page;
 
-                int f5 = _fingerprints[i + 4];
-                int f6 = _fingerprints[i + 5];
-                int f7 = _fingerprints[i + 6];
-                int f8 = _fingerprints[i + 7];
+            var page = _tx.ModifyPage(pageNumber);
+            node->PageNumber = pageNumber;
+            node->Page = page;
+            node->IsWritable = true;
 
-                if (f5 == fingerprint) goto Found4;
-                if (f6 == fingerprint) goto Found5;
-                if (f7 == fingerprint) goto Found6;
-                if (f8 == fingerprint) goto Found7;
-
-                i += 8;
-            }
-
-            // If we got here, there was a cache miss
-            _current = (_current + 1) % _cacheSize;
-            _cache[_current] = new PageHandlePtr(pageNumber, _tx.ModifyPage(pageNumber), true);
-            _fingerprints[_current] = sfingerprint;
-
-            return _cache[_current].Value;
-
-            Found1: i += 1; goto Found;
-            Found2: i += 2; goto Found;
-            Found3: i += 3; goto Found;
-            Found4: i += 4; goto Found;
-            Found5: i += 5; goto Found;
-            Found6: i += 6; goto Found;
-            Found7: i += 7;
-
-            Found:
-            if (_cache[i].PageNumber == pageNumber && _cache[i].IsWritable)
-                return _cache[i].Value;
-
-            _cache[i] = new PageHandlePtr(pageNumber, _tx.ModifyPage(pageNumber), true);
-            return _cache[i].Value;
+            return page;
         }
 
-        public void Clear()
-        {
-            _current = -1;
-            for (int i = 0; i < _cacheSize; i++)
-                _fingerprints[i] = Invalid;
-        }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset(long pageNumber)
         {
-            ushort sfingerprint = (ushort)pageNumber;
-            if (sfingerprint == Invalid) sfingerprint++;
-            int fingerprint = sfingerprint;
+            var position = pageNumber & _andMask;
 
-            int i = 0;
-            int size = _cacheSize;
-            while (i < size)
+            if (_cache[position].PageNumber == pageNumber)
             {
-                int f1 = _fingerprints[i + 0];
-                int f2 = _fingerprints[i + 1];
-                int f3 = _fingerprints[i + 2];
-                int f4 = _fingerprints[i + 3];
-
-                // This is used to force the JIT to layout the code as if unlikely() compiler directive existed.
-                if (f1 == fingerprint) goto Found;
-                if (f2 == fingerprint) goto Found1;
-                if (f3 == fingerprint) goto Found2;
-                if (f4 == fingerprint) goto Found3;
-
-                int f5 = _fingerprints[i + 4];
-                int f6 = _fingerprints[i + 5];
-                int f7 = _fingerprints[i + 6];
-                int f8 = _fingerprints[i + 7];
-
-                if (f5 == fingerprint) goto Found4;
-                if (f6 == fingerprint) goto Found5;
-                if (f7 == fingerprint) goto Found6;
-                if (f8 == fingerprint) goto Found7;
-
-                i += 8;
-            }
-
-            return;
-
-            Found1: i += 1; goto Found;
-            Found2: i += 2; goto Found;
-            Found3: i += 3; goto Found;
-            Found4: i += 4; goto Found;
-            Found5: i += 5; goto Found;
-            Found6: i += 6; goto Found;
-            Found7: i += 7;
-
-            Found:
-            if (_cache[i].PageNumber == pageNumber)
-            {
-                _fingerprints[i] = Invalid;
+                _cache[position].PageNumber = Invalid;
             }
         }
     }

@@ -42,6 +42,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public bool IsModified { get; private set; }
 
+        public Slice Name => _nestedValueKey;
+
+        public TreePage RelevantPage
+        {
+            get
+            {
+                TreeNodeHeader* node;
+                return _parent.FindPageFor(_nestedValueKey, out node);
+            }
+        }
+
         public void Add(long id, BlittableJsonReaderObject result)
         {
             IsModified = true;
@@ -137,9 +148,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _parent.Delete(_nestedValueKey);
         }
 
-        public int GetResults(JsonOperationContext context,List<BlittableJsonReaderObject> results)
+        public int GetResults(JsonOperationContext context, List<BlittableJsonReaderObject> results)
         {
-
             var readResult = _parent.Read(_nestedValueKey);
             if (readResult == null)
                 return 0;
@@ -155,9 +165,27 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 entry = (ResultHeader*)((byte*)entry + sizeof(ResultHeader) + entry->Size);
             }
             return entries;
-
         }
-        
+
+        public int GetResultsForDebug(JsonOperationContext context, Dictionary<long, BlittableJsonReaderObject> results)
+        {
+            var readResult = _parent.Read(_nestedValueKey);
+            if (readResult == null)
+                return 0;
+
+            var reader = readResult.Reader;
+            var entry = (ResultHeader*)reader.Base;
+            var end = reader.Base + reader.Length;
+            int entries = 0;
+            while (entry < end)
+            {
+                entries++;
+                results.Add(entry->Id, new BlittableJsonReaderObject((byte*)entry + sizeof(ResultHeader), entry->Size, context));
+                entry = (ResultHeader*)((byte*)entry + sizeof(ResultHeader) + entry->Size);
+            }
+            return entries;
+        }
+
         public void Delete(long id)
         {
             IsModified = true;

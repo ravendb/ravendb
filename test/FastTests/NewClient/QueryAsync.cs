@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client;
-using Raven.Client.Document;
+using Raven.Client.Documents;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Tests.Core.Utils.Entities;
@@ -25,7 +24,7 @@ namespace FastTests.NewClient
                     await asyncSession.SaveChangesAsync();
 
                     var queryResult = await asyncSession.Query<User>()
-                        .NewToListAsync();
+                        .ToListAsync();
 
                     Assert.Equal(queryResult.Count, 3);
                 }
@@ -46,11 +45,11 @@ namespace FastTests.NewClient
 
                     var queryResult = await asyncSession.Query<User>()
                         .Where(x => x.Name.StartsWith("J"))
-                        .NewToListAsync();
+                        .ToListAsync();
 
                     var queryResult2 = await asyncSession.Query<User>()
                         .Where(x => x.Name.Equals("Tarzan"))
-                        .NewToListAsync();
+                        .ToListAsync();
 
                     Assert.Equal(queryResult.Count, 2);
                     Assert.Equal(queryResult2.Count, 1);
@@ -84,14 +83,14 @@ namespace FastTests.NewClient
                 {
                     var queryResult = await asyncSession.Query<DogsIndex.Result, DogsIndex>()
                         .Where(x => x.Age > 2 && x.IsVaccinated == false)
-                        .NewToListAsync();
+                        .ToListAsync();
 
                     Assert.Equal(queryResult.Count, 1);
                     Assert.Equal(queryResult[0].Name, "Brian");
 
                     var queryResult2 = await asyncSession.Query<DogsIndex.Result, DogsIndex>()
                         .Where(x => x.Age <= 2 && x.IsVaccinated == false)
-                        .NewToListAsync();
+                        .ToListAsync();
 
                     Assert.Equal(queryResult2.Count, 3);
 

@@ -9,6 +9,7 @@ var paths = {
     configurationFilesToParse:[
         '../Raven.Server/Config/Categories/**/*Configuration.cs'
     ],
+    configurationConstants: '../Raven.Client/Data/Constants.cs',
     constantsTargetDir: './typescript/',
     typingsConfig: './typings.json',
     tsSource: './typescript/**/*.ts',

@@ -9,6 +9,7 @@ import getSqlReplicationConnectionsCommand = require("commands/database/sqlRepli
 import messagePublisher = require("common/messagePublisher");
 import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
 import sqlReplication = require("models/database/sqlReplication/sqlReplication");
+import eventsCollector = require("common/eventsCollector");
 
 class sqlReplicationConnectionStringsManagement extends viewModelBase{
     
@@ -49,6 +50,8 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     }
 
     save() {
+        eventsCollector.default.reportEvent("sql-replication-connections", "save");
+
         var newDoc = new document(this.connections().toDto());
         this.attachReservedMetaProperties("Raven/SqlReplication/Connections", newDoc.__metadata);
 
@@ -69,6 +72,8 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
 
 
     addSqlReplicationConnection() {
+        eventsCollector.default.reportEvent("sql-replication-connections", "create");
+
         var newPredefinedConnection = predefinedSqlConnection.empty();
         this.connections().predefinedConnections.unshift(newPredefinedConnection);
         this.subscribeToSqlReplicationConnectionName(newPredefinedConnection);
@@ -76,6 +81,8 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     }
 
     removeSqlReplicationConnection(connection: predefinedSqlConnection) {
+        eventsCollector.default.reportEvent("sql-replication-connections", "remove");
+
         this.connections().predefinedConnections.remove(connection);
     }
 

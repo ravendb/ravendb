@@ -47,9 +47,10 @@ namespace Voron.Platform.Win32
 
         public Win32MemoryMapPager(StorageEnvironmentOptions options,string file,
             long? initialFileSize = null,
-                                   Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
-                                   Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
-            :base(options)
+            Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
+            Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite,
+            bool usePageProtection = false)
+            : base(options, usePageProtection)
         {
             SYSTEM_INFO systemInfo;
             GetSystemInfo(out systemInfo);
@@ -183,6 +184,17 @@ namespace Voron.Platform.Win32
 
             Win32NativeFileMethods.SetFileLength(_handle, _totalAllocationSize + allocationSize);
             PagerState newPagerState = null;
+
+#if VALIDATE
+            // If we're on validate more, we don't want to allocate continuous pages because this
+            // introduces weird conditions on the protection and unprotection routines (we have to
+            // track boundaries, which is more complex than we're willing to do)
+            newPagerState = CreatePagerState();
+
+            SetPagerState(newPagerState);
+
+            PagerState.DebugVerify(newLengthAfterAdjustment);
+#else
             if (TryAllocateMoreContinuousPages(allocationSize) == false)
             {
                 newPagerState = CreatePagerState();
@@ -191,6 +203,7 @@ namespace Voron.Platform.Win32
 
                 PagerState.DebugVerify(newLengthAfterAdjustment);
             }
+#endif
 
             _totalAllocationSize += allocationSize;
             NumberOfAllocatedPages = _totalAllocationSize / PageSize;
@@ -248,6 +261,8 @@ namespace Voron.Platform.Win32
                 return null;
             }
 
+            ProtectPageRange(newMappingBaseAddress, (ulong)allocationSize);
+
             NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(newMappingBaseAddress), allocationSize);
 
             return new PagerState.AllocationInfo
@@ -296,6 +311,9 @@ namespace Voron.Platform.Win32
             }
 
             NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(startingBaseAddressPtr), _fileStream.Length);
+
+            // If we are working on memory validation mode, then protect the pages by default.
+            ProtectPageRange(startingBaseAddressPtr, (ulong)_fileStream.Length);
 
             var allocationInfo = new PagerState.AllocationInfo
             {
@@ -434,6 +452,50 @@ namespace Voron.Platform.Win32
                 Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess,
                     (UIntPtr)ranges.Count,
                     entries, 0);
+            }
+        }
+
+        internal override void ProtectPageRange(byte* start, ulong size, bool force = false)
+        {
+            if (UsePageProtection || force)
+            {
+                Win32NativeMethods.MEMORY_BASIC_INFORMATION memoryInfo1 = new Win32NativeMethods.MEMORY_BASIC_INFORMATION();
+                int vQueryFirstOutput = Win32NativeMethods.VirtualQuery(start, &memoryInfo1, new UIntPtr(size));
+                int vQueryFirstError = Marshal.GetLastWin32Error();
+
+                Win32NativeMethods.MemoryProtection oldProtection;
+                bool status = Win32NativeMethods.VirtualProtect(start, new UIntPtr(size), Win32NativeMethods.MemoryProtection.READONLY, out oldProtection);
+                if (!status)
+                {
+                    int vProtectError = Marshal.GetLastWin32Error();
+
+                    Win32NativeMethods.MEMORY_BASIC_INFORMATION memoryInfo2 = new Win32NativeMethods.MEMORY_BASIC_INFORMATION();
+                    int vQuerySecondOutput = Win32NativeMethods.VirtualQuery(start, &memoryInfo2, new UIntPtr(size));
+                    int vQuerySecondError = Marshal.GetLastWin32Error();
+                    Debugger.Break();
+                }
+            }
+        }
+
+        internal override void UnprotectPageRange(byte* start, ulong size, bool force = false)
+        {
+            if (UsePageProtection || force)
+            {
+                Win32NativeMethods.MEMORY_BASIC_INFORMATION memoryInfo1 = new Win32NativeMethods.MEMORY_BASIC_INFORMATION();
+                int vQueryFirstOutput = Win32NativeMethods.VirtualQuery(start, &memoryInfo1, new UIntPtr(size));
+                int vQueryFirstError = Marshal.GetLastWin32Error();
+
+                Win32NativeMethods.MemoryProtection oldProtection;
+                bool status = Win32NativeMethods.VirtualProtect(start, new UIntPtr(size), Win32NativeMethods.MemoryProtection.READWRITE, out oldProtection);
+                if (!status)
+                {
+                    int vProtectError = Marshal.GetLastWin32Error();
+
+                    Win32NativeMethods.MEMORY_BASIC_INFORMATION memoryInfo2 = new Win32NativeMethods.MEMORY_BASIC_INFORMATION();
+                    int vQuerySecondOutput = Win32NativeMethods.VirtualQuery(start, &memoryInfo2, new UIntPtr(size));
+                    int vQuerySecondError = Marshal.GetLastWin32Error();
+                    Debugger.Break();
+                }
             }
         }
     }

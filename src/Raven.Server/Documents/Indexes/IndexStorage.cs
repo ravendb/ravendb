@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public unsafe void WritePriority(IndexingPriority priority)
+        public unsafe void WritePriority(IndexPriority priority)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -116,14 +116,40 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IndexingPriority ReadPriority(RavenTransaction tx)
+        public IndexPriority ReadPriority(RavenTransaction tx)
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
             var priority = statsTree.Read(IndexSchema.PrioritySlice);
             if (priority == null)
-                return IndexingPriority.Normal;
+                return IndexPriority.Normal;
 
-            return (IndexingPriority)priority.Reader.ReadLittleEndianInt32();
+            return (IndexPriority)priority.Reader.ReadLittleEndianInt32();
+        }
+
+        public unsafe void WriteState(IndexState state)
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
+                var stateInt = (int)state;
+                Slice stateSlice;
+                using (Slice.External(context.Allocator, (byte*)&stateInt, sizeof(int), out stateSlice))
+                    statsTree.Add(IndexSchema.StateSlice, stateSlice);
+
+                tx.Commit();
+            }
+        }
+
+        public IndexState ReadState(RavenTransaction tx)
+        {
+            var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
+            var state = statsTree.Read(IndexSchema.StateSlice);
+            if (state == null)
+                return IndexState.Normal;
+
+            return (IndexState)state.Reader.ReadLittleEndianInt32();
         }
 
         public void WriteLock(IndexLockMode mode)
@@ -601,6 +627,8 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice PrioritySlice;
 
+            public static readonly Slice StateSlice;
+
             public static readonly Slice ErrorTimestampsSlice;
 
             static IndexSchema()
@@ -615,6 +643,7 @@ namespace Raven.Server.Documents.Indexes
                 Slice.From(StorageEnvironment.LabelsContext, "ReduceErrors", ByteStringType.Immutable, out ReduceErrorsSlice);
                 Slice.From(StorageEnvironment.LabelsContext, "LastIndexingTime", ByteStringType.Immutable, out LastIndexingTimeSlice);
                 Slice.From(StorageEnvironment.LabelsContext, "Priority", ByteStringType.Immutable, out PrioritySlice);
+                Slice.From(StorageEnvironment.LabelsContext, "State", ByteStringType.Immutable, out StateSlice);
                 Slice.From(StorageEnvironment.LabelsContext, "ErrorTimestamps", ByteStringType.Immutable, out ErrorTimestampsSlice);
             }
         }

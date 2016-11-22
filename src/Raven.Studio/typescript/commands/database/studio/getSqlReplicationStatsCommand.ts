@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class getSqlReplicationStatsCommand extends commandBase {
     constructor(private ownerDb: database, private sqlReplicationName: string) {
@@ -10,19 +11,14 @@ class getSqlReplicationStatsCommand extends commandBase {
         }
     }
 
-    execute() {
-        var args = {
-            sqlReplicationName: this.sqlReplicationName
+    execute(): JQueryPromise<Raven.Server.Documents.SqlReplication.SqlReplicationStatistics> {
+        const args = {
+            name: this.sqlReplicationName
         };
 
-        var url = "/studio-tasks/get-sql-replication-stats";//TODO: use endpoints
+        const url = endpoints.databases.sqlReplication.sqlReplicationStats;
 
-        var resultsSelector = function (result: any) {
-            result.Value["Name"] = result.Key;
-            var replicationDto = result.Value;
-            return replicationDto;
-        };
-        return this.query(url, args, this.ownerDb, resultsSelector);
+        return this.query(url, args, this.ownerDb);
     }
 }
 

@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveIndexPriorityCommand extends commandBase {
 
-    constructor(private indexName: string, private priority: Raven.Client.Data.Indexes.IndexingPriority, private db: database) {
+    constructor(private indexName: string, private priority: Raven.Client.Data.Indexes.IndexPriority, private db: database) {
         super();
     }
 

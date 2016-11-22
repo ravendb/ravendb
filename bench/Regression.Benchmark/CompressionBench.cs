@@ -61,7 +61,7 @@ namespace Regression
             byte[] encodedOutput = new byte[maximumOutputLength];
 
             LZ4 lz4 = new LZ4();
-
+            
             ExecuteBenchmark(() => 
             {
                 fixed (byte* inputPtr = input)

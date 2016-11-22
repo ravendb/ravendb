@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using Raven.Client.Document.Batches;
@@ -18,15 +17,13 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Client.Data;
 using Raven.Client.Document;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Options;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Util;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
-using Raven.Json.Linq;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -213,25 +210,18 @@ namespace Raven.Client.Documents
 
         private DocumentInfo GetDocumentInfo<T>(T instance)
         {
-            DocumentInfo value;
+            DocumentInfo documentInfo;
             string id;
 
-            if (DocumentsByEntity.TryGetValue(instance, out value)) return value;
+            if (DocumentsByEntity.TryGetValue(instance, out documentInfo)) return documentInfo;
 
             if (!GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id) &&
                 (!(instance is IDynamicMetaObjectProvider) ||
                  !GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))
-                throw new InvalidOperationException("Could not find the document key for " + instance);
+                 throw new InvalidOperationException("Could not find the document key for " + instance);
 
-            AssertNoNonUniqueInstance(instance, id);
-
-            return GetDocumentInfo(id);
+            throw new ArgumentException("Document " + id + " doesn't exist in the session");
         }
-
-        /// <summary>
-        /// Get the documentInfo by key (Load document from server)
-        /// </summary>
-        protected abstract DocumentInfo GetDocumentInfo(string documentId);
 
         /// <summary>
         /// Returns whatever a document with the specified id is loaded in the 
@@ -352,8 +342,7 @@ more responsive application.
         {
             if (string.IsNullOrEmpty(key))
             {
-                // TODO, iftah, find out in which scenario the key would be empty and handle appropriately
-                //return JsonObjectToClrInstancesWithoutTracking(entityType, document);
+                return DeserializeFromTransformer(entityType, null, document);
             }
 
             DocumentInfo docInfo;
@@ -831,7 +820,7 @@ more responsive application.
                 entity.Value.IsNewDocument = false;
                 result.Entities.Add(entity.Key);
 
-                if (entity.Value.Entity != null)
+                if (entity.Value.Id != null)
                     DocumentsById.Remove(entity.Value.Id);
 
                 entity.Value.Document = document;
@@ -1124,6 +1113,12 @@ more responsive application.
             }
         }
 
+        public object DeserializeFromTransformer(Type entityType, string id, BlittableJsonReaderObject document)
+        {
+            HandleInternalMetadata(document);
+            return EntityToBlittable.ConvertToEntity(entityType, id, document);
+        }
+
         public string CreateDynamicIndexName<T>()
         {
             var indexName = "dynamic";
@@ -1174,8 +1169,23 @@ more responsive application.
             return true;
         }
 
-        protected void RefreshInternal<T>(T entity, BlittableJsonReaderObject document, DocumentInfo documentInfo)
+        protected void RefreshInternal<T>(T entity, RavenCommand<GetDocumentResult> cmd, DocumentInfo documentInfo)
         {
+            var document = (BlittableJsonReaderObject)cmd.Result.Results[0];
+            if (document == null)
+                throw new InvalidOperationException("Document '" + documentInfo.Id +
+                                                    "' no longer exists and was probably deleted");
+
+            object value;
+            document.TryGetMember(Constants.Metadata.Key, out value);
+            documentInfo.Metadata = value as BlittableJsonReaderObject;
+
+            object etag;
+            document.TryGetMember(Constants.Metadata.Etag, out etag);
+            documentInfo.ETag = etag as long?;
+
+            documentInfo.Document = document;
+
             documentInfo.Entity = ConvertToEntity(typeof(T), documentInfo.Id, document);
 
             var type = entity.GetType();

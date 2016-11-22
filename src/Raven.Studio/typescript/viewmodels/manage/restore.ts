@@ -10,6 +10,7 @@ import monitorRestoreCommand = require("commands/maintenance/monitorRestoreComma
 import startDbRestoreCommand = require("commands/maintenance/startRestoreCommand");
 import startFsRestoreCommand = require("commands/filesystem/startRestoreCommand");
 import resourcesManager = require("common/shell/resourcesManager");
+import eventsCollector = require("common/eventsCollector");
 
 class resourceRestore {
     defrag = ko.observable<boolean>(false);
@@ -39,6 +40,8 @@ class resourceRestore {
     }
 
     toggleKeepDown() {
+        eventsCollector.default.reportEvent("restore", "keep-down", this.type.toString());
+
         this.keepDown.toggle();
         this.forceKeepDown();
     }
@@ -112,6 +115,8 @@ class restore extends viewModelBase {
     }
 
     startDbRestore() {
+        eventsCollector.default.reportEvent("database", "restore");
+
         this.isBusy(true);
         var self = this;
 
@@ -131,6 +136,8 @@ class restore extends viewModelBase {
     }
 
     startFsRestore() {
+        eventsCollector.default.reportEvent("fs", "restore");
+
         this.isBusy(true);
         var self = this;
 

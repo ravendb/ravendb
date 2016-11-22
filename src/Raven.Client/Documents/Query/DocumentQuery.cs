@@ -143,13 +143,13 @@ namespace Raven.Client.Documents
             return this;
         }
 
-        public IDocumentQuery<T> SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+        public IDocumentQuery<T> SetQueryInputs(Dictionary<string, object> queryInputs)
         {
             SetTransformerParameters(queryInputs);
             return this;
         }
 
-        public IDocumentQuery<T> SetTransformerParameters(Dictionary<string, RavenJToken> transformerParameters)
+        public IDocumentQuery<T> SetTransformerParameters(Dictionary<string, object> transformerParameters)
         {
             this.transformerParameters = transformerParameters;
             return this;

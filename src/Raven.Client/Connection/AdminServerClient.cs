@@ -66,6 +66,21 @@ namespace Raven.Client.Connection
             AsyncHelpers.RunSync(() => asyncAdminServerClient.StartIndexingAsync(maxNumberOfParallelIndexTasks));
         }
 
+        public Operation CompactIndex(string name)
+        {
+            return AsyncHelpers.RunSync(() => asyncAdminServerClient.CompactIndexAsync(name));
+        }
+
+        public void EnableIndex(string name)
+        {
+            AsyncHelpers.RunSync(() => asyncAdminServerClient.EnableIndexAsync(name));
+        }
+
+        public void DisableIndex(string name)
+        {
+            AsyncHelpers.RunSync(() => asyncAdminServerClient.DisableIndexAsync(name));
+        }
+
         public void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
         {
             AsyncHelpers.RunSync(() => asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument, incremental, databaseName));

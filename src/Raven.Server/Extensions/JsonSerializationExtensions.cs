@@ -10,10 +10,8 @@ namespace Raven.Server.Extensions
         {
             var result = new DynamicJsonValue();
             result[nameof(IndexDefinition.IndexId)] = definition.IndexId;
-            result[nameof(IndexDefinition.IndexVersion)] = definition.IndexVersion;
             result[nameof(IndexDefinition.IsSideBySideIndex)] = definition.IsSideBySideIndex;
             result[nameof(IndexDefinition.IsTestIndex)] = definition.IsTestIndex;
-            result[nameof(IndexDefinition.MaxIndexOutputsPerDocument)] = definition.MaxIndexOutputsPerDocument;
             result[nameof(IndexDefinition.LockMode)] = definition.LockMode.ToString();
             result[nameof(IndexDefinition.Name)] = definition.Name;
             result[nameof(IndexDefinition.Reduce)] = definition.Reduce;
@@ -49,8 +47,13 @@ namespace Raven.Server.Extensions
                 fields[kvp.Key] = field;
             }
 
-
             result[nameof(IndexDefinition.Fields)] = fields;
+
+            var settings = new DynamicJsonValue();
+            foreach (var kvp in definition.Configuration)
+                settings[kvp.Key] = kvp.Value;
+
+            result[nameof(IndexDefinition.Configuration)] = settings;
 
             return result;
         }

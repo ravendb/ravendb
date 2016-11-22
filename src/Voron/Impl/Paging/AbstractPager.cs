@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Binary;
@@ -11,6 +12,7 @@ using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Voron.Platform.Win32;
 using Voron.Global;
+using static System.Runtime.InteropServices.Marshal;
 
 namespace Voron.Impl.Paging
 {
@@ -28,6 +30,7 @@ namespace Voron.Impl.Paging
         private DateTime _lastIncrease;
         private readonly int _pageSize;
         private readonly object _pagerStateModificationLocker = new object();
+        public bool UsePageProtection { get; } = false;
 
         public void SetPagerState(PagerState newState)
         {
@@ -77,10 +80,11 @@ namespace Voron.Impl.Paging
 
         public string FileName;
 
-        protected AbstractPager(StorageEnvironmentOptions options)
+        protected AbstractPager(StorageEnvironmentOptions options, bool usePageProtection = false)
         {
             _options = options;
             _pageSize = _options.PageSize;
+            UsePageProtection = usePageProtection;
 
             Debug.Assert((_pageSize - Constants.TreePageHeaderSize) / Constants.MinKeysInPage >= 1024);
 
@@ -185,6 +189,17 @@ namespace Voron.Impl.Paging
             return AllocateMorePages(allocationSize);
         }
 
+        [Conditional("VALIDATE")]
+        internal virtual void ProtectPageRange(byte* start, ulong size, bool force = false)
+        {
+            // This method is currently implemented only in Win32MemoryMapPager, there is no POSIX support
+        }
+
+        [Conditional("VALIDATE")]
+        internal virtual void UnprotectPageRange(byte* start, ulong size, bool force = false)
+        {
+            // This method is currently implemented only in Win32MemoryMapPager, there is no POSIX support
+        }
 
         public bool Disposed { get; private set; }
 

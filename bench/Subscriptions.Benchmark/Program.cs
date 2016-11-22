@@ -128,7 +128,7 @@ namespace SubscriptionsBenchmark
                         string benchmarkPath;
                         if (Debugger.IsAttached)
                         {
-                            benchmarkPath = "bin\\Debug\\netcoreapp1.0\\Subscriptions.Benchmark.dll";
+                            benchmarkPath = "bin\\Debug\\netcoreapp1.1\\Subscriptions.Benchmark.dll";
                         }
                         else
                         {

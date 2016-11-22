@@ -8,7 +8,6 @@
     
     exportFileName = ko.observable<string>();
 
-    batchSize = ko.observable(1024);
     includeExpiredDocuments = ko.observable(false);
     removeAnalyzers = ko.observable(false);
 
@@ -37,7 +36,6 @@
         }
 
         return {
-            BatchSize: this.batchSize(),
             CollectionsToExport: this.includeAllCollections() ? null : this.includedCollections(),
             FileName: this.exportFileName(),
             IncludeExpired: this.includeExpiredDocuments(),

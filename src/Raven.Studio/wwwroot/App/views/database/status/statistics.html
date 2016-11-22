@@ -1,177 +1,90 @@
-<section data-bind="if: stats, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-    <form class="form-horizontal col-md-10" role="form">
-        <div class="form-group">
-            <label class="col-md-2 control-label">Storage Engine</label>
-            <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: stats().StorageEngine"></p>
-            </div>
-        </div><div class="form-group">
-            <label class="col-md-2 control-label">Last Document Etag</label>
-            <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: stats().LastDocEtag"></p>
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="col-md-2 control-label">Last Attachment Etag</label>
-            <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: stats().LastAttachmentEtag"></p>
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="col-md-2 control-label">Index Count</label>
-            <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: stats().CountOfIndexes"></p>
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="col-md-2 control-label">Document Count</label>
-            <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: stats().CountOfDocumentsLocale"></p>
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="col-md-2 control-label">Stale Indexes</label>
-            <ul class="col-md-10 list-unstyled" style="margin-top: 8px" data-bind="visible: noStaleIndexes">
-                <li>-</li>
-            </ul>
-            <ul class="col-md-10 list-unstyled" style="margin-top: 8px" data-bind="foreach: stats().StaleIndexes, visible: noStaleIndexes() == false">
-                <!-- ko if:$root.disabledIndexes().indexOf($data) == -1 -->
-                <li data-bind="text: $data"></li>
-                <!-- /ko -->
-            </ul>
-        </div>
-        <div class="form-group">
-            <label class="col-md-2 control-label">Index Batch Size</label>
-            <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: stats().CurrentNumberOfItemsToIndexInSingleBatchLocale"></p>
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="col-md-2 control-label">Last Indexing Time</label>
-            <div class="col-md-8">
-                <p class="form-control-static" data-bind="text: stats().LastIndexingDateTime"></p>
-            </div>
+<section data-bind="if: stats">
+
+    <h2>General Stats</h2>
+    
+    <div class="row" data-bind="with: stats">
+        
+        <div class="col-xs-12 visible-sm visible-xs">
+            <table class="table table-condensed table-striped table-responsive bg-info">
+                <tbody>
+                <tr>
+                    <td>Database Id</td>
+                    <td data-bind="text: dataBaseId"></td>
+                </tr>
+                <tr>
+                    <td>Documents Count</td>
+                    <td data-bind="text: countOfDocuments"></td>
+                </tr>
+                <tr>
+                    <td>Indexes Count</td>
+                    <td data-bind="text: countOfIndexes"></td>
+                </tr>
+                <tr>
+                    <td>Transformers Count</td>
+                    <td data-bind="text: countOfTransformers"></td>
+                </tr>
+                <tr>
+                    <td>Last Document Etag</td>
+                    <td data-bind="text: lastDocEtag"></td>
+                </tr>
+                <tr>
+                    <td>64 Bit</td>
+                    <td data-bind="text: is64Bit"></td>
+                </tr>
+                </tbody>
+            </table>
         </div>
 
-        <div class="form-group">
-            <label class="col-md-2 control-label">Reduce Batch Size</label>
-            <div class="col-md-10">
-                <p class="form-control-static" data-bind="text: stats().CurrentNumberOfItemsToReduceInSingleBatchLocale"></p>
-            </div>
+        <div class="col-lg-7 visible-md visible-lg">
+            <table class="table table-condensed table-striped table-responsive table-bordered bg-info">
+                <tbody>
+                <tr>
+                    <td class="row"><span class="col-md-6">Documents Count</span><span class="col-md-3" data-bind="text: countOfDocuments" style="float: right"></span></td>
+                    <td class="row"><span class="col-md-6">Last Document Etag</span><span class="col-md-3" data-bind="text: lastDocEtag" style="float: right"></span></td>
+                </tr>
+                <tr>
+                    <td class="row"><span class="col-sm-6">Indexes Count</span><span class="col-sm-3" data-bind="text: countOfIndexes" style="float: right"></span></td>
+                    <td class="row"><span class="col-sm-6">Transformers Count</span><span class="col-sm-3" data-bind="text: countOfTransformers" style="float: right"></span></td>
+                </tr>
+                <tr>
+                    <td class="row"><span class="col-sm-6">64 Bit</span><span class="col-sm-3" data-bind="text: is64Bit" style="float: right"></span></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="row"><span class="col-sm-3">Database Id</span><span class="col-sm-8" data-bind="text: dataBaseId"></span></td>
+                </tr>
+                </tbody>
+            </table>
         </div>
+    </div>
 
-        <div class="form-group">
-            <label class="col-md-2 control-label">Indexes</label>
-            <div class="col-md-10">
-                <div class="panel-group" id="indexStatsAccordion" data-bind="foreach: indexes">
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <h4 class="panel-title">
-                                <a data-toggle="collapse" href="#collapseOne" data-bind="attr: { href: '#statsIndexCollapse' + $index() }">
-                                    <span data-bind="text: Name"></span>
-                                    <span class="text-muted">- <span data-bind="text: DocsCountLocale"></span> entries</span>
-                                </a>
-                            </h4>
-                        </div>
-                        <div class="panel-collapse collapse" data-bind="attr: { id: 'statsIndexCollapse' + $index() }">
-                            <div class="panel-body">
-                                <div class="form-horizontal" role="form">
-                                    <div class="form-group">
-                                        <label class="col-md-2 control-label">Created</label>
-                                        <div class="col-md-8">
-                                            <p class="form-control-static" data-bind="text: CreatedTimestampText"></p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-md-2 control-label">Entries</label>
-                                        <div class="col-md-8">
-                                            <p class="form-control-static" data-bind="text: DocsCountLocale"></p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group" data-bind="if: IndexingAttempts !== null">
-                                        <label class="col-md-2 control-label">Runs</label>
-                                        <div class="col-md-8">
-                                            <p class="form-control-static" data-bind="css: { 'text-success': IndexingAttempts === IndexingSuccesses, 'text-warning': IndexingSuccesses > 0 && IndexingSuccesses < IndexingAttempts, 'text-danger': IndexingAttempts > 0 && IndexingSuccesses === 0 }">
-                                                <span data-bind="visible: IndexingAttempts > 0, text: IndexingAttemptsLocale"></span>
-                                                <span data-bind="visible: IndexingAttempts === 0" class="text-muted">Never run</span>
-                                                <span data-bind="visible: IndexingAttempts === IndexingSuccesses && IndexingAttempts > 0">- all successful</span>
-                                                <span data-bind="visible: IndexingSuccesses > 0 && IndexingSuccesses < IndexingAttempts, text: 'attempts ' + (IndexingAttempts - IndexingSuccesses) + ' failed'"></span>
-                                                <span data-bind="visible: IndexingAttempts > 0 && IndexingSuccesses === 0">- all failed</span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-md-2 control-label">Docs indexed from</label>
-                                        <div class="col-md-8">
-                                            <p class="form-control-static" data-bind="text: LastIndexedTimestampText"></p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group" data-bind="if: IndexingAttempts !== null">
-                                        <label class="col-md-2 control-label">Maps reduced from</label>
-                                        <div class="col-md-8">
-                                            <p class="form-control-static" data-bind="css: { 'text-success': ReduceIndexingAttempts === ReduceIndexingSuccesses, 'text-warning': ReduceIndexingSuccesses > 0 && ReduceIndexingSuccesses < ReduceIndexingAttempts, 'text-danger': ReduceIndexingAttempts > 0 && ReduceIndexingSuccesses === 0 }">
-                                                <span data-bind="visible: ReduceIndexingAttempts > 0, text: ReduceIndexingAttemptsLocale"></span>
-                                                <span data-bind="visible: !ReduceIndexingAttempts" class="text-muted">Never run</span>
-                                                <span data-bind="visible: ReduceIndexingAttempts === ReduceIndexingSuccesses && ReduceIndexingAttempts > 0">- all successful</span>
-                                                <span data-bind="visible: ReduceIndexingSuccesses > 0 && ReduceIndexingSuccesses < ReduceIndexingAttempts, text: 'attempts, ' + (ReduceIndexingAttempts - ReduceIndexingSuccesses) + ' failed'"></span>
-                                                <span data-bind="visible: ReduceIndexingAttempts > 0 && ReduceIndexingSuccesses === 0">- all failed</span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group" data-bind="visible: IsMapReduce">
-                                        <label class="col-md-2 control-label">Last reduce</label>
-                                        <div class="col-md-8">
-                                            <p class="form-control-static" data-bind="text: LastReducedTimestampText"></p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-md-2 control-label">Last query</label>
-                                        <div class="col-md-8">
-                                            <p class="form-control-static" data-bind="text: LastQueryTimestampText"></p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-md-2 control-label">Priority</label>
-                                        <div class="col-md-8">
-                                            <p class="form-control-static" data-bind="text: Priority, css: { 'text-muted': Priority === 'Idle', 'text-warning': Priority === 'Disabled', 'text-danger': Priority === 'Abandoned' }"></p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-md-2 control-label">Last indexed Etag</label>
-                                        <div class="col-md-8">
-                                            <p class="form-control-static" data-bind="text: LastIndexedEtag"></p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group" data-bind="visible: IsMapReduce">
-                                        <label class="col-md-2 control-label">Last reduced Etag</label>
-                                        <div class="col-md-8">
-                                            <p class="form-control-static" data-bind="text: LastReducedEtag"></p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-md-2 control-label">Is on RAM</label>
-                                        <div class="col-md-8">
-                                            <p class="form-control-static" data-bind="text: IsOnRam"></p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-md-2 control-label">Lock</label>
-                                        <div class="col-md-8">
-                                            <p class="form-control-static" data-bind="text: LockMode"></p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-md-2 control-label">Entities</label>
-                                        <div class="col-md-8" data-bind="with: ForEntityName">
-                                            <p class="form-control-static" data-bind="text: $data.join(', ')"></p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+    <hr />
+    <h2>Indexes Stats by type</h2>
+    <br />
+
+    <h3 class="text-center" data-bind="visible: stats().indexesByType().length === 0">No indexes have been created for this database.</h3>
+
+    <div data-bind="foreach: stats().indexesByType">
+
+        <h3 data-bind="text: indexType"></h3>
+
+        <div class="row">
+            <div data-bind="foreach: indexes">
+                <div class="col-sm-4">
+                    <div class="panel panel-success">
+                        <div class="panel-body">
+                            <a href="#" data-bind="attr: { href: $root.urlForIndexPerformance(name) } ">
+                                <span class="text" data-bind="text: name"></span>
+                            </a><br/>
+                            Id: <span data-bind="text: indexId"></span>
+                            <span class="badge badge-warning" data-bind="visible: isStale">Stale</span> <!-- TODO: How to move to the right side ? -->
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </form>
+        </div> 
+
+        <br />
+    </div>
+
 </section>

@@ -28,8 +28,6 @@ namespace Raven.Server.Documents.Indexes.Static
             if (definition.Reduce != null)
                 list.Add(definition.Reduce);
 
-            // TODO [ppekrol] add field options
-
             var key = new CacheKey(list);
             Func<StaticIndexBase> createIndex = () => IndexAndTransformerCompiler.Compile(definition);
             var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(createIndex));
@@ -57,6 +55,8 @@ namespace Raven.Server.Documents.Indexes.Static
             public unsafe CacheKey(List<string> items)
             {
                 _items = items;
+
+                byte[] temp = null;
                 var ctx = Hashing.Streamed.XXHash32.BeginProcess();
                 foreach (var str in items)
                 {
@@ -67,7 +67,19 @@ namespace Raven.Server.Documents.Indexes.Static
                         do
                         {
                             if (toProcess < Hashing.Streamed.XXHash32.Alignment)
-                                break; // TODO [ppekrol] This is bad, fix me
+                            {
+                                if (temp == null)
+                                    temp = new byte[Hashing.Streamed.XXHash32.Alignment];
+
+                                fixed (byte* tempBuffer = temp)
+                                {
+                                    Memory.Set(tempBuffer, 0, temp.Length);
+                                    Memory.Copy(tempBuffer, (byte*)current, toProcess);
+
+                                    ctx = Hashing.Streamed.XXHash32.Process(ctx, tempBuffer, temp.Length);
+                                    break;
+                                }
+                            }
 
                             ctx = Hashing.Streamed.XXHash32.Process(ctx, (byte*)current, Hashing.Streamed.XXHash32.Alignment);
                             toProcess -= Hashing.Streamed.XXHash32.Alignment;

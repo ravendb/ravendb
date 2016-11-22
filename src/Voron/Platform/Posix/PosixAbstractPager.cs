@@ -13,7 +13,7 @@ namespace Voron.Platform.Posix
         {
             foreach (var range in ranges)
             {
-                if (Syscall.madvise(new IntPtr(range.VirtualAddress), (int)range.NumberOfBytes, MAdvFlags.MADV_WILLNEED) == -1)
+                if (Syscall.madvise(new IntPtr(range.VirtualAddress), (UIntPtr)range.NumberOfBytes.ToPointer(), MAdvFlags.MADV_WILLNEED) == -1)
                 {
                     // ignore this error. TODO : Log ?
                 }

@@ -4,10 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +18,6 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
-using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -103,6 +100,41 @@ namespace Raven.Client.Connection.Async
             return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async operationMetadata =>
             {
                 using (var req = adminRequest.StartIndexing(operationMetadata.Url, maxNumberOfParallelIndexTasks))
+                {
+                    await req.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+                }
+            }, token);
+        }
+
+        public Task<Operation> CompactIndexAsync(string name, CancellationToken token = new CancellationToken())
+        {
+            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async operationMetadata =>
+            {
+                using (var req = adminRequest.CompactIndex(operationMetadata.Url, name))
+                {
+                    var json = await req.ReadResponseJsonAsync().ConfigureAwait(false);
+                    var operationId = json.Value<long>("OperationId");
+                    return new Operation(innerAsyncServerClient, operationId);
+                }
+            }, token);
+        }
+
+        public Task EnableIndexAsync(string name, CancellationToken token = default(CancellationToken))
+        {
+            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async operationMetadata =>
+            {
+                using (var req = adminRequest.EnableIndexAsync(operationMetadata.Url, name))
+                {
+                    await req.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+                }
+            }, token);
+        }
+
+        public Task DisableIndexAsync(string name, CancellationToken token = default(CancellationToken))
+        {
+            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async operationMetadata =>
+            {
+                using (var req = adminRequest.DisableIndexAsync(operationMetadata.Url, name))
                 {
                     await req.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
                 }
@@ -238,7 +270,7 @@ namespace Raven.Client.Connection.Async
         private IEnumerable<NamedApiKeyDefinition> YieldResults(Stream stream, HttpJsonRequest request)
         {
             using (request)
-            using(stream)
+            using (stream)
             using (var jtr = new JsonTextReader(new StreamReader(stream)))
             {
                 if (jtr.Read() == false || jtr.TokenType != JsonToken.StartArray)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Sparrow;
 using Voron.Data.Tables;
 
@@ -10,6 +11,9 @@ namespace Voron.Benchmark
     {
         public static List<Tuple<Slice, Slice>> GenerateUniqueRandomSlicePairs(int amount, int keyLength, int? randomSeed = null)
         {
+            Debug.Assert(amount > 0);
+            Debug.Assert(keyLength > 0);
+
             // Generate random key value pairs
             var generator = randomSeed.HasValue ? new Random(randomSeed.Value) : new Random();
             var keyBuffer = new byte[keyLength];
@@ -18,6 +22,7 @@ namespace Voron.Benchmark
             // we know the exact number of insertions)
             var added = new HashSet<Slice>(SliceComparer.Instance);
             var pairs = new List<Tuple<Slice, Slice>>();
+            int i = 0;
 
             while (pairs.Count < amount)
             {
@@ -28,6 +33,8 @@ namespace Voron.Benchmark
 
                 ByteStringContext.Scope keyScope =
                     Slice.From(Configuration.Allocator, keyBuffer, ByteStringType.Immutable, out key);
+
+                i++;
 
                 if (added.Contains(key))
                 {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
@@ -22,8 +23,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public abstract unsafe class ReduceMapResultsBase<T> : IIndexingWork where T : IndexDefinitionBase
     {
-        public static readonly Slice PageNumberSlice;
-        private Logger _logger;
+        internal static readonly Slice PageNumberSlice;
+        internal static readonly string PageNumberToReduceResultTableName = "PageNumberToReduceResult";
+        private readonly Logger _logger;
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
         private readonly Index _index;
         protected readonly T _indexDefinition;
@@ -31,13 +33,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly MetricsCountersManager _metrics;
         private readonly MapReduceIndexingContext _mapReduceContext;
 
-        private readonly TableSchema _reduceResultsSchema = new TableSchema()
-            .DefineKey(new TableSchema.SchemaIndexDef
-            {
-                StartIndex = 0,
-                Count = 1,
-                Name = PageNumberSlice
-            });
+        internal static readonly TableSchema ReduceResultsSchema;
+
+        private IndexingStatsScope _treeReductionStatsInstance;
+        private IndexingStatsScope _nestedValuesReductionStatsInstance;
+        private readonly TreeReductionStats _treeReductionStats = new TreeReductionStats();
+        private readonly NestedValuesReductionStats _nestedValuesReductionStats = new NestedValuesReductionStats();
 
         protected ReduceMapResultsBase(Index index, T indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
         {
@@ -52,6 +53,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         static ReduceMapResultsBase()
         {
             Slice.From(StorageEnvironment.LabelsContext, "PageNumber", ByteStringType.Immutable, out PageNumberSlice);
+
+            ReduceResultsSchema = new TableSchema()
+                .DefineKey(new TableSchema.SchemaIndexDef
+                {
+                    StartIndex = 0,
+                    Count = 1,
+                    Name = PageNumberSlice
+                });
         }
 
         public string Name => "Reduce";
@@ -67,13 +76,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             _aggregationBatch.Clear();
 
-            _reduceResultsSchema.Create(indexContext.Transaction.InnerTransaction, "PageNumberToReduceResult");
-            var table = indexContext.Transaction.InnerTransaction.OpenTable(_reduceResultsSchema, "PageNumberToReduceResult");
+            ReduceResultsSchema.Create(indexContext.Transaction.InnerTransaction, PageNumberToReduceResultTableName);
+            var table = indexContext.Transaction.InnerTransaction.OpenTable(ReduceResultsSchema, PageNumberToReduceResultTableName);
 
             var lowLevelTransaction = indexContext.Transaction.InnerTransaction.LowLevelTransaction;
 
-
             var writer = writeOperation.Value;
+
+            var treeScopeStats = stats.For(IndexingOperation.Reduce.TreeScope, start: false);
+            var nestedValuesScopeStats = stats.For(IndexingOperation.Reduce.NestedValuesScope, start: false);
 
             foreach (var store in _mapReduceContext.StoreByReduceKeyHash)
             {
@@ -85,15 +96,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     switch (modifiedStore.Type)
                     {
                         case MapResultsStorageType.Tree:
-                            using (var scope = stats.For(IndexingOperation.Reduce.TreeScope))
+                            using (treeScopeStats.Start())
                             {
-                                HandleTreeReduction(indexContext, scope, token, modifiedStore, lowLevelTransaction, writer, reduceKeyHash, table);
+                                HandleTreeReduction(indexContext, treeScopeStats, token, modifiedStore, lowLevelTransaction, writer, reduceKeyHash, table);
                             }
                             break;
                         case MapResultsStorageType.Nested:
-                            using (var scope = stats.For(IndexingOperation.Reduce.NestedValuesScope))
+                            using (nestedValuesScopeStats.Start())
                             {
-                                HandleNestedValuesReduction(indexContext, scope, token, modifiedStore, writer, reduceKeyHash);
+                                HandleNestedValuesReduction(indexContext, nestedValuesScopeStats, token, modifiedStore, writer, reduceKeyHash);
                             }
                             break;
 
@@ -130,6 +141,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     CancellationToken token, MapReduceResultsStore modifiedStore,
                     IndexWriteOperation writer, LazyStringValue reduceKeyHash)
         {
+            EnsureValidNestedValuesReductionStats(stats);
+
             var numberOfEntriesToReduce = 0;
 
             try
@@ -139,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 if (section.IsModified == false)
                     return;
 
-                using (stats.For(IndexingOperation.Reduce.NestedValuesRead))
+                using (_nestedValuesReductionStats.NestedValuesRead.Start())
                 {
                     numberOfEntriesToReduce += section.GetResults(indexContext, _aggregationBatch);
                 }
@@ -147,7 +160,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 stats.RecordReduceAttempts(numberOfEntriesToReduce);
 
                 AggregationResult result;
-                using (stats.For(IndexingOperation.Reduce.NestedValuesAggregation))
+                using (_nestedValuesReductionStats.NestedValuesAggregation.Start())
                 {
                     result = AggregateOn(_aggregationBatch, indexContext, token);
                 }
@@ -192,6 +205,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             CancellationToken token, MapReduceResultsStore modifiedStore, LowLevelTransaction lowLevelTransaction,
             IndexWriteOperation writer, LazyStringValue reduceKeyHash, Table table)
         {
+            EnsureValidTreeReductionStats(stats);
+
             var tree = modifiedStore.Tree;
 
             var branchesToAggregate = new HashSet<long>();
@@ -240,7 +255,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 try
                 {
-                    using (var result = AggregateLeafPage(page, lowLevelTransaction, table, indexContext, stats, token))
+                    using (var result = AggregateLeafPage(page, lowLevelTransaction, indexContext, stats, token))
                     {
                         if (parentPage == -1)
                         {
@@ -364,10 +379,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        private AggregationResult AggregateLeafPage(TreePage page, LowLevelTransaction lowLevelTransaction, Table table, TransactionOperationContext indexContext,
+        private AggregationResult AggregateLeafPage(TreePage page, LowLevelTransaction lowLevelTransaction, TransactionOperationContext indexContext,
                                                     IndexingStatsScope stats, CancellationToken token)
         {
-            using (stats.For(IndexingOperation.Reduce.LeafAggregation))
+            using (_treeReductionStats.LeafAggregation.Start())
             {
                 for (int i = 0; i < page.NumberOfEntries; i++)
                 {
@@ -384,7 +399,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private AggregationResult AggregateBranchPage(TreePage page, Table table, TransactionOperationContext indexContext, HashSet<long> remainingBranchesToAggregate,
             IndexingStatsScope stats, CancellationToken token)
         {
-            using (stats.For(IndexingOperation.Reduce.BranchAggregation))
+            using (_treeReductionStats.BranchAggregation.Start())
             {
                 for (int i = 0; i < page.NumberOfEntries; i++)
                 {
@@ -455,7 +470,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private void StoreAggregationResult(long modifiedPage, int aggregatedEntries, Table table, AggregationResult result, IndexingStatsScope stats)
         {
-            using (stats.For(IndexingOperation.Reduce.StoringReduceResult))
+            using (_treeReductionStats.StoringReduceResult.Start())
             {
                 var pageNumber = Bits.SwapBytes(modifiedPage);
                 var numberOfOutputs = result.Count;
@@ -477,5 +492,43 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         }
 
         protected abstract AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, CancellationToken token);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureValidTreeReductionStats(IndexingStatsScope stats)
+        {
+            if (_treeReductionStatsInstance == stats)
+                return;
+
+            _treeReductionStatsInstance = stats;
+
+            _treeReductionStats.LeafAggregation = stats.For(IndexingOperation.Reduce.LeafAggregation, start: false);
+            _treeReductionStats.BranchAggregation = stats.For(IndexingOperation.Reduce.BranchAggregation, start: false);
+            _treeReductionStats.StoringReduceResult = stats.For(IndexingOperation.Reduce.StoringReduceResult, start: false);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureValidNestedValuesReductionStats(IndexingStatsScope stats)
+        {
+            if (_nestedValuesReductionStatsInstance == stats)
+                return;
+
+            _nestedValuesReductionStatsInstance = stats;
+
+            _nestedValuesReductionStats.NestedValuesRead = stats.For(IndexingOperation.Reduce.NestedValuesRead, start: false);
+            _nestedValuesReductionStats.NestedValuesAggregation = stats.For(IndexingOperation.Reduce.NestedValuesAggregation, start: false);
+        }
+
+        private class TreeReductionStats
+        {
+            public IndexingStatsScope LeafAggregation;
+            public IndexingStatsScope BranchAggregation;
+            public IndexingStatsScope StoringReduceResult;
+        }
+
+        private class NestedValuesReductionStats
+        {
+            public IndexingStatsScope NestedValuesRead;
+            public IndexingStatsScope NestedValuesAggregation;
+        }
     }
 }

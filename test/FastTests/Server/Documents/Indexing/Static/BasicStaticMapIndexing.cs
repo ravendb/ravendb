@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
+using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
@@ -89,6 +90,31 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Fact]
+        public void CanInheritConfiguration()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var indexDefinition = new IndexDefinition
+                {
+                    Name = "Users_ByName",
+                    Maps = { "from user in docs.Users select new { user.Name }" },
+                    Type = IndexType.Map,
+                    Configuration =
+                    {
+                        {RavenConfiguration.GetKey(x => x.Indexing.MapTimeout), "33"}
+                    }
+                };
+
+                Assert.Equal(1, database.IndexStore.CreateIndex(indexDefinition));
+
+                var index = database.IndexStore.GetIndex(1);
+                
+                Assert.Equal(33, (int)index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
+                Assert.NotEqual(database.Configuration.Indexing.MapTimeout.AsTimeSpan, index.Configuration.MapTimeout.AsTimeSpan);
+            }
+        }
+
+        [Fact]
         public void CanPersist()
         {
             var path = NewDataPath();
@@ -99,14 +125,23 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     Name = "Users_ByName",
                     Maps = { "from user in docs.Users select new { user.Name }" },
-                    Type = IndexType.Map
+                    Type = IndexType.Map,
+                    Configuration =
+                    {
+                        { "TestKey", "TestValue" }
+                    }
                 };
+
                 Assert.Equal(1, database.IndexStore.CreateIndex(indexDefinition1));
 
                 indexDefinition2 = new IndexDefinition
                 {
                     Name = "Users_ByAge",
                     Maps = { "from user in docs.Users select new { CustomAge = user.Age }" },
+                    Configuration =
+                    {
+                        MaxIndexOutputsPerDocument = 10
+                    }
                 };
                 Assert.Equal(2, database.IndexStore.CreateIndex(indexDefinition2));
             }
@@ -127,9 +162,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Contains("Name", indexes[0].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
-                Assert.Equal(IndexingPriority.Normal, indexes[0].Priority);
+                Assert.Equal(IndexPriority.Normal, indexes[0].Priority);
                 Assert.True(indexes[0].Definition.Equals(indexDefinition1, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
-                Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutput: false));
+                Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutputs: false));
 
                 Assert.Equal(2, indexes[1].IndexId);
                 Assert.Equal(IndexType.Map, indexes[1].Type);
@@ -139,9 +174,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(1, indexes[1].Definition.MapFields.Count);
                 Assert.Contains("CustomAge", indexes[1].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[1].Definition.LockMode);
-                Assert.Equal(IndexingPriority.Normal, indexes[1].Priority);
+                Assert.Equal(IndexPriority.Normal, indexes[1].Priority);
                 Assert.True(indexes[1].Definition.Equals(indexDefinition2, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
-                Assert.True(indexDefinition2.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutput: false));
+                Assert.True(indexDefinition2.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutputs: false));
             }
         }
 
@@ -156,12 +191,11 @@ namespace FastTests.Server.Documents.Indexing.Static
                 "a",
                 "b"
             };
-            indexDefinition.MaxIndexOutputsPerDocument = 5;
+            indexDefinition.Configuration.MaxIndexOutputsPerDocument = 5;
             indexDefinition.Name = "n1";
             indexDefinition.Reduce = "c";
             indexDefinition.Type = IndexType.MapReduce;
             indexDefinition.IndexId = 3;
-            indexDefinition.IndexVersion = 2;
             indexDefinition.IsSideBySideIndex = true;
             indexDefinition.Fields = new Dictionary<string, IndexFieldOptions>
             {
@@ -216,7 +250,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     var newIndexDefinition = JsonDeserializationServer.IndexDefinition(json);
 
-                    Assert.True(indexDefinition.Equals(newIndexDefinition, compareIndexIds: true, ignoreFormatting: false, ignoreMaxIndexOutput: false));
+                    Assert.True(indexDefinition.Equals(newIndexDefinition, compareIndexIds: true, ignoreFormatting: false, ignoreMaxIndexOutputs: false));
                 }
             }
         }

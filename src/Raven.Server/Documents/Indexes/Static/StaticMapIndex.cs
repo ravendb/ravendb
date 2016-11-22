@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        internal readonly StaticIndexBase _compiled;
+        protected internal readonly StaticIndexBase _compiled;
 
         private HandleReferences _handleReferences;
 
@@ -43,18 +43,18 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override void InitializeInternal()
         {
-            _maxNumberOfIndexOutputs = Definition.IndexDefinition.MaxIndexOutputsPerDocument ?? DocumentDatabase.Configuration.Indexing.MaxMapIndexOutputsPerDocument;
+            _maxNumberOfIndexOutputs = Definition.IndexDefinition.Configuration.MaxIndexOutputsPerDocument ?? Configuration.MaxMapIndexOutputsPerDocument;
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
             var workers = new List<IIndexingWork>();
-            workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null));
+            workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null));
 
             if (_referencedCollections.Count > 0)
-                workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing));
+                workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
-            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, null, DocumentDatabase.Configuration.Indexing));
+            workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, null, Configuration));
 
             return workers.ToArray();
         }
@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var minLength = MinimumSizeForCalculateIndexEtagLength();
             var length = minLength +
-                         sizeof(long)*2*(Collections.Count*_referencedCollections.Count); // last referenced collection etags and last processed reference collection etags
+                         sizeof(long) * 2 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags and last processed reference collection etags
 
             var indexEtagBytes = stackalloc byte[length];
 
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, referencedCollection.Name);
                     var lastMappedEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
 
-                    *(long*) writePos = lastDocEtag;
+                    *(long*)writePos = lastDocEtag;
                     writePos += sizeof(long);
                     *(long*)writePos = lastMappedEtag;
                 }
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             unchecked
             {
-                return (long) Hashing.XXHash64.Calculate(indexEtagBytes, (ulong) length);
+                return (long)Hashing.XXHash64.Calculate(indexEtagBytes, (ulong)length);
             }
         }
 
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (base.EnsureValidNumberOfOutputsForDocument(numberOfAlreadyProducedOutputs) == false)
                 return false;
 
-            if (Definition.IndexDefinition.MaxIndexOutputsPerDocument != null)
+            if (Definition.IndexDefinition.Configuration.MaxIndexOutputsPerDocument.HasValue)
             {
                 // user has specifically configured this value, but we don't trust it.
 
@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public static Index CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var instance = CreateIndexInstance(indexId, definition);
-            instance.Initialize(documentDatabase);
+            instance.Initialize(documentDatabase, new IndexingConfigurationWithClientOverrides(definition.Configuration, documentDatabase.Configuration));
 
             return instance;
         }
@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var definition = StaticMapIndexDefinition.Load(environment);
             var instance = CreateIndexInstance(indexId, definition);
 
-            instance.Initialize(environment, documentDatabase);
+            instance.Initialize(environment, documentDatabase, new IndexingConfigurationWithClientOverrides(definition.Configuration, documentDatabase.Configuration));
 
             return instance;
         }
@@ -247,8 +247,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
-            var staticMapIndexDefinition = new StaticMapIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(),
-                staticIndex.OutputFields, staticIndex.HasDynamicFields);
+            var staticMapIndexDefinition = new StaticMapIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new StaticMapIndex(indexId, staticMapIndexDefinition, staticIndex);
             return instance;
         }

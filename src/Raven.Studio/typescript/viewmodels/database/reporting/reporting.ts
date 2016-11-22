@@ -7,6 +7,7 @@ import queryFacetsCommand = require("commands/database/query/queryFacetsCommand"
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
+import eventsCollector = require("common/eventsCollector");
 
 class reporting extends viewModelBase {
     selectedIndexName = ko.observable<string>();
@@ -34,6 +35,8 @@ class reporting extends viewModelBase {
     }
 
     exportCsv() {
+        eventsCollector.default.reportEvent("reporting", "export-csv");
+
         if (this.isExportEnabled() === false)
             return false;
 
@@ -100,7 +103,7 @@ class reporting extends viewModelBase {
     fetchIndexes(): JQueryPromise<any> {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
-            .done((results: databaseStatisticsDto) => this.indexNames(results.Indexes.map(i => i.Name)));
+            .done((results) => this.indexNames(results.Indexes.map(i => i.Name)));
     }
 
     fetchIndexDefinition(indexName: string) {
@@ -163,6 +166,8 @@ class reporting extends viewModelBase {
     }
 
     addValue(fieldName: string) {
+        eventsCollector.default.reportEvent("reporting", "add-value");
+
         var sortOps = this.sortOptions();
         var sortOption = (fieldName in sortOps) ? (<any>sortOps)[fieldName] : "String";
         var val = facet.fromNameAndAggregation(this.selectedField(), fieldName, this.mapSortToType(sortOption));
@@ -170,10 +175,14 @@ class reporting extends viewModelBase {
     }
 
     removeValue(val: facet) {
+        eventsCollector.default.reportEvent("reporting", "remove-value");
+
         this.addedValues.remove(val);
     }
 
     runReport() {
+        eventsCollector.default.reportEvent("reporting", "run");
+
         var selectedIndex = this.selectedIndexName();
         var filterQuery = this.hasFilter() ? this.filter() : null;
         var facets = this.addedValues().map(v => v.toDto());
@@ -198,6 +207,8 @@ class reporting extends viewModelBase {
     }
 
     toggleCacheEnable() {
+        eventsCollector.default.reportEvent("reporting", "toggle-cache");
+
         this.isCacheDisable(!this.isCacheDisable());
     }
 

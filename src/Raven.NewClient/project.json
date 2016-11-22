@@ -1,0 +1,45 @@
+{
+  "version": "4.0.0-*",
+  "description": "Raven.NewClient.Client is the client library for accessing RavenDB",
+  "authors": [ "Hibernating Rhinos" ],
+
+
+  "packOptions": {
+    "tags": [ "database", "nosql", "doc db" ],
+    "projectUrl": "https://ravendb.net"
+  },
+
+  "buildOptions": {
+    "allowUnsafe": true,
+    "define": [ "PORTABLE" ],
+    "compile": {
+      "include": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/**/*.cs" ],
+      "exclude": [ "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/Properties/AssemblyInfo.cs" ]
+    }
+  },
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
+  },
+
+  "dependencies": {
+    "NETStandard.Library": "1.6.1",
+    "Sparrow": "4.0.0-*",
+    "System.Collections.Specialized": "4.3.0",
+    "System.Diagnostics.Process": "4.3.0",
+    "System.Linq.Queryable": "4.3.0",
+    "System.Net.NameResolution": "4.3.0",
+    "System.Net.WebSockets.Client": "4.3.0",
+    "System.Reflection.TypeExtensions": "4.3.0",
+    "System.Security.Cryptography.Cng": "4.3.0",
+    "System.ServiceModel.Primitives": "4.3.0"
+  },
+
+  "frameworks": {
+    "netstandard1.6": {}
+  }
+}

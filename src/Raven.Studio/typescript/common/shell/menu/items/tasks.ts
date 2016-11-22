@@ -22,7 +22,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/tasks/importDatabase',
             title: 'Import Database',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-import-database',
             dynamicHash: importDatabaseUrl
         }),
         new leafMenuItem({
@@ -30,7 +30,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/tasks/exportDatabase',
             title: 'Export Database',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-export-database',
             dynamicHash: exportDatabaseUrl
         }),
         /* TODO:
@@ -47,7 +47,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/tasks/createSampleData',
             title: 'Create Sample Data',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-create-sample-data',
             dynamicHash: sampleDataUrl
         }),
         /* TODO:

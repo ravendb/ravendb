@@ -1,3 +1,6 @@
+
+<div data-bind="compose: 'common/sectionUnderDevelopment.html'"></div>
+
 <section id="editSQLReplication">
     <form class="form-horizontal" role="form" data-bind="submit: save">
         <div class="btn-toolbar edit-sql-replication-actions">
@@ -19,12 +22,12 @@
                         <a href="#" title="View current SQL Replication stats" data-bind="click: showStats">Stats</a>
                     </li>
                     <li>
-                        <a href="#" title="Simulate SQL Replication" data-bind="click: simulateSqlReplication">
+                        <a href="#" title="Simulate SQL Replication" class="btn-prerelease" > <!--data-bind="click: simulateSqlReplication"-->
                             Simulation
                         </a>
                     </li>
                     <li>
-                        <a href="#" title="Open Sql Replication Statistics and Metrics View" data-bind="attr: {href: $root.sqlReplicationStatsAndMetricsHref }" target="_blank">
+                        <a href="#" title="Open Sql Replication Statistics and Metrics View" class="btn-prerelease" disabled="disabled" data-bind="attr: {href: $root.sqlReplicationStatsAndMetricsHref }">
                             Metrics Page <i class="fa fa-external-link"></i>
                         </a>
                     </li>

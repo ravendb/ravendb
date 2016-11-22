@@ -1,22 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
-using Raven.Abstractions.Logging;
+using Raven.Abstractions.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
-using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Voron;
-using Voron.Data;
 using Sparrow;
+using Sparrow.Collections;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Data.Tables;
+using Voron.Exceptions;
+using Bits = Sparrow.Binary.Bits;
 
 namespace Raven.Server.ServerWide
 {
@@ -33,16 +34,46 @@ namespace Raven.Server.ServerWide
 
         private StorageEnvironment _env;
 
-        private readonly TableSchema _itemsSchema;
+        private static readonly TableSchema _itemsSchema;
 
         public readonly DatabasesLandlord DatabasesLandlord;
 
         private readonly IList<IDisposable> toDispose = new List<IDisposable>();
+        private static readonly Slice EtagIndexName;
+
         public readonly RavenConfiguration Configuration;
         public readonly IoMetrics IoMetrics;
         public readonly AlertsStorage Alerts;
 
+        // this is only modified by write transactions under lock
+        // no need to use thread safe ops
+        private long _lastEtag;
+
+        private readonly ConcurrentSet<AsyncQueue<DynamicJsonValue>> _changes = new ConcurrentSet<AsyncQueue<DynamicJsonValue>>();
+
         private readonly TimeSpan _frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
+
+        static ServerStore()
+        {
+            Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out EtagIndexName);
+
+            _itemsSchema = new TableSchema();
+
+            // We use the follow format for the items data
+            // { lowered key, key, data, etag }
+            _itemsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 0,
+                Count = 0
+            });
+
+            _itemsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            {
+                Name = EtagIndexName,
+                IsGlobal = true,
+                StartIndex = 3
+            });
+        }
 
         public ServerStore(RavenConfiguration configuration)
         {
@@ -52,16 +83,7 @@ namespace Raven.Server.ServerWide
             _logger = LoggingSource.Instance.GetLogger<ServerStore>("ServerStore");
             DatabasesLandlord = new DatabasesLandlord(this);
 
-            Alerts = new AlertsStorage("Raven/Server");
-
-            // We use the follow format for the items data
-            // { lowered key, key, data }
-            _itemsSchema = new TableSchema();
-            _itemsSchema.DefineKey(new TableSchema.SchemaIndexDef
-            {
-                StartIndex = 0,
-                Count = 0
-            });
+            Alerts = new AlertsStorage("Raven/Server",this);
         }
 
         public TransactionContextPool ContextPool;
@@ -81,7 +103,7 @@ namespace Raven.Server.ServerWide
                 ? StorageEnvironmentOptions.CreateMemoryOnly(Configuration.Core.DataDirectory)
                 : StorageEnvironmentOptions.ForPath(Configuration.Core.DataDirectory);
 
-            options.SchemaVersion = 1;
+            options.SchemaVersion = 2;
 
             try
             {
@@ -92,6 +114,20 @@ namespace Raven.Server.ServerWide
                     tx.DeleteTree("items");// note the different casing, we remove the old items tree 
                     _itemsSchema.Create(tx, "Items");
                     tx.Commit();
+                }
+
+                using (var tx = _env.ReadTransaction())
+                {
+                    var table = tx.OpenTable(_itemsSchema, "Items");
+                    var itemsFromBackwards = table.SeekBackwardFrom(_itemsSchema.FixedSizeIndexes[EtagIndexName], long.MaxValue);
+                    var reader = itemsFromBackwards.FirstOrDefault();
+                    if (reader == null)
+                        _lastEtag = 0;
+                    else
+                    {
+                        int size;
+                        _lastEtag = Bits.SwapBytes(*(long*) reader.Read(3, out size));
+                    }
                 }
             }
             catch (Exception e)
@@ -106,6 +142,19 @@ namespace Raven.Server.ServerWide
             ContextPool = new TransactionContextPool(_env);
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             Alerts.Initialize(_env, ContextPool);
+        }
+
+        public long ReadLastEtag(TransactionOperationContext ctx)
+        {
+            var table = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
+            var itemsFromBackwards = table.SeekBackwardFrom(_itemsSchema.FixedSizeIndexes[EtagIndexName], long.MaxValue);
+            var reader = itemsFromBackwards.FirstOrDefault();
+
+            if (reader == null)
+                return 0;
+
+            int size;
+            return Bits.SwapBytes(*(long*)reader.Read(3, out size));
         }
 
         public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id)
@@ -125,8 +174,27 @@ namespace Raven.Server.ServerWide
             return new BlittableJsonReaderObject(ptr, size, ctx);
         }
 
+        public Tuple<BlittableJsonReaderObject,long> ReadWithEtag(TransactionOperationContext ctx, string id)
+        {
+            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
+
+            TableValueReader reader;
+            Slice key;
+            using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
+            {
+                reader = items.ReadByKey(key);
+            }
+            if (reader == null)
+                return null;
+            int size;
+            var ptr = reader.Read(2, out size);
+            return Tuple.Create(new BlittableJsonReaderObject(ptr, size, ctx),Bits.SwapBytes(*(long*)reader.Read(3,out size)));
+        }
+
         public void Delete(TransactionOperationContext ctx, string id)
         {
+            TrackChange(ctx, "Delete", id);
+
             var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
             Slice key;
             using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
@@ -139,6 +207,7 @@ namespace Raven.Server.ServerWide
         {
             public string Key;
             public BlittableJsonReaderObject Data;
+            public long Etag;
         }
 
         public IEnumerable<Item> StartingWith(TransactionOperationContext ctx, string prefix, int start, int take)
@@ -167,28 +236,69 @@ namespace Raven.Server.ServerWide
             return new Item
             {
                 Data = new BlittableJsonReaderObject(reader.Read(2, out size), size, ctx),
-                Key = Encoding.UTF8.GetString(reader.Read(1, out size), size)
+                Key = Encoding.UTF8.GetString(reader.Read(1, out size), size),
+                Etag = Bits.SwapBytes(*(long*)reader.Read(3,out size))
             };
         }
 
-
-        public void Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc)
+        public void Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc, long? expectedEtag = null)
         {
+            TrackChange(ctx, "Write", id);
             Slice idAsSlice;
             Slice loweredId;
             using (Slice.From(ctx.Allocator, id, out idAsSlice))
             using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out loweredId))
             {
-                var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
+                var newEtag = _lastEtag + 1;
+                var newEtagBigEndian = Bits.SwapBytes(newEtag);
+                var itemTable = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
 
-                items.Set(new TableValueBuilder
+                var oldValue = itemTable.ReadByKey(loweredId);
+                if (oldValue == null)
                 {
-                    loweredId,
-                    idAsSlice,
-                    {doc.BasePointer, doc.Size}
-                });
+                    if (expectedEtag != null && expectedEtag != 0)
+                    {
+                        throw new ConcurrencyException(
+                            $"Server store item {id} does not exists, but Write was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                        {
+                            ExpectedETag = (long) expectedEtag
+                        };
+                    }
+                  
+                    itemTable.Insert(new TableValueBuilder
+                    {
+                        loweredId,
+                        idAsSlice,
+                        {doc.BasePointer, doc.Size},
+                        {&newEtagBigEndian, sizeof(long)}
+                    });
+                }
+                else
+                {
+                    int size;
+                    var test = GetCurrentItem(ctx, oldValue);
+                    var oldEtag = Bits.SwapBytes(*(long*)oldValue.Read(3, out size));
+                    if (expectedEtag != null && oldEtag != expectedEtag)
+                        throw new ConcurrencyException(
+                            $"Server store item {id} has etag {oldEtag}, but Write was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                        {
+                            ActualETag = oldEtag,
+                            ExpectedETag = (long)expectedEtag
+                        };
+
+                    itemTable.Update(oldValue.Id,new TableValueBuilder
+                    {
+                        loweredId,
+                        idAsSlice,
+                        {doc.BasePointer, doc.Size},
+                        {&newEtagBigEndian, sizeof(long)}
+                    });
+                }
             }
+            _lastEtag++;
         }
+
+        
 
         public void Dispose()
         {
@@ -285,5 +395,37 @@ namespace Raven.Server.ServerWide
 
             return true;
         }
+
+        public IDisposable TrackChanges(AsyncQueue<DynamicJsonValue> asyncQueue)
+        {
+            _changes.TryAdd(asyncQueue);
+            return new DisposableAction(() => _changes.TryRemove(asyncQueue));
+        }
+
+        public void TrackChange(TransactionOperationContext ctx, string operation, string id)
+        {
+            if (_changes.Count == 0)
+                return;
+
+            var llt = ctx.Transaction.InnerTransaction.LowLevelTransaction;
+          
+
+            // need to do this after the transaction is over
+            llt.OnDispose += _ =>
+            {
+                if (llt.Committed == false)
+                    return;
+                var djv = new DynamicJsonValue
+                {
+                    ["Operation"] = operation,
+                    ["Id"] = id
+                };
+                foreach (var asyncQueue in _changes)
+                {
+                    asyncQueue.Enqueue(djv);
+                }
+            };
+        }
+
     }
 }

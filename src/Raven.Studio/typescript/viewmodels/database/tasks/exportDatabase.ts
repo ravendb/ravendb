@@ -16,7 +16,7 @@ import validateExportDatabaseOptionsCommand = require("commands/database/studio/
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
-
+import eventsCollector = require("common/eventsCollector");
 
 class exportDatabase extends viewModelBase {
 
@@ -110,9 +110,6 @@ class exportDatabase extends viewModelBase {
             var databaseName = this.activeDatabase().name;
             commandTokens.push("--database=" + exportDatabase.escapeForShell(databaseName));
 
-            var batchSize = model.batchSize();
-            commandTokens.push("--batch-size=" + batchSize);
-
             if (model.includeExpiredDocuments()) {
                 commandTokens.push("--includeexpired");
             }
@@ -149,6 +146,8 @@ class exportDatabase extends viewModelBase {
     }
 
     startExport() {
+        eventsCollector.default.reportEvent("database", "export");
+
         exportDatabase.isExporting(true);
 
         var exportArg = this.model.toDto();
@@ -193,7 +192,10 @@ class exportDatabase extends viewModelBase {
                 $form.submit();
 
                 notificationCenter.instance.monitorOperation(db, operationId)
-                    .always(() => exportDatabase.isExporting(false));
+                    .fail((exception: Raven.Client.Data.OperationExceptionResult) => {
+                        messagePublisher.reportError("Could not export database: " + exception.Message, exception.StackTrace, null, false);
+                    }).always(() => exportDatabase.isExporting(false));
+
             });
     }
 }

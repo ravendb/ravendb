@@ -67,7 +67,7 @@ namespace Raven.Server.Documents
 
         public void Initialize()
         {
-            using (var transactionPersistentContext = new TransactionPersistentContext())
+            var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.WriteTransaction(transactionPersistentContext))
             {
                 tx.CreateTree(SubscriptionSchema.IdsTree);
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents
             // and doing that without holding the tx lock
             JsonDeserializationServer.SubscriptionCriteria(criteria);
 
-            using (var transactionPersistentContext = new TransactionPersistentContext())
+            var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.WriteTransaction(transactionPersistentContext))
             {
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents
 
         public unsafe void AcknowledgeBatchProcessed(long id, long lastEtag)
         {
-            using (var transactionPersistentContext = new TransactionPersistentContext())
+            var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.WriteTransaction(transactionPersistentContext))
             {
                 var config = GetSubscriptionConfig(id, tx);
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents
 
         public unsafe void GetCriteriaAndEtag(long id, DocumentsOperationContext context, out SubscriptionCriteria criteria, out long startEtag)
         {
-            using (var transactionPersistentContext = new TransactionPersistentContext())
+            var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.ReadTransaction(transactionPersistentContext))
             {
                 var config = GetSubscriptionConfig(id, tx);
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents
 
         public unsafe void AssertSubscriptionIdExists(long id)
         {
-            using (var transactionPersistentContext = new TransactionPersistentContext())
+            var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.ReadTransaction(transactionPersistentContext))
             {
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
@@ -219,7 +219,7 @@ namespace Raven.Server.Documents
                 subscriptionState.Dispose();
             }
 
-            using (var transactionPersistentContext = new TransactionPersistentContext())
+            var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.WriteTransaction(transactionPersistentContext))
             {
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
@@ -315,7 +315,7 @@ namespace Raven.Server.Documents
         public unsafe void GetAllSubscriptions(BlittableJsonTextWriter writer,
             DocumentsOperationContext context, int start, int take)
         {
-            using (var transactionPersistentContext = new TransactionPersistentContext())
+            var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.WriteTransaction(transactionPersistentContext))
             {
                 var subscriptions = new List<DynamicJsonValue>();
@@ -368,7 +368,7 @@ namespace Raven.Server.Documents
         public void GetRunningSusbscriptions(BlittableJsonTextWriter writer,
            DocumentsOperationContext context, int start, int take)
         {
-            using (var transactionPersistentContext = new TransactionPersistentContext())
+            var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.ReadTransaction(transactionPersistentContext))
             {
                 var connections = new List<DynamicJsonValue>(take);
@@ -412,7 +412,7 @@ namespace Raven.Server.Documents
             var subscriptionConnection = subscriptionState.Connection;
             if (subscriptionConnection == null) return null;
 
-            using (var transactionPersistentContext = new TransactionPersistentContext())
+            var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.ReadTransaction(transactionPersistentContext))
             {
                 var subscriptionData =
@@ -436,7 +436,7 @@ namespace Raven.Server.Documents
         }
         public long GetAllSubscriptionsCount()
         {
-            using (var transactionPersistentContext = new TransactionPersistentContext())
+            var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = _environment.ReadTransaction(transactionPersistentContext))
             {
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);

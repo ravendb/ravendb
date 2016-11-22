@@ -71,6 +71,8 @@ namespace Raven.Server.Indexing
             {
                 files.Add(key, val);
             }
+
+            _file.Dispose();
         }
     }
 }

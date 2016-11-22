@@ -37,7 +37,8 @@ namespace Voron.Impl
 
         private readonly HashSet<long> _dirtyPages;
         private readonly Dictionary<long, long> _dirtyOverflowPages;
-        public List<IDisposable> AlsoDispose;
+        public event Action<LowLevelTransaction> OnCommit;
+        public event Action<LowLevelTransaction> OnDispose;
         readonly Stack<long> _pagesToFreeOnCommit;
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -491,13 +492,7 @@ namespace Voron.Impl
                 _allocator.Dispose();
 
 
-            if (AlsoDispose != null)
-            {
-                foreach (var disposable in AlsoDispose)
-                {
-                    disposable.Dispose();
-                }
-            }
+            OnDispose?.Invoke(this);
         }
 
         internal void FreePageOnCommit(long pageNumber)
@@ -571,8 +566,6 @@ namespace Voron.Impl
             if (RolledBack)
                 throw new InvalidOperationException("Cannot commit rolled-back transaction.");
 
-
-
             while (_pagesToFreeOnCommit.Count > 0)
             {
                 FreePage(_pagesToFreeOnCommit.Pop());
@@ -587,6 +580,8 @@ namespace Voron.Impl
                                                    // allow call to writeToJournal for flushing lazy tx
                 (IsLazyTransaction == false && _journal?.HasDataInLazyTxBuffer() == true))
             {
+                // In the case of non-lazy transactions, we must flush the data from older lazy transactions
+                // to ensure the sequentiality of the data.
                 var numberOfWrittenPages = _journal.WriteToJournal(this, totalNumberOfAllocatedPages + PagesTakenByHeader);
                 FlushedToJournal = true;
 
@@ -605,7 +600,7 @@ namespace Voron.Impl
                 ValidateAllPages();
 
                 // release scratch file page allocated for the transaction header
-                _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);
+                _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, null);
 
                 Committed = true;
                 _env.TransactionAfterCommit(this);
@@ -616,6 +611,7 @@ namespace Voron.Impl
 
                 throw;
             }
+            OnCommit?.Invoke(this);
         }
 
 
@@ -632,16 +628,16 @@ namespace Voron.Impl
 
             foreach (var pageFromScratch in _transactionPages)
             {
-                _env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, -1);
+                _env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, null);
             }
 
             foreach (var pageFromScratch in _unusedScratchPages)
             {
-                _env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, -1);
+                _env.ScratchBufferPool.Free(pageFromScratch.ScratchFileNumber, pageFromScratch.PositionInScratchBuffer, null);
             }
 
             // release scratch file page allocated for the transaction header
-            _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);
+            _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, null);
 
             _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
             _env.Journal.UpdateCacheForJournalSnapshots();
@@ -664,6 +660,7 @@ namespace Voron.Impl
         private bool _isLazyTransaction;
 
         internal ActiveTransactions.Node ActiveTransactionNode;
+        internal bool FlushInProgressLockTaken;
 
         internal void EnsurePagerStateReference(PagerState state)
         {

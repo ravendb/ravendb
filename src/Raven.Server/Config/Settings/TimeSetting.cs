@@ -10,17 +10,26 @@ namespace Raven.Server.Config.Settings
 {
     public struct TimeSetting
     {
-        public static readonly Type TypeOf = typeof (TimeSetting);
+        public static readonly Type TypeOf = typeof(TimeSetting);
         public static readonly Type NullableTypeOf = typeof(TimeSetting?);
 
-        private readonly long value;
-        private readonly TimeUnit unit;
+        private readonly long _value;
+        private readonly TimeUnit _unit;
 
         public TimeSetting(long value, TimeUnit unit)
         {
-            this.value = value;
-            this.unit = unit;
-            
+            _value = value;
+            _unit = unit;
+
+            if (value < 0)
+            {
+                if (value != -1)
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "TimeSetting does not support negative values. The only negative value supported is -1 (TimeSpan.MaxValue).");
+
+                AsTimeSpan = TimeSpan.MaxValue;
+                return;
+            }
+
             switch (unit)
             {
                 case TimeUnit.Milliseconds:

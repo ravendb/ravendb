@@ -15,20 +15,20 @@ namespace Voron.Platform.Posix
 {
     public class PosixHelper
     {
-        public static void AllocateFileSpace(int fd, ulong size)
+        public static void AllocateFileSpace(int fd, ulong size, string file)
         {
             int result;
             int retries = 1024;
             while (true)
             {
-                result = Syscall.posix_fallocate(fd, 0, size);
+                result = Syscall.posix_fallocate(fd, IntPtr.Zero, (UIntPtr)size);
                 if (result != (int)Errno.EINTR)
                     break;
                 if (retries-- > 0)
                     throw new IOException("Tried too many times to call posix_fallocate, but always got EINTR, cannot retry again");
             }
             if (result != 0)
-                ThrowLastError(result);
+                ThrowLastError(result, $"posix_fallocate(\"{file}\", {size})");
         }
 
         public static void ThrowLastError(int lastError, string msg = null)
@@ -49,7 +49,7 @@ namespace Voron.Platform.Posix
                 if (fd == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
-                    ThrowLastError(err);
+                    ThrowLastError(err, "when opening " + path);
                 }
                     
                 int remaining = sizeof(FileHeader);
@@ -60,7 +60,7 @@ namespace Voron.Platform.Posix
                     if (written == -1)
                     {
                         var err = Marshal.GetLastWin32Error();
-                        ThrowLastError(err);
+                        ThrowLastError(err, "writing to " + path);
                     }
 
                     remaining -= (int) written;
@@ -69,12 +69,12 @@ namespace Voron.Platform.Posix
                 if(Syscall.fsync(fd) == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
-                    ThrowLastError(err);
+                    ThrowLastError(err, "fsync " + path);
                 }
                 if (SyncDirectory(path) == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
-                    ThrowLastError(err);
+                    ThrowLastError(err, "fsync dir " + path);
                 }
             }
             finally

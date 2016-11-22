@@ -84,7 +84,7 @@ namespace Raven.Client.Documents
 
         protected KeyValuePair<string, string> lastEquality;
 
-        protected Dictionary<string, RavenJToken> transformerParameters = new Dictionary<string, RavenJToken>();
+        protected Dictionary<string, object> transformerParameters = new Dictionary<string, object>();
 
         /// <summary>
         ///   The list of fields to project directly from the results
@@ -587,7 +587,6 @@ namespace Raven.Client.Documents
 
         protected internal QueryOperation InitializeQueryOperation(bool isAsync = false)
         {
-            // TODO Iftah, should we use isAsync? GetIndexQuery doesn't use it...
             var indexQuery = GetIndexQuery(isAsync: isAsync);
 
             if (beforeQueryExecutionAction != null)
@@ -615,23 +614,29 @@ namespace Raven.Client.Documents
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize);
 
-            return DatabaseCommands.GetFacets(query);
+            // TODO iftah
+            return null;
+            //return DatabaseCommands.GetFacets(query);
         }
 
         public FacetedQueryResult GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize);
-
-            return DatabaseCommands.GetFacets(query);
+            
+            // TODO iftah
+            return null;
+            //return DatabaseCommands.GetFacets(query);
         }
 
         public Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery(true);
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize);
-
-            return AsyncDatabaseCommands.GetFacetsAsync(query, token);
+            
+            // TODO iftah
+            return null;
+            //return AsyncDatabaseCommands.GetFacetsAsync(query, token);
         }
 
         public Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
@@ -639,7 +644,9 @@ namespace Raven.Client.Documents
             var q = GetIndexQuery(true);
             var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize);
 
-            return AsyncDatabaseCommands.GetFacetsAsync(query, token);
+            // TODO iftah
+            return null;
+            //return AsyncDatabaseCommands.GetFacetsAsync(query, token);
         }
 
         /// <summary>
@@ -782,11 +789,11 @@ namespace Raven.Client.Documents
         /// <value>The query result.</value>
         public async Task<QueryResult> QueryResultAsync(CancellationToken token = default(CancellationToken))
         {
-            var result = await InitAsync().WithCancellation(token).ConfigureAwait(false);
+            var result = await InitAsync(token).ConfigureAwait(false);
             return result.CurrentQueryResults.CreateSnapshot();
         }
 
-        protected virtual async Task<QueryOperation> InitAsync()
+        protected virtual async Task<QueryOperation> InitAsync(CancellationToken token = default(CancellationToken))
         {
             if (queryOperation != null)
                 return queryOperation;
@@ -796,7 +803,7 @@ namespace Raven.Client.Documents
             theSession.OnBeforeQueryExecutedInvoke(beforeQueryExecutedEventArgs);
 
             queryOperation = InitializeQueryOperation(isAsync: true);
-            return await ExecuteActualQueryAsync().ConfigureAwait(false);
+            return await ExecuteActualQueryAsync(token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1812,7 +1819,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Called externally to raise the after stream executed callback
         /// </summary>
-        public void InvokeAfterStreamExecuted(ref RavenJObject result)
+        public void InvokeAfterStreamExecuted(ref StreamResult result)
         {
             var streamExecuted = afterStreamExecutedCallback;
             if (streamExecuted != null)
@@ -1821,13 +1828,13 @@ If you really want to do in memory filtering on the data returned from the query
 
         #endregion
 
-        protected virtual async Task<QueryOperation> ExecuteActualQueryAsync()
+        protected virtual async Task<QueryOperation> ExecuteActualQueryAsync(CancellationToken token = new CancellationToken())
         {
             using (queryOperation.EnterQueryContext())
             {
                 queryOperation.LogQuery();
                 var command = queryOperation.CreateRequest();
-                await theSession.RequestExecuter.ExecuteAsync(command, theSession.Context);
+                await theSession.RequestExecuter.ExecuteAsync(command, theSession.Context, token);
                 queryOperation.SetResult(command.Result);
 
                 InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
@@ -2286,7 +2293,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public async Task<IList<T>> ToListAsync(CancellationToken token = default(CancellationToken))
         {
-            var currentQueryOperation = await InitAsync().WithCancellation(token).ConfigureAwait(false);
+            var currentQueryOperation = await InitAsync(token).ConfigureAwait(false);
             var tuple = await ProcessEnumerator(currentQueryOperation).WithCancellation(token).ConfigureAwait(false);
             return tuple.Item2;
         }

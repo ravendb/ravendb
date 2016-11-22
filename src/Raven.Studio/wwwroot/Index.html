@@ -30,9 +30,17 @@
             }
         </script>
     </head>
-    <body class="loading-active">
+    <body class="loading-active show-top-alert">
     <div id="applicationHost">
-        <div class="loading-overlay"></div>
+        <div class="loading-overlay">
+            <div class="loading-info">
+                <p class="text-center">
+                    <span class=" text-warning">
+                        PRERELEASE
+                    </span>
+                </p>
+            </div>
+        </div>
     </div>
     <div class="processing-spinner"></div>
     <iframe id="downloadFrame" style="display: none" name="hidden-form"></iframe>
@@ -66,5 +74,7 @@
     <script type="text/javascript" src="Content/ace/ace.js"></script>
     <script type="text/javascript" src="Content/ace/ext-language_tools.js"></script>
     <script type="text/javascript" src="Content/ace/worker-json.js"></script>
+
+    <script type="text/javascript" src="lib/google-analytics/index.js"></script>
 </body>
 </html>

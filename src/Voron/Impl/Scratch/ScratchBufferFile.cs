@@ -8,6 +8,8 @@ using Sparrow;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using Voron.Data;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Scratch
@@ -94,10 +96,20 @@ namespace Voron.Impl.Scratch
 
                 listOfAvailableImmediately.RemoveLast();
 
-                result = new PageFromScratchBuffer ( _scratchNumber, freeAndAvailablePageNumber, size, numberOfPages );
+#if VALIDATE
+                byte* freeAndAvailablePagePointer = _scratchPager.AcquirePagePointer(tx, freeAndAvailablePageNumber, PagerState);
+                var freeAndAvailablePage = new Page(freeAndAvailablePagePointer);
+                ulong freeAndAvailablePageSize = (ulong)size * (ulong)_scratchPager.PageSize;
+                // This has to be forced, as the list of available pages should be protected by default, but this
+                // is a policy we implement inside the ScratchBufferFile only.
+                _scratchPager.UnprotectPageRange(freeAndAvailablePagePointer, freeAndAvailablePageSize, true);
+#endif
+
+                result = new PageFromScratchBuffer (_scratchNumber, freeAndAvailablePageNumber, size, numberOfPages);
 
                 _allocatedPagesUsedSize += numberOfPages;
                 _allocatedPages.Add(freeAndAvailablePageNumber, result);
+
                 return true;
             }
 
@@ -111,6 +123,16 @@ namespace Voron.Impl.Scratch
                 return false;
 
             list.RemoveLast();
+
+#if VALIDATE
+            byte* freePageBySizePointer = _scratchPager.AcquirePagePointer(tx, val.Page, PagerState);
+            var freePageBySize = new Page(freePageBySizePointer);
+            ulong freePageBySizeSize = (ulong)size * (ulong)_scratchPager.PageSize;
+            // This has to be forced, as the list of available pages should be protected by default, but this
+            // is a policy we implement inside the ScratchBufferFile only.
+            _scratchPager.UnprotectPageRange(freePageBySizePointer, freePageBySizeSize, true);
+#endif
+
             result = new PageFromScratchBuffer ( _scratchNumber, val.Page, size, numberOfPages );
 
             _allocatedPagesUsedSize += numberOfPages;
@@ -129,7 +151,30 @@ namespace Voron.Impl.Scratch
             return true;
         }
 
-        public void Free(long page, long asOfTxId)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Free(long pageNumber, LowLevelTransaction tx)
+        {
+            long asOfTxId = tx?.Id ?? -1;
+
+#if VALIDATE
+            byte* pagePointer = _scratchPager.AcquirePagePointer(tx, pageNumber, PagerState);
+
+            PageFromScratchBuffer temporary;
+            if (_allocatedPages.TryGetValue(pageNumber, out temporary) != false)
+            {
+                var page = new Page(pagePointer);
+                ulong pageSize = (ulong)_scratchPager.GetNumberOfPages(page) * (ulong)_scratchPager.PageSize;
+                // This has to be forced, as the scratchPager does NOT protect on allocate,
+                // (on the contrary, we force protection/unprotection when freeing a page and allocating it
+                // from the reserve)
+                _scratchPager.ProtectPageRange(pagePointer, pageSize, true);
+            }
+#endif
+
+            Free(pageNumber, asOfTxId);
+        }
+
+        internal void Free(long page, long asOfTxId)
         {
             PageFromScratchBuffer value;
             if (_allocatedPages.TryGetValue(page, out value) == false)
@@ -142,7 +187,7 @@ namespace Voron.Impl.Scratch
 
             if (value.Size == 0)
                 return;// this value was broken up to smaller sections, only the first page there is valid for space allocations
-            
+
             if (asOfTxId == -1)
             {
                 LinkedList<long> list;

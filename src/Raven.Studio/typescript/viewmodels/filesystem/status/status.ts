@@ -7,6 +7,7 @@ import activityItems = require("viewmodels/filesystem/status/activityItems");
 import getConfigurationNamesByPrefixCommand = require("commands/filesystem/getConfigurationsByPrefixCommand");
 import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
 import sourceSynchronizationInformation = require("viewmodels/filesystem/status/sourceSynchronizationInformation");
+import eventsCollector = require("common/eventsCollector");
 
 class status extends viewModelBase {
 
@@ -98,6 +99,8 @@ class status extends viewModelBase {
     }
 
     synchronizeNow() {
+        eventsCollector.default.reportEvent("fs-status", "sync");
+
         var fs = this.activeFilesystem();
         if (fs) {
             new synchronizeNowCommand(fs).execute();

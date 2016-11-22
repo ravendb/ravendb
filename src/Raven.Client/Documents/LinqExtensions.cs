@@ -530,26 +530,11 @@ namespace Raven.Client.Documents
 
             return provider.CountLazilyAsync<T>(source.Expression,token);
         }
-
+        
         /// <summary>
         /// Returns a list of results for a query asynchronously. 
         /// </summary>
-        public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> source,CancellationToken token = default (CancellationToken))
-        {
-            var provider = source.Provider as IRavenQueryProvider;
-            if (provider == null)
-                throw new ArgumentException("You can only use Raven Queryable with ToListAsync");
-
-            var documentQuery = provider.ToAsyncDocumentQuery<T>(source.Expression);
-            provider.MoveAfterQueryExecuted(documentQuery);
-            return documentQuery.ToListAsync(token);
-        }
-
-        // TODO Iftah, when importing LinqExtensions to new client merge ToListAsync and NewToListAsync
-        /// <summary>
-        /// Returns a list of results for a query asynchronously. 
-        /// </summary>
-        public static Task<IList<T>> NewToListAsync<T>(this IQueryable<T> source, CancellationToken token = default(CancellationToken))
+        public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> source, CancellationToken token = default(CancellationToken))
         {
             var provider = source.Provider as Documents.IRavenQueryProvider;
             if (provider == null)

@@ -803,12 +803,12 @@ namespace Raven.Client.Documents
             return GenerateSpatialQueryData(fieldName, criteria);
         }
 
-        public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+        public void SetQueryInputs(Dictionary<string, object> queryInputs)
         {
             SetTransformerParameters(queryInputs);
         }
 
-        public void SetTransformerParameters(Dictionary<string, RavenJToken> parameters)
+        public void SetTransformerParameters(Dictionary<string, object> parameters)
         {
             transformerParameters = parameters;
         }

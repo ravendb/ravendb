@@ -8,6 +8,7 @@ import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenComm
 import adminLogsConfigEntry = require("models/database/debug/adminLogsConfigEntry");
 import appUrl = require('common/appUrl');
 import accessHelper = require("viewmodels/shell/accessHelper");
+import eventsCollector = require("common/eventsCollector");
 
 class adminLogs extends viewModelBase {
    
@@ -59,6 +60,8 @@ class adminLogs extends viewModelBase {
     }
 
     clearLogs() {
+        eventsCollector.default.reportEvent("admin-logs", "clear");
+
         this.pendingLogs = [];
         this.rawLogs([]);
         $("#rawLogsContainer pre").empty();
@@ -72,6 +75,8 @@ class adminLogs extends viewModelBase {
     }
 
     configureConnection() {
+        eventsCollector.default.reportEvent("admin-logs", "configure");
+
         this.intervalId = setInterval(function () { this.redraw(); }.bind(this), 1000);
 
         var currentConfig = this.adminLogsConfig() ? this.adminLogsConfig().clone() : this.defaultLogsConfig();
@@ -84,6 +89,8 @@ class adminLogs extends viewModelBase {
     }
 
     connect() {
+        eventsCollector.default.reportEvent("admin-logs", "connect");
+
         if (!!this.adminLogsClient()) {
             this.reconnect();
             return;
@@ -126,6 +133,8 @@ class adminLogs extends viewModelBase {
     }
 
     disconnect(): JQueryPromise<any> {
+        eventsCollector.default.reportEvent("admin-logs", "disconnect");
+
         if (!!this.adminLogsClient()) {
             this.adminLogsClient().dispose();
             return this.adminLogsClient().connectionClosingTask.then(() => {
@@ -139,6 +148,7 @@ class adminLogs extends viewModelBase {
     }
 
     reconnect() {
+        eventsCollector.default.reportEvent("admin-logs", "reconnect");
         if (!this.adminLogsClient()) {
             this.connect();
         } else {
@@ -184,6 +194,7 @@ class adminLogs extends viewModelBase {
     }
 
     exportLogs() {
+        eventsCollector.default.reportEvent("admin-logs", "export");
         fileDownloader.downloadAsJson(this.rawLogs(), "logs.json");
     }
 

@@ -32,11 +32,6 @@ namespace Raven.Client.Data
         public int CountOfTransformers { get; set; }
 
         /// <summary>
-        /// Indicates how many tasks (approximately) are running currently in database.
-        /// </summary>
-        public long ApproximateTaskCount { get; set; }
-
-        /// <summary>
         /// Total number of documents in database.
         /// </summary>
         public long CountOfDocuments { get; set; }
@@ -52,21 +47,6 @@ namespace Raven.Client.Data
         public string[] StaleIndexes => Indexes?.Where(x => x.IsStale).Select(x => x.Name).ToArray();
 
         /// <summary>
-        /// The concurrency level that RavenDB is currently using
-        /// </summary>
-        public int CurrentNumberOfParallelTasks { get; set; }
-
-        /// <summary>
-        /// Current value of items that will be processed by index (map) in single batch.
-        /// </summary>
-        public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
-
-        /// <summary>
-        /// Current value of items that will be processed by index (reduce) in single batch.
-        /// </summary>
-        public int CurrentNumberOfItemsToReduceInSingleBatch { get; set; }
-
-        /// <summary>
         /// Statistics for each index in database.
         /// </summary>
         public IndexInformation[] Indexes { get; set; }
@@ -80,6 +60,8 @@ namespace Raven.Client.Data
         /// Indicates if process is 64-bit
         /// </summary>
         public bool Is64Bit { get; set; }
+
+        public DateTime? LastIndexingTime { get; set; }
     }
 
     public class IndexInformation
@@ -90,11 +72,13 @@ namespace Raven.Client.Data
 
         public bool IsStale { get; set; }
 
-        public IndexingPriority Priority { get; set; }
+        public IndexState State { get; set; }
 
         public IndexLockMode LockMode { get; set; }
 
         public IndexType Type { get; set; }
+
+        public DateTime? LastIndexingTime { get; set; }
     }
 
     public class TriggerInfo

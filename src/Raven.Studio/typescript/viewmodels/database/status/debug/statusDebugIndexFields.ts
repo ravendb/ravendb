@@ -2,7 +2,7 @@ import getStatusDebugIndexFieldsCommand = require("commands/database/debug/getSt
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
-
+import eventsCollector = require("common/eventsCollector");
 
 class statusDebugIndexFields extends viewModelBase {
     editor: AceAjax.Editor;
@@ -78,6 +78,8 @@ class statusDebugIndexFields extends viewModelBase {
     }
 
     fetchIndexFields(): JQueryPromise<statusDebugIndexFieldsDto> {
+        eventsCollector.default.reportEvent("index-fields", "show");
+
         this.result(null);
         var db = this.activeDatabase();
         if (db) {
