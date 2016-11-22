@@ -45,7 +45,6 @@ namespace Raven.Client.Connection
             catch (Exception e)
             {
                 _result.TrySetException(e);
-                throw;
             }
         }
 
