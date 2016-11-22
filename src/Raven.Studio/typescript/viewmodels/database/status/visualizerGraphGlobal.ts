@@ -69,46 +69,6 @@ class reduceTreeItem {
         this.countItemsPerDepth();
     }
 
-    mergeWith(newTree: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
-        if (this.tree.PageCount !== newTree.PageCount || this.tree.NumberOfEntries !== newTree.NumberOfEntries) {
-            throw new Error("Looks like tree data was changed. Can't render graph");
-        }
-
-        const existingLeafs = this.extractLeafs(this.tree.Root);
-        const newLeafs = this.extractLeafs(newTree.Root);
-
-        existingLeafs.forEach((page, pageNumber) => {
-            const newPage = newLeafs.get(pageNumber);
-
-            for (let i = 0; i < newPage.Entries.length; i++) {
-                if (newPage.Entries[i].Source) {
-                    page.Entries[i].Source = newPage.Entries[i].Source;
-                }
-            }
-        });
-    }
-
-    private extractLeafs(root: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage): Map<number, Raven.Server.Documents.Indexes.Debugging.ReduceTreePage> {
-        const result = new Map<number, Raven.Server.Documents.Indexes.Debugging.ReduceTreePage>();
-
-        const visitor = (node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage) => {
-
-            if (node.Entries && node.Entries.length) {
-                result.set(node.PageNumber, node);
-            }
-
-            if (node.Children) {
-                for (let i = 0; i < node.Children.length; i++) {
-                    visitor(node.Children[i]);
-                }
-            }
-        }
-
-        visitor(root);
-
-        return result;
-    }
-
     private countItemsPerDepth() {
         this.itemsCountAtDepth = new Array(this.depth);
 
@@ -351,7 +311,7 @@ class visualizerGraphGlobal {
     private reduceTrees: Array<reduceTreeItem> = [];
 
     private canvas: d3.Selection<void>;
-    private svg: d3.Selection<void>;
+    private svg: d3.Selection<void>; //TODO: do we really need svg in here?
     private zoom: d3.behavior.Zoom<void>;
 
     private dataWidth = 0; // total width of all virtual elements
@@ -362,24 +322,23 @@ class visualizerGraphGlobal {
 
     private goToDetailsCallback: (treeName: string) => void;
 
-    addTrees(documentName: string, result: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
+    addDocument(documentName: string) {
         const document = new documentItem(documentName);
         document.color = this.getNextColor();
         this.documents.push(document);
+    }
 
+    addTrees(result: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
         for (let i = 0; i < result.length; i++) {
             const reduceTree = result[i];
             const existingTree = this.reduceTrees.find(x => x.name === reduceTree.Name);
-            if (existingTree) {
-                existingTree.mergeWith(reduceTree);
-            } else {
+            if (!existingTree) {
                 const newTree = new reduceTreeItem(reduceTree);
                 this.reduceTrees.push(newTree);
             }
         }
 
         this.layout();
-        this.zoomToDocumentInternal(document);
     }
 
     private getNextColor() {
@@ -392,7 +351,17 @@ class visualizerGraphGlobal {
         const documentNameLowerCase = documentName.toLowerCase();
         const doc = this.documents.find(x => x.name.toLowerCase() === documentNameLowerCase);
         if (doc) {
-            this.zoomToDocumentInternal(doc);
+            const requestedTranslation: [number, number] = [-doc.x + this.totalWidth / 2 - doc.width / 2, 0];
+            if (this.documents.length === 1) {
+                // we don't want animation on first element
+                this.zoom.translate(requestedTranslation).scale(1).event(this.canvas);
+
+            } else {
+                this.canvas
+                    .transition()
+                    .duration(500)
+                    .call(this.zoom.translate(requestedTranslation).scale(1).event);
+            }
         }
     }
 
@@ -402,20 +371,6 @@ class visualizerGraphGlobal {
         this.nextColorIndex = 0;
 
         this.draw();
-    }
-
-    private zoomToDocumentInternal(document: documentItem) {
-        const requestedTranslation: [number, number] = [-document.x + this.totalWidth / 2 - document.width / 2, 0];
-        if (this.documents.length === 1) {
-            // we don't want animation on first element
-            this.zoom.translate(requestedTranslation).scale(1).event(this.canvas);
-
-        } else {
-            this.canvas
-                .transition()
-                .duration(500)
-                .call(this.zoom.translate(requestedTranslation).scale(1).event);
-        }
     }
 
     init(goToDetailsCallback: (treeName: string) => void) {
@@ -479,10 +434,15 @@ class visualizerGraphGlobal {
             .duration(500)
             .call(this.zoom.translate(requestedTranslation).scale(requestedScale).event)
             .style('opacity', 0)
-            .each("end", () => this.goToDetailsCallback(item.name));
+            .each("end", () => {
+                this.toggleUiElements(false);
+                this.goToDetailsCallback(item.name);
+            });
     }
 
     restoreView() {
+        this.toggleUiElements(true);
+
         this.canvas
             .transition()
             .duration(500)
@@ -720,6 +680,11 @@ ctx.stroke();*/
         ctx.font = "18px Lato";
         ctx.fillStyle = "black";
         ctx.fillText(docItem.name, docItem.x + docItem.width / 2, docItem.y + docItem.height / 2);
+    }
+
+    private toggleUiElements(show: boolean) {
+        this.svg.style("display", show ? "block" : "none");
+        this.canvas.style("display", show ? "block" : "none");
     }
 
     static totalEntriesWidth(entries: number) {

@@ -5,6 +5,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import d3 = require('d3');
 
 import visualizerGraphGlobal = require("viewmodels/database/status/visualizerGraphGlobal");
+import visualizerGraphDetails = require("viewmodels/database/status/visualizerGraphDetails");
 
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import getIndexMapReduceTreeCommand = require("commands/database/index/getIndexMapReduceTreeCommand");
@@ -22,8 +23,6 @@ class visualizer extends viewModelBase {
     private currentIndexUi: KnockoutComputed<string>;
     private hasIndexSelected: KnockoutComputed<boolean>;
 
-    private detailsViewActive = ko.observable<boolean>(false);
-
     private documents = {
         docKey: ko.observable(""),
         hasFocusDocKey: ko.observable<boolean>(false),
@@ -32,7 +31,10 @@ class visualizer extends viewModelBase {
         docKeysSearchResults: ko.observableArray<string>()
     }
 
+    private trees = [] as Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
+
     private globalGraph = new visualizerGraphGlobal();
+    private detailsGraph = new visualizerGraphDetails();
 
     constructor() {
         super();
@@ -67,7 +69,8 @@ class visualizer extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        this.globalGraph.init((treeName: string) => this.goToDetails(treeName));
+        this.globalGraph.init((treeName: string) => this.detailsGraph.openFor(treeName));
+        this.detailsGraph.init(() => this.globalGraph.restoreView());
     }
 
     private onIndexesLoaded(indexes: Raven.Client.Data.Indexes.IndexStats[]) {
@@ -102,22 +105,74 @@ class visualizer extends viewModelBase {
                 .done((mapReduceTrees) => {
                     if (!this.documents.docKeys.contains(key)) {
                         this.documents.docKeys.push(key);
-                        this.globalGraph.addTrees(key, mapReduceTrees);
-                        //TODO: pass to graph
+
+                        this.globalGraph.addDocument(key);
+                        this.addTrees(mapReduceTrees);
+                        
+
+                        this.globalGraph.zoomToDocument(key);
                     }
                 });
         }
     }
 
-    goToDetails(treeName: string) {
-        console.log("loading details for: " + treeName);
-        this.detailsViewActive(true);
+    private addTrees(result: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
+        const treesToAdd = [] as Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
+
+        for (let i = 0; i < result.length; i++) {
+            const incomingTree = result[i];
+
+            const existingTree = this.trees.find(x => x.Name === incomingTree.Name);
+
+            if (existingTree) {
+                this.mergeTrees(incomingTree, existingTree);
+                treesToAdd.push(existingTree);
+            } else {
+                treesToAdd.push(incomingTree);
+            }
+        }
+
+        this.globalGraph.addTrees(treesToAdd);
     }
 
-    backToGlobalView() {
-        this.detailsViewActive(false);
+    private mergeTrees(incoming: Raven.Server.Documents.Indexes.Debugging.ReduceTree, mergeOnto: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
+        if (incoming.PageCount !== mergeOnto.PageCount || incoming.NumberOfEntries !== mergeOnto.NumberOfEntries) {
+            throw new Error("Looks like tree data was changed. Can't render graph");
+        }
 
-        this.globalGraph.restoreView();
+        const existingLeafs = visualizer.extractLeafs(mergeOnto.Root);
+        const newLeafs = visualizer.extractLeafs(incoming.Root);
+
+        existingLeafs.forEach((page, pageNumber) => {
+            const newPage = newLeafs.get(pageNumber);
+
+            for (let i = 0; i < newPage.Entries.length; i++) {
+                if (newPage.Entries[i].Source) {
+                    page.Entries[i].Source = newPage.Entries[i].Source;
+                }
+            }
+        });
+    }
+
+    private static extractLeafs(root: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage): Map<number, Raven.Server.Documents.Indexes.Debugging.ReduceTreePage> {
+        const result = new Map<number, Raven.Server.Documents.Indexes.Debugging.ReduceTreePage>();
+
+        const visitor = (node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage) => {
+
+            if (node.Entries && node.Entries.length) {
+                result.set(node.PageNumber, node);
+            }
+
+            if (node.Children) {
+                for (let i = 0; i < node.Children.length; i++) {
+                    visitor(node.Children[i]);
+                }
+            }
+        }
+
+        visitor(root);
+
+        return result;
     }
 
     selectDocKey(value: string) {
