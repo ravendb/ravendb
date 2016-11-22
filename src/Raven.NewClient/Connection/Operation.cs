@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Async;
 using Raven.NewClient.Client.Data;
@@ -108,17 +109,18 @@ namespace Raven.NewClient.Client.Connection
         {
         }
 
-        public virtual async Task<IOperationResult> WaitForCompletionAsync()
+        public virtual async Task<IOperationResult> WaitForCompletionAsync(TimeSpan? timeout = null)
         {
-            var whenAny = await Task.WhenAny(_result.Task, Task.Delay(15 * 1000)).ConfigureAwait(false); ;
-            if (whenAny != _result.Task)
-                throw new TimeoutException("After 15 seconds, did not get a reply for operation " + _id);
+            var completed = await _result.Task.WaitWithTimeout(timeout).ConfigureAwait(false);
+            if (completed == false)
+                throw new TimeoutException($"After {timeout}, did not get a reply for operation " + _id);
+
             return await _result.Task.ConfigureAwait(false);
         }
 
-        public virtual IOperationResult WaitForCompletion()
+        public virtual IOperationResult WaitForCompletion(TimeSpan? timeout = null)
         {
-            return AsyncHelpers.RunSync(WaitForCompletionAsync);
+            return AsyncHelpers.RunSync(() => WaitForCompletionAsync(timeout));
         }
     }
 }

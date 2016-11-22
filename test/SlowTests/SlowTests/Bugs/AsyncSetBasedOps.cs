@@ -66,7 +66,7 @@ namespace SlowTests.SlowTests.Bugs
                         Script = "this.FullName = this.FirstName + ' ' + this.LastName;"
                     }
                 ))
-                .WaitForCompletionAsync();
+                .WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var db = store.OpenAsyncSession())
                 {

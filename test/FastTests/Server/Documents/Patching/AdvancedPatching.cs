@@ -690,7 +690,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                 var operation = await store.AsyncDatabaseCommands.UpdateByIndexAsync("TestIndex",
                     new IndexQuery {Query = "Value:1"},
                     new PatchRequest {Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });"});
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 var documents = await store.AsyncDatabaseCommands.GetDocumentsAsync(0, 10);
                 Assert.Equal(3, documents.Length);
@@ -801,7 +801,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                 store.DatabaseCommands.UpdateByIndex("TestIndex",
                     new IndexQuery {Query = "Owner:Bob"},
                     new PatchRequest {Script = sampleScript})
-                    .WaitForCompletion();
+                    .WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 var item1ResultJson = store.DatabaseCommands.Get(item1.Id).DataAsJson;
                 var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());
