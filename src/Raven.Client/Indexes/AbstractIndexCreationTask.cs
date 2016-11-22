@@ -327,6 +327,7 @@ namespace Raven.Client.Indexes
             try
             {
                 serverDef.IndexId = indexDefinition.IndexId;
+                indexDefinition.RemoveDefaultValues();
 
                 if (serverDef.Equals(indexDefinition, false))
                     return true;
