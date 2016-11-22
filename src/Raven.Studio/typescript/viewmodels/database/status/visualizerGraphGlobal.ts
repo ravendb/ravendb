@@ -2,6 +2,7 @@ import app = require("durandal/app");
 import graphHelper = require("common/helpers/graph/graphHelper");
 
 import d3 = require('d3');
+import rbush = require("rbush");
 
 class pageItem {
     static readonly pageWidth = 20;
@@ -69,7 +70,43 @@ class reduceTreeItem {
     }
 
     mergeWith(newTree: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
-        //TODO: (merge on existing DTO!)
+        if (this.tree.PageCount !== newTree.PageCount || this.tree.NumberOfEntries !== newTree.NumberOfEntries) {
+            throw new Error("Looks like tree data was changed. Can't render graph");
+        }
+
+        const existingLeafs = this.extractLeafs(this.tree.Root);
+        const newLeafs = this.extractLeafs(newTree.Root);
+
+        existingLeafs.forEach((page, pageNumber) => {
+            const newPage = newLeafs.get(pageNumber);
+
+            for (let i = 0; i < newPage.Entries.length; i++) {
+                if (newPage.Entries[i].Source) {
+                    page.Entries[i].Source = newPage.Entries[i].Source;
+                }
+            }
+        });
+    }
+
+    private extractLeafs(root: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage): Map<number, Raven.Server.Documents.Indexes.Debugging.ReduceTreePage> {
+        const result = new Map<number, Raven.Server.Documents.Indexes.Debugging.ReduceTreePage>();
+
+        const visitor = (node: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage) => {
+
+            if (node.Entries && node.Entries.length) {
+                result.set(node.PageNumber, node);
+            }
+
+            if (node.Children) {
+                for (let i = 0; i < node.Children.length; i++) {
+                    visitor(node.Children[i]);
+                }
+            }
+        }
+
+        visitor(root);
+
+        return result;
     }
 
     private countItemsPerDepth() {
@@ -237,6 +274,58 @@ class documentItem {
     }
 }
 
+type rTreeLeaf = {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+    actionType: "pageClicked";
+    arg: reduceTreeItem;
+}
+
+class hitTest {
+
+    private rTree = rbush<rTreeLeaf>();
+
+    private onPageClicked: (item: reduceTreeItem) => void;
+
+    init(onPageClicked: (item: reduceTreeItem) => void) {
+        this.onPageClicked = onPageClicked;
+    }
+
+    registerPage(page: reduceTreeItem) {
+        this.rTree.insert({
+            minX: page.x,
+            maxX: page.x + page.width,
+            minY: page.y,
+            maxY: page.y + page.height,
+            actionType: "pageClicked",
+            arg: page
+        } as rTreeLeaf);
+    }
+
+    reset() {
+        this.rTree.clear();
+    }
+
+    onClick(x: number, y: number) {
+        const items = this.findItems(x, y);
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            this.onPageClicked(item.arg as reduceTreeItem);
+        }
+    }
+
+    private findItems(x: number, y: number): Array<rTreeLeaf> {
+        return this.rTree.search({
+            minX: x,
+            maxX: x,
+            minY: y,
+            maxY: y
+        });
+    }
+}
 
 class visualizerGraphGlobal {
 
@@ -248,6 +337,12 @@ class visualizerGraphGlobal {
 
     static readonly documentColors = ["#7cb82f", "#1a858e", "#ef6c5a"];
     private nextColorIndex = 0;
+    private hitTest = new hitTest();
+
+    private savedZoomStatus = {
+        scale: 1,
+        translate: [0, 0] as [number, number]
+    }
 
     private totalWidth = 1500; //TODO: use dynamic value
     private totalHeight = 700; //TODO: use dynamic value
@@ -264,6 +359,8 @@ class visualizerGraphGlobal {
 
     private xScale: d3.scale.Linear<number, number>;
     private yScale: d3.scale.Linear<number, number>;
+
+    private goToDetailsCallback: (treeName: string) => void;
 
     addTrees(documentName: string, result: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
         const document = new documentItem(documentName);
@@ -282,7 +379,7 @@ class visualizerGraphGlobal {
         }
 
         this.layout();
-        this.zoomToDocument(document);
+        this.zoomToDocumentInternal(document);
     }
 
     private getNextColor() {
@@ -291,18 +388,38 @@ class visualizerGraphGlobal {
         return color;
     }
 
-    private zoomToDocument(document: documentItem) {
-        const requestedTranslation: [number, number] = [-document.x + this.totalWidth / 2 - document.width / 2, 0];
-
-        this.canvas
-            .transition()
-            .duration(500)
-            .call(this.zoom.translate(requestedTranslation).scale(1).event);
-
-        //TODO: end can use .each("end", listener) to get info about completion
+    zoomToDocument(documentName: string) {
+        const documentNameLowerCase = documentName.toLowerCase();
+        const doc = this.documents.find(x => x.name.toLowerCase() === documentNameLowerCase);
+        if (doc) {
+            this.zoomToDocumentInternal(doc);
+        }
     }
 
-    init() {
+    reset() {
+        this.documents = [];
+        this.reduceTrees = [];
+        this.nextColorIndex = 0;
+
+        this.draw();
+    }
+
+    private zoomToDocumentInternal(document: documentItem) {
+        const requestedTranslation: [number, number] = [-document.x + this.totalWidth / 2 - document.width / 2, 0];
+        if (this.documents.length === 1) {
+            // we don't want animation on first element
+            this.zoom.translate(requestedTranslation).scale(1).event(this.canvas);
+
+        } else {
+            this.canvas
+                .transition()
+                .duration(500)
+                .call(this.zoom.translate(requestedTranslation).scale(1).event);
+        }
+    }
+
+    init(goToDetailsCallback: (treeName: string) => void) {
+        this.goToDetailsCallback = goToDetailsCallback;
         const container = d3.select("#visualizerContainer");
 
         this.canvas = container
@@ -335,15 +452,57 @@ class visualizerGraphGlobal {
             .attr("height", this.totalHeight)
             .call(this.zoom)
             .call(d => this.setupEvents(d));
+
+        this.hitTest.init(item => this.onPageClicked(item));
     }
 
     private setupEvents(selection: d3.Selection<void>) {
-        //TODO: setup on click, etc
         selection.on("dblclick.zoom", null);
+        selection.on("click", () => this.onClick());
     }
 
     private onZoom() {
         this.draw();
+    }
+
+    private onPageClicked(item: reduceTreeItem) {
+        this.saveCurrentZoom();
+
+        const requestedScale = Math.min(this.totalWidth / item.width, this.totalHeight / item.height);
+
+        const extraXOffset = (this.totalWidth - requestedScale * item.width) / 2;
+
+        const requestedTranslation: [number, number] = [-item.x * requestedScale + extraXOffset, -item.y * requestedScale];
+
+        this.canvas
+            .transition()
+            .duration(500)
+            .call(this.zoom.translate(requestedTranslation).scale(requestedScale).event)
+            .style('opacity', 0)
+            .each("end", () => this.goToDetailsCallback(item.name));
+    }
+
+    restoreView() {
+        this.canvas
+            .transition()
+            .duration(500)
+            .call(this.zoom.translate(this.savedZoomStatus.translate).scale(this.savedZoomStatus.scale).event)
+            .style('opacity', 1);
+    }
+
+    private saveCurrentZoom() {
+        this.savedZoomStatus.scale = this.zoom.scale();
+        this.savedZoomStatus.translate = this.zoom.translate();
+    }
+
+    private onClick() {
+        const clickLocation = d3.mouse(this.canvas.node());
+
+        if ((d3.event as any).defaultPrevented) {
+            return;
+        }
+
+        this.hitTest.onClick(this.xScale.invert(clickLocation[0]), this.yScale.invert(clickLocation[1]));
     }
 
     private cleanLayoutCache() {
@@ -390,6 +549,7 @@ class visualizerGraphGlobal {
         this.dataHeight = height;
 
         this.layoutDocuments(documentNamesYStart);
+        this.registerHitAreas();
     }
 
     private layoutDocuments(yStart: number) {
@@ -423,6 +583,14 @@ class visualizerGraphGlobal {
             doc.x = currentX;
 
             currentX += doc.width + documentItem.margins.minMarginBetweenDocumentNames + extraItemPadding;
+        }
+    }
+
+    private registerHitAreas() {
+        this.hitTest.reset();
+
+        for (let i = 0; i < this.reduceTrees.length; i++) {
+            this.hitTest.registerPage(this.reduceTrees[i]);
         }
     }
 
