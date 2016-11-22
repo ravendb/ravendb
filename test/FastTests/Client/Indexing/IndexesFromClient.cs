@@ -479,7 +479,7 @@ namespace FastTests.Client.Indexing
                     ;
 
                 var deleteResult = await operation
-                    .WaitForCompletionAsync().ConfigureAwait(false) as BulkOperationResult;
+                    .WaitForCompletionAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false) as BulkOperationResult;
 
                 Assert.Equal(2, deleteResult.Total);
 
@@ -509,7 +509,7 @@ namespace FastTests.Client.Indexing
 
                 var e = Assert.Throws<InvalidOperationException>(() =>
                 {
-                    deleteOperation.WaitForCompletion();
+                    deleteOperation.WaitForCompletion(TimeSpan.FromSeconds(15));
                 });
 
                 Assert.True(e.Message.Contains("Query is stale"));
@@ -548,7 +548,7 @@ namespace FastTests.Client.Indexing
                     ;
 
                 await operation
-                    .WaitForCompletionAsync()
+                    .WaitForCompletionAsync(TimeSpan.FromSeconds(15))
                     ;
 
                 using (var session = store.OpenSession())

@@ -55,7 +55,7 @@ namespace SlowTests.MailingList
                     new PatchRequest { Script = script },
                     new QueryOperationOptions { AllowStale = false, StaleTimeout = TimeSpan.MaxValue, RetrieveDetails = true });
 
-                var patchResult = operation.WaitForCompletion();
+                var patchResult = operation.WaitForCompletion(TimeSpan.FromSeconds(15));
                 Assert.False(patchResult.ToString().Contains("Patched"));
             }
         }

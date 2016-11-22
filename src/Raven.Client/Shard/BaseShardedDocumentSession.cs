@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.Document;
@@ -280,26 +281,23 @@ namespace Raven.Client.Shard
 
         internal class ShardsOperation : Operation
         {
-            private Operation[] shardsOperations;
+            private readonly Operation[] _shardsOperations;
             internal ShardsOperation(Operation[] shardsOperations) : base(-1)
             {
-                this.shardsOperations = shardsOperations;
+                _shardsOperations = shardsOperations;
             }
 
-            public override IOperationResult WaitForCompletion()
+            public override IOperationResult WaitForCompletion(TimeSpan? timeout = null)
             {
-                IOperationResult rc = null;
-                foreach (var op in shardsOperations)
-                    rc = op.WaitForCompletion();
-                return rc;
+                return AsyncHelpers.RunSync(() => WaitForCompletionAsync(timeout));
             }
 
-            public override async Task<IOperationResult> WaitForCompletionAsync()
+            public override async Task<IOperationResult> WaitForCompletionAsync(TimeSpan? timeout = null)
             {
                 IOperationResult rc = null;
-                foreach (var op in shardsOperations)
+                foreach (var op in _shardsOperations)
                 {
-                    rc = await op.WaitForCompletionAsync().ConfigureAwait(false);
+                    rc = await op.WaitForCompletionAsync(timeout).ConfigureAwait(false);
                 }
                 return rc;
             }
