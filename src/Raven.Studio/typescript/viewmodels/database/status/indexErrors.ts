@@ -42,6 +42,7 @@ class indexErrors extends viewModelBase {
     fetchIndexErrors(): JQueryPromise<databaseStatisticsDto> {
         var db = this.activeDatabase();
         if (db) {
+            /* TODO
             // Index errors are actually the .ServerErrors returned from the database statistics query.
             return new getDatabaseStatsCommand(db)
                 .execute()
@@ -49,7 +50,7 @@ class indexErrors extends viewModelBase {
                     stats.Errors.forEach((e: any) => e['TimestampHumanized'] = this.createHumanReadableTime(e.Timestamp));
                     this.allIndexErrors(stats.Errors);
                     this.hasFetchedErrors(true);
-                });
+                });*/
         }
 
         return null;

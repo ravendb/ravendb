@@ -111,6 +111,8 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="properties-item state-selector" data-bind="template: { name: 'state-template' }">
+                            </div>
                             <div class="properties-item priority" data-bind="template: { name: 'priority-template' }">
                             </div>
                             <div class="properties-item mode" data-bind="template: { name: 'lock-mode-template' }">
@@ -139,48 +141,87 @@
     </div>
 </div>
 
+
 <script type="text/html" id="priority-template">
     <span class="properties-label">Priority:</span>
     <div class="btn-group properties-value">
         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
                 data-bind="css: { 'btn-spinner': $root.spinners.localPriority().contains(name) }, enable: $root.indexingEnabled() && !$root.spinners.localPriority().contains(name)">
-            <span class="text-warning" data-bind="visible: pausedUntilRestart()">
-                <i class="icon-cancel"></i>
-                <span>Paused until restart</span>
-            </span>
-            <span data-bind="visible: !pausedUntilRestart() && isNormalPriority()">
+            <span data-bind="visible: isNormalPriority()">
                 <i class="icon-check"></i>
                 <span>Normal</span>
             </span>
-            <span data-bind="visible: !pausedUntilRestart() && isIdle()">
+            <span data-bind="visible: isLowPriority()">
                 <i class="icon-coffee"></i>
-                <span>Idle</span>
+                <span>Low</span>
             </span>
-            <span class="text-danger" data-bind="visible: !pausedUntilRestart() && isDisabled()">
+            <span data-bind="visible: isHighPriority()">
                 <i class="icon-cancel"></i>
-                <span>Disabled</span>
+                <span>High</span>
             </span>
             <span class="caret"></span>
         </button>
         <ul class="dropdown-menu">
+            <li>
+                <a href="#" data-bind="click: $root.lowPriority.bind($root, $data)" title="Low">
+                    <i class="icon-coffee"></i><span>Low</span>
+                </a>
+            </li>
             <li>
                 <a href="#" data-bind="click: $root.normalPriority.bind($root, $data)" title="Normal">
                     <i class="icon-check"></i><span>Normal</span>
                 </a>
             </li>
             <li>
-                <a href="#" data-bind="click: $root.idlePriority.bind($root, $data)" title="Idle">
-                    <i class="icon-coffee"></i><span>Idle</span>
+                <a href="#" data-bind="click: $root.highPriority.bind($root, $data)" title="High">
+                    <i class="icon-cancel"></i><span>High</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</script>
+
+<script type="text/html" id="state-template">
+    <span class="properties-label">State:</span>
+    <div class="btn-group properties-value">
+        <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
+                data-bind="css: { 'btn-spinner': $root.spinners.localState().contains(name) }, enable: $root.indexingEnabled() && !$root.spinners.localState().contains(name)">
+            <span class="text-warning" data-bind="visible: pausedUntilRestart()">
+                <i class="icon-cancel"></i>
+                <span>Paused until restart</span>
+            </span>
+            <span data-bind="visible: !pausedUntilRestart() && isNormalState()">
+                <i class="icon-check"></i>
+                <span>Normal</span>
+            </span>
+            <span data-bind="visible: !pausedUntilRestart() && isIdleState()">
+                <i class="icon-coffee"></i>
+                <span>Idle</span>
+            </span>
+            <span class="text-danger" data-bind="visible: !pausedUntilRestart() && isDisabledState()">
+                <i class="icon-cancel"></i>
+                <span>Disabled</span>
+            </span>
+            <span class="text-danger" data-bind="visible: !pausedUntilRestart() && isErrorState()">
+                <i class="icon-danger"></i>
+                <span>Error</span>
+            </span>
+            <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu">
+            <li data-bind="visible: canBeEnabled()">
+                <a href="#" data-bind="click: $root.enableIndex.bind($root, $data)" title="Enable">
+                    <i class="icon-check"></i><span>Enable</span>
+                </a>
+            </li>
+            <li data-bind="visible: canBeDisabled()">
+                <a href="#" data-bind="click: $root.disableIndex.bind($root, $data)" title="Disable">
+                    <i class="icon-cancel"></i><span>Disable</span>
                 </a>
             </li>
             <li data-bind="visible: canBePaused()">
-                <a href="#" class="text-warning" data-bind="click: $root.pauseUntilRestart.bind($root, $data)" title="Paused until restart">
+                <a href="#" class="text-warning" data-bind="click: $root.pauseUntilRestart.bind($root, $data)" title="Pause until restart">
                     <i class="icon-pause"></i><span>Pause until restart</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" class="text-danger" data-bind="click: $root.disabledPriority.bind($root, $data)" title="Disabled">
-                    <i class="icon-cancel"></i><span>Disable</span>
                 </a>
             </li>
             <li data-bind="visible: canBeResumed()">

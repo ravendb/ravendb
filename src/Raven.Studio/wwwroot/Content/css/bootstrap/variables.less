@@ -2,37 +2,42 @@
 // Variables
 // --------------------------------------------------
 
+//MAYBE PRIMARY COLOR?
+// #1a88ff
 
 //== Colors
 //
 //## Gray and brand colors for use across Bootstrap.
 
-@gray-base:              #1e2626;
-@gray-darker:            #2c3333;
-@gray-dark:              #3a4242;
-@gray:                   #686f6f;
-@gray-light:             #a9adad;
-@gray-lighter:           #e9eaea;
+@gray-base:              #25272b;
+@gray-darker:            #2c343a;
+@gray-dark:              #39434f;
+@gray:                   #546175;
+@gray-light:             #98a7b7;
+@gray-lighter:           #f0f4f6;
 
-@brand-primary-dark:    #ad5812;
-@brand-primary:         #ff5500; //#ee3442; // #ff7f66; //#ee3442;
-@brand-primary-light:   #ffdc9b;
+// PRIMARY #ca1c59  - linki tesktowe: #e33572
 
-@brand-success-dark:    #295b33;
-@brand-success:         #58b36a;
-@brand-success-light:   #bfdea0;
+@brand-primary-dark:    #b21557;
+@brand-primary:         #ca1c59; //#ee3442; // #ff7f66; //#ee3442;
+@brand-primary-light:   #ff6694;
+
+@brand-success-dark:    #5d933b;//#5d933b;
+@brand-success:         #6ebf3a;
+@brand-success-light:   #9fde73;
 
 @brand-info-dark:       #2c5266;
-@brand-info:            #4d90b3;
+@brand-info:            #4d90b3;// #45a0ff;
 @brand-info-light:      #84d5f7;
 
-@brand-warning-dark:    #b98525;
-@brand-warning:         #f7d631;
-@brand-warning-light:   #ffe066;
+@brand-warning-dark:    #dd992c;
+@brand-warning:         #ffc533;
+@brand-warning-light:   #ffd77d;
 
-@brand-danger-dark:     #793233;
-@brand-danger:          #e55151;
-@brand-danger-light:    #f48685;
+@brand-danger-dark:     #a52731; //#793233;
+@brand-danger:          #ff3633;
+@brand-danger-light:    #ff6461;
+
 
 //== Scaffolding
 //
@@ -44,9 +49,9 @@
 @text-color:            @gray-light;
 
 //** Global textual link color.
-@link-color:            @brand-primary;
+@link-color:            #e33572;
 //** Link hover color set via `darken()` function.
-@link-hover-color:      darken(@link-color, 15%);
+@link-hover-color:      #ff6565;//#ff3369;
 //** Link hover decoration.
 @link-hover-decoration: underline;
 
@@ -863,8 +868,8 @@
 //
 //##
 
-@code-color:                  #c7254e;
-@code-bg:                     #f9f2f4;
+@code-color:                  @brand-info-light;
+@code-bg:                     @gray;
 
 @kbd-color:                   #fff;
 @kbd-bg:                      #333;

@@ -596,6 +596,13 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(statistics.LastIndexingTime));
+            if (statistics.LastIndexingTime.HasValue)
+                writer.WriteString(statistics.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true));
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
             writer.WritePropertyName((nameof(statistics.Indexes)));
             writer.WriteStartArray();
             var isFirstInternal = true;
@@ -630,6 +637,13 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(nameof(index.Type));
                 writer.WriteString(index.Type.ToString());
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(index.LastIndexingTime));
+                if (index.LastIndexingTime.HasValue)
+                    writer.WriteString(index.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true));
+                else
+                    writer.WriteNull();
 
                 writer.WriteEndObject();
             }

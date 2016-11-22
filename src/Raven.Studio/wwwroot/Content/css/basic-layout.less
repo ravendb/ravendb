@@ -39,6 +39,7 @@
         }
 
         .navbar-brand {
+            filter:saturate(0%);
             color: @brand-primary;
             font-size: 34px;
             margin: 0 !important;
@@ -854,7 +855,7 @@ body.show-top-alert {
         height: 26px;
         padding: 4px;
         float: right;
-        color: @brand-primary;
+        color: @brand-danger;
         text-transform: uppercase;
         line-height: 18px;
         font-weight: 700;
@@ -912,8 +913,9 @@ body.show-top-alert {
         li.active a {
             background-color: @gray-light;
             color:@gray-dark;
+
             i, i:before {
-                color:inherit;
+                text-shadow: 0px 0px 1px @gray-darker, 0px 0px 10px @gray-dark, 0px 0px 20px @gray-dark;
             }
         }
 

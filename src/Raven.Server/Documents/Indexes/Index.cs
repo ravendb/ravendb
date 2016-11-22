@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
         private DateTime? _lastQueryingTime;
-        private DateTime? _lastIndexingTime;
+        public DateTime? LastIndexingTime { get; private set; }
 
         public Stopwatch TimeSpentIndexing = new Stopwatch();
 
@@ -356,7 +356,7 @@ namespace Raven.Server.Documents.Indexes
                 Priority = _indexStorage.ReadPriority(tx);
                 State = _indexStorage.ReadState(tx);
                 _lastQueryingTime = DocumentDatabase.Time.GetUtcNow();
-                _lastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
+                LastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
             }
         }
 
@@ -591,7 +591,7 @@ namespace Raven.Server.Documents.Indexes
                         _mre.Reset();
 
                         var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId());
-                        _lastIndexingTime = stats.StartTime;
+                        LastIndexingTime = stats.StartTime;
 
                         AddIndexingPerformance(stats);
 
@@ -1709,7 +1709,7 @@ namespace Raven.Server.Documents.Indexes
         {
             result.IndexName = Name;
             result.IsStale = isStale;
-            result.IndexTimestamp = _lastIndexingTime ?? DateTime.MinValue;
+            result.IndexTimestamp = LastIndexingTime ?? DateTime.MinValue;
             result.LastQueryTime = _lastQueryingTime ?? DateTime.MinValue;
             result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext) ^ facetSetupEtag;
         }
@@ -1719,7 +1719,7 @@ namespace Raven.Server.Documents.Indexes
         {
             result.IndexName = Name;
             result.IsStale = isStale;
-            result.IndexTimestamp = _lastIndexingTime ?? DateTime.MinValue;
+            result.IndexTimestamp = LastIndexingTime ?? DateTime.MinValue;
             result.LastQueryTime = _lastQueryingTime ?? DateTime.MinValue;
             result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext);
         }
