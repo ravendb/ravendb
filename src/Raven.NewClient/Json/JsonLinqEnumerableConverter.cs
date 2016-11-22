@@ -1,8 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using  Raven.Imports.Newtonsoft.Json;
-using  Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Utilities;
 
 namespace Raven.NewClient.Abstractions.Json
 {

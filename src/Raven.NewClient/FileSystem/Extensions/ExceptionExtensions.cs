@@ -13,7 +13,7 @@ using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.FileSystem;
 using Raven.NewClient.Client.Exceptions;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 
 namespace Raven.NewClient.Client.FileSystem.Extensions
 {

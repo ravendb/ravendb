@@ -13,8 +13,7 @@
     "allowUnsafe": true,
     "define": [ "PORTABLE" ],
     "compile": {
-      "include": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/**/*.cs" ],
-      "exclude": [ "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/Properties/AssemblyInfo.cs" ]
+      "include": [ "**/*.cs", "../CommonAssemblyInfo.cs"]
     }
   },
 
@@ -28,6 +27,7 @@
 
   "dependencies": {
     "NETStandard.Library": "1.6.1",
+    "Newtonsoft.Json": "9.0.1",
     "Sparrow": "4.0.0-*",
     "System.Collections.Specialized": "4.3.0",
     "System.Diagnostics.Process": "4.3.0",

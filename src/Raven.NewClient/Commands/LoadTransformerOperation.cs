@@ -7,7 +7,7 @@ using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Json;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Json.Linq;
 using Sparrow.Json;

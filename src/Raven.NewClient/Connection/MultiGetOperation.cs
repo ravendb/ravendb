@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.NewClient.Client.Connection.Implementation;
 using Raven.NewClient.Client.Exceptions;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Data;

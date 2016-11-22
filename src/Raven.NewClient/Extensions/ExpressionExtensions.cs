@@ -10,7 +10,7 @@ using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using  Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json;
 
 namespace Raven.NewClient.Abstractions.Extensions
 {

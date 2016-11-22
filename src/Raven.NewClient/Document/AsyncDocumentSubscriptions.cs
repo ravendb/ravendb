@@ -14,7 +14,7 @@ using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Async;
 using Raven.NewClient.Client.Util;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
 using Sparrow.Collections;
 

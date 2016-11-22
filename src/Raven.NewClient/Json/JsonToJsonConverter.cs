@@ -1,10 +1,8 @@
 using System;
 using System.Reflection;
-using  Raven.Imports.Newtonsoft.Json;
-using  Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.NewClient.Abstractions.Linq;
+using Newtonsoft.Json;
 using Raven.NewClient.Client.Linq;
-using  Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Abstractions.Json

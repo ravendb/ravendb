@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
-using  Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Abstractions.Util

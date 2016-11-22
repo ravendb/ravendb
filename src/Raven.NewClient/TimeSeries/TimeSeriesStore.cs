@@ -11,7 +11,7 @@ using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.TimeSeries.Changes;
 using Raven.NewClient.Client.TimeSeries.Replication;
 using Raven.NewClient.Client.Util;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 
 namespace Raven.NewClient.Client.TimeSeries
 {

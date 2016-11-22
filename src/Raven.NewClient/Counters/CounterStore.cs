@@ -14,7 +14,7 @@ using Raven.NewClient.Client.Counters.Changes;
 using Raven.NewClient.Client.Counters.Replication;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Util;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 
 namespace Raven.NewClient.Client.Counters
 {

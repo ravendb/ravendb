@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
-using  Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 
 namespace Raven.NewClient.Abstractions.Counters
 {

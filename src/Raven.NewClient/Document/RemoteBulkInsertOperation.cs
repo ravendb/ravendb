@@ -20,9 +20,9 @@ using Raven.NewClient.Client.Changes;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Implementation;
 using Raven.NewClient.Client.Util;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 
-using Raven.Imports.Newtonsoft.Json.Bson;
+using Newtonsoft.Json.Bson;
 using Raven.NewClient.Json.Linq;
 using System.IO.Compression;
 using System.Net.Http;

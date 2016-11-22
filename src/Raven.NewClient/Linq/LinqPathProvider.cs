@@ -9,8 +9,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json;
 using Raven.NewClient.Abstractions.Extensions;
 
 namespace Raven.NewClient.Client.Linq

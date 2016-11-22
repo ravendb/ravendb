@@ -4,7 +4,7 @@ using Raven.NewClient.Abstractions.FileSystem;
 using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Request;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
 
 using System;

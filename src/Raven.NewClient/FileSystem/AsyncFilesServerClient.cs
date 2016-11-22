@@ -22,7 +22,7 @@ using Raven.NewClient.Client.FileSystem.Connection;
 using Raven.NewClient.Client.FileSystem.Extensions;
 using Raven.NewClient.Client.FileSystem.Listeners;
 using Raven.NewClient.Client.Util.Auth;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.FileSystem

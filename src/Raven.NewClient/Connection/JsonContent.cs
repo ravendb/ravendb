@@ -4,14 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
-using  Raven.Imports.Newtonsoft.Json;
-using  Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Json.Linq;
 

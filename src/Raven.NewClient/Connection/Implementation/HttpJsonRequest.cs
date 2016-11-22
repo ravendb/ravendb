@@ -8,7 +8,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -20,17 +19,15 @@ using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Helpers;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Metrics;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Connection.Async;
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Json.Linq;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.NewClient.Client.Connection.Implementation
 {

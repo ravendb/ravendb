@@ -22,7 +22,7 @@ using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Util;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
 using Sparrow.Json;

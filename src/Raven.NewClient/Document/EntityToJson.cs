@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Linq;
 using Raven.NewClient.Client.Linq;
 using Raven.NewClient.Client.Util;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Document

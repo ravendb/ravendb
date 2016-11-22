@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
 using Raven.NewClient.Abstractions.Extensions;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json;
 
 namespace Raven.NewClient.Client.Linq
 {

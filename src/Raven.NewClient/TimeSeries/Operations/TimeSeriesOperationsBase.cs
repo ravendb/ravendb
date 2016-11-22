@@ -4,7 +4,7 @@ using System.Net.Http;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Implementation;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 
 namespace Raven.NewClient.Client.TimeSeries.Operations
 {

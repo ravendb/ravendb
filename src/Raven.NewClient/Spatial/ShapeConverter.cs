@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.NewClient.Abstractions.Linq;
 using Raven.NewClient.Client.Linq;
-using  Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Abstractions.Spatial

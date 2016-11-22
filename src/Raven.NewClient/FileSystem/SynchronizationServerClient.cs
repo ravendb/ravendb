@@ -16,7 +16,7 @@ using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.FileSystem.Extensions;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
 using FileSystemInfo = Raven.NewClient.Abstractions.FileSystem.FileSystemInfo;
 

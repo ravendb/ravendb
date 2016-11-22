@@ -12,7 +12,7 @@ using Raven.NewClient.Abstractions.Replication;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection.Request;
 using Raven.NewClient.Client.Metrics;
-using Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 using System;
 using System.Collections.Generic;

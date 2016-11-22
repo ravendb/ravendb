@@ -6,11 +6,11 @@ using System.IO;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Json;
-using  Raven.Imports.Newtonsoft.Json;
-using  Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using Raven.NewClient.Json.Utilities;
 using Raven.NewClient.Abstractions.Data;
 using System.Runtime.CompilerServices;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.NewClient.Json.Linq
 {

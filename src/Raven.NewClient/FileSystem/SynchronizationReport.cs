@@ -1,6 +1,6 @@
 using System;
 using Raven.NewClient.Abstractions.Data;
-using  Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 
 namespace Raven.NewClient.Abstractions.FileSystem
 {

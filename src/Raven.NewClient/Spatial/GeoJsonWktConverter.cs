@@ -7,7 +7,7 @@ using System;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using  Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Abstractions.Spatial

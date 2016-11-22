@@ -14,7 +14,7 @@ using Microsoft.Extensions.Primitives;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Data;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Data

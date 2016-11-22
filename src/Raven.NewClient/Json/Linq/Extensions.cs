@@ -7,12 +7,9 @@ using System.Linq;
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Json;
 using Raven.NewClient.Abstractions.Json.Linq;
-using  Raven.Imports.Newtonsoft.Json.Linq;
-using  Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.NewClient.Abstractions.Data;
-using System.Text;
 using System.Reflection;
-using Raven.NewClient.Abstractions.Extensions;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Json.Utilities;
 
 namespace Raven.NewClient.Json.Linq

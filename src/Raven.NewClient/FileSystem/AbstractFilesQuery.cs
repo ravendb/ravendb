@@ -4,8 +4,7 @@ using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Linq;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
 using System;
 using System.Collections;
@@ -15,6 +14,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.NewClient.Client.FileSystem
 {

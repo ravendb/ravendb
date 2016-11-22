@@ -19,8 +19,9 @@ using Raven.NewClient.Abstractions.Cluster;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Abstractions.Replication;
 using Raven.NewClient.Client.Connection.Async;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Utilities;
+using Newtonsoft.Json.Serialization;
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Json;
@@ -28,12 +29,8 @@ using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Converters;
 using Raven.NewClient.Client.Util;
 using Raven.NewClient.Json.Linq;
-using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.NewClient.Client.Document
 {

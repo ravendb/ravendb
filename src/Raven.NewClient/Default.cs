@@ -1,4 +1,4 @@
-using  Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Json;
 

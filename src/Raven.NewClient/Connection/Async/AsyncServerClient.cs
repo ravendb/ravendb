@@ -22,10 +22,8 @@ using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Listeners;
 using Raven.NewClient.Client.Metrics;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using Raven.NewClient.Json.Linq;
-
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;

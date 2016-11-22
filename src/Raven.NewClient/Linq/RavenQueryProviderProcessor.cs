@@ -19,7 +19,7 @@ using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Client.Linq;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Json.Linq;
 

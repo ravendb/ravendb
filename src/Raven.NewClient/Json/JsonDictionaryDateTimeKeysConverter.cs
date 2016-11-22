@@ -4,8 +4,7 @@ using System.Globalization;
 using System.Reflection;
 
 using Raven.Abstractions.Extensions;
-using  Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json;
 
 namespace Raven.NewClient.Abstractions.Json
 {

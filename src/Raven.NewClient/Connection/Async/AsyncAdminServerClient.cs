@@ -20,7 +20,7 @@ using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Indexes;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Json.Linq;
 

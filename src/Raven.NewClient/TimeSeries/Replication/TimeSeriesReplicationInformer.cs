@@ -17,8 +17,8 @@ using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Request;
 using Raven.NewClient.Client.Data;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.TimeSeries.Replication
