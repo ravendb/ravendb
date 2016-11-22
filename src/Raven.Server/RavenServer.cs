@@ -118,7 +118,7 @@ namespace Raven.Server
                     .UseKestrel(options =>
                     {
                     })
-                    .UseUrls(Configuration.Core.ServerUrl)
+                     .UseUrls("http://0.0.0.0:8080")
                     .UseStartup<RavenServerStartup>()
                     .ConfigureServices(services =>
                     {
