@@ -4,52 +4,67 @@ import virtualRow = require("widgets/virtualGrid/virtualRow");
 import pagedResult = require("widgets/virtualGrid/pagedResult");
 import itemFetch = require("widgets/virtualGrid/itemFetch");
 import virtualColumn = require("widgets/virtualGrid/virtualColumn");
-import textCellTemplate = require("widgets/virtualGrid/textCellTemplate");
-import checkedCellTemplate = require("widgets/virtualGrid/checkedCellTemplate");
 import virtualGridConfig = require("widgets/virtualGrid/virtualGridConfig");
+import virtualGridConfigDefaults = require("widgets/virtualGrid/virtualGridConfigDefaults");
+import textColumn = require("widgets/virtualGrid/textColumn");
+import checkedColumn = require("widgets/virtualGrid/checkedColumn");
 
-class VirtualGrid<T> {
-    items: T[] = []; // The items loaded asynchronously.
-    totalItemCount: number | null = null;
-    virtualRows: virtualRow[] = []; // These are the fixed number of elements that get displayed on screen. Each virtual row displays an element from .items array. As the user scrolls, rows will be recycled to represent different items.
-    fetcher: (skip: number, take: number) => JQueryPromise<pagedResult<T>>; // The function invoked that fetches a chunk of items.
-    gridId: string;
-    $gridElement: JQuery;
-    $viewportElement: JQuery;
-    elementHeight: number;
-    virtualHeight = ko.observable(0);
-    scrollAnimationFrameHandle = 0;
-    isLoading = ko.observable(false);
-    queuedFetch: itemFetch | null = null;
-    columns = ko.observableArray<virtualColumn>();
-    isSelectAllChecked = ko.observable<boolean | null>(false);
-    selectedIndices: number[] = [];
+class virtualGrid<T> {
+    private items: T[] = []; // The items loaded asynchronously.
+    private totalItemCount: number | null = null;
+    private virtualRows: virtualRow[] = []; // These are the fixed number of elements that get displayed on screen. Each virtual row displays an element from .items array. As the user scrolls, rows will be recycled to represent different items.
+    private gridId: string;
+    private $gridElement: JQuery;
+    private $viewportElement: JQuery;
+    private elementHeight: number;
+    private virtualHeight = ko.observable(0);
+    private scrollAnimationFrameHandle = 0;
+    private isLoading = ko.observable(false);
+    private queuedFetch: itemFetch | null = null;
+    private columns = ko.observableArray<virtualColumn>();
+    private isSelectAllChecked = ko.observable<boolean | null>(false);
+    private selectedIndices: number[] = [];
+    private settings = new virtualGridConfigDefaults();
+    
+    private static readonly minItemFetchCount = 100;
 
-    static readonly textCellTemplate = new textCellTemplate();
-    static readonly checkedCellTemplate = new checkedCellTemplate();
-    static readonly minItemFetchCount = 100;
-
-    constructor(params: virtualGridConfig<T>) {
+    constructor(params: virtualGridConfig<T>, componentInfo: KnockoutComponentTypes.ComponentInfo) {
         this.gridId = "vg-" + (1 + Math.random()).toString().replace(".", "");
-        this.fetcher = params.fetcher;
-        if (params.columns && params.columns.length > 0) {
-            this.columns([this.createCheckedColumn()].concat(params.columns));
+        
+        // Configure the grid using the parameters passed in from HTML.
+        $.extend(this.settings, params);
+        if (this.settings.columns && this.settings.columns.length > 0 && this.settings.showRowSelectionCheckbox) {
+            this.columns([new checkedColumn()].concat(params.columns));
         }
-
         this.isSelectAllChecked.subscribe(allSelected => this.selectAllChanged(allSelected));
-        this.fetchItems(0, 100);
-        window.requestAnimationFrame(() => this.initializeUIElements());
     }
 
-    private initializeUIElements() {
+    // Called by Knockout once the grid has been rendered.
+    private afterRender() {
+        window.requestAnimationFrame(() => {
+            var initialized = this.initializeUIElements();
+            if (initialized) {
+                this.fetchItems(0, 100); // We must fetch the items only after initializing the UI; otherwise rendering can fail.
+            }
+        });
+    }
+
+    private initializeUIElements(): boolean {
         this.$gridElement = this.findGridElement();
-        this.$gridElement.on("click", e => this.gridClicked(e));
         this.elementHeight = this.$gridElement.height();
+        // TODO: A better way to do this. Either KO needs to give us a proper callback, or we need to migrate this from a KO component to a Durandal component.
+        if (this.elementHeight === 0) {
+            setTimeout(() => this.afterRender(), 1);
+            return false;
+        }
+
+        this.$gridElement.on("click", e => this.gridClicked(e));
         this.virtualRows = this.createVirtualRows();
         this.$viewportElement = this.$gridElement.find(".viewport");
         this.$viewportElement.find(".viewport-scroller").append(this.virtualRows.map(r => r.element[0]));
 
         this.$gridElement.find(".viewport").on("scroll", () => this.gridScrolled());
+        return true;
     }
 
     private gridScrolled() {
@@ -99,7 +114,7 @@ class VirtualGrid<T> {
             }
 
             if (safeTake > 0) {
-                this.fetcher(safeSkip, safeTake)
+                this.settings.fetcher(safeSkip, safeTake)
                     .then((results: pagedResult<T>) => this.chunkFetched(results))
                     .fail(error => this.chunkFetchFailed(error, skip, safeTake))
                     .always(() => {
@@ -162,7 +177,7 @@ class VirtualGrid<T> {
         }
     }
 
-    fillDataIntoRows() {
+    private fillDataIntoRows() {
         // Find which rows are visible.
         const scrollTop = this.$viewportElement.scrollTop();
         const scrollBottom = scrollTop + this.elementHeight;
@@ -197,7 +212,7 @@ class VirtualGrid<T> {
         if (needsToFetch) {
             // Take about 50 items before the first visible index (in case we're scrolling up)
             const skip = Math.max(0, firstVisibleRowIndex - 50);
-            const take = Math.max(VirtualGrid.minItemFetchCount, totalVisible);
+            const take = Math.max(virtualGrid.minItemFetchCount, totalVisible);
             this.fetchItems(skip, take);
         }
     }
@@ -262,7 +277,7 @@ class VirtualGrid<T> {
         const uniquePropertyNames = new Set(itemPropertyNames);
         const columnNames = Array.from(uniquePropertyNames);
         const viewportWidth = this.$viewportElement.prop("clientWidth");
-        const columnWidth = Math.floor(viewportWidth / columnNames.length) - checkedCellTemplate.columnWidth + "px";
+        const columnWidth = Math.floor(viewportWidth / columnNames.length) - checkedColumn.columnWidth + "px";
         
         // Put Id and Name columns first.
         const prioritizedColumns = ["Id", "Name"];
@@ -276,19 +291,7 @@ class VirtualGrid<T> {
                 }
             });
 
-        this.columns([this.createCheckedColumn()].concat(columnNames.map(p => VirtualGrid.propertyNameToColumn(p, columnWidth))));
-    }
-
-    /**
-     * Creates the system-maintained "checked" column, allowing the user to select rows.
-     */
-    private createCheckedColumn(): virtualColumn {
-        return {
-            display: `<input class="checked-column-header" type="checkbox" />`,
-            dataMemberName: "",
-            template: VirtualGrid.checkedCellTemplate,
-            width: `${checkedCellTemplate.columnWidth}px`
-        };
+        this.columns([new checkedColumn()].concat(columnNames.map(p => new textColumn(p, p, columnWidth))));
     }
 
     private gridClicked(e: JQueryEventObject) {
@@ -349,34 +352,35 @@ class VirtualGrid<T> {
         this.redraw();
     }
 
-    static propertyNameToColumn(propName: string, width: string): virtualColumn {
-        return {
-            display: propName,
-            dataMemberName: propName,
-            template: VirtualGrid.textCellTemplate,
-            width: width
-        };
-    }
-}
-
-// TODO: we may want to move this to an HTML file that's fetched with RequireJS. Knockout components do support this.
-ko.components.register("virtual-grid", {
-    viewModel: VirtualGrid,
-    template: `
+    /**
+     * Installs the virtual grid component if it's not already installed.
+     */
+    public static install() {
+        const componentName = "virtual-grid";
+        if (!ko.components.isRegistered(componentName)) {
+            // TODO: we may want to move this to an HTML file that's fetched with RequireJS. Knockout components do support this.
+            ko.components.register(componentName, {
+                viewModel: virtualGrid,
+                template: `
 <div class="virtual-grid" data-bind="attr: { id: gridId }">
     <!-- Columns -->
-    <div class="column-container" data-bind="foreach: columns"><div class="column" data-bind="style: { width: $data.width }"><strong data-bind="html: $data.display"></strong></div></div>    
+    <div class="column-container" data-bind="foreach: columns, visible: settings.showColumns"><div class="column" data-bind="style: { width: $data.width }"><strong data-bind="html: $data.display"></strong></div></div>    
 
     <!-- Viewport -->
     <!-- The viewport is the section of the grid showing visible rows -->
-    <div class="viewport">
+    <div class="viewport" data-bind="css: { 'columns-visible': settings.showColumns }">
 
         <!-- The viewport scroller is the very tall scrolling part -->
-        <div class="viewport-scroller" data-bind="style: { height: virtualHeight() + 'px' }">
+        <div class="viewport-scroller" data-bind="style: { height: virtualHeight() + 'px' }, template: { afterRender: afterRender.bind($data) }">
 
         </div>
     </div>
     
 </div>
 `
-});
+            });
+        }
+    }
+}
+
+export = virtualGrid;

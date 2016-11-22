@@ -1,0 +1,79 @@
+﻿.virtual-grid {
+	overflow-x: auto;
+	overflow-y: hidden;
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+
+    @columnHeaderHeight: 30px;
+    .column-container {
+	    white-space: nowrap;
+	    height: @columnHeaderHeight;
+    }
+
+    .viewport {
+	    position: absolute;
+        top: 0;
+	    left: 0;
+	    right: 0;
+	    bottom: 0;
+	    overflow-y: auto;
+	    overflow-x: hidden;
+
+        &.columns-visible {
+            top: @columnHeaderHeight;
+        }
+    }
+
+    .viewport-scroller {
+	    position: relative;
+    }
+
+    .column {
+	    display: inline-block;
+	    text-overflow: ellipsis;
+	    overflow: hidden;
+	    text-align: left;
+	    border-bottom: 2px solid rgb(221, 221, 221);
+	    height: 100%;
+    }
+
+    .checked-column-header {
+        text-align: center;
+        width: 100%;
+        margin-left: -1px;
+    }
+
+    .virtual-row {
+	    position: absolute;
+	    top: 0;
+	    left: 0;
+	    right: 0;
+	    white-space: nowrap;
+
+        &.even {
+	        background-color: rgba(255,255,255, .1);
+        }
+
+        &.selected {
+            background-color: rgba(255, 85, 0, 0.38) !important;
+        }
+    }
+
+    .cell {
+        display: inline-block;
+        vertical-align: middle;
+    }
+
+    .text-cell {
+	    text-overflow: ellipsis; 
+	    overflow: hidden;
+        color: white;
+    }
+
+    .checked-cell {
+        text-align: center;
+    }
+}
