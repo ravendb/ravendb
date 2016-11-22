@@ -48,9 +48,11 @@
             </div>
             <div class="flex-window-scroll">
                 <div class="panel-body">
-                    <ul class="objects-list" data-bind="foreach: filteredResultSet">
+                    <!--<ul class="objects-list" data-bind="foreach: filteredResultSet">
                         <li><a href="#" class="document" data-bind="text: id, attr: { href: href }"></a></li>
-                    </ul>
+                    </ul>-->
+
+                    <virtual-grid params="fetcher: fetchChunk.bind($data), showColumns: false, columns: columns"></virtual-grid>
                 </div>
             </div>
         </div>

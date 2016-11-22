@@ -11,32 +11,23 @@ import getCollectionsStatsCommand = require("commands/database/documents/getColl
 
 import appUrl = require("common/appUrl");
 import pagedResultSet = require("common/pagedResultSet");
+import pagedResult = require("widgets/virtualGrid/pagedResult"); // Paged result for the new virtual grid.
+import virtualGrid = require("widgets/virtualGrid/virtualGrid");
+import virtualColumn = require("widgets/virtualGrid/virtualColumn");
+import hyperlinkColumn = require("widgets/virtualGrid/hyperlinkColumn");
 import documentHelpers = require("common/helpers/database/documentHelpers");
 import starredDocumentsStorage = require("common/starredDocumentsStorage");
 
 class connectedDocuments {
-    static connectedDocsTabs = {
-        related: "related",
-        collection: "collection",
-        recent: "recent",
-        starred: "starred"
-    };
-
-    constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, loadDocument: (docId: string) => void) {
-        this.document = document;
-        this.db = db;
-        this.document.subscribe((doc) => this.onDocumentLoaded(doc));
-        this.loadDocumentAction = loadDocument;
-    }
-
-    private loadDocumentAction: (docId: string) => void;
-    private document: KnockoutObservable<document>;
-    private db: KnockoutObservable<database>;
-    private static currentTab = ko.observable<string>(connectedDocuments.connectedDocsTabs.related);
-
+    
+    loadDocumentAction: (docId: string) => void;
+    document: KnockoutObservable<document>;
+    db: KnockoutObservable<database>;
     searchInput = ko.observable<string>("");
+    columns: virtualColumn[] = [
+        new hyperlinkColumn("id", "href", "", "100%")
+    ];
     currentDocumentIsStarred = ko.observable<boolean>(false);
-
     currentResultSet = ko.pureComputed<Array<connectedDocument>>(() => { //TODO: implement virtual paging
         switch (connectedDocuments.currentTab()) {
             case connectedDocuments.connectedDocsTabs.related:
@@ -51,6 +42,46 @@ class connectedDocuments {
                 return [];
         }
     });
+
+    static connectedDocsTabs = {
+        related: "related",
+        collection: "collection",
+        recent: "recent",
+        starred: "starred"
+    };
+    static currentTab = ko.observable<string>(connectedDocuments.connectedDocsTabs.related);
+
+    constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, loadDocument: (docId: string) => void) {
+        this.document = document;
+        this.db = db;
+        this.document.subscribe((doc) => this.onDocumentLoaded(doc));
+        this.loadDocumentAction = loadDocument;
+        virtualGrid.install();
+    }
+
+    fetchChunk(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
+        const deferred = $.Deferred<pagedResult<connectedDocument>>();
+
+        const relatedDocumentsCandidates: string[] = documentHelpers.findRelatedDocumentsCandidates(this.document());
+        const docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.db(), true, true);
+        docIDsVerifyCommand.execute()
+            .done((verifiedIDs: string[]) => {
+                var connectedDocs: connectedDocument[] = verifiedIDs.map(verified => {
+                    return {
+                        id: verified.toString(),
+                        href: appUrl.forEditDoc(verified.toString(), this.db())
+                    } as connectedDocument;
+                });
+                deferred.resolve({
+                    items: connectedDocs, 
+                    skip: skip,
+                    take: take,
+                    totalCount: connectedDocs.length
+                }); 
+            });
+
+        return deferred.promise();
+    }
 
     filteredResultSet = ko.pureComputed<Array<connectedDocument>>(() => {
         var itemsToFilter = this.currentResultSet();
