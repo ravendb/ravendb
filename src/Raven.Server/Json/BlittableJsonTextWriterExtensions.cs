@@ -1029,6 +1029,44 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
+        public static void WriteServerStoreObject(this BlittableJsonTextWriter writer, JsonOperationContext context, BlittableJsonReaderObject data, long etag)
+        {
+            if (_buffers == null)
+                _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
+
+            writer.WriteStartObject();
+
+                bool first = true;
+                var size = data.GetPropertiesByInsertionOrder(_buffers);
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+                for (int i = 0; i < size; i++)
+                {
+                    data.GetPropertyByIndex(_buffers.Properties[i], ref prop);                   
+                    if (first == false)
+                    {
+                        writer.WriteComma();
+                    }
+                    first = false;
+                    writer.WritePropertyName(prop.Name);
+                    writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+                }
+                if (first == false)
+                    writer.WriteComma();            
+
+                //start writing @metadata property
+                writer.WritePropertyName(Constants.Metadata.Key);
+                writer.WriteStartObject();
+
+                    writer.WritePropertyName(Constants.Metadata.Etag);
+                    writer.WriteInteger(etag);
+
+                writer.WriteEndObject();
+                //end writing @metadata property
+
+            writer.WriteEndObject();
+        }
+
         public static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
         {
             if (_buffers == null)

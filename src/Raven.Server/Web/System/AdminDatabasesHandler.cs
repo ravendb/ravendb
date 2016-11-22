@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
 using Raven.Server.Config;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -34,7 +35,8 @@ namespace Raven.Server.Web.System
                 context.OpenReadTransaction();
 
                 var dbId = Constants.Database.Prefix + name;
-                var dbDoc = ServerStore.Read(context, dbId);
+                long etag;
+                var dbDoc = ServerStore.Read(context, dbId, out etag);
                 
                 if (dbDoc == null)
                 {
@@ -45,9 +47,12 @@ namespace Raven.Server.Web.System
                 UnprotectSecuredSettingsOfDatabaseDocument(dbDoc);
 
                 HttpContext.Response.StatusCode = 200;
-                // TODO: Implement etags
 
-                context.Write(ResponseBodyStream(), dbDoc);
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteServerStoreObject(context, dbDoc, etag);
+                    writer.Flush();
+                }
             }
 
             return Task.CompletedTask;
@@ -69,7 +74,9 @@ namespace Raven.Server.Web.System
             var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
             string errorMessage;
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory, out errorMessage) == false)
+            if (
+                ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory,
+                    out errorMessage) == false)
             {
                 HttpContext.Response.StatusCode = 400;
                 return HttpContext.Response.WriteAsync(errorMessage);
@@ -87,7 +94,9 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 {
                     var existingDatabase = ServerStore.Read(context, dbId);
-                    if (DatabaseHelper.CheckExistingDatabaseName(existingDatabase, name, dbId, etagAsString, out errorMessage) == false)
+                    if (
+                        DatabaseHelper.CheckExistingDatabaseName(existingDatabase, name, dbId, etagAsString,
+                            out errorMessage) == false)
                     {
                         HttpContext.Response.StatusCode = 400;
                         return HttpContext.Response.WriteAsync(errorMessage);
@@ -119,13 +128,15 @@ namespace Raven.Server.Web.System
                 {
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        ServerStore.Write(context, dbId, dbDoc);
+                        if (hasEtagInRequest)
+                            ServerStore.Write(context, dbId, dbDoc, etag);
+                        else
+                            ServerStore.Write(context, dbId, dbDoc);
                         tx.Commit();
                     }
                 });
 
                 HttpContext.Response.StatusCode = 201;
-
             }
             return Task.CompletedTask;
         }
