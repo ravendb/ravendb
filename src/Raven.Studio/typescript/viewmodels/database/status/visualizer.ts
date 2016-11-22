@@ -22,6 +22,8 @@ class visualizer extends viewModelBase {
     private currentIndexUi: KnockoutComputed<string>;
     private hasIndexSelected: KnockoutComputed<boolean>;
 
+    private detailsViewActive = ko.observable<boolean>(false);
+
     private documents = {
         docKey: ko.observable(""),
         hasFocusDocKey: ko.observable<boolean>(false),
@@ -30,7 +32,7 @@ class visualizer extends viewModelBase {
         docKeysSearchResults: ko.observableArray<string>()
     }
 
-    private graph = new visualizerGraphGlobal();
+    private globalGraph = new visualizerGraphGlobal();
 
     constructor() {
         super();
@@ -65,33 +67,57 @@ class visualizer extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        this.graph.init();
+        this.globalGraph.init((treeName: string) => this.goToDetails(treeName));
     }
 
     private onIndexesLoaded(indexes: Raven.Client.Data.Indexes.IndexStats[]) {
-        this.indexes(indexes.map(x => x.Name));
+        this.indexes(indexes.filter(x => x.Type === "AutoMapReduce" || x.Type === "MapReduce").map(x => x.Name));
     }
 
     setSelectedIndex(indexName: string) {
         this.currentIndex(indexName);
-        //TODO: reset chart
+
+        this.resetGraph();
+    }
+
+    private resetGraph() {
+        this.documents.docKeys([]);
+        this.documents.docKey("");
+        this.documents.docKeysSearchResults([]);
+
+        this.globalGraph.reset();
     }
 
     addDocKey(key: string) {
-        if (!key || this.documents.docKeys.contains(key)) {
+        if (!key) {
             return;
         }
 
-        //TODO: spinner
-        new getIndexMapReduceTreeCommand(this.activeDatabase(), this.currentIndex(), key)
-            .execute()
-            .done((mapReduceTrees) => {
-                if (!this.documents.docKeys.contains(key)) {
-                    this.documents.docKeys.push(key);
-                    this.graph.addTrees(key, mapReduceTrees);
-                    //TODO: pass to graph
-                }
-            });
+        if (this.documents.docKeys.contains(key)) {
+            this.globalGraph.zoomToDocument(key);
+        } else {
+            //TODO: spinner
+            new getIndexMapReduceTreeCommand(this.activeDatabase(), this.currentIndex(), key)
+                .execute()
+                .done((mapReduceTrees) => {
+                    if (!this.documents.docKeys.contains(key)) {
+                        this.documents.docKeys.push(key);
+                        this.globalGraph.addTrees(key, mapReduceTrees);
+                        //TODO: pass to graph
+                    }
+                });
+        }
+    }
+
+    goToDetails(treeName: string) {
+        console.log("loading details for: " + treeName);
+        this.detailsViewActive(true);
+    }
+
+    backToGlobalView() {
+        this.detailsViewActive(false);
+
+        this.globalGraph.restoreView();
     }
 
     selectDocKey(value: string) {
