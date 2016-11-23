@@ -11,12 +11,12 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class StaticMapIndexDefinition : IndexDefinitionBase
+    public class MapIndexDefinition : IndexDefinitionBase
     {
         private readonly bool _hasDynamicFields;
         public readonly IndexDefinition IndexDefinition;
 
-        public StaticMapIndexDefinition(IndexDefinition definition, string[] collections, string[] outputFields, bool hasDynamicFields)
+        public MapIndexDefinition(IndexDefinition definition, string[] collections, string[] outputFields, bool hasDynamicFields)
             : base(definition.Name, collections, definition.LockMode, GetFields(definition, outputFields))
         {
             _hasDynamicFields = hasDynamicFields;

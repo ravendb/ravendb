@@ -17,11 +17,22 @@ namespace Raven.Abstractions.Data
             {
             }
 
-            public const string MaxIndexOutputsPerDocument = "Raven/Indexing/MaxIndexOutputsPerDocument";
+            public class Indexing
+            {
+                private Indexing()
+                {
+                }
 
-            public const string MaxMapIndexOutputsPerDocument = "Raven/Indexing/MaxMapIndexOutputsPerDocument";
+                public const string MaxIndexOutputsPerDocument = "Raven/Indexing/MaxIndexOutputsPerDocument";
 
-            public const string MaxMapReduceIndexOutputsPerDocument = "Raven/Indexing/MaxMapIndexOutputsPerDocument";
+                public const string MaxMapIndexOutputsPerDocument = "Raven/Indexing/MaxMapIndexOutputsPerDocument";
+
+                public const string MaxMapReduceIndexOutputsPerDocument = "Raven/Indexing/MaxMapIndexOutputsPerDocument";
+
+                public const string AdditionalIndexStoragePaths = "Raven/Indexing/AdditionalIndexStoragePaths";
+
+                public const string StoragePath = "Raven/Indexing/StoragePath";
+            }
         }
 
         public class Command

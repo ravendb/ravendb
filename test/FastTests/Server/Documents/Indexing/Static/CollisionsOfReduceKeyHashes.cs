@@ -105,8 +105,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
-                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapPhaseTreeName);
-                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.ReducePhaseTreeName);
+                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition>.MapPhaseTreeName);
+                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition>.ReducePhaseTreeName);
 
                     var store = new MapReduceResultsStore(hashOfReduceKey, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
 
@@ -162,8 +162,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
-                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapPhaseTreeName);
-                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.ReducePhaseTreeName);
+                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition>.MapPhaseTreeName);
+                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition>.ReducePhaseTreeName);
 
                     var store = new MapReduceResultsStore(hashOfReduceKey, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
 
@@ -217,8 +217,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
-                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.MapPhaseTreeName);
-                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<StaticMapIndexDefinition>.ReducePhaseTreeName);
+                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition>.MapPhaseTreeName);
+                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition>.ReducePhaseTreeName);
 
                     var store = new MapReduceResultsStore(hashOfReduceKey, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
 

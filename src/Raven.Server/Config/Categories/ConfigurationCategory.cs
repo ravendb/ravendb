@@ -73,6 +73,11 @@ namespace Raven.Server.Config.Categories
                             {
                                 property.SetValue(this, Enum.Parse(property.PropertyType, value, true));
                             }
+                            if (property.PropertyType == typeof(string[]))
+                            {
+                                var values = value.Split(';');
+                                property.SetValue(this, values);
+                            }
                             else if (timeUnit != null)
                             {
                                 property.SetValue(this, new TimeSetting(Convert.ToInt64(value), timeUnit.Unit));

@@ -17,6 +17,9 @@ namespace Raven.Server.Documents.Indexes
 
         public void Add(Index index)
         {
+            if (index.IndexId < _nextIndexId)
+                throw new InvalidOperationException($"Invalid index Id. Should be equal or greater than {_nextIndexId}. Was {index.IndexId}");
+
             _nextIndexId = Math.Max(index.IndexId, _nextIndexId) + 1;
             _indexesById[index.IndexId] = index;
             _indexesByName[index.Name] = index;
