@@ -314,30 +314,12 @@ namespace Raven.NewClient.Client.Connection
             return asyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method, disableRequestCompression, disableAuthentication, timeout);
         }
 
-        public IDatabaseCommands With(ICredentials credentialsForSession)
-        {
-            return new ServerClient(asyncServerClient.WithInternal(credentialsForSession));
-        }
-
         public IDisposable ForceReadFromMaster()
         {
             return asyncServerClient.ForceReadFromMaster();
         }
 
-        public IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null)
-        {
-            var newAsyncServerClient = asyncServerClient.ForDatabaseInternal(database, clusterBehavior);
-            if (asyncServerClient == newAsyncServerClient)
-                return this;
-
-            return new ServerClient(newAsyncServerClient);
-        }
-
-        public IDatabaseCommands ForSystemDatabase()
-        {
-            return new ServerClient(asyncServerClient.ForSystemDatabaseInternal());
-        }
-
+        
         public string Url
         {
             get { return asyncServerClient.Url; }
@@ -495,6 +477,21 @@ namespace Raven.NewClient.Client.Connection
         public ReplicationStatistics GetReplicationInfo()
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.Info.GetReplicationInfoAsync());
+        }
+
+        public IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = default(ClusterBehavior?))
+        {
+            throw new NotImplementedException();
+        }
+
+        public IDatabaseCommands ForSystemDatabase()
+        {
+            throw new NotImplementedException();
+        }
+
+        public IDatabaseCommands With(ICredentials credentialsForSession)
+        {
+            throw new NotImplementedException();
         }
 
         public IAdminDatabaseCommands Admin

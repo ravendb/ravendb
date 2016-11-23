@@ -34,7 +34,8 @@ namespace Raven.NewClient.Client.Document
 
         public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners)
         {
-            this.documentStore = documentStore;
+            throw new NotImplementedException();
+            /*this.documentStore = documentStore;
 
             database = database ?? MultiDatabase.GetDatabaseName(documentStore.Url);
 
@@ -44,11 +45,11 @@ namespace Raven.NewClient.Client.Document
                 : documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
             generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, entity =>
-                AsyncHelpers.RunSync(() => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity)));
+                AsyncHelpers.RunSync(() => documentStore.Conventions.GenerateDocumentKeyAsync(database, entity)));
 
             // ReSharper disable once VirtualMemberCallInContructor
             Operation = GetBulkInsertOperation(DatabaseCommands);
-            entityToJson = new EntityToJson(documentStore, listeners);
+            entityToJson = new EntityToJson(documentStore, listeners);*/
         }
 
         protected virtual TcpBulkInsertOperation GetBulkInsertOperation(IAsyncDatabaseCommands commands)

@@ -167,7 +167,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact (Skip = "ClearSortHints not implemented")]
         public void Can_Query_With_Include_By_Primary_String_Property()
         {
             using (var store = GetDocumentStore())
@@ -205,7 +205,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "ClearSortHints not implemented")]
         public void Can_Query_With_Include_By_Primary_Valuetype_Property()
         {
             using (var store = GetDocumentStore())

@@ -537,8 +537,7 @@ namespace Raven.NewClient.Client.Connection
 
     public interface IGlobalAdminDatabaseCommands
     {
-        IDatabaseCommands Commands { get; }
-
+ 
         /// <summary>
         ///     Sends an async command to compact a database. During the compaction the specified database will be offline.
         /// </summary>

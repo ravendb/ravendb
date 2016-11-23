@@ -19,7 +19,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
         }
 #endif
 
-        [Fact]
+        [Fact(Skip = "TODO: use IDatabaseCommands")]
         public void GetDocumentId()
         {
             using (var store = GetDocumentStore())
@@ -46,8 +46,8 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.RegisterIdConvention<User>((databaseName, commands, entity) => "abc");
-                store.Conventions.RegisterAsyncIdConvention<User>((databaseName, commands, entity) => new CompletedTask<string>("def"));
+                store.Conventions.RegisterIdConvention<User>((databaseName, entity) => "abc");
+                store.Conventions.RegisterAsyncIdConvention<User>((databaseName, entity) => new CompletedTask<string>("def"));
 
                 using (var session = store.OpenSession())
                 {
@@ -65,11 +65,11 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
                     Assert.Equal("def", user.Id);
                 }
 
-                Assert.Equal("abc", store.Conventions.GenerateDocumentKey(store.DefaultDatabase, store.DatabaseCommands, new User()));
-                Assert.Equal("def", await store.Conventions.GenerateDocumentKeyAsync(store.DefaultDatabase, store.AsyncDatabaseCommands, new User()));
+                Assert.Equal("abc", store.Conventions.GenerateDocumentKey(store.DefaultDatabase,  new User()));
+                Assert.Equal("def", await store.Conventions.GenerateDocumentKeyAsync(store.DefaultDatabase,  new User()));
 
-                Assert.Equal("addresses/1", store.Conventions.GenerateDocumentKey(store.DefaultDatabase, store.DatabaseCommands, new Address()));
-                Assert.Equal("companies/1", await store.Conventions.GenerateDocumentKeyAsync(store.DefaultDatabase, store.AsyncDatabaseCommands, new Company()));
+                Assert.Equal("addresses/1", store.Conventions.GenerateDocumentKey(store.DefaultDatabase,  new Address()));
+                Assert.Equal("companies/1", await store.Conventions.GenerateDocumentKeyAsync(store.DefaultDatabase,  new Company()));
             }
         }
 
@@ -78,7 +78,7 @@ namespace SlowTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.RegisterIdConvention<TShirt>((databaseName, commands, entity) => "ts/" + entity.ReleaseYear);
+                store.Conventions.RegisterIdConvention<TShirt>((databaseName, entity) => "ts/" + entity.ReleaseYear);
                 store.Conventions.RegisterIdLoadConvention<TShirt>(id => "ts/" + id);
 
                 using (var session = store.OpenSession())

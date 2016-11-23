@@ -35,7 +35,7 @@ namespace Raven.NewClient.Client.Document
         /// <param name="entity">The entity.</param>
         /// <param name="databaseCommands">Low level database commands.</param>
         /// <returns></returns>
-        public string GenerateDocumentKey(IDatabaseCommands databaseCommands, DocumentConvention conventions, object entity)
+        public string GenerateDocumentKey( DocumentConvention conventions, object entity)
         {
          var typeTagName = conventions.GetDynamicTagName(entity);
             if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
@@ -43,12 +43,12 @@ namespace Raven.NewClient.Client.Document
             var tag = conventions.TransformTypeTagNameToDocumentKeyPrefix(typeTagName);
             HiLoKeyGenerator value;
             if (keyGeneratorsByTag.TryGetValue(tag, out value))
-                return value.GenerateDocumentKey(databaseCommands, conventions, entity);
+                return value.GenerateDocumentKey(conventions, entity);
 
             lock(generatorLock)
             {
                 if (keyGeneratorsByTag.TryGetValue(tag, out value))
-                    return value.GenerateDocumentKey(databaseCommands, conventions, entity);
+                    return value.GenerateDocumentKey(conventions, entity);
 
                 value = new HiLoKeyGenerator(tag, capacity);
                 // doing it this way for thread safety
@@ -58,7 +58,7 @@ namespace Raven.NewClient.Client.Document
                 };
             }
 
-            return value.GenerateDocumentKey(databaseCommands, conventions, entity);
+            return value.GenerateDocumentKey(conventions, entity);
         }
     }
 }

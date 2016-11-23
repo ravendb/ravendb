@@ -22,11 +22,11 @@ namespace Raven.NewClient.Client.Document
             this.capacity = capacity;
         }
 
-        public Task<string> GenerateDocumentKeyAsync(string dbName, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions,
+        public Task<string> GenerateDocumentKeyAsync(string dbName, DocumentConvention conventions,
                                                      object entity)
         {
             var generator = generators.GetOrAdd(dbName ?? Constants.SystemDatabase, s => new AsyncMultiTypeHiLoKeyGenerator(capacity));
-            return generator.GenerateDocumentKeyAsync(databaseCommands, conventions, entity);
+            return generator.GenerateDocumentKeyAsync(conventions, entity);
         }
     }
 }
