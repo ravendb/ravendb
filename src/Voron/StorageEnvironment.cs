@@ -51,6 +51,9 @@ namespace Voron
         public readonly ActiveTransactions ActiveTransactions = new ActiveTransactions();
 
         private readonly AbstractPager _dataPager;
+
+        internal LowLevelTransaction.WriteTransactionPool WriteTransactionPool =
+            new LowLevelTransaction.WriteTransactionPool();
         internal ExceptionDispatchInfo CatastrophicFailure;
         private readonly WriteAheadJournal _journal;
         private readonly object _txWriter = new object();

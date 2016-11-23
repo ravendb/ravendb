@@ -36,9 +36,20 @@ namespace Voron.Impl
         private readonly WriteAheadJournal _journal;
         internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
-        private static ObjectPool<Dictionary<long, PageFromScratchBuffer>, DictionaryResetBehavior<long, PageFromScratchBuffer>> ScratchPagesTablePool = new ObjectPool<Dictionary<long, PageFromScratchBuffer>, DictionaryResetBehavior<long, PageFromScratchBuffer>>(() => new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance), 30);
-        private static ObjectPool<Dictionary<long, long>, DictionaryResetBehavior<long, long>> DirtyOverflowPagesPool = new ObjectPool<Dictionary<long, long>, DictionaryResetBehavior<long, long>>(() => new Dictionary<long, long>(NumericEqualityComparer.Instance), 30);
-        private static ObjectPool<HashSet<long>, HashSetResetBehavior<long>> DirtyPagesPool = new ObjectPool<HashSet<long>, HashSetResetBehavior<long>>(() => new HashSet<long>(NumericEqualityComparer.Instance), 30);
+        internal class WriteTransactionPool
+        {
+            public Dictionary<long, PageFromScratchBuffer> ScratchPagesTablePool = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
+            public Dictionary<long, long> DirtyOverflowPagesPool = new Dictionary<long, long>(NumericEqualityComparer.Instance);
+            public HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.Instance);
+
+            public void Reset()
+            {
+                ScratchPagesTablePool.Clear();
+                DirtyOverflowPagesPool.Clear();
+                DirtyPagesPool.Clear();
+            }
+
+        }
 
         // BEGIN: Structures that are safe to pool.
         private readonly HashSet<long> _dirtyPages;
@@ -145,9 +156,10 @@ namespace Voron.Impl
 
             EnsureNoDuplicateTransactionId(id);
 
-            _dirtyOverflowPages = DirtyOverflowPagesPool.Allocate();
-            _scratchPagesTable = ScratchPagesTablePool.Allocate();
-            _dirtyPages = DirtyPagesPool.Allocate();
+            _env.WriteTransactionPool.Reset();
+            _dirtyOverflowPages = _env.WriteTransactionPool.DirtyOverflowPagesPool;
+            _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesTablePool;
+            _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
             _freedPages = new HashSet<long>(NumericEqualityComparer.Instance);
             _unusedScratchPages = new List<PageFromScratchBuffer>();
             _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);           
@@ -506,9 +518,7 @@ namespace Voron.Impl
 
             if (Flags == TransactionFlags.ReadWrite)
             {
-                ScratchPagesTablePool.Free(_scratchPagesTable);
-                DirtyOverflowPagesPool.Free(_dirtyOverflowPages);
-                DirtyPagesPool.Free(_dirtyPages);
+                _env.WriteTransactionPool.Reset();
             }
         }
 
