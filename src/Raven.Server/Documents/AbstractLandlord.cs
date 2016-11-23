@@ -102,15 +102,16 @@ namespace Raven.Server.Documents
                 LastRecentlyUsed.TryRemove(resourceName, out time);
                 return;
             }
-            if (resourceTask.Status == TaskStatus.Faulted || resourceTask.Status == TaskStatus.Canceled)
+            var resourceTaskStatus = resourceTask.Status;
+            if (resourceTaskStatus == TaskStatus.Faulted || resourceTaskStatus == TaskStatus.Canceled)
             {
                 LastRecentlyUsed.TryRemove(resourceName, out time);
                 ResourcesStoresCache.TryRemove(resourceName, out resourceTask);
                 return;
             }
-            if (resourceTask.Status != TaskStatus.RanToCompletion)
+            if (resourceTaskStatus != TaskStatus.RanToCompletion)
             {
-                throw new InvalidOperationException($"Couldn't modify '{resourceName}' while it is loading");
+                throw new InvalidOperationException($"Couldn't modify '{resourceName}' while it is loading, current status {resourceTaskStatus}");
             }
 
             // will never wait, we checked that we already run to completion here
