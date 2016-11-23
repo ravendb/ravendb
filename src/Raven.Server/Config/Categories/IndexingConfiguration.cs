@@ -10,18 +10,33 @@ namespace Raven.Server.Config.Categories
 {
     public class IndexingConfiguration : ConfigurationCategory
     {
-        private readonly Func<bool> _runInMemory;
+        private bool? _runInMemory;
+
+        private readonly Func<bool> _databaseRunInMemory;
         private readonly Func<string> _dataDirectory;
 
         private string _indexStoragePath;
 
         public IndexingConfiguration(Func<bool> runInMemory, Func<string> dataDirectory) // TODO arek - maybe use Lazy instead
         {
-            _runInMemory = runInMemory;
+            _databaseRunInMemory = runInMemory;
             _dataDirectory = dataDirectory;
         }
 
-        public virtual bool RunInMemory => _runInMemory();
+        [Description("Whatever the indexes should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
+        [ConfigurationEntry("Raven/Indexing/RunInMemory", setDefaultValueIfNeeded: false)]
+        public virtual bool RunInMemory
+        {
+            get
+            {
+                if (_runInMemory == null)
+                    _runInMemory = _databaseRunInMemory();
+
+                return _runInMemory.Value;
+            }
+
+            protected set { _runInMemory = value; }
+        }
 
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Indexing/Disable")]

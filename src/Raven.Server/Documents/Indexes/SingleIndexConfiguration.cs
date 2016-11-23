@@ -9,6 +9,7 @@ namespace Raven.Server.Documents.Indexes
 {
     public class SingleIndexConfiguration : IndexingConfiguration
     {
+        private bool? _runInMemory;
         private string _indexStoragePath;
 
         private readonly RavenConfiguration _databaseConfiguration;
@@ -40,8 +41,20 @@ namespace Raven.Server.Documents.Indexes
             throw new InvalidOperationException($"Given index path ('{IndexStoragePath}') is not defined in '{Constants.Configuration.Indexing.StoragePath}' or '{Constants.Configuration.Indexing.AdditionalIndexStoragePaths}'");
         }
 
-        public override bool RunInMemory => _databaseConfiguration.Indexing.RunInMemory;
         public override bool Disabled => _databaseConfiguration.Indexing.Disabled;
+
+        public override bool RunInMemory
+        {
+            get
+            {
+                if (_runInMemory == null)
+                    _runInMemory = _databaseConfiguration.Indexing.RunInMemory;
+
+                return _runInMemory.Value;
+            }
+
+            protected set { _runInMemory = value; }
+        }
 
         public override string IndexStoragePath
         {
