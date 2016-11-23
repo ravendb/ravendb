@@ -173,7 +173,7 @@ namespace Raven.NewClient.Client.Http
                 using (var parser = new UnmanagedJsonParser(context, state, "")) //TODO: FIXME
                 {
                     builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, nameof(ApiKeyAuthenticator) + "." + nameof(Recieve), parser, state);
-                    builder.ReadObject();
+                    builder.ReadObjectDocument();
                     while (builder.Read() == false)
                     {
                         var result = await webSocket.ReceiveAsync(buffer.Buffer, _disposedToken.Token);

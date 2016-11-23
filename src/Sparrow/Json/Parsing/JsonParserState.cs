@@ -14,13 +14,18 @@ namespace Sparrow.Json.Parsing
 
         public readonly List<int> EscapePositions = new List<int>();
 
-        private static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"', };
+        public static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"', };
     
         public int GetEscapePositionsSize()
         {
-            int size = VariableSizeIntSize(EscapePositions.Count);
+            return GetEscapePositionsSize(EscapePositions);
+        }
+
+        public static int GetEscapePositionsSize(List<int> escapePosiitons)
+        {
+            int size = VariableSizeIntSize(escapePosiitons.Count);
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (int pos in EscapePositions)
+            foreach (int pos in escapePosiitons)
             {
                 size += VariableSizeIntSize(pos);
             }
