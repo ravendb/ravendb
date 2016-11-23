@@ -96,8 +96,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 default:
                     throw new ArgumentOutOfRangeException(Type.ToString());
             }
-            
-            _mapReduceContext.EntryDeleted(id);
         }
 
         public void Add(long id, BlittableJsonReaderObject result)

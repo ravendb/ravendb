@@ -14,8 +14,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public FixedSizeTree DocumentMapEntries;
 
-        private readonly Queue<long> _idsOfDeletedEntries = new Queue<long>();
-
         public Tree MapPhaseTree;
         public Tree ReducePhaseTree;
         
@@ -24,16 +22,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public Dictionary<string, long> ProcessedDocEtags = new Dictionary<string, long>();
         public Dictionary<string, long> ProcessedTombstoneEtags = new Dictionary<string, long>();
         
-        internal long LastMapResultId = -1;
+        public long NextMapResultId;
 
         static MapReduceIndexingContext()
         {
-             Slice.From(StorageEnvironment.LabelsContext, "#LastMapResultId", ByteStringType.Immutable, out LastMapResultIdKey);
+             Slice.From(StorageEnvironment.LabelsContext, "#NextMapResultId", ByteStringType.Immutable, out LastMapResultIdKey);
         }
 
         public void Dispose()
         {
-            StoreLastMapResultId();
+            StoreNextMapResultId();
             DocumentMapEntries?.Dispose();
             DocumentMapEntries = null;
             MapPhaseTree = null;
@@ -41,24 +39,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             ProcessedDocEtags.Clear();
             ProcessedTombstoneEtags.Clear();
             StoreByReduceKeyHash.Clear();
-            _idsOfDeletedEntries.Clear();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EntryDeleted(long deletedEntryId)
+        public unsafe void StoreNextMapResultId()
         {
-            _idsOfDeletedEntries.Enqueue(deletedEntryId);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public long GetNextIdentifier()
-        {
-            return _idsOfDeletedEntries.Count > 1 ? _idsOfDeletedEntries.Dequeue() : ++LastMapResultId;
-        }
-
-        public unsafe void StoreLastMapResultId()
-        {
-            *(long*)MapPhaseTree.DirectAdd(LastMapResultIdKey, sizeof(long)) = LastMapResultId;
+            *(long*)MapPhaseTree.DirectAdd(LastMapResultIdKey, sizeof(long)) = NextMapResultId;
         }
 
         public unsafe void Initialize(Tree mapEntriesTree)
@@ -68,7 +53,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             if (read == null)
                 return;
 
-            LastMapResultId = *(long*)read.Reader.Base;
+            NextMapResultId = *(long*)read.Reader.Base;
         }
     }
 }

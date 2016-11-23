@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             // MapPhase tree has the following entries
             // 1) { document key, fixed size tree } where each fixed size tree stores records like 
             //   |----> { identifier of a map result, hash of a reduce key for the map result }
-            // 2) entry to keep track the identifier of a last stored entry { #LastMapResultId, long_value }
+            // 2) entry to keep track the next identifier of a next map result { #NextMapResultId, long_value }
 
             return tx.CreateTree(MapPhaseTreeName);
         }
@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             if (id == -1)
                             {
-                                id = MapReduceWorkContext.GetNextIdentifier();
+                                id = MapReduceWorkContext.NextMapResultId++;
 
                                 Slice val;
                                 using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))
