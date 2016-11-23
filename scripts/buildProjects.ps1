@@ -1,5 +1,5 @@
 function BuildServer ( $srcDir, $outDir, $buildDir ) {
-    write-host "== Building Server..."
+    write-host "Building Server..."
     #build server
     & dotnet build --output "$outDir\Server" `
                  --build-base-path "$buildDir\Server" `
@@ -10,7 +10,7 @@ function BuildServer ( $srcDir, $outDir, $buildDir ) {
 }
 
 function BuildClient ( $srcDir, $outDir, $buildDir ) {
-    write-host "== Building Client..."
+    write-host "Building Client..."
     # build client
     & dotnet build --output "$outDir\Client" `
                 --build-base-path "$buildDir\Client" `
@@ -27,7 +27,7 @@ function BuildTypingsGenerator ( $srcDir ) {
 
 function BuildStudio ( $srcDir, $projectDir ) {
     # build studio
-    write-host "== Building Studio..."
+    write-host "Building Studio..."
     & npm install -g gulp-cli
     cd $srcDir
     & npm install

@@ -5,17 +5,34 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
+using System.Net;
+using System.Net.Http;
+using System.Reflection;
+using System.Runtime.Loader;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting;
+using Raven.Abstractions.Data;
+using Raven.Client.Connection;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
-using Sparrow;
+using Raven.Abstractions.Extensions;
+using System.Linq;
+using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
+using StringSegment = Sparrow.StringSegment;
 
 namespace Raven.Server.Web.System
 {
     public class StudioHandler : RequestHandler
     {
+        private static readonly ConcurrentDictionary<string, string> ZipLastChangedDate =
+                new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         private static readonly Dictionary<string, string> MimeMapping = new Dictionary<string, string>()
         {
             {"css", "text/css"},
@@ -123,7 +140,17 @@ namespace Raven.Server.Web.System
                 return;
             }
 
-            HttpContext.Response.StatusCode = 404;
+            var env = (IHostingEnvironment)HttpContext.RequestServices.GetService(typeof(IHostingEnvironment));
+            var basePath = env.ContentRootPath;
+            var zipFilePath = Path.Combine(basePath, "Raven.Studio.zip");
+
+            if (File.Exists(zipFilePath) == false)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return;
+            }
+
+            WriteFileFromZip(zipFilePath, filename);
         }
 
         [RavenAction("/", "GET")]
@@ -132,6 +159,113 @@ namespace Raven.Server.Web.System
             HttpContext.Response.Headers["Location"] = "/studio/index.html";
             HttpContext.Response.StatusCode = 301;
             return Task.CompletedTask;
+        }
+
+        private void WriteFileFromZip(string zipPath, string docPath)
+        {
+            var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
+            var currentFileEtag = ZipLastChangedDate.GetOrAdd(zipPath, f => File.GetLastWriteTime(f).Ticks.ToString("G")) + docPath;
+            if (etagValue == $"\"{ currentFileEtag }\"")
+            {
+                WriteEmptyMessage(HttpStatusCode.NotModified);
+                return;
+            }
+
+            var fileStream = new FileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Read, false);
+
+            var zipEntry = zipArchive.Entries.FirstOrDefault(a => a.FullName.Equals(docPath, StringComparison.OrdinalIgnoreCase));
+            if (zipEntry == null)
+            {
+                WriteEmbeddedFileNotFound(docPath);
+                return;
+            }
+
+            using (var responseStream = ResponseBodyStream())
+            {
+                var type = GetContentType(docPath);
+                HttpContext.Response.ContentType = new MediaTypeHeaderValue(type).ToString();
+                WriteETag(currentFileEtag);
+                using (var entry = zipEntry.Open())
+                {
+                    entry.CopyTo(responseStream);
+                    entry.Flush();
+                }
+            }
+        }
+
+        private static string GetContentType(string docPath)
+        {
+            switch (Path.GetExtension(docPath))
+            {
+                case ".html":
+                case ".htm":
+                    return "text/html";
+                case ".css":
+                    return "text/css";
+                case ".js":
+                    return "text/javascript";
+                case ".ico":
+                    return "image/vnd.microsoft.icon";
+                case ".jpg":
+                    return "image/jpeg";
+                case ".gif":
+                    return "image/gif";
+                case ".png":
+                    return "image/png";
+                case ".xap":
+                    return "application/x-silverlight-2";
+                case ".json":
+                    return "application/json";
+                case ".eot":
+                    return "application/vnd.ms-fontobject";
+                case ".svg":
+                    return "image/svg+xml";
+                case ".ttf":
+                    return "application/octet-stream";
+                case ".woff":
+                    return "application/font-woff";
+                case ".woff2":
+                    return "application/font-woff2";
+                case ".appcache":
+                    return "text/cache-manifest";
+                default:
+                    return "text/plain";
+            }
+        }
+
+        public string GetHeader(string key)
+        {
+            StringValues values;
+            var requestHeaders = HttpContext.Request.Headers;
+            if (requestHeaders.TryGetValue(key, out values))
+                return values.FirstOrDefault();
+            return null;
+        }
+
+        public virtual void WriteEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, long? etag = null)
+        {
+            HttpContext.Response.StatusCode = (int)code;
+            WriteETag(etag);
+        }
+
+        protected void WriteETag(long? etag)
+        {
+            WriteETag(etag.ToInvariantString());
+        }
+
+        protected void WriteETag(string etag)
+        {
+            HttpContext.Response.Headers[Constants.MetadataEtagField] = etag.ToInvariantString();
+        }
+
+        private void WriteEmbeddedFileNotFound(string docPath)
+        {
+            var message = "The following embedded file was not available: " + docPath +
+                          ". Please make sure that the Raven.Studio.zip file exist in the main directory (near to the Raven.Database.dll).";
+            HttpContext.Response.StatusCode = (int) HttpStatusCode.NotFound;
+            HttpContext.Response.ContentType = "application/json";
+            HttpContext.Response.Body.Write(message);
         }
     }
 }

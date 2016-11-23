@@ -18,8 +18,6 @@
     "bootstrap-contextmenu": "^0.3.4",
     "bootstrap-multiselect": "^0.9.13",
     "bootstrap-select": "^1.9.4",
-    "jquery-ui": "jquery.ui#^1.11.4",
-    "jquery.dynatree": "^1.2.8",
     "Durandal": "durandal#^2.1.0",
     "forge": "^0.6.38",
     "d3": "^3.5.15",
@@ -35,7 +33,6 @@
     "Squire.js": "squire#^0.2.0",
     "es6-shim": "^0.35.1",
     "knockout-validation": "ko-validation#^2.0.3",
-    "rbush": "git://github.com/mourner/rbush.git#^2.0.1",
     "google-analytics": "https://www.google-analytics.com/analytics.js"
   },
   "resolutions": {

@@ -52,7 +52,7 @@ gulp.task('less', function() {
          // .pipe(plugins.newy(findNewestFile(PATHS.lessTargetSelector)))
         .pipe(plugins.sourcemaps.init())
         .pipe(plugins.less({ sourceMap: true }))
-        .pipe(autoPrefixer()) 
+        .pipe(autoPrefixer())
         .pipe(plugins.sourcemaps.write("."))
         .pipe(gulp.dest(PATHS.lessTarget));
 });
@@ -108,8 +108,8 @@ gulp.task('release:favicon', function() {
 });
 
 gulp.task('release:images', function() {
-    return gulp.src('wwwroot/Content/images/*')
-       .pipe(gulp.dest(PATHS.releaseTarget + "Content/images/"));
+    return gulp.src('wwwroot/Content/img/*', { base: 'wwwroot/Content' })
+       .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
 gulp.task('release:fonts', function() {
@@ -117,6 +117,17 @@ gulp.task('release:fonts', function() {
        .pipe(gulp.dest(path.join(PATHS.releaseTarget, 'App/fonts')));
 });
 
+gulp.task('release:ace', function () {
+    return gulp.src('wwwroot/Content/ace/*')
+        .pipe(gulp.dest(path.join(PATHS.releaseTarget, 'Content/ace')));
+});
+
+gulp.task('release:customlibs', function () {
+    const libs = [ 'rbush', 'ace' ].join(',');
+    const src = `wwwroot/Content/{${ libs }}/**/*`;
+    return gulp.src(src, { base: 'wwwroot/Content' })
+        .pipe(gulp.dest(path.join(PATHS.releaseTarget, 'Content')));
+});
 
 gulp.task('release:html', function() {
     return gulp.src('wwwroot/index.html')
@@ -225,14 +236,14 @@ gulp.task('release', function (cb) {
             'release:html',
             'release:css',
             'release:fonts',
+            'release:customlibs',
             'release:durandal'
         ],
         cb);
 });
 
 gulp.task('release-package', ['release'], function () {
-    return gulp.src(PATHS.releaseTarget + "/**/*.*", {
-    })
+    return gulp.src(PATHS.releaseTarget + "/**/*.*")
     .pipe(plugins.zip("Raven.Studio.zip"))
     .pipe(gulp.dest(PATHS.releaseTarget));
 });
@@ -242,4 +253,34 @@ gulp.task('build', function (cb) {
         'restore',
         'compile',
         cb);
+});
+
+gulp.task('alpha-release:_copy-js', function () {
+    return gulp.src('wwwroot/**/*.js')
+        //.pipe(plugins.uglify().on('error', gutil.log))
+        .pipe(gulp.dest(PATHS.releaseTarget));
+});
+
+gulp.task('alpha-release:_copy-content', function () {
+    return gulp.src('wwwroot/**/*.{css,ico,json,png,svg,html,woff,woff2,eot,ttf}')
+        .pipe(gulp.dest(PATHS.releaseTarget));
+});
+
+gulp.task('alpha-release:_package', ['alpha-release:_copy'], function () {
+    return gulp.src(PATHS.releaseTarget + "/**/*.*")
+    .pipe(plugins.zip("Raven.Studio.zip"))
+    .pipe(gulp.dest(PATHS.releaseTarget));
+});
+
+gulp.task('alpha-release:_copy', [
+        'alpha-release:_copy-content',
+        'alpha-release:_copy-js'
+]);
+
+gulp.task('alpha-release', function (cb) {
+    return runSequence(
+        'restore',
+        'clean',
+        'build',
+        'alpha-release:_package');
 });
