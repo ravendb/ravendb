@@ -384,22 +384,24 @@ namespace Sparrow
             return CombineInline(x, y);
         }
 
+
+        public static long Combine(long x, long y)
+        {
+            return CombineInline(x, y);
+        }
+
+        public static ulong Combine(ulong x, ulong y)
+        {
+            return CombineInline(x, y);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int CombineInline(int x, int y)
         {
-            ulong ex = (ulong)x;
-            ulong ey = (ulong)y;
-
-            ulong key = ex << 32 | ey;
-
-            key = (~key) + (key << 18); // key = (key << 18) - key - 1;
-            key = key ^ (key >> 31);
-            key = key * 21; // key = (key + (key << 2)) + (key << 4);
-            key = key ^ (key >> 11);
-            key = key + (key << 6);
-            key = key ^ (key >> 22);
-
-            return (int)key;
+            // The jit optimizes this to use the ROL instruction on x86
+            // Related GitHub pull request: dotnet/coreclr#1830
+            uint shift5 = ((uint)x << 5) | ((uint)x >> 27);
+            return ((int)shift5 + x) ^ y;
         }
 
         private static readonly ulong kMul = 0x9ddfea08eb382d69UL;
@@ -422,7 +424,7 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong CombineInline(long upper, long lower)
+        public static long CombineInline(long upper, long lower)
         {
             // This is the Hash128to64 function from Google's CityHash (available
             // under the MIT License).  We use it to reduce multiple 64 bit hashes
@@ -438,25 +440,16 @@ namespace Sparrow
             b ^= (b >> 47);
             b *= kMul;
 
-            return b;
+            return (long) b;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint CombineInline(uint x, uint y)
         {
-            ulong ex = (ulong)x;
-            ulong ey = (ulong)y;
-
-            ulong key = ex << 32 | ey;
-
-            key = (~key) + (key << 18); // key = (key << 18) - key - 1;
-            key = key ^ (key >> 31);
-            key = key * 21; // key = (key + (key << 2)) + (key << 4);
-            key = key ^ (key >> 11);
-            key = key + (key << 6);
-            key = key ^ (key >> 22);
-
-            return (uint)key;
+            // The jit optimizes this to use the ROL instruction on x86
+            // Related GitHub pull request: dotnet/coreclr#1830
+            uint shift5 = (x << 5) | (x >> 27);
+            return (shift5 + x) ^ y;
         }
 
         #endregion
