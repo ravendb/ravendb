@@ -1372,7 +1372,7 @@ namespace Raven.Server.Documents
                         {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length}, //4
                         lastModifiedTicks // 5
                     };
-
+                    
                     if (oldValue == null)
                     {
                         if (expectedEtag != null && expectedEtag != 0)

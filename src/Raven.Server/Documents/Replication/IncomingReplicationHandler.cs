@@ -256,8 +256,10 @@ namespace Raven.Server.Documents.Replication
                             switch (conflictStatus)
                             {
                                 case ConflictStatus.ShouldResolveConflict:                                    
-                                    _database.IndexMetadataPersistence.DeleteConflictsFor(tx.InnerTransaction, item.Name);
-                                    goto case ConflictStatus.Update;
+                                    var conflictChangeVectors =  _database.IndexMetadataPersistence.DeleteConflictsFor(tx.InnerTransaction,_context, item.Name);
+                                    var mergedVector = ReplicationUtils.MergeVectors(conflictChangeVectors);
+                                    PutIndexOrTransformer(item, definition,mergedVector);
+                                    break;
                                 case ConflictStatus.Update:
                                     PutIndexOrTransformer(item, definition);
                                     break;
@@ -329,23 +331,22 @@ namespace Raven.Server.Documents.Replication
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void PutIndexOrTransformer(ReplicationIndexOrTransformerPositions item, BlittableJsonReaderObject definition)
+        private void PutIndexOrTransformer(ReplicationIndexOrTransformerPositions item, BlittableJsonReaderObject definition, ChangeVectorEntry[] changeVector = null)
         {
             switch (item.Type)
             {
                 case IndexEntryType.Index:
-                    PutIndexReplicationItem(item, definition);
+                    PutIndexReplicationItem(item, definition, changeVector);
                     break;
                 case IndexEntryType.Transformer:
-                    PutTransformerReplicationItem(item, definition);
+                    PutTransformerReplicationItem(item, definition, changeVector);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
         }
 
-        private void PutTransformerReplicationItem(ReplicationIndexOrTransformerPositions item,
-            BlittableJsonReaderObject definition)
+        private void PutTransformerReplicationItem(ReplicationIndexOrTransformerPositions item, BlittableJsonReaderObject definition, ChangeVectorEntry[] changeVector)
         {
             if (_log.IsInfoEnabled)
             {
@@ -368,7 +369,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void PutIndexReplicationItem(ReplicationIndexOrTransformerPositions item, BlittableJsonReaderObject definition)
+        private void PutIndexReplicationItem(ReplicationIndexOrTransformerPositions item, BlittableJsonReaderObject definition, ChangeVectorEntry[] changeVector)
         {
             if (_log.IsInfoEnabled)
             {
@@ -378,6 +379,11 @@ namespace Raven.Server.Documents.Replication
             try
             {
                 IndexProcessor.Import(definition, _database, ServerVersion.Build);
+
+                if (changeVector != null)
+                {
+                    _database.IndexMetadataPersistence.UpdateChangeVectorFor(item.Name, changeVector);
+                }
             }
             catch (ArgumentException e)
             {

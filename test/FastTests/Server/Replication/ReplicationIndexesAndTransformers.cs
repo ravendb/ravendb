@@ -118,6 +118,70 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
+        public void DeleteConflictsFor_should_delete_all_conflict_records()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var userByAge = new UserByAgeIndex();
+                userByAge.Execute(store);
+                
+                var databaseStoreTask =
+                    Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+                databaseStoreTask.Wait();
+                var databaseStore = databaseStoreTask.Result;
+
+                var definitionJson = new DynamicJsonValue
+                {
+                    ["Foo"] = "Bar"
+                };
+
+                var definitionJson2 = new DynamicJsonValue
+                {
+                    ["Foo"] = "Bar"
+                };
+
+                DocumentsOperationContext context;
+                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                using (var definintion = context.ReadObject(definitionJson, string.Empty))
+                using (var definintion2 = context.ReadObject(definitionJson2, string.Empty))
+                {
+                    databaseStore.IndexMetadataPersistence.AddConflict(
+                        context,
+                        tx.InnerTransaction,
+                        userByAge.IndexName,
+                        IndexEntryType.Index,
+                        new ChangeVectorEntry[0], definintion);
+
+                    databaseStore.IndexMetadataPersistence.AddConflict(
+                        context,
+                        tx.InnerTransaction,
+                        userByAge.IndexName,
+                        IndexEntryType.Index,
+                        new ChangeVectorEntry[0], definintion2);
+
+                    tx.Commit();
+                }
+
+                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var changeVectors = databaseStore.IndexMetadataPersistence.DeleteConflictsFor(tx.InnerTransaction,context, userByAge.IndexName);
+                    tx.Commit();
+
+                    Assert.Equal(2,changeVectors.Count);
+                }
+
+                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    Assert.Empty(databaseStore.IndexMetadataPersistence.GetConflictsFor(tx.InnerTransaction, context, userByAge.IndexName, 0, 1024));
+                }
+
+            }
+        }
+
+        [Fact]
         public void Adding_conflict_should_set_the_original_metadata_as_conflicted()
         {
             using (var store = GetDocumentStore())

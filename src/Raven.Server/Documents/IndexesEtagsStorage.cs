@@ -367,10 +367,10 @@ namespace Raven.Server.Documents
             return changeVector;
         }
 
-        public IReadOnlyList<ChangeVectorEntry[]> DeleteConflictsFor(Transaction tx, string name)
+        public IReadOnlyList<ChangeVectorEntry[]> DeleteConflictsFor(Transaction tx, DocumentsOperationContext context, string name)
         {
-            Slice nameSlice;
-            using (Slice.From(tx.Allocator, name, ByteStringType.Immutable, out nameSlice))
+            Slice nameSlice;            
+            using (DocumentKeyWorker.GetSliceFromKey(context,name, out nameSlice))
                 return DeleteConflictsFor(tx, nameSlice);
         }
 
@@ -426,6 +426,19 @@ namespace Raven.Server.Documents
                 yield return TableValueToConflict(tvr, context);
             }
         }
+
+        public void UpdateChangeVectorFor(Transaction tx, JsonOperationContext context, string name, ChangeVectorEntry[] changeVector)
+        {
+            var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
+            Debug.Assert(table != null);
+
+//            Slice nameAsSlice;
+//            using (DocumentKeyWorker.GetSliceFromKey(context, name, out nameAsSlice))
+//            {
+//                var tvr = table.ReadByKey(nameAsSlice);
+//            }
+        }
+
 
         /// <summary>
         /// this method will fetch all metadata entries - tombstones or otherwise
@@ -716,9 +729,7 @@ namespace Raven.Server.Documents
             public const string ConflictMetadataTable = "IndexAndTransformerConflictsMetadata";
             public const string GlobalChangeVectorTree = "IndexAndTransformerGlobalChangeVectorTree";
             public const string LastReplicatedEtagsTree = "IndexAndTransformerLastReplicatedEtags";
-        }
-
-
+    }
     }
 
     public enum IndexEntryType : byte
