@@ -217,7 +217,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         using (Stream file = await getFile())
                         using (var stream = new GZipStream(file, CompressionMode.Decompress))
                         {
-                            var result = await DoImport(context, stream);
+                            var importer = new SmugglerImporter(Database);
+                            var result =  await importer.Import(context, stream);
                             results.Enqueue(result);
                         }
                     }
@@ -260,15 +261,22 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
+
+
         [RavenAction("/databases/*/smuggler/import", "GET")]
-        public async Task GetImport()
+        public Task GetImport()
         {
             if (HttpContext.Request.Query.ContainsKey("file") == false &&
                 HttpContext.Request.Query.ContainsKey("url") == false)
             {
                 throw new ArgumentException("'file' or 'url' are mandatory when using GET /smuggler/import");
             }
-        
+            return PostImport();
+        }
+
+        [RavenAction("/databases/*/smuggler/import", "POST")]
+        public async Task PostImport()
+        {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
@@ -303,41 +311,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return Tuple.Create<Stream, IDisposable>(HttpContext.Request.Body, null);
         }
 
-        private async Task<ImportResult> DoImport(DocumentsOperationContext context, Stream stream)
-        {
-            var importer = new SmugglerImporter(Database);
-
-
-            return await importer.Import(context, stream);
-        }
-        [RavenAction("/databases/*/smuggler/import", "POST")]
-        public Task PostImport()
-        {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                if (HttpContext.Request.Form.Files.Count > 0)
-                {
-                    var file = HttpContext.Request.Form.Files[0];
-                    using (var fileStream = file?.OpenReadStream())
-                    {
-                        var stream = new GZipStream(fileStream, CompressionMode.Decompress);
-                            
-                        var operationId = Database.Operations.GetNextOperationId();
-                        var token = CreateOperationToken();
-                        Database.Operations.AddOperation("Import to: " + Database.Name, DatabaseOperations.PendingOperationType.DatabaseImport,
-                                onProgress => DoImportInternal(context, stream, onProgress), operationId, token);
-
-                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                        {
-                            writer.WriteOperationId(context, operationId);
-                        }
-                        
-                    }
-                }
-            }
-            return Task.CompletedTask;
-        }
 
         private void WriteImportResult(DocumentsOperationContext context, Stopwatch sp, ImportResult result, Stream stream)
         {
@@ -359,27 +332,17 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         }
 
 
-        private async Task<IOperationResult> DoImportInternal(DocumentsOperationContext context, Stream stream,
-            Action<IOperationProgress> onProgress = null)
-        {
-            try
-            {
-                return await DoImport(context, stream, onProgress);
-            }
-            finally
-            {
-                stream.Dispose();
-                
-            }
 
-        }
-
-        private async Task<ImportResult> DoImport(DocumentsOperationContext context, Stream stream, Action<IOperationProgress> onProgress = null)
+        private async Task<ImportResult> DoImport(DocumentsOperationContext context, Stream stream)
         {
-            var importOptionsStream = TryGetRequestFormStream("importOptions") ?? RequestBodyStream();
-            var blittableJson = await context.ReadForMemoryAsync(importOptionsStream, "importOptions");
-            var options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
-            var importer = new SmugglerImporter(Database, options);
+            var importer = new SmugglerImporter(Database);
+
+            //var operateOnTypes = GetStringQueryString("operateOnTypes", required: false);
+            //DatabaseItemType databaseItemType;
+            //if (Enum.TryParse(operateOnTypes, true, out databaseItemType))
+            //{
+            //    importer.OperateOnTypes = databaseItemType;
+            //}
 
             return await importer.Import(context, stream);
         }

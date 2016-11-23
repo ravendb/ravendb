@@ -6,6 +6,8 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Json;
 using Raven.Json.Linq;
@@ -116,14 +118,16 @@ namespace Raven.Client.Smuggler
 
                 var response = await httpClient.PostAsync(uri, content, cancellationToken).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode == false)
-                    throw new InvalidOperationException("Import failed with status code: " +  response.StatusCode + Environment.NewLine + 
-                        await response.Content.ReadAsStringAsync()
-                        );
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var x = await response.Content.ReadAsStringAsync();
-                }
+                    throw new InvalidOperationException("Import failed with status code: " + response.StatusCode +
+                                                        Environment.NewLine +
+                                                        await response.Content.ReadAsStringAsync()
+                    );
+                //TODO: If the call uses operation result, need to wait on that
+                //// TODO: fix this when we have the new client, avoid the downcast and make handle this properly
+                //var opId = RavenJObject.Parse(await response.Content.ReadAsStringAsync()).Value<long>("OperationId");
+                //var asyncDatabaseCommands = _store.AsyncDatabaseCommands.ForDatabase(database);
+                //var operation = new Operation((AsyncServerClient) asyncDatabaseCommands, opId);
+                //await operation.WaitForCompletionAsync().ConfigureAwait(false);
             }
         }
 
