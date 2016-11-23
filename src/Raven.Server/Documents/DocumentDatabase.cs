@@ -190,7 +190,7 @@ namespace Raven.Server.Documents
 
             //Index Metadata Store shares Voron env and context pool with documents storage, 
             //so replication of both documents and indexes/transformers can be made within one transaction
-            ConfigurationStorage.Initialize(IndexStore,TransformerStore,DocumentsStorage.Environment,DocumentsStorage.ContextPool);
+            ConfigurationStorage.Initialize(IndexStore,TransformerStore);
             DocumentReplicationLoader.Initialize();
         }
 

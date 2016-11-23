@@ -40,7 +40,8 @@ namespace Raven.Server.Documents.Replication
             {
                 var sp = Stopwatch.StartNew();
                 var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
-                using (_parent._documentsContext.OpenReadTransaction())
+                var context = _parent._configurationContext;
+                using (context.OpenReadTransaction())
                 {
                     while (sp.ElapsedMilliseconds < timeout)
                     {
@@ -49,8 +50,8 @@ namespace Raven.Server.Documents.Replication
                         _parent.CancellationToken.ThrowIfCancellationRequested();
 
                         var indexAndTransformerMetadata = _parent._database.IndexMetadataPersistence.GetAfter(
-                            _parent._documentsContext.Transaction.InnerTransaction,
-                            _parent._documentsContext, LastEtag + 1, 0, 1024);
+                            context.Transaction.InnerTransaction,
+                            context, LastEtag + 1, 0, 1024);
 
                         using (var stream = new MemoryStream())
                         {
@@ -58,7 +59,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 _parent.CancellationToken.ThrowIfCancellationRequested();
                                 stream.Position = 0;
-                                using (var writer = new BlittableJsonTextWriter(_parent._documentsContext, stream))
+                                using (var writer = new BlittableJsonTextWriter(context, stream))
                                 {
                                     switch (item.Type)
                                     {
@@ -70,7 +71,7 @@ namespace Raven.Server.Documents.Replication
 
                                             try
                                             {
-                                                IndexProcessor.Export(writer, index, _parent._documentsContext, false);
+                                                IndexProcessor.Export(writer, index, context, false);
                                             }
                                             catch (InvalidOperationException e)
                                             {
@@ -89,7 +90,7 @@ namespace Raven.Server.Documents.Replication
                                             try
                                             {
                                                 TransformerProcessor.Export(writer, transformer,
-                                                    _parent._documentsContext);
+                                                    context);
                                             }
                                             catch (InvalidOperationException e)
                                             {
@@ -114,7 +115,7 @@ namespace Raven.Server.Documents.Replication
                                         Etag = item.Etag,
                                         Type = (int) item.Type,
                                         Definition =
-                                            _parent._documentsContext.ReadForMemory(stream,
+                                            context.ReadForMemory(stream,
                                                 "Index/Transformer Replication - Reading definition into memory")
                                     };
 
@@ -126,7 +127,7 @@ namespace Raven.Server.Documents.Replication
                         // if we are at the end, we are done
                         if (LastEtag <=
                             _parent._database.IndexMetadataPersistence.ReadLastEtag(
-                                _parent._documentsContext.Transaction.InnerTransaction))
+                                context.Transaction.InnerTransaction))
                         {
                             break;
                         }
@@ -143,7 +144,8 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        SendIndexTransformerBatch();
+                        using (_parent._documentsContext.OpenReadTransaction())
+                            SendIndexTransformerBatch();
                     }
                     catch (Exception e)
                     {

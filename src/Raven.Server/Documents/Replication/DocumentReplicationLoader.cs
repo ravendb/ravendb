@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<ReplicationDestination, ConnectionFailureInfo> OutgoingFailureInfo => _outgoingFailureInfo;
         public IReadOnlyDictionary<IncomingConnectionInfo, DateTime> IncomingLastActivityTime => _incomingLastActivityTime;
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
-        public IEnumerable<ReplicationDestination> ReconnectQueue => _reconnectQueue.Select(x=>x.Destination);
+        public IEnumerable<ReplicationDestination> ReconnectQueue => _reconnectQueue.Select(x => x.Destination);
 
         public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions)
         {
@@ -78,9 +78,12 @@ namespace Raven.Server.Documents.Replication
             }
 
             DocumentsOperationContext documentsOperationContext;
+            TransactionOperationContext configurationContext;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
+            using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
             using (var writer = new BlittableJsonTextWriter(documentsOperationContext, tcpConnectionOptions.Stream))
             using (var tx = documentsOperationContext.OpenReadTransaction())
+            using (var configTx = configurationContext.OpenReadTransaction())
             {
                 var documentsChangeVector = new DynamicJsonArray();
                 foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext))
@@ -93,7 +96,7 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 var indexesChangeVector = new DynamicJsonArray();
-                var changeVectorAsArray = _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector(tx.InnerTransaction);
+                var changeVectorAsArray = _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector(configTx.InnerTransaction);
                 foreach (var changeVectorEntry in changeVectorAsArray)
                 {
                     indexesChangeVector.Add(new DynamicJsonValue
@@ -213,7 +216,7 @@ namespace Raven.Server.Documents.Replication
         {
             _replicationDocument = GetReplicationDocument();
             if (_replicationDocument?.Destinations == null || //precaution
-                _replicationDocument.Destinations.Count == 0) 
+                _replicationDocument.Destinations.Count == 0)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info("Tried to initialize outgoing replications, but there is no replication document or destinations are empty. Nothing to do...");
@@ -293,8 +296,8 @@ namespace Raven.Server.Documents.Replication
         {
             if (!notification.Key.Equals(Constants.Replication.DocumentReplicationConfiguration, StringComparison.OrdinalIgnoreCase))
                 return;
-            
-            if(_log.IsInfoEnabled)
+
+            if (_log.IsInfoEnabled)
                 _log.Info("System document change detected. Starting and stopping outgoing replication threads.");
 
 

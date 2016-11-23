@@ -113,7 +113,8 @@ namespace Raven.Server.Documents.Replication
                     // ensure that the other server is aware that we skipped 
                     // on (potentially a lot of) documents to send, and we update
                     // the last etag they have from us on the other side
-                    _parent.SendHeartbeat();
+                    using (_parent._configurationContext.OpenReadTransaction())
+                        _parent.SendHeartbeat();
                     return hasModification;
                 }
 
@@ -207,6 +208,7 @@ namespace Raven.Server.Documents.Replication
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
             using (_parent._documentsContext.OpenReadTransaction())
+            using (_parent._configurationContext.OpenReadTransaction())
             {
                 _parent.HandleServerResponse();
             }
