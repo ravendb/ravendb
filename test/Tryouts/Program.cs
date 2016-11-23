@@ -12,9 +12,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var store = new FastTests.Voron.Backups.BackupToOneZipFile())
+                using (var store = new FastTests.NewClient.CRUD())
                 {
-                    store.FullBackupToOneZipFile();
+                    store.CRUD_Operations_With_Mark_Read_Only();
                 }
             }
         }

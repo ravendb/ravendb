@@ -1010,8 +1010,8 @@ namespace Raven.Server.Json
                 if (first == false)
                 {
                     writer.WriteComma();
-                    first = true;
                 }
+                first = false;
                 writer.WritePropertyName(Constants.Metadata.Etag);
                 writer.WriteInteger(document.Etag);
             }
@@ -1020,8 +1020,8 @@ namespace Raven.Server.Json
                 if (first == false)
                 {
                     writer.WriteComma();
-                    first = true;
                 }
+                first = false;
                 writer.WritePropertyName(Constants.Metadata.Id);
                 writer.WriteString(document.Key);
 
@@ -1031,8 +1031,8 @@ namespace Raven.Server.Json
                 if (first == false)
                 {
                     writer.WriteComma();
-                    first = true;
                 }
+                first = false;
                 writer.WritePropertyName(Constants.Metadata.IndexScore);
                 writer.WriteDouble(document.IndexScore.Value);
             }
@@ -1041,8 +1041,8 @@ namespace Raven.Server.Json
                 if (first == false)
                 {
                     writer.WriteComma();
-                    first = true;
                 }
+                first = false;
                 writer.WritePropertyName(Constants.Headers.LastModified);
                 writer.WriteString(document.LastModified.GetDefaultRavenFormat());
             }
