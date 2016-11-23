@@ -4,19 +4,33 @@
     includeTransformers = ko.observable(true);
     removeAnalyzers = ko.observable(false);
 
-    batchSize = ko.observable(1024);
+    includeRevisionDocuments = ko.observable(true);
     includeExpiredDocuments = ko.observable(true);
-    stripReplicationInformation = ko.observable(false);
     shouldDisableVersioningBundle = ko.observable(false);
     transformScript = ko.observable<string>();
 
-
-    toDto(): importDatabaseRequestDto {
-        return {
-            batchSize: this.batchSize(),
-
-            //TODO: send other props
+    toDto(): Raven.Client.Smuggler.DatabaseSmugglerOptions {
+        const operateOnTypes: Array<Raven.Client.Smuggler.DatabaseItemType> = [];
+        if (this.includeDocuments()) {
+            operateOnTypes.push("Documents");
         }
+        if (this.includeIndexes()) {
+            operateOnTypes.push("Indexes");
+        }
+        if (this.includeTransformers()) {
+            operateOnTypes.push("Transformers");
+        }
+        if (this.includeRevisionDocuments()) {
+            operateOnTypes.push("RevisionDocuments");
+        }
+
+        return {
+            IncludeExpired: this.includeExpiredDocuments(),
+            TransformScript: this.transformScript(),
+            RemoveAnalyzers: this.removeAnalyzers(),
+            DisableVersioningBundle: this.shouldDisableVersioningBundle(),
+            OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Smuggler.DatabaseItemType
+        } as Raven.Client.Smuggler.DatabaseSmugglerOptions;
     }
 }
 

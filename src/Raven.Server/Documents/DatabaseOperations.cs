@@ -267,6 +267,8 @@ namespace Raven.Server.Documents
             DeleteByIndex,
 
             DatabaseExport,
+            
+            DatabaseImport,
 
             IndexCompact,
 

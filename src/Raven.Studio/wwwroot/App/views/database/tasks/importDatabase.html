@@ -8,7 +8,7 @@
                 <div class="col-sm-6">
                     <div class="input-group file-input">
                         <input required="" type="file" id="importDatabaseFilePicker"  data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }, disable: isImporting" tabindex="-1" >
-                        <span class="static-name form-control">Select file...</span>
+                        <span class="static-name form-control" data-bind="text: importedFileName() || 'Select file...'" ></span>
                         <span class="input-group-btn">
                             <label for="importDatabaseFilePicker" class="btn btn-default">
                                 <i class="icon-document"></i>
@@ -35,6 +35,12 @@
                                     Include Indexes
                                 </label>
                             </div>
+                            <div class="toggle">
+                                <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments">
+                                <label for="toggle6">
+                                    Include revision documents
+                                </label>
+                            </div>
                         </div>
                         <div class="col-sm-6 col-lg-4">
                             <div class="toggle">
@@ -56,22 +62,6 @@
             <br />
 
             <div data-bind="collapse: showAdvancedOptions, with: model">
-                <div class="row">
-                    <div class="col-sm-6">
-                        <div class="form-group">
-                            <div class="input-group">
-                                <div class="input-group-addon">Batch size</div>
-                                <input class="form-control" type="number" min="0" data-bind="textInput: batchSize">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="toggle">
-                    <input id="stripReplicationInformation" type="checkbox" data-bind="checked: stripReplicationInformation">
-                    <label for="stripReplicationInformation">
-                        Strip replication information from documents metadata
-                    </label>
-                </div>
                 <div class="toggle">
                     <input id="shouldDisableVersioningBundle" type="checkbox" data-bind="checked: shouldDisableVersioningBundle">
                     <label for="shouldDisableVersioningBundle">

@@ -80,14 +80,12 @@ namespace Raven.Server.Smuggler.Documents
                         if (document == null)
                             continue;
 
-                        if (!Options.IncludeExpired && document.Expired())
-                                continue;
+                        if (Options.IncludeExpired == false && document.Expired())
+                            continue;
 
-                        if (patch != null)
+                        var patchResult = patch?.Apply(context, document, patchRequest);
+                        if (patchResult != null && patchResult.ModifiedDocument.Equals(document.Data) == false)
                         {
-                            var patchResult = patch.Apply(context, document, patchRequest);
-                            if(patchResult == null || patchResult.ModifiedDocument.Equals(document.Data))
-                                continue;
                             document.Data = patchResult.ModifiedDocument;
                         }
 
