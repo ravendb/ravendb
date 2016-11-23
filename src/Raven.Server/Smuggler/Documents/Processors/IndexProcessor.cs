@@ -37,7 +37,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
             //so we can use ServerVersion.Build to get the build and not hardcode it
             else if (buildVersion == 13 || (buildVersion >= 40000 && buildVersion <= 44999) || (buildVersion >= 40 && buildVersion <= 44))
             {
-                var indexType = ReadIndexType(indexDefinitionDoc);
+                var indexType = ReadIndexType(indexDefinitionDoc, out indexDefinitionDoc);
                 switch (indexType)
                 {
                     case IndexType.AutoMap:
@@ -98,11 +98,15 @@ namespace Raven.Server.Smuggler.Documents.Processors
             writer.WriteEndObject();
         }
 
-        private static IndexType ReadIndexType(BlittableJsonReaderObject reader)
+        private static IndexType ReadIndexType(BlittableJsonReaderObject reader, out BlittableJsonReaderObject indexDef)
         {
             string typeAsString;
             if (reader.TryGet(nameof(IndexDefinition.Type), out typeAsString) == false)
                 throw new InvalidOperationException("Could not read index type.");
+
+            if(reader.TryGet(nameof(IndexDefinition), out indexDef) ==false)
+                throw new InvalidOperationException("Could not read index definition");
+
 
             return (IndexType)Enum.Parse(typeof(IndexType), typeAsString, ignoreCase: true);
         }
