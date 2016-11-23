@@ -1,19 +1,13 @@
 ﻿using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
-using Raven.Client.Connection;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Patching
 {
     public class PatchAndDeleteByCollection : RavenTestBase
     {
-
-        public class User
-        {
-            public string Name { get; set; }
-        }
-
         [Fact]
         public void CanDeleteCollection()
         {
@@ -23,21 +17,21 @@ namespace FastTests.Server.Documents.Patching
                 {
                     for (int i = 0; i < 100; i++)
                     {
-                        x.Store(new User {}, "users/");
+                        x.Store(new User { }, "users/");
                     }
                     x.SaveChanges();
                 }
-                store.DatabaseCommands.CreateRequest("/collections/users", HttpMethod.Delete).ExecuteRequest();
+                store.DatabaseCommands.CreateRequest("/collections/docs?name=users", HttpMethod.Delete).ExecuteRequest();
                 var sp = Stopwatch.StartNew();
 
-                var timeout = Debugger.IsAttached ? 60*1000 : 1000;
+                var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
 
                 while (sp.ElapsedMilliseconds < timeout)
                 {
                     if (store.DatabaseCommands.GetStatistics().CountOfDocuments == 0)
                         return;
                 }
-                Assert.False(true, "There are stilld documents afet 1 second");
+                Assert.False(true, "There are still documents after 1 second");
             }
         }
 
@@ -54,7 +48,7 @@ namespace FastTests.Server.Documents.Patching
                     }
                     x.SaveChanges();
                 }
-                var httpJsonRequest = store.DatabaseCommands.CreateRequest("/collections/users", new HttpMethod("PATCH"));
+                var httpJsonRequest = store.DatabaseCommands.CreateRequest("/collections/docs?name=users", new HttpMethod("PATCH"));
                 httpJsonRequest.WriteAsync(@"
 {
     'Script': 'this.Name = __document_id'
@@ -73,7 +67,7 @@ namespace FastTests.Server.Documents.Patching
                 Assert.Equal(100, store.DatabaseCommands.GetStatistics().CountOfDocuments);
                 using (var x = store.OpenSession())
                 {
-                    var users = x.Load<User>(Enumerable.Range(1,100).Select(i=>"users/"+i));
+                    var users = x.Load<User>(Enumerable.Range(1, 100).Select(i => "users/" + i));
                     Assert.Equal(100, users.Length);
 
                     foreach (var user in users)
