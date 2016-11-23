@@ -272,7 +272,7 @@ namespace Raven.Server.Documents
 
             DeleteByCollection,
 
-            PatchByCollection
+            UpdateByCollection
             //TODO: other operation types
             ,
             

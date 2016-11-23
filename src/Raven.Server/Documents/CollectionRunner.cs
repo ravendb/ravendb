@@ -38,8 +38,9 @@ namespace Raven.Server.Documents
         private IOperationResult ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context, 
              Action<DeterminateProgress> onProgress, Action<string> action, OperationCancelToken token)
         {
-            const int BatchSize = 1024;
+            const int batchSize = 1024;
             var progress = new DeterminateProgress();
+            var cancellationToken = token.Token;
 
             long lastEtag;
             long totalCount;
@@ -50,8 +51,7 @@ namespace Raven.Server.Documents
             }
             progress.Total = totalCount;
             long startEtag = 0;
-            using (
-                var rateGate = options.MaxOpsPerSecond.HasValue
+            using (var rateGate = options.MaxOpsPerSecond.HasValue
                     ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1))
                     : null)
             {
@@ -59,18 +59,17 @@ namespace Raven.Server.Documents
                 //The reason i do this nested loop is because i can't operate on a document while iterating the document tree.
                 while (startEtag <= lastEtag)
                 {
-                    token.Token.ThrowIfCancellationRequested();
+                    cancellationToken.ThrowIfCancellationRequested();
                     bool wait = false;
 
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        var documents = _database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag,
-                            0, BatchSize).ToList();
+                        var documents = _database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize).ToList();
                         foreach (var document in documents)
                         {                                
-                            token.Token.ThrowIfCancellationRequested();
+                            cancellationToken.ThrowIfCancellationRequested();
                             
-                            if (document.Etag > lastEtag)
+                            if (document.Etag > lastEtag)// we don't want to go over the documents that we have patched
                             {
                                 done = true;
                                 break;

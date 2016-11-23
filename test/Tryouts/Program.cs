@@ -1,4 +1,5 @@
 ﻿using System;
+using FastTests.Server.Documents.Patching;
 using FastTests.Server.Documents.Replication;
 using Sparrow.Logging;
 
@@ -12,9 +13,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var store = new FastTests.NewClient.CRUD())
+                using (var store = new PatchAndDeleteByCollection())
                 {
-                    store.CRUD_Operations_With_Mark_Read_Only();
+                    store.CanPatchCollection();
                 }
             }
         }
