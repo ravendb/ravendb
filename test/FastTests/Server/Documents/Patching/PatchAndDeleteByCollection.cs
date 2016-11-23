@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using Raven.Client.Connection;
 using Xunit;
 
@@ -30,12 +31,15 @@ namespace FastTests.Server.Documents.Patching
                 store.DatabaseCommands.CreateRequest("/collections/docs?name=users", HttpMethod.Delete).ExecuteRequest();
                 var sp = Stopwatch.StartNew();
 
-                var timeout = Debugger.IsAttached ? 60*1000 : 1000;
+                var timeout = Debugger.IsAttached ? 60*10000 : 10000;
 
                 while (sp.ElapsedMilliseconds < timeout)
                 {
-                    if (store.DatabaseCommands.GetStatistics().CountOfDocuments == 0)
+                    var databaseStatistics = store.DatabaseCommands.GetStatistics();
+                    if (databaseStatistics.CountOfDocuments == 0)
                         return;
+
+                    Thread.Sleep(25);
                 }
                 Assert.False(true, "There are stilld documents afet 1 second");
             }
@@ -63,12 +67,14 @@ namespace FastTests.Server.Documents.Patching
                 httpJsonRequest.ExecuteRequest();
                 var sp = Stopwatch.StartNew();
 
-                var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
+                var timeout = Debugger.IsAttached ? 60 * 10000 : 10000;
 
                 while (sp.ElapsedMilliseconds < timeout)
                 {
-                    if (store.DatabaseCommands.GetStatistics().LastDocEtag >= 200)
+                    var databaseStatistics = store.DatabaseCommands.GetStatistics();
+                    if (databaseStatistics.LastDocEtag >= 200)
                         break;
+                    Thread.Sleep(25);
                 }
                 Assert.Equal(100, store.DatabaseCommands.GetStatistics().CountOfDocuments);
                 using (var x = store.OpenSession())
