@@ -237,6 +237,7 @@
     <Compile Include="Issues\GermanUmlauts.cs" />
     <Compile Include="Issues\IndexationTests.cs" />
     <Compile Include="Issues\LargeAttachmentsImportShouldWork.cs" />
+    <Compile Include="Issues\RavenDB-5632.cs" />
     <Compile Include="Issues\RavenDB-3619.cs" />
     <Compile Include="Issues\RavenDB-3136.cs" />
     <Compile Include="Issues\RavenDB-3646.cs" />
