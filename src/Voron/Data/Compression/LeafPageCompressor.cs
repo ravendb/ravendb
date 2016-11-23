@@ -12,8 +12,11 @@ namespace Voron.Data.Compression
     {
         public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, out CompressionResult result, bool defrag = true, UncompressedEntry aboutToAdd = null)
         {
-            if (defrag) // TODO arek
-                page.Defrag(tx); // TODO arek no need to call it on every time probably - need to check if a page really requires defrag
+            if (defrag)
+            {
+                if (page.SizeUsed == page.SizeUsed - Constants.TreePageHeaderSize) // check if the page relly requires defrag
+                    page.Defrag(tx);
+            }
             
             var valuesSize = page.PageSize - page.Upper;
 
