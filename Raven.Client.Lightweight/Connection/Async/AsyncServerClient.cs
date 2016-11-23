@@ -1983,18 +1983,36 @@ namespace Raven.Client.Connection.Async
 						.ContinueWith(task =>
 						{
 							var results = task.Result.Results.Select(SerializationHelper.ToJsonDocument).ToArray();
+                            if (results.Any(x => x == null))
+                            {
+                                // one of the conflict documents doesn't exist, means that it was already resolved.
+                                // we'll reload the relevant documents again
+                                return new CompletedTask<bool>(true);
+                            }
 
 							foreach (var conflictListener in conflictListeners)
 							{
 								JsonDocument resolvedDocument;
 								if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
 								{
-									return DirectPutAsync(operationMetadata, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata)
-										.ContinueWith(_ =>
-										{
-											_.AssertNotFailed();
-											return true;
-										});
+                                    return DirectPutAsync(operationMetadata, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata)
+                                        .ContinueWith(_ =>
+                                        {
+                                            try
+                                            {
+                                                _.AssertNotFailed();
+                                            }
+                                            catch (AggregateException e)
+                                            {
+                                                var inner = e.ExtractSingleInnerException();
+                                                if (inner is ConcurrencyException == false)
+                                                    throw;
+
+                                                // we are racing the changes API here, so that is fine
+                                            }
+
+                                            return true;
+                                        });
 								}
 							}
 
