@@ -259,15 +259,16 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        public void Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc, long? expectedEtag = null)
+        public long Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc, long? expectedEtag = null)
         {
             TrackChange(ctx, "Write", id);
+            var newEtag = _lastEtag + 1;
+
             Slice idAsSlice;
             Slice loweredId;
             using (Slice.From(ctx.Allocator, id, out idAsSlice))
             using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out loweredId))
             {
-                var newEtag = _lastEtag + 1;
                 var newEtagBigEndian = Bits.SwapBytes(newEtag);
                 var itemTable = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
 
@@ -314,6 +315,7 @@ namespace Raven.Server.ServerWide
                 }
             }
             _lastEtag++;
+            return newEtag;
         }
 
         
