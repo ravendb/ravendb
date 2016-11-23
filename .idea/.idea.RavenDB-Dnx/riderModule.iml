@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="RIDER_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$/../..">
+      <sourceFolder url="file://$MODULE_DIR$/../../bench/BulkInsert.Benchmark" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../bench/Indexing.Benchmark" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../bench/Micro.Benchmark" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../bench/Regression.Benchmark" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../bench/Subscriptions.Benchmark" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../bench/Voron.Benchmark" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../global.json" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../libs/GeoAPI" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../libs/Jint" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../libs/Lucene.Net" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../libs/Lucene.Net.Contrib.Spatial.NTS" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../libs/NetTopologySuite" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../libs/Spatial4n.Core" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../test/FastTests" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../test/SlowTests" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../test/StressTests" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../test/Studio" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../test/Tests.Infrastructure" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../test/Tryouts" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../tests/FastTests" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../tests/SlowTests" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../tests/Tests.Base" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../tools/Raven.Traffic" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../tools/TypingsGenerator" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../tools/Voron.Recovery" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/../../bench/BulkInsert.Benchmark/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../bench/BulkInsert.Benchmark/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../bench/Indexing.Benchmark/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../bench/Indexing.Benchmark/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../bench/Micro.Benchmark/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../bench/Micro.Benchmark/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../bench/Regression.Benchmark/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../bench/Regression.Benchmark/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../bench/Subscriptions.Benchmark/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../bench/Subscriptions.Benchmark/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../bench/Voron.Benchmark/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../bench/Voron.Benchmark/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../libs/GeoAPI/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../libs/GeoAPI/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../libs/Jint/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../libs/Jint/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../libs/Lucene.Net.Contrib.Spatial.NTS/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../libs/Lucene.Net.Contrib.Spatial.NTS/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../libs/Lucene.Net/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../libs/Lucene.Net/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../libs/NetTopologySuite/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../libs/NetTopologySuite/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../libs/Spatial4n.Core/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../libs/Spatial4n.Core/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../packages" />
+      <excludeFolder url="file://$MODULE_DIR$/../../src/Raven.Client/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../src/Raven.Client/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../src/Raven.NewClient/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../src/Raven.NewClient/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../src/Raven.Server/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../src/Raven.Server/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../src/Raven.Studio/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../src/Raven.Studio/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../src/Sparrow/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../src/Sparrow/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../src/Voron/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../src/Voron/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../test/FastTests/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../test/FastTests/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../test/SlowTests/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../test/SlowTests/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../test/StressTests/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../test/StressTests/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../test/Studio/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../test/Studio/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../test/Tests.Infrastructure/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../test/Tests.Infrastructure/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../test/Tryouts/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../test/Tryouts/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../tests/FastTests/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../tests/FastTests/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../tests/SlowTests/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../tests/SlowTests/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../tests/Tests.Base/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../tests/Tests.Base/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../tools/Raven.Traffic/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../tools/Raven.Traffic/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../tools/TypingsGenerator/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../tools/TypingsGenerator/obj" />
+      <excludeFolder url="file://$MODULE_DIR$/../../tools/Voron.Recovery/bin" />
+      <excludeFolder url="file://$MODULE_DIR$/../../tools/Voron.Recovery/obj" />
+    </content>
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

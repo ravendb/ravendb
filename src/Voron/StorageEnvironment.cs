@@ -361,7 +361,8 @@ namespace Voron
 
                     if (FlushInProgressLock.IsWriteLockHeld == false)
                         flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
-
+                    if(Monitor.IsEntered(_txWriter))
+                        throw new InvalidOperationException("A write transaction is already opened by this thread");
                     Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
                     if (txLockTaken == false || (flushInProgressReadLockTaken == false && FlushInProgressLock.IsWriteLockHeld == false))
                     {

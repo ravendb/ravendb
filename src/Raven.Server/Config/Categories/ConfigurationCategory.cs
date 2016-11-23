@@ -55,10 +55,12 @@ namespace Raven.Server.Config.Categories
                 }
 
                 var configuredValueSet = false;
+                var setDefaultValueOfNeeded = true;
 
                 foreach (var entry in property.GetCustomAttributes<ConfigurationEntryAttribute>())
                 {
                     var value = getSetting(entry.Key);
+                    setDefaultValueOfNeeded &= entry.SetDefaultValueIfNeeded;
 
                     if (value == null)
                         continue;
@@ -72,6 +74,11 @@ namespace Raven.Server.Config.Categories
                             if (property.PropertyType.GetTypeInfo().IsEnum)
                             {
                                 property.SetValue(this, Enum.Parse(property.PropertyType, value, true));
+                            }
+                            if (property.PropertyType == typeof(string[]))
+                            {
+                                var values = value.Split(';');
+                                property.SetValue(this, values);
                             }
                             else if (timeUnit != null)
                             {
@@ -115,7 +122,7 @@ namespace Raven.Server.Config.Categories
                     break;
                 }
 
-                if (configuredValueSet)
+                if (configuredValueSet || setDefaultValueOfNeeded == false)
                     continue;
 
                 var defaultValueAttribute = property.GetCustomAttribute<DefaultValueAttribute>();

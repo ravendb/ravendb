@@ -36,7 +36,6 @@ namespace Raven.Server.Documents.Indexes
 
         private bool _initialized;
 
-        private string _path;
         private bool _run = true;
 
         public readonly IndexIdentities Identities = new IndexIdentities();
@@ -59,13 +58,13 @@ namespace Raven.Server.Documents.Indexes
 
                 if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
                 {
-                    _path = _documentDatabase.Configuration.Indexing.IndexStoragePath;
+                    InitializePath(_documentDatabase.Configuration.Indexing.IndexStoragePath);
 
-                    if (Platform.RunningOnPosix)
-                        _path = PosixHelper.FixLinuxPath(_path);
-
-                    if (Directory.Exists(_path) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
-                        Directory.CreateDirectory(_path);
+                    if (_documentDatabase.Configuration.Indexing.AdditionalIndexStoragePaths != null)
+                    {
+                        foreach (var path in _documentDatabase.Configuration.Indexing.AdditionalIndexStoragePaths)
+                            InitializePath(path);
+                    }
                 }
 
                 _initialized = true;
@@ -124,7 +123,7 @@ namespace Raven.Server.Documents.Indexes
                 switch (definition.Type)
                 {
                     case IndexType.Map:
-                        index = StaticMapIndex.CreateNew(indexId, definition, _documentDatabase);
+                        index = MapIndex.CreateNew(indexId, definition, _documentDatabase);
                         break;
                     case IndexType.MapReduce:
                         index = MapReduceIndex.CreateNew(indexId, definition, _documentDatabase);
@@ -168,7 +167,7 @@ namespace Raven.Server.Documents.Indexes
                     index = AutoMapIndex.CreateNew(indexId, (AutoMapIndexDefinition)definition, _documentDatabase);
                 else if (definition is AutoMapReduceIndexDefinition)
                     index = AutoMapReduceIndex.CreateNew(indexId, (AutoMapReduceIndexDefinition)definition, _documentDatabase);
-                else if (definition is StaticMapIndexDefinition)
+                else if (definition is MapIndexDefinition)
                 {
                     var mapReduceIndexDef = definition as MapReduceIndexDefinition;
 
@@ -178,7 +177,7 @@ namespace Raven.Server.Documents.Indexes
                     }
                     else
                     {
-                        index = StaticMapIndex.CreateNew(indexId, ((StaticMapIndexDefinition)definition).IndexDefinition, _documentDatabase);
+                        index = MapIndex.CreateNew(indexId, ((MapIndexDefinition)definition).IndexDefinition, _documentDatabase);
                     }
                 }
                 else
@@ -240,7 +239,7 @@ namespace Raven.Server.Documents.Indexes
                            ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex
                            : IndexCreationOptions.Update;
             }
-            
+
             throw new NotSupportedException($"Not supported index definition type: {indexDefinition.GetType()}");
         }
 
@@ -469,20 +468,47 @@ namespace Raven.Server.Documents.Indexes
 
             lock (_locker)
             {
-                foreach (var indexDirectory in new DirectoryInfo(_path).GetDirectories())
+                OpenIndexesFromDirectory(_documentDatabase.Configuration.Indexing.IndexStoragePath);
+
+                if (_documentDatabase.Configuration.Indexing.AdditionalIndexStoragePaths != null)
                 {
-                    if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
-                        return;
+                    foreach (var path in _documentDatabase.Configuration.Indexing.AdditionalIndexStoragePaths)
+                        OpenIndexesFromDirectory(path);
+                }
+            }
+        }
 
-                    int indexId;
-                    string indexName;
-                    if (IndexDefinitionBase.TryReadIdFromDirectory(indexDirectory, out indexId, out indexName) == false)
-                        continue;
+        private void OpenIndexesFromDirectory(string path)
+        {
+            if (Directory.Exists(path) == false)
+                return;
 
-                    List<Exception> exceptions = null;
-                    if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)
-                        exceptions = new List<Exception>();
+            foreach (var indexDirectory in new DirectoryInfo(path).GetDirectories())
+            {
+                if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
+                    return;
 
+                int indexId;
+                string indexName;
+                if (IndexDefinitionBase.TryReadIdFromDirectory(indexDirectory, out indexId, out indexName) == false)
+                    continue;
+
+                List<Exception> exceptions = null;
+                if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)
+                    exceptions = new List<Exception>();
+
+                Index _;
+                if (_indexes.TryGetById(indexId, out _))
+                {
+                    var message = $"Could not open index with id {indexId} at '{indexDirectory.FullName}'. Index with the same id already exists.";
+
+                    exceptions?.Add(new InvalidOperationException(message));
+
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations(message);
+                }
+                else
+                {
                     Index index = null;
 
                     try
@@ -496,18 +522,18 @@ namespace Raven.Server.Documents.Indexes
                         index?.Dispose();
                         exceptions?.Add(e);
 
-                        var fakeIndex = new FaultyInMemoryIndex(e,indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexDirectory) ?? indexName);
+                        var fakeIndex = new FaultyInMemoryIndex(e, indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexDirectory) ?? indexName);
 
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Could not open index with id {indexId}. Created in-memory, fake instance: {fakeIndex.Name}", e);
+                            _logger.Info($"Could not open index with id {indexId} at '{indexDirectory.FullName}'. Created in-memory, fake instance: {fakeIndex.Name}", e);
                         // TODO arek: add alert
 
                         _indexes.Add(fakeIndex);
                     }
-
-                    if (exceptions != null && exceptions.Count > 0)
-                        throw new AggregateException("Could not load some of the indexes", exceptions);
                 }
+
+                if (exceptions != null && exceptions.Count > 0)
+                    throw new AggregateException("Could not load some of the indexes", exceptions);
             }
         }
 
@@ -591,6 +617,15 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
             }
+        }
+
+        private void InitializePath(string path)
+        {
+            if (Platform.RunningOnPosix)
+                path = PosixHelper.FixLinuxPath(path);
+
+            if (Directory.Exists(path) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
+                Directory.CreateDirectory(path);
         }
 
         private class UnusedIndexState

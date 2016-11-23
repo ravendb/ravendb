@@ -1011,18 +1011,38 @@ namespace Raven.Server.Json
                 {
                     writer.WriteComma();
                 }
+                first = false;
                 writer.WritePropertyName(Constants.Metadata.Etag);
                 writer.WriteInteger(document.Etag);
-                writer.WriteComma();
-                writer.WritePropertyName(Constants.Metadata.Id);
-                writer.WriteString(document.Key);
-                if (document.IndexScore != null)
+            }
+            if (document.Key != null)
+            {
+                if (first == false)
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(Constants.Metadata.IndexScore);
-                    writer.WriteDouble(document.IndexScore.Value);
                 }
-                writer.WriteComma();
+                first = false;
+                writer.WritePropertyName(Constants.Metadata.Id);
+                writer.WriteString(document.Key);
+
+            }
+            if (document.IndexScore != null)
+            {
+                if (first == false)
+                {
+                    writer.WriteComma();
+                }
+                first = false;
+                writer.WritePropertyName(Constants.Metadata.IndexScore);
+                writer.WriteDouble(document.IndexScore.Value);
+            }
+            if (document.LastModified != DateTime.MinValue)
+            {
+                if (first == false)
+                {
+                    writer.WriteComma();
+                }
+                first = false;
                 writer.WritePropertyName(Constants.Headers.LastModified);
                 writer.WriteString(document.LastModified.GetDefaultRavenFormat());
             }

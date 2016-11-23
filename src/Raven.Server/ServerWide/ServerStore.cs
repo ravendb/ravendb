@@ -156,6 +156,25 @@ namespace Raven.Server.ServerWide
             return Bits.SwapBytes(*(long*)reader.Read(3, out size));
         }
 
+        public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id, out long etag)
+        {
+            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
+            etag = 0;
+            TableValueReader reader;
+            Slice key;
+            using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
+            {
+                reader = items.ReadByKey(key);
+            }
+            if (reader == null)
+                return null;
+            int size;
+            etag = Bits.SwapBytes(*(long*) reader.Read(3, out size));
+            var ptr = reader.Read(2, out size);
+            return new BlittableJsonReaderObject(ptr, size, ctx);
+        }
+
+
         public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id)
         {
             var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");

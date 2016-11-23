@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Indexes
                     case IndexType.AutoMapReduce:
                         return AutoMapReduceIndex.Open(indexId, environment, documentDatabase);
                     case IndexType.Map:
-                        return StaticMapIndex.Open(indexId, environment, documentDatabase);
+                        return MapIndex.Open(indexId, environment, documentDatabase);
                     case IndexType.MapReduce:
                         return MapReduceIndex.Open(indexId, environment, documentDatabase);
                     default:
