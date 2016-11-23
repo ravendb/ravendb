@@ -7,6 +7,7 @@ using Raven.Client.Replication.Messages;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -56,14 +57,14 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static void WriteChangeVectorTo(TransactionOperationContext context, Dictionary<Guid, long> changeVector, Tree tree)
+        public static void WriteChangeVectorTo(ByteStringContext context, Dictionary<Guid, long> changeVector, Tree tree)
         {
             Guid dbId;
             long etagBigEndian;
             Slice keySlice;
             Slice valSlice;
-            using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out keySlice))
-            using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out valSlice))
+            using (Slice.External(context, (byte*)&dbId, sizeof(Guid), out keySlice))
+            using (Slice.External(context, (byte*)&etagBigEndian, sizeof(long), out valSlice))
             {
                 foreach (var kvp in changeVector)
                 {

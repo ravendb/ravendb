@@ -16,7 +16,6 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Replication
 {
-    //TODO : add code to create outgoing connections
     public class DocumentReplicationLoader : IDisposable
     {
         private readonly DocumentDatabase _database;
@@ -25,10 +24,10 @@ namespace Raven.Server.Documents.Replication
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
         private readonly Timer _reconnectAttemptTimer;
-        private readonly ConcurrentDictionary<ReplicationDestination, OutgoingReplicationHandler> _outgoing = new ConcurrentDictionary<ReplicationDestination, OutgoingReplicationHandler>();
+        private readonly ConcurrentSet<OutgoingReplicationHandler> _outgoing = new ConcurrentSet<OutgoingReplicationHandler>();
         private readonly ConcurrentDictionary<ReplicationDestination, ConnectionFailureInfo> _outgoingFailureInfo = new ConcurrentDictionary<ReplicationDestination, ConnectionFailureInfo>();
 
-        private readonly ConcurrentSet<Lazy<IncomingReplicationHandler>> _incoming = new ConcurrentSet<Lazy<IncomingReplicationHandler>>();
+        private readonly ConcurrentSet<IncomingReplicationHandler> _incoming = new ConcurrentSet<IncomingReplicationHandler>();
         private readonly ConcurrentDictionary<IncomingConnectionInfo, DateTime> _incomingLastActivityTime = new ConcurrentDictionary<IncomingConnectionInfo, DateTime>();
         private readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> _incomingRejectionStats = new ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>();
 
@@ -37,8 +36,8 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private ReplicationDocument _replicationDocument;
 
-        public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Select(x => x.Value.ConnectionInfo);
-        public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Keys;
+        public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Select(x => x.ConnectionInfo);
+        public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Select(x => x.Destination);
 
         public DocumentReplicationLoader(DocumentDatabase database)
         {
@@ -81,62 +80,58 @@ namespace Raven.Server.Documents.Replication
             DocumentsOperationContext documentsOperationContext;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
             using (var writer = new BlittableJsonTextWriter(documentsOperationContext, tcpConnectionOptions.Stream))
-            using (documentsOperationContext.OpenReadTransaction())
+            using (var tx = documentsOperationContext.OpenReadTransaction())
             {
-                var changeVector = new DynamicJsonArray();
+                var documentsChangeVector = new DynamicJsonArray();
                 foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext))
                 {
-                    changeVector.Add(new DynamicJsonValue
+                    documentsChangeVector.Add(new DynamicJsonValue
                     {
-                        ["DbId"] = changeVectorEntry.DbId.ToString(),
-                        ["Etag"] = changeVectorEntry.Etag
+                        [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
+                        [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
                     });
                 }
 
                 var indexesChangeVector = new DynamicJsonArray();
-                foreach (var changeVectorEntry in _database.IndexMetadataPersistence.GetGlobalChangeVector())
+                var changeVectorAsArray = _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector(tx.InnerTransaction);
+                foreach (var changeVectorEntry in changeVectorAsArray)
                 {
                     indexesChangeVector.Add(new DynamicJsonValue
                     {
-                        ["DbId"] = changeVectorEntry.DbId.ToString(),
-                        ["Etag"] = changeVectorEntry.Etag
+                        [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
+                        [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
                     });
                 }
 
                 documentsOperationContext.Write(writer, new DynamicJsonValue
                 {
-                    ["Type"] = "Ok",
-                    ["MessageType"] = ReplicationMessageType.Heartbeat,
-                    ["LastEtagAccepted"] = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId),
-                    ["LastIndexTransformerEtagAccepted"] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(getLatestEtagMessage.SourceDatabaseId),
-                    ["CurrentChangeVector"] = changeVector,
-                    ["CurrentIndexTransformerChangeVector"] = indexesChangeVector
+                    [nameof(ReplicationMessageReply.Type)] = "Ok",
+                    [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
+                    [nameof(ReplicationMessageReply.LastEtagAccepted)] = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId),
+                    [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(tx.InnerTransaction, getLatestEtagMessage.SourceDatabaseId),
+                    [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector,
+                    [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVector
                 });
                 writer.Flush();
             }
 
-            
-            var lazyIncomingHandler = new Lazy<IncomingReplicationHandler>(() =>
-            {
-                //TODO: fix the disposable of the passed context and all the params cleanly
-                var newIncoming = new IncomingReplicationHandler(
-                    tcpConnectionOptions.MultiDocumentParser, 
-                    _database,
-                    tcpConnectionOptions.TcpClient, 
-                    tcpConnectionOptions.Stream, 
-                    getLatestEtagMessage,
-                    this);
-                newIncoming.Failed += OnIncomingReceiveFailed;
-                newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Initialized document replication connection from {connectionInfo.SourceDatabaseName} located at {connectionInfo.SourceUrl}", null);
-                return newIncoming;
-            });
+            var newIncoming = new IncomingReplicationHandler(
+                   tcpConnectionOptions.MultiDocumentParser,
+                   _database,
+                   tcpConnectionOptions.TcpClient,
+                   tcpConnectionOptions.Stream,
+                   getLatestEtagMessage,
+                   this);
 
-            _incoming.Add(lazyIncomingHandler);
+            newIncoming.Failed += OnIncomingReceiveFailed;
+            newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
 
-            //TODO: Why are we using lazy here?
-            lazyIncomingHandler.Value.Start();
+            if (_log.IsInfoEnabled)
+                _log.Info($"Initialized document replication connection from {connectionInfo.SourceDatabaseName} located at {connectionInfo.SourceUrl}", null);
+
+            _incoming.Add(newIncoming);
+
+            newIncoming.Start();
         }
 
         private void AttemptReconnectFailedOutgoing(object state)
@@ -162,7 +157,7 @@ namespace Raven.Server.Documents.Replication
                 }
                 else
                 {
-                    if (minDiff < diff)
+                    if (minDiff > diff)
                         minDiff = diff;
                 }
             }
@@ -186,15 +181,19 @@ namespace Raven.Server.Documents.Replication
                     "Cannot have have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {_database.DbId})");
             }
 
-            var relevantActivityEntry =
-                _incomingLastActivityTime.FirstOrDefault(x => x.Key.SourceDatabaseId.Equals(connectionInfo.SourceDatabaseId, StringComparison.OrdinalIgnoreCase));
-
-            if (relevantActivityEntry.Key != null &&
-                (relevantActivityEntry.Value - DateTime.UtcNow).TotalMilliseconds <=
-                _database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds)
+            foreach (var relevantActivityEntry in _incomingLastActivityTime)
             {
-                throw new InvalidOperationException(
-                    $"Tried to connect [{connectionInfo}], but the connection from the same source was active less then {_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalSeconds} ago. Duplicate connections from the same source are not allowed.");
+                if (relevantActivityEntry.Key.SourceDatabaseId.Equals(connectionInfo.SourceDatabaseId,
+                        StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                if (relevantActivityEntry.Key != null &&
+                   (relevantActivityEntry.Value - DateTime.UtcNow).TotalMilliseconds <=
+                   _database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds)
+                {
+                    throw new InvalidOperationException(
+                        $"Tried to connect [{connectionInfo}], but the connection from the same source was active less then {_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalSeconds} ago. Duplicate connections from the same source are not allowed.");
+                }
             }
         }
 
@@ -222,12 +221,13 @@ namespace Raven.Server.Documents.Replication
             }
 
             if (_log.IsInfoEnabled)
-                _log.Info("Initializing outgoing replications..");
+                _log.Info($"Initializing {_replicationDocument.Destinations.Count:#,#} outgoing replications..");
+
             foreach (var destination in _replicationDocument.Destinations)
             {
-                if(_log.IsInfoEnabled)
-                    _log.Info($"Initialized outgoing replication for [{destination.Database}/{destination.Url}]");
                 AddAndStartOutgoingReplication(destination);
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Initialized outgoing replication for [{destination.Database}/{destination.Url}]");
             }
             if (_log.IsInfoEnabled)
                 _log.Info("Finished initialization of outgoing replications..");
@@ -238,32 +238,19 @@ namespace Raven.Server.Documents.Replication
             var outgoingReplication = new OutgoingReplicationHandler(_database, destination);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
-            if (!_outgoing.TryAdd(destination, outgoingReplication))
+            _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instace
+            _outgoingFailureInfo.TryAdd(destination, new ConnectionFailureInfo
             {
-                //keep outgoing replication unique per url/database name?
-                //this is reasonable I think, but not 100% sure
-                if (_log.IsInfoEnabled)
-                    _log.Info(
-                        $"Tried to add outgoing destination and failed. Do you have duplicate destinations? (the destination that could not add was -> {destination})");
-                outgoingReplication.Dispose();
-            }
-            else
-            {
-                _outgoingFailureInfo.TryAdd(destination, new ConnectionFailureInfo
-                {
-                    Destination = destination
-                });
-                outgoingReplication.Start();
-            }
+                Destination = destination
+            });
+            outgoingReplication.Start();
         }
 
         private void OnIncomingReceiveFailed(IncomingReplicationHandler instance, Exception e)
         {
             using (instance)
             {
-                var storedInstance = _incoming.FirstOrDefault(x => ReferenceEquals(x.Value, instance));
-                if (storedInstance != null)
-                    _incoming.TryRemove(storedInstance);
+                _incoming.TryRemove(instance);
 
                 instance.Failed -= OnIncomingReceiveFailed;
                 instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
@@ -276,8 +263,7 @@ namespace Raven.Server.Documents.Replication
         {
             using (instance)
             {
-                OutgoingReplicationHandler _;
-                _outgoing.TryRemove(instance.Destination, out _);
+                _outgoing.TryRemove(instance);
 
                 ConnectionFailureInfo failureInfo;
                 if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo) == false)
@@ -311,11 +297,12 @@ namespace Raven.Server.Documents.Replication
             if(_log.IsInfoEnabled)
                 _log.Info("System document change detected. Starting and stopping outgoing replication threads.");
 
-            var outgoing = _outgoing.ToList();
+
+            foreach (var instance in _outgoing)
+                instance.Dispose();
+
             _outgoing.Clear();
 
-            foreach (var instance in outgoing)
-                instance.Value.Dispose();
             _outgoingFailureInfo.Clear();
 
             InitializeOutgoingReplications();
@@ -350,12 +337,13 @@ namespace Raven.Server.Documents.Replication
             _database.Notifications.OnSystemDocumentChange -= OnSystemDocumentChange;
 
             if (_log.IsInfoEnabled)
-                _log.Info("Closing and disposing document replication connections.", null);
+                _log.Info("Closing and disposing document replication connections.");
+
             foreach (var incoming in _incoming)
-                incoming.Value.Dispose();
+                incoming.Dispose();
 
             foreach (var outgoing in _outgoing)
-                outgoing.Value.Dispose();
+                outgoing.Dispose();
 
         }
 

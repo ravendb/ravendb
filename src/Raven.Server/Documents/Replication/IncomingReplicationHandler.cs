@@ -13,6 +13,7 @@ using System.Text;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Alerts;
+using Raven.Server.ServerWide;
 using Raven.Server.Smuggler.Documents.Processors;
 using Raven.Server.Utils;
 using Sparrow;
@@ -100,46 +101,34 @@ namespace Raven.Server.Documents.Replication
                                 string messageType = null;
                                 try
                                 {
-                                    messageType = ValidateReplicationMessageAndGetType(message);
+                                    if (!message.TryGet(nameof(ReplicationMessageHeader.Type), out messageType))
+                                        throw new InvalidDataException("Expected the message to have a 'Type' field. The property was not found");
+
+                                    long lastIndexOrTransformerEtag;
+                                            long lastDocumentEtag;
+                                    if (!message.TryGet(nameof(ReplicationMessageHeader.LastDocumentEtag), out lastDocumentEtag))
+                                                throw new InvalidOperationException(
+                                                    "Expected LastDocumentEtag property in the replication message, but didn't find it..");
+
+                                    if (!message.TryGet(nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag), out lastIndexOrTransformerEtag))
+                                        throw new InvalidOperationException(
+                                            "Expected LastIndexOrTransformerEtag property in the replication message, but didn't find it..");
+
                                     switch (messageType)
                                     {
                                         case ReplicationMessageType.Documents:
-                                            long lastDocumentEtag;
-                                            if (!message.TryGet("LastDocumentEtag", out lastDocumentEtag))
-                                                throw new InvalidOperationException(
-                                                    "Expected LastDocumentEtag property in the replication message, but didn't find it..");
-
                                             HandleReceivedDocumentBatch(message, lastDocumentEtag);
-                                            SendStatusToSource(writer, lastDocumentEtag, messageType);
                                             break;
                                         case ReplicationMessageType.IndexesTransformers:
-                                            long lastIndexOrTransformerEtag;
-                                            if (
-                                                !message.TryGet("LastIndexOrTransformerEtag",
-                                                    out lastIndexOrTransformerEtag))
-                                                throw new InvalidOperationException(
-                                                    "Expected LastIndexOrTransformerEtag property in the replication message, but didn't find it..");
-
                                             HandleReceivedIndexOrTransformerBatch(message, lastIndexOrTransformerEtag);
-                                            SendStatusToSource(writer, lastIndexOrTransformerEtag, messageType);
                                             break;
                                         case ReplicationMessageType.Heartbeat:
-                                            if (!message.TryGet("LastDocumentEtag", out lastDocumentEtag))
-                                                throw new InvalidOperationException(
-                                                    "Expected LastDocumentEtag property in the replication message, but didn't find it..");
-
-                                            if (
-                                                !message.TryGet("LastIndexOrTransformerEtag",
-                                                    out lastIndexOrTransformerEtag))
-                                                throw new InvalidOperationException(
-                                                    "Expected LastIndexOrTransformerEtag property in the replication message, but didn't find it..");
-
-                                            SendHeartbeatStatusToSource(writer,lastDocumentEtag,lastIndexOrTransformerEtag, messageType);
+                                            //nothing to do..
                                             break;
                                         default:
                                             throw new ArgumentOutOfRangeException();
                                     }
-
+                                    SendHeartbeatStatusToSource(writer, lastDocumentEtag, lastIndexOrTransformerEtag, messageType);
                                 }
                                 catch (ObjectDisposedException)
                                 {
@@ -159,10 +148,11 @@ namespace Raven.Server.Documents.Replication
                                         //return negative ack
                                         _context.Write(writer, new DynamicJsonValue
                                         {
-                                            ["Type"] = ReplicationMessageReply.ReplyType.Error.ToString(),
-                                            ["MessageType"] = messageType,
-                                            ["LastEtagAccepted"] = -1,
-                                            ["Error"] = e.ToString()
+                                            [nameof(ReplicationMessageReply.Type)] = ReplicationMessageReply.ReplyType.Error.ToString(),
+                                            [nameof(ReplicationMessageReply.MessageType)] = messageType,
+                                            [nameof(ReplicationMessageReply.LastEtagAccepted)] = -1,
+                                            [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = -1,
+                                            [nameof(ReplicationMessageReply.Error)] = e.ToString()
                                         });
 
                                         exceptionLogged = true;
@@ -196,43 +186,35 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private long HandleReceivedIndexOrTransformerBatch(BlittableJsonReaderObject message, long lastIndexOrTransformerEtag)
+        private void HandleReceivedIndexOrTransformerBatch(BlittableJsonReaderObject message, long lastIndexOrTransformerEtag)
         {
-            var replicatedIndexTransformerCount = GetReplicationBatchItemCount(message);
+            int itemCount;
+            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemCount), out itemCount))
+                throw new InvalidDataException("Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
+            var replicatedIndexTransformerCount = itemCount;
 
-            if (replicatedIndexTransformerCount > 0)
-            {
+            if (replicatedIndexTransformerCount <= 0)
+                return;
+
                 ReceiveSingleIndexAndTransformersBatch(replicatedIndexTransformerCount, lastIndexOrTransformerEtag);
                 OnIndexesAndTransformersReceived(this);
             }
 
-            return replicatedIndexTransformerCount;
-        }      
-
-        private long HandleReceivedDocumentBatch(BlittableJsonReaderObject message, long lastDocumentEtag)
-        {
-            var replicatedDocsCount = GetReplicationBatchItemCount(message);
-
-            ReceiveSingleDocumentsBatch(replicatedDocsCount, lastDocumentEtag);
-            OnDocumentsReceived(this);
-
-            return lastDocumentEtag;
-        }
-
-        private static int GetReplicationBatchItemCount(BlittableJsonReaderObject message)
+        private void HandleReceivedDocumentBatch(BlittableJsonReaderObject message, long lastDocumentEtag)
         {
             int itemCount;
-            if (!message.TryGet("ItemCount", out itemCount))
+            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemCount), out itemCount))
                 throw new InvalidDataException("Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
-            return itemCount;
+
+            ReceiveSingleDocumentsBatch(itemCount, lastDocumentEtag);
+            OnDocumentsReceived(this);
         }
 
         private unsafe void ReceiveSingleIndexAndTransformersBatch(int itemCount, long lastEtag)
         {
             var sw = Stopwatch.StartNew();
             var writeBuffer = _context.GetStream();
-            // this will read the documents to memory from the network
-            // without holding the write tx open
+            // this will read the indexes to memory from the network
             try
             {
                 ReadIndexesTransformersFromSource(ref writeBuffer, itemCount);
@@ -254,21 +236,23 @@ namespace Raven.Server.Documents.Replication
 
             try
             {
-                using (_context.OpenWriteTransaction())
+                using (var tx = _context.OpenWriteTransaction())
                 {
                     var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
-                    foreach (var changeVectorEntry in _database.IndexMetadataPersistence.GetGlobalChangeVector())
+                    foreach (var changeVectorEntry in _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector(tx.InnerTransaction))
                         maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
 
                     foreach (var item in _replicatedIndexesAndTransformers)
                     {
-                        var relevantMetadata = _database.IndexMetadataPersistence.GetIndexMetadataByName(item.Name);
+
+                        // TODO: Handle change vector just like documents
+
+                        var relevantMetadata = _database.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, _context, item.Name);
                         var local = relevantMetadata?.ChangeVector;
 
                         ReadChangeVector(item, maxReceivedChangeVectorByDatabase);
 
-                        if (local != null)
-                            //if local == null --> this is a tombstone and thus incoming item should be accepted
+                        if (local != null) //if local == null --> this is a tombstone and thus incoming item should be accepted
                         {
                             //do not accept incoming index/transformer if it's change vector is lower
                             //--> change vector is lower if at least one local change vector etag is higher than the one in incoming
@@ -279,14 +263,7 @@ namespace Raven.Server.Documents.Replication
                             }
                         }
 
-
-                        //TODO : find a good way to get build version, 
-                        //so this will remain compatible between different 4.x versions
-                        const int BuildVersion = 40000;
-
-                        using (
-                            var definition = new BlittableJsonReaderObject(buffer + item.Position, item.DefinitionSize,
-                                _context))
+                        using (var definition = new BlittableJsonReaderObject(buffer + item.Position, item.DefinitionSize, _context))
                         {
                             switch (item.Type)
                             {
@@ -298,7 +275,7 @@ namespace Raven.Server.Documents.Replication
                                     _database.IndexStore.TryDeleteIndexIfExists(item.Name);
                                     try
                                     {
-                                        IndexProcessor.Import(definition, _database, BuildVersion);
+                                        IndexProcessor.Import(definition, _database, ServerVersion.Build);
                                     }
                                     catch (ArgumentException e)
                                     {
@@ -319,7 +296,7 @@ namespace Raven.Server.Documents.Replication
 
                                     try
                                     {
-                                        TransformerProcessor.Import(definition, _database, BuildVersion);
+                                        TransformerProcessor.Import(definition, _database, ServerVersion.Build);
                                     }
                                     catch (ArgumentException e)
                                     {
@@ -334,12 +311,12 @@ namespace Raven.Server.Documents.Replication
                                     throw new ArgumentOutOfRangeException();
                             }
                         }
-                        _database.IndexMetadataPersistence.SetGlobalChangeVector(maxReceivedChangeVectorByDatabase);
-                        _database.DocumentsStorage.SetLastReplicateEtagFrom(_context,
-                            ConnectionInfo.SourceDatabaseId, lastEtag);
+
+                        _database.IndexMetadataPersistence.SetGlobalChangeVector(tx.InnerTransaction,_context.Allocator, maxReceivedChangeVectorByDatabase);
+                        _database.IndexMetadataPersistence.SetLastReplicateEtagFrom(tx.InnerTransaction,_context.Allocator, ConnectionInfo.SourceDatabaseId, lastEtag);
                     }
 
-                    _context.Transaction.Commit();
+                    tx.Commit();
                 }
             }
             catch (Exception e)
@@ -359,26 +336,14 @@ namespace Raven.Server.Documents.Replication
             Dictionary<Guid, long> maxReceivedChangeVectorByDatabase, 
             ChangeVectorEntry[] local)
         {
-            string whatIsIt = null;
-            switch (item.Type)
-            {
-                case IndexEntryType.Index:
-                    whatIsIt = "index";
-                    break;
-                case IndexEntryType.Transformer:
-                    whatIsIt = "transformer";
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
 
-            var msg =
-                $"Received {whatIsIt} via replication from {_replicationDocument.Source} ( {whatIsIt} name = {item.Name}), but it's change vector was smaller than the local, so I skipped it. Remote change vector = {ReplicationUtils.ChangeVectorToString(maxReceivedChangeVectorByDatabase)}, Local change vector = {ReplicationUtils.ChangeVectorToString(local)}";
+            var msg = $"Received {item.Type} via replication from {_replicationDocument.Source} ( {item.Type} name = {item.Name}), but it's change vector was smaller than the local, so I skipped it. Remote change vector = {ReplicationUtils.ChangeVectorToString(maxReceivedChangeVectorByDatabase)}, Local change vector = {ReplicationUtils.ChangeVectorToString(local)}";
             if (_log.IsOperationsEnabled)
             {
                 //this is severe enough to warrant 'operations' log entry
                 _log.Operations(msg);
             }
+
             _database.Alerts.AddAlert(new Alert
             {
                 Key = _replicationDocument.Source,
@@ -513,6 +478,7 @@ namespace Raven.Server.Documents.Replication
                             json = new BlittableJsonReaderObject(
                                 buffer + doc.Position + (doc.ChangeVectorCount*sizeof(ChangeVectorEntry)),
                                 doc.DocumentSize, _context);
+                            json.BlittableValidation();
                         }
                         ChangeVectorEntry[] conflictingVector;
                         var conflictStatus = GetConflictStatus(_context, doc.Id, _tempReplicatedChangeVector,
@@ -599,10 +565,10 @@ namespace Raven.Server.Documents.Replication
             switch (ReplicationDocument?.DocumentConflictResolution ?? StraightforwardConflictResolution.None)
             {
                 case StraightforwardConflictResolution.ResolveToLocal:
-                    RespolveConflictToLocal(docPosition, conflictingVector);
+                    ResolveConflictToLocal(docPosition, conflictingVector);
                     break;
                 case StraightforwardConflictResolution.ResolveToRemote:
-                    RespolveConflictToRemote(docPosition, doc, conflictingVector);
+                    ResolveConflictToRemote(docPosition, doc, conflictingVector);
                     break;
                 case StraightforwardConflictResolution.ResolveToLatest:
                     if (conflictingVector == null) //precaution
@@ -627,23 +593,23 @@ namespace Raven.Server.Documents.Replication
                             localLastModified = relevantLocalDoc.Item1.Data.GetLastModified();
                         else if (relevantLocalDoc.Item2 != null)
                         {
-                            RespolveConflictToRemote(docPosition, doc, conflictingVector);
+                            ResolveConflictToRemote(docPosition, doc, conflictingVector);
                             return;
                         }
                         else //precaution, not supposed to get here
                         {
                             throw new InvalidOperationException(
-                                $"Didn\'t find document neither tombstone for specified id ({docPosition.Id}), this is not supposed to happen and is likely a bug.");
+                                $"Didn't find document neither tombstone for specified id ({docPosition.Id}), this is not supposed to happen and is likely a bug.");
                         }
                     }
                     var remoteLastModified = doc.GetLastModified();
                     if (remoteLastModified > localLastModified)
                     {
-                        RespolveConflictToRemote(docPosition, doc, conflictingVector);
+                        ResolveConflictToRemote(docPosition, doc, conflictingVector);
                     }
                     else
                     {
-                        RespolveConflictToLocal(docPosition, conflictingVector);
+                        ResolveConflictToLocal(docPosition, conflictingVector);
                     }
                     break;
                 default:
@@ -652,7 +618,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void RespolveConflictToRemote(ReplicationDocumentsPositions doc, 
+        private void ResolveConflictToRemote(ReplicationDocumentsPositions doc,
             BlittableJsonReaderObject json, 
             ChangeVectorEntry[] conflictingVector)
         {
@@ -661,7 +627,7 @@ namespace Raven.Server.Documents.Replication
             _database.DocumentsStorage.Put(_context, doc.Id, null, json, merged);
         }
 
-        private void RespolveConflictToLocal(ReplicationDocumentsPositions doc, ChangeVectorEntry[] conflictingVector)
+        private void ResolveConflictToLocal(ReplicationDocumentsPositions doc, ChangeVectorEntry[] conflictingVector)
         {
             var relevantLocalConflict =
                 _context.DocumentDatabase.DocumentsStorage.GetConflictForChangeVector(
@@ -743,21 +709,25 @@ namespace Raven.Server.Documents.Replication
             {
                 documentChangeVectorAsDynamicJson.Add(new DynamicJsonValue
                 {
-                    ["DbId"] = changeVectorEntry.DbId.ToString(),
-                    ["Etag"] = changeVectorEntry.Etag
+                    [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
+                    [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
                 });
             }
 
             var indexesChangeVectorAsDynamicJson = new DynamicJsonArray();
-            foreach (var changeVectorEntry in _database.IndexMetadataPersistence.GetGlobalChangeVector())
+            ChangeVectorEntry[] indexesAndTransformersChangeVector;
+            using (var tx = _context.OpenReadTransaction())
+                indexesAndTransformersChangeVector =
+                    _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector(tx.InnerTransaction);
+
+            foreach (var changeVectorEntry in indexesAndTransformersChangeVector)
             {
                 indexesChangeVectorAsDynamicJson.Add(new DynamicJsonValue
                 {
-                    ["DbId"] = changeVectorEntry.DbId.ToString(),
-                    ["Etag"] = changeVectorEntry.Etag
+                    [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
+                    [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
                 });
             }
-
 
             if (_log.IsInfoEnabled)
             {
@@ -766,61 +736,16 @@ namespace Raven.Server.Documents.Replication
             }
             _context.Write(writer, new DynamicJsonValue
             {
-                ["Type"] = "Ok",
-                ["MessageType"] = handledMessageType,
-                ["LastEtagAccepted"] = lastDocumentEtag,
-                ["LastIndexTransformerEtagAccepted"] = lastIndexOrTransformerEtag,
-                ["Error"] = null,
-                ["CurrentChangeVector"] = documentChangeVectorAsDynamicJson,
-                ["CurrentIndexTransformerChangeVector"] = indexesChangeVectorAsDynamicJson
+                [nameof(ReplicationMessageReply.Type)] = "Ok",
+                [nameof(ReplicationMessageReply.MessageType)] = handledMessageType,
+                [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastDocumentEtag,
+                [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = lastIndexOrTransformerEtag,
+                [nameof(ReplicationMessageReply.Error)] = null,
+                [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentChangeVectorAsDynamicJson,
+                [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVectorAsDynamicJson
             });
 
             writer.Flush();
-        }
-
-        private void SendStatusToSource(BlittableJsonTextWriter writer, long lastEtag, string handledMessageType)
-        {
-            var changeVector = new DynamicJsonArray();
-            ChangeVectorEntry[] databaseChangeVector;
-
-            using (_context.OpenReadTransaction())
-            {
-                databaseChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(_context);
-            }
-
-            foreach (var changeVectorEntry in databaseChangeVector)
-            {
-                changeVector.Add(new DynamicJsonValue
-                {
-                    ["DbId"] = changeVectorEntry.DbId.ToString(),
-                    ["Etag"] = changeVectorEntry.Etag
-                });
-            }
-            if (_log.IsInfoEnabled)
-            {
-                _log.Info(
-                    $"Sending ok => {FromToString} with last etag {lastEtag} and change vector: {databaseChangeVector.Format()}");
-            }
-            _context.Write(writer, new DynamicJsonValue
-            {
-                ["Type"] = "Ok",
-                ["MessageType"] = handledMessageType,
-                ["LastEtagAccepted"] = lastEtag,
-                ["Error"] = null,
-                ["CurrentChangeVector"] = changeVector
-            });
-
-            writer.Flush();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static string ValidateReplicationMessageAndGetType(BlittableJsonReaderObject message)
-        {
-            string messageType;
-            if (!message.TryGet("Type", out messageType))
-                throw new InvalidDataException("Expected the message to have a 'Type' field. The property was not found");            
-
-            return messageType;
         }
 
         public string FromToString => $"from {ConnectionInfo.SourceDatabaseName} at {ConnectionInfo.SourceUrl} (into database {_database.Name})";
@@ -870,7 +795,6 @@ namespace Raven.Server.Documents.Replication
                         Position = writeBuffer.SizeInBytes
                     };
 
-                    
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
                     curDoc.ChangeVectorCount = *(int*)pTemp;
 

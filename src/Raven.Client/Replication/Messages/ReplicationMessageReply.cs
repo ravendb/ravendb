@@ -21,9 +21,9 @@ namespace Raven.Client.Replication.Messages
 
         public string MessageType { get; set; }
 
-        public ChangeVectorEntry[] CurrentChangeVector { get; set; }
+        public ChangeVectorEntry[] DocumentsChangeVector { get; set; }
 
-        public ChangeVectorEntry[] CurrentIndexTransformerChangeVector { get; set; }
+        public ChangeVectorEntry[] IndexTransformerChangeVector { get; set; }
     }
 
     public struct ChangeVectorEntry

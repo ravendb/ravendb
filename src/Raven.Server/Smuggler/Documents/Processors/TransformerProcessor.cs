@@ -25,7 +25,9 @@ namespace Raven.Server.Smuggler.Documents.Processors
             {
                 transformerDefinition = ReadLegacyTransformerDefinition(transformerDefinitionDoc);
             }
-            else if (buildVersion >= 40000 && buildVersion <= 44999)
+            //I think supporting only major version as a number should be here,
+            //so we can use ServerVersion.Build to get the build and not hardcode it
+            else if ((buildVersion >= 40000 && buildVersion <= 44999) || (buildVersion >= 40 && buildVersion <= 44))
             {
                 transformerDefinition = JsonDeserializationServer.TransformerDefinition(transformerDefinitionDoc);
             }

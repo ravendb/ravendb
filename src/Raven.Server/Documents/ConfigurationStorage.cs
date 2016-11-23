@@ -25,7 +25,6 @@ namespace Raven.Server.Documents
                 : StorageEnvironmentOptions.ForPath(Path.Combine(db.Configuration.Core.DataDirectory, "Configuration"));
 
             options.SchemaVersion = 1;
-
             Environment = new StorageEnvironment(options);
 
             AlertsStorage = new AlertsStorage(db.Name, serverStore);
@@ -33,11 +32,14 @@ namespace Raven.Server.Documents
             IndexesEtagsStorage = new IndexesEtagsStorage(db.Name);
         }
 
-        public void Initialize(IndexStore indexStore, TransformerStore transformerStore)
+        public void Initialize(IndexStore indexStore, 
+                               TransformerStore transformerStore,
+                               StorageEnvironment documentStorageEnvironment,
+                               DocumentsContextPool documentsContextPool)
         {
             _contextPool = new TransactionContextPool(Environment);
             AlertsStorage.Initialize(Environment, _contextPool);
-            IndexesEtagsStorage.Initialize(Environment, _contextPool,indexStore, transformerStore);
+            IndexesEtagsStorage.Initialize(documentStorageEnvironment, documentsContextPool, indexStore, transformerStore);
         }
 
         public void Dispose()
