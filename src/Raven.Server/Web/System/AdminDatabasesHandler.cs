@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -50,7 +51,11 @@ namespace Raven.Server.Web.System
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteServerStoreObject(context, dbDoc, etag);
+                    writer.WriteDocument(context, new Document
+                    {
+                        Etag = etag,
+                        Data = dbDoc,
+                    });
                     writer.Flush();
                 }
             }

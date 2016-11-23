@@ -1010,60 +1010,42 @@ namespace Raven.Server.Json
                 if (first == false)
                 {
                     writer.WriteComma();
+                    first = true;
                 }
                 writer.WritePropertyName(Constants.Metadata.Etag);
                 writer.WriteInteger(document.Etag);
-                writer.WriteComma();
-                writer.WritePropertyName(Constants.Metadata.Id);
-                writer.WriteString(document.Key);
-                if (document.IndexScore != null)
+            }
+            if (document.Key != null)
+            {
+                if (first == false)
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(Constants.Metadata.IndexScore);
-                    writer.WriteDouble(document.IndexScore.Value);
+                    first = true;
                 }
-                writer.WriteComma();
+                writer.WritePropertyName(Constants.Metadata.Id);
+                writer.WriteString(document.Key);
+
+            }
+            if (document.IndexScore != null)
+            {
+                if (first == false)
+                {
+                    writer.WriteComma();
+                    first = true;
+                }
+                writer.WritePropertyName(Constants.Metadata.IndexScore);
+                writer.WriteDouble(document.IndexScore.Value);
+            }
+            if (document.LastModified != DateTime.MinValue)
+            {
+                if (first == false)
+                {
+                    writer.WriteComma();
+                    first = true;
+                }
                 writer.WritePropertyName(Constants.Headers.LastModified);
                 writer.WriteString(document.LastModified.GetDefaultRavenFormat());
             }
-            writer.WriteEndObject();
-        }
-
-        public static void WriteServerStoreObject(this BlittableJsonTextWriter writer, JsonOperationContext context, BlittableJsonReaderObject data, long etag)
-        {
-            if (_buffers == null)
-                _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
-
-            writer.WriteStartObject();
-
-                bool first = true;
-                var size = data.GetPropertiesByInsertionOrder(_buffers);
-                var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-                for (int i = 0; i < size; i++)
-                {
-                    data.GetPropertyByIndex(_buffers.Properties[i], ref prop);                   
-                    if (first == false)
-                    {
-                        writer.WriteComma();
-                    }
-                    first = false;
-                    writer.WritePropertyName(prop.Name);
-                    writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
-                }
-                if (first == false)
-                    writer.WriteComma();            
-
-                //start writing @metadata property
-                writer.WritePropertyName(Constants.Metadata.Key);
-                writer.WriteStartObject();
-
-                    writer.WritePropertyName(Constants.Metadata.Etag);
-                    writer.WriteInteger(etag);
-
-                writer.WriteEndObject();
-                //end writing @metadata property
-
             writer.WriteEndObject();
         }
 
