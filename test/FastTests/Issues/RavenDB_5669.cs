@@ -31,8 +31,6 @@ namespace FastTests.Issues
 
                     query.CloseSubclause();
 
-                    Console.WriteLine(query);
-
                     var results = query.ToList();
                     Assert.Equal(1, results.Count);
                 }
@@ -62,8 +60,6 @@ namespace FastTests.Issues
                     query = query.CloseSubclause();
 
                     query.CloseSubclause();
-
-                    Console.WriteLine(query);
 
                     var results = query.ToList();
                     Assert.Equal(1, results.Count);
