@@ -21,27 +21,40 @@ namespace Voron.Impl
     public unsafe class LowLevelTransaction : IDisposable
     {
         private const int PagesTakenByHeader = 1;
+
         public readonly AbstractPager DataPager;
         private readonly StorageEnvironment _env;
         private readonly long _id;
         private readonly ByteStringContext _allocator;
         private readonly bool _disposeAllocator;
+
         private Tree _root;
+        public Tree RootObjects => _root;        
 
-        internal FixedSizeTree _freeSpaceTree;
-
-        public bool FlushedToJournal;
-        public Tree RootObjects => _root;
+        public bool FlushedToJournal;        
 
         private readonly WriteAheadJournal _journal;
+        internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
+        private static ObjectPool<Dictionary<long, PageFromScratchBuffer>, DictionaryResetBehavior<long, PageFromScratchBuffer>> ScratchPagesTablePool = new ObjectPool<Dictionary<long, PageFromScratchBuffer>, DictionaryResetBehavior<long, PageFromScratchBuffer>>(() => new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance), 30);
+        private static ObjectPool<Dictionary<long, long>, DictionaryResetBehavior<long, long>> DirtyOverflowPagesPool = new ObjectPool<Dictionary<long, long>, DictionaryResetBehavior<long, long>>(() => new Dictionary<long, long>(NumericEqualityComparer.Instance), 30);
+        private static ObjectPool<HashSet<long>, HashSetResetBehavior<long>> DirtyPagesPool = new ObjectPool<HashSet<long>, HashSetResetBehavior<long>>(() => new HashSet<long>(NumericEqualityComparer.Instance), 30);
+
+        // BEGIN: Structures that are safe to pool.
         private readonly HashSet<long> _dirtyPages;
         private readonly Dictionary<long, long> _dirtyOverflowPages;
+        private readonly Stack<long> _pagesToFreeOnCommit;
+        private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable;
+        private readonly HashSet<PagerState> _pagerStates;
+        private readonly Dictionary<int, PagerState> _scratchPagerStates;        
+        // END: Structures that are safe to pool.
+
+
         public event Action<LowLevelTransaction> OnCommit;
         public event Action<LowLevelTransaction> OnDispose;
-        readonly Stack<long> _pagesToFreeOnCommit;
-
+        
         private readonly IFreeSpaceHandling _freeSpaceHandling;
+        internal FixedSizeTree _freeSpaceTree;
 
         private int _allocatedPagesInTransaction;
         private int _overflowPagesInTransaction;
@@ -51,14 +64,10 @@ namespace Voron.Impl
         private readonly HashSet<PageFromScratchBuffer> _transactionPages;
         private readonly HashSet<long> _freedPages;
         private readonly List<PageFromScratchBuffer> _unusedScratchPages;
-
-        private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable;
-
-        private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
-        internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
+        
 
         private readonly StorageEnvironmentState _state;
-        private readonly Dictionary<int, PagerState> _scratchPagerStates;
+
         private CommitStats _requestedCommitStats;
 
         public TransactionPersistentContext PersistentContext { get; }
@@ -105,6 +114,7 @@ namespace Voron.Impl
             _freeSpaceHandling = freeSpaceHandling;
             _allocator = context ?? new ByteStringContext();
             _disposeAllocator = context == null;
+            _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
 
             PersistentContext = transactionPersistentContext;
             Flags = flags;
@@ -135,12 +145,12 @@ namespace Voron.Impl
 
             EnsureNoDuplicateTransactionId(id);
 
-            _dirtyOverflowPages = new Dictionary<long, long>(NumericEqualityComparer.Instance);
-            _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
-            _dirtyPages = new HashSet<long>(NumericEqualityComparer.Instance);
-            _freedPages = new HashSet<long>();
+            _dirtyOverflowPages = DirtyOverflowPagesPool.Allocate();
+            _scratchPagesTable = ScratchPagesTablePool.Allocate();
+            _dirtyPages = DirtyPagesPool.Allocate();
+            _freedPages = new HashSet<long>(NumericEqualityComparer.Instance);
             _unusedScratchPages = new List<PageFromScratchBuffer>();
-            _transactionPages = new HashSet<PageFromScratchBuffer>();
+            _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);           
             _pagesToFreeOnCommit = new Stack<long>();
 
             _state = env.State.Clone();
@@ -283,7 +293,7 @@ namespace Voron.Impl
             // Check if we can hit the lowest level locality cache.
             Page p;
             PageFromScratchBuffer value;
-            if (_scratchPagesTable != null && _scratchPagesTable.TryGetValue(pageNumber, out value))
+            if (_scratchPagesTable != null && _scratchPagesTable.TryGetValue(pageNumber, out value)) // Scratch Pages Table will be null in read transactions
             {
                 PagerState state = null;
                 if (_scratchPagerStates != null)
@@ -493,6 +503,13 @@ namespace Voron.Impl
 
 
             OnDispose?.Invoke(this);
+
+            if (Flags == TransactionFlags.ReadWrite)
+            {
+                ScratchPagesTablePool.Free(_scratchPagesTable);
+                DirtyOverflowPagesPool.Free(_dirtyOverflowPages);
+                DirtyPagesPool.Free(_dirtyPages);
+            }
         }
 
         internal void FreePageOnCommit(long pageNumber)
