@@ -21,8 +21,8 @@ namespace Raven.Server.Documents.Handlers
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
                 var collections = new DynamicJsonValue();
                 var result = new DynamicJsonValue
                 {
@@ -45,8 +45,8 @@ namespace Raven.Server.Documents.Handlers
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
 
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
 
@@ -58,19 +58,19 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/collections/$", "DELETE")]
+        [RavenAction("/databases/*/collections/docs", "DELETE")]
         public Task Delete()
         {
             DocumentsOperationContext context;
             var returnContextToPool = ContextPool.AllocateOperationContext(out context);
 
-            ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(()=>runner.ExecuteDelete(collectionName, options, context, onProgress, token)),
+            ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(() => runner.ExecuteDelete(collectionName, options, context, onProgress, token)),
                 context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByCollection);
             return Task.CompletedTask;
 
         }
 
-        [RavenAction("/databases/*/collections/$", "PATCH")]
+        [RavenAction("/databases/*/collections/docs", "PATCH")]
         public Task Patch()
         {
             DocumentsOperationContext context;
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Handlers
 
         private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
         {
-            var collectionName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+            var collectionName = GetStringQueryString("name");
 
             var token = CreateTimeLimitedOperationToken();
 
@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Handlers
             var options = GetCollectionOperationOptions();
 
             var task = Database.Operations.AddOperation(collectionName, operationType, onProgress =>
-                    operation(collectionRunner, collectionName, options ,onProgress, token), operationId, token);
+                    operation(collectionRunner, collectionName, options, onProgress, token), operationId, token);
 
             task.ContinueWith(_ => returnContextToPool.Dispose());
 

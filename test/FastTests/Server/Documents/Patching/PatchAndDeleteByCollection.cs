@@ -27,7 +27,7 @@ namespace FastTests.Server.Documents.Patching
                     }
                     x.SaveChanges();
                 }
-                store.DatabaseCommands.CreateRequest("/collections/users", HttpMethod.Delete).ExecuteRequest();
+                store.DatabaseCommands.CreateRequest("/collections/docs?name=users", HttpMethod.Delete).ExecuteRequest();
                 var sp = Stopwatch.StartNew();
 
                 var timeout = Debugger.IsAttached ? 60*1000 : 1000;
@@ -54,7 +54,7 @@ namespace FastTests.Server.Documents.Patching
                     }
                     x.SaveChanges();
                 }
-                var httpJsonRequest = store.DatabaseCommands.CreateRequest("/collections/users", new HttpMethod("PATCH"));
+                var httpJsonRequest = store.DatabaseCommands.CreateRequest("/collections/docs?name=users", new HttpMethod("PATCH"));
                 httpJsonRequest.WriteAsync(@"
 {
     'Script': 'this.Name = __document_id'

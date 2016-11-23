@@ -262,7 +262,7 @@ namespace Raven.Server.Documents
 
         public enum PendingOperationType 
         {
-            UpdateByIndex,
+            PatchByIndex,
 
             DeleteByIndex,
 

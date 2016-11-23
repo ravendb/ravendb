@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.Handlers
             var patch = PatchRequest.Parse(reader);
 
             ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, onProgress, token), 
-                context, returnContextToPool, DatabaseOperations.PendingOperationType.UpdateByIndex);
+                context, returnContextToPool, DatabaseOperations.PendingOperationType.PatchByIndex);
             return Task.CompletedTask;
         }
 
