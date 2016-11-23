@@ -516,7 +516,7 @@ namespace Raven.Client.Embedded
 													   ", conflict must be resolved before the document will be accessible", true)
 												   {
 													   ConflictedVersionIds = new[] { conflictedResultId }
-												   });
+												   }, isQuery: true);
 		}
 
 		/// <summary>
@@ -1212,10 +1212,10 @@ namespace Raven.Client.Embedded
 		}
 
 		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry,
-													Func<string, ConflictException> onConflictedQueryResult = null)
+                                                    Func<string, ConflictException> onConflictedQueryResult = null, bool isQuery = false)
 		{
 			bool requiresRetry = docResults.Aggregate(false, (current, docResult) =>
-														current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult, onConflictedQueryResult));
+                                                        current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult, onConflictedQueryResult, isQuery));
 			if (!requiresRetry)
 				return currentResult;
 
@@ -1301,7 +1301,8 @@ namespace Raven.Client.Embedded
 			return false;
 		}
 
-		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult, Func<string, ConflictException> onConflictedQueryResult = null)
+		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult,
+            Func<string, ConflictException> onConflictedQueryResult = null, bool isQuery = false)
 		{
 			if (docResult == null)
 				return false;
@@ -1316,6 +1317,17 @@ namespace Raven.Client.Embedded
 					return true;
 				throw concurrencyException;
 			}
+
+            var isConflict = metadata.Value<bool>(Constants.RavenReplicationConflict);
+            if (isQuery && isConflict)
+            {
+                // this fix applies only to the Query API and to 2.5 servers since
+                // in v2.5 servers we index the original conflicted document
+                var documentId = metadata.Value<string>("@id");
+                var realDocumentId = documentId.Substring(0, documentId.IndexOf("/conflicts/", StringComparison.InvariantCulture));
+                Get(realDocumentId);
+                return true;
+            }
 
 			if (metadata.Value<bool>(Constants.RavenReplicationConflict) && onConflictedQueryResult != null)
 				throw onConflictedQueryResult(metadata.Value<string>("@id"));
