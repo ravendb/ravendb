@@ -6,7 +6,6 @@
 
     includeRevisionDocuments = ko.observable(true);
     includeExpiredDocuments = ko.observable(true);
-    stripReplicationInformation = ko.observable(false);
     shouldDisableVersioningBundle = ko.observable(false);
     transformScript = ko.observable<string>();
 
@@ -29,7 +28,6 @@
             IncludeExpired: this.includeExpiredDocuments(),
             TransformScript: this.transformScript(),
             RemoveAnalyzers: this.removeAnalyzers(),
-            RemoveReplicationInformation: this.stripReplicationInformation(),
             DisableVersioningBundle: this.shouldDisableVersioningBundle(),
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Smuggler.DatabaseItemType
         } as Raven.Client.Smuggler.DatabaseSmugglerOptions;

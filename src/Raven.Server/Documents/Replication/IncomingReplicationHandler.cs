@@ -110,10 +110,10 @@ namespace Raven.Server.Documents.Replication
                                         throw new InvalidDataException("Expected the message to have a 'Type' field. The property was not found");
 
                                     long lastIndexOrTransformerEtag;
-                                    long lastDocumentEtag;
+                                            long lastDocumentEtag;
                                     if (!message.TryGet(nameof(ReplicationMessageHeader.LastDocumentEtag), out lastDocumentEtag))
-                                        throw new InvalidOperationException(
-                                            "Expected LastDocumentEtag property in the replication message, but didn't find it..");
+                                                throw new InvalidOperationException(
+                                                    "Expected LastDocumentEtag property in the replication message, but didn't find it..");
 
                                     if (!message.TryGet(nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag), out lastIndexOrTransformerEtag))
                                         throw new InvalidOperationException(
@@ -201,9 +201,9 @@ namespace Raven.Server.Documents.Replication
             if (replicatedIndexTransformerCount <= 0)
                 return;
 
-            ReceiveSingleIndexAndTransformersBatch(replicatedIndexTransformerCount, lastIndexOrTransformerEtag);
-            OnIndexesAndTransformersReceived(this);
-        }
+                ReceiveSingleIndexAndTransformersBatch(replicatedIndexTransformerCount, lastIndexOrTransformerEtag);
+                OnIndexesAndTransformersReceived(this);
+            }
 
         private void HandleReceivedDocumentBatch(BlittableJsonReaderObject message, long lastDocumentEtag)
         {
@@ -248,8 +248,8 @@ namespace Raven.Server.Documents.Replication
                         maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
                 }
 
-                foreach (var item in _replicatedIndexesAndTransformers)
-                {
+                    foreach (var item in _replicatedIndexesAndTransformers)
+                    {
 
                     // TODO: Handle change vector just like documents
 
@@ -302,56 +302,56 @@ namespace Raven.Server.Documents.Replication
 
         private unsafe void ImportIndexOrTransformer(byte* buffer, ReplicationIndexOrTransformerPositions item)
         {
-            using (
+                        using (
                 var definition = new BlittableJsonReaderObject(buffer + item.Position, item.DefinitionSize, _documentsContext))
-            {
-                switch (item.Type)
-                {
-                    case IndexEntryType.Index:
-                        if (_log.IsInfoEnabled)
                         {
-                            _log.Info($"Replicated index with name = {item.Name}");
-                        }
-                        _database.IndexStore.TryDeleteIndexIfExists(item.Name);
-                        try
-                        {
-                            IndexProcessor.Import(definition, _database, ServerVersion.Build);
-                        }
-                        catch (ArgumentException e)
-                        {
-                            if (_log.IsOperationsEnabled)
-                                _log.Operations(
-                                    $"Failed to read index (name = {item.Name}, etag = {item.Etag}) definition from incoming replication batch. This is not supposed to happen.",
-                                    e);
-                            throw;
-                        }
-                        break;
-                    case IndexEntryType.Transformer:
-                        if (_log.IsInfoEnabled)
-                        {
-                            _log.Info($"Replicated tranhsformer with name = {item.Name}");
-                        }
+                            switch (item.Type)
+                            {
+                                case IndexEntryType.Index:
+                                    if (_log.IsInfoEnabled)
+                                    {
+                                        _log.Info($"Replicated index with name = {item.Name}");
+                                    }
+                                    _database.IndexStore.TryDeleteIndexIfExists(item.Name);
+                                    try
+                                    {
+                                        IndexProcessor.Import(definition, _database, ServerVersion.Build, false);
+                                    }
+                                    catch (ArgumentException e)
+                                    {
+                                        if (_log.IsOperationsEnabled)
+                                            _log.Operations(
+                                                $"Failed to read index (name = {item.Name}, etag = {item.Etag}) definition from incoming replication batch. This is not supposed to happen.",
+                                                e);
+                                        throw;
+                                    }
+                                    break;
+                                case IndexEntryType.Transformer:
+                                    if (_log.IsInfoEnabled)
+                                    {
+                                        _log.Info($"Replicated tranhsformer with name = {item.Name}");
+                                    }
 
-                        _database.TransformerStore.TryDeleteTransformerIfExists(item.Name);
+                                    _database.TransformerStore.TryDeleteTransformerIfExists(item.Name);
 
-                        try
-                        {
+                                    try
+                                    {
                             TransformerProcessor.Import(definition, _database, ServerVersion.Build);
+                                    }
+                                    catch (ArgumentException e)
+                                    {
+                                        if (_log.IsOperationsEnabled)
+                                            _log.Operations(
+                                                $"Failed to read transformer (name = {item.Name}, etag = {item.Etag}) definition from incoming replication batch. This is not supposed to happen.",
+                                                e);
+                                        throw;
+                                    }
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
                         }
-                        catch (ArgumentException e)
-                        {
-                            if (_log.IsOperationsEnabled)
-                                _log.Operations(
-                                    $"Failed to read transformer (name = {item.Name}, etag = {item.Etag}) definition from incoming replication batch. This is not supposed to happen.",
-                                    e);
-                            throw;
-                        }
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
-        }
+                    }
 
         private void LogSkippedIndexOrTransformer(
             ReplicationIndexOrTransformerPositions item,
@@ -490,7 +490,7 @@ namespace Raven.Server.Documents.Replication
 
                         BlittableJsonReaderObject json = null;
                         if (doc.DocumentSize >= 0) //no need to load document data for tombstones
-                                                   // document size == -1 --> doc is a tombstone
+                            // document size == -1 --> doc is a tombstone
                         {
                             if (doc.Position + doc.DocumentSize > totalSize)
                                 ThrowInvalidSize(totalSize, doc);
@@ -883,7 +883,7 @@ namespace Raven.Server.Documents.Replication
             foreach (var disposable in _disposables)
             {
                 disposable.Dispose();
-            }
+        }
             _disposables.Clear();
         }
 
@@ -980,6 +980,6 @@ namespace Raven.Server.Documents.Replication
                 return ConflictStatus.AlreadyMerged;
 
             return ConflictStatus.Update;
-        }
+    }
     }
 }

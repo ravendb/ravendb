@@ -21,11 +21,6 @@ namespace Raven.Client.Smuggler
         public bool RemoveAnalyzers { get; set; }
 
         /// <summary>
-        /// If true the import process will Strip replication information from documents metadata
-        /// </summary>
-        public bool RemoveReplicationInformation { get; set; }
-        
-        /// <summary>
         /// If true the import process will remove VersioningBundle from the document metadata
         /// </summary>
         public bool DisableVersioningBundle { get; set; }

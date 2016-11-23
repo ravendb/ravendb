@@ -121,19 +121,10 @@ namespace Raven.Server.Smuggler.Documents
                                         Data = reader,
                                     };
 
-                                    if (patch != null)
-                                    {
-                                        BlittableJsonReaderObject newMetadata;
-                                        LazyStringValue key = null;
-                                        if (reader.TryGet(Constants.Metadata.Key, out newMetadata))
-                                            newMetadata.TryGet(Constants.Metadata.Id, out key);
-                                        document.Key = key;
+                                    if (!Options.IncludeExpired && document.Expired())
+                                        continue;
 
-                                        var patchResult = patch.Apply(context, document, patchRequest);
-                                        if (patchResult == null || patchResult.ModifiedDocument.Equals(document.Data))
-                                            continue;
-                                        document.Data = patchResult.ModifiedDocument;
-                                    }
+                                    TransformScriptOrDisableVersioningIfNeeded(context, patch, reader, document, patchRequest);
 
                                     _batchPutCommand.Add(document.Data);
                                 }
@@ -167,7 +158,7 @@ namespace Raven.Server.Smuggler.Documents
                                             result.IndexesCount++;
                                             try
                                             {
-                                                IndexProcessor.Import(builder, _database, buildVersion);
+                                                IndexProcessor.Import(builder, _database, buildVersion, Options.RemoveAnalyzers);
                                             }
                                             catch (Exception e)
                                             {
@@ -265,6 +256,38 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result;
+        }
+
+        private void TransformScriptOrDisableVersioningIfNeeded(DocumentsOperationContext context, 
+            PatchDocument patch, BlittableJsonReaderObject reader, Document document, PatchRequest patchRequest)
+        {
+            if (patch == null && Options.DisableVersioningBundle == false)
+                return;
+
+            BlittableJsonReaderObject newMetadata;
+            reader.TryGet(Constants.Metadata.Key, out newMetadata);
+
+            if (patch != null)
+            {
+                LazyStringValue key;
+                if (newMetadata != null)
+                    if (newMetadata.TryGet(Constants.Metadata.Id, out key))
+                        document.Key = key;
+
+                var patchResult = patch.Apply(context, document, patchRequest);
+                if (patchResult != null && patchResult.ModifiedDocument.Equals(document.Data) == false)
+                {
+                    document.Data = patchResult.ModifiedDocument;
+                }
+            }
+
+            if (Options.DisableVersioningBundle == false || newMetadata == null)
+                return;
+
+            newMetadata.Modifications = new DynamicJsonValue(newMetadata)
+            {
+                [Constants.Versioning.RavenDisableVersioning] = false
+            };
         }
 
         private async Task FinishBatchOfDocuments()

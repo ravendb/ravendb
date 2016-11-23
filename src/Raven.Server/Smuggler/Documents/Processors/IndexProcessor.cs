@@ -16,13 +16,13 @@ namespace Raven.Server.Smuggler.Documents.Processors
     public static class IndexProcessor
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Import(BlittableJsonDocumentBuilder builder, DocumentDatabase database, long buildVersion)
+        public static void Import(BlittableJsonDocumentBuilder builder, DocumentDatabase database, long buildVersion, bool removeAnalyzers)
         {
             using (var reader = builder.CreateReader())
-                Import(reader, database, buildVersion);
+                Import(reader, database, buildVersion, removeAnalyzers);
         }
 
-        public static void Import(BlittableJsonReaderObject indexDefinitionDoc, DocumentDatabase database, long buildVersion)
+        public static void Import(BlittableJsonReaderObject indexDefinitionDoc, DocumentDatabase database, long buildVersion, bool removeAnalyzers )
         {
             if (buildVersion == 0) // pre 4.0 support
             {
@@ -38,20 +38,26 @@ namespace Raven.Server.Smuggler.Documents.Processors
             else if (buildVersion == 13 || (buildVersion >= 40000 && buildVersion <= 44999) || (buildVersion >= 40 && buildVersion <= 44))
             {
                 var indexType = ReadIndexType(indexDefinitionDoc);
-                var definition = ReadIndexDefinition(indexDefinitionDoc);
                 switch (indexType)
                 {
                     case IndexType.AutoMap:
-                        var autoMapIndexDefinition = AutoMapIndexDefinition.LoadFromJson(definition);
+                        var autoMapIndexDefinition = AutoMapIndexDefinition.LoadFromJson(indexDefinitionDoc);
                         database.IndexStore.CreateIndex(autoMapIndexDefinition);
                         break;
                     case IndexType.AutoMapReduce:
-                        var autoMapReduceIndexDefinition = AutoMapReduceIndexDefinition.LoadFromJson(definition);
+                        var autoMapReduceIndexDefinition = AutoMapReduceIndexDefinition.LoadFromJson(indexDefinitionDoc);
                         database.IndexStore.CreateIndex(autoMapReduceIndexDefinition);
                         break;
                     case IndexType.Map:
                     case IndexType.MapReduce:
-                        var indexDefinition = JsonDeserializationServer.IndexDefinition(definition);
+                        var indexDefinition = JsonDeserializationServer.IndexDefinition(indexDefinitionDoc);
+                        if (removeAnalyzers)
+                        {
+                            foreach (var indexDefinitionField in indexDefinition.Fields)
+                            {
+                                indexDefinitionField.Value.Analyzer = null;
+                            }
+                        }
                         database.IndexStore.CreateIndex(indexDefinition);
                         break;
                     default:
@@ -90,15 +96,6 @@ namespace Raven.Server.Smuggler.Documents.Processors
             }
 
             writer.WriteEndObject();
-        }
-
-        private static BlittableJsonReaderObject ReadIndexDefinition(BlittableJsonReaderObject reader)
-        {
-            BlittableJsonReaderObject json;
-            if (reader.TryGet(nameof(IndexDefinition), out json) == false)
-                throw new InvalidOperationException("Could not read index definition.");
-
-            return json;
         }
 
         private static IndexType ReadIndexType(BlittableJsonReaderObject reader)
