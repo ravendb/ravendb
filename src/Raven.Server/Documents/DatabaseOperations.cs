@@ -89,7 +89,7 @@ namespace Raven.Server.Documents
             return null;
         }
 
-        public Task<IOperationResult> AddOperation(string description, PendingOperationType opererationType, Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory, 
+        public Task<IOperationResult> AddOperation(string description, PendingOperationType opererationType, Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
             long id, OperationCancelToken token = null)
         {
             var operationState = new OperationState
@@ -216,7 +216,7 @@ namespace Raven.Server.Documents
 
             [JsonIgnore]
             public Task Task;
-            
+
             [JsonIgnore]
             public OperationCancelToken Token;
 
@@ -226,7 +226,6 @@ namespace Raven.Server.Documents
             public bool Dismissed;
 
             public bool Killable => Token != null;
-            
 
             public DynamicJsonValue ToJson()
             {
@@ -260,9 +259,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        public enum PendingOperationType 
+        public enum PendingOperationType
         {
-            PatchByIndex,
+            UpdateByIndex,
 
             DeleteByIndex,
 
@@ -277,7 +276,7 @@ namespace Raven.Server.Documents
             UpdateByCollection
             //TODO: other operation types
             ,
-            
+
         }
     }
 }
