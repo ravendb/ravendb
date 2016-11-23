@@ -73,7 +73,10 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     yield break;
             }
             else if (it.Seek(MapReduceIndexingContext.LastMapResultIdKey))
-                it.MoveNext();
+            {
+                if (it.MoveNext() == false)
+                    yield break;
+            }
 
             do
             {
