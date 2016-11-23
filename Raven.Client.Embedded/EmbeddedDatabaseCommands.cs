@@ -120,7 +120,21 @@ namespace Raven.Client.Embedded
 			// this
 
 			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, start, pageSize, CancellationToken.None);
-			return SerializationHelper.RavenJObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<RavenJObject>()).ToArray();
+
+            var docResults = documentsWithIdStartingWith.OfType<RavenJObject>().ToList();
+            var startsWithResults = SerializationHelper.RavenJObjectsToJsonDocuments(docResults.Select(x => (RavenJObject)x.CloneToken())).ToArray();
+
+            return RetryOperationBecauseOfConflict(docResults, startsWithResults, () =>
+                                                    StartsWith(keyPrefix, matches, start, pageSize, metadataOnly, exclude),
+                                                    conflictedResultId =>
+                                                    new ConflictException(
+                                                        "Conflict detected on " +
+                                                        conflictedResultId.Substring(0,
+                                                            conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+                                                        ", conflict must be resolved before the document will be accessible", true)
+                                                    {
+                                                        ConflictedVersionIds = new[] { conflictedResultId }
+                                                    }, retryAfterFirstResolve: true);
 		}
 
 		/// <summary>
@@ -1212,16 +1226,24 @@ namespace Raven.Client.Embedded
 		}
 
 		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry,
-                                                    Func<string, ConflictException> onConflictedQueryResult = null, bool isQuery = false)
+            Func<string, ConflictException> onConflictedQueryResult = null, bool isQuery = false, bool retryAfterFirstResolve = false)
 		{
-			bool requiresRetry = docResults.Aggregate(false, (current, docResult) =>
-                                                        current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult, onConflictedQueryResult, isQuery));
+            var requiresRetry = false;
+            foreach (var docResult in docResults)
+            {
+                requiresRetry |= AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult, onConflictedQueryResult, isQuery);
+
+                if (retryAfterFirstResolve && requiresRetry)
+                    return nextTry();
+            }
+
 			if (!requiresRetry)
 				return currentResult;
 
 			if (resolvingConflictRetries)
 				throw new InvalidOperationException(
 					"Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
+
 			resolvingConflictRetries = true;
 			try
 			{
