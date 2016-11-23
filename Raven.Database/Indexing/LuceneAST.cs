@@ -26,6 +26,7 @@ namespace Raven.Database.Indexing
 
         public abstract Query ToQuery(LuceneASTQueryConfiguration configuration);
 
+
         public virtual void AddQueryToBooleanQuery(BooleanQuery b, LuceneASTQueryConfiguration configuration, Occur o, bool letChildrenDecide = false)
         {
             var oc = letChildrenDecide ? GetDefaultOccurFromConfiguration(configuration) : o;
@@ -532,15 +533,16 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public override Query ToQuery(LuceneASTQueryConfiguration configuration)
         {
             var query = new BooleanQuery();
+            bool hasExplicitPrefix;
             switch (Op)
             {
                 case Operator.AND:
-                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
+                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST, out hasExplicitPrefix));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST, out hasExplicitPrefix));
                     break;
                 case Operator.OR:
-                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
+                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD, out hasExplicitPrefix));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD, out hasExplicitPrefix), !hasExplicitPrefix);
                     break;
                 case Operator.NOT:
                     query.Add(LeftNode.ToQuery(configuration), Occur.MUST_NOT);
@@ -549,20 +551,20 @@ This edge-case has a very slim chance of happening, but still we should not igno
                     switch (configuration.DefaultOperator)
                     {
                         case QueryOperator.Or:
-                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD));
-                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
+                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD, out hasExplicitPrefix));
+                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD, out hasExplicitPrefix), !hasExplicitPrefix);
                             break;
                         case QueryOperator.And:
-                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
-                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
+                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST, out hasExplicitPrefix));
+                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST, out hasExplicitPrefix));
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("defaultOperator");
                     }
                     break;
                 case Operator.INTERSECT:
-                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
+                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST, out hasExplicitPrefix));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST, out hasExplicitPrefix));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -570,15 +572,18 @@ This edge-case has a very slim chance of happening, but still we should not igno
             return query;
         }
 
-        private Occur PrefixToOccurance(LuceneASTNodeBase node, Occur defaultOccurance)
-        {
+        private Occur PrefixToOccurance(LuceneASTNodeBase node, Occur defaultOccurance,out bool hasExplicitPrefix)
+        {             
             switch (node.Prefix)
             {
                 case PrefixOperator.None:
+                    hasExplicitPrefix = false;
                     return defaultOccurance;
                 case PrefixOperator.Plus:
+                    hasExplicitPrefix = true;
                     return Occur.MUST;
                 case PrefixOperator.Minus:
+                    hasExplicitPrefix = true;
                     return Occur.MUST_NOT;
                 default:
                     throw new ArgumentOutOfRangeException("Unknown query prefix " + node.Prefix);
@@ -587,15 +592,16 @@ This edge-case has a very slim chance of happening, but still we should not igno
 
         public override void AddQueryToBooleanQuery(BooleanQuery query, LuceneASTQueryConfiguration configuration, Occur o, bool letChildrenDecide = false)
         {
+            bool hasExplicitPrefix;
             switch (Op)
             {
                 case Operator.AND:
-                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide? Occur.MUST:o));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
+                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide? Occur.MUST:o, out hasExplicitPrefix));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST, out hasExplicitPrefix));
                     break;
                 case Operator.OR:
-                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide ? Occur.SHOULD : o));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
+                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide ? Occur.SHOULD : o, out hasExplicitPrefix));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD, out hasExplicitPrefix), !hasExplicitPrefix);
                     break;
                 case Operator.NOT:
                     query.Add(LeftNode.ToQuery(configuration), Occur.MUST_NOT);
@@ -604,20 +610,20 @@ This edge-case has a very slim chance of happening, but still we should not igno
                     switch (configuration.DefaultOperator)
                     {
                         case QueryOperator.Or:
-                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide ? Occur.SHOULD : o));
-                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
+                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide ? Occur.SHOULD : o, out hasExplicitPrefix));
+                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD, out hasExplicitPrefix), !hasExplicitPrefix);
                             break;
                         case QueryOperator.And:
-                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide ? Occur.MUST : o));
-                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
+                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide ? Occur.MUST : o, out hasExplicitPrefix));
+                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST, out hasExplicitPrefix));
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("defaultOperator");
                     }
                     break;
                 case Operator.INTERSECT:
-                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide ? Occur.MUST : o));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
+                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide ? Occur.MUST : o, out hasExplicitPrefix));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST, out hasExplicitPrefix));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
