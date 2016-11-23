@@ -8,7 +8,7 @@
             </div>
         </div>
     </div>
-    <div class="clearfix" data-bind="if: transformersGroups().length">
+    <div class="clearfix toolbar" data-bind="if: transformersGroups().length">
         <div class="pull-left">
             <div class="form-inline">
                 <div class="checkbox checkbox-inline align-checkboxes" title="Select all or none">
@@ -44,8 +44,7 @@
                 </button>
             </div>
         </div>
-    </div>
-    <hr data-bind="visible: transformersGroups().length"/>
+    </div>    
 
     <div data-bind="foreach: transformersGroups">
         <h2 data-bind="text: entityName, visible: !groupHidden()"></h2>
