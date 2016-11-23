@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Data;
-using Raven.Client.Data.Queries;
-using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -34,9 +31,11 @@ namespace Raven.Server.Documents.Handlers
                 {
                     collections[collectionStat.Name] = collectionStat.Count;
                 }
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     context.Write(writer, result);
             }
+
             return Task.CompletedTask;
         }
 
@@ -47,7 +46,6 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -55,6 +53,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteDocuments(context, documents, metadataOnly: false);
                 }
             }
+
             return Task.CompletedTask;
         }
 

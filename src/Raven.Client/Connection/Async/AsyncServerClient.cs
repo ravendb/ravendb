@@ -97,7 +97,7 @@ namespace Raven.Client.Connection.Async
             Guid? sessionId,
             Func<AsyncServerClient, string, ClusterBehavior, bool, IRequestExecuter> requestExecuterGetter,
             Func<string, RequestTimeMetric> requestTimeMetricGetter,
-            Func<string, IDatabaseChanges> changesGetter,
+            Func<string, IDatabaseChanges> changesGetter, 
             string databaseName,
             IDocumentConflictListener[] conflictListeners,
             bool incrementReadStripe,
