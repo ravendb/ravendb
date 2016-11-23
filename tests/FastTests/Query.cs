@@ -9,7 +9,7 @@ namespace NewClientTests.NewClient
 {
     public class Query : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "ClearSortHints not implemented")]
         public void Query_Simple()
         {
             using (var store = GetDocumentStore())
@@ -29,7 +29,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "ClearSortHints not implemented")]
         public void Query_With_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -55,7 +55,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void Query_With_Customize()
         {
             using (var store = GetDocumentStore())
@@ -104,7 +104,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "ClearSortHints not implemented")]
         public void Query_Long_Request()
         {
             using (var store = GetDocumentStore())
@@ -124,7 +124,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void Query_By_Index()
         {
             using (var store = GetDocumentStore())

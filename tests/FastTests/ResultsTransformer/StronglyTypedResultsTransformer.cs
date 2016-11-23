@@ -105,7 +105,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanUseResultsTransformerOnLoad()
         {
             using (var store = GetDocumentStore())
@@ -114,7 +114,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanUseResultsTransformerOnLoadWithMultipleReturns()
         {
             using (var store = GetDocumentStore())
@@ -123,7 +123,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanUseResultsTransformerOnLoadWithMultipleReturnsFullDocument()
         {
             using (var store = GetDocumentStore())
@@ -132,7 +132,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithSingleException()
         {
             using (var store = GetDocumentStore())

@@ -39,8 +39,6 @@ namespace Raven.NewClient.Client.Connection
             AsyncHelpers.RunSync(() => asyncAdminServerClient.DeleteDatabaseAsync(databaseName, hardDelete));
         }
 
-        public IDatabaseCommands Commands { get { return new ServerClient(asyncServerClient); } }
-
         public Operation CompactDatabase(string databaseName)
         {
             return AsyncHelpers.RunSync(() => asyncAdminServerClient.CompactDatabaseAsync(databaseName));

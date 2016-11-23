@@ -40,15 +40,15 @@ namespace Raven.NewClient.Client.Document
         /// <param name="convention">The convention.</param>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>
-        public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, DocumentConvention convention, object entity)
+        public Task<string> GenerateDocumentKeyAsync(DocumentConvention convention, object entity)
         {
-            return NextIdAsync(databaseCommands).ContinueWith(task => GetDocumentKeyFromId(convention, task.Result));
+            return NextIdAsync().ContinueWith(task => GetDocumentKeyFromId(convention, task.Result));
         }
 
         ///<summary>
         /// Create the next id (numeric)
         ///</summary>
-        public Task<long> NextIdAsync(IAsyncDatabaseCommands databaseCommands)
+        public Task<long> NextIdAsync()
         {
             var myRange = Range; // thread safe copy
             long incrementedCurrent = Interlocked.Increment(ref myRange.Current);
@@ -65,10 +65,10 @@ namespace Raven.NewClient.Client.Document
                 {
                     // Lock was contended, and the max has already been changed. Just get a new id as usual.
                     generatorLock.Exit();
-                    return NextIdAsync(databaseCommands);
+                    return NextIdAsync();
                 }
                 // Get a new max, and use the current value.
-                return GetNextRangeAsync(databaseCommands)
+                return GetNextRangeAsync()
                     .ContinueWith(task =>
                     {
                         try
@@ -80,7 +80,7 @@ namespace Raven.NewClient.Client.Document
                             generatorLock.Exit();
                         }
 
-                        return NextIdAsync(databaseCommands);
+                        return NextIdAsync();
                     }).Unwrap();
             }
             catch
@@ -93,16 +93,17 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        private Task<RangeValue> GetNextRangeAsync(IAsyncDatabaseCommands databaseCommands)
+        private Task<RangeValue> GetNextRangeAsync()
         {
             ModifyCapacityIfRequired();
 
-            return GetNextMaxAsyncInner(databaseCommands);
+            return GetNextMaxAsyncInner();
         }
 
-        private async Task<RangeValue> GetNextMaxAsyncInner(IAsyncDatabaseCommands databaseCommands)
+        private async Task<RangeValue> GetNextMaxAsyncInner( )
         {
-            var minNextMax = Range.Max;
+            throw new NotImplementedException();
+           /* var minNextMax = Range.Max;
 
             using (databaseCommands.ForceReadFromMaster())
                 while (true)
@@ -153,7 +154,7 @@ namespace Raven.NewClient.Client.Document
                     {
                         //expected & ignored, will retry this
                     }
-                }
+                }*/
         }
 
         private async Task<RangeValue> HandleConflictsAsync(IAsyncDatabaseCommands databaseCommands, ConflictException e, long minNextMax)
@@ -175,7 +176,7 @@ namespace Raven.NewClient.Client.Document
                 DataAsJson = RavenJObject.FromObject(new { Max = highestMax }),
                 Key = HiLoDocumentKey
             }).ConfigureAwait(false);
-            return await GetNextRangeAsync(databaseCommands).ConfigureAwait(false);
+            return await GetNextRangeAsync().ConfigureAwait(false);
         }
 
         private Task PutDocumentAsync(IAsyncDatabaseCommands databaseCommands, JsonDocument document)

@@ -97,7 +97,7 @@ namespace Raven.NewClient.Client.Commands
                 }
             }
 
-            url = pathBuilder.ToString();
+            url = $"{node.Url}/databases/{node.Database}/" + pathBuilder;
             return request;
         }
 

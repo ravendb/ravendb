@@ -14,7 +14,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Util.Encryptors;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Indexes;
+using Raven.NewClient.Data.Indexes;
 
 namespace Raven.NewClient.Client
 {
@@ -77,7 +77,6 @@ namespace Raven.NewClient.Client
         public abstract HttpJsonRequestFactory JsonRequestFactory { get; }
         public abstract string Identifier { get; set; }
         public abstract IDocumentStore Initialize();
-        public abstract IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
         public abstract IAsyncDocumentSession OpenAsyncSession();
         public abstract IAsyncDocumentSession OpenAsyncSession(string database);
         public abstract IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions);
@@ -85,14 +84,13 @@ namespace Raven.NewClient.Client
         public abstract IDocumentSession OpenSession();
         public abstract IDocumentSession OpenSession(string database);
         public abstract IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
-        public abstract IDatabaseCommands DatabaseCommands { get; }
 
         /// <summary>
         /// Executes index creation.
         /// </summary>
         public virtual void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)
         {
-            indexCreationTask.Execute(DatabaseCommands, Conventions);
+            indexCreationTask.Execute(Conventions);
         }
 
         /// <summary>
@@ -100,7 +98,7 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
         {
-            return indexCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
+            return indexCreationTask.ExecuteAsync(Conventions);
         }
 
         /// <summary>
@@ -108,7 +106,7 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
-            indexCreationTask.SideBySideExecute(DatabaseCommands, Conventions, minimumEtagBeforeReplace, replaceTimeUtc);
+            indexCreationTask.SideBySideExecute(Conventions, minimumEtagBeforeReplace, replaceTimeUtc);
         }
 
         /// <summary>
@@ -116,7 +114,7 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
-            return indexCreationTask.SideBySideExecuteAsync(AsyncDatabaseCommands, Conventions, minimumEtagBeforeReplace, replaceTimeUtc);
+            return indexCreationTask.SideBySideExecuteAsync(Conventions, minimumEtagBeforeReplace, replaceTimeUtc);
         }
 
         /// <summary>
@@ -124,7 +122,7 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)
         {
-            transformerCreationTask.Execute(DatabaseCommands, Conventions);
+            transformerCreationTask.Execute( Conventions);
         }
 
         /// <summary>
@@ -132,7 +130,7 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask)
         {
-            return transformerCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
+            return transformerCreationTask.ExecuteAsync(Conventions);
         }
 
         /// <summary>
@@ -140,11 +138,12 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual void ExecuteIndexes(IList<AbstractIndexCreationTask> indexCreationTasks)
         {
-            var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
+            throw new NotImplementedException();
+            /*var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
             DatabaseCommands.PutIndexes(indexesToAdd);
 
             foreach (var task in indexCreationTasks)
-                task.AfterExecute(DatabaseCommands, Conventions);
+                task.AfterExecute(DatabaseCommands, Conventions);*/
         }
 
         /// <summary>
@@ -152,11 +151,12 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual async Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
         {
-            var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
-            await AsyncDatabaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
+            throw new NotImplementedException();
+            /* var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
+             await AsyncDatabaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
 
-            foreach (var task in indexCreationTasks)
-                await task.AfterExecuteAsync(AsyncDatabaseCommands, Conventions).ConfigureAwait(false);
+             foreach (var task in indexCreationTasks)
+                 await task.AfterExecuteAsync(Conventions).ConfigureAwait(false);*/
         }
 
         /// <summary>
@@ -164,11 +164,12 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual void SideBySideExecuteIndexes(IList<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
-            var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
+            throw new NotImplementedException();
+            /*var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
             DatabaseCommands.PutSideBySideIndexes(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc);
 
             foreach (var task in indexCreationTasks)
-                task.AfterExecute(DatabaseCommands, Conventions);
+                task.AfterExecute(DatabaseCommands, Conventions);*/
         }
 
         /// <summary>
@@ -176,11 +177,12 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual async Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
-            var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
+            throw new NotImplementedException();
+            /*var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
             await AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
 
             foreach (var task in indexCreationTasks)
-                task.AfterExecute(DatabaseCommands, Conventions);
+                task.AfterExecute(Conventions);*/
         }
 
         private DocumentConvention conventions;

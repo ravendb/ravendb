@@ -209,7 +209,12 @@ namespace Raven.Server.Web.System
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartArray();
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["Results"] = results
+                    });
+
+                    /*writer.WriteStartArray();
                     var first = true;
                     foreach (var result in results)
                     {
@@ -219,7 +224,7 @@ namespace Raven.Server.Web.System
 
                         context.Write(writer, result);
                     }
-                    writer.WriteEndArray();
+                    writer.WriteEndArray();*/
                 }
             }
 

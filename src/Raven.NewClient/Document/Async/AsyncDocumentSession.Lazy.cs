@@ -95,7 +95,8 @@ namespace Raven.NewClient.Client.Document.Async
 
         private async Task<bool> ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
         {
-            var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
+            throw new NotImplementedException();
+            /*var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
             try
             {
                 var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToArray();
@@ -130,7 +131,7 @@ namespace Raven.NewClient.Client.Document.Async
                 {
                     disposable.Dispose();
                 }
-            }
+            }*/
         }
 
         public Lazy<Task<TResult>> LoadAsync<TResult>(string id, Action<TResult> onEval, CancellationToken token = new CancellationToken())

@@ -62,7 +62,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanUseResultsTransformerWithQueryOnLoad()
         {
             using (var store = GetDocumentStore())
@@ -84,7 +84,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
         }
 
 
-        [Fact]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanUseResultsTransformerWithQueryOnLoadWithRemoteClient()
         {
             using (var store = GetDocumentStore())
@@ -207,7 +207,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanCastTransformerParameter()
         {
             using (var store = GetDocumentStore())

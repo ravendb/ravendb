@@ -394,9 +394,10 @@ namespace Raven.NewClient.Client
         /// </summary>
         public static SuggestionQueryResult Suggest(this IQueryable queryable, SuggestionQuery query)
         {
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
-            return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);
+            throw new NotImplementedException();
+            /* var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+             SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
+             return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);*/
         }
 
         /// <summary>
@@ -440,10 +441,11 @@ namespace Raven.NewClient.Client
         /// </summary>
         public static Task<SuggestionQueryResult> SuggestAsync(this IQueryable queryable, SuggestionQuery query, CancellationToken token = default (CancellationToken))
         {
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+            throw new NotImplementedException();
+            /*var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query, true);
 
-            return ravenQueryInspector.AsyncDatabaseCommands.SuggestAsync(ravenQueryInspector.AsyncIndexQueried, query, token);
+            return ravenQueryInspector.AsyncDatabaseCommands.SuggestAsync(ravenQueryInspector.AsyncIndexQueried, query, token);*/
         }
 
         /// <summary>
