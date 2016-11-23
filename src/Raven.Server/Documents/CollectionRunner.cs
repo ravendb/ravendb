@@ -25,17 +25,17 @@ namespace Raven.Server.Documents
         }
 
 
-        public IOperationResult ExecuteDelete(string collectionName, CollectionOpertaionOptions options, DocumentsOperationContext documentsOperationContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public IOperationResult ExecuteDelete(string collectionName, CollectionOperationOptions options, DocumentsOperationContext documentsOperationContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation(collectionName, options, _context, onProgress, key => _database.DocumentsStorage.Delete(_context, key, null), token);
         }
 
-        public IOperationResult ExecutePatch(string collectionName, CollectionOpertaionOptions options, PatchRequest patch, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public IOperationResult ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation(collectionName, options, _context, onProgress, key => _database.Patch.Apply(context, key, null, patch, null), token);
         }
 
-        private IOperationResult ExecuteOperation(string collectionName, CollectionOpertaionOptions options, DocumentsOperationContext context, 
+        private IOperationResult ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context, 
              Action<DeterminateProgress> onProgress, Action<string> action, OperationCancelToken token)
         {
             const int BatchSize = 1024;

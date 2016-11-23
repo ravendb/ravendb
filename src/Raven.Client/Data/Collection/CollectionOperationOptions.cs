@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Data.Collection
 {
-    public class CollectionOpertaionOptions
+    public class CollectionOperationOptions
     {
         private int? _maxOpsPerSecond;
 

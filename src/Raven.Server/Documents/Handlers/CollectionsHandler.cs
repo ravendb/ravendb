@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Handlers
 
         }
 
-        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOpertaionOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
+        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
         {
             var collectionName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
@@ -108,69 +108,9 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/collections/docs", "DELETE", "/databases/{databaseName:string}/collections/docs?name={collectionName:string}")]
-        public Task DeleteCollectionDocuments()
+        private CollectionOperationOptions GetCollectionOperationOptions()
         {
-            var deletedList = new List<LazyStringValue>();
-            long totalDocsDeletes = 0;
-            long maxEtag = -1;
-            DocumentsOperationContext context;
-            var collection = GetStringQueryString("name");
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartArray();
-                    while (true)
-                    {
-                        using (context.OpenWriteTransaction())
-                        {
-                            if (maxEtag == -1)
-                                maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
-
-                            foreach (var document in Database.DocumentsStorage.GetDocumentsFrom(context, collection, 0, 0, 16 * 1024))
-                            {
-                                if (document.Etag > maxEtag)
-                                    break;
-                                deletedList.Add(document.Key);
-                            }
-
-                            if (deletedList.Count == 0)
-                                break;
-
-                            foreach (LazyStringValue key in deletedList)
-                            {
-                                Database.DocumentsStorage.Delete(context, key, null);
-                            }
-
-                            context.Transaction.Commit();
-                        }
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            ["BatchSize"] = deletedList.Count
-                        });
-                        writer.WriteComma();
-                        writer.WriteNewLine();
-                        writer.Flush();
-
-                        totalDocsDeletes += deletedList.Count;
-
-                        deletedList.Clear();
-                    }
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        ["TotalDocsDeleted"] = totalDocsDeletes
-                    });
-                    writer.WriteNewLine();
-                    writer.WriteEndArray();
-                }
-            }
-            return Task.CompletedTask;
-        }
-
-        private CollectionOpertaionOptions GetCollectionOperationOptions()
-        {
-            return new CollectionOpertaionOptions
+            return new CollectionOperationOptions
             {
                 MaxOpsPerSecond = GetIntValueQueryString("maxOpsPerSec", required: false),
             };
