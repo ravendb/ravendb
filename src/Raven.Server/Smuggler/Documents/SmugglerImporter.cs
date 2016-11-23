@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -100,9 +101,43 @@ namespace Raven.Server.Smuggler.Documents
 
                             if (operateOnType == "Docs" && Options.OperateOnTypes.HasFlag(DatabaseItemType.Documents))
                             {
+
+                                PatchDocument patch = null;
+                                PatchRequest patchRequest = null;
+                                if (string.IsNullOrWhiteSpace(Options.TransformScript) == false)
+                                {
+                                    patch = new PatchDocument(context.DocumentDatabase);
+                                    patchRequest = new PatchRequest
+                                    {
+                                        Script = Options.TransformScript
+                                    };
+                                }
+
                                 result.DocumentsCount++;
                                 using (var reader = builder.CreateReader())
-                                    _batchPutCommand.Add(reader);
+                                {
+                                    var document = new Document
+                                    {
+                                        Data = reader,
+                                    };
+
+                                    if (patch != null)
+                                    {
+                                        BlittableJsonReaderObject newMetadata;
+                                        LazyStringValue key = null;
+                                        if (reader.TryGet(Constants.Metadata.Key, out newMetadata))
+                                            newMetadata.TryGet(Constants.Metadata.Id, out key);
+                                        document.Key = key;
+
+                                        var patchResult = patch.Apply(context, document, patchRequest);
+                                        if (patchResult == null || patchResult.ModifiedDocument.Equals(document.Data))
+                                            continue;
+                                        document.Data = patchResult.ModifiedDocument;
+                                    }
+
+                                    _batchPutCommand.Add(document.Data);
+                                }
+                                
                                 await HandleBatchOfDocuments(context, parser, buildVersion);
                             }
                             else if (operateOnType == "RevisionDocuments" &&
