@@ -4,6 +4,7 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using FastTests;
 using Raven.Abstractions.Data;
@@ -73,7 +74,7 @@ namespace SlowTests.MailingList
                             Script = "this.Privilege[0].Level = 'Gold'"
                         },
                         options: null)
-                    .WaitForCompletion();
+                    .WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 var document = store.DatabaseCommands.Get("patrons/1");
 

@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -45,7 +46,7 @@ namespace SlowTests.SlowTests.Issues
                 };
 
                 var operation = store.DatabaseCommands.DeleteByIndex(stats.IndexName, queryToDelete);
-                operation.WaitForCompletion();
+                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession())
                 {

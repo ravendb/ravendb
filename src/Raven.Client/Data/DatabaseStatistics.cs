@@ -60,6 +60,8 @@ namespace Raven.Client.Data
         /// Indicates if process is 64-bit
         /// </summary>
         public bool Is64Bit { get; set; }
+
+        public DateTime? LastIndexingTime { get; set; }
     }
 
     public class IndexInformation
@@ -75,6 +77,8 @@ namespace Raven.Client.Data
         public IndexLockMode LockMode { get; set; }
 
         public IndexType Type { get; set; }
+
+        public DateTime? LastIndexingTime { get; set; }
     }
 
     public class TriggerInfo

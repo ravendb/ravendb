@@ -237,7 +237,7 @@ class resourcesManager {
         const globalChanges = changesContext.default.globalChangesApi();
 
         return [
-            globalChanges.watchItemsStartingWith("db/", e => this.onResourceUpdateReceivedViaChangesApi())
+            globalChanges.watchItemsStartingWith("db/", e => this.onResourceUpdateReceivedViaChangesApi()),
              //TODO: DO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),*/
         ];
     }

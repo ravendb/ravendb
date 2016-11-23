@@ -22,11 +22,17 @@ namespace Raven.Server.Documents
         public void RaiseNotifications(IndexChangeNotification indexChangeNotification)
         {
             OnIndexChange?.Invoke(indexChangeNotification);
+
+            foreach (var connection in Connections)
+                connection.Value.SendIndexChanges(indexChangeNotification);
         }
 
         public void RaiseNotifications(TransformerChangeNotification transformerChangeNotification)
         {
             OnTransformerChange?.Invoke(transformerChangeNotification);
+
+            foreach (var connection in Connections)
+                connection.Value.SendTransformerChanges(transformerChangeNotification);
         }
 
         public void RaiseSystemNotifications(DocumentChangeNotification documentChangeNotification)

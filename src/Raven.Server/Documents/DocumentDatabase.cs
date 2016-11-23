@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Server.Alerts;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -189,7 +190,7 @@ namespace Raven.Server.Documents
 
             //Index Metadata Store shares Voron env and context pool with documents storage, 
             //so replication of both documents and indexes/transformers can be made within one transaction
-            ConfigurationStorage.Initialize(IndexStore,TransformerStore,DocumentsStorage.Environment,DocumentsStorage.ContextPool);
+            ConfigurationStorage.Initialize(IndexStore,TransformerStore);
             DocumentReplicationLoader.Initialize();
         }
 

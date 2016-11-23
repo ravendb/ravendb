@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Raven.Server.Alerts;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
@@ -11,6 +12,9 @@ namespace Raven.Server.Documents
     public class ConfigurationStorage : IDisposable
     {
         private TransactionContextPool _contextPool;
+
+        public TransactionContextPool ContextPool => _contextPool;
+
         public IndexesEtagsStorage IndexesEtagsStorage { get; }
 
         public AlertsStorage AlertsStorage { get; }
@@ -31,14 +35,11 @@ namespace Raven.Server.Documents
             IndexesEtagsStorage = new IndexesEtagsStorage(db.Name);
         }
 
-        public void Initialize(IndexStore indexStore, 
-                               TransformerStore transformerStore,
-                               StorageEnvironment documentStorageEnvironment,
-                               DocumentsContextPool documentsContextPool)
+        public void Initialize(IndexStore indexStore, TransformerStore transformerStore)
         {
             _contextPool = new TransactionContextPool(Environment);
             AlertsStorage.Initialize(Environment, _contextPool);
-            IndexesEtagsStorage.Initialize(documentStorageEnvironment, documentsContextPool, indexStore, transformerStore);
+            IndexesEtagsStorage.Initialize(Environment, _contextPool, indexStore, transformerStore);
         }
 
         public void Dispose()

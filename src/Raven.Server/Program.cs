@@ -58,6 +58,10 @@ namespace Raven.Server
                     Console.WriteLine(e);
                     return -1;
                 }
+                finally
+                {
+                    Console.WriteLine("Bye, bye...");
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
+import endpoints = require("endpoints");
 
 class getDatabaseStatsCommand extends commandBase {
 
@@ -8,9 +9,9 @@ class getDatabaseStatsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<databaseStatisticsDto> {
+    execute(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {
         var url = this.getQueryUrlFragment();
-        return this.query<databaseStatisticsDto>(url, null, this.db, null, this.getTimeToAlert(this.longWait));
+        return this.query<Raven.Client.Data.DatabaseStatistics>(url, null, this.db, null, this.getTimeToAlert(this.longWait));
     }
 
     getQueryUrl(): string {
@@ -18,7 +19,7 @@ class getDatabaseStatsCommand extends commandBase {
     }
 
     private getQueryUrlFragment(): string {
-        return "/stats";//TODO: use endpoints
+        return endpoints.databases.stats.stats;
     }
 }
 

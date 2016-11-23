@@ -9,6 +9,7 @@
     "file-exists": "^1.0.0",
     "glob": "^7.0.0",
     "gulp": "^3.9.0",
+    "gulp-autoprefixer": "^3.1.1",
     "gulp-bower": "0.0.13",
     "gulp-changed": "^1.3.0",
     "gulp-concat": "^2.6.0",

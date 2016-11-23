@@ -13,12 +13,6 @@ namespace Raven.Server.Web.TEMP_REMOVE_ME
             return Task.CompletedTask;
         }
 
-        [RavenAction("/studio-tasks/latest-server-build-version", "GET")]
-        public Task FakeResponseForLastServerBuild()
-        {
-            return HttpContext.Response.WriteAsync("{'LatestBuild':'4.0.404'}");
-        }
-
         [RavenAction("/license/status", "GET")]
         public Task FakeResponseForLicenseStatus()
         {

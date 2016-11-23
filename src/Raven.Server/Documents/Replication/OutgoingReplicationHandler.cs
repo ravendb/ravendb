@@ -49,6 +49,7 @@ namespace Raven.Server.Documents.Replication
         private BlittableJsonTextWriter _writer;
         private JsonOperationContext.MultiDocumentParser _parser;
         internal DocumentsOperationContext _documentsContext;
+        internal TransactionOperationContext _configurationContext;
 
         internal CancellationToken CancellationToken => _cts.Token;
 
@@ -71,7 +72,7 @@ namespace Raven.Server.Documents.Replication
 
         public void Start()
         {
-            _sendingThread = new Thread(ReplicateDocuments)
+            _sendingThread = new Thread(ReplicateToDestination)
             {
                 Name = $"Outgoing replication {FromToString}",
                 IsBackground = true
@@ -103,7 +104,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void ReplicateDocuments()
+        private void ReplicateToDestination()
         {
             try
             {
@@ -113,6 +114,7 @@ namespace Raven.Server.Documents.Replication
                     ConnectSocket(connectionInfo, _tcpClient);
 
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out _documentsContext))
+                    using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out _configurationContext))
                     using (var stream = _tcpClient.GetStream())
                     {
                         var documentSender = new ReplicationDocumentSender(stream, this, _log);
@@ -142,6 +144,7 @@ namespace Raven.Server.Documents.Replication
                             //handle initial response to last etag and staff
                             try
                             {
+                                using (_configurationContext.OpenReadTransaction())
                                 using (_documentsContext.OpenReadTransaction())
                                     HandleServerResponse();
                             }
@@ -161,10 +164,8 @@ namespace Raven.Server.Documents.Replication
 
                                 Debug.Assert(_database.IndexMetadataPersistence.IsInitialized);
 
-                                using (_documentsContext.OpenReadTransaction())
-                                    currentEtag =
-                                        _database.IndexMetadataPersistence.ReadLastEtag(
-                                            _documentsContext.Transaction.InnerTransaction);
+                                using (_configurationContext.OpenReadTransaction())
+                                    currentEtag = _database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction);
 
                                 if (currentEtag != indexAndTransformerSender.LastEtag)
                                 {
@@ -185,8 +186,10 @@ namespace Raven.Server.Documents.Replication
                                 //if this returns false, this means either timeout or canceled token is activated                    
                                 while (_waitForChanges.Wait(_minimalHeartbeatInterval, _cts.Token) == false)
                                 {
+                                    _configurationContext.ResetAndRenew();
                                     _documentsContext.ResetAndRenew();
                                     using (_documentsContext.OpenReadTransaction())
+                                    using (_configurationContext.OpenReadTransaction())
                                     {
                                         SendHeartbeat();
                                     }
@@ -244,7 +247,8 @@ namespace Raven.Server.Documents.Replication
             _lastSentIndexOrTransformerEtag = replicationBatchReply.LastIndexTransformerEtagAccepted;
 
             _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.DocumentsChangeVector.Format();
-            _destinationLastKnownIndexOrTransformerChangeVectorAsString = replicationBatchReply.IndexTransformerChangeVector.Format();
+            _destinationLastKnownIndexOrTransformerChangeVectorAsString =
+                replicationBatchReply.IndexTransformerChangeVector.Format();
 
             foreach (var changeVectorEntry in replicationBatchReply.DocumentsChangeVector)
             {
@@ -256,7 +260,8 @@ namespace Raven.Server.Documents.Replication
                 _destinationLastKnownIndexOrTransformerChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
 
-            if (DocumentsStorage.ReadLastEtag(_documentsContext.Transaction.InnerTransaction) != replicationBatchReply.LastEtagAccepted)
+            if (DocumentsStorage.ReadLastEtag(_documentsContext.Transaction.InnerTransaction) !=
+                replicationBatchReply.LastEtagAccepted)
             {
                 // We have changes that the other side doesn't have, this can be because we have writes
                 // or because we have documents that were replicated to us. Either way, we need to sync
@@ -267,13 +272,13 @@ namespace Raven.Server.Documents.Replication
                     _waitForChanges.Set();
             }
 
-            if (_database.IndexMetadataPersistence.ReadLastEtag(_documentsContext.Transaction.InnerTransaction) !=
+            if (_database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction) !=
                 replicationBatchReply.LastIndexTransformerEtagAccepted)
             {
                 if (DateTime.UtcNow - _lastIndexOrTransformerSentTime > _minimalHeartbeatInterval)
                     _waitForChanges.Set();
             }
-        }       
+        }
 
         private string FromToString => $"from {_database.ResourceName} to {_destination.Database} at {_destination.Url}";
 

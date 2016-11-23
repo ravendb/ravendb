@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Util.Encryptors;
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Indexes;
 
 namespace Raven.NewClient.Client
 {

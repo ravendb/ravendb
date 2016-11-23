@@ -37,7 +37,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
             database.TransformerStore.CreateTransformer(transformerDefinition);
         }
 
-        public static void Export(BlittableJsonTextWriter writer, Transformer transformer, DocumentsOperationContext context)
+        public static void Export(BlittableJsonTextWriter writer, Transformer transformer, JsonOperationContext context)
         {
             writer.WriteTransformerDefinition(context, transformer.Definition);
         }

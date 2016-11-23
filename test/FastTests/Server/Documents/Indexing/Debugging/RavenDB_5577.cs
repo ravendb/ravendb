@@ -146,8 +146,8 @@ select new
                                 Assert.Equal(100, tree.NumberOfEntries);
                                 Assert.Equal(3, tree.PageCount);
 
-                                Assert.True(tree.Root.IsBranch);
-                                Assert.False(tree.Root.IsLeaf);
+                                Assert.True(tree.Root.Children.Any());
+                                Assert.Null(tree.Root.Entries);
 
                                 Assert.Null(tree.Root.Entries);
 
@@ -160,9 +160,7 @@ select new
 
                                 foreach (var leafPage in new []{left, right})
                                 {
-                                    Assert.True(leafPage.IsLeaf);
-                                    Assert.False(leafPage.IsBranch);
-                                   
+                                    Assert.Null(tree.Root.Entries);
                                     Assert.Null(leafPage.Children);
 
                                     Assert.NotNull(leafPage.AggregationResult);

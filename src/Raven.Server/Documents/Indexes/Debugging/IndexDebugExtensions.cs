@@ -15,6 +15,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -72,7 +73,10 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     yield break;
             }
             else if (it.Seek(MapReduceIndexingContext.LastMapResultIdKey))
-                it.MoveNext();
+            {
+                if (it.MoveNext() == false)
+                    yield break;
+            }
 
             do
             {
@@ -234,12 +238,40 @@ namespace Raven.Server.Documents.Indexes.Debugging
             
             return new ReduceTree
             {
+                DisplayName = GetTreeName(root.AggregationResult, index.Definition, context),
                 Name = tree.Name.ToString(),
                 Root = root,
                 Depth = tree.State.Depth,
                 PageCount = tree.State.PageCount,
                 NumberOfEntries = tree.State.NumberOfEntries
             };
+        }
+
+        private static string GetTreeName(BlittableJsonReaderObject reduceEntry, IndexDefinitionBase indexDefinition, TransactionOperationContext context)
+        {
+            HashSet<string> groupByFields;
+
+            if (indexDefinition is MapReduceIndexDefinition)
+                groupByFields = ((MapReduceIndexDefinition) indexDefinition).GroupByFields;
+            else if (indexDefinition is AutoMapReduceIndexDefinition)
+                groupByFields = ((AutoMapReduceIndexDefinition)indexDefinition).GroupByFields.Keys.ToHashSet();
+            else
+                throw new InvalidOperationException("Invalid map reduce index definition: " + indexDefinition.GetType());
+
+            foreach (var prop in reduceEntry.GetPropertyNames())
+            {
+                if (groupByFields.Contains(prop))
+                    continue;
+
+                if (reduceEntry.Modifications == null)
+                    reduceEntry.Modifications = new DynamicJsonValue(reduceEntry);  
+
+                reduceEntry.Modifications.Remove(prop);
+            }
+
+            var reduceKey = context.ReadObject(reduceEntry, "debug: creating reduce tree name");
+
+            return reduceKey.ToString();
         }
 
         private static unsafe BlittableJsonReaderObject GetAggregationResult(long pageNumber, Table table, TransactionOperationContext context)
@@ -281,6 +313,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
             return new ReduceTree
             {
+                DisplayName = GetTreeName(root.AggregationResult, index.Definition, context),
                 Name = section.Name.ToString(),
                 Root = root,
                 Depth = 1,

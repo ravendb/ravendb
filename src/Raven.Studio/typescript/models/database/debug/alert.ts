@@ -6,11 +6,11 @@ class alert {
     key: string;
     message: string;
     read: boolean;
-    severity: Raven.Server.Documents.AlertSeverity;
-    type: Raven.Server.Documents.AlertType;
+    severity: Raven.Server.Alerts.AlertSeverity;
+    type: Raven.Server.Alerts.AlertType;
     createdAt: string;
     dismissedUntil: string;
-    content: Raven.Server.Documents.IAlertContent;
+    content: Raven.Server.Alerts.IAlertContent;
 
     global: boolean;
 
@@ -18,7 +18,9 @@ class alert {
     isWarning: boolean;
     isInfo: boolean;
 
-    constructor(dto: Raven.Server.Documents.Alert) {
+    isOpen = ko.observable<boolean>(false);
+
+    constructor(dto: Raven.Server.Alerts.Alert) {
         this.id = dto.Id;
         this.key = dto.Key;
         this.message = dto.Message;
@@ -33,11 +35,29 @@ class alert {
     }
 
     private initStatus() {
-        this.isError = this.severity === ("Error" as Raven.Server.Documents.AlertSeverity);
-        this.isWarning = this.severity === ("Warning" as Raven.Server.Documents.AlertSeverity);
-        this.isInfo = this.severity === ("Info" as Raven.Server.Documents.AlertSeverity);
+        this.isError = this.severity === ("Error" as Raven.Server.Alerts.AlertSeverity);
+        this.isWarning = this.severity === ("Warning" as Raven.Server.Alerts.AlertSeverity);
+        this.isInfo = this.severity === ("Info" as Raven.Server.Alerts.AlertSeverity);
     }
 
+    hasDetails() {
+        return ["NewServerVersionAvailable"].some(x => x === this.type);
+    }
+
+    openDetails() {
+        if (!this.isOpen()) {
+            ko.postbox.publish("Alerts.DetailsOpen", this);
+            this.isOpen(true);
+        }
+    }
+
+    canOpenDetails() {
+        return this.type !== 'NewServerVersionAvailable';
+    }
+
+    canBeDismissed() {
+        return this.type !== 'NewServerVersionAvailable';
+    }
 
 }
 

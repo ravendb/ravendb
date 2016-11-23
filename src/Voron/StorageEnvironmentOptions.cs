@@ -527,6 +527,6 @@ namespace Voron
 
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
-        public const OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | OpenFlags.O_DIRECT;
+        public static OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
     }
 }

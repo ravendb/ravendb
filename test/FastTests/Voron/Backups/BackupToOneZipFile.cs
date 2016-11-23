@@ -26,35 +26,35 @@ namespace FastTests.Voron.Backups
             {
                 var context = DocumentsOperationContext.ShortTermSingleUse(database);
 
+                var subscriptionCriteria = new SubscriptionCriteria
+                {
+                    Collection = "Users",
+                };
+                var obj = RavenJObject.FromObject(subscriptionCriteria);
+                var objString = obj.ToString(Formatting.None);
+                var stream = new MemoryStream();
+                var streamWriter = new StreamWriter(stream);
+                streamWriter.Write(objString);
+                streamWriter.Flush();
+                stream.Position = 0;
+                var reader = context.Read(stream, "docs/1");
+                database.SubscriptionStorage.CreateSubscription(reader);
+
+                database.IndexStore.CreateIndex(new IndexDefinition()
+                {
+                    Name = "Users_ByName",
+                    Maps = { "from user in docs.Users select new { user.Name }" },
+                    Type = IndexType.Map
+                });
+                database.IndexStore.CreateIndex(new IndexDefinition()
+                {
+                    Name = "Users_ByName2",
+                    Maps = { "from user in docs.Users select new { user.Name }" },
+                    Type = IndexType.Map
+                });
+
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    var subscriptionCriteria = new SubscriptionCriteria
-                    {
-                        Collection = "Users",
-                    };
-                    var obj = RavenJObject.FromObject(subscriptionCriteria);
-                    var objString = obj.ToString(Formatting.None);
-                    var stream = new MemoryStream();
-                    var streamWriter = new StreamWriter(stream);
-                    streamWriter.Write(objString);
-                    streamWriter.Flush();
-                    stream.Position = 0;
-                    var reader = context.Read(stream, "docs/1");
-                    database.SubscriptionStorage.CreateSubscription(reader);
-
-                    database.IndexStore.CreateIndex(new IndexDefinition()
-                    {
-                        Name = "Users_ByName",
-                        Maps = { "from user in docs.Users select new { user.Name }" },
-                        Type = IndexType.Map
-                    });
-                    database.IndexStore.CreateIndex(new IndexDefinition()
-                    {
-                        Name = "Users_ByName2",
-                        Maps = { "from user in docs.Users select new { user.Name }" },
-                        Type = IndexType.Map
-                    });
-
                     var doc2 = CreateDocument(context, "users/2", new DynamicJsonValue
                     {
                         ["Name"] = "Edward",
@@ -96,7 +96,7 @@ namespace FastTests.Voron.Backups
             }
         }
 
-       [Fact]
+        [Fact]
         public void IncrementalBackupToOneZipFile()
         {
             var tempFileName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
@@ -110,35 +110,36 @@ namespace FastTests.Voron.Backups
                 database.SubscriptionStorage.Environment().Options.IncrementalBackupEnabled = true;
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
+
+                    var subscriptionCriteria = new SubscriptionCriteria
+                    {
+                        Collection = "Users",
+                    };
+                    var obj = RavenJObject.FromObject(subscriptionCriteria);
+                    var objString = obj.ToString(Formatting.None);
+                    var stream = new MemoryStream();
+                    var streamWriter = new StreamWriter(stream);
+                    streamWriter.Write(objString);
+                    streamWriter.Flush();
+                    stream.Position = 0;
+                    var reader = context.Read(stream, "docs/1");
+                    database.SubscriptionStorage.CreateSubscription(reader);
+
+                    database.IndexStore.CreateIndex(new IndexDefinition()
+                    {
+                        Name = "Users_ByName",
+                        Maps = { "from user in docs.Users select new { user.Name }" },
+                        Type = IndexType.Map
+                    });
+
+                    foreach (var index in database.IndexStore.GetIndexes())
+                    {
+                        index._indexStorage.Environment().Options.ManualFlushing = true;
+                        index._indexStorage.Environment().Options.IncrementalBackupEnabled = true;
+                    }
+
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        var subscriptionCriteria = new SubscriptionCriteria
-                        {
-                            Collection = "Users",
-                        };
-                        var obj = RavenJObject.FromObject(subscriptionCriteria);
-                        var objString = obj.ToString(Formatting.None);
-                        var stream = new MemoryStream();
-                        var streamWriter = new StreamWriter(stream);
-                        streamWriter.Write(objString);
-                        streamWriter.Flush();
-                        stream.Position = 0;
-                        var reader = context.Read(stream, "docs/1");
-                        database.SubscriptionStorage.CreateSubscription(reader);
-
-                        database.IndexStore.CreateIndex(new IndexDefinition()
-                        {
-                            Name = "Users_ByName",
-                            Maps = {"from user in docs.Users select new { user.Name }"},
-                            Type = IndexType.Map
-                        });
-
-                        foreach (var index in database.IndexStore.GetIndexes())
-                        {
-                            index._indexStorage.Environment().Options.ManualFlushing = true;
-                            index._indexStorage.Environment().Options.IncrementalBackupEnabled = true;
-                        }
-
                         var doc2 = CreateDocument(context, "users/2", new DynamicJsonValue
                         {
                             ["Name"] = "Edward",
@@ -164,21 +165,22 @@ namespace FastTests.Voron.Backups
                     database.IncrementalBackupTo(Path.Combine(tempFileName,
                         string.Format("voron-test.{0}-incremental-backup.zip", 0)));
 
+
+                    database.IndexStore.CreateIndex(new IndexDefinition()
+                    {
+                        Name = "Users_ByName2",
+                        Maps = { "from user in docs.Users select new { user.Name }" },
+                        Type = IndexType.Map
+                    });
+
+                    foreach (var index in database.IndexStore.GetIndexes())
+                    {
+                        index._indexStorage.Environment().Options.ManualFlushing = true;
+                        index._indexStorage.Environment().Options.IncrementalBackupEnabled = true;
+                    }
+
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        database.IndexStore.CreateIndex(new IndexDefinition()
-                        {
-                            Name = "Users_ByName2",
-                            Maps = {"from user in docs.Users select new { user.Name }"},
-                            Type = IndexType.Map
-                        });
-
-                        foreach (var index in database.IndexStore.GetIndexes())
-                        {
-                            index._indexStorage.Environment().Options.ManualFlushing = true;
-                            index._indexStorage.Environment().Options.IncrementalBackupEnabled = true;
-                        }
-
                         var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                         {
                             ["Name"] = "Edward",

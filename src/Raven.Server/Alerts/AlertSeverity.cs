@@ -1,4 +1,4 @@
-﻿namespace Raven.Server.Documents
+﻿namespace Raven.Server.Alerts
 {
     public enum AlertSeverity
     {

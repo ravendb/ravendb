@@ -13,7 +13,7 @@ namespace Voron.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mkdir (
             [MarshalAs (UnmanagedType.LPStr)] string filename, 
-            [MarshalAs (UnmanagedType.U4)] uint mode);
+            [MarshalAs (UnmanagedType.U2)] ushort mode);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int close(int fd);
@@ -58,7 +58,9 @@ namespace Voron.Platform.Posix
         //    int open(const char *pathname, int flags, mode_t mode);
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int open(
-                [MarshalAs(UnmanagedType.LPStr)] string pathname, OpenFlags flags, FilePermissions mode);
+                [MarshalAs(UnmanagedType.LPStr)] string pathname,
+                [MarshalAs(UnmanagedType.I4)] OpenFlags flags,
+                [MarshalAs(UnmanagedType.U2)] FilePermissions mode);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int fsync(int fd);
@@ -116,7 +118,7 @@ namespace Voron.Platform.Posix
     }
 
     [Flags]
-    public enum MAdvFlags
+    public enum MAdvFlags : int
     {
         MADV_NORMAL = 0x0,  /* No further special treatment */
         MADV_RANDOM = 0x1, /* Expect random page references */
@@ -445,6 +447,22 @@ namespace Voron.Platform.Posix
         ENOPOLICY = 1103,   // No such policy registered
     }
 
+    public class OpenFlagsThatAreDifferentBetweenPlatforms
+    {
+        public static OpenFlags O_DIRECT =(OpenFlags)(
+            (RuntimeInformation.OSArchitecture == Architecture.Arm ||
+             RuntimeInformation.OSArchitecture == Architecture.Arm64)
+                ? 65536 // value directly from printf("%d", O_DIRECT) on the pi
+                : 16384); // value directly from printf("%d", O_DIRECT)
+
+        public static OpenFlags O_DIRECTORY = (OpenFlags) (
+        (RuntimeInformation.OSArchitecture == Architecture.Arm ||
+         RuntimeInformation.OSArchitecture == Architecture.Arm64)
+            ? 16384 // value directly from printf("%d", O_DIRECTORY)
+            : 65536); // value directly from printf("%d", O_DIRECTORY) on the pi
+
+    }
+
     [Flags]
     
     public enum OpenFlags : int
@@ -467,7 +485,6 @@ namespace Voron.Platform.Posix
         O_NONBLOCK = 0x00000800,
         O_SYNC = 1052672, // 0x00101000, // value directly from printf("%d", O_SYNC)
         O_DSYNC = 4096, // 0x00001000, // value directly from printf("%d", O_DSYNC)
-        O_DIRECT = 16384, // 0x00004000, // value directly from printf("%d", O_DIRECT)
 
         //
         // These are non-Posix.  Using them will result in errors/exceptions on
@@ -480,7 +497,6 @@ namespace Voron.Platform.Posix
         //
 
         O_NOFOLLOW = 0x00020000,
-        O_DIRECTORY = 0x00010000,
         O_ASYNC = 0x00002000,
         O_LARGEFILE = 0x00008000,
         O_CLOEXEC = 0x00080000,
@@ -490,7 +506,7 @@ namespace Voron.Platform.Posix
     // mode_t
     [Flags]
     
-    public enum FilePermissions : uint
+    public enum FilePermissions : ushort
     {
         S_ISUID = 0x0800, // Set user ID on execution
         S_ISGID = 0x0400, // Set group ID on execution
@@ -525,7 +541,7 @@ namespace Voron.Platform.Posix
     }
 
 
-    public enum SysconfName
+    public enum SysconfName : int
     {
         _SC_ARG_MAX,
         _SC_CHILD_MAX,
@@ -734,31 +750,30 @@ namespace Voron.Platform.Posix
     }
 
     [StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-    public struct sysinfo_t
+    public unsafe struct sysinfo_t
     {
-        public System.UIntPtr  uptime;             /* Seconds since boot */
-        [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValArray, SizeConst=3)]
-        public System.UIntPtr [] loads;  /* 1, 5, and 15 minute load averages */
-        public System.UIntPtr totalram;  /* Total usable main memory size */
+        public long  uptime;             /* Seconds since boot */
+        public fixed ulong loads[3];  /* 1, 5, and 15 minute load averages */
+        public ulong totalram;  /* Total usable main memory size */
+        public ulong freeram;   /* Available memory size */
+        public ulong sharedram; /* Amount of shared memory */
+        public ulong bufferram; /* Memory used by buffers */
+        public ulong totalswap; /* Total swap space size */
+        public ulong freeswap;  /* swap space still available */
+        public ushort procs;    /* Number of current processes */
+        public ulong totalhigh; /* Total high memory size */
+        public ulong freehigh;  /* Available high memory size */
+        public uint mem_unit; /* Memory unit size in bytes */
 
-        public System.UIntPtr freeram;   /* Available memory size */
         public ulong AvailableRam {
-            get { return (ulong)freeram; }
-            set { freeram = new UIntPtr (value); }
+            get { return freeram; }
+            set { freeram =  value; }
         }
         public ulong TotalRam
         {
-            get { return (ulong)totalram; }
-            set { totalram = new UIntPtr(value); }
+            get { return totalram; }
+            set { totalram = value; }
         }
-
-        public System.UIntPtr sharedram; /* Amount of shared memory */
-        public System.UIntPtr bufferram; /* Memory used by buffers */
-        public System.UIntPtr totalswap; /* Total swap space size */
-        public System.UIntPtr freeswap;  /* swap space still available */
-        public ushort procs;    /* Number of current processes */
-        [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValArray, SizeConst=22)]
-        public char[] _f; /* Pads structure to 64 bytes */
     }
 
 }

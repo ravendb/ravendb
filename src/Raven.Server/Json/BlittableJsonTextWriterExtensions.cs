@@ -596,6 +596,13 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(statistics.LastIndexingTime));
+            if (statistics.LastIndexingTime.HasValue)
+                writer.WriteString(statistics.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true));
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
             writer.WritePropertyName((nameof(statistics.Indexes)));
             writer.WriteStartArray();
             var isFirstInternal = true;
@@ -630,6 +637,13 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(nameof(index.Type));
                 writer.WriteString(index.Type.ToString());
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(index.LastIndexingTime));
+                if (index.LastIndexingTime.HasValue)
+                    writer.WriteString(index.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true));
+                else
+                    writer.WriteNull();
 
                 writer.WriteEndObject();
             }
@@ -997,18 +1011,38 @@ namespace Raven.Server.Json
                 {
                     writer.WriteComma();
                 }
+                first = false;
                 writer.WritePropertyName(Constants.Metadata.Etag);
                 writer.WriteInteger(document.Etag);
-                writer.WriteComma();
-                writer.WritePropertyName(Constants.Metadata.Id);
-                writer.WriteString(document.Key);
-                if (document.IndexScore != null)
+            }
+            if (document.Key != null)
+            {
+                if (first == false)
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(Constants.Metadata.IndexScore);
-                    writer.WriteDouble(document.IndexScore.Value);
                 }
-                writer.WriteComma();
+                first = false;
+                writer.WritePropertyName(Constants.Metadata.Id);
+                writer.WriteString(document.Key);
+
+            }
+            if (document.IndexScore != null)
+            {
+                if (first == false)
+                {
+                    writer.WriteComma();
+                }
+                first = false;
+                writer.WritePropertyName(Constants.Metadata.IndexScore);
+                writer.WriteDouble(document.IndexScore.Value);
+            }
+            if (document.LastModified != DateTime.MinValue)
+            {
+                if (first == false)
+                {
+                    writer.WriteComma();
+                }
+                first = false;
                 writer.WritePropertyName(Constants.Headers.LastModified);
                 writer.WriteString(document.LastModified.GetDefaultRavenFormat());
             }
@@ -1091,9 +1125,6 @@ namespace Raven.Server.Json
 
         public static void WriteReduceTrees(this BlittableJsonTextWriter writer, IEnumerable<ReduceTree> trees)
         {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName("Trees");
             writer.WriteStartArray();
 
             var first = true;
@@ -1109,6 +1140,10 @@ namespace Raven.Server.Json
                 writer.WriteString(tree.Name);
                 writer.WriteComma();
 
+                writer.WritePropertyName(nameof(ReduceTree.DisplayName));
+                writer.WriteString(tree.DisplayName);
+                writer.WriteComma();
+
                 writer.WritePropertyName(nameof(ReduceTree.Depth));
                 writer.WriteInteger(tree.Depth);
                 writer.WriteComma();
@@ -1121,7 +1156,7 @@ namespace Raven.Server.Json
                 writer.WriteInteger(tree.NumberOfEntries);
                 writer.WriteComma();
 
-                writer.WritePropertyName("Pages");
+                writer.WritePropertyName(nameof(ReduceTree.Root));
                 writer.WriteTreePagesRecursively(new[] { tree.Root });
 
                 writer.WriteEndObject();
@@ -1130,8 +1165,6 @@ namespace Raven.Server.Json
             }
 
             writer.WriteEndArray();
-
-            writer.WriteEndObject();
         }
 
         public static void WriteTreePagesRecursively(this BlittableJsonTextWriter writer, IEnumerable<ReduceTreePage> pages)
@@ -1147,14 +1180,6 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(nameof(TreePage.PageNumber));
                 writer.WriteInteger(page.PageNumber);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(TreePage.IsBranch));
-                writer.WriteBool(page.IsBranch);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(TreePage.IsLeaf));
-                writer.WriteBool(page.IsLeaf);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(ReduceTreePage.AggregationResult));

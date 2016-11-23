@@ -145,7 +145,7 @@
         }
 
         &:checked + label::before {
-            background-color: @brand-success;
+            background-color: @brand-primary;
             //box-shadow: 0 0 0 2px @gray-darker inset;
         }
 
@@ -212,8 +212,8 @@
             left: 0;
             top: 3px;
             margin-left: -23px;
-            border: 1px solid @gray-light;
-            background-color: transparent;
+            border: 1px solid @gray;
+            background-color: @gray;
             .transition(~"border 0.15s ease-in-out, color 0.15s ease-in-out, background-color 0.15s ease-in-out");
         }
 
@@ -228,7 +228,7 @@
             padding-left: 3px;
             padding-top: 0px;
             font-size: 15px;
-            color: @input-color;
+            color: @brand-primary;
         }
     }
 
@@ -242,7 +242,8 @@
         }
 
         &:checked + label::before {
-            background-color: fadeout(@gray-lighter,70%);
+            border-color:@gray-lighter;
+            background-color: @gray-lighter;
         }
 
 
@@ -335,9 +336,9 @@
             left: 0;
             margin-left: -22px;
             margin-top:2px;
-            border: 1px solid @gray-light;
+            border: 1px solid @gray;
             border-radius: 50%;
-            background-color: transparent;
+            background-color: @gray;
             .transition(border 0.15s ease-in-out);
         }
 
@@ -345,13 +346,13 @@
             display: inline-block;
             position: absolute;
             content: " ";
-            width: 14px;
-            height: 14px;
-            left: 1px;
-            top: 5px;
+            width: 12px;
+            height: 12px;
+            left: 2px;
+            top: 6px;
             margin-left: -20px;
             border-radius: 50%;
-            background-color: @input-color;
+            background-color: @brand-primary;
             .scale(0, 0);
             .transition-transform(.1s cubic-bezier(.8,-0.33,.2,1.33));
             //curve - http://cubic-bezier.com/#.8,-0.33,.2,1.33
@@ -368,6 +369,11 @@
 
         &:checked + label::after {
             .scale(1, 1);
+        }
+
+        &:checked + label::before {
+            background-color: @gray-lighter;
+            border-color: @gray-lighter;
         }
 
         &:disabled + label {

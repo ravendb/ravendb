@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Data;
@@ -136,7 +137,7 @@ namespace SlowTests.MailingList
                     {
                         Script = "this.Consultant.Name = 'Subhashini';"
                     },
-                    options: null).WaitForCompletion();
+                    options: null).WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 //Here, I again list the name of the consultant in the Proficiencies collection and expect it to be "Subhashini".
                 using (var session = store.OpenSession())

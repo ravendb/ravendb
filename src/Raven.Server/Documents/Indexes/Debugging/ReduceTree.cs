@@ -6,6 +6,8 @@
 
         public string Name;
 
+        public string DisplayName;
+
         public int Depth { get; set; }
 
         public long PageCount { get; set; }

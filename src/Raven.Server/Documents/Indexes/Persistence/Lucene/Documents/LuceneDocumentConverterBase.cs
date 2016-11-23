@@ -223,6 +223,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 var timeSpan = (TimeSpan)value;
                 yield return GetOrCreateField(path, timeSpan.ToString("c", CultureInfo.InvariantCulture), null, null, storage, indexing, termVector);
+
+                foreach (var numericField in GetOrCreateNumericField(field, timeSpan.Ticks, storage, termVector))
+                    yield return numericField;
+
                 yield break;
             }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Sparrow.Utils
 {
@@ -25,6 +26,7 @@ namespace Sparrow.Utils
 
         public void ComputeDiff()
         {
+            Debug.Assert(Size % 4096 == 0);
             Debug.Assert(Size % sizeof(long) == 0);
             var len = Size / sizeof(long);
             IsDiff = true;
@@ -32,90 +34,122 @@ namespace Sparrow.Utils
             long start = 0;
             OutputSize = 0;
             _allZeros = true;
-            for (long i = 0; i < len; i++)
+
+            // This stops the JIT from accesing Original directly, as we know
+            // it is not mutable, this lowers the number of generated instructions
+            long* original = (long*)Original;
+            long* modified = (long*)Modified;
+
+            for (long i = 0; i < len; i += 4, original += 4, modified += 4)
             {
-                var modifiedVal = ((long*)Modified)[i];
-                _allZeros &= modifiedVal == 0;
-                if (((long*)Original)[i] == modifiedVal)
+                long m0 = modified[0];
+                long m1 = modified[1];
+                long m2 = modified[2];
+                long m3 = modified[3];
+
+                long o0 = original[0];
+                long o1 = original[1];
+                long o2 = original[2];
+                long o3 = original[3];
+
+                _allZeros &= m0 == 0 && m1 == 0 && m2 == 0 && m3 == 0;
+
+                if (o0 != m0 || o1 != m1 || o2 != m2 || o3 != m3)
+                    continue;
+
+                if (start == i || WriteDiff(start, i - start))
                 {
-                    if (start != i)
-                    {
-                        if (WriteDiff(start, i - start) == false)
-                            return;
-                    }
-                    start = i + 1;
+                    start = i + 4;
                     _allZeros = true;
                 }
+                else return;
             }
+
             if (start != len)
-            {
-                WriteDiff(start, Size / sizeof(long) - start);
-            }
+                WriteDiff(start, len - start);
         }
 
         public void ComputeNew()
         {
+            Debug.Assert(Size % 4096 == 0);
             Debug.Assert(Size % sizeof(long) == 0);
-            long len = Size / sizeof(long);
+            var len = Size / sizeof(long);
             IsDiff = true;
 
             long start = 0;
             OutputSize = 0;
             _allZeros = true;
-            for (long i = 0; i < len; i++)
+
+            // This stops the JIT from accesing Original directly, as we know
+            // it is not mutable, this lowers the number of generated instructions
+            long* modified = (long*)Modified;
+
+            for (long i = 0; i < len; i += 4, modified += 4)
             {
-                var modifiedVal = ((long*)Modified)[i];
-                _allZeros &= modifiedVal == 0;
-                if (0 == modifiedVal)
+                long m0 = modified[0];
+                long m1 = modified[1];
+                long m2 = modified[2];
+                long m3 = modified[3];
+
+                _allZeros &= m0 == 0 && m1 == 0 && m2 == 0 && m3 == 0;
+
+                if (0 != m0 || 0 != m1 || 0 != m2 || 0 != m3)
+                    continue;
+
+                if (start == i || WriteDiff(start, i - start))
                 {
-                    if (start != i)
-                    {
-                        if (WriteDiff(start, i - start) == false)
-                            return;
-                    }
-                    start = i + 1;
+                    start = i + 4;
                     _allZeros = true;
                 }
+                else return;
             }
+
             if (start != len)
-            {
-                WriteDiff(start, Size / sizeof(long) - start);
-            }
+                WriteDiff(start, len - start);
         }
 
         private bool WriteDiff(long start, long count)
         {
             Debug.Assert(start < Size);
-            Debug.Assert(count != 0);
+            Debug.Assert(count > 0);
+            Debug.Assert((OutputSize % sizeof(long)) == 0);
+
             start *= sizeof(long);
             count *= sizeof(long);
+
+            long* outputPtr = (long*) Output;
+            long outputSize = OutputSize;
+            long smOutputSize = outputSize / sizeof(long);
+
             if (_allZeros)
             {
-                if (OutputSize + sizeof(long) * 2 > Size)
+                if (outputSize + sizeof(long) * 2 > Size)
                 {
                     CopyFullBuffer();
                     return false;
                 }
 
-                ((long*)(Output + OutputSize))[0] = start;
-                ((long*)(Output + OutputSize))[1] = -count;
+                outputPtr[smOutputSize] = start;
+                outputPtr[smOutputSize + 1] = -count;
                 OutputSize += sizeof(long) * 2;
                 return true;
             }
-            if (OutputSize + count + sizeof(long) * 2 > Size)
+
+            if (outputSize + count + sizeof(long) * 2 > Size)
             {
                 CopyFullBuffer();
                 return false;
             }
 
-            ((long*)(Output + OutputSize))[0] = start;
-            ((long*)(Output + OutputSize))[1] = count;
-            OutputSize += sizeof(long) * 2;
-            Memory.Copy(Output + OutputSize, Modified + start, count);
-            OutputSize += count;
+            outputPtr[smOutputSize] = start;
+            outputPtr[smOutputSize + 1] = count;
+            outputSize += sizeof(long) * 2;
+            Memory.Copy(Output + outputSize, Modified + start, count);
+            OutputSize = outputSize + count;
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void CopyFullBuffer()
         {
             // too big, no saving, just use the full modification
@@ -142,14 +176,19 @@ namespace Sparrow.Utils
 
         public void Apply()
         {
+            long diffSize = DiffSize;
+            long size = Size;
+            byte* diffPtr = Diff;
+            byte* destPtr = Destination;
+
             long pos = 0;
-            while (pos < DiffSize)
+            while (pos < diffSize)
             {
-                if (pos + (sizeof(long) * 2) > DiffSize)
+                if (pos + sizeof(long) * 2 > diffSize)
                     AssertInvalidDiffSize(pos, sizeof(long) * 2);
 
-                long start = ((long*)(Diff + pos))[0];
-                long count = ((long*)(Diff + pos))[1];
+                long start = ((long*)(diffPtr + pos))[0];
+                long count = ((long*)(diffPtr + pos))[1];
                 pos += sizeof(long) * 2;
 
                 
@@ -157,28 +196,30 @@ namespace Sparrow.Utils
                 {
                     // run of only zeroes
                     count *= -1;
-                    if (start + count > Size)
+                    if (start + count > size)
                         AssertInvalidSize(start, count);
-                    Memory.Set(Destination + start, 0, count);
+                    Memory.Set(destPtr + start, 0, count);
                     continue;
                 }
 
-                if (start + count > Size)
+                if (start + count > size)
                     AssertInvalidSize(start, count);
-                if (pos + count > DiffSize)
+                if (pos + count > diffSize)
                     AssertInvalidDiffSize(pos, count);
 
-                Memory.Copy(Destination + start, Diff + pos, count);
+                Memory.Copy(destPtr + start, diffPtr + pos, count);
                 pos += count;
             }
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         private void AssertInvalidSize(long start, long count)
         {
             throw new ArgumentOutOfRangeException(nameof(Size),
                 $"Cannot apply diff to position {start + count} because it is bigger than {Size}");
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         private void AssertInvalidDiffSize(long pos, long count)
         {
             throw new ArgumentOutOfRangeException(nameof(Size),

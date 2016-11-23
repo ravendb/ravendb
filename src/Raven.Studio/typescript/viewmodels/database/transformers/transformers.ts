@@ -60,6 +60,7 @@ class transformers extends viewModelBase {
     }
 
     activate(args: any) {
+        super.activate(args);
         return this.fetchTransformers(this.activeDatabase());
     }
 
@@ -102,7 +103,7 @@ class transformers extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            //TODO: use cooldown changesContext.currentResourceChangesApi().watchAllTransformers((e: Raven.Abstractions.Data.TransformerChangeNotification) => this.processTransformerEvent(e))
+            this.changesContext.currentResourceChangesApi().watchAllTransformers((e) => this.processTransformerEvent(e))
         ];
     }
 
@@ -113,9 +114,7 @@ class transformers extends viewModelBase {
                 this.removeTransformersFromAllGroups([existingTransformer]);    
             }
         } else {
-            setTimeout(() => {
-                this.fetchTransformers(this.activeDatabase());
-            }, 5000); //TODO: do we need such timeout here?
+            this.fetchTransformers(this.activeDatabase());
         }
     }
 

@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Indexes;
@@ -45,7 +46,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 var operation = store.DatabaseCommands.Admin.CompactIndex(new Users_ByName().IndexName);
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession())
                 {

@@ -212,37 +212,55 @@ namespace Raven.Client.Indexing
                 var allDefault = true;
                 var field = kvp.Value;
 
-                if (field.Storage == FieldStorage.No)
-                    field.Storage = null;
-                else
-                    allDefault = false;
+                if (field != null)
+                {
+                    if (field.Storage.HasValue)
+                    {
+                        if (field.Storage == FieldStorage.No)
+                            field.Storage = null;
+                        else
+                            allDefault = false;
+                    }
 
-                if (field.Indexing == FieldIndexing.Default)
-                    field.Indexing = null;
-                else
-                    allDefault = false;
+                    if (field.Indexing.HasValue)
+                    {
+                        if (field.Indexing == FieldIndexing.Default)
+                            field.Indexing = null;
+                        else
+                            allDefault = false;
+                    }
 
-                if (string.IsNullOrWhiteSpace(field.Analyzer))
-                    field.Analyzer = null;
-                else
-                    allDefault = false;
+                    if (string.IsNullOrWhiteSpace(field.Analyzer))
+                        field.Analyzer = null;
+                    else
+                        allDefault = false;
 
-                if (field.Sort == SortOptions.None)
-                    field.Sort = null;
-                else
-                    allDefault = false;
+                    if (field.Sort.HasValue)
+                    {
+                        if (field.Sort == SortOptions.None)
+                            field.Sort = null;
+                        else
+                            allDefault = false;
+                    }
 
-                if (field.TermVector == FieldTermVector.No)
-                    field.TermVector = null;
-                else
-                    allDefault = false;
+                    if (field.TermVector.HasValue)
+                    {
+                        if (field.TermVector == FieldTermVector.No)
+                            field.TermVector = null;
+                        else
+                            allDefault = false;
+                    }
 
-                if (field.Suggestions == false)
-                    field.Suggestions = null;
-                else
-                    allDefault = false;
+                    if (field.Suggestions.HasValue)
+                    {
+                        if (field.Suggestions == false)
+                            field.Suggestions = null;
+                        else
+                            allDefault = false;
+                    }
 
-                allDefault = allDefault && (field.Spatial == null);
+                    allDefault = allDefault && (field.Spatial == null);
+                }
 
                 if (allDefault)
                     toRemove.Add(kvp.Key);

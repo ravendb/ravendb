@@ -85,8 +85,8 @@ class cluster extends viewModelBase {
     fetchDatabaseId(db: database): JQueryPromise<any> {
         return new getDatabaseStatsCommand(db)
             .execute()
-            .done((stats: databaseStatisticsDto) => {
-                this.systemDatabaseId(stats.DatabaseId);
+            .done((stats) => {
+                this.systemDatabaseId(stats.DatabaseId); //TODO: make sure it works!
             });
     }
 

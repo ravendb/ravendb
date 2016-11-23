@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
+using Raven.Server.Alerts;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -13,7 +14,6 @@ using Sparrow.Json;
 using Voron;
 using Sparrow;
 using Sparrow.Collections;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Data.Tables;
 using Voron.Exceptions;
@@ -48,8 +48,7 @@ namespace Raven.Server.ServerWide
         // this is only modified by write transactions under lock
         // no need to use thread safe ops
         private long _lastEtag;
-
-        private readonly ConcurrentSet<AsyncQueue<DynamicJsonValue>> _changes = new ConcurrentSet<AsyncQueue<DynamicJsonValue>>();
+        private readonly ConcurrentSet<AsyncQueue<GlobalAlertNotification>> _changes = new ConcurrentSet<AsyncQueue<GlobalAlertNotification>>();
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 
@@ -157,6 +156,25 @@ namespace Raven.Server.ServerWide
             return Bits.SwapBytes(*(long*)reader.Read(3, out size));
         }
 
+        public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id, out long etag)
+        {
+            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
+            etag = 0;
+            TableValueReader reader;
+            Slice key;
+            using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
+            {
+                reader = items.ReadByKey(key);
+            }
+            if (reader == null)
+                return null;
+            int size;
+            etag = Bits.SwapBytes(*(long*) reader.Read(3, out size));
+            var ptr = reader.Read(2, out size);
+            return new BlittableJsonReaderObject(ptr, size, ctx);
+        }
+
+
         public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id)
         {
             var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
@@ -241,15 +259,16 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        public void Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc, long? expectedEtag = null)
+        public long Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc, long? expectedEtag = null)
         {
             TrackChange(ctx, "Write", id);
+            var newEtag = _lastEtag + 1;
+
             Slice idAsSlice;
             Slice loweredId;
             using (Slice.From(ctx.Allocator, id, out idAsSlice))
             using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out loweredId))
             {
-                var newEtag = _lastEtag + 1;
                 var newEtagBigEndian = Bits.SwapBytes(newEtag);
                 var itemTable = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
 
@@ -296,6 +315,7 @@ namespace Raven.Server.ServerWide
                 }
             }
             _lastEtag++;
+            return newEtag;
         }
 
         
@@ -396,7 +416,7 @@ namespace Raven.Server.ServerWide
             return true;
         }
 
-        public IDisposable TrackChanges(AsyncQueue<DynamicJsonValue> asyncQueue)
+        public IDisposable TrackChanges(AsyncQueue<GlobalAlertNotification> asyncQueue)
         {
             _changes.TryAdd(asyncQueue);
             return new DisposableAction(() => _changes.TryRemove(asyncQueue));
@@ -415,10 +435,10 @@ namespace Raven.Server.ServerWide
             {
                 if (llt.Committed == false)
                     return;
-                var djv = new DynamicJsonValue
+                var djv = new GlobalAlertNotification
                 {
-                    ["Operation"] = operation,
-                    ["Id"] = id
+                    Operation = operation,
+                    Id = id
                 };
                 foreach (var asyncQueue in _changes)
                 {

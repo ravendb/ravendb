@@ -48,11 +48,6 @@ interface singleAuthToken {
     Token: string;
 }
 
-interface adminWatchMessage {
-    Operation: string;
-    Id: string;
-}
-
 interface chagesApiConfigureRequestDto {
     Command: string;
     Param?: string;
@@ -145,4 +140,10 @@ interface storageReportItemDto {
     Name: string;
     Type: string;
     Report: Voron.Debugging.StorageReport;
+}
+
+
+interface arrayOfResultsAndCountDto<T> {
+    Results: T[];
+    Count: number;
 }

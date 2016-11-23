@@ -231,8 +231,8 @@ namespace FastTests.Server.Documents.Replication
                 var conflicts = await WaitUntilHasConflict(store2, "foo/bar");
                 Assert.Equal(2, conflicts["foo/bar"].Count);
             }
-        }        
-        
+        }
+
         [Fact]
         public async Task Conflict_then_data_query_will_return_409_and_conflict_data()
         {
@@ -243,11 +243,11 @@ namespace FastTests.Server.Documents.Replication
                 {
                     s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
-        }
+                }
 
                 var userIndex = new UserIndex();
                 store2.ExecuteIndex(userIndex);
-                
+
                 using (var s2 = store2.OpenSession())
                 {
                     s2.Store(new User(), "foo/bar");
@@ -255,7 +255,7 @@ namespace FastTests.Server.Documents.Replication
                 }
                 WaitForIndexing(store2);
                 SetupReplication(store1, store2);
-                
+
                 await WaitUntilHasConflict(store2, "foo/bar");
                 // /indexes/Raven/DocumentsByEntityName
                 //TODO: this needs to be replaced by ClientAPI LoadDocument() when the ClientAPI is finished
@@ -265,7 +265,7 @@ namespace FastTests.Server.Documents.Replication
                 {
                     var ex = Assert.Throws<ErrorResponseException>(() => request.ExecuteRequest());
                     Assert409Response(ex);
-                }          
+                }
             }
         }
 
@@ -300,12 +300,12 @@ namespace FastTests.Server.Documents.Replication
                     Query = String.Empty
                 });
 
-                Assert.Throws<DocumentInConflictException>(() => op.WaitForCompletion());
-                }
+                Assert.Throws<DocumentInConflictException>(() => op.WaitForCompletion(TimeSpan.FromSeconds(15)));
             }
+        }
 
         //TODO: this probably needs to be refactored when operations related functionality is finished
-        protected async Task AssertOperationFaultsAsync(DocumentStore store,int operationId)
+        protected async Task AssertOperationFaultsAsync(DocumentStore store, int operationId)
         {
             var url = $"{store.Url}/databases/{store.DefaultDatabase}/operations/status?id={operationId}";
             var sw = Stopwatch.StartNew();
@@ -318,11 +318,11 @@ namespace FastTests.Server.Documents.Replication
                 {
                     response = await request.ReadResponseJsonAsync();
                 }
-            }            
+            }
             Assert.NotNull(response); //precaution
             Assert.Equal("Faulted", response.Value<string>("Status"));
 
-            var result = response.Value<RavenJToken>("Result");            
+            var result = response.Value<RavenJToken>("Result");
             Assert.Contains("DocumentConflictException", result.Value<string>("StackTrace"));
         }
 
@@ -351,19 +351,19 @@ namespace FastTests.Server.Documents.Replication
 
                 await WaitUntilHasConflict(store2, "foo/bar");
 
-           
+
                 // /indexes/Raven/DocumentsByEntityName
                 var op = store2.DatabaseCommands.UpdateByIndex(userIndex.IndexName, new IndexQuery
                 {
                     Query = String.Empty
                 }, new Raven.Client.Data.PatchRequest
-                    {
-                        Script = String.Empty
-                    });
+                {
+                    Script = String.Empty
+                });
 
-                Assert.Throws<DocumentInConflictException>(() => op.WaitForCompletion());
-                }
+                Assert.Throws<DocumentInConflictException>(() => op.WaitForCompletion(TimeSpan.FromSeconds(15)));
             }
+        }
 
         [Fact]
         public async Task Conflict_then_load_by_id_will_return_409_and_conflict_data()
@@ -424,7 +424,7 @@ namespace FastTests.Server.Documents.Replication
                 var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/docs?id=foo/bar";
                 using (var request = store2.JsonRequestFactory.CreateHttpJsonRequest(
                     new CreateHttpJsonRequestParams(null, url, HttpMethod.Put, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
-                {                     
+                {
                     var ex = Assert.Throws<AggregateException>(() => request.WriteWithObjectAsync(new User()).Wait());
                     Assert409Response(ex.InnerException);
                 }
@@ -470,7 +470,8 @@ namespace FastTests.Server.Documents.Replication
             }
         }
 
-        [Fact] public async Task Conflict_then_delete_request_will_return_409_and_conflict_data()
+        [Fact]
+        public async Task Conflict_then_delete_request_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -545,7 +546,7 @@ namespace FastTests.Server.Documents.Replication
 
                 Assert.Equal(3, conflicts["foo/bar"].Count);
             }
-        }	
+        }
 
         private async Task<Dictionary<string, List<ChangeVectorEntry[]>>> WaitUntilHasConflict(
                 DocumentStore store,
@@ -582,12 +583,12 @@ namespace FastTests.Server.Documents.Replication
             public UserIndex()
             {
                 Map = users => from u in users
-                    select new User
-                    {
-                        Id = u.Id,
-                        Name = u.Name,
-                        Age = u.Age
-                    };
+                               select new User
+                               {
+                                   Id = u.Id,
+                                   Name = u.Name,
+                                   Age = u.Age
+                               };
 
                 Index(x => x.Name, FieldIndexing.Analyzed);
 

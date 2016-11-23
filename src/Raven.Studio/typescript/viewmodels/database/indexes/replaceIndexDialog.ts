@@ -37,12 +37,12 @@ class replaceIndexDialog extends dialogViewModelBase {
     private fetchIndexes() {
         return new getDatabaseStatsCommand(this.db)
             .execute()
-            .done((stats: databaseStatisticsDto) => this.processDbStats(stats));
+            .done(stats => this.processDbStats(stats));
     }
 
-    processDbStats(stats: databaseStatisticsDto) {
+    processDbStats(stats: Raven.Client.Data.DatabaseStatistics) {
         var oldIndex = stats.Indexes.first(i => i.Name == this.indexName);
-        this.lastIndexedEtag(oldIndex.LastIndexedEtag);       
+        //TODO: this.lastIndexedEtag(oldIndex.LastIndexedEtag);       
     }
 
     saveReplace() {

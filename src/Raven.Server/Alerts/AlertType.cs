@@ -1,4 +1,4 @@
-﻿namespace Raven.Server.Documents
+﻿namespace Raven.Server.Alerts
 {
     public enum AlertType
     {
@@ -11,6 +11,7 @@
         SqlReplicationScriptError,
         SqlReplicationScriptErrorRatio,
         PeriodicExport,
-        Replication
+        Replication,
+        NewServerVersionAvailable,
     }
 }

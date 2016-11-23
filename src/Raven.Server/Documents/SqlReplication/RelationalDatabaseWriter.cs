@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
+using Raven.Server.Alerts;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;

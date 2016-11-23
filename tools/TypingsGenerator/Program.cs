@@ -9,7 +9,9 @@ using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Client.Smuggler;
 using Raven.Json.Linq;
+using Raven.Server.Alerts;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.PeriodicExport;
@@ -18,6 +20,7 @@ using Raven.Server.Web.Operations;
 using Sparrow.Json;
 using TypeScripter;
 using TypeScripter.TypeScript;
+using Voron.Data.BTrees;
 using Voron.Debugging;
 
 namespace TypingsGenerator
@@ -43,6 +46,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(List<>))
                 .WithTypeMapping(TsPrimitive.Any, typeof(RavenJObject))
                 .WithTypeMapping(TsPrimitive.Any, typeof(RavenJValue))
+                .WithTypeMapping(TsPrimitive.Any, typeof(TreePage))
                 .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(RavenJArray))
                 .WithTypeMapping(TsPrimitive.Any, typeof(RavenJToken))
@@ -78,10 +82,11 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexChangeNotification));
             scripter.AddType(typeof(TransformerChangeNotification));
             scripter.AddType(typeof(DatabaseOperations.PendingOperation));
-            scripter.AddType(typeof(AlertNotification));
 
             // alerts
             scripter.AddType(typeof(Alert));
+            scripter.AddType(typeof(GlobalAlertNotification));
+            scripter.AddType(typeof(AlertNotification));
             
             // indexes
             scripter.AddType(typeof(IndexStats));
@@ -118,6 +123,9 @@ namespace TypingsGenerator
 
             // storage report
             scripter.AddType(typeof(StorageReport));
+
+            // map reduce visualizer
+            scripter.AddType(typeof(ReduceTree));
 
             return scripter;
         }

@@ -26,7 +26,7 @@ namespace Raven.Server.Documents
 
         private StorageEnvironment _environment;
 
-        private DocumentsContextPool _contextPool;
+        private TransactionContextPool _contextPool;
 
         private static readonly TableSchema IndexesTableSchema;
         private static readonly TableSchema ConflictsTableSchema;
@@ -87,14 +87,14 @@ namespace Raven.Server.Documents
             Logger = LoggingSource.Instance.GetLogger<IndexesEtagsStorage>(resourceName);
         }
 
-        public DocumentsContextPool ContextPool => _contextPool;
+        public TransactionContextPool ContextPool => _contextPool;
 
-        public void Initialize(StorageEnvironment environment, DocumentsContextPool contextPool, IndexStore indexStore, TransformerStore transformerStore)
+        public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool, IndexStore indexStore, TransformerStore transformerStore)
         {
             _environment = environment;
             _contextPool = contextPool;
 
-            DocumentsOperationContext context;
+            TransactionOperationContext context;
             using (contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
@@ -103,12 +103,8 @@ namespace Raven.Server.Documents
 
                 tx.InnerTransaction.CreateTree(SchemaNameConstants.GlobalChangeVectorTree);
                 tx.InnerTransaction.CreateTree(SchemaNameConstants.LastReplicatedEtagsTree);
-                tx.Commit();
-            }
+         
 
-            using (contextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenWriteTransaction())
-            {
                 DeleteIndexMetadataForRemovedIndexesAndTransformers(tx.InnerTransaction, context, indexStore, transformerStore);
                 tx.Commit();
             }
@@ -118,7 +114,7 @@ namespace Raven.Server.Documents
 
         public long OnIndexCreated(Index index)
         {
-            DocumentsOperationContext context;
+            TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
@@ -131,7 +127,7 @@ namespace Raven.Server.Documents
 
         public long OnIndexDeleted(Index index)
         {
-            DocumentsOperationContext context;
+            TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
@@ -144,7 +140,7 @@ namespace Raven.Server.Documents
 
         public long OnTransformerCreated(Transformer transformer)
         {
-            DocumentsOperationContext context;
+            TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
@@ -157,7 +153,7 @@ namespace Raven.Server.Documents
 
         public long OnTransformerDeleted(Transformer transformer)
         {
-            DocumentsOperationContext context;
+            TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
@@ -218,7 +214,7 @@ namespace Raven.Server.Documents
         }
 
         private long WriteEntry(Transaction tx, string indexName, IndexEntryType type, int indexIndexId,
-            DocumentsOperationContext context,bool isConflicted = false, bool allowOverwrite = false)
+            TransactionOperationContext context,bool isConflicted = false, bool allowOverwrite = false)
         {
             var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
             Debug.Assert(table != null);
@@ -655,7 +651,7 @@ namespace Raven.Server.Documents
             return Bits.SwapBytes(*(long*)tvr.Read((int)MetadataFields.Etag, out size));
         }
 
-        private void DeleteIndexMetadataForRemovedIndexesAndTransformers(Transaction tx, DocumentsOperationContext context,IndexStore indexStore,
+        private void DeleteIndexMetadataForRemovedIndexesAndTransformers(Transaction tx, TransactionOperationContext context,IndexStore indexStore,
             TransformerStore transformerStore)
         {
             var toRemove = new List<IndexEntryMetadata>();

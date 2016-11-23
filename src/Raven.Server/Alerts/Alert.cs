@@ -1,8 +1,8 @@
 using System;
-using Sparrow.Json;
+using Raven.Server.Documents;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Alerts
 {
     public class Alert
     {

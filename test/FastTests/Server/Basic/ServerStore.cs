@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Raven.Client.Linq;
+using System.IO;
+using System.Net.Http;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -13,6 +13,106 @@ namespace FastTests.Server.Basic
 {
     public class ServerStore : RavenTestBase
     {
+        [Fact]
+        public void Admin_databases_endpoint_should_refuse_document_with_lower_etag_with_concurrency_Exception()
+        {
+            using (var store = GetDocumentStore())
+            {
+                TransactionOperationContext context;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+                {
+                    var getCommand = new GetDatabaseDocumentTestCommand();
+                    using (var requestExecuter = new RequestExecuter(store.Url, store.DefaultDatabase, null))
+                    {
+                        requestExecuter.Execute(getCommand, context);
+                        var putCommand = new PutDatabaseDocumentTestCommand(getCommand.Result);
+
+                        var exception = Assert.Throws<InternalServerErrorException>(() => requestExecuter.Execute(putCommand, context));
+                        Assert.Contains("ConcurrencyException", exception.Message);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void Admin_databases_endpoint_should_fetch_document_with_etag_in_metadata_property()
+        {
+            using (var store = GetDocumentStore())
+            {
+                TransactionOperationContext context;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+                {
+                    Assert.True(HasEtagInDatabaseDocumentResponse(store.Url, store.DefaultDatabase, context));
+                }
+            }
+        }
+
+        public class PutDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>
+        {
+            private readonly BlittableJsonReaderObject databaseDocument;
+
+            public PutDatabaseDocumentTestCommand(BlittableJsonReaderObject databaseDocument)
+            {
+                this.databaseDocument = databaseDocument;
+            }
+
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = String.Empty;
+                IsAdminCommand = true;
+                var message = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put
+                };
+
+                message.Headers.Add("ETag", "0");
+                message.Content = new BlittableJsonContent(stream =>  databaseDocument.WriteJsonTo(stream));
+
+                return message;
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response)
+            {
+                Result = response;
+            }
+
+        }
+
+        public class GetDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>
+        {        
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = String.Empty;
+                IsAdminCommand = true;
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                };
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response)
+            {
+                Result = response;
+            }
+
+        }
+
+        private bool HasEtagInDatabaseDocumentResponse(string url,string databaseName, JsonOperationContext context)
+        {
+            var command = new GetDatabaseDocumentTestCommand();
+            using (var requestExecuter = new RequestExecuter(url,databaseName,null))
+            {
+                requestExecuter.Execute(command, context);
+            }
+
+            var result = command.Result;
+            BlittableJsonReaderObject metadata;
+            var hasMetadataProperty = result.TryGet("@metadata", out metadata);
+            long etag;
+            var hasEtagProperty = metadata.TryGet("@etag", out etag);
+            return hasMetadataProperty && hasEtagProperty && etag > 0; 
+        }
+
         [Fact]
         public void Server_store_basic_read_write_should_work()
         {
@@ -112,3 +212,4 @@ namespace FastTests.Server.Basic
         }
     }
 }
+

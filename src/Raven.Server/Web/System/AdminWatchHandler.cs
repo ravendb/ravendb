@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
+using Raven.Server.Alerts;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Routing;
 using Sparrow.Collections;
@@ -19,7 +20,7 @@ namespace Raven.Server.Web.System
             var ms = new MemoryStream();
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                var asyncQueue = new AsyncQueue<DynamicJsonValue>();
+                var asyncQueue = new AsyncQueue<GlobalAlertNotification>();
 
                 using (ServerStore.TrackChanges(asyncQueue))
                 {
@@ -40,7 +41,7 @@ namespace Raven.Server.Web.System
                         using (ServerStore.ContextPool.AllocateOperationContext(out context))
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
-                            context.Write(writer, tuple.Item2);
+                            context.Write(writer, tuple.Item2.ToJson());
                         }
 
                         ArraySegment<byte> bytes;
