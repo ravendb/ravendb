@@ -22,13 +22,6 @@ namespace Raven.Server.Documents
             _notifications = notifications;
         }
 
-        public override void Commit()
-        {
-            base.Commit();
-
-            AfterCommit();
-        }
-
         public void AddAfterCommitNotification(DocumentChangeNotification notification)
         {
             _afterCommitNotifications.Add(notification);
@@ -39,8 +32,12 @@ namespace Raven.Server.Documents
             if (_context.Transaction != this)
                 throw new InvalidOperationException("There is a different transaction in context.");
             
+
             _context.Transaction = null;
             base.Dispose();
+
+            if(InnerTransaction.LowLevelTransaction.Committed)
+                AfterCommit();
         }
 
         private void AfterCommit()
