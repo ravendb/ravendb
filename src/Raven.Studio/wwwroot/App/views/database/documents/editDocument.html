@@ -62,19 +62,18 @@
                 <div class="col-md-6">
                     <div class="documentId">
                         <div data-bind="if: isCreatingNewDocument()">
-                        <div class="input-group">
-                            <div class="input-group-addon">key</div>
-                            <input type="text"
-                                   name="documentId"
-                                   id="documentIdInput"
-                                   required="required"
-                                   placeholder="&lt;auto-generated&gt;"
-                                   class="obj-name"
-                                   placeholder="document ID"
-                                   data-bind="textInput: $root.userSpecifiedId, attr: { disabled: $root.isBusy }, customValidity: userSpecifiedIdCustomValidityError, hasFocus: userIdHasFocus()" />
-                        </div>
-                        
-                        
+                            <div class="input-group">
+                                <div class="input-group-addon">key</div>
+                                <input type="text"
+                                       name="documentId"
+                                       id="documentIdInput"
+                                       required="required"
+                                       placeholder="&lt;auto-generated&gt;"
+                                       class="obj-name"
+                                       placeholder="document ID"
+                                       data-bind="textInput: $root.userSpecifiedId, attr: { disabled: $root.isBusy }, customValidity: userSpecifiedIdCustomValidityError, hasFocus: userIdHasFocus()" />
+                            </div>
+
                         </div>
                         <div data-bind="if: !isCreatingNewDocument()">
                             <a class="reset-color btn-toggle markFavourite" data-bind="click: connectedDocuments.toggleStar.bind(connectedDocuments, $data)">
@@ -84,8 +83,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6>
-                    <p class="pull-right-md padding padding-xs" data-bind="if: displayLastModifiedDate()">
+                <div class="col-md-6">
+                    <p class="pull-right-md text-right-md padding padding-xs" data-bind="if: displayLastModifiedDate()">
+                        <i class="icon-recent"></i>
                         <small>Last modified <span data-bind="text: metadata().lastModifiedAsAgo"></span></small>
                     </p>
                     <p class="pull-right-md bg-warning padding padding-xs" data-bind="visible: displayDocumentChangeNotification()">
@@ -95,10 +95,10 @@
                     </p>
                 </div>
             </div>
-            <div class="btn-bar">
+            <div class="btn-bar toolbar">
                 <div class="pull-left-sm">
-                    <button type="submit" class="btn btn-success save-btn" data-bind="enable: isSaveEnabled">
-                        <i class="icon-save"></i> 
+                    <button type="submit" class="btn btn-primary save-btn" data-bind="enable: isSaveEnabled">
+                        <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
                     <button type="button" class="clone-btn btn btn-default" data-bind="click: saveAsNew">
@@ -113,7 +113,7 @@
                 <div class="pull-right-sm">
                     <div class="btn-group">
                         <button type="button" class="btn btn-default" data-bind="click: toClipboard">
-                            <i class="icon-copy-to-clipboard"></i> 
+                            <i class="icon-copy-to-clipboard"></i>
                             <span>Copy to clipboard</span>
                         </button>
                         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -126,12 +126,11 @@
                     </div>
                 </div>
             </div>
-            <hr class="small" />
             <div class="clearfix">
                 <div class="btn-group btn-group-sm pull-right" role="group">
-                    <button type="button" class="btn btn-default" data-bind="enable: !isNewLineFriendlyMode(), click: formatDocument"><span class="icon-indent"></span> <span>Format</span></button>
-                    <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleAutoCollapse"><span class="icon-collapse"></span> <span>Toggle collapse</span></button>
-                    <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleNewlineMode"><span class="icon-newline"></span> <span>Toggle new lines</span></button>
+                    <button type="button" class="btn" data-bind="enable: !isNewLineFriendlyMode(), click: formatDocument"><span class="icon-indent"></span> <span>Format</span></button>
+                    <button type="button" class="btn" data-toggle="button" data-bind="click: toggleAutoCollapse"><span class="icon-collapse"></span> <span>Toggle collapse</span></button>
+                    <button type="button" class="btn" data-toggle="button" data-bind="click: toggleNewlineMode"><span class="icon-newline"></span> <span>Toggle new lines</span></button>
                 </div>
             </div>
         </div>
