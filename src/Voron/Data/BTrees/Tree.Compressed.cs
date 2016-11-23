@@ -130,16 +130,18 @@ namespace Voron.Data.BTrees
                             {
                                 if (cmp == 0)
                                 {
-                                    // update
-                                    throw new NotImplementedException("TODO arek");
+                                    // update of the last entry, just decrement NumberOfEntries in the page and
+                                    // put it at the last position
+
+                                    index = decompressedPage.NumberOfEntries - 1;
+                                    decompressedPage.Lower -= Constants.NodeOffsetSize; 
                                 }
-
-                                index = decompressedPage.NodePositionFor(_llt, nodeKey);
-
-                                if (decompressedPage.LastMatch == 0)
+                                else
                                 {
-                                    // update
-                                    throw new NotImplementedException("TODO arek");
+                                    index = decompressedPage.NodePositionFor(_llt, nodeKey);
+
+                                    if (decompressedPage.LastMatch == 0) // update
+                                        decompressedPage.RemoveNode(index);
                                 }
                             }
                         }
