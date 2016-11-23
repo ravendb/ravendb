@@ -178,7 +178,7 @@ namespace Raven.Client.Connection
 
         public static string CollectionsDocs(this string url, string collectionName)
         {
-            return $"{url}/collections/docs?name={collectionName}";
+            return $"{url}/collections/{collectionName}";
         }
 
         public static Uri ToUri(this string url)
