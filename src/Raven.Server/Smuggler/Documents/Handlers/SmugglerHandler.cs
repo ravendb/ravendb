@@ -20,6 +20,7 @@ using Jint.Parser.Ast;
 using Microsoft.Extensions.Primitives;
 using Raven.Abstractions;
 using Raven.Client.Data;
+using Raven.Client.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -248,16 +249,55 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         }
 
         [RavenAction("/databases/*/smuggler/import", "GET")]
-        public Task GetImport()
+        public async Task GetImport()
         {
             if (HttpContext.Request.Query.ContainsKey("file") == false &&
                 HttpContext.Request.Query.ContainsKey("url") == false)
             {
                 throw new ArgumentException("'file' or 'url' are mandatory when using GET /smuggler/import");
             }
-            return PostImport();
+        
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                var tuple = await GetImportStream();
+                using (tuple.Item2)
+                using (var stream = new GZipStream(tuple.Item1, CompressionMode.Decompress))
+                {
+                    var sp = Stopwatch.StartNew();
+                    var result = await DoImport(context, stream);
+                    sp.Stop();
+                    WriteImportResult(context, sp, result, ResponseBodyStream());
+                }
+            }
         }
 
+
+        private async Task<Tuple<Stream, IDisposable>> GetImportStream()
+        {
+            var file = GetStringQueryString("file", required: false);
+            if (string.IsNullOrEmpty(file) == false)
+                return Tuple.Create<Stream, IDisposable>(File.OpenRead(file), null);
+
+            var url = GetStringQueryString("url", required: false);
+            if (string.IsNullOrEmpty(url) == false)
+            {
+                var httpClient = new HttpClient();
+
+                var stream = await httpClient.GetStreamAsync(url);
+                return Tuple.Create<Stream, IDisposable>(stream, httpClient);
+            }
+
+            return Tuple.Create<Stream, IDisposable>(HttpContext.Request.Body, null);
+        }
+
+        private async Task<ImportResult> DoImport(DocumentsOperationContext context, Stream stream)
+        {
+            var importer = new SmugglerImporter(Database);
+
+
+            return await importer.Import(context, stream);
+        }
         [RavenAction("/databases/*/smuggler/import", "POST")]
         public Task PostImport()
         {
