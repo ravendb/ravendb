@@ -609,7 +609,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             try
             {
 
-                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata);
+                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata).ConfigureAwait(false);
                 ResetFailureCount(operationMetadata.Url);
                 return new AsyncOperationResult<T>
                 {

@@ -385,7 +385,7 @@ namespace Raven.Client.Connection
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 
-			RavenJToken responseJson;
+            RavenJToken responseJson = null;
 			try
 			{
 				responseJson = request.ReadResponseJson();
@@ -396,9 +396,21 @@ namespace Raven.Client.Connection
 				if (httpWebResponse == null ||
 					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
 					throw;
-				throw ThrowConcurrencyException(e);
 			}
-			return SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)responseJson).OfType<RavenJObject>()).ToArray();
+
+            var docResults = ((RavenJArray)responseJson).OfType<RavenJObject>().ToList();
+            var startsWithResults = SerializationHelper.RavenJObjectsToJsonDocuments(docResults.Select(x => (RavenJObject)x.CloneToken())).ToArray();
+            return RetryOperationBecauseOfConflict(docResults, startsWithResults, () =>
+                                                    DirectStartsWith(operationMetadata, keyPrefix, matches, exclude, start, pageSize, metadataOnly),
+                                                    conflictedResultId =>
+                                                    new ConflictException(
+                                                        "Conflict detected on " +
+                                                        conflictedResultId.Substring(0,
+                                                            conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+                                                        ", conflict must be resolved before the document will be accessible", true)
+                                                    {
+                                                        ConflictedVersionIds = new[] { conflictedResultId }
+                                                    }, retryAfterFirstResolve: true);
 		}
 
 		private PutResult DirectPut(RavenJObject metadata, string key, Etag etag, RavenJObject document, OperationMetadata operationMetadata)
@@ -1434,16 +1446,24 @@ namespace Raven.Client.Connection
 		}
 
 		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry,
-                                                    Func<string, ConflictException> onConflictedQueryResult = null, QueryInfo queryInfo = null)
+            Func<string, ConflictException> onConflictedQueryResult = null, QueryInfo queryInfo = null, bool retryAfterFirstResolve = false)
 		{
-			bool requiresRetry = docResults.Aggregate(false, (current, docResult) =>
-                                                        current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult, onConflictedQueryResult, queryInfo));
+            var requiresRetry = false;
+            foreach (var docResult in docResults)
+            {
+                requiresRetry |= AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult, onConflictedQueryResult, queryInfo);
+
+                if (retryAfterFirstResolve && requiresRetry)
+                    return nextTry();
+            }
+
 			if (!requiresRetry)
 				return currentResult;
 
 			if (resolvingConflictRetries)
 				throw new InvalidOperationException(
 					"Encountered another conflict after already resolving a conflict. Conflict resolution cannot recurse.");
+
 			resolvingConflictRetries = true;
 			try
 			{
