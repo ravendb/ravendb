@@ -33,6 +33,7 @@ import messagePublisher = require("common/messagePublisher");
 import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
 import extensions = require("common/extensions");
 import notificationCenter = require("common/notifications/notificationCenter");
+import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
@@ -115,6 +116,7 @@ class shell extends viewModelBase {
         autoCompleteBindingHandler.install();
         enableResizeBindingHandler.install();
         helpBindingHandler.install();
+        virtualGrid.install();
 
         this.clientBuildVersion.subscribe(v =>
             viewModelBase.clientVersion("4.0." + v.BuildVersion));
