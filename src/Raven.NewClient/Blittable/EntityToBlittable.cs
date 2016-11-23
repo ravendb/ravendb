@@ -48,6 +48,14 @@ namespace Raven.NewClient.Client.Blittable
             return _session.Context.ReadForMemory(_stream, "convention.Serialize");
         }
 
+        public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConvention documentConvention, JsonOperationContext jsonOperationContext)
+        {
+            _stream.Position = 0;
+            documentConvention.SerializeEntityToJsonStream(entity, _streamWriter);
+            _stream.Position = 0;
+            return jsonOperationContext.ReadForMemory(_stream, "convention.Serialize");
+        }
+
         private void InsertMetadataToStream(DocumentInfo documentInfo)
         {
             _stream.Position--;
