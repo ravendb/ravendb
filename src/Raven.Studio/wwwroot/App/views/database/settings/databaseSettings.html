@@ -19,11 +19,7 @@
                 </button>
             </div>
             <div class="panel-body">
-                <ul class="nav nav-tabs">
-                    <li accesskey="d" data-bind="click: activateDoc, css: { active: isEditingMetadata() === false }" title="Edit document data (Alt+Shift+D)"><a style="cursor: pointer;">Data</a></li>
-                </ul>
                 <pre id="dbDocEditor" data-bind="aceEditor: { code: text, lang: 'ace/mode/json', readOnly: !isEditingEnabled() }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', container: '#databaseSettingsContainer' }"></pre>
-
             </div>
         </div>
     </form>
