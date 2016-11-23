@@ -152,6 +152,9 @@ class databaseSettings extends viewModelBase {
     }
 
     saveChanges() {
+        var updatedDto: documentDto;
+        var meta: any;
+
         eventsCollector.default.reportEvent("database-settings", "save");
 
         var editDbConfirm = new viewSystemDatabaseConfirm("Meddling with the database settings document could cause irreversible damage!");
@@ -159,16 +162,14 @@ class databaseSettings extends viewModelBase {
             .viewTask
             .done(() => {
                 try {
-                    var updatedDto: documentDto = JSON.parse(this.documentText());
-                    var meta = JSON.parse(this.metadataText());
-
-                    updatedDto['@metadata'] = meta;
-                    updatedDto['@metadata']['@etag'] = (<any>this.document()).__metadata['@etag'];
+                    updatedDto = JSON.parse(this.documentText());
+                    meta = JSON.parse(this.metadataText());
                     var newDoc = new document(updatedDto);
-                    var saveCommand = new saveDatabaseSettingsCommand(this.activeDatabase(), newDoc);
+                    newDoc.__metadata.etag = this.document().__metadata.etag;
+                    var saveCommand = new saveDatabaseSettingsCommand(this.activeDatabase(), newDoc); 
                     var saveTask = saveCommand.execute();
                     saveTask.done((saveResult: databaseDocumentSaveDto) => {
-                        (<any>this.document()).__metadata['@etag'] = saveResult.ETag;
+                        (<any>this.document()).__metadata.etag = saveResult.ETag;
                         this.metadataText("{}");
                         this.isEditingEnabled(false);
                         this.formatDocument();

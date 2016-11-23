@@ -124,19 +124,30 @@ namespace Raven.Server.Web.System
                 //    }
                 //}
 
+                long? newEtag = null;
+
                 ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
                 {
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        if (hasEtagInRequest)
-                            ServerStore.Write(context, dbId, dbDoc, etag);
-                        else
-                            ServerStore.Write(context, dbId, dbDoc);
+                        newEtag = hasEtagInRequest ? ServerStore.Write(context, dbId, dbDoc, etag) : 
+                                                     ServerStore.Write(context, dbId, dbDoc);
                         tx.Commit();
                     }
                 });
 
                 HttpContext.Response.StatusCode = 201;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["ETag"] = newEtag,
+                        ["Key"]  = dbId
+                    });
+                    writer.Flush();
+                }
+
             }
             return Task.CompletedTask;
         }
