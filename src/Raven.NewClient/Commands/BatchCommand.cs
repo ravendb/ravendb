@@ -45,7 +45,7 @@ namespace Raven.NewClient.Client.Commands
                 }
             });
 
-            url = "bulk_docs";
+            url = $"{node.Url}/databases/{node.Database}/bulk_docs";
             return request;
         }
 

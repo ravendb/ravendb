@@ -201,6 +201,9 @@ namespace Raven.NewClient.Client.Http
 
                     using (var stream = await response.Content.ReadAsStreamAsync())
                     {
+                        //TODO - WIP - Efrat - If???
+                        if (stream.Length == 0)
+                            return;
                         // we intentionally don't dispose the reader here, we'll be using it
                         // in the command, any associated memory will be released on context reset
                         var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
@@ -237,7 +240,7 @@ namespace Raven.NewClient.Client.Http
         private static HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)
         {
             var request = command.CreateRequest(node, out url);
-            url = $"{node.Url}/databases/{node.Database}/{url}";
+            
             request.RequestUri = new Uri(url);
 
             if (node.CurrentToken != null)

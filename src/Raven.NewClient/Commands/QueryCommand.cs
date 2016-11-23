@@ -66,7 +66,7 @@ namespace Raven.NewClient.Client.Commands
                 pathBuilder.Append("&").Append(string.Join("&", Includes.Select(x => "include=" + x).ToArray()));
             }
 
-            url = pathBuilder.ToString();
+            url = $"{node.Url}/databases/{node.Database}/" + pathBuilder;
             return request;
         }
 
