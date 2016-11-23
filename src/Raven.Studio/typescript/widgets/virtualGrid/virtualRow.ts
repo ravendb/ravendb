@@ -1,5 +1,4 @@
 ﻿import virtualColumn = require("widgets/virtualGrid/virtualColumn");
-import textCellTemplate = require("widgets/virtualGrid/textCellTemplate");
 
 /**
  * A virtual row. Contains an element displayed as a row in the grid. Gets recycled as the grid scrolls in order to create and manage fewer elements.
@@ -80,12 +79,7 @@ class VirtualRow {
 
     private createCellsHtml(item: Object, columns: virtualColumn[], isSelected: boolean): string {
         const cellsHtml = columns
-            .map(c => {
-                if (!c.template) {
-                    c.template = new textCellTemplate();
-                }
-                return `<div class="cell ${c.template.className}" style="width: ${c.width}">${c.template.getHtml(item, c.dataMemberName, isSelected)}</div>`;
-            });
+            .map(c => `<div class="cell ${c.cellClass}" style="width: ${c.width}">${c.renderCell(item, isSelected)}</div>`);
         return cellsHtml.join("");
     }
 
