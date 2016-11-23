@@ -296,13 +296,26 @@ namespace Raven.Client.Connection
 					var multiLoadResult = Get(conflictIds, null);
 
 					var results = multiLoadResult.Results.Select(SerializationHelper.ToJsonDocument).ToArray();
+                    if (results.Any(x => x == null))
+                    {
+                        // one of the conflict documents doesn't exist, means that it was already resolved.
+                        // we'll reload the relevant documents again
+                        return null;
+                    }
 
 					foreach (var conflictListener in conflictListeners)
 					{
 						JsonDocument resolvedDocument;
 						if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
 						{
-							Put(key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata);
+                            try
+                            {
+                                Put(key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata);
+                            }
+                            catch (ConcurrencyException)
+                            {
+                                // we are racing the changes API here, so that is fine
+                            }
 
 							return null;
 						}
