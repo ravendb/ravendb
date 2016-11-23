@@ -873,16 +873,29 @@ body.show-top-alert {
         &:hover {
             .level-1 {
                 transition-delay: .35s;
+                a {
+                    transition: opacity 0s;
+                    transition-delay: .35s;
+                }
             }
 
             .level-1:not(:hover) {
-                transform: translateX(@menu-width - 55);
+                transform: translateX(@menu-width - 55);   
+                a {
+                    opacity:0; 
+                    transition-delay: 0;             
+                }             
             }
 
             a.active:hover + .level-1 {
                 animation:none;
                 transform: translateX(0);
                 transition-delay: .4s;
+
+                a {
+                    transition-delay: 0;  
+                    opacity:1;
+                }
             }
         }
 
