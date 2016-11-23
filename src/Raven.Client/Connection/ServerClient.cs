@@ -124,6 +124,11 @@ namespace Raven.Client.Connection
             AsyncHelpers.RunSync(() => asyncServerClient.DeleteAsync(key, etag));
         }
 
+        public Operation DeleteCollection(string collectionName)
+        {
+            return AsyncHelpers.RunSync(() => asyncServerClient.DeleteCollectionAsync(collectionName));
+        }
+
         public string[] GetDatabaseNames(int pageSize, int start = 0)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.GlobalAdmin.GetDatabaseNamesAsync(pageSize, start));
