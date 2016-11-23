@@ -449,7 +449,7 @@ namespace Raven.NewClient.Client.Connection.Async
             }, token);
         }
 
-        public Task DeleteCollectionAsync(string collectionName, CancellationToken token = default(CancellationToken))
+        public Task<Operation> DeleteCollectionAsync(string collectionName, CancellationToken token = default(CancellationToken))
         {
             EnsureIsNotNullOrEmpty(collectionName, nameof(collectionName));
             return ExecuteWithReplication(HttpMethod.Delete, async operationMetadata =>
@@ -460,7 +460,10 @@ namespace Raven.NewClient.Client.Connection.Async
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, HttpMethod.Delete, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
-                    await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+                    var json = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    var operationId = json.Value<long>("OperationId");
+
+                    return new Operation(this, operationId);
                 }
             }, token);
         }

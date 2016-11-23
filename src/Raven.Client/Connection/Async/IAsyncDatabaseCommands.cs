@@ -88,8 +88,9 @@ namespace Raven.Client.Connection.Async
         /// <summary>
         ///     Perform a set based deletes using the collection
         /// </summary>
+        /// <param name="collectionName">Name of the collection</param>
         /// <param name="token">The cancellation token.</param>
-        Task DeleteCollectionAsync(string collectionName, CancellationToken token = default(CancellationToken));
+        Task<Operation> DeleteCollectionAsync(string collectionName, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Perform a set based deletes using the specified index
