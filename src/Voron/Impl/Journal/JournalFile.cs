@@ -24,7 +24,11 @@ namespace Voron.Impl.Journal
         private bool _disposed;
         private int _refs;
         private readonly PageTable _pageTranslationTable = new PageTable();
-        private readonly List<PagePosition> _unusedPages = new List<PagePosition>();
+
+        private static ObjectPool<List<PagePosition>, ListResetBehavior<PagePosition>> UnusedPagesPool = new ObjectPool<List<PagePosition>, ListResetBehavior<PagePosition>>(() => new List<PagePosition>(), 5);
+        private static ObjectPool<HashSet<PagePosition>, HashSetResetBehavior<PagePosition>> UnusedPagesHashSetPool = new ObjectPool<HashSet<PagePosition>, HashSetResetBehavior<PagePosition>>(() => new HashSet<PagePosition>(PagePositionEqualityComparer.Instance), 5);
+
+        private readonly List<PagePosition> _unusedPages;
         private readonly object _locker = new object();
 
         public JournalFile(StorageEnvironment env, IJournalWriter journalWriter, long journalNumber)
@@ -33,6 +37,8 @@ namespace Voron.Impl.Journal
             _env = env;
             _journalWriter = journalWriter;
             _writePage = 0;
+            _unusedPages = UnusedPagesPool.Allocate();
+
         }
 
         public override string ToString()
@@ -80,8 +86,11 @@ namespace Voron.Impl.Journal
         public void Dispose()
         {
             DisposeWithoutClosingPager();
+
             _journalWriter?.Dispose();
             _journalWriter = null;
+
+            UnusedPagesPool.Free(_unusedPages);
         }
 
         public JournalSnapshot GetSnapshot()
@@ -117,10 +126,11 @@ namespace Voron.Impl.Journal
         /// </summary>
         public void Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch, int uncompressedPageCount)
         {
-            var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);
-            var unused = new HashSet<PagePosition>();
+            var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);           
             var pageWritePos = _writePage;
 
+
+            var unused = UnusedPagesHashSetPool.Allocate(); // new HashSet<PagePosition>();
             UpdatePageTranslationTable(tx, unused, ptt);
 
             lock (_locker)
@@ -130,6 +140,8 @@ namespace Voron.Impl.Journal
                 Debug.Assert(!_unusedPages.Any(unused.Contains));
                 _unusedPages.AddRange(unused);
             }
+
+            UnusedPagesHashSetPool.Free(unused);
 
             var position = pageWritePos * tx.Environment.Options.PageSize;
 

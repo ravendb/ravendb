@@ -347,6 +347,15 @@ namespace Sparrow
         }
     }
 
+    public struct ListResetBehavior<T1> : IResetSupport<List<T1>>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void IResetSupport<List<T1>>.Reset(List<T1> value)
+        {
+            value.Clear();
+        }
+    }
+
     public struct ObjectPoolContext<T, TR> : IDisposable 
         where T : class
         where TR : struct, IResetSupport<T>
