@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Reflection;
 using Newtonsoft.Json;
 
 namespace Raven.NewClient.Abstractions.Json
@@ -54,7 +55,7 @@ namespace Raven.NewClient.Abstractions.Json
         /// </returns>
         public override bool CanConvert(Type objectType)
         {
-            return (Nullable.GetUnderlyingType(objectType) ?? objectType).IsEnum();
+            return (Nullable.GetUnderlyingType(objectType) ?? objectType).GetTypeInfo().IsEnum;
         }
     }
 }

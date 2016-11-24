@@ -19,7 +19,7 @@ using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Connection.Request;
 using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Client.Connection.Async;
+
 using System.Threading.Tasks;
 using Raven.NewClient.Client.Document.Async;
 using Raven.NewClient.Client.Http;
@@ -35,9 +35,9 @@ namespace Raven.NewClient.Client.Document
     /// </summary>
     public class DocumentStore : DocumentStoreBase
     {
-        private readonly ConcurrentDictionary<string, IDocumentStoreReplicationInformer> replicationInformers = new ConcurrentDictionary<string, IDocumentStoreReplicationInformer>(StringComparer.OrdinalIgnoreCase);
+        //private readonly ConcurrentDictionary<string, IDocumentStoreReplicationInformer> replicationInformers = new ConcurrentDictionary<string, IDocumentStoreReplicationInformer>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentDictionary<string, ClusterAwareRequestExecuter> clusterAwareRequestExecuters = new ConcurrentDictionary<string, ClusterAwareRequestExecuter>(StringComparer.OrdinalIgnoreCase);
+        //private readonly ConcurrentDictionary<string, ClusterAwareRequestExecuter> clusterAwareRequestExecuters = new ConcurrentDictionary<string, ClusterAwareRequestExecuter>(StringComparer.OrdinalIgnoreCase);
 
         private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
@@ -231,10 +231,10 @@ namespace Raven.NewClient.Client.Document
                 }
             }
 
-            foreach (var replicationInformer in replicationInformers)
+            /*foreach (var replicationInformer in replicationInformers)
             {
                 replicationInformer.Value.Dispose();
-            }
+            }*/
 
             // try to wait until all the async disposables are completed
             Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(3));
@@ -416,7 +416,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         protected virtual void InitializeInternal()
         {
-            var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
+            /*var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
 
             databaseCommandsGenerator = () =>
             {
@@ -438,10 +438,10 @@ namespace Raven.NewClient.Client.Document
                 if (string.IsNullOrEmpty(DefaultDatabase))
                     return asyncServerClient;
                 return asyncServerClient.ForDatabase(DefaultDatabase);
-            };
+            };*/
         }
 
-        public IDocumentStoreReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
+        /*public IDocumentStoreReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
         {
             var key = Url;
             dbName = dbName ?? DefaultDatabase;
@@ -467,9 +467,9 @@ namespace Raven.NewClient.Client.Document
             }
 
             return result;
-        }
+        }*/
 
-        private IRequestExecuter GetRequestExecuterForDatabase(AsyncServerClient serverClient, string databaseName, ClusterBehavior clusterBehavior, bool incrementStrippingBase)
+        /*private IRequestExecuter GetRequestExecuterForDatabase(AsyncServerClient serverClient, string databaseName, ClusterBehavior clusterBehavior, bool incrementStrippingBase)
         {
             var key = Url;
             databaseName = databaseName ?? DefaultDatabase;
@@ -499,7 +499,7 @@ namespace Raven.NewClient.Client.Document
             }
 
             return requestExecuter;
-        }
+        }*/
 
         public RequestTimeMetric GetRequestTimeMetricForDatabase(string databaseName)
         {
@@ -682,7 +682,7 @@ namespace Raven.NewClient.Client.Document
 
         public override BulkInsertOperation BulkInsert(string database = null)
         {
-            return new BulkInsertOperation(database ?? DefaultDatabase, this, Listeners);
+            return new BulkInsertOperation(database ?? DefaultDatabase, this);
         }
 
         protected override void AfterSessionCreated(InMemoryDocumentSessionOperations session)

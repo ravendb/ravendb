@@ -1,5 +1,5 @@
 using System;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Abstractions.Data
 {
@@ -7,8 +7,9 @@ namespace Raven.NewClient.Abstractions.Data
     {
         static Constants()
         {
-            InResourceKeyVerificationDocumentContents = new RavenJObject { { "Text", "The encryption is correct." } };
-            InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
+            //TODO: Iftah
+            //InResourceKeyVerificationDocumentContents = new RavenJObject { { "Text", "The encryption is correct." } };
+            //InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
         }
 
         public class Configuration
@@ -211,7 +212,8 @@ namespace Raven.NewClient.Abstractions.Data
 
         public const string InResourceKeyVerificationDocumentName = "Raven/Encryption/Verification";
 
-        public static readonly RavenJObject InResourceKeyVerificationDocumentContents;
+        //TODO: Iftah
+        //public static readonly RavenJObject InResourceKeyVerificationDocumentContents;
 
         public const int DefaultGeneratedEncryptionKeyLength = 256 / 8;
 

@@ -1,11 +1,11 @@
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Connection.Async;
+
 using System;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Changes;
 using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Document
 {
@@ -15,11 +15,10 @@ namespace Raven.NewClient.Client.Document
         private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
         protected TcpBulkInsertOperation Operation { get; set; }
         public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
-        private readonly EntityToJson entityToJson;
 
-        public delegate void BeforeEntityInsert(string id, RavenJObject data, RavenJObject metadata);
+        /*public delegate void BeforeEntityInsert(string id, RavenJObject data, RavenJObject metadata);
 
-        public event BeforeEntityInsert OnBeforeEntityInsert = delegate { };
+        public event BeforeEntityInsert OnBeforeEntityInsert = delegate { };*/
 
         public void Abort()
         {
@@ -32,7 +31,7 @@ namespace Raven.NewClient.Client.Document
             remove { Operation.Report -= value; }
         }
 
-        public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners)
+        public BulkInsertOperation(string database, IDocumentStore documentStore)
         {
             this.documentStore = documentStore;
 
@@ -48,7 +47,6 @@ namespace Raven.NewClient.Client.Document
 
             // ReSharper disable once VirtualMemberCallInContructor
             Operation = GetBulkInsertOperation(DatabaseCommands);
-            entityToJson = new EntityToJson(documentStore, listeners);
         }
 
         protected virtual TcpBulkInsertOperation GetBulkInsertOperation(IAsyncDatabaseCommands commands)
@@ -78,16 +76,17 @@ namespace Raven.NewClient.Client.Document
             return id;
         }
 
-        public async Task StoreAsync(RavenJObject doc, RavenJObject metadata, string id)
+        /*public async Task StoreAsync(RavenJObject doc, RavenJObject metadata, string id)
         {
             OnBeforeEntityInsert(id, doc, metadata);
 
             await Operation.WriteAsync(id, metadata, doc).ConfigureAwait(false);
-        }
+        }*/
 
         public async Task StoreAsync(object entity, string id)
         {
-            var metadata = new RavenJObject();
+            throw new NotImplementedException();
+            /*var metadata = new RavenJObject();
             var tag = documentStore.Conventions.GetDynamicTagName(entity);
             if (tag != null)
                 metadata.Add(Constants.Headers.RavenEntityName, tag);
@@ -95,7 +94,7 @@ namespace Raven.NewClient.Client.Document
             var data = entityToJson.ConvertEntityToJson(id, entity, metadata);
             OnBeforeEntityInsert(id, data, metadata);
 
-            await Operation.WriteAsync(id, metadata, data).ConfigureAwait(false);
+            await Operation.WriteAsync(id, metadata, data).ConfigureAwait(false);*/
         }
 
         private string GetId(object entity)

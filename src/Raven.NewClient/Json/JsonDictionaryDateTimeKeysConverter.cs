@@ -120,7 +120,7 @@ namespace Raven.NewClient.Abstractions.Json
 
         public override bool CanConvert(Type objectType)
         {
-            if (objectType.IsGenericType() == false)
+            if (objectType.GetTypeInfo().IsGenericType == false)
                 return false;
             if (objectType.GetGenericTypeDefinition() != typeof(Dictionary<,>))
                 return false;

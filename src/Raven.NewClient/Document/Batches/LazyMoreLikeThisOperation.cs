@@ -11,7 +11,7 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Shard;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Document.Batches
 {
@@ -45,7 +45,9 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public void HandleResponse(GetResponse response)
         {
-            var result = response.Result;
+            throw new NotImplementedException();
+
+            /*var result = response.Result;
 
             var multiLoadResult = new LoadResult
             {
@@ -53,7 +55,7 @@ namespace Raven.NewClient.Client.Document.Batches
                 Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
             };
 
-            HandleResponse(multiLoadResult);
+            HandleResponse(multiLoadResult);*/
         }
 
         private void HandleResponse(LoadResult loadResult)

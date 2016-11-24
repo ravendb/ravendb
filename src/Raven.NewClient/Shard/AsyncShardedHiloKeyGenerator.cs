@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Document;
 
 namespace Raven.NewClient.Client.Shard

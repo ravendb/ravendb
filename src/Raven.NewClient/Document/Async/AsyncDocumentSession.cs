@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Document.Batches;

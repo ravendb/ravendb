@@ -89,16 +89,6 @@ namespace Raven.NewClient.Client.Document
 
         public string DatabaseName { get; }
 
-        /// <summary>
-        /// all the listeners for this session
-        /// </summary>
-        protected readonly DocumentSessionListeners TheListeners;
-
-        /// <summary>
-        /// all the listeners for this session
-        /// </summary>
-        public DocumentSessionListeners Listeners => TheListeners;
-
         ///<summary>
         /// The document store associated with this session
         ///</summary>
@@ -427,7 +417,7 @@ more responsive application.
         /// <returns></returns>
         public static object GetDefaultValue(Type type)
         {
-            return type.IsValueType() ? Activator.CreateInstance(type) : null;
+            return type.GetTypeInfo().IsValueType ? Activator.CreateInstance(type) : null;
         }
 
         /// <summary>

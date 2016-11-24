@@ -14,10 +14,10 @@ using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Document.Async;
 using Raven.NewClient.Client.Document.Batches;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Json.Linq;
+
 using Raven.NewClient.Client.Data.Queries;
 using System.Threading.Tasks;
 using Raven.NewClient.Client.Connection;
@@ -32,7 +32,7 @@ namespace Raven.NewClient.Client.Shard
         {
         private readonly AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
 
-        public AsyncShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
+        public AsyncShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, Guid id,
                                            ShardStrategy shardStrategy, IDictionary<string, IAsyncDatabaseCommands> shardDbCommands)
         {
             

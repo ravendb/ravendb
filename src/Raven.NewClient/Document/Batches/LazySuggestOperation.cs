@@ -5,7 +5,7 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Shard;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Document.Batches
 {
@@ -46,7 +46,9 @@ namespace Raven.NewClient.Client.Document.Batches
         public bool RequiresRetry { get; private set; }
         public void HandleResponse(GetResponse response)
         {
-            if (response.Status != 200 && response.Status != 304)
+            throw new NotImplementedException();
+
+            /*if (response.Status != 200 && response.Status != 304)
             {
                 throw new InvalidOperationException("Got an unexpected response code for the request: " + response.Status + "\r\n" +
                                                     response.Result);
@@ -56,12 +58,14 @@ namespace Raven.NewClient.Client.Document.Batches
             Result = new SuggestionQueryResult
             {
                 Suggestions = ((RavenJArray)result["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
-            };
+            };*/
         }
 
         public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
         {
-            var result = new SuggestionQueryResult
+            throw new NotImplementedException();
+
+            /*var result = new SuggestionQueryResult
             {
                 Suggestions = (from item in responses
                                let data = (RavenJObject)item.Result
@@ -71,7 +75,7 @@ namespace Raven.NewClient.Client.Document.Batches
                               .ToArray()
             };
 
-            Result = result;
+            Result = result;*/
         }
 
         public IDisposable EnterContext()

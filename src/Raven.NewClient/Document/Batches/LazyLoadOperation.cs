@@ -8,7 +8,7 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Shard;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Document.Batches
 {
@@ -98,7 +98,9 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public void HandleResponse(GetResponse response)
         {
-            if (response.ForceRetry)
+            throw new NotImplementedException();
+
+            /*if (response.ForceRetry)
             {
                 Result = null;
                 RequiresRetry = true;
@@ -112,7 +114,7 @@ namespace Raven.NewClient.Client.Document.Batches
                 Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
                 Results = result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
             };
-            HandleResponse(multiLoadResult);
+            HandleResponse(multiLoadResult);*/
         }
 
         private void HandleResponse(LoadResult loadResult)
