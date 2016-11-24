@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = StaticMapIndex.CreateNew(1, new IndexDefinition()
+                using (var index = MapIndex.CreateNew(1, new IndexDefinition()
                 {
                     Name = "Users_ByName",
                     Maps = { "from user in docs.Users select new { user.Name }" },
@@ -260,7 +260,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = StaticMapIndex.CreateNew(1, new IndexDefinition()
+                using (var index = MapIndex.CreateNew(1, new IndexDefinition()
                 {
                     Name = "Index1",
                     Maps = { "from doc in docs select new { doc.Name }" },
@@ -350,7 +350,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = StaticMapIndex.CreateNew(1, new IndexDefinition()
+                using (var index = MapIndex.CreateNew(1, new IndexDefinition()
                 {
                     Name = "Index1",
                     Maps = { "from doc in docs.Users select new { doc.Name }" },

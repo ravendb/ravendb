@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
-using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
@@ -66,7 +61,7 @@ namespace Raven.NewClient.Client.Commands
                 pathBuilder.Append("&").Append(string.Join("&", Includes.Select(x => "include=" + x).ToArray()));
             }
 
-            url = pathBuilder.ToString();
+            url = $"{node.Url}/databases/{node.Database}/" + pathBuilder;
             return request;
         }
 

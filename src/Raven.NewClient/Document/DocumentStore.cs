@@ -56,11 +56,6 @@ namespace Raven.NewClient.Client.Document
         private int maxNumberOfCachedRequests = DefaultNumberOfCachedRequests;
         private bool aggressiveCachingUsed;
         
-        /// <summary>
-        /// Generate new instance of database commands
-        /// </summary>
-        protected Func<IDatabaseCommands> databaseCommandsGenerator;
-
         private HttpJsonRequestFactory jsonRequestFactory;
 
         /// <summary>
@@ -81,45 +76,6 @@ namespace Raven.NewClient.Client.Document
             get
             {
                 return jsonRequestFactory;
-            }
-        }
-
-        /// <summary>
-        /// Gets the database commands.
-        /// </summary>
-        /// <value>The database commands.</value>
-        public override IDatabaseCommands DatabaseCommands
-        {
-            get
-            {
-                AssertInitialized();
-                var commands = databaseCommandsGenerator();
-                foreach (string key in SharedOperationsHeaders)
-                {
-                    var values = SharedOperationsHeaders.GetValues(key);
-                    if (values == null)
-                        continue;
-                    foreach (var value in values)
-                    {
-                        commands.OperationsHeaders[key] = value;
-                    }
-                }
-                return commands;
-            }
-        }
-
-        protected Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
-        /// <summary>
-        /// Gets the async database commands.
-        /// </summary>
-        /// <value>The async database commands.</value>
-        public override IAsyncDatabaseCommands AsyncDatabaseCommands
-        {
-            get
-            {
-                if (asyncDatabaseCommandsGenerator == null)
-                    return null;
-                return asyncDatabaseCommandsGenerator();
             }
         }
 
@@ -281,8 +237,7 @@ namespace Raven.NewClient.Client.Document
             {
                 var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
                 var requestExecuter = GetRequestExecuter(databaseName);
-                var session = new DocumentSession(databaseName, this, sessionId,
-                    SetupCommands(DatabaseCommands, databaseName, options.Credentials, options), requestExecuter);
+                var session = new DocumentSession(databaseName, this, sessionId, requestExecuter);
                 RegisterEvents(session);
                 // AfterSessionCreated(session);
                 return session;
@@ -293,7 +248,8 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        private RequestExecuter GetRequestExecuter(string databaseName)
+        //TODO - Efrat
+        public RequestExecuter GetRequestExecuter(string databaseName)
         {
             Lazy<RequestExecuter> lazy;
             if (_requestExecuters.TryGetValue(databaseName, out lazy))
@@ -302,29 +258,7 @@ namespace Raven.NewClient.Client.Document
                 dbName => new Lazy<RequestExecuter>(() => new RequestExecuter(Url, dbName, ApiKey)));
             return lazy.Value;
         }
-
-        private static IDatabaseCommands SetupCommands(IDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession, OpenSessionOptions options)
-        {
-            if (database != null)
-                databaseCommands = databaseCommands.ForDatabase(database);
-            if (credentialsForSession != null)
-                databaseCommands = databaseCommands.With(credentialsForSession);
-            if (options.ForceReadFromMaster)
-                databaseCommands.ForceReadFromMaster();
-            return databaseCommands;
-        }
-
-        private static IAsyncDatabaseCommands SetupCommandsAsync(IAsyncDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession, OpenSessionOptions options)
-        {
-            if (database != null)
-                databaseCommands = databaseCommands.ForDatabase(database);
-            if (credentialsForSession != null)
-                databaseCommands = databaseCommands.With(credentialsForSession);
-            if (options.ForceReadFromMaster)
-                databaseCommands.ForceReadFromMaster();
-            return databaseCommands;
-        }
-
+        
         public override IDocumentStore Initialize()
         {
             return Initialize(true);
@@ -356,13 +290,13 @@ namespace Raven.NewClient.Client.Document
                 if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
                 {
                     var generator = new MultiDatabaseHiLoGenerator(32);
-                    Conventions.DocumentKeyGenerator = (dbName, databaseCommands, entity) => generator.GenerateDocumentKey(dbName, databaseCommands, Conventions, entity);
+                    Conventions.DocumentKeyGenerator = (dbName, entity) => generator.GenerateDocumentKey(dbName, Conventions, entity);
                 }
 
-                if (Conventions.AsyncDocumentKeyGenerator == null && asyncDatabaseCommandsGenerator != null)
+                if (Conventions.AsyncDocumentKeyGenerator == null )
                 {
                     var generator = new AsyncMultiDatabaseHiLoKeyGenerator(32);
-                    Conventions.AsyncDocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKeyAsync(dbName, commands, Conventions, entity);
+                    Conventions.AsyncDocumentKeyGenerator = (dbName, entity) => generator.GenerateDocumentKeyAsync(dbName, Conventions, entity);
                 }
 
                 Smuggler = new DatabaseSmuggler(this);
@@ -411,6 +345,7 @@ namespace Raven.NewClient.Client.Document
                 throw new ArgumentException("Document store URL cannot be empty", "Url");
         }
 
+
         /// <summary>
         /// Initialize the document store access method to RavenDB
         /// </summary>
@@ -418,7 +353,8 @@ namespace Raven.NewClient.Client.Document
         {
             var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
 
-            databaseCommandsGenerator = () =>
+            //throw new NotImplementedException();
+            /*databaseCommandsGenerator = () =>
             {
                 string databaseUrl = Url;
                 if (string.IsNullOrEmpty(DefaultDatabase) == false)
@@ -427,18 +363,20 @@ namespace Raven.NewClient.Client.Document
                     databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
                 }
                 return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
-                    currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForDatabase, Changes, null,
-                    Listeners.ConflictListeners, true, Conventions.ClusterBehavior));
+                     currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForDatabase, Changes, null,
+                     Listeners.ConflictListeners, true, Conventions.ClusterBehavior));
             };
 
             asyncDatabaseCommandsGenerator = () =>
             {
-                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForDatabase, Changes, null, Listeners.ConflictListeners, true, Conventions.ClusterBehavior);
+                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, 
+                    currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForDatabase, Changes, null, 
+                    Listeners.ConflictListeners, true, Conventions.ClusterBehavior);
 
                 if (string.IsNullOrEmpty(DefaultDatabase))
                     return asyncServerClient;
                 return asyncServerClient.ForDatabase(DefaultDatabase);
-            };
+            };*/
         }
 
         public IDocumentStoreReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
@@ -540,24 +478,25 @@ namespace Raven.NewClient.Client.Document
 
         protected virtual IDatabaseChanges CreateDatabaseChanges(string database)
         {
-            if (string.IsNullOrEmpty(Url))
-                throw new InvalidOperationException("Changes API requires usage of server/client");
+            throw new NotImplementedException();
+            /* if (string.IsNullOrEmpty(Url))
+                 throw new InvalidOperationException("Changes API requires usage of server/client");
 
-            database = database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
+             database = database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
 
-            var dbUrl = MultiDatabase.GetRootDatabaseUrl(Url);
-            if (string.IsNullOrEmpty(database) == false)
-                dbUrl = dbUrl + "/databases/" + database;
+             var dbUrl = MultiDatabase.GetRootDatabaseUrl(Url);
+             if (string.IsNullOrEmpty(database) == false)
+                 dbUrl = dbUrl + "/databases/" + database;
 
-            using (NoSynchronizationContext.Scope())
-            {
-                return new RemoteDatabaseChanges(dbUrl,
-                    ApiKey,
-                    Credentials,
-                    Conventions,
-                    () => databaseChanges.Remove(database),
-                    (key, etag, conflictIds, metadata) => ((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
-            }
+             using (NoSynchronizationContext.Scope())
+             {
+                 return new RemoteDatabaseChanges(dbUrl,
+                     ApiKey,
+                     Credentials,
+                     Conventions,
+                     () => databaseChanges.Remove(database),
+                     (key, etag, conflictIds, metadata) => ((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
+             }*/
         }
 
         /// <summary>
@@ -616,13 +555,9 @@ namespace Raven.NewClient.Client.Document
             currentSessionId = sessionId;
             try
             {
-                var asyncDatabaseCommands = SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options);
-                if (AsyncDatabaseCommands == null)
-                    throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
-
                 var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
                 var requestExecuter = GetRequestExecuter(databaseName);
-                var session = new AsyncDocumentSession(databaseName, this, asyncDatabaseCommands, requestExecuter, sessionId);
+                var session = new AsyncDocumentSession(databaseName, this, requestExecuter, sessionId);
                 //AfterSessionCreated(session);
                 return session;
             }

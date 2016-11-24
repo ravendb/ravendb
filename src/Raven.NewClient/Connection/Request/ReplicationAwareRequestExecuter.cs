@@ -57,7 +57,10 @@ namespace Raven.NewClient.Client.Connection.Request
 
         public Task<T> ExecuteOperationAsync<T>(AsyncServerClient serverClient, HttpMethod method, int currentRequest, Func<OperationMetadata, Task<T>> operation, CancellationToken token)
         {
+            throw new NotImplementedException();
+            /*
             return replicationInformer.ExecuteWithReplicationAsync(method, serverClient.Url, serverClient.PrimaryCredentials, requestTimeMetric, currentRequest, readStripingBase, operation, token);
+            */
         }
 
         public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient, bool force = false)
@@ -70,17 +73,18 @@ namespace Raven.NewClient.Client.Connection.Request
 
         public void AddHeaders(HttpJsonRequest httpJsonRequest, AsyncServerClient serverClient, string currentUrl)
         {
-            if (serverClient.Url.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
-                return;
-            if (ReplicationInformer.FailureCounters.GetFailureCount(serverClient.Url) <= 0)
-                return; // not because of failover, no need to do this.
+            throw new NotImplementedException();
+            /* if (serverClient.Url.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
+                 return;
+             if (ReplicationInformer.FailureCounters.GetFailureCount(serverClient.Url) <= 0)
+                 return; // not because of failover, no need to do this.
 
-            var lastPrimaryCheck = ReplicationInformer.FailureCounters.GetFailureLastCheck(serverClient.Url);
-            httpJsonRequest.AddHeader(Constants.Headers.RavenClientPrimaryServerUrl, ToRemoteUrl(serverClient.Url));
-            httpJsonRequest.AddHeader(Constants.Headers.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
+             var lastPrimaryCheck = ReplicationInformer.FailureCounters.GetFailureLastCheck(serverClient.Url);
+             httpJsonRequest.AddHeader(Constants.Headers.RavenClientPrimaryServerUrl, ToRemoteUrl(serverClient.Url));
+             httpJsonRequest.AddHeader(Constants.Headers.RavenClientPrimaryServerLastCheck, lastPrimaryCheck.ToString("s"));
 
-            httpJsonRequest.AddReplicationStatusChangeBehavior(serverClient.Url, currentUrl, HandleReplicationStatusChanges);
-
+             httpJsonRequest.AddReplicationStatusChangeBehavior(serverClient.Url, currentUrl, HandleReplicationStatusChanges);
+ */
         }
 
         private static string ToRemoteUrl(string primaryUrl)

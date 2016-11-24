@@ -13,6 +13,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
     public unsafe class MapReduceResultsStore : IDisposable
     {
         public const string ReduceTreePrefix = "#reduceTree-";
+        public const string NestedValuesPrefix = "#nestedSection-";
 
         private readonly ulong _reduceKeyHash;
         private readonly TransactionOperationContext _indexContext;
@@ -45,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     InitializeTree(create);
                     break;
                 case MapResultsStorageType.Nested:
-                    _nestedValueKeyScope = Slice.From(indexContext.Allocator, ReduceTreePrefix + reduceKeyHash, ByteStringType.Immutable, out _nestedValueKey);
+                    _nestedValueKeyScope = Slice.From(indexContext.Allocator, NestedValuesPrefix + reduceKeyHash, ByteStringType.Immutable, out _nestedValueKey);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(Type.ToString());

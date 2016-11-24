@@ -26,7 +26,7 @@ namespace Raven.NewClient.Client.Document
         }
 
         
-        public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions, object entity)
+        public Task<string> GenerateDocumentKeyAsync(DocumentConvention conventions, object entity)
         {
             var typeTagName = conventions.GetDynamicTagName(entity);
             if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
@@ -34,18 +34,18 @@ namespace Raven.NewClient.Client.Document
             var tag = conventions.TransformTypeTagNameToDocumentKeyPrefix(typeTagName);
             AsyncHiLoKeyGenerator value;
             if (keyGeneratorsByTag.TryGetValue(tag, out value))
-                return value.GenerateDocumentKeyAsync(databaseCommands, conventions, entity);
+                return value.GenerateDocumentKeyAsync(conventions, entity);
 
             lock(generatorLock)
             {
                 if (keyGeneratorsByTag.TryGetValue(tag, out value))
-                    return value.GenerateDocumentKeyAsync(databaseCommands, conventions, entity);
+                    return value.GenerateDocumentKeyAsync(conventions, entity);
 
                 value = new AsyncHiLoKeyGenerator(tag, capacity);
                 keyGeneratorsByTag.TryAdd(tag, value);
             }
 
-            return value.GenerateDocumentKeyAsync(databaseCommands, conventions, entity);
+            return value.GenerateDocumentKeyAsync(conventions, entity);
         }
     }
 }

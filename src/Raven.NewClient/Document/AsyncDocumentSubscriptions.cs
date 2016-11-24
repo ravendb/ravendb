@@ -47,19 +47,20 @@ namespace Raven.NewClient.Client.Document
 
         public async Task<long> CreateAsync(SubscriptionCriteria criteria, long startEtag=0, string database = null)
         {
-            if (criteria == null)
-                throw new InvalidOperationException("Cannot create a subscription if criteria is null");
+            throw new NotImplementedException();
+            /* if (criteria == null)
+                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
 
-            var commands = database == null
-                ? documentStore.AsyncDatabaseCommands
-                : documentStore.AsyncDatabaseCommands.ForDatabase(database);
+             var commands = database == null
+                 ? documentStore.AsyncDatabaseCommands
+                 : documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-            using (var request = commands.CreateRequest("/subscriptions/create?startEtag="+startEtag, HttpMethods.Post))
-            {
-                await request.WriteAsync(RavenJObject.FromObject(criteria)).ConfigureAwait(false);
+             using (var request = commands.CreateRequest("/subscriptions/create?startEtag="+startEtag, HttpMethods.Post))
+             {
+                 await request.WriteAsync(RavenJObject.FromObject(criteria)).ConfigureAwait(false);
 
-                return request.ReadResponseJson().Value<long>("Id");
-            }
+                 return request.ReadResponseJson().Value<long>("Id");
+             }*/
         }
 
         public Subscription<RavenJObject> Open(SubscriptionConnectionOptions options, string database = null)
@@ -69,7 +70,8 @@ namespace Raven.NewClient.Client.Document
 
         public Subscription<T> Open<T>(SubscriptionConnectionOptions options, string database = null) where T : class
         {
-            if (options == null)
+            throw new NotImplementedException();
+            /*if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
             
             // todo: treat the sharded connection case..
@@ -83,12 +85,13 @@ namespace Raven.NewClient.Client.Document
 
             subscriptions.Add(subscription);
 
-            return subscription;
+            return subscription;*/
         }
 
         public async Task<List<SubscriptionConfig>> GetSubscriptionsAsync(int start, int take, string database = null)
         {
-            var commands = database == null
+            throw new NotImplementedException();
+            /*var commands = database == null
                 ? documentStore.AsyncDatabaseCommands
                 : documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
@@ -101,31 +104,33 @@ namespace Raven.NewClient.Client.Document
                 configs = documentStore.Conventions.CreateSerializer().Deserialize<SubscriptionConfig[]>(new RavenJTokenReader(response)).ToList();
             }
 
-            return configs;
+            return configs;*/
         }
 
         public async Task DeleteAsync(long id, string database = null)
         {
-            var commands = database == null
+            throw new NotImplementedException();
+            /*var commands = database == null
                 ? documentStore.AsyncDatabaseCommands
                 : documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
             using (var request = commands.CreateRequest("/subscriptions?id=" + id, HttpMethods.Delete))
             {
                 await request.ExecuteRequestAsync().ConfigureAwait(false);
-            }
+            }*/
         }
 
         public async Task ReleaseAsync(long id, string database = null)
         {
-            var commands = database == null
+            throw new NotImplementedException();
+            /*var commands = database == null
                 ? documentStore.AsyncDatabaseCommands
                 : documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
             using (var request = commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection=&force=true", id), HttpMethods.Post))
             {
                 await request.ExecuteRequestAsync().ConfigureAwait(false);
-            }
+            }*/
         }
 
         public static bool TryGetSubscriptionException(ErrorResponseException ere, out SubscriptionException subscriptionException)

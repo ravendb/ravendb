@@ -87,16 +87,17 @@ namespace Raven.NewClient.Client.Document
 
         private async Task<Stream> ConnectToServer(AsyncServerClient asyncServerClient)
         {
-            var connectionInfo = await asyncServerClient.GetTcpInfoAsync().ConfigureAwait(false);
-            _url = asyncServerClient.Url;
-            await _tcpClient.ConnectAsync(new Uri(_url).Host, connectionInfo.Port).ConfigureAwait(false);
+            throw new NotImplementedException();
+            /* var connectionInfo = await asyncServerClient.GetTcpInfoAsync().ConfigureAwait(false);
+             _url = asyncServerClient.Url;
+             await _tcpClient.ConnectAsync(new Uri(_url).Host, connectionInfo.Port).ConfigureAwait(false);
 
-            _tcpClient.NoDelay = true;
-            _tcpClient.SendBufferSize = 32 * 1024;
-            _tcpClient.ReceiveBufferSize = 4096;
-            var networkStream = _tcpClient.GetStream();
+             _tcpClient.NoDelay = true;
+             _tcpClient.SendBufferSize = 32 * 1024;
+             _tcpClient.ReceiveBufferSize = 4096;
+             var networkStream = _tcpClient.GetStream();
 
-            return networkStream;
+             return networkStream;*/
         }
 
         private void WriteToServer(Stream serverStream)
@@ -138,7 +139,7 @@ namespace Raven.NewClient.Client.Document
                         jsonParser, jsonParserState))
                     {
                         _jsonOperationContext.CachedProperties.NewDocument();
-                        builder.ReadObject();
+                        builder.ReadObjectDocument();
                         while (true)
                         {
                             var read = jsonBuffer.Read(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
@@ -212,7 +213,7 @@ namespace Raven.NewClient.Client.Document
                 var writer = new BlittableJsonDocumentBuilder(context,
                     BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState);
 
-                writer.ReadObject();
+                writer.ReadObjectDocument();
 
                 var result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken).ConfigureAwait(false);
 

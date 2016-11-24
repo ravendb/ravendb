@@ -72,7 +72,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public Task CanLoadWithTransformer()
         {
             using (var store = GetDocumentStore())

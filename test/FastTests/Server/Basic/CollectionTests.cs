@@ -24,7 +24,8 @@ namespace Raven.Tests.Core
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.DeleteCollectionAsync("Users");
+                var operation = await store.AsyncDatabaseCommands.DeleteCollectionAsync("Users");
+                await operation.WaitForCompletionAsync();
 
 
                 Assert.Equal(0, store.DatabaseCommands.GetStatistics().CountOfDocuments);

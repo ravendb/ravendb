@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Replication
 
         public bool ExecuteReplicationOnce()
         {            
-            var readTx = _parent._context.OpenReadTransaction();
+            var readTx = _parent._documentsContext.OpenReadTransaction();
             try
             {
                 // we scan through the documents to send to the other side, we need to be careful about
@@ -47,11 +47,11 @@ namespace Raven.Server.Documents.Replication
                     _parent.CancellationToken.ThrowIfCancellationRequested();
 
                     var docs =
-                        _parent._database.DocumentsStorage.GetDocumentsFrom(_parent._context,
+                        _parent._database.DocumentsStorage.GetDocumentsFrom(_parent._documentsContext,
                                 _lastEtag + 1, 0, 1024)
                             .ToList();
                     var tombstones =
-                        _parent._database.DocumentsStorage.GetTombstonesFrom(_parent._context,
+                        _parent._database.DocumentsStorage.GetTombstonesFrom(_parent._documentsContext,
                                 _lastEtag + 1, 0, 1024)
                             .ToList();
 
@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Replication
 
                     // if we are at the end, we are done
                     if (_lastEtag <=
-                        DocumentsStorage.ReadLastEtag(_parent._context.Transaction.InnerTransaction))
+                        DocumentsStorage.ReadLastEtag(_parent._documentsContext.Transaction.InnerTransaction))
                     {
                         break;
                     }
@@ -113,7 +113,8 @@ namespace Raven.Server.Documents.Replication
                     // ensure that the other server is aware that we skipped 
                     // on (potentially a lot of) documents to send, and we update
                     // the last etag they have from us on the other side
-                    _parent.SendHeartbeat();
+                    using (_parent._configurationContext.OpenReadTransaction())
+                        _parent.SendHeartbeat();
                     return hasModification;
                 }
 
@@ -178,9 +179,10 @@ namespace Raven.Server.Documents.Replication
             {
                 var headerJson = new DynamicJsonValue
                 {
-                    ["Type"] = ReplicationMessageType.Documents,
-                    ["LastDocumentEtag"] = _lastEtag,
-                    ["ItemCount"] = _orderedReplicaItems.Count
+                    [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
+                    [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
+                    [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _parent._lastSentIndexOrTransformerEtag,
+                    [nameof(ReplicationMessageHeader.ItemCount)] = _orderedReplicaItems.Count
                 };
                 _parent.WriteToServerAndFlush(headerJson);
                 foreach (var item in _orderedReplicaItems)
@@ -193,7 +195,7 @@ namespace Raven.Server.Documents.Replication
             {
                 // we can release the read transaction while we are waiting for 
                 // reply from the server and not hold it for a long time
-                _parent._context.Transaction.Dispose();
+                _parent._documentsContext.Transaction.Dispose();
             }
             _stream.Flush();
             sw.Stop();
@@ -205,7 +207,8 @@ namespace Raven.Server.Documents.Replication
                     $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
-            using (_parent._context.OpenReadTransaction())
+            using (_parent._documentsContext.OpenReadTransaction())
+            using (_parent._configurationContext.OpenReadTransaction())
             {
                 _parent.HandleServerResponse();
             }

@@ -15,6 +15,8 @@ namespace Raven.Client.Documents.Commands
 
         public HashSet<ServerNode> FailedNodes;
 
+        public bool IsAdminCommand;
+
         public TResult Result;
         public int AuthenticationRetries;
         public bool IsReadRequest = true;

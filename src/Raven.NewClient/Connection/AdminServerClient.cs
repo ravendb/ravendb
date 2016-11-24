@@ -18,9 +18,9 @@ using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Connection
 {
-    public class AdminServerClient : IAdminDatabaseCommands, IGlobalAdminDatabaseCommands
+    public class AdminServerClient  
     {
-        private readonly AsyncServerClient asyncServerClient;
+       /* private readonly AsyncServerClient asyncServerClient;
         private readonly AsyncAdminServerClient asyncAdminServerClient;
 
         public AdminServerClient(AsyncServerClient asyncServerClient, AsyncAdminServerClient asyncAdminServerClient)
@@ -38,8 +38,6 @@ namespace Raven.NewClient.Client.Connection
         {
             AsyncHelpers.RunSync(() => asyncAdminServerClient.DeleteDatabaseAsync(databaseName, hardDelete));
         }
-
-        public IDatabaseCommands Commands { get { return new ServerClient(asyncServerClient); } }
 
         public Operation CompactDatabase(string databaseName)
         {
@@ -119,6 +117,6 @@ namespace Raven.NewClient.Client.Connection
         public IEnumerable<NamedApiKeyDefinition> GetAllApiKeys()
         {
             return  AsyncHelpers.RunSync(() => asyncAdminServerClient.GetAllApiKeys());
-        }
+        }*/
     }
 }

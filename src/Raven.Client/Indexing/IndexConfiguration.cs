@@ -19,7 +19,7 @@ namespace Raven.Client.Indexing
         {
             get
             {
-                var value = GetValue(Constants.Configuration.MaxIndexOutputsPerDocument);
+                var value = GetValue(Constants.Configuration.Indexing.MaxIndexOutputsPerDocument);
                 if (value == null)
                     return null;
 
@@ -32,15 +32,15 @@ namespace Raven.Client.Indexing
 
             set
             {
-                Add(Constants.Configuration.MaxIndexOutputsPerDocument, value?.ToInvariantString());
+                Add(Constants.Configuration.Indexing.MaxIndexOutputsPerDocument, value?.ToInvariantString());
             }
         }
 
         public new void Add(string key, string value)
         {
-            if (string.Equals(key, Constants.Configuration.MaxMapReduceIndexOutputsPerDocument, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(key, Constants.Configuration.MaxMapReduceIndexOutputsPerDocument, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException($"Cannot set '{key}' key. Use '{Constants.Configuration.MaxIndexOutputsPerDocument}' instead.");
+            if (string.Equals(key, Constants.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(key, Constants.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Cannot set '{key}' key. Use '{Constants.Configuration.Indexing.MaxIndexOutputsPerDocument}' instead.");
 
             base[key] = value;
         }
@@ -70,7 +70,7 @@ namespace Raven.Client.Indexing
 
             foreach (var kvp in this)
             {
-                if (ignoreMaxIndexOutputs && kvp.Key.Equals(Constants.Configuration.MaxIndexOutputsPerDocument, StringComparison.OrdinalIgnoreCase))
+                if (ignoreMaxIndexOutputs && kvp.Key.Equals(Constants.Configuration.Indexing.MaxIndexOutputsPerDocument, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 string value;

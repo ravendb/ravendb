@@ -108,5 +108,10 @@ namespace Sparrow.Json
 
             return 0;
         }
+
+        public override string ToString()
+        {
+            return this.Inner.ToString();
+        }
     }
 }

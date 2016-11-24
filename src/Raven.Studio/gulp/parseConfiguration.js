@@ -13,7 +13,7 @@ var HANDLER_PATTERN = "Configuration.cs";
 
 function getConfigurationConstantsFields() {
     var constantsContent =  fs.readFileSync(PATHS.configurationConstants, 'utf8');
-    var confClassStart = constantsContent.indexOf('public class Configuration');
+    var confClassStart = constantsContent.indexOf('public class Indexing');
     if (confClassStart === -1) {
         throw new Error('Could not find Configuration subclass in Constants.');
     }

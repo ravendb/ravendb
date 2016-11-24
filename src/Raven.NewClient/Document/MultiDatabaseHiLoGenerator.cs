@@ -21,10 +21,10 @@ namespace Raven.NewClient.Client.Document
             this.capacity = capacity;
         }
 
-        public string GenerateDocumentKey(string dbName, IDatabaseCommands databaseCommands, DocumentConvention conventions, object entity)
+        public string GenerateDocumentKey(string dbName, DocumentConvention conventions, object entity)
         {
             var multiTypeHiLoKeyGenerator = generators.GetOrAdd(dbName ?? Constants.SystemDatabase, s => new MultiTypeHiLoKeyGenerator(capacity));
-            return multiTypeHiLoKeyGenerator.GenerateDocumentKey(databaseCommands, conventions, entity);
+            return multiTypeHiLoKeyGenerator.GenerateDocumentKey(conventions, entity);
         }
     }
 }

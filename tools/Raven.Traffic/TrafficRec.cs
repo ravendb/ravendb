@@ -71,7 +71,7 @@ namespace Raven.Traffic
                 {
                     builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None,
                         nameof(TrafficRec) + "." + nameof(Receive), parser, state);
-                    builder.ReadObject();
+                    builder.ReadObjectDocument();
                     while (builder.Read() == false)
                     {
                         var result = await webSocket.ReceiveAsync(buffer.Buffer, CancellationToken.None);

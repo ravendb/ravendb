@@ -3,7 +3,7 @@ import filesystem = require("models/filesystem/filesystem");
 import messagePublisher = require("common/messagePublisher");
 import importFilesystemCommand = require("commands/filesystem/importFilesystemCommand");
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
-import fsCheckSufficientDiskSpaceCommand = require("commands/filesystem/fsCheckSufficientDiskSpaceCommand");
+//import fsCheckSufficientDiskSpaceCommand = require("commands/filesystem/fsCheckSufficientDiskSpaceCommand");
 import eventsCollector = require("common/eventsCollector");
 
 class importDatabase extends viewModelBase {

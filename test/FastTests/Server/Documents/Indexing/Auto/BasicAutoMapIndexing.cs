@@ -313,7 +313,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
-                        index.DoIndexingWork(scope, CancellationToken.None);
+                        while (index.DoIndexingWork(scope, CancellationToken.None))
+                        {
+                            
+                        }
                         Assert.Equal(2, index.GetLastMappedEtagsForDebug().Values.Min());
                         Assert.Equal(2, batchStats.MapAttempts);
                         Assert.Equal(2, batchStats.MapSuccesses);

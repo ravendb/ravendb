@@ -12,7 +12,6 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Document.Batches;
-using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
@@ -24,12 +23,6 @@ namespace Raven.NewClient.Client.Document
     /// </summary>
     public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ISyncAdvancedSessionOperation, IDocumentSessionImpl
     {
-        /// <summary>
-        /// Gets the database commands.
-        /// </summary>
-        /// <value>The database commands.</value>
-        public IDatabaseCommands DatabaseCommands { get; private set; }
-
         /// <summary>
         /// Get the accessor for advanced operations
         /// </summary>
@@ -52,10 +45,10 @@ namespace Raven.NewClient.Client.Document
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
         /// </summary>
-        public DocumentSession(string dbName, DocumentStore documentStore, Guid id, IDatabaseCommands databaseCommands, RequestExecuter requestExecuter)
+        public DocumentSession(string dbName, DocumentStore documentStore, Guid id, RequestExecuter requestExecuter)
             : base(dbName, documentStore, requestExecuter, id)
         {
-            DatabaseCommands = databaseCommands;
+            
         }
         
         #region DeleteByIndex
@@ -135,7 +128,7 @@ namespace Raven.NewClient.Client.Document
         /// <returns></returns>
         protected override string GenerateKey(object entity)
         {
-            return Conventions.GenerateDocumentKey(DatabaseName, DatabaseCommands, entity);
+            return Conventions.GenerateDocumentKey(DatabaseName, entity);
         }
 
         /// <summary>

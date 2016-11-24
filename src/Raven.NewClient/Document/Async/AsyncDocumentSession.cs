@@ -30,19 +30,12 @@ namespace Raven.NewClient.Client.Document.Async
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
         /// </summary>
-        public AsyncDocumentSession(string dbName, DocumentStore documentStore, IAsyncDatabaseCommands asyncDatabaseCommands, RequestExecuter requestExecuter, Guid id)
+        public AsyncDocumentSession(string dbName, DocumentStore documentStore, RequestExecuter requestExecuter, Guid id)
             : base(dbName, documentStore, requestExecuter, id)
         {
-            AsyncDatabaseCommands = asyncDatabaseCommands;
             GenerateDocumentKeysOnStore = false;
             asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, DocumentsByEntity.TryGetValue, (key, entity, metadata) => key);
         }
-
-        /// <summary>
-        /// Gets the async database commands.
-        /// </summary>
-        /// <value>The async database commands.</value>
-        public IAsyncDatabaseCommands AsyncDatabaseCommands { get; private set; }
 
         public Task<FacetedQueryResult[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
         {
@@ -106,7 +99,7 @@ namespace Raven.NewClient.Client.Document.Async
 
         protected override Task<string> GenerateKeyAsync(object entity)
         {
-            return Conventions.GenerateDocumentKeyAsync(DatabaseName, AsyncDatabaseCommands, entity);
+            return Conventions.GenerateDocumentKeyAsync(DatabaseName, entity);
         }
 
         public IAsyncEagerSessionOperations Eagerly { get; }

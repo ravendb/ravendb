@@ -96,7 +96,7 @@
 
 <script type="text/html" id="leafMenuItem">
     <li data-bind="with: item, css: { 'active': menu.activeItem() === item }">
-        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav === true, attr: { href: path, title: title }">
+        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav === true, attr: { href: path }">
             <i data-bind="css: css"></i>
             <span data-bind="text: title"></span>
         </a>
@@ -105,7 +105,7 @@
 
 <script type="text/html" id="intermediateMenuItem">
     <li class="arrow-right">
-        <a data-bind="attr: { title: item.title }, click: menu.handleIntermediateItemClick.bind(menu), css: { 'active': item.isOpen }">
+        <a data-bind="click: menu.handleIntermediateItemClick.bind(menu), css: { 'active': item.isOpen }">
             <i data-bind="css: item.css"></i>
             <span data-bind="text: item.title"></span>
         </a>

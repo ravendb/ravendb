@@ -14,7 +14,6 @@ namespace Raven.NewClient.Client.Document
         private readonly IDocumentStore documentStore;
         private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
         protected TcpBulkInsertOperation Operation { get; set; }
-        public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
         private readonly EntityToJson entityToJson;
 
         public delegate void BeforeEntityInsert(string id, RavenJObject data, RavenJObject metadata);
@@ -34,7 +33,8 @@ namespace Raven.NewClient.Client.Document
 
         public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners)
         {
-            this.documentStore = documentStore;
+            throw new NotImplementedException();
+            /*this.documentStore = documentStore;
 
             database = database ?? MultiDatabase.GetDatabaseName(documentStore.Url);
 
@@ -44,16 +44,17 @@ namespace Raven.NewClient.Client.Document
                 : documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
             generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, entity =>
-                AsyncHelpers.RunSync(() => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity)));
+                AsyncHelpers.RunSync(() => documentStore.Conventions.GenerateDocumentKeyAsync(database, entity)));
 
             // ReSharper disable once VirtualMemberCallInContructor
             Operation = GetBulkInsertOperation(DatabaseCommands);
-            entityToJson = new EntityToJson(documentStore, listeners);
+            entityToJson = new EntityToJson(documentStore, listeners);*/
         }
 
-        protected virtual TcpBulkInsertOperation GetBulkInsertOperation(IAsyncDatabaseCommands commands)
-        {			
-            return commands.GetBulkInsertOperation();
+        protected virtual TcpBulkInsertOperation GetBulkInsertOperation()
+        {
+            throw new NotImplementedException();
+            //return commands.GetBulkInsertOperation();
         }
 
         public async Task DisposeAsync()

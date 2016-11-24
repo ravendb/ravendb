@@ -4,7 +4,7 @@ import document = require("models/database/documents/document");
 
 class saveDatabaseSettingsCommand extends commandBase {
 
-    constructor(private db: database, private document: document) {
+    constructor(private db: database, private document: document) { 
         super();
 
         if (!db) {
@@ -17,7 +17,7 @@ class saveDatabaseSettingsCommand extends commandBase {
 
         var jQueryOptions: JQueryAjaxSettings = {
             headers: {
-                'If-None-Match': this.document.__metadata.etag,
+                'ETag': this.document.__metadata.etag,
                 'Raven-Temp-Allow-Bundles-Change': (<any>this.document.__metadata)['Raven-Temp-Allow-Bundles-Change']
             }
         };

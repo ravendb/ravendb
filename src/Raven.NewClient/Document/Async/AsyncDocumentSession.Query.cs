@@ -28,14 +28,13 @@ namespace Raven.NewClient.Client.Document.Async
             var ravenQueryStatistics = new RavenQueryStatistics();
             var highlightings = new RavenQueryHighlightings();
             var ravenQueryInspector = new RavenQueryInspector<T>();
-            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings,
-                null, AsyncDatabaseCommands, isMapReduce);
+            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, isMapReduce);
             ravenQueryInspector.Init(ravenQueryProvider,
                 ravenQueryStatistics,
                 highlightings,
                 indexName,
                 null,
-                this, null, AsyncDatabaseCommands, isMapReduce);
+                this, isMapReduce);
             return ravenQueryInspector;
         }
 
@@ -65,7 +64,7 @@ namespace Raven.NewClient.Client.Document.Async
         /// </summary>
         public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce)
         {
-            return new AsyncDocumentQuery<T>(this, null, AsyncDatabaseCommands, index, new string[0], new string[0], isMapReduce);
+            return new AsyncDocumentQuery<T>(this, index, new string[0], new string[0], isMapReduce);
         }
 
         /// <summary>
@@ -75,7 +74,7 @@ namespace Raven.NewClient.Client.Document.Async
         {
             var indexName = CreateDynamicIndexName<T>();
 
-            return new AsyncDocumentQuery<T>(this, null, AsyncDatabaseCommands, indexName, new string[0], new string[0], false);
+            return new AsyncDocumentQuery<T>(this, indexName, new string[0], new string[0], false);
         }
 
         /// <summary>
