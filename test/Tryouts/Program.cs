@@ -12,15 +12,16 @@ namespace Tryouts
         {
             //LoggingSource.Instance.SetupLogMode(LogMode.Information, "E:\\Work");
 
-            Parallel.For(0, 100, i =>
+            //Parallel.For(0, 100, i =>
+            for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
                 using (var store = new SlowTests.Voron.Bugs.DataInconsistencyRepro())
                 {
-                    store.FaultyOverflowPagesHandling_CannotModifyReadOnlyPages(initialNumberOfDocs: 1000,
-                        numberOfModifications: 50000, seed: 1721006799);
+                    store.FaultyOverflowPagesHandling_CannotModifyReadOnlyPages(initialNumberOfDocs: 1000, numberOfModifications: 5000, seed: 662314505);
                 }
-            });
+            }
+            //);
         }
     }
 

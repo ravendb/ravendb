@@ -128,17 +128,16 @@ namespace Voron.Impl.Journal
 
 
             _unusedPagesHashSetPool.Clear();
-            var unused = _unusedPagesHashSetPool;
-            UpdatePageTranslationTable(tx, unused, ptt);
+            UpdatePageTranslationTable(tx, _unusedPagesHashSetPool, ptt);
 
             lock (_locker)
             {
                 _writePage += pages.NumberOfPages;
 
-                Debug.Assert(!_unusedPages.Any(unused.Contains));
-                _unusedPages.AddRange(unused);
+                Debug.Assert(!_unusedPages.Any(_unusedPagesHashSetPool.Contains));
+                _unusedPages.AddRange(_unusedPagesHashSetPool);
             }
-
+            _unusedPagesHashSetPool.Clear();
 
             var position = pageWritePos * tx.Environment.Options.PageSize;
 
