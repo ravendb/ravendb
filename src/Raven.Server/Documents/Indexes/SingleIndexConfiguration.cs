@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly RavenConfiguration _databaseConfiguration;
 
         public SingleIndexConfiguration(IndexConfiguration clientConfiguration, RavenConfiguration databaseConfiguration)
-            : base(null, null)
+            : base(() => databaseConfiguration.DatabaseName, null, null)
         {
             _databaseConfiguration = databaseConfiguration;
 
@@ -62,16 +62,21 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (string.IsNullOrEmpty(_indexStoragePath))
                     _indexStoragePath = _databaseConfiguration.Indexing.IndexStoragePath;
-
                 return _indexStoragePath;
             }
 
             protected set
             {
                 if (string.IsNullOrWhiteSpace(value))
+                {
+                    _indexStoragePath = null;
                     return;
-                _indexStoragePath = value.ToFullPath();
+                }
+
+                _indexStoragePath = AddDatabaseNameToPathIfNeeded(value.ToFullPath());
             }
         }
+
+        public override string[] AdditionalIndexStoragePaths => _databaseConfiguration.Indexing.AdditionalIndexStoragePaths;
     }
 }
