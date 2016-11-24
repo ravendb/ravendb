@@ -25,14 +25,19 @@ function BuildTypingsGenerator ( $srcDir ) {
         --configuration "Debug" $srcDir;
 }
 
-function BuildStudio ( $srcDir, $projectDir ) {
+function BuildStudio ( $srcDir, $projectDir, $version ) {
     # build studio
     write-host "Building Studio..."
     & npm install -g gulp-cli
     cd $srcDir
+
     & npm install
     CheckLastExitCode
-    & gulp release-package
+
+    echo "{ ""Version"": ""$version"" }" > "$srcDir\wwwroot\version.json"
+    echo "Update version.json..."
+
+    & gulp alpha-release
     CheckLastExitCode
 
     cd $projectDir
