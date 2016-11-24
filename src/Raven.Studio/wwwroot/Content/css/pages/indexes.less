@@ -7,9 +7,11 @@
 
     .vertical-divider {
         position: relative;
+
         @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
             margin-left: 20px;
         }
+
         @media (min-width:@screen-xl) {
             &:before {
                 content: '';
@@ -32,6 +34,7 @@
         .row {
             display: flex;
             flex-wrap: wrap;
+
             @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
                 .info-container {
                     order: 1;
@@ -114,30 +117,27 @@
         .properties-item {
             .properties-label,
             .properties-value {
-                &>button {
+                & > button {
                     color: @brand-info;
                 }
             }
+
+            @media (min-width: @screen-sm) {
+                &.entriesCount, &.staleness {
+                    width: 33%;
+                }
+            }
+
+            @media (min-width: @screen-xl) {
+                &.entriesCount, &.staleness {
+                    width: 24%;
+                }
+            }
+
             @media (min-width: @screen-xl) {
                 width: 49%;
                 max-width: none;
-                min-width: none;
-
-                &.staleness {
-                    order: 2;
-                }
-
-                &.entriesCount {
-                    order: 4;
-                }
-
-                &.priority {
-                    order: 1;
-                }
-
-                &.mode {
-                    order: 3;
-                }
+                min-width: 0;
             }
         }
     }
