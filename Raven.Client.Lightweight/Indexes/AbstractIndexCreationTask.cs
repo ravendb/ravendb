@@ -571,7 +571,7 @@ namespace Raven.Client.Indexes
                 MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
             }.ToIndexDefinition(Conventions);
 
-            var fields = Map.Body.Type.GenericTypeArguments.First().GetProperties();
+            var fields = GetMapResultType().GetProperties();
             foreach (var field in fields)
             {
                 if (indexDefinition.SortOptions.ContainsKey(field.Name))
@@ -604,6 +604,17 @@ namespace Raven.Client.Indexes
             }
 
             return indexDefinition;
+        }
+
+        protected virtual Type GetMapResultType()
+        {
+            var mapBody = Map.Body;
+            if (mapBody.NodeType == ExpressionType.Convert || mapBody.NodeType == ExpressionType.ConvertChecked)
+                mapBody = ((UnaryExpression) mapBody).Operand;
+            var resultType = mapBody.Type.GenericTypeArguments.FirstOrDefault();
+            if(resultType == null)
+                throw new InvalidOperationException("Could not find the result type of this index in expression " + Map.Body);
+            return resultType;
         }
 
         /// <summary>
