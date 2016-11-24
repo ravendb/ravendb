@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
@@ -12,13 +13,16 @@ namespace Raven.Server.Config.Categories
     {
         private bool? _runInMemory;
 
+        private readonly Func<string> _databaseName;
         private readonly Func<bool> _databaseRunInMemory;
         private readonly Func<string> _dataDirectory;
 
         private string _indexStoragePath;
+        private string[] _additionalIndexStoragePaths;
 
-        public IndexingConfiguration(Func<bool> runInMemory, Func<string> dataDirectory) // TODO arek - maybe use Lazy instead
+        public IndexingConfiguration(Func<string> databaseName, Func<bool> runInMemory, Func<string> dataDirectory) // TODO arek - maybe use Lazy instead
         {
+            _databaseName = databaseName;
             _databaseRunInMemory = runInMemory;
             _dataDirectory = dataDirectory;
         }
@@ -57,15 +61,38 @@ namespace Raven.Server.Config.Categories
             protected set
             {
                 if (string.IsNullOrWhiteSpace(value))
+                {
+                    _indexStoragePath = null;
                     return;
-                _indexStoragePath = value.ToFullPath();
+                }
+
+                _indexStoragePath = AddDatabaseNameToPathIfNeeded(value.ToFullPath());
             }
         }
 
         [Description("List of paths separated by semicolon ';' where database will look for index when it loads.")]
         [DefaultValue(null)]
         [ConfigurationEntry(Constants.Configuration.Indexing.AdditionalIndexStoragePaths)]
-        public string[] AdditionalIndexStoragePaths { get; protected set; }
+        public virtual string[] AdditionalIndexStoragePaths
+        {
+            get
+            {
+                return _additionalIndexStoragePaths;
+            }
+
+            protected set
+            {
+                if (value == null)
+                {
+                    _additionalIndexStoragePaths = null;
+                    return;
+                }
+
+                _additionalIndexStoragePaths = value
+                    .Select(x => AddDatabaseNameToPathIfNeeded(x.ToFullPath()))
+                    .ToArray();
+            }
+        }
 
         [Description("How long indexing will keep document transaction open when indexing. After this the transaction will be reopened.")]
         [DefaultValue(15)]
@@ -111,5 +138,14 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/Indexing/MapTimeoutAfterEtagReachedInMin")]
         public TimeSetting MapTimeoutAfterEtagReached { get; protected set; }
+
+        protected string AddDatabaseNameToPathIfNeeded(string path)
+        {
+            var databaseName = _databaseName();
+            if (string.IsNullOrWhiteSpace(databaseName))
+                return path;
+
+            return Path.Combine(path, databaseName);
+        }
     }
 }

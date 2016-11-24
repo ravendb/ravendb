@@ -73,7 +73,7 @@ namespace Raven.Server.Config
             SqlReplication = new SqlReplicationConfiguration();
             Storage = new StorageConfiguration();
             Encryption = new EncryptionConfiguration();
-            Indexing = new IndexingConfiguration(() => Core.RunInMemory, () => Core.DataDirectory);
+            Indexing = new IndexingConfiguration(() => DatabaseName, () => Core.RunInMemory, () => Core.DataDirectory);
             WebSockets = new WebSocketsConfiguration();
             Monitoring = new MonitoringConfiguration();
             Queries = new QueryConfiguration();

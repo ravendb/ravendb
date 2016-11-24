@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Abstractions.Connection;
@@ -49,9 +50,13 @@ namespace SlowTests.Issues
         {
             var index = new Users_ByCity();
 
+            var name = Guid.NewGuid().ToString("N");
             var path = NewDataPath();
             var otherPath = NewDataPath();
-            using (var store = GetDocumentStore(path: path, modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalIndexStoragePaths)] = otherPath))
+            using (var store = GetDocumentStore(
+                path: path,
+                modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalIndexStoragePaths)] = otherPath,
+                modifyName: n => name))
             {
                 var indexDefinition = index.CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.IndexStoragePath)] = otherPath;
@@ -59,7 +64,10 @@ namespace SlowTests.Issues
                 store.DatabaseCommands.PutIndex(index.IndexName, indexDefinition);
             }
 
-            using (var store = GetDocumentStore(path: path, modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalIndexStoragePaths)] = otherPath))
+            using (var store = GetDocumentStore(
+                path: path,
+                modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalIndexStoragePaths)] = otherPath,
+                modifyName: n => name))
             {
                 var indexDefinition = store.DatabaseCommands.GetIndex(index.IndexName);
 
@@ -72,10 +80,15 @@ namespace SlowTests.Issues
         {
             var index = new Users_ByCity();
 
-            var path = NewDataPath();
             string destPath;
+
+            var name = Guid.NewGuid().ToString("N");
+            var path = NewDataPath();
             var otherPath = NewDataPath();
-            using (var store = GetDocumentStore(path: path, modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalIndexStoragePaths)] = otherPath))
+            using (var store = GetDocumentStore(
+                path: path,
+                modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalIndexStoragePaths)] = otherPath,
+                modifyName: n => name))
             {
                 var indexDefinition1 = index.CreateIndexDefinition();
                 indexDefinition1.Configuration[RavenConfiguration.GetKey(x => x.Indexing.IndexStoragePath)] = otherPath;
@@ -91,17 +104,20 @@ namespace SlowTests.Issues
                 destPath = database.Configuration.Indexing.IndexStoragePath;
             }
 
-            var srcDirectories = Directory.GetDirectories(otherPath);
+            var srcDirectories = Directory.GetDirectories(Path.Combine(otherPath, name));
             var srcDirectory1 = new DirectoryInfo(srcDirectories[0]);
             var srcDirectory2 = new DirectoryInfo(srcDirectories[1]);
 
             IOExtensions.MoveDirectory(srcDirectory2.FullName, Path.Combine(destPath, srcDirectory1.Name));
 
-            using (var store = GetDocumentStore(path: path, modifyDatabaseDocument: document =>
-            {
-                document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalIndexStoragePaths)] = otherPath;
-                document.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "false";
-            }))
+            using (var store = GetDocumentStore(
+                path: path,
+                modifyDatabaseDocument: document =>
+                {
+                    document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalIndexStoragePaths)] = otherPath;
+                    document.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "false";
+                },
+                modifyName: n => name))
             {
                 var indexNames = store.DatabaseCommands.GetIndexNames(0, 128);
                 Assert.Equal(1, indexNames.Length);
@@ -112,12 +128,25 @@ namespace SlowTests.Issues
         public void CanDefineMoreThanOneAdditionalStoragePath()
         {
             var configuration = new RavenConfiguration();
-            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalIndexStoragePaths), "Path1;Path2");
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.IndexStoragePath), "C:\\temp\\0");
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalIndexStoragePaths), "C:\\temp\\1;C:\\temp\\2");
             configuration.Initialize();
 
+            Assert.Equal("C:\\temp\\0", configuration.Indexing.IndexStoragePath);
             Assert.Equal(2, configuration.Indexing.AdditionalIndexStoragePaths.Length);
-            Assert.Equal("Path1", configuration.Indexing.AdditionalIndexStoragePaths[0]);
-            Assert.Equal("Path2", configuration.Indexing.AdditionalIndexStoragePaths[1]);
+            Assert.Equal("C:\\temp\\1", configuration.Indexing.AdditionalIndexStoragePaths[0]);
+            Assert.Equal("C:\\temp\\2", configuration.Indexing.AdditionalIndexStoragePaths[1]);
+
+            configuration = new RavenConfiguration();
+            configuration.DatabaseName = "DB";
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.IndexStoragePath), "C:\\temp\\0");
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalIndexStoragePaths), "C:\\temp\\1;C:\\temp\\2");
+            configuration.Initialize();
+
+            Assert.Equal("C:\\temp\\0\\DB", configuration.Indexing.IndexStoragePath);
+            Assert.Equal(2, configuration.Indexing.AdditionalIndexStoragePaths.Length);
+            Assert.Equal("C:\\temp\\1\\DB", configuration.Indexing.AdditionalIndexStoragePaths[0]);
+            Assert.Equal("C:\\temp\\2\\DB", configuration.Indexing.AdditionalIndexStoragePaths[1]);
         }
 
         [Fact]

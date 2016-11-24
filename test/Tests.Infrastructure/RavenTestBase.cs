@@ -176,14 +176,21 @@ namespace FastTests
 
         private static int _counter;
 
-        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string caller = null,
-            string dbSuffixIdentifier = null, string path = null,
-            Action<DatabaseDocument> modifyDatabaseDocument = null, string apiKey = null)
+        protected virtual DocumentStore GetDocumentStore(
+            [CallerMemberName] string caller = null,
+            string dbSuffixIdentifier = null,
+            string path = null,
+            Action<DatabaseDocument> modifyDatabaseDocument = null,
+            Func<string, string> modifyName = null,
+            string apiKey = null)
         {
             var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
 
             if (dbSuffixIdentifier != null)
                 name = $"{name}_{dbSuffixIdentifier}";
+
+            if (modifyName != null)
+                name = modifyName(name);
 
             var hardDelete = true;
             var runInMemory = true;
@@ -389,7 +396,7 @@ namespace FastTests
         /// <param name="etag"></param>
         /// <param name="documentInfo"></param>
         /// <returns></returns>
-        public static BlittableJsonReaderObject GetCommand(Raven.Client.Documents.DocumentSession session, string[] ids, 
+        public static BlittableJsonReaderObject GetCommand(Raven.Client.Documents.DocumentSession session, string[] ids,
             out Raven.Client.Documents.InMemoryDocumentSessionOperations.DocumentInfo documentInfo)
         {
             var command = new GetDocumentCommand
