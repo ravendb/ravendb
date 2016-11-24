@@ -28,11 +28,8 @@ namespace Raven.NewClient.Client.Document
         /// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
         /// </summary>
         public DocumentQuery(InMemoryDocumentSessionOperations session
-            , IDatabaseCommands databaseCommands
-            , IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, bool isMapReduce)
-            : base(session
-            , databaseCommands
-            , asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, isMapReduce)
+           ,  string indexName, string[] fieldsToFetch, string[] projectionFields, bool isMapReduce)
+            : base(session, indexName, fieldsToFetch, projectionFields, isMapReduce)
         {
         }
 
@@ -80,8 +77,6 @@ namespace Raven.NewClient.Client.Document
             where TTransformer : AbstractTransformerCreationTask, new()
         {
             var documentQuery = new DocumentQuery<TTransformerResult>(theSession,
-                                                                     theDatabaseCommands,
-                                                                     theAsyncDatabaseCommands,
                                                                      indexName,
                                                                      fieldsToFetch,
                                                                      projectionFields,
@@ -173,8 +168,6 @@ namespace Raven.NewClient.Client.Document
         public virtual IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
         {
             var documentQuery = new DocumentQuery<TProjection>(theSession,
-                                                               theDatabaseCommands,
-                                                               theAsyncDatabaseCommands,
                                                                indexName,
                                                                fields,
                                                                projections,

@@ -3,11 +3,10 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
 import importDatabaseCommand = require("commands/database/studio/importDatabaseCommand");
-import copyToClipboard = require("common/copyToClipboard");
-import checksufficientdiskspaceCommand = require("commands/database/studio/checksufficientdiskspaceCommand");
 import importDatabaseModel = require("models/database/tasks/importDatabaseModel");
 import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
+import copyToClipboard = require("common/copyToClipboard");
 
 class importDatabase extends viewModelBase {
 
@@ -83,32 +82,18 @@ class importDatabase extends viewModelBase {
     }
 
     fileSelected(fileName: string) {
-        var isFileSelected = fileName ? !!fileName.trim() : false;
-        var importFileName = $(importDatabase.filePickerTag).val().split(/(\\|\/)/g).pop();
-        if (isFileSelected) {
-            const fileInput = document.querySelector(importDatabase.filePickerTag) as HTMLInputElement;
-            new checksufficientdiskspaceCommand(fileInput.files[0].size, this.activeDatabase())
-                .execute()
-                .done(() => {
-                    this.hasFileSelected(isFileSelected);
-                    this.importedFileName(importFileName);
-                })
-                .fail(() => {
-                    messagePublisher.reportWarning("No sufficient diskspace for import, consider using Raven.Smuggler.exe directly.");
-                    this.hasFileSelected(false);
-                    this.importedFileName("");
-                });
-        }
+        const isFileSelected = fileName ? !!fileName.trim() : false;
+        this.hasFileSelected(isFileSelected);
+        this.importedFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
     }
 
     importDb() {
         eventsCollector.default.reportEvent("database", "import");
         this.isUploading(true);
-        const formData = new FormData();
+        
         const fileInput = document.querySelector(importDatabase.filePickerTag) as HTMLInputElement;
-        formData.append("file", fileInput.files[0]);
 
-        new importDatabaseCommand(formData, this.model, this.activeDatabase())
+        new importDatabaseCommand(fileInput.files[0], this.model, this.activeDatabase())
             .execute()
             .done((result: operationIdDto) => {
                 const operationId = result.OperationId;

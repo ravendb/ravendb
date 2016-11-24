@@ -234,7 +234,13 @@ namespace Raven.Client.Http
         private static HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)
         {
             var request = command.CreateRequest(node, out url);
-            url = $"{node.Url}/databases/{node.Database}/{url}";
+
+            //prevent the trailing backslash --> so database name, in case the url is empty will not be with a slash
+            var urlSuffix = string.IsNullOrWhiteSpace(url) ? string.Empty : $"/{url}";
+            url = command.IsAdminCommand
+                ? $"{node.Url}/admin/databases/{node.Database}{urlSuffix}":
+                  $"{node.Url}/databases/{node.Database}{urlSuffix}";
+
             request.RequestUri = new Uri(url);
 
             if (node.CurrentToken != null)

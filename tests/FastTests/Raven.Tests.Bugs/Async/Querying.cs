@@ -5,7 +5,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Async
 {
     public class Querying : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "ClearSortHints not implemented")]
         public async Task Can_query_using_async_session()
         {
             using (var store = GetDocumentStore())

@@ -17,6 +17,7 @@ using Raven.NewClient.Client;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Extensions;
+using Raven.NewClient.Client.Http;
 using Raven.NewClient.Data.Indexes;
 using Raven.Server;
 using Raven.Server.Config;
@@ -217,14 +218,27 @@ namespace NewClientTests
             ModifyStore(store);
             store.Initialize();
 
-            store.DatabaseCommands.GlobalAdmin.CreateDatabase(doc);
+            //TODO -EFRAT - WIP
+            var createDatabaseOperation = new CreateDatabaseOperation(context);
+            var command = createDatabaseOperation.CreateRequest(store, doc);
+            if (command != null)
+            {
+                store.GetRequestExecuter(name).Execute(command, context);
+            }
+            //store.DatabaseCommands.GlobalAdmin.CreateDatabase(doc);
             store.AfterDispose += (sender, args) =>
             {
                 var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
                 if (databaseTask != null && databaseTask.IsCompleted == false)
                     databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
 
-                store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: hardDelete);
+                var deleteDatabaseOperation = new DeleteDatabaseOperation();
+                var delCommand = deleteDatabaseOperation.CreateRequest(hardDelete);
+                if (delCommand != null)
+                {
+                   store.GetRequestExecuter(name).Execute(delCommand, context);
+                }
+                //store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: hardDelete);
                 CreatedStores.TryRemove(store);
             };
             CreatedStores.Add(store);
@@ -246,8 +260,8 @@ namespace NewClientTests
 
         public static void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)
         {
-            var databaseCommands = store.DatabaseCommands;
-            if (database != null)
+            throw new NotImplementedException();
+            /*if (database != null)
             {
                 databaseCommands = databaseCommands.ForDatabase(database);
             }
@@ -305,12 +319,13 @@ namespace NewClientTests
                     $"The following indexes are with error state: {string.Join(",", corrupted.Select(x => x.Name))} - details at " + file);
             }
 
-            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
+            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);*/
         }
 
         public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)
         {
-            if (debug && Debugger.IsAttached == false)
+            throw new NotImplementedException();
+            /*if (debug && Debugger.IsAttached == false)
                 return;
 
             string url = documentStore.Url;
@@ -324,7 +339,7 @@ namespace NewClientTests
             do
             {
                 Thread.Sleep(100);
-            } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+            } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));*/
         }
 
         public static void OpenBrowser(string url)

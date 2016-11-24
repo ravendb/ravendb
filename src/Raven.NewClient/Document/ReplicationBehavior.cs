@@ -42,87 +42,88 @@ namespace Raven.NewClient.Client.Document
         /// <returns>Task which will have the number of nodes that the caught up to the specified etag</returns>
         public async Task<int> WaitAsync(long? etag = null, TimeSpan? timeout = null, string database = null, int replicas = 2)
         {
-            etag = etag ?? documentStore.LastEtagHolder.GetLastWrittenEtag();
-            if (etag == 0 || etag == null)
-                return replicas; // if the etag is empty, nothing to do
+            throw new NotImplementedException();
+            /* etag = etag ?? documentStore.LastEtagHolder.GetLastWrittenEtag();
+             if (etag == 0 || etag == null)
+                 return replicas; // if the etag is empty, nothing to do
 
-            var asyncDatabaseCommands = (AsyncServerClient)documentStore.AsyncDatabaseCommands;
-            database = database ?? documentStore.DefaultDatabase;
-            asyncDatabaseCommands = (AsyncServerClient)asyncDatabaseCommands.ForDatabase(database);
+             var asyncDatabaseCommands = (AsyncServerClient)documentStore.AsyncDatabaseCommands;
+             database = database ?? documentStore.DefaultDatabase;
+             asyncDatabaseCommands = (AsyncServerClient)asyncDatabaseCommands.ForDatabase(database);
 
-            asyncDatabaseCommands.ForceReadFromMaster();
+             asyncDatabaseCommands.ForceReadFromMaster();
 
-            var replicationDocument = await asyncDatabaseCommands.ExecuteWithReplication(HttpMethods.Get, 
-                        operationMetadata => asyncDatabaseCommands.DirectGetReplicationDestinationsAsync(operationMetadata)).ConfigureAwait(false);
-            if (replicationDocument == null)
-                return -1;
+             var replicationDocument = await asyncDatabaseCommands.ExecuteWithReplication(HttpMethods.Get, 
+                         operationMetadata => asyncDatabaseCommands.DirectGetReplicationDestinationsAsync(operationMetadata)).ConfigureAwait(false);
+             if (replicationDocument == null)
+                 return -1;
 
-            var destinationsToCheck = replicationDocument.Destinations
-                                                         .Where(x => x.CanBeFailover())
-                                                         .Select(x => string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url.ForDatabase(x.Database) : x.ClientVisibleUrl.ForDatabase(x.Database))
-                                                         .ToList();
+             var destinationsToCheck = replicationDocument.Destinations
+                                                          .Where(x => x.CanBeFailover())
+                                                          .Select(x => string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url.ForDatabase(x.Database) : x.ClientVisibleUrl.ForDatabase(x.Database))
+                                                          .ToList();
 
-            if (destinationsToCheck.Count == 0)
-                return 0;
+             if (destinationsToCheck.Count == 0)
+                 return 0;
 
-            int toCheck = Math.Min(replicas, destinationsToCheck.Count);
+             int toCheck = Math.Min(replicas, destinationsToCheck.Count);
 
-            var cts = new CancellationTokenSource();
-            cts.CancelAfter(timeout ?? TimeSpan.FromSeconds(60));
+             var cts = new CancellationTokenSource();
+             cts.CancelAfter(timeout ?? TimeSpan.FromSeconds(60));
 
-            var sp = Stopwatch.StartNew();
+             var sp = Stopwatch.StartNew();
 
-            var sourceCommands = documentStore.AsyncDatabaseCommands.ForDatabase(database ?? documentStore.DefaultDatabase);
-            var sourceUrl = documentStore.Url.ForDatabase(database ?? documentStore.DefaultDatabase);
-            var sourceStatistics = await sourceCommands.GetStatisticsAsync(cts.Token).ConfigureAwait(false);
-            ThrowTimeoutIfCanceled(cts.Token); //in extreme conditions GetStatisticsAsync can timeout as well
+             var sourceCommands = documentStore.AsyncDatabaseCommands.ForDatabase(database ?? documentStore.DefaultDatabase);
+             var sourceUrl = documentStore.Url.ForDatabase(database ?? documentStore.DefaultDatabase);
+             var sourceStatistics = await sourceCommands.GetStatisticsAsync(cts.Token).ConfigureAwait(false);
+             ThrowTimeoutIfCanceled(cts.Token); //in extreme conditions GetStatisticsAsync can timeout as well
 
-            var sourceDbId = sourceStatistics.DatabaseId.ToString();
+             var sourceDbId = sourceStatistics.DatabaseId.ToString();
 
-            var latestEtags = new ReplicatedEtagInfo[destinationsToCheck.Count];
-            for (int i = 0; i < destinationsToCheck.Count; i++)
-            {
-                latestEtags[i] = new ReplicatedEtagInfo { DestinationUrl = destinationsToCheck[i] };
-            }
+             var latestEtags = new ReplicatedEtagInfo[destinationsToCheck.Count];
+             for (int i = 0; i < destinationsToCheck.Count; i++)
+             {
+                 latestEtags[i] = new ReplicatedEtagInfo { DestinationUrl = destinationsToCheck[i] };
+             }
 
-            var tasks = destinationsToCheck
-                .Select((url, index) => WaitForReplicationFromServerAsync(url, sourceUrl, sourceDbId, etag, latestEtags, index, cts.Token))
-                .ToArray();
+             var tasks = destinationsToCheck
+                 .Select((url, index) => WaitForReplicationFromServerAsync(url, sourceUrl, sourceDbId, etag, latestEtags, index, cts.Token))
+                 .ToArray();
 
-            try
-            {
-                await Task.WhenAll(tasks).ConfigureAwait(false);
-                return tasks.Length;
-            }
-            catch (Exception e)
-            {
-                var successCount = tasks.Count(x => x.IsCompleted && x.IsFaulted == false && x.IsCanceled == false);
-                if (successCount >= toCheck)
-                {
-                    // we have nothing to do here, we replicated to at least the 
-                    // number we had to check, so that is good
-                    return successCount;
-                }
-               
-                if (tasks.Any(x => x.IsFaulted) && successCount == 0)
-                {
-                    // there was an error here, not just cancellation, let us just let it bubble up.
-                    throw;
-                }
+             try
+             {
+                 await Task.WhenAll(tasks).ConfigureAwait(false);
+                 return tasks.Length;
+             }
+             catch (Exception e)
+             {
+                 var successCount = tasks.Count(x => x.IsCompleted && x.IsFaulted == false && x.IsCanceled == false);
+                 if (successCount >= toCheck)
+                 {
+                     // we have nothing to do here, we replicated to at least the 
+                     // number we had to check, so that is good
+                     return successCount;
+                 }
 
-                // we have either completed (but not enough) or cancelled, meaning timeout
-                var message = string.Format("Could only confirm that the specified long? {0} was replicated to {1} of {2} servers after {3}\r\nDetails: {4}", 
-                    etag,
-                    successCount,
-                    destinationsToCheck.Count,
-                    sp.Elapsed,
-                    string.Join<ReplicatedEtagInfo>("; ", latestEtags));
+                 if (tasks.Any(x => x.IsFaulted) && successCount == 0)
+                 {
+                     // there was an error here, not just cancellation, let us just let it bubble up.
+                     throw;
+                 }
 
-                if(e is OperationCanceledException)
-                    throw new TimeoutException(message);
+                 // we have either completed (but not enough) or cancelled, meaning timeout
+                 var message = string.Format("Could only confirm that the specified long? {0} was replicated to {1} of {2} servers after {3}\r\nDetails: {4}", 
+                     etag,
+                     successCount,
+                     destinationsToCheck.Count,
+                     sp.Elapsed,
+                     string.Join<ReplicatedEtagInfo>("; ", latestEtags));
 
-                throw new TimeoutException(message, e);
-            }
+                 if(e is OperationCanceledException)
+                     throw new TimeoutException(message);
+
+                 throw new TimeoutException(message, e);
+             }*/
         }
 
         private void ThrowTimeoutIfCanceled(CancellationToken token)

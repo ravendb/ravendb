@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Handlers
                             using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState))
                             {
                                 parser.NewDocument();
-                                builder.ReadObject();
+                                builder.ReadObjectDocument();
 
                                 while (builder.Read() == false)
                                 {

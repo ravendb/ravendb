@@ -1,11 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using System.Threading.Tasks;
-
+using Raven.Client.Data;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Client.Data.Collection;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -16,8 +18,8 @@ namespace Raven.Server.Documents.Handlers
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
                 var collections = new DynamicJsonValue();
                 var result = new DynamicJsonValue
                 {
@@ -29,9 +31,11 @@ namespace Raven.Server.Documents.Handlers
                 {
                     collections[collectionStat.Name] = collectionStat.Count;
                 }
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     context.Write(writer, result);
             }
+
             return Task.CompletedTask;
         }
 
@@ -40,9 +44,8 @@ namespace Raven.Server.Documents.Handlers
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
-
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -50,67 +53,66 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteDocuments(context, documents, metadataOnly: false);
                 }
             }
+
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/collections/docs", "DELETE", "/databases/{databaseName:string}/collections/docs?name={collectionName:string}")]
-        public Task DeleteCollectionDocuments()
+        [RavenAction("/databases/*/collections/docs", "DELETE")]
+        public Task Delete()
         {
-            var deletedList = new List<LazyStringValue>();
-            long totalDocsDeletes = 0;
-            long maxEtag = -1;
             DocumentsOperationContext context;
-            var collection = GetStringQueryString("name");
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartArray();
-                    while (true)
-                    {
-                        using (context.OpenWriteTransaction())
-                        {
-                            if (maxEtag == -1)
-                                maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
+            var returnContextToPool = ContextPool.AllocateOperationContext(out context);
 
-                            foreach (var document in Database.DocumentsStorage.GetDocumentsFrom(context, collection, 0, 0, 16 * 1024))
-                            {
-                                if (document.Etag > maxEtag)
-                                    break;
-                                deletedList.Add(document.Key);
-                            }
-
-                            if (deletedList.Count == 0)
-                                break;
-
-                            foreach (LazyStringValue key in deletedList)
-                            {
-                                Database.DocumentsStorage.Delete(context, key, null);
-                            }
-
-                            context.Transaction.Commit();
-                        }
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            ["BatchSize"] = deletedList.Count
-                        });
-                        writer.WriteComma();
-                        writer.WriteNewLine();
-                        writer.Flush();
-
-                        totalDocsDeletes += deletedList.Count;
-
-                        deletedList.Clear();
-                    }
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        ["TotalDocsDeleted"] = totalDocsDeletes
-                    });
-                    writer.WriteNewLine();
-                    writer.WriteEndArray();
-                }
-            }
+            ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(() => runner.ExecuteDelete(collectionName, options, context, onProgress, token)),
+                context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByCollection);
             return Task.CompletedTask;
+
+        }
+
+        [RavenAction("/databases/*/collections/docs", "PATCH")]
+        public Task Patch()
+        {
+            DocumentsOperationContext context;
+            var returnContextToPool = ContextPool.AllocateOperationContext(out context);
+
+            var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
+            var patch = Documents.Patch.PatchRequest.Parse(reader);
+
+            ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(() => runner.ExecutePatch(collectionName, options, patch, context, onProgress, token)),
+                context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByCollection);
+            return Task.CompletedTask;
+
+        }
+
+        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
+        {
+            var collectionName = GetStringQueryString("name");
+
+            var token = CreateTimeLimitedOperationToken();
+
+            var collectionRunner = new CollectionRunner(Database, context);
+
+            var operationId = Database.Operations.GetNextOperationId();
+
+            var options = GetCollectionOperationOptions();
+
+            var task = Database.Operations.AddOperation(collectionName, operationType, onProgress =>
+                    operation(collectionRunner, collectionName, options, onProgress, token), operationId, token);
+
+            task.ContinueWith(_ => returnContextToPool.Dispose());
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationId(context, operationId);
+            }
+        }
+
+        private CollectionOperationOptions GetCollectionOperationOptions()
+        {
+            return new CollectionOperationOptions
+            {
+                MaxOpsPerSecond = GetIntValueQueryString("maxOpsPerSec", required: false),
+            };
         }
     }
 }

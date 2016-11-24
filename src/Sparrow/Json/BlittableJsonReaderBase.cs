@@ -125,6 +125,14 @@ namespace Sparrow.Json
             throw new ArgumentException($"Unsupported size {sizeOfValue}");
         }
 
+        public BlittableJsonReaderObject ReadNestedObject(int pos)
+        {
+            byte offset;
+            var size = ReadVariableSizeInt(pos, out offset);
+
+            return new BlittableJsonReaderObject(_mem + pos + offset, size, _context);
+        }
+
         public LazyStringValue ReadStringLazily(int pos)
         {
             byte offset;

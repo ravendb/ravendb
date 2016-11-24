@@ -148,9 +148,10 @@ namespace Raven.NewClient.Client.Indexes
         /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions
         /// </summary>
-        public virtual void Execute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
+        public virtual void Execute(DocumentConvention documentConvention)
         {
-            Conventions = documentConvention;
+            throw new NotImplementedException("databaseCommands");
+            /*Conventions = documentConvention;
             var prettify = documentConvention.PrettifyGeneratedLinqExpressions;
             var transformerDefinition = CreateTransformerDefinition(prettify);
             // This code take advantage on the fact that RavenDB will turn an index PUT
@@ -159,12 +160,13 @@ namespace Raven.NewClient.Client.Indexes
             databaseCommands.PutTransformer(TransformerName, transformerDefinition);
 
             if (documentConvention.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Transformers))
-                ReplicateTransformerIfNeeded(databaseCommands);
+                ReplicateTransformerIfNeeded(databaseCommands);*/
         }
 
-        internal void ReplicateTransformerIfNeeded(IDatabaseCommands databaseCommands)
+        internal void ReplicateTransformerIfNeeded()
         {
-            var serverClient = databaseCommands as ServerClient;
+            throw new NotImplementedException("databaseCommands");
+            /*var serverClient = databaseCommands as ServerClient;
             if (serverClient == null)
                 return;
 
@@ -179,12 +181,13 @@ namespace Raven.NewClient.Client.Indexes
                 {
                     // ignoring errors
                 }
-            }
+            }*/
         }
 
-        private async Task ReplicateTransformerIfNeededAsync(IAsyncDatabaseCommands databaseCommands)
+        private async Task ReplicateTransformerIfNeededAsync()
         {
-            var serverClient = databaseCommands as AsyncServerClient;
+            throw new NotImplementedException("databaseCommands");
+            /*var serverClient = databaseCommands as AsyncServerClient;
             if (serverClient == null)
                 return;
 
@@ -199,22 +202,23 @@ namespace Raven.NewClient.Client.Indexes
                 {
                     // ignoring error
                 }
-            }
+            }*/
         }
 
         /// <summary>
         /// Executes the index creation against the specified document store.
         /// </summary>
-        public virtual async Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
+        public virtual async Task ExecuteAsync(DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
         {
-            Conventions = documentConvention;
+            throw new NotImplementedException("asyncDatabaseCommands");
+           /* Conventions = documentConvention;
             var prettify = documentConvention.PrettifyGeneratedLinqExpressions;
             var transformerDefinition = CreateTransformerDefinition(prettify);
             // This code take advantage on the fact that RavenDB will turn an index PUT
             // to a noop of the index already exists and the stored definition matches
             // the new definition.
             await asyncDatabaseCommands.PutTransformerAsync(TransformerName, transformerDefinition, token).ConfigureAwait(false);
-            await ReplicateTransformerIfNeededAsync(asyncDatabaseCommands).ConfigureAwait(false);
+            await ReplicateTransformerIfNeededAsync(asyncDatabaseCommands).ConfigureAwait(false);*/
         }
     }
 

@@ -18,7 +18,6 @@ using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Util;

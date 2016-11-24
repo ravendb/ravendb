@@ -12,6 +12,9 @@ namespace Raven.Server.Documents
     public class ConfigurationStorage : IDisposable
     {
         private TransactionContextPool _contextPool;
+
+        public TransactionContextPool ContextPool => _contextPool;
+
         public IndexesEtagsStorage IndexesEtagsStorage { get; }
 
         public AlertsStorage AlertsStorage { get; }
@@ -25,7 +28,6 @@ namespace Raven.Server.Documents
                 : StorageEnvironmentOptions.ForPath(Path.Combine(db.Configuration.Core.DataDirectory, "Configuration"));
 
             options.SchemaVersion = 1;
-
             Environment = new StorageEnvironment(options);
 
             AlertsStorage = new AlertsStorage(db.Name, serverStore);
@@ -37,7 +39,7 @@ namespace Raven.Server.Documents
         {
             _contextPool = new TransactionContextPool(Environment);
             AlertsStorage.Initialize(Environment, _contextPool);
-            IndexesEtagsStorage.Initialize(Environment, _contextPool,indexStore, transformerStore);
+            IndexesEtagsStorage.Initialize(Environment, _contextPool, indexStore, transformerStore);
         }
 
         public void Dispose()

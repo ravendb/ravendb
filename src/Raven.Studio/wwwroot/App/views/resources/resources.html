@@ -1,18 +1,44 @@
 <div class="resources" data-bind="css: { 'resources_compact': compactView() }">
-    <div class="resourcesToolbar clearfix">
+    <div class="resourcesToolbar toolbar clearfix">
         <div class="form-inline">
             <div class="checkbox checkbox-inline align-checkboxes">
                 <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }">
                 <label></label>
             </div>
-            <div class="resourcesToolbar-typeSelector btn-group">
+            <div class="resourcesToolbar-typeSelector dropdown">
+                <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                    Show all
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                    <li>
+                        <a href="#">
+                            <i class="icon-database"></i>
+                            <span>
+                                Databases
+                            </span>
+                            <span class="badge" data-bind="text: resources().databasesCount(), visible: resources().databasesCount()"></span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="icon-filesystem"></i>
+                            <span>
+                                Filesytems
+                            </span>
+                            <span class="badge">2</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <!--<div class="resourcesToolbar-typeSelector btn-group">
                 <button class="btn btn-default" data-bind="css: { active: filters.includeDatabases() }, click: filters.includeDatabases.toggle.bind(filters.includeDatabases)">
                     <i class="icon-database"></i>
                     <span>
                         Databases
                     </span>
                     <span class="badge" data-bind="text: resources().databasesCount(), visible: resources().databasesCount()"></span>
-                </button>
+                </button>-->
                 <!--
                 <button class="btn btn-default" data-bind="css: { active: filters.includeFilesystems() }, click: filters.includeFilesystems.toggle.bind(filters.includeFilesystems)">
                     <i class="icon-filesystem"></i>
@@ -22,18 +48,22 @@
                     <span class="badge" data-bind="text: resources().filesystemCount(), visible: resources().filesystemCount()"></span>
                 </button>
                 -->
-            </div>
+            <!--</div>-->
             <input type="text" class="form-control" placeholder="Filter" accesskey="/"  title="Filter resources (Alt+/)" data-bind="textInput: filters.searchText">
             <div class="resourcesToolbar-actions">
+                <button class="btn btn-primary">
+                    <i class="icon-trash"></i>
+                    <span>New database</span>
+                </button>
                 <button class="btn btn-danger" data-bind="visible: isGlobalAdmin(), enable: selectedResources().length, click: deleteSelectedResources">
                     <i class="icon-trash"></i>
-                    <span>Delete</span>
+                    <span>Delete selected</span>
                 </button>
                 <button type="button" class="btn btn-default" data-bind="enable: selectedResources().length && !spinners.globalToggleDisable(), click: toggleSelectedResources(), css: { 'btn-spinner': spinners.globalToggleDisable() }">
                     <i data-bind="visible: !allCheckedResourcesDisabled()" class="icon-lock"></i>
-                    <span data-bind="visible: !allCheckedResourcesDisabled()">Disable</span>
+                    <span data-bind="visible: !allCheckedResourcesDisabled()">Disable selected</span>
                     <i data-bind="visible: allCheckedResourcesDisabled()" class="icon-unlock"></i>
-                    <span data-bind="visible: allCheckedResourcesDisabled()">Enable</span>
+                    <span data-bind="visible: allCheckedResourcesDisabled()">Enable selected</span>
                 </button>
             </div>
             <div class="toggle toggle-primary resourcesToolbar-toggleCompactView pull-right">
@@ -43,8 +73,7 @@
                 </label>
             </div>
         </div>
-    </div>
-    <hr />    
+    </div> 
     
     <div data-bind="foreach: resources().sortedResources">
         <div class="panel resource" data-bind="visible: !filteredOut(), css: { 'active': isCurrentlyActiveResource() }">

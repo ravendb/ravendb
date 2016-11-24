@@ -30,16 +30,6 @@ namespace Raven.NewClient.Client.Connection
         string AsyncIndexQueried { get; }
 
         /// <summary>
-        /// Grant access to the database commands
-        /// </summary>
-        IDatabaseCommands DatabaseCommands { get; }
-
-        /// <summary>
-        /// Grant access to the async database commands
-        /// </summary>
-        IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
-
-        /// <summary>
         /// The query session
         /// </summary>
         InMemoryDocumentSessionOperations Session { get; }

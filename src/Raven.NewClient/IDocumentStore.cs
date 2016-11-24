@@ -113,12 +113,6 @@ namespace Raven.NewClient.Client
         IDocumentStore Initialize();
 
         /// <summary>
-        /// Gets the async database commands.
-        /// </summary>
-        /// <value>The async database commands.</value>
-        IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
-
-        /// <summary>
         /// Opens the async session.
         /// </summary>
         /// <returns></returns>
@@ -150,12 +144,6 @@ namespace Raven.NewClient.Client
         /// Opens the session with the specified options.
         /// </summary>
         IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
-
-        /// <summary>
-        /// Gets the database commands.
-        /// </summary>
-        /// <value>The database commands.</value>
-        IDatabaseCommands DatabaseCommands { get; }
 
         /// <summary>
         /// Executes the index creation in side-by-side mode.

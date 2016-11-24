@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,81 +10,52 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Logging;
-using Raven.NewClient.Client;
 using Raven.NewClient.Client.Connection;
 
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Data.Indexes;
 
-namespace Raven.NewClient.Indexes
+namespace Raven.NewClient.Client.Indexes
 {
     /// <summary>
     /// Helper class for creating indexes from implementations of <see cref="AbstractIndexCreationTask"/>.
     /// </summary>
     public static class IndexCreation
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof(IndexCreation));
+        private readonly static ILog Log = LogManager.GetLogger(typeof(IndexCreation));
 
         /// <summary>
         /// Creates the indexes found in the specified assembly.
         /// </summary>
-        public static void CreateIndexes(Assembly assemblyToScan, IDocumentStore documentStore)
+        /// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
+        /// <param name="documentStore">The document store.</param>
+        public static void CreateIndexes(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore)
         {
-            var indexCompilationExceptions = new List<IndexCompilationException>();
-            try
-            {
-                var tasks = GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan)
-                    .ToList();
+            throw new NotImplementedException("Figure out how to get the relevant types from the assembly");
 
-                documentStore.ExecuteIndexes(tasks);
-            }
-            // For old servers that don't have the new endpoint for executing multiple indexes
-            catch (Exception ex)
-            {
-                Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
-                foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
-                {
-                    try
-                    {
-                        task.Execute(documentStore);
-                    }
-                    catch (IndexCompilationException e)
-                    {
-                        indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
-                    }
-                }
-            }
-
-            CreateTransformers(assemblyToScan, documentStore);
-
-            if (indexCompilationExceptions.Any())
-                throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+            //CreateIndexes(catalog, documentStore);
         }
 
         /// <summary>
-        /// Creates the indexes found in the specified assembly.
+        /// Creates the indexes found in the specified catalog
         /// </summary>
-        public static void CreateIndexes(Assembly assemblyToScan, IDatabaseCommands databaseCommands, DocumentConvention conventions)
+        public static void CreateIndexes(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers , DocumentConvention conventions)
         {
-            var indexCompilationExceptions = new List<IndexCompilationException>();
+            /*var indexCompilationExceptions = new List<IndexCompilationException>();
             try
             {
-                var tasks = GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan)
-                    .ToList();
-
-                var indexesToAdd = CreateIndexesToAdd(tasks, conventions);
+                var indexesToAdd = CreateIndexesToAdd(indexes, conventions);
                 databaseCommands.PutIndexes(indexesToAdd);
 
-                foreach (var task in tasks)
+                foreach (var task in indexes)
                     task.AfterExecute(databaseCommands, conventions);
             }
             // For old servers that don't have the new endpoint for executing multiple indexes
-            catch (Exception ex)
+            catch (Exception)
             {
-                Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
-                foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
+                foreach (var task in indexes)
                 {
                     try
                     {
@@ -98,70 +68,36 @@ namespace Raven.NewClient.Indexes
                 }
             }
 
-            CreateTransformers(assemblyToScan, databaseCommands, conventions);
+            CreateTransformers(transformers, databaseCommands, conventions);
 
             if (indexCompilationExceptions.Any())
                 throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
-        }
+       */ }
 
         /// <summary>
-        /// Creates the indexes found in the specified assembly.
+        /// Creates the indexes found in the specified catalog
         /// </summary>
-        public static async Task CreateIndexesAsync(Assembly assemblyToScan, IDocumentStore documentStore)
+        public static async Task CreateIndexesAsync(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers,  DocumentConvention conventions)
         {
-            var indexCompilationExceptions = new List<IndexCompilationException>();
+            /*var indexCompilationExceptions = new List<IndexCompilationException>();
+            var failed = false;
             try
             {
-                var tasks = GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan)
-                    .ToList();
-
-                await documentStore.ExecuteIndexesAsync(tasks).ConfigureAwait(false);
-            }
-            // For old servers that don't have the new endpoint for executing multiple indexes
-            catch (Exception ex)
-            {
-                Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
-                foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
-                {
-                    try
-                    {
-                        await task.ExecuteAsync(documentStore).ConfigureAwait(false);
-                    }
-                    catch (IndexCompilationException e)
-                    {
-                        indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
-                    }
-                }
-            }
-
-            await CreateTransformersAsync(assemblyToScan, documentStore).ConfigureAwait(false);
-
-            if (indexCompilationExceptions.Any())
-                throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
-        }
-
-        /// <summary>
-        /// Creates the indexes found in the specified assembly.
-        /// </summary>
-        public static async Task CreateIndexesAsync(Assembly assemblyToScan, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions)
-        {
-            var indexCompilationExceptions = new List<IndexCompilationException>();
-            try
-            {
-                var tasks = GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan)
-                    .ToList();
-
-                var indexesToAdd = CreateIndexesToAdd(tasks, conventions);
+            
+                var indexesToAdd = CreateIndexesToAdd(indexes, conventions);
                 await databaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
 
-                foreach (var task in tasks)
+                foreach (var task in indexes)
                     await task.AfterExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
             }
             // For old servers that don't have the new endpoint for executing multiple indexes
-            catch (Exception ex)
+            catch (Exception)
             {
-                Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
-                foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
+                failed = true;
+            }
+            if (failed)
+            {
+                foreach (var task in indexes)
                 {
                     try
                     {
@@ -174,73 +110,145 @@ namespace Raven.NewClient.Indexes
                 }
             }
 
-            await CreateTransformersAsync(assemblyToScan, databaseCommands, conventions).ConfigureAwait(false);
+            await CreateTransformersAsync(transformers, databaseCommands, conventions).ConfigureAwait(false);
+
+            if (indexCompilationExceptions.Any())
+                throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+       */ }
+
+        /// <summary>
+        /// Creates the indexes found in the specified catalog
+        /// </summary>
+        /// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
+        /// <param name="documentStore">The document store.</param>
+        public static void CreateIndexes(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, IDocumentStore documentStore)
+        {
+            var indexCompilationExceptions = new List<IndexCompilationException>();
+            try
+            {
+              
+                documentStore.ExecuteIndexes(indexes);
+            }
+            // For old servers that don't have the new endpoint for executing multiple indexes
+            catch (Exception ex)
+            {
+                Log.InfoException("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                foreach (var task in indexes)
+                {
+                    try
+                    {
+                        task.Execute(documentStore);
+                    }
+                    catch (IndexCompilationException e)
+                    {
+                        indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
+                    }
+                }
+            }
+
+            CreateTransformers(transformers, documentStore);
 
             if (indexCompilationExceptions.Any())
                 throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
         }
 
         /// <summary>
-        /// Creates the indexes found in the specified catalog in side-by-side mode.
+        /// Creates the indexes found in the specified assembly.
         /// </summary>
-        public static void SideBySideCreateIndexes(Assembly assemblyToScan, IDocumentStore documentStore, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        /// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
+        /// <param name="documentStore">The document store.</param>
+        public static Task CreateIndexesAsync(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore)
         {
-            var indexCompilationExceptions = new List<IndexCompilationException>();
+            throw new NotImplementedException("Figure out how to get the relevant types from the assembly");
+
+            //return CreateIndexesAsync(catalog, documentStore);
+        }
+
+        /// <summary>
+        /// Creates the indexes found in the specified catalog
+        /// </summary>
+        /// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
+        /// <param name="documentStore">The document store.</param>
+        public static async Task CreateIndexesAsync(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers , IDocumentStore documentStore)
+        {
+            throw new NotImplementedException();
+            /*var indexCompilationExceptions = new List<IndexCompilationException>();
+            var failed = false;
             try
             {
-                var tasks = GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan)
-                    .ToList();
+       
 
-                documentStore.SideBySideExecuteIndexes(tasks, minimumEtagBeforeReplace, replaceTimeUtc);
+                var indexesToAdd = CreateIndexesToAdd(indexes, documentStore.Conventions);
+                await documentStore.AsyncDatabaseCommands.PutIndexesAsync(indexesToAdd).ConfigureAwait(false);
+
+                foreach (var task in indexes)
+                    await task.AfterExecuteAsync(documentStore.AsyncDatabaseCommands, documentStore.Conventions).ConfigureAwait(false);
             }
             // For old servers that don't have the new endpoint for executing multiple indexes
-            catch (Exception ex)
+            catch (Exception)
             {
-                Log.InfoException("Could not create side by side indexes in one shot (maybe using older version of RavenDB ?)", ex);
-                foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
+                failed = true;
+            }
+            if (failed)
+            {
+                foreach (var task in indexes)
                 {
                     try
                     {
-                        task.SideBySideExecute(documentStore, minimumEtagBeforeReplace, replaceTimeUtc);
+                        await task.ExecuteAsync(documentStore).ConfigureAwait(false);
                     }
                     catch (IndexCompilationException e)
                     {
-                        indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile side by side index name = " + task.IndexName, e));
+                        indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile index name = " + task.IndexName, e));
                     }
                 }
             }
 
-            CreateTransformers(assemblyToScan, documentStore);
+            await CreateTransformersAsync(transformers, documentStore).ConfigureAwait(false);
 
             if (indexCompilationExceptions.Any())
-                throw new AggregateException("Failed to create one or more side by indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+                throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+      */
         }
 
         /// <summary>
         /// Creates the indexes found in the specified assembly in side-by-side mode.
         /// </summary>
-        public static void SideBySideCreateIndexes(Assembly assemblyToScan, IDatabaseCommands databaseCommands, DocumentConvention conventions, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        /// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
+        /// <param name="documentStore">The document store.</param>
+        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
+        /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
+        public static void SideBySideCreateIndexes(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
-            var indexCompilationExceptions = new List<IndexCompilationException>();
+            throw new NotImplementedException("Figure out how to get the relevant types from the assembly");
+
+            //SideBySideCreateIndexes(catalog, documentStore, minimumEtagBeforeReplace, replaceTimeUtc);
+        }
+
+        /// <summary>
+        /// Creates the indexes found in the specified catalog in side-by-side mode.
+        /// </summary>
+        public static void SideBySideCreateIndexes(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, DocumentConvention conventions, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        {
+            throw new NotImplementedException();
+            /*var indexCompilationExceptions = new List<IndexCompilationException>();
             try
             {
-                var tasks = GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan)
-                    .ToList();
-
-                var indexesToAdd = CreateIndexesToAdd(tasks, conventions);
+            
+                var indexesToAdd = CreateIndexesToAdd(indexes, conventions);
                 databaseCommands.PutSideBySideIndexes(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc);
 
-                foreach (var task in tasks)
-                    task.AfterExecute(databaseCommands, conventions);
+                foreach (var task in indexes)
+                    task.AfterExecute(conventions);
             }
             // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception)
             {
-                foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
+                foreach (var task in indexes)
                 {
                     try
                     {
-                        task.SideBySideExecute(databaseCommands, conventions, minimumEtagBeforeReplace, replaceTimeUtc);
+                        task.SideBySideExecute(conventions, minimumEtagBeforeReplace, replaceTimeUtc);
                     }
                     catch (IndexCompilationException e)
                     {
@@ -249,69 +257,39 @@ namespace Raven.NewClient.Indexes
                 }
             }
 
-            CreateTransformers(assemblyToScan, databaseCommands, conventions);
+            CreateTransformers(transformers, conventions);
 
             if (indexCompilationExceptions.Any())
                 throw new AggregateException("Failed to create one or more side by side indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+     */
         }
 
         /// <summary>
         /// Creates the indexes found in the specified catalog in side-by-side mode.
         /// </summary>
-        public static async Task SideBySideCreateIndexesAsync(Assembly assemblyToScan, IDocumentStore documentStore, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public static async Task SideBySideCreateIndexesAsync(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, DocumentConvention conventions, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
-            var indexCompilationExceptions = new List<IndexCompilationException>();
+            throw new NotImplementedException();
+            /*var indexCompilationExceptions = new List<IndexCompilationException>();
+            var failed = false;
             try
             {
-                var tasks = GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan)
-                    .ToList();
+           
 
-                await documentStore.SideBySideExecuteIndexesAsync(tasks, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
-            }
-            // For old servers that don't have the new endpoint for executing multiple indexes
-            catch (Exception ex)
-            {
-                Log.InfoException("Could not create side by side indexes in one shot (maybe using older version of RavenDB ?)", ex);
-                foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
-                {
-                    try
-                    {
-                        await task.SideBySideExecuteAsync(documentStore, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
-                    }
-                    catch (IndexCompilationException e)
-                    {
-                        indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile side by side index name = " + task.IndexName, e));
-                    }
-                }
-            }
-
-            await CreateTransformersAsync(assemblyToScan, documentStore).ConfigureAwait(false);
-
-            if (indexCompilationExceptions.Any())
-                throw new AggregateException("Failed to create one or more side by indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
-        }
-
-        /// <summary>
-        /// Creates the indexes found in the specified assembly in side-by-side mode.
-        /// </summary>
-        public static async Task SideBySideCreateIndexesAsync(Assembly assemblyToScan, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
-        {
-            var indexCompilationExceptions = new List<IndexCompilationException>();
-            try
-            {
-                var tasks = GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan)
-                    .ToList();
-
-                var indexesToAdd = CreateIndexesToAdd(tasks, conventions);
+                var indexesToAdd = CreateIndexesToAdd(indexes, conventions);
                 await databaseCommands.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
 
-                foreach (var task in tasks)
+                foreach (var task in indexes)
                     await task.AfterExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
             }
-            // For old servers that don't have the new endpoint for executing multiple indexes
+                // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception)
             {
-                foreach (var task in GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan))
+                failed = true;
+            }
+            if (failed)
+            {
+                foreach (var task in indexes)
                 {
                     try
                     {
@@ -324,51 +302,142 @@ namespace Raven.NewClient.Indexes
                 }
             }
 
-            await CreateTransformersAsync(assemblyToScan, databaseCommands, conventions).ConfigureAwait(false);
+            await CreateTransformersAsync(transformers, databaseCommands, conventions).ConfigureAwait(false);
 
             if (indexCompilationExceptions.Any())
                 throw new AggregateException("Failed to create one or more side by side indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+      */
         }
 
-        private static void CreateTransformers(Assembly assemblyToScan, IDocumentStore documentStore)
+        /// <summary>
+        /// Creates the indexes found in the specified catalog in side-by-side mode.
+        /// </summary>
+        /// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
+        /// <param name="documentStore">The document store.</param>
+        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
+        /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
+        public static void SideBySideCreateIndexes(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, IDocumentStore documentStore, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
-            foreach (var task in GetAllInstancesOfType<AbstractTransformerCreationTask>(assemblyToScan))
+            var indexCompilationExceptions = new List<IndexCompilationException>();
+            try
+            {
+               
+                documentStore.SideBySideExecuteIndexes(indexes, minimumEtagBeforeReplace, replaceTimeUtc);
+            }
+            // For old servers that don't have the new endpoint for executing multiple indexes
+            catch (Exception ex)
+            {
+                Log.InfoException("Could not create side by side indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                foreach (var task in indexes)
+                {
+                    try
+                    {
+                        task.SideBySideExecute(documentStore, minimumEtagBeforeReplace, replaceTimeUtc);
+                    }
+                    catch (IndexCompilationException e)
+                    {
+                        indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile side by side index name = " + task.IndexName, e));
+                    }
+                }
+            }
+
+            CreateTransformers(transformers, documentStore);
+
+            if (indexCompilationExceptions.Any())
+                throw new AggregateException("Failed to create one or more side by indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+        }
+
+        /// <summary>
+        /// Creates the indexes found in the specified assembly in side-by-side mode.
+        /// </summary>
+        /// <param name="assemblyToScanForIndexingTasks">The assembly to scan for indexing tasks.</param>
+        /// <param name="documentStore">The document store.</param>
+        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
+        /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
+        public static Task SideBySideCreateIndexesAsync(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        {
+            throw new NotImplementedException("Figure out how to get the relevant types from the assembly");
+            //return SideBySideCreateIndexesAsync(catalog, documentStore, minimumEtagBeforeReplace, replaceTimeUtc);
+        }
+
+        /// <summary>
+        /// Creates the indexes found in the specified catalog in side-by-side mode.
+        /// </summary>
+        /// <param name="documentStore">The document store.</param>
+        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
+        /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
+        public static async Task SideBySideCreateIndexesAsync(
+            IList<AbstractIndexCreationTask> indexes,
+            IList<AbstractTransformerCreationTask> transformers,
+            IDocumentStore documentStore, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        {
+            /*var indexCompilationExceptions = new List<IndexCompilationException>();
+            var failed = false;
+            try
+            {
+                var indexesToAdd = CreateIndexesToAdd(indexes, documentStore.Conventions);
+                await documentStore.AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd).ConfigureAwait(false);
+
+                foreach (var task in indexes)
+                    await task.AfterExecuteAsync(documentStore.AsyncDatabaseCommands, documentStore.Conventions).ConfigureAwait(false);
+            }
+            // For old servers that don't have the new endpoint for executing multiple indexes
+            catch (Exception)
+            {
+                failed = true;
+            }
+            if (failed)
+            {
+                foreach (var task in indexes)
+                {
+                    try
+                    {
+                        await task.SideBySideExecuteAsync(documentStore, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
+                    }
+                    catch (IndexCompilationException e)
+                    {
+                        indexCompilationExceptions.Add(new IndexCompilationException("Failed to compile side by side index name = " + task.IndexName, e));
+                    }
+                }
+            }
+
+            await CreateTransformersAsync(transformers, documentStore).ConfigureAwait(false);
+
+            if (indexCompilationExceptions.Any())
+                throw new AggregateException("Failed to create one or more side by side indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+     */   }
+
+        private static void CreateTransformers(IEnumerable<AbstractTransformerCreationTask> transformers, IDocumentStore documentStore)
+        {
+            foreach (var task in transformers)
             {
                 task.Execute(documentStore);
             }
         }
 
-        private static void CreateTransformers(Assembly assemblyToScan, IDatabaseCommands databaseCommands, DocumentConvention conventions)
+        private static void CreateTransformers(IEnumerable<AbstractTransformerCreationTask> transformers,  DocumentConvention conventions)
         {
-            foreach (var task in GetAllInstancesOfType<AbstractTransformerCreationTask>(assemblyToScan))
+            foreach (var task in transformers)
             {
-                task.Execute(databaseCommands, conventions);
+                task.Execute(conventions);
             }
         }
 
-        private static async Task CreateTransformersAsync(Assembly assemblyToScan, IDocumentStore documentStore)
+        private static async Task CreateTransformersAsync(IEnumerable<AbstractTransformerCreationTask> transformers, IDocumentStore documentStore)
         {
-            foreach (var task in GetAllInstancesOfType<AbstractTransformerCreationTask>(assemblyToScan))
+            foreach (var task in transformers)
             {
                 await task.ExecuteAsync(documentStore).ConfigureAwait(false);
             }
         }
 
-        private static async Task CreateTransformersAsync(Assembly assemblyToScan, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions)
+        private static async Task CreateTransformersAsync(IEnumerable<AbstractTransformerCreationTask> transformers, DocumentConvention conventions)
         {
-            foreach (var task in GetAllInstancesOfType<AbstractTransformerCreationTask>(assemblyToScan))
+            throw new NotImplementedException();
+            /*foreach (var task in transformers)
             {
                 await task.ExecuteAsync(databaseCommands, conventions).ConfigureAwait(false);
-            }
-        }
-
-        private static IEnumerable<TType> GetAllInstancesOfType<TType>(Assembly assembly)
-        {
-            foreach (var type in assembly.GetTypes()
-                .Where(x => x.GetTypeInfo().IsClass && x.GetTypeInfo().IsAbstract == false && x.GetTypeInfo().IsSubclassOf(typeof(TType))))
-            {
-                yield return (TType)Activator.CreateInstance(type);
-            }
+            }*/
         }
 
         public static IndexToAdd[] CreateIndexesToAdd(IEnumerable<AbstractIndexCreationTask> indexCreationTasks, DocumentConvention conventions)

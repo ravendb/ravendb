@@ -35,8 +35,6 @@ namespace Raven.NewClient.Client.Linq
         private readonly IDocumentQueryGenerator queryGenerator;
         private readonly RavenQueryStatistics ravenQueryStatistics;
         private readonly RavenQueryHighlightings highlightings;
-        private readonly IDatabaseCommands databaseCommands;
-        private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
         private readonly bool isMapReduce;
         private readonly Dictionary<string, object> transformerParamaters = new Dictionary<string, object>();
 
@@ -48,8 +46,7 @@ namespace Raven.NewClient.Client.Linq
             string indexName,
             RavenQueryStatistics ravenQueryStatistics,
             RavenQueryHighlightings highlightings
-            , IDatabaseCommands databaseCommands
-            , IAsyncDatabaseCommands asyncDatabaseCommands,
+           ,
             bool isMapReduce
 )
         {
@@ -60,8 +57,6 @@ namespace Raven.NewClient.Client.Linq
             this.indexName = indexName;
             this.ravenQueryStatistics = ravenQueryStatistics;
             this.highlightings = highlightings;
-            this.databaseCommands = databaseCommands;
-            this.asyncDatabaseCommands = asyncDatabaseCommands;
             this.isMapReduce = isMapReduce;
         }
         
@@ -133,8 +128,7 @@ namespace Raven.NewClient.Client.Linq
                 return this;
 
             var ravenQueryProvider = new RavenQueryProvider<S>(queryGenerator, indexName, ravenQueryStatistics, highlightings
-                , databaseCommands
-                , asyncDatabaseCommands,
+                ,
                 isMapReduce
             );
             ravenQueryProvider.ResultTransformer = ResultTransformer;
@@ -163,8 +157,7 @@ namespace Raven.NewClient.Client.Linq
             var a = queryGenerator.CreateRavenQueryInspector<S>();
 
             a.Init(this, ravenQueryStatistics, highlightings, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator
-                                              , databaseCommands
-                                              , asyncDatabaseCommands, isMapReduce);
+                                              , isMapReduce);
 
             return a;
         }
@@ -177,10 +170,7 @@ namespace Raven.NewClient.Client.Linq
                 var queryInspectorGenericType = typeof(RavenQueryInspector<>).MakeGenericType(elementType);
                 var args = new object[]
                 {
-                    this, ravenQueryStatistics, highlightings, indexName, expression, queryGenerator
-                    , databaseCommands
-                    , asyncDatabaseCommands,
-                    isMapReduce
+                    this, ravenQueryStatistics, highlightings, indexName, expression, queryGenerator, isMapReduce
                 };
                 var queryInspectorInstance = Activator.CreateInstance(queryInspectorGenericType);
                 var methodInfo = queryInspectorGenericType.GetMethod("Init");

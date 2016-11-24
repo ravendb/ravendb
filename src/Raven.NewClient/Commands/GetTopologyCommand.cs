@@ -9,7 +9,7 @@ namespace Raven.NewClient.Client.Commands
     {
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"topology?url=" + node.Url;
+            url = $"{node.Url}/databases/{node.Database}/topology?url={node.Url}";
             return new HttpRequestMessage
             {
                 Method = HttpMethod.Get,

@@ -34,8 +34,6 @@ namespace Raven.NewClient.Client.Linq
         private RavenQueryStatistics queryStats;
         private RavenQueryHighlightings highlightings;
         private string indexName;
-        private IDatabaseCommands databaseCommands;
-        private IAsyncDatabaseCommands asyncDatabaseCommands;
         private InMemoryDocumentSessionOperations session;
         private bool isMapReduce;
 
@@ -50,8 +48,7 @@ namespace Raven.NewClient.Client.Linq
             string indexName,
             Expression expression,
             InMemoryDocumentSessionOperations session
-            , IDatabaseCommands databaseCommands
-            , IAsyncDatabaseCommands asyncDatabaseCommands,
+            ,
             bool isMapReduce
             )
         {
@@ -64,8 +61,6 @@ namespace Raven.NewClient.Client.Linq
             this.highlightings = highlightings;
             this.indexName = indexName;
             this.session = session;
-            this.databaseCommands = databaseCommands;
-            this.asyncDatabaseCommands = asyncDatabaseCommands;
             this.isMapReduce = isMapReduce;
             this.provider.AfterQueryExecuted(this.AfterQueryExecuted);
             this.expression = expression ?? Expression.Constant(this);
@@ -189,7 +184,8 @@ namespace Raven.NewClient.Client.Linq
         /// </returns>
         public override string ToString()
         {
-            RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
+            throw new NotImplementedException();
+            /*RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
             string query;
             if (asyncDatabaseCommands != null)
             {
@@ -205,7 +201,7 @@ namespace Raven.NewClient.Client.Linq
             string fields = "";
             if (ravenQueryProvider.FieldsToFetch.Count > 0)
                 fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
-            return fields + query;
+            return fields + query;*/
         }
  
         public IndexQuery GetIndexQuery(bool isAsync = true)
@@ -292,32 +288,6 @@ namespace Raven.NewClient.Client.Linq
                     provider.ResultTransformer, provider.TransformerParameters, OriginalQueryType);
                 var documentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
                 return ((IRavenQueryInspector)documentQuery).IndexQueried;
-            }
-        }
-
-        /// <summary>
-        /// Grant access to the database commands
-        /// </summary>
-        public IDatabaseCommands DatabaseCommands
-        {
-            get
-            {
-                if(databaseCommands == null)
-                    throw new NotSupportedException("You cannot get database commands for this query");
-                return databaseCommands;
-            }
-        }
-
-        /// <summary>
-        /// Grant access to the async database commands
-        /// </summary>
-        public IAsyncDatabaseCommands AsyncDatabaseCommands
-        {
-            get
-            {
-                if (asyncDatabaseCommands == null)
-                    throw new NotSupportedException("You cannot get database commands for this query");
-                return asyncDatabaseCommands;
             }
         }
 

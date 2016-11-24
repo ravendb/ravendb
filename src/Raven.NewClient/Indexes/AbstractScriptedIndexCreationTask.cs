@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -39,21 +41,22 @@ namespace Raven.NewClient.Client.Indexes
             set { scripts.RetryOnConcurrencyExceptions = value; }
         }
 
-        public override void AfterExecute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
+        public override void AfterExecute(DocumentConvention documentConvention)
         {
-            base.AfterExecute(databaseCommands, documentConvention);
-            AfterExecute(databaseCommands, IndexName, scripts);
+            base.AfterExecute( documentConvention);
+            AfterExecute( IndexName, scripts);
         }
 
-        public override async Task AfterExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
+        public override async Task AfterExecuteAsync(DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
         {
-            await base.AfterExecuteAsync(asyncDatabaseCommands, documentConvention, token).ConfigureAwait(false);
-            await AfterExecuteAsync(asyncDatabaseCommands, IndexName, scripts, token).ConfigureAwait(false);
+            await base.AfterExecuteAsync( documentConvention, token).ConfigureAwait(false);
+            await AfterExecuteAsync(IndexName, scripts, token).ConfigureAwait(false);
         }
 
-        internal static void AfterExecute(IDatabaseCommands databaseCommands, string indexName, ScriptedIndexResults scripts)
+        internal static void AfterExecute(string indexName, ScriptedIndexResults scripts)
         {
-            var documentId = GetScriptedIndexResultsDocumentId(indexName);
+            throw new NotImplementedException();
+            /*var documentId = GetScriptedIndexResultsDocumentId(indexName);
             scripts.Id = documentId;
 
             var oldDocument = databaseCommands.Get(documentId);
@@ -62,12 +65,13 @@ namespace Raven.NewClient.Client.Indexes
                 return;
 
             databaseCommands.Put(documentId, null, newDocument, null);
-            databaseCommands.ResetIndex(indexName);
+            databaseCommands.ResetIndex(indexName);*/
         }
 
-        internal static async Task AfterExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, ScriptedIndexResults scripts, CancellationToken token)
+        internal static async Task AfterExecuteAsync(string indexName, ScriptedIndexResults scripts, CancellationToken token)
         {
-            var documentId = GetScriptedIndexResultsDocumentId(indexName);
+            throw new NotImplementedException();
+            /*var documentId = GetScriptedIndexResultsDocumentId(indexName);
             scripts.Id = documentId;
 
             var oldDocument = await asyncDatabaseCommands.GetAsync(documentId, token: token).ConfigureAwait(false);
@@ -76,7 +80,7 @@ namespace Raven.NewClient.Client.Indexes
                 return;
 
             await asyncDatabaseCommands.PutAsync(documentId, null, newDocument, null, token).ConfigureAwait(false);
-            await asyncDatabaseCommands.ResetIndexAsync(indexName, token).ConfigureAwait(false);
+            await asyncDatabaseCommands.ResetIndexAsync(indexName, token).ConfigureAwait(false);*/
         }
 
         private static string GetScriptedIndexResultsDocumentId(string indexName)
@@ -112,16 +116,16 @@ namespace Raven.NewClient.Client.Indexes
             set { scripts.RetryOnConcurrencyExceptions = value; }
         }
 
-        public override void AfterExecute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
+        public override void AfterExecute( DocumentConvention documentConvention)
         {
-            base.AfterExecute(databaseCommands, documentConvention);
-            AbstractScriptedIndexCreationTask.AfterExecute(databaseCommands, IndexName, scripts);
+            base.AfterExecute( documentConvention);
+            AbstractScriptedIndexCreationTask.AfterExecute( IndexName, scripts);
         }
 
-        public override async Task AfterExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
+        public override async Task AfterExecuteAsync( DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
         {
-            await base.AfterExecuteAsync(asyncDatabaseCommands, documentConvention, token).ConfigureAwait(false);
-            await AbstractScriptedIndexCreationTask.AfterExecuteAsync(asyncDatabaseCommands, IndexName, scripts, token).ConfigureAwait(false);
+            await base.AfterExecuteAsync( documentConvention, token).ConfigureAwait(false);
+            await AbstractScriptedIndexCreationTask.AfterExecuteAsync(IndexName, scripts, token).ConfigureAwait(false);
         }
     }
 

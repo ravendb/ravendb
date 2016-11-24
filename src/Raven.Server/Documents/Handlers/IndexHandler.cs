@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Handlers
             switch (index.Type)
             {
                 case IndexType.Map:
-                    var staticMapIndex = (StaticMapIndex)index;
+                    var staticMapIndex = (MapIndex)index;
                     source = staticMapIndex._compiled.Source;
                     break;
                 case IndexType.MapReduce:

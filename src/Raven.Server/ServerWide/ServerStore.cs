@@ -156,6 +156,25 @@ namespace Raven.Server.ServerWide
             return Bits.SwapBytes(*(long*)reader.Read(3, out size));
         }
 
+        public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id, out long etag)
+        {
+            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
+            etag = 0;
+            TableValueReader reader;
+            Slice key;
+            using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
+            {
+                reader = items.ReadByKey(key);
+            }
+            if (reader == null)
+                return null;
+            int size;
+            etag = Bits.SwapBytes(*(long*) reader.Read(3, out size));
+            var ptr = reader.Read(2, out size);
+            return new BlittableJsonReaderObject(ptr, size, ctx);
+        }
+
+
         public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id)
         {
             var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
@@ -240,15 +259,16 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        public void Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc, long? expectedEtag = null)
+        public long Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc, long? expectedEtag = null)
         {
             TrackChange(ctx, "Write", id);
+            var newEtag = _lastEtag + 1;
+
             Slice idAsSlice;
             Slice loweredId;
             using (Slice.From(ctx.Allocator, id, out idAsSlice))
             using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out loweredId))
             {
-                var newEtag = _lastEtag + 1;
                 var newEtagBigEndian = Bits.SwapBytes(newEtag);
                 var itemTable = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
 
@@ -295,6 +315,7 @@ namespace Raven.Server.ServerWide
                 }
             }
             _lastEtag++;
+            return newEtag;
         }
 
         

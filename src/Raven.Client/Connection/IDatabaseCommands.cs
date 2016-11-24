@@ -82,6 +82,12 @@ namespace Raven.Client.Connection
         void Delete(string key, long? etag);
 
         /// <summary>
+        ///     Perform a set based deletes using the collection
+        /// </summary>
+        /// <param name="collectionName">Name of the collection</param>
+        Operation DeleteCollection(string collectionName);
+
+        /// <summary>
         ///     Perform a set based deletes using the specified index
         /// </summary>
         /// <param name="indexName">name of an index to perform a query on</param>

@@ -18,7 +18,7 @@ namespace Raven.NewClient.Client.Commands
         {
             EnsureIsNotNullOrEmpty(Id, nameof(Id));
 
-            url = $"docs?id={UrlEncode(Id)}";
+            url = $"{node.Url}/databases/{node.Database}/docs?id={UrlEncode(Id)}";
             IsReadRequest = false;
             var request = new HttpRequestMessage
             {

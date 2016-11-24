@@ -73,7 +73,6 @@ namespace Sparrow.Utils
         {
             Debug.Assert(Size % 4096 == 0);
             Debug.Assert(Size % sizeof(long) == 0);
-            Debug.Assert(Size % 4 == 0);
             var len = Size / sizeof(long);
             IsDiff = true;
 
@@ -85,19 +84,24 @@ namespace Sparrow.Utils
             // it is not mutable, this lowers the number of generated instructions
             long* modified = (long*)Modified;
 
-            for (long i = 0; i < len; i++)
+            for (long i = 0; i < len; i += 4, modified += 4)
             {
-                var modifiedVal = modified[i];
-                _allZeros &= modifiedVal == 0;
+                long m0 = modified[0];
+                long m1 = modified[1];
+                long m2 = modified[2];
+                long m3 = modified[3];
 
-                if (0 != modifiedVal)
+                _allZeros &= m0 == 0 && m1 == 0 && m2 == 0 && m3 == 0;
+
+                if (0 != m0 || 0 != m1 || 0 != m2 || 0 != m3)
                     continue;
 
-                if (start != i && WriteDiff(start, i - start) == false)
-                    return;
-
-                start = i + 1;
-                _allZeros = true;
+                if (start == i || WriteDiff(start, i - start))
+                {
+                    start = i + 4;
+                    _allZeros = true;
+                }
+                else return;
             }
 
             if (start != len)

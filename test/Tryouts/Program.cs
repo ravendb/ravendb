@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading.Tasks;
+using FastTests.Server.Documents.Patching;
 using FastTests.Server.Documents.Replication;
 using Sparrow.Logging;
 
@@ -9,14 +11,17 @@ namespace Tryouts
         static unsafe void Main(string[] args)
         {
             //LoggingSource.Instance.SetupLogMode(LogMode.Information, "E:\\Work");
-            for (int i = 0; i < 1000; i++)
+
+            //Parallel.For(0, 100, i =>
+            for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var store = new FastTests.Server.Documents.Indexing.Static.BasicStaticMapReduceIndexing())
+                using (var store = new SlowTests.Voron.Bugs.DataInconsistencyRepro())
                 {
-                    store.Static_map_reduce_index_with_multiple_outputs_per_document().Wait();
+                    store.FaultyOverflowPagesHandling_CannotModifyReadOnlyPages(initialNumberOfDocs: 1000, numberOfModifications: 5000, seed: 662314505);
                 }
             }
+            //);
         }
     }
 

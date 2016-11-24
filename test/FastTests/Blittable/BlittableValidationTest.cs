@@ -518,7 +518,7 @@ namespace FastTests.Blittable
                         var writer = new BlittableJsonDocumentBuilder(ctx,
                             BlittableJsonDocumentBuilder.UsageMode.CompressSmallStrings,
                             "test", parser, state);
-                        writer.ReadObject();
+                        writer.ReadObjectDocument();
                         var x = writer.Read();
                         writer.FinalizeDocument();
                         var reader = writer.CreateReader();
@@ -564,7 +564,7 @@ namespace FastTests.Blittable
                         {
                             parser.SetBuffer(pBuffer + bufferOffset, data.Length);
 
-                            builder.ReadObject();
+                            builder.ReadObjectDocument();
 
                             Assert.True(builder.Read());
 
@@ -620,7 +620,7 @@ namespace FastTests.Blittable
                         var writer = new BlittableJsonDocumentBuilder(ctx,
                             BlittableJsonDocumentBuilder.UsageMode.None,
                             "test", parser, state);
-                        writer.ReadObject();
+                        writer.ReadObjectDocument();
                         var x = writer.Read();
                         writer.FinalizeDocument();
                         var reader = writer.CreateReader();
@@ -660,7 +660,7 @@ namespace FastTests.Blittable
                         var writer = new BlittableJsonDocumentBuilder(ctx,
                             BlittableJsonDocumentBuilder.UsageMode.None,
                             "test", parser, state);
-                        writer.ReadObject();
+                        writer.ReadObjectDocument();
                         var x = writer.Read();
                         writer.FinalizeDocument();
                         var reader = writer.CreateReader();
@@ -693,7 +693,7 @@ namespace FastTests.Blittable
                         var writer = new BlittableJsonDocumentBuilder(ctx,
                             BlittableJsonDocumentBuilder.UsageMode.None,
                             "test", parser, state);
-                        writer.ReadObject();
+                        writer.ReadObjectDocument();
                         var x = writer.Read();
                         writer.FinalizeDocument();
                         var reader = writer.CreateReader();
