@@ -18,6 +18,8 @@ class visualizer extends viewModelBase {
     indexes = ko.observableArray<string>();
     indexName = ko.observable<string>();
 
+    private nextColorIndex = 0;
+
     private currentIndex = ko.observable<string>();
 
     private currentIndexUi: KnockoutComputed<string>;
@@ -70,7 +72,7 @@ class visualizer extends viewModelBase {
         super.compositionComplete();
 
         this.globalGraph.init((treeName: string) => this.detailsGraph.openFor(treeName));
-        this.detailsGraph.init(() => this.globalGraph.restoreView());
+        this.detailsGraph.init(() => this.globalGraph.restoreView(), this.trees);
     }
 
     private onIndexesLoaded(indexes: Raven.Client.Data.Indexes.IndexStats[]) {
@@ -87,8 +89,10 @@ class visualizer extends viewModelBase {
         this.documents.docKeys([]);
         this.documents.docKey("");
         this.documents.docKeysSearchResults([]);
+        this.nextColorIndex = 0;
 
         this.globalGraph.reset();
+        this.detailsGraph.reset();
     }
 
     addDocKey(key: string) {
@@ -106,14 +110,20 @@ class visualizer extends viewModelBase {
                     if (!this.documents.docKeys.contains(key)) {
                         this.documents.docKeys.push(key);
 
-                        this.globalGraph.addDocument(key);
+                        this.addDocument(key);
                         this.addTrees(mapReduceTrees);
-                        
 
                         this.globalGraph.zoomToDocument(key);
                     }
                 });
         }
+    }
+
+    private addDocument(docName: string) {
+        const documentColor = this.getNextColor();
+
+        this.globalGraph.addDocument(docName, documentColor);
+        this.detailsGraph.addDocument(docName, documentColor);
     }
 
     private addTrees(result: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
@@ -129,6 +139,7 @@ class visualizer extends viewModelBase {
                 treesToAdd.push(existingTree);
             } else {
                 treesToAdd.push(incomingTree);
+                this.trees.push(incomingTree);
             }
         }
 
@@ -179,6 +190,12 @@ class visualizer extends viewModelBase {
         this.addDocKey(value);
         this.documents.docKey("");
         this.documents.docKeysSearchResults.removeAll();
+    }
+
+    private getNextColor() {
+        const color = visualizerGraphGlobal.documentColors[this.nextColorIndex % visualizerGraphGlobal.documentColors.length];
+        this.nextColorIndex++;
+        return color;
     }
 
     private fetchDocKeySearchResults(query: string) {
