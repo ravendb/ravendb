@@ -71,37 +71,42 @@ namespace Raven.Tests.Issues
             using (var store = NewDocumentStore())
             {
                 SaveThreeUsers(store);
+                WaitForIndexing(store);
 
-                var subscription = CreateUserSubscription(store);
-
-                var afterBatchCalled = new ManualResetEvent(false);
-                subscription.AfterBatch += count => afterBatchCalled.Set();
-
-                var beforeAcknowledgmentCalled = new ManualResetEvent(false);
-                subscription.BeforeAcknowledgment += () =>
+                using (var subscription = CreateUserSubscription(store))
                 {
-                    beforeAcknowledgmentCalled.Set();
 
-                    return false;
-                };
+                    var afterBatchCalled = new ManualResetEvent(false);
+                    subscription.AfterBatch += count => afterBatchCalled.Set();
 
-                bool afterAcknowledgment = false;
-                subscription.AfterAcknowledgment += etag =>
-                {
-                    afterAcknowledgment = true;
-                };
+                    var beforeAcknowledgmentCalled = new ManualResetEvent(false);
+                    subscription.BeforeAcknowledgment += () =>
+                    {
+                        beforeAcknowledgmentCalled.Set();
 
-                subscription.Subscribe(x => { });
+                        return false;
+                    };
 
-                Assert.True(afterBatchCalled.WaitOne(waitForEvent));
+                    bool afterAcknowledgment = false;
+                    subscription.AfterAcknowledgment += etag =>
+                    {
+                        afterAcknowledgment = true;
+                    };
 
-                Assert.True(beforeAcknowledgmentCalled.WaitOne(1));
-                Assert.False(afterAcknowledgment);
+                    subscription.Subscribe(x => { });
 
-                var subscriptionConfigs = store.Subscriptions.GetSubscriptions(0, 10);
-                Assert.Equal(1, subscriptionConfigs.Count);
+                    Assert.True(afterBatchCalled.WaitOne(waitForEvent));
 
-                Assert.Equal(Etag.Empty, subscriptionConfigs[0].AckEtag);
+                    Assert.True(beforeAcknowledgmentCalled.WaitOne(1));
+                    Assert.False(afterAcknowledgment);
+
+                    var subscriptionConfigs = store.Subscriptions.GetSubscriptions(0, 10);
+                    Assert.Equal(1, subscriptionConfigs.Count);
+
+                    Assert.Equal(new Etag(UuidType.Documents, 1, 1), subscriptionConfigs[0].AckEtag);
+
+                    subscription.Dispose();
+                }
             }
         }
 

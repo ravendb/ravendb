@@ -968,6 +968,7 @@
     <Compile Include="Triggers\Bugs\Person.cs" />
     <Compile Include="Triggers\CascadeDeleteTrigger.cs" />
     <Compile Include="Triggers\DeleteTriggers.cs" />
+    <Compile Include="Triggers\DocumentQueryTriggers.cs" />
     <Compile Include="Triggers\IndexToDataTable.cs" />
     <Compile Include="Triggers\IndexTriggers.cs" />
     <Compile Include="Triggers\PutTriggers.cs" />

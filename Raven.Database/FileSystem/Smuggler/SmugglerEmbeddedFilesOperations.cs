@@ -54,9 +54,9 @@ namespace Raven.Database.FileSystem.Smuggler
             return new CompletedTask<FileSystemStats[]>(new [] {stats});
         }
 
-        public Task<string> GetVersion(FilesConnectionStringOptions server)
+        public Task<BuildNumber> GetVersion(FilesConnectionStringOptions server)
         {
-            return new CompletedTask<string>(DocumentDatabase.ProductVersion);
+            return new CompletedTask<BuildNumber>(new BuildNumber { BuildVersion = DocumentDatabase.BuildVersion.ToString(), ProductVersion = DocumentDatabase.ProductVersion });
         }
 
         public LastFilesEtagsInfo FetchCurrentMaxEtags()
@@ -173,6 +173,17 @@ namespace Raven.Database.FileSystem.Smuggler
             }
 
             return metadata;
+        }
+
+        public Task<Stream> ReceiveFilesInStream(List<string> filePaths)
+        {
+            throw new NotSupportedException("Streaming bulks of files between filesystems is currently not supported in embedded version.");
+        }
+
+        public bool IsEmbedded => true;
+        public Task UploadFilesInStream(FileUploadUnitOfWork[] files)
+        {
+            throw new NotSupportedException("Streaming bulks of files between filesystems is currently not supported in embedded version.");
         }
     }
 }

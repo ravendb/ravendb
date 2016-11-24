@@ -29,6 +29,10 @@ namespace Raven.Database.Counters.Controllers
 
             InnerInitialization(controllerContext);
 
+            HttpResponseMessage message;
+            if (IsClientV4OrHigher(out message))
+                return message;
+
             if (CounterStorage == null || ClusterManager.IsActive() == false)
                 return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
 

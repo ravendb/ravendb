@@ -391,12 +391,24 @@ namespace Raven.Bundles.Replication.Tasks
                         {
                             if (!startedTasks.Any(st => st.IsFaulted))
                             {
-                                //purge tombstones that are not needed anymore
-                                docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationDocsTombstones,
-                                    lastReplicatedDocumentEtags.Values.Min());
+                                try
+                                {
+                                    //purge tombstones that are not needed anymore
+                                    docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationDocsTombstones,
+                                        lastReplicatedDocumentEtags.Values.Min());
 
-                                docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationAttachmentsTombstones,
-                                    lastReplicatedAttachmentEtags.Values.Min());
+                                    docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationAttachmentsTombstones,
+                                        lastReplicatedAttachmentEtags.Values.Min());
+                                }
+                                catch (ConcurrencyException)
+                                {
+                                    //We are ignoring concurrency exception this may happen if two batches compelete before
+                                    //The first batch finishes to cleanup the tombstones.
+                                }
+                                catch (Exception e)
+                                {
+                                    log.ErrorException("Unexpected error during tombstones purging",e);
+                                }
                             }
                             else
                             {

@@ -161,11 +161,16 @@ namespace Raven.Database.FileSystem.Util
 
         public override int Read(byte[] buffer, int offset, int count)
         {
+            var innerBuffer = new byte[StorageConstants.MaxPageSize];
+            return ReadUsingExternalTempBuffer(buffer, offset, count, innerBuffer);
+        }
+
+        public int ReadUsingExternalTempBuffer(byte[] buffer, int offset, int count, byte[] temp)
+        {
             if (currentOffset >= Length)
             {
                 return 0;
             }
-            var innerBuffer = new byte[StorageConstants.MaxPageSize];
             var pageOffset = currentPageFrameOffset;
             var length = 0L;
             var startingOffset = currentOffset;
@@ -174,12 +179,12 @@ namespace Raven.Database.FileSystem.Util
                 if (pageOffset <= currentOffset && currentOffset < pageOffset + page.Size)
                 {
                     var pageLength = 0;
-                    storage.Batch(accessor => pageLength = accessor.ReadPage(page.Id, innerBuffer));
+                    storage.Batch(accessor => pageLength = accessor.ReadPage(page.Id, temp));
                     var sourceIndex = currentOffset - pageOffset;
-                    length = Math.Min(innerBuffer.Length - sourceIndex,
-                                      Math.Min(pageLength, Math.Min(buffer.Length - offset, Math.Min(pageLength - sourceIndex, count))));
+                    length = Math.Min(temp.Length - sourceIndex,
+                        Math.Min(pageLength, Math.Min(buffer.Length - offset, Math.Min(pageLength - sourceIndex, count))));
 
-                    Array.Copy(innerBuffer, sourceIndex, buffer, offset, length);
+                    Array.Copy(temp, sourceIndex, buffer, offset, length);
                     break;
                 }
                 pageOffset += page.Size;

@@ -449,7 +449,7 @@ namespace Raven.Client.Document
 
         IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent)
         {
-            GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude,distErrorPercent, radiusUnits);
+            GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, distErrorPercent, radiusUnits);
             return this;
         }
 
@@ -462,7 +462,7 @@ namespace Raven.Client.Document
 
         IDocumentQueryCustomization IDocumentQueryCustomization.RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distErrorPercent)
         {
-            GenerateSpatialQueryData(fieldName, shapeWKT, rel,distErrorPercent);
+            GenerateSpatialQueryData(fieldName, shapeWKT, rel, distErrorPercent);
             return this;
         }
 
@@ -585,7 +585,8 @@ namespace Raven.Client.Document
 
         protected internal QueryOperation InitializeQueryOperation()
         {
-            var indexQuery = GetIndexQuery(isAsync: false);
+            var query = queryText.ToString();
+            var indexQuery = GenerateIndexQuery(query);
 
             if (beforeQueryExecutionAction != null)
                 beforeQueryExecutionAction(indexQuery);
@@ -603,8 +604,13 @@ namespace Raven.Client.Document
 
         public IndexQuery GetIndexQuery(bool isAsync)
         {
+            ExecuteBeforeQueryListeners();
+
             var query = queryText.ToString();
             var indexQuery = GenerateIndexQuery(query);
+            if (beforeQueryExecutionAction != null)
+                beforeQueryExecutionAction(indexQuery);
+
             return indexQuery;
         }
 
@@ -1779,7 +1785,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             if (conventions.SaveEnumsAsIntegers && type.IsEnum())
             {
-                return ((int) whereParams.Value).ToString();
+                return ((int)whereParams.Value).ToString();
             }
 
             if (type == typeof(bool))

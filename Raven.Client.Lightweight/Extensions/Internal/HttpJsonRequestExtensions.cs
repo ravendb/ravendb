@@ -9,9 +9,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Extensions
 {
-    internal static class HttpJsonRequestExtensions
+    public static class HttpJsonRequestExtensions
     {
-        internal async static Task AssertNotFailingResponse(this HttpResponseMessage response)
+        public async static Task AssertNotFailingResponse(this HttpResponseMessage response)
         {
             if (response.IsSuccessStatusCode)
                 return;

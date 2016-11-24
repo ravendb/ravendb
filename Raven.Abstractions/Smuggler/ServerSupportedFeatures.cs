@@ -12,5 +12,7 @@ namespace Raven.Abstractions.Smuggler
         public bool IsIdentitiesSmugglingSupported { get; set; }
         public bool IsBulkIdentitiesSmugglingSupported { get; set; }
         public bool IsMultiPartExportSupported { get; set; }
+
+        public bool IsFilesStreamingSupported { get; set; }
     }
 }

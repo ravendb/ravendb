@@ -15,7 +15,7 @@ namespace Raven.Abstractions.Smuggler
 
 
         Task<FileSystemStats[]> GetStats();
-        Task<string> GetVersion(FilesConnectionStringOptions server);        
+        Task<BuildNumber> GetVersion(FilesConnectionStringOptions server);        
 
         LastFilesEtagsInfo FetchCurrentMaxEtags();
 
@@ -41,5 +41,9 @@ namespace Raven.Abstractions.Smuggler
         RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata);
 
         RavenJObject DisableVersioning(RavenJObject metadata);
+        Task<Stream> ReceiveFilesInStream(List<string> filePaths);
+
+        bool IsEmbedded { get; }
+        Task UploadFilesInStream(FileUploadUnitOfWork[] files);
     }
 }

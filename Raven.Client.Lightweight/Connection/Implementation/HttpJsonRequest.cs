@@ -1007,5 +1007,10 @@ namespace Raven.Client.Connection.Implementation
                 httpClient = null;
             }
         }
+
+        public IDisposable Continue100Scope()
+        {
+            return ConnectionOptions.Expect100Continue(this.Url);
+        }
     }
 }

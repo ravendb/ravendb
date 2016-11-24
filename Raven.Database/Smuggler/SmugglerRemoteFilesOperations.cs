@@ -1,17 +1,27 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
+using Raven.Client;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Connection;
+using Raven.Client.FileSystem.Extensions;
+using Raven.Client.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Smuggler
@@ -55,10 +65,9 @@ namespace Raven.Smuggler
             return await PrimaryStore.AsyncFilesCommands.Admin.GetStatisticsAsync().ConfigureAwait(false);
         }
 
-        public virtual async Task<string> GetVersion(FilesConnectionStringOptions server)
+        public virtual Task<BuildNumber> GetVersion(FilesConnectionStringOptions server)
         {
-            var buildNumber = await DocumentStore.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync().ConfigureAwait(false);
-            return buildNumber.ProductVersion;
+            return DocumentStore.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
         }
 
         public virtual LastFilesEtagsInfo FetchCurrentMaxEtags()
@@ -75,9 +84,10 @@ namespace Raven.Smuggler
             ShowProgress("Streaming documents from {0}, batch size {1}", lastEtag, take);
             return await PrimaryStore.AsyncFilesCommands.StreamFileHeadersAsync(lastEtag, pageSize: take).ConfigureAwait(false);
         }
-
+        
         public virtual Task<Stream> DownloadFile(FileHeader file)
         {
+        
             return PrimaryStore.AsyncFilesCommands.DownloadAsync(file.FullPath);
         }
 
@@ -163,6 +173,81 @@ namespace Raven.Smuggler
 
             return metadata;
         }
+          
+        public async Task<Stream> ReceiveFilesInStream(List<string> filePaths)
+        {
+            if (filePaths == null || filePaths.Count == 0)
+            {
+                throw new ArgumentException("Should receive file names");
+            }
+            var asyncFilesCommands = PrimaryStore.AsyncFilesCommands;
+            var commands = (AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>) PrimaryStore.AsyncFilesCommands;
+
+            var uri = "/streams/export";
+            
+            var request = commands.RequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(PrimaryStore.AsyncFilesCommands, 
+                    PrimaryStore.AsyncFilesCommands.UrlFor() + uri, 
+                    HttpMethods.Post, 
+                    commands.PrimaryCredentials, 
+                    commands.Conventions))
+                .AddOperationHeaders(commands.OperationsHeaders);
+            
+            try
+            {
+                var fileNamesJson = RavenJObject.FromObject(new
+                {
+                    FileNames = filePaths
+                });
+                    
+                var response = await request.ExecuteRawResponseAsync(fileNamesJson).ConfigureAwait(false);
+
+                return new DisposableStream(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false), request.Dispose);
+                
+            }
+            catch (Exception e)
+            {
+                throw e.SimplifyException();
+            }
+        }
+
+        public async Task UploadFilesInStream(FileUploadUnitOfWork[] files)
+        {
+            var workload = new FilesUploadWorker(files);
+            var asyncFilesCommands = PrimaryStore.AsyncFilesCommands;
+            var commands = (AsyncServerClientBase<FilesConvention, IFilesReplicationInformer>)PrimaryStore.AsyncFilesCommands;
+            var uri = "/streams/Import";
+
+
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(asyncFilesCommands, PrimaryStore.AsyncFilesCommands.UrlFor()  + uri, HttpMethod.Put, commands.PrimaryCredentials, commands.Conventions, timeout: TimeSpan.FromHours(12))
+            {
+                DisableRequestCompression = true
+            };
+
+
+            var request = commands.RequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).AddOperationHeaders(commands.OperationsHeaders);
+            
+            using (request.Continue100Scope())
+            {
+
+                var response = await request.ExecuteRawRequestAsync(async(stream,t)=>await workload.UploadFiles(stream, t).ConfigureAwait(false)).ConfigureAwait(false);
+
+                try
+                {
+                    await response.AssertNotFailingResponse().ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    var simplified = e.SimplifyException();
+
+                    if (simplified != e)
+                        throw simplified;
+
+                    throw;
+                }
+            }
+        }
+        public bool IsEmbedded => false;
     }
 
 
