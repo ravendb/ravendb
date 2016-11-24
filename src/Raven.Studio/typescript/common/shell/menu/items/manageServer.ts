@@ -1,6 +1,6 @@
 ﻿import appUrl = require("common/appUrl");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
-import accessHelper = require("viewModels/shell/accessHelper");
+import accessHelper = require("viewmodels/shell/accessHelper");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 

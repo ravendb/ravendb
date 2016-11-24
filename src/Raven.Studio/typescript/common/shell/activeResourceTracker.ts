@@ -2,8 +2,8 @@
 import database = require("models/resources/database");
 import resource = require("models/resources/resource");
 import filesystem = require("models/filesystem/filesystem");
-import counterStorage = require("models/counter/counterstorage");
-import timeSeries = require("models/timeseries/timeseries");
+import counterStorage = require("models/counter/counterStorage");
+import timeSeries = require("models/timeSeries/timeSeries");
 import resourceActivatedEventArgs = require("viewmodels/resources/resourceActivatedEventArgs");
 
 export = activeResourceTracker;

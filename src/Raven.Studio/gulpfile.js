@@ -155,7 +155,7 @@ gulp.task('release:libs', function() {
 gulp.task('release:durandal', function() {
     return plugins.durandal({
         baseDir: 'wwwroot/App',
-        extraModules: ['transitions/fadeIn', 'widgets/virtualTable/viewmodel'],
+        extraModules: ['transitions/fadeIn', 'widgets/virtualTable/viewModel'],
         almond: true,
         minify: true,
         rjsConfigAdapter: function (cfg) {
