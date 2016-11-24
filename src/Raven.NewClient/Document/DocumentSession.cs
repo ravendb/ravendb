@@ -12,7 +12,6 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Document.Batches;
-using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;

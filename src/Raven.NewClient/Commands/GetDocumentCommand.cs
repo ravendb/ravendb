@@ -5,7 +5,6 @@ using System.Net.Http;
 using System.Text;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;

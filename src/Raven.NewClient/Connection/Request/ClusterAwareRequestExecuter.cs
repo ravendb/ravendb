@@ -99,6 +99,8 @@ namespace Raven.NewClient.Client.Connection.Request
 
         public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient, bool force = false)
         {
+            throw new NotImplementedException();
+            /*
             if (force == false && lastUpdate.AddMinutes(5) > SystemTime.UtcNow && LeaderNode != null)
                 return new CompletedTask();
 
@@ -112,23 +114,25 @@ namespace Raven.NewClient.Client.Connection.Request
 
                     return t.Result;
                 });
-            });
+            });*/
         }
 
         public void AddHeaders(HttpJsonRequest httpJsonRequest, AsyncServerClient serverClient, string currentUrl)
         {
-            httpJsonRequest.AddHeader(Constants.Cluster.ClusterAwareHeader, "true");
+            throw new NotImplementedException();
+            /* httpJsonRequest.AddHeader(Constants.Cluster.ClusterAwareHeader, "true");
 
-            if (serverClient.ClusterBehavior == ClusterBehavior.ReadFromAllWriteToLeader)
-                httpJsonRequest.AddHeader(Constants.Cluster.ClusterReadBehaviorHeader, "All");
+             if (serverClient.ClusterBehavior == ClusterBehavior.ReadFromAllWriteToLeader)
+                 httpJsonRequest.AddHeader(Constants.Cluster.ClusterReadBehaviorHeader, "All");
 
-            if (serverClient.ClusterBehavior == ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers || serverClient.ClusterBehavior == ClusterBehavior.ReadFromLeaderWriteToLeaderWithFailovers)
-                httpJsonRequest.AddHeader(Constants.Cluster.ClusterFailoverBehaviorHeader, "true");
+             if (serverClient.ClusterBehavior == ClusterBehavior.ReadFromAllWriteToLeaderWithFailovers || serverClient.ClusterBehavior == ClusterBehavior.ReadFromLeaderWriteToLeaderWithFailovers)
+                 httpJsonRequest.AddHeader(Constants.Cluster.ClusterFailoverBehaviorHeader, "true");*/
         }
 
         private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, HttpMethod method, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries = 2)
         {
-            token.ThrowIfCancellationRequested();
+            throw new NotImplementedException();
+            /*token.ThrowIfCancellationRequested();
 
             if (numberOfRetries < 0)
                 throw new InvalidOperationException("Cluster is not reachable. Out of retries, aborting.");
@@ -182,6 +186,7 @@ namespace Raven.NewClient.Client.Connection.Request
             LeaderNode = null;
             FailureCounters.IncrementFailureCount(node.Url);
             return await ExecuteWithinClusterInternalAsync(serverClient, method, operation, token, numberOfRetries - 1).ConfigureAwait(false);
+     */
         }
 
         private OperationMetadata GetNodeForReadOperation(OperationMetadata node)

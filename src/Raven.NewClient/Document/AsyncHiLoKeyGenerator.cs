@@ -157,38 +157,41 @@ namespace Raven.NewClient.Client.Document
                 }*/
         }
 
-        private async Task<RangeValue> HandleConflictsAsync(IAsyncDatabaseCommands databaseCommands, ConflictException e, long minNextMax)
+        private async Task<RangeValue> HandleConflictsAsync(ConflictException e, long minNextMax)
         {
-            // resolving the conflict by selecting the highest number
-            long highestMax = -1;
-            if (e.ConflictedVersionIds.Length == 0)
-                throw new InvalidOperationException("Got conflict exception, but no conflicted versions", e);
-            foreach (var conflictedVersionId in e.ConflictedVersionIds)
-            {
-                var doc = await databaseCommands.GetAsync(conflictedVersionId).ConfigureAwait(false);
-                highestMax = Math.Max(highestMax, GetMaxFromDocument(doc, minNextMax));
-            }
+            throw new NotImplementedException();
+            /* // resolving the conflict by selecting the highest number
+             long highestMax = -1;
+             if (e.ConflictedVersionIds.Length == 0)
+                 throw new InvalidOperationException("Got conflict exception, but no conflicted versions", e);
+             foreach (var conflictedVersionId in e.ConflictedVersionIds)
+             {
+                 var doc = await databaseCommands.GetAsync(conflictedVersionId).ConfigureAwait(false);
+                 highestMax = Math.Max(highestMax, GetMaxFromDocument(doc, minNextMax));
+             }
 
-            await PutDocumentAsync(databaseCommands, new JsonDocument
-            {
-                Etag = e.Etag,
-                Metadata = new RavenJObject(),
-                DataAsJson = RavenJObject.FromObject(new { Max = highestMax }),
-                Key = HiLoDocumentKey
-            }).ConfigureAwait(false);
-            return await GetNextRangeAsync().ConfigureAwait(false);
+             await PutDocumentAsync(databaseCommands, new JsonDocument
+             {
+                 Etag = e.Etag,
+                 Metadata = new RavenJObject(),
+                 DataAsJson = RavenJObject.FromObject(new { Max = highestMax }),
+                 Key = HiLoDocumentKey
+             }).ConfigureAwait(false);
+             return await GetNextRangeAsync().ConfigureAwait(false);*/
         }
 
-        private Task PutDocumentAsync(IAsyncDatabaseCommands databaseCommands, JsonDocument document)
+        private Task PutDocumentAsync(JsonDocument document)
         {
-            return databaseCommands.PutAsync(HiLoDocumentKey, document.Etag,
+            throw new NotImplementedException();
+            /*return databaseCommands.PutAsync(HiLoDocumentKey, document.Etag,
                                  document.DataAsJson,
-                                 document.Metadata);
+                                 document.Metadata);*/
         }
 
-        private async Task<JsonDocument> GetDocumentAsync(IAsyncDatabaseCommands databaseCommands)
+        private async Task<JsonDocument> GetDocumentAsync()
         {
-            var documents = await databaseCommands.GetAsync(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0]).ConfigureAwait(false);
+            throw new NotImplementedException();
+            /*var documents = await databaseCommands.GetAsync(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0]).ConfigureAwait(false);
             if (documents.Results.Count == 2 && documents.Results[1] != null)
             {
                 lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");
@@ -205,7 +208,7 @@ namespace Raven.NewClient.Client.Document
             {
                 jsonDocument.Metadata.Remove(key);
             }
-            return jsonDocument;
+            return jsonDocument;*/
         }
     }
 }

@@ -189,7 +189,8 @@ namespace Raven.NewClient.Client.Document
 
         private async Task<Stream> ConnectToServer()
         {
-            var connectionInfo = await _commands.GetTcpInfoAsync();
+            throw new NotImplementedException();
+            /*var connectionInfo = await _commands.GetTcpInfoAsync();
             await _tcpClient.ConnectAsync(new Uri(connectionInfo.Url).Host, connectionInfo.Port);
 
             _tcpClient.NoDelay = true;
@@ -212,7 +213,7 @@ namespace Raven.NewClient.Client.Document
             await _networkStream.WriteAsync(bytes.Array, bytes.Offset, bytes.Count);
 
             await _networkStream.FlushAsync();
-            return _networkStream;
+            return _networkStream;*/
         }
 
         private void InformSubscribersOnError(Exception ex)

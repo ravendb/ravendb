@@ -14,7 +14,6 @@ namespace Raven.NewClient.Client.Document
         private readonly IDocumentStore documentStore;
         private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
         protected TcpBulkInsertOperation Operation { get; set; }
-        public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
         private readonly EntityToJson entityToJson;
 
         public delegate void BeforeEntityInsert(string id, RavenJObject data, RavenJObject metadata);
@@ -52,9 +51,10 @@ namespace Raven.NewClient.Client.Document
             entityToJson = new EntityToJson(documentStore, listeners);*/
         }
 
-        protected virtual TcpBulkInsertOperation GetBulkInsertOperation(IAsyncDatabaseCommands commands)
-        {			
-            return commands.GetBulkInsertOperation();
+        protected virtual TcpBulkInsertOperation GetBulkInsertOperation()
+        {
+            throw new NotImplementedException();
+            //return commands.GetBulkInsertOperation();
         }
 
         public async Task DisposeAsync()

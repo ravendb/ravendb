@@ -1,19 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
-using Raven.NewClient.Abstractions.Data;
+﻿using System.Net.Http;
 using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Json;
 using Sparrow.Json;
-using System.Runtime.Serialization.Formatters;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Serialization;
-using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Commands
 {
