@@ -3,9 +3,9 @@ using System.Net.Http;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Json.Linq;
+
 
 using System;
 using System.Collections;

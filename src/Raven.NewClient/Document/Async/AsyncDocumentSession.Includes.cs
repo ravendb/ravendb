@@ -13,10 +13,10 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Linq;
 using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Json.Linq;
+
 using Raven.NewClient.Client.Document.Batches;
 using System.Diagnostics;
 using System.Dynamic;

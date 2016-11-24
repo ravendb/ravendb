@@ -11,10 +11,10 @@ using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Logging;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Platform;
-using Raven.NewClient.Json.Linq;
+
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

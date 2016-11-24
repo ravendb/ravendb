@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Connection;
 using Newtonsoft.Json;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Extensions
 {

@@ -10,7 +10,7 @@ using Raven.NewClient.Abstractions.Exceptions.Subscriptions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Extensions;
 using Newtonsoft.Json;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Abstractions.Data
 {

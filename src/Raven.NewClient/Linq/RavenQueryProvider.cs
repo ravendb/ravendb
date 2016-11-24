@@ -10,10 +10,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Json.Linq;
+
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.NewClient.Client.Commands;

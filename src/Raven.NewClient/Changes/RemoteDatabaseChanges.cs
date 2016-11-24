@@ -5,7 +5,7 @@ using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Json.Linq;
+
 using Sparrow.Collections;
 using System;
 using System.Collections.Generic;

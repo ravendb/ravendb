@@ -7,6 +7,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -232,7 +233,7 @@ namespace Raven.NewClient.Client.Http
             return new HttpCache.ReleaseCacheItem();
         }
 
-        public static readonly string ClientVersion = typeof(RequestExecuter).Assembly().GetName().Version.ToString();
+        public static readonly string ClientVersion = typeof(RequestExecuter).GetTypeInfo().Assembly.GetName().Version.ToString();
 
         private static HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)
         {

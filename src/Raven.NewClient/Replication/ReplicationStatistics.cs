@@ -4,7 +4,7 @@ using Raven.NewClient.Abstractions.Data;
 
 namespace Raven.NewClient.Abstractions.Replication
 {
-    using Raven.NewClient.Json.Linq;
+    
 
     public class ReplicationStatistics
     {

@@ -10,12 +10,12 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Listeners;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Shard;
-using Raven.NewClient.Json.Linq;
+
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;

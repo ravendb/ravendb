@@ -5,7 +5,7 @@ namespace Raven.NewClient.Abstractions.Extensions
     using System.Linq;
 
     using Raven.NewClient.Abstractions.Data;
-    using Raven.NewClient.Json.Linq;
+    
 
     public static class JsonDocumentExtensions
     {

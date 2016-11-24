@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Connection.Implementation;
 using Raven.NewClient.Client.Connection.Profiling;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Util.Auth
 {

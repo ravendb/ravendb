@@ -15,7 +15,7 @@ using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Platform;
 using Raven.NewClient.Client.Util;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Changes
 {

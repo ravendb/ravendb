@@ -11,7 +11,7 @@ using System.Linq;
 using System.Text;
 using Raven.NewClient.Abstractions.Data;
 using Newtonsoft.Json;
-using Raven.NewClient.Json.Linq;
+
 using System.Net.Http;
 
 namespace Raven.NewClient.Abstractions.Extensions

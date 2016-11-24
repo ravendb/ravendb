@@ -5,17 +5,16 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using Lucene.Net.Documents;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Transformers;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Abstractions.Data;
-using Lucene.Net.Documents;
 
 namespace Raven.Server.Utils
 {

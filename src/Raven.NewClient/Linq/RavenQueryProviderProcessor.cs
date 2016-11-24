@@ -21,7 +21,7 @@ using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Client.Linq;
 using Newtonsoft.Json;
 using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Linq
 {

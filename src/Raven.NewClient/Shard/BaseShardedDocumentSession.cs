@@ -12,7 +12,7 @@ using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Shard
 {

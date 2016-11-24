@@ -11,9 +11,9 @@ using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Json.Linq;
+
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Data;
 
 namespace Raven.NewClient.Client.Document

@@ -10,7 +10,7 @@ using Newtonsoft.Json;
 using System.Linq;
 using Raven.NewClient.Abstractions.Linq;
 using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Abstractions.Json
 {
