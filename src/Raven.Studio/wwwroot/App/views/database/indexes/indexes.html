@@ -12,11 +12,11 @@
         <div class="pull-left">
             <div class="form-inline">
                 <div class="checkbox checkbox-inline align-checkboxes" title="Select all or none">
-                    <input type="checkbox" class="styled" data-bind="checkboxTriple: indexesSelectionState, event: { change: toggleSelectAll }"/>
+                    <input type="checkbox" class="styled" data-bind="checkboxTriple: indexesSelectionState, event: { change: toggleSelectAll }" />
                     <label></label>
                 </div>
                 <div class="input-group">
-                    <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText"/>
+                    <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText" />
                 </div>
                 <div class="btn-group">
                     <button type="button" class="btn btn-default dropdown-toggle" title="Set lock mode for selected indexes"
@@ -82,14 +82,29 @@
                                 <input type="checkbox" class="styled" data-bind="checked: $root.selectedIndexesName, checkedValue: name">
                                 <label></label>
                             </div>
-                            <h3 class="index-name"><a href="#" data-bind="text: name, attr: { href: queryUrl(), title: name }"></a>
+                            <h3 class="index-name">
+                                <a href="#" data-bind="text: name, attr: { href: queryUrl(), title: name }"></a>
                             </h3>
                             <div class="index-type">
                                 <span data-bind="text: getTypeForUI()"></span>
-                                &nbsp; <span data-bind="visible: isTestIndex" class="label label-warning">TEST INDEX</span>    
+                                &nbsp; <span data-bind="visible: isTestIndex" class="label label-warning">TEST INDEX</span>
                             </div>
                         </div>
                         <div class="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container" data-bind="if: !isFaulty()">
+
+                            <div class="properties-item state-selector" data-bind="template: { name: 'state-template' }">
+                            </div>
+                            <div class="properties-item priority" data-bind="template: { name: 'priority-template' }">
+                            </div>
+                            <div class="properties-item mode" data-bind="template: { name: 'lock-mode-template' }">
+                            </div>
+                            <div class="properties-item entriesCount">
+                                <div class="properties-value value-only">
+                                    <div class="set-size">
+                                        <i class="icon-list"></i><span data-bind="text: $root.pluralize(entriesCount, 'entry', 'entries')"></span>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="properties-item staleness" data-bind="visible: isStale()">
                                 <div class="properties-value value-only">
                                     <div class="set-size">
@@ -104,19 +119,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="properties-item entriesCount">
-                                <div class="properties-value value-only">
-                                    <div class="set-size">
-                                        <i class="icon-list"></i><span data-bind="text: $root.pluralize(entriesCount, 'entry', 'entries')"></span>    
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="properties-item state-selector" data-bind="template: { name: 'state-template' }">
-                            </div>
-                            <div class="properties-item priority" data-bind="template: { name: 'priority-template' }">
-                            </div>
-                            <div class="properties-item mode" data-bind="template: { name: 'lock-mode-template' }">
-                            </div>
+
                         </div>
                         <div class="col-xs-12 col-sm-6 col-xl-3 actions-container">
                             <div class="actions">
@@ -236,7 +239,7 @@
 <script type="text/html" id="lock-mode-template">
     <span class="properties-label">Mode:</span>
     <div class="btn-group properties-value">
-        <button type="button" class="btn btn-block set-size dropdown-toggle" data-toggle="dropdown" 
+        <button type="button" class="btn btn-block set-size dropdown-toggle" data-toggle="dropdown"
                 data-bind="css: { 'btn-spinner': $root.spinners.localLockChanges().contains(name) }, enable: !$root.spinners.localLockChanges().contains(name)">
             <span data-bind="visible: lockMode() === 'Unlock'">
                 <i class="icon-unlock"></i><span>Unlocked</span>
