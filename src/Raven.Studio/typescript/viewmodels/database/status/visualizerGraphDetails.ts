@@ -63,11 +63,23 @@ class layoutableItem {
 class documentItem extends layoutableItem {
     name: string;
     color: string;
+    drawOffset: number;
 
-    constructor(name: string, color: string) {
+    connectedEntries = [] as entryItem[];
+
+    constructor(name: string, color: string, drawOffset: number) {
         super();
         this.name = name;
         this.color = color;
+        this.drawOffset = drawOffset;
+    }
+
+    getSourceConnectionPoint(): [number, number] {
+        return [this.x + this.width / 2, this.y];
+    }
+
+    reset() {
+        this.connectedEntries = [];
     }
 }
 
@@ -75,6 +87,7 @@ class entryItem extends layoutableItem {
     data: Object;
     dataAsString: string;
     source: string;
+    parent: pageItem;
 
     constructor(source: string, data: Object) {
         super();
@@ -85,6 +98,10 @@ class entryItem extends layoutableItem {
 
     static estimateTextWidth(text: string) {
         return text.length * 6;
+    }
+
+    getGlobalTargetConnectionPoint(): [number, number] {
+        return [this.x + this.parent.x, this.y + this.parent.y + this.height / 2];
     }
 }
 
@@ -198,7 +215,14 @@ class leafPageItem extends pageItem {
         const result = [] as Array<entryItem | entryPaddingItem>;
         for (let i = 0; i < entries.length; i++) {
             if (entiresToTake[i]) {
-                result.push(new entryItem(entries[i].Source, entries[i].Data));
+                const entry = new entryItem(entries[i].Source, entries[i].Data);
+                if (entry.source) {
+                    const matchedDocument = documents.find(x => x.name === entry.source);
+                    if (matchedDocument) {
+                        matchedDocument.connectedEntries.push(entry);
+                    }
+                }
+                result.push(entry);
             } else {
                 if (result.length === 0 || result.last() instanceof entryItem) {
                     result.push(new entryPaddingItem());
@@ -285,10 +309,10 @@ class reduceTreeItem {
         countEntries(0, this.tree.Root);
     }
 
-    filterAndLayoutVisibleItems(documents: documentItem[]) {
+    filterAndLayoutVisibleItems(documents: documentItem[]): number {
         this.cleanCache(documents);
         this.filterVisibleItems(documents);
-        this.layout();
+        return this.layout();
     }
 
     private cleanCache(documents: documentItem[]) {
@@ -317,6 +341,7 @@ class reduceTreeItem {
             if (node.Entries && node.Entries.length) {
                 const entries = leafPageItem.findEntries(documents, node.Entries);
                 const item = new leafPageItem(parentPage, node.PageNumber, entries);
+                entries.filter(x => x instanceof entryItem).forEach((entry: entryItem) => entry.parent = item);
                 items.push(item);
             }
         };
@@ -324,7 +349,7 @@ class reduceTreeItem {
         filterAtDepth(0, this.tree.Root, null);
     }
 
-    private layout() {
+    private layout(): number {
         this.itemsAtDepth.forEach((pages, depth) => {
             pages.forEach(page => page.layout());
         });
@@ -369,6 +394,8 @@ class reduceTreeItem {
 
             yStart += maxHeightPerLevel[depth] + visualizerGraphDetails.margins.verticalMarginBetweenLevels;
         }
+
+        return yStart;
     }
 }
 
@@ -377,8 +404,14 @@ class visualizerGraphDetails {
 
     static margins = {
         top: 40,
-        verticalMarginBetweenLevels: 60
-       //TODO: 
+        verticalMarginBetweenLevels: 60,
+        betweenTreesAndDocumentsPadding: 80,
+        badgePadding: 30,
+        minMarginBetweenDocumentNames: 30,
+        straightLine: 12,
+        arrowHalfHeight: 6,
+        arrowWidth: 8,
+        betweenLinesOffset: 5
     }
 
     private totalWidth = 1500; //TODO: use dynamic value
@@ -390,9 +423,6 @@ class visualizerGraphDetails {
     private svg: d3.Selection<void>; //TODO: do we really need svg in here?
     private zoom: d3.behavior.Zoom<void>;
 
-    private dataWidth = 0; // total width of all virtual elements
-    private dataHeight = 0; // total heigth of all virtual elements
-
     private xScale: d3.scale.Linear<number, number>;
     private yScale: d3.scale.Linear<number, number>;
 
@@ -402,6 +432,9 @@ class visualizerGraphDetails {
     private trees: Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
     private currentTreeIndex = 0;
     private currentTree: reduceTreeItem;
+
+    private currentLineOffset = 0;
+    private connectionsBaseY = 0;
 
     init(goToMasterViewCallback: () => void, trees: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
         this.gotoMasterViewCallback = goToMasterViewCallback;
@@ -444,12 +477,15 @@ class visualizerGraphDetails {
     }
 
     addDocument(documentName: string, color: string) {
-        const document = new documentItem(documentName, color);
+        const document = new documentItem(documentName, color, this.currentLineOffset);
+        this.currentLineOffset += visualizerGraphDetails.margins.betweenLinesOffset;
         this.documents.push(document);
     }
 
     reset() {
         this.zoom.translate([0, 0]).scale(1).event(this.canvas);
+
+        this.documents.forEach(doc => doc.reset());
         //TODO: reset documents and details index
     }
 
@@ -487,10 +523,50 @@ class visualizerGraphDetails {
     }
 
     private layout() {
-        this.currentTree.filterAndLayoutVisibleItems(this.documents);
+        let yStart = this.currentTree.filterAndLayoutVisibleItems(this.documents);
 
+        this.connectionsBaseY = yStart
+            + visualizerGraphDetails.margins.betweenTreesAndDocumentsPadding / 2
+            - (visualizerGraphDetails.margins.betweenLinesOffset * this.documents.length) / 2;
 
-        //TODO: layout document and this
+        yStart += visualizerGraphDetails.margins.betweenTreesAndDocumentsPadding;
+
+        this.layoutDocuments(yStart);
+    }
+
+    private layoutDocuments(yStart: number) {
+
+        let totalWidth = 0;
+
+        for (let i = 0; i < this.documents.length; i++) {
+            const doc = this.documents[i];
+            const documentNameWidthEstimation = (text: string) => text.length * 9;
+
+            doc.width = visualizerGraphDetails.margins.badgePadding * 2 + documentNameWidthEstimation(doc.name);
+            doc.height = 35;
+            doc.y = yStart;
+
+            totalWidth += doc.width;
+        }
+
+        totalWidth += this.documents.length * (visualizerGraphDetails.margins.minMarginBetweenDocumentNames + 1);
+
+        let extraItemPadding = 0;
+
+        if (totalWidth > this.currentTree.totalWidth) {
+            //TODO: handle me!
+        } else {
+            extraItemPadding = (this.currentTree.totalWidth - totalWidth) / (this.documents.length + 1);
+        }
+
+        let currentX = visualizerGraphDetails.margins.minMarginBetweenDocumentNames + extraItemPadding;
+
+        for (let i = 0; i < this.documents.length; i++) {
+            const doc = this.documents[i];
+            doc.x = currentX;
+
+            currentX += doc.width + visualizerGraphDetails.margins.minMarginBetweenDocumentNames + extraItemPadding;
+        }
     }
 
     private draw() {
@@ -510,13 +586,12 @@ class visualizerGraphDetails {
                 this.drawTree(ctx, this.currentTree);
             }
 
-            /* TODO
             for (let i = 0; i < this.documents.length; i++) {
                 const doc = this.documents[i];
                 this.drawDocument(ctx, doc);
             }
-    
-            this.drawDocumentConnections(ctx);*/
+
+            this.drawDocumentConnections(ctx);
 
         } finally {
             ctx.restore();
@@ -531,11 +606,25 @@ class visualizerGraphDetails {
 
                 if (page.parentPage) {
                     ctx.strokeStyle = "#686f6f";
+                    ctx.lineWidth = 2;
 
                     const sourcePoint = page.getSourceConnectionPoint();
                     const targetPoint = page.parentPage.getTargetConnectionPoint();
 
-                    graphHelper.drawBezierDiagonal(ctx, sourcePoint, targetPoint, true);
+                    const middleY = (sourcePoint[1] + targetPoint[1]) / 2;
+
+                    ctx.beginPath();
+                    ctx.moveTo(sourcePoint[0], sourcePoint[1]);
+                    ctx.lineTo(sourcePoint[0], middleY);
+                    ctx.lineTo(targetPoint[0], middleY);
+                    ctx.lineTo(targetPoint[0], targetPoint[1]);
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(targetPoint[0] - visualizerGraphDetails.margins.arrowWidth, targetPoint[1] + visualizerGraphDetails.margins.arrowHalfHeight);
+                    ctx.lineTo(targetPoint[0], targetPoint[1]);
+                    ctx.lineTo(targetPoint[0] + visualizerGraphDetails.margins.arrowWidth, targetPoint[1] + visualizerGraphDetails.margins.arrowHalfHeight);
+                    ctx.stroke();
                 }
             }
         });
@@ -598,6 +687,47 @@ class visualizerGraphDetails {
             ctx.fillText(key + ": " + value, pageItem.margins.aggragationTextHorizontalPadding, currentY);
             currentY += yOffset;
         });
+    }
+
+    private drawDocument(ctx: CanvasRenderingContext2D, docItem: documentItem) {
+        //TODO: it is the same as in global - consider merging?
+        ctx.fillStyle = docItem.color;
+        ctx.fillRect(docItem.x, docItem.y, docItem.width, docItem.height);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = "18px Lato";
+        ctx.fillStyle = "black";
+        ctx.fillText(docItem.name, docItem.x + docItem.width / 2, docItem.y + docItem.height / 2);
+    }
+
+    private drawDocumentConnections(ctx: CanvasRenderingContext2D) {
+        ctx.lineWidth = 2;
+        for (let i = 0; i < this.documents.length; i++) {
+            const doc = this.documents[i];
+
+            ctx.strokeStyle = doc.color;
+
+            for (let j = 0; j < doc.connectedEntries.length; j++) {
+                const entry = doc.connectedEntries[j];
+
+                const source = doc.getSourceConnectionPoint();
+                const target = entry.getGlobalTargetConnectionPoint();
+
+                ctx.beginPath();
+                ctx.moveTo(source[0], source[1]);
+                ctx.lineTo(source[0], this.connectionsBaseY + doc.drawOffset);
+                ctx.lineTo(target[0] - visualizerGraphDetails.margins.straightLine - doc.drawOffset, this.connectionsBaseY + doc.drawOffset);
+                ctx.lineTo(target[0] - visualizerGraphDetails.margins.straightLine - doc.drawOffset, target[1]);
+                ctx.lineTo(target[0], target[1]);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(target[0] - visualizerGraphDetails.margins.arrowWidth, target[1] - visualizerGraphDetails.margins.arrowHalfHeight);
+                ctx.lineTo(target[0], target[1]);
+                ctx.lineTo(target[0] - visualizerGraphDetails.margins.arrowWidth, target[1] + visualizerGraphDetails.margins.arrowHalfHeight);
+                ctx.stroke();
+            }
+        }
     }
 
     private toggleUiElements(show: boolean) {

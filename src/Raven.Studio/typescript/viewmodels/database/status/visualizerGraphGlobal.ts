@@ -296,7 +296,6 @@ class visualizerGraphGlobal {
         globalMargin: 30
     }
 
-    static readonly documentColors = ["#7cb82f", "#1a858e", "#ef6c5a"];
     private hitTest = new hitTest();
 
     private savedZoomStatus = {
