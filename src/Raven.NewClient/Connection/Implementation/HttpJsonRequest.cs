@@ -558,8 +558,9 @@ namespace Raven.NewClient.Client.Connection.Implementation
             AsyncServerClient serverClient,
             string currentUrl)
         {
-            serverClient.RequestExecuter.AddHeaders(this, serverClient, currentUrl);
-                return this;
+            throw new NotImplementedException();
+            /*  serverClient.RequestExecuter.AddHeaders(this, serverClient, currentUrl);
+                  return this;*/
         }
 
         internal void AddReplicationStatusChangeBehavior(string thePrimaryUrl, string currentUrl, Action<NameValueCollection, string, string> handler)

@@ -28,7 +28,6 @@ using Raven.NewClient.Client.Connection.Request;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Indexing;
@@ -37,9 +36,9 @@ using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Connection
 {
-    public class ServerClient : IDatabaseCommands, IInfoDatabaseCommands
+    public class ServerClient
     {
-        private readonly AsyncServerClient asyncServerClient;
+        /*private readonly AsyncServerClient asyncServerClient;
 
         public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
         {
@@ -52,7 +51,6 @@ namespace Raven.NewClient.Client.Connection
             this.asyncServerClient = asyncServerClient;
         }
 
-        public IInfoDatabaseCommands Info => this;
 
         public OperationCredentials PrimaryCredentials => asyncServerClient.PrimaryCredentials;
 
@@ -72,9 +70,6 @@ namespace Raven.NewClient.Client.Connection
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(key, metadataOnly));
         }
-
-        public IGlobalAdminDatabaseCommands GlobalAdmin =>
-            new AdminServerClient(asyncServerClient, new AsyncAdminServerClient(asyncServerClient));
 
         public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
                                          RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
@@ -283,9 +278,10 @@ namespace Raven.NewClient.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(ids, includes, transformer, transformerParameters, metadataOnly));
         }
 
-        public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
+        public BatchResult[] Batch()
         {
-            return AsyncHelpers.RunSync(() => asyncServerClient.BatchAsync(commandDatas.ToArray()));
+            throw new NotImplementedException();
+            //return AsyncHelpers.RunSync(() => asyncServerClient.BatchAsync(commandDatas.ToArray()));
         }
 
         public BuildNumber GetBuildNumber()
@@ -484,25 +480,6 @@ namespace Raven.NewClient.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.Info.GetReplicationInfoAsync());
         }
 
-        public IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = default(ClusterBehavior?))
-        {
-            throw new NotImplementedException();
-        }
-
-        public IDatabaseCommands ForSystemDatabase()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IDatabaseCommands With(ICredentials credentialsForSession)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IAdminDatabaseCommands Admin
-        {
-            get { return new AdminServerClient(asyncServerClient, new AsyncAdminServerClient(asyncServerClient)); }
-        }
 
         private class AsyncEnumerableWrapper<T> : IEnumerator<T>, IEnumerable<T>
         {
@@ -548,6 +525,6 @@ namespace Raven.NewClient.Client.Connection
                 return GetEnumerator();
             }
         }
-
+*/
     }
 }

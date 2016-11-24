@@ -44,13 +44,15 @@ namespace Raven.NewClient.Client.Connection
 
         public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient)
         {
-            // Default database doesn't have replication topology endpoint
-            if (MultiDatabase.GetRootDatabaseUrl(serverClient.Url) == serverClient.Url)
-                return Task.CompletedTask;
+            throw new NotImplementedException();
+            /* // Default database doesn't have replication topology endpoint
+             if (MultiDatabase.GetRootDatabaseUrl(serverClient.Url) == serverClient.Url)
+                 return Task.CompletedTask;
 
-            return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => 
-                AsyncHelpers.RunSync(() => 
-                    serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null))));
+             return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => 
+                 AsyncHelpers.RunSync(() => 
+                     serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null))));
+      */
         }
 
         private Task UpdateReplicationInformationIfNeededInternalAsync(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
@@ -94,8 +96,9 @@ namespace Raven.NewClient.Client.Connection
 
         public override void ClearReplicationInformationLocalCache(ServerClient client)
         {
-            var serverHash = ServerHash.GetServerHash(client.Url);
-            ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
+            throw new NotImplementedException();
+            /* var serverHash = ServerHash.GetServerHash(client.Url);
+             ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);*/
         }
 
         protected override void UpdateReplicationInformationFromDocument(JsonDocument document)
@@ -142,12 +145,14 @@ namespace Raven.NewClient.Client.Connection
 
         public void RefreshReplicationInformation(AsyncServerClient serverClient)
         {
-            RefreshReplicationInformationInternal(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null))));
+            throw new NotImplementedException();
+            // RefreshReplicationInformationInternal(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null))));
         }
 
         public override void RefreshReplicationInformation(ServerClient serverClient)
         {
-            RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinations(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null)));
+            throw new NotImplementedException();
+            //RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinations(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null)));
         }
 
         private void RefreshReplicationInformationInternal(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)

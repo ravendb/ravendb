@@ -345,11 +345,6 @@ namespace Raven.NewClient.Client.Document
                 throw new ArgumentException("Document store URL cannot be empty", "Url");
         }
 
-        /// <summary>
-        /// Generate new instance of database commands
-        /// </summary>
-        protected Func<IDatabaseCommands> databaseCommandsGenerator;
-        protected Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
 
         /// <summary>
         /// Initialize the document store access method to RavenDB

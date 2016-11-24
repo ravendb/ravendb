@@ -87,16 +87,17 @@ namespace Raven.NewClient.Client.Document
 
         private async Task<Stream> ConnectToServer(AsyncServerClient asyncServerClient)
         {
-            var connectionInfo = await asyncServerClient.GetTcpInfoAsync().ConfigureAwait(false);
-            _url = asyncServerClient.Url;
-            await _tcpClient.ConnectAsync(new Uri(_url).Host, connectionInfo.Port).ConfigureAwait(false);
+            throw new NotImplementedException();
+            /* var connectionInfo = await asyncServerClient.GetTcpInfoAsync().ConfigureAwait(false);
+             _url = asyncServerClient.Url;
+             await _tcpClient.ConnectAsync(new Uri(_url).Host, connectionInfo.Port).ConfigureAwait(false);
 
-            _tcpClient.NoDelay = true;
-            _tcpClient.SendBufferSize = 32 * 1024;
-            _tcpClient.ReceiveBufferSize = 4096;
-            var networkStream = _tcpClient.GetStream();
+             _tcpClient.NoDelay = true;
+             _tcpClient.SendBufferSize = 32 * 1024;
+             _tcpClient.ReceiveBufferSize = 4096;
+             var networkStream = _tcpClient.GetStream();
 
-            return networkStream;
+             return networkStream;*/
         }
 
         private void WriteToServer(Stream serverStream)

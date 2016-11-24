@@ -8,8 +8,8 @@ using Raven.NewClient.Client.Data;
 namespace Raven.NewClient.Client.Connection.Async
 {
     public static class AsyncDatabaseCommandsExtensions
-    {
-        public static Task<NameAndCount[]> GetTermsCount(this IAsyncDatabaseCommands cmds, string indexName, string field, string fromValue, int pageSize)
+    {/*
+        public static Task<NameAndCount[]> GetTermsCount(string indexName, string field, string fromValue, int pageSize)
         {
             string[] terms = null;
             return cmds.GetTermsAsync(indexName, field, fromValue, pageSize)
@@ -44,7 +44,7 @@ namespace Raven.NewClient.Client.Connection.Async
                 })
                 .Unwrap();
         }
-    }
+   */ }
 
     public class NameAndCount
     {

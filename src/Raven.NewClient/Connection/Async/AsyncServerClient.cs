@@ -42,15 +42,14 @@ using Raven.NewClient.Client.Changes;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Data.Indexes;
 
 namespace Raven.NewClient.Client.Connection.Async
 {
-    public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncInfoDatabaseCommands
+    public class AsyncServerClient 
     {
-        private readonly ProfilingInformation profilingInformation;
+        /*private readonly ProfilingInformation profilingInformation;
 
         private readonly IDocumentConflictListener[] conflictListeners;
 
@@ -532,7 +531,7 @@ namespace Raven.NewClient.Client.Connection.Async
             if (!ignoreMissing && batchResults[0].PatchResult != null &&
                 batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
                 throw new DocumentDoesNotExistException("Document with key " + key + " does not exist.");
-            return batchResults[0].AdditionalData;*/
+            return batchResults[0].AdditionalData;#1#
         }
 
         public async Task<RavenJObject> PatchAsync(string key, PatchRequest patch, long? etag, CancellationToken token = default(CancellationToken))
@@ -547,7 +546,7 @@ namespace Raven.NewClient.Client.Connection.Async
                      Etag = etag
                  }
              }, token).ConfigureAwait(false);
-             return batchResults[0].AdditionalData;*/
+             return batchResults[0].AdditionalData;#1#
         }
 
         public async Task<RavenJObject> PatchAsync(string key, PatchRequest patchExisting,
@@ -564,7 +563,7 @@ namespace Raven.NewClient.Client.Connection.Async
                     PatchIfMissing = patchDefault,
                 }
             }, token).ConfigureAwait(false);
-            return batchResults[0].AdditionalData;*/
+            return batchResults[0].AdditionalData;#1#
         }
 
         public Task<PutResult> PutAsync(string key, long? etag, RavenJObject document, RavenJObject metadata, CancellationToken token = default(CancellationToken))
@@ -1389,9 +1388,10 @@ namespace Raven.NewClient.Client.Connection.Async
             }, token);
         }
 
-        public Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, CancellationToken token = default(CancellationToken))
+        public Task<BatchResult[]> BatchAsync(CancellationToken token = default(CancellationToken))
         {
-            return ExecuteWithReplication(HttpMethod.Post, async operationMetadata =>
+            throw new NotImplementedException();
+            /*return ExecuteWithReplication(HttpMethod.Post, async operationMetadata =>
             {
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", HttpMethod.Post,
                     operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
@@ -1420,7 +1420,7 @@ namespace Raven.NewClient.Client.Connection.Async
                     }
                     throw FetchConcurrencyException(responseException);
                 }
-            }, token);
+            }, token);#1#
         }
 
         private static ConcurrencyException FetchConcurrencyException(ErrorResponseException e)
@@ -2206,7 +2206,7 @@ namespace Raven.NewClient.Client.Connection.Async
             {
                 resolvingConflictRetries = false;
                 retryBecauseOfConflict = false;
-            }*/
+            }#1#
         }
 
         public async Task<RavenJToken> GetOperationStatusAsync(long id)
@@ -2269,6 +2269,6 @@ namespace Raven.NewClient.Client.Connection.Async
                     }
                 }
             }
-        }
+        }*/
     }
 }

@@ -36,17 +36,18 @@ namespace Raven.NewClient.Client.Connection
 
         private async Task Initialize()
         {
-            try
-            {
-                await _asyncServerClient.changes.Value.ConnectionTask.ConfigureAwait(false);
-                var observableWithTask = _asyncServerClient.changes.Value.ForOperationId(_id);
-                _subscription = observableWithTask.Subscribe(this);
-                await FetchOperationStatus().ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                _result.TrySetException(e);
-            }
+            throw new NotImplementedException();
+            /* try
+             {
+                 await _asyncServerClient.changes.Value.ConnectionTask.ConfigureAwait(false);
+                 var observableWithTask = _asyncServerClient.changes.Value.ForOperationId(_id);
+                 _subscription = observableWithTask.Subscribe(this);
+                 await FetchOperationStatus().ConfigureAwait(false);
+             }
+             catch (Exception e)
+             {
+                 _result.TrySetException(e);
+             }*/
         }
 
         /// <summary>
@@ -57,17 +58,18 @@ namespace Raven.NewClient.Client.Connection
         /// </summary>
         private async Task FetchOperationStatus()
         {
-            var operationStatusJson = await _asyncServerClient.GetOperationStatusAsync(_id).ConfigureAwait(false);
-            var operationStatus = _asyncServerClient.convention
-                    .CreateSerializer()
-                    .Deserialize<OperationState>(new RavenJTokenReader(operationStatusJson));
-            // using deserializer from Conventions to properly handle $type mapping
+            throw new NotImplementedException();
+            /* var operationStatusJson = await _asyncServerClient.GetOperationStatusAsync(_id).ConfigureAwait(false);
+             var operationStatus = _asyncServerClient.convention
+                     .CreateSerializer()
+                     .Deserialize<OperationState>(new RavenJTokenReader(operationStatusJson));
+             // using deserializer from Conventions to properly handle $type mapping
 
-            OnNext(new OperationStatusChangeNotification
-            {
-                OperationId = _id,
-                State = operationStatus
-            });
+             OnNext(new OperationStatusChangeNotification
+             {
+                 OperationId = _id,
+                 State = operationStatus
+             });*/
         }
 
         public void OnNext(OperationStatusChangeNotification notification)

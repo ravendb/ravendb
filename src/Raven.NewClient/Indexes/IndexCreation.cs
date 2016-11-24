@@ -228,9 +228,10 @@ namespace Raven.NewClient.Client.Indexes
         /// <summary>
         /// Creates the indexes found in the specified catalog in side-by-side mode.
         /// </summary>
-        public static void SideBySideCreateIndexes(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, IDatabaseCommands databaseCommands, DocumentConvention conventions, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public static void SideBySideCreateIndexes(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, DocumentConvention conventions, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
-            var indexCompilationExceptions = new List<IndexCompilationException>();
+            throw new NotImplementedException();
+            /*var indexCompilationExceptions = new List<IndexCompilationException>();
             try
             {
             
@@ -260,12 +261,13 @@ namespace Raven.NewClient.Client.Indexes
 
             if (indexCompilationExceptions.Any())
                 throw new AggregateException("Failed to create one or more side by side indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
+     */
         }
 
         /// <summary>
         /// Creates the indexes found in the specified catalog in side-by-side mode.
         /// </summary>
-        public static async Task SideBySideCreateIndexesAsync(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public static async Task SideBySideCreateIndexesAsync(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, DocumentConvention conventions, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             throw new NotImplementedException();
             /*var indexCompilationExceptions = new List<IndexCompilationException>();
@@ -429,7 +431,7 @@ namespace Raven.NewClient.Client.Indexes
             }
         }
 
-        private static async Task CreateTransformersAsync(IEnumerable<AbstractTransformerCreationTask> transformers, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions)
+        private static async Task CreateTransformersAsync(IEnumerable<AbstractTransformerCreationTask> transformers, DocumentConvention conventions)
         {
             throw new NotImplementedException();
             /*foreach (var task in transformers)
