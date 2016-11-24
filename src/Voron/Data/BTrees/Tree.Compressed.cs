@@ -61,90 +61,86 @@ namespace Voron.Data.BTrees
             var decompressedPage = _llt.Environment.DecompressionBuffers.GetPage(_llt, decompressedPageSize, p);
 
             var decompressedNodesOffset = (ushort)(decompressedPage.PageSize - input.DecompressedSize); // TODO arek - aligntment
+            
+            LZ4.Decode64LongBuffers(
+                input.Data,
+                input.CompressedSize,
+                decompressedPage.Base + decompressedNodesOffset,
+                input.DecompressedSize, true);
 
-            byte* decompressedPtr;
-            using (_llt.Environment.DecompressionBuffers.GetTemporaryBuffer(_llt, Bits.NextPowerOf2(input.DecompressedSize), out decompressedPtr))
+            decompressedPage.Lower += input.KeysOffsetsSize;
+            decompressedPage.Upper = decompressedNodesOffset;
+
+            for (var i = 0; i < input.NumberOfEntries; i++)
             {
-                LZ4.Decode64LongBuffers(
-                    input.Data,
-                    input.CompressedSize,
-                    decompressedPage.Base + decompressedNodesOffset,
-                    input.DecompressedSize, true);
+                decompressedPage.KeysOffsets[i] = (ushort) (input.KeysOffsets[i] + decompressedPage.Upper);
+            }
 
-                decompressedPage.Lower += input.KeysOffsetsSize;
-                decompressedPage.Upper = decompressedNodesOffset;
-
-                for (var i = 0; i < input.NumberOfEntries; i++)
-                {
-                    decompressedPage.KeysOffsets[i] = (ushort) (input.KeysOffsets[i] + decompressedPage.Upper);
-                }
-
-                if (p.NumberOfEntries == 0)
-                {
-                    decompressedPage.DebugValidate(this, State.RootPageNumber);
-                    return decompressedPage;
-                }
+            if (p.NumberOfEntries == 0)
+            {
+                decompressedPage.DebugValidate(this, State.RootPageNumber);
+                return decompressedPage;
+            }
                 
-                // copy uncompressed nodes
+            // copy uncompressed nodes
 
-                for (var i = 0; i < p.NumberOfEntries; i++)
+            for (var i = 0; i < p.NumberOfEntries; i++)
+            {
+                var uncompressedNode = p.GetNode(i);
+
+                Slice nodeKey;
+                using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, uncompressedNode, out nodeKey))
                 {
-                    var uncompressedNode = p.GetNode(i);
+                    if (decompressedPage.HasSpaceFor(_llt, TreeSizeOf.NodeEntry(uncompressedNode)) == false)
+                        throw new InvalidOperationException("Could not add uncompressed node to decompressed page");
 
-                    Slice nodeKey;
-                    using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, uncompressedNode, out nodeKey))
+                    int index;
+
+                    Slice lastKey;
+                    using (decompressedPage.GetNodeKey(_llt, decompressedPage.NumberOfEntries - 1, out lastKey))
                     {
-                        if (decompressedPage.HasSpaceFor(_llt, TreeSizeOf.NodeEntry(uncompressedNode)) == false)
-                            throw new InvalidOperationException("Could not add uncompressed node to decompressed page");
+                        // optimization: it's very likely that uncompressed nodes have greater keys than compressed ones 
+                        // when we insert sequential keys
 
-                        int index;
+                        var cmp = SliceComparer.CompareInline(nodeKey, lastKey);
 
-                        Slice lastKey;
-                        using (decompressedPage.GetNodeKey(_llt, decompressedPage.NumberOfEntries - 1, out lastKey))
+                        if (cmp > 0)
+                            index = decompressedPage.NumberOfEntries;
+                        else
                         {
-                            // optimization: it's very likely that uncompressed nodes have greater keys than compressed ones 
-                            // when we insert sequential keys
+                            if (cmp == 0)
+                            {
+                                // update of the last entry, just decrement NumberOfEntries in the page and
+                                // put it at the last position
 
-                            var cmp = SliceComparer.CompareInline(nodeKey, lastKey);
-
-                            if (cmp > 0)
-                                index = decompressedPage.NumberOfEntries;
+                                index = decompressedPage.NumberOfEntries - 1;
+                                decompressedPage.Lower -= Constants.NodeOffsetSize; 
+                            }
                             else
                             {
-                                if (cmp == 0)
-                                {
-                                    // update of the last entry, just decrement NumberOfEntries in the page and
-                                    // put it at the last position
+                                index = decompressedPage.NodePositionFor(_llt, nodeKey);
 
-                                    index = decompressedPage.NumberOfEntries - 1;
-                                    decompressedPage.Lower -= Constants.NodeOffsetSize; 
-                                }
-                                else
-                                {
-                                    index = decompressedPage.NodePositionFor(_llt, nodeKey);
-
-                                    if (decompressedPage.LastMatch == 0) // update
-                                        decompressedPage.RemoveNode(index);
-                                }
+                                if (decompressedPage.LastMatch == 0) // update
+                                    decompressedPage.RemoveNode(index);
                             }
                         }
+                    }
 
-                        switch (uncompressedNode->Flags)
-                        {
-                            case TreeNodeFlags.PageRef:
-                                decompressedPage.AddPageRefNode(index, nodeKey, uncompressedNode->PageNumber);
-                                break;
-                            case TreeNodeFlags.Data:
-                                var pos = decompressedPage.AddDataNode(index, nodeKey, uncompressedNode->DataSize, (ushort)(uncompressedNode->Version - 1));
-                                var nodeValue = TreeNodeHeader.Reader(_llt, uncompressedNode);
-                                Memory.Copy(pos, nodeValue.Base, nodeValue.Length);
-                                break;
-                            case TreeNodeFlags.MultiValuePageRef:
-                                throw new NotSupportedException("Multi trees do not support compression");
+                    switch (uncompressedNode->Flags)
+                    {
+                        case TreeNodeFlags.PageRef:
+                            decompressedPage.AddPageRefNode(index, nodeKey, uncompressedNode->PageNumber);
+                            break;
+                        case TreeNodeFlags.Data:
+                            var pos = decompressedPage.AddDataNode(index, nodeKey, uncompressedNode->DataSize, (ushort)(uncompressedNode->Version - 1));
+                            var nodeValue = TreeNodeHeader.Reader(_llt, uncompressedNode);
+                            Memory.Copy(pos, nodeValue.Base, nodeValue.Length);
+                            break;
+                        case TreeNodeFlags.MultiValuePageRef:
+                            throw new NotSupportedException("Multi trees do not support compression");
 
-                            default:
-                                throw new NotSupportedException("Invalid node type to copye: " + uncompressedNode->Flags);
-                        }
+                        default:
+                            throw new NotSupportedException("Invalid node type to copye: " + uncompressedNode->Flags);
                     }
                 }
             }
