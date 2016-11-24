@@ -107,7 +107,8 @@ abstract class pageItem extends layoutableItem {
         bottomPadding: 5,
         entryTextPadding: 5,
         aggregationItemHeight: 22,
-        aggragationTextHorizontalPadding: 18
+        aggragationTextHorizontalPadding: 18,
+        betweenPagesMinWidth: 40
     }
 
     parentPage?: branchPageItem;
@@ -120,6 +121,14 @@ abstract class pageItem extends layoutableItem {
     }
 
     abstract layout(): void;
+
+    getSourceConnectionPoint(): [number, number] {
+        return [this.x + this.width / 2, this.y];
+    }
+
+    getTargetConnectionPoint(): [number, number] {
+        return [this.x + this.width / 2, this.y + this.height];
+    }
     
 }
 
@@ -244,6 +253,9 @@ class branchPageItem extends pageItem {
 class reduceTreeItem {
     private tree: Raven.Server.Documents.Indexes.Debugging.ReduceTree;
 
+    totalWidth: number;
+    totalHeigh: number;
+
     displayName: string;
     depth: number;
     itemsCountAtDepth: Array<number>; // this represents non-filtered count
@@ -252,6 +264,7 @@ class reduceTreeItem {
     constructor(tree: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
         this.tree = tree;
         this.displayName = tree.DisplayName;
+        this.depth = tree.Depth;
 
         this.countItemsPerDepth();
     }
@@ -316,17 +329,46 @@ class reduceTreeItem {
             pages.forEach(page => page.layout());
         });
 
-        //TODO: delete this!
-        this.itemsAtDepth.forEach((pages, depth) => {
-            pages.forEach(page => {
-                page.x = Math.random() * 1300;
-                page.y = Math.random() * 600;
-            });
+        const lastLevelItems = this.itemsAtDepth.get(this.depth - 1);
+
+        // make all items at last level at the same size
+        const maxWidth = d3.max(lastLevelItems, x => x.width);
+        for (let i = 0; i < lastLevelItems.length; i++) {
+            lastLevelItems[i].width = maxWidth;
+        }
+
+        this.totalWidth = lastLevelItems.reduce((p, c) => p + c.width, 0)
+            + (lastLevelItems.length + 1) * pageItem.margins.betweenPagesMinWidth;
+
+        let yStart = visualizerGraphDetails.margins.top;
+
+        const avgElementWidthPerDepth = Array.from(this.itemsAtDepth.values()).map(pages => {
+            const totalWidth = pages.reduce((p, c) => p + c.width, 0);
+            return totalWidth / pages.length;
         });
 
+        const maxHeightPerLevel = Array.from(this.itemsAtDepth.values()).map(pages => d3.max(pages, x => x.height));
 
-        console.log("layout me");
-        //TODO: 
+        for (let depth = 0; depth < this.depth; depth++) {
+            const items = this.itemsAtDepth.get(depth);
+
+            const startAndOffset = graphHelper.computeStartAndOffset(this.totalWidth, items.length,
+                avgElementWidthPerDepth[depth]);
+
+            const xOffset = startAndOffset.offset;
+
+            let xStart = startAndOffset.start;
+
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                item.x = xStart;
+                item.y = yStart;
+
+                xStart += xOffset;
+            }
+
+            yStart += maxHeightPerLevel[depth] + visualizerGraphDetails.margins.verticalMarginBetweenLevels;
+        }
     }
 }
 
@@ -334,6 +376,8 @@ class reduceTreeItem {
 class visualizerGraphDetails {
 
     static margins = {
+        top: 40,
+        verticalMarginBetweenLevels: 60
        //TODO: 
     }
 
@@ -435,6 +479,10 @@ class visualizerGraphDetails {
         this.currentTree = new reduceTreeItem(this.trees[this.currentTreeIndex]); //TODO: consider moving this to layout?
 
         this.layout();
+
+        const initialTranslation: [number, number] = [this.totalWidth / 2 - this.currentTree.totalWidth / 2, 0];
+        this.zoom.translate(initialTranslation).scale(1).event(this.canvas);
+
         this.draw();
     }
 
@@ -476,11 +524,19 @@ class visualizerGraphDetails {
     }
 
     private drawTree(ctx: CanvasRenderingContext2D, tree: reduceTreeItem) {
-
         tree.itemsAtDepth.forEach(pages => {
             for (let i = 0; i < pages.length; i++) {
                 const page = pages[i];
                 this.drawPage(ctx, page);
+
+                if (page.parentPage) {
+                    ctx.strokeStyle = "#686f6f";
+
+                    const sourcePoint = page.getSourceConnectionPoint();
+                    const targetPoint = page.parentPage.getTargetConnectionPoint();
+
+                    graphHelper.drawBezierDiagonal(ctx, sourcePoint, targetPoint, true);
+                }
             }
         });
     }
