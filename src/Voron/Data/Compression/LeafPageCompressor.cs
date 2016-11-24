@@ -10,7 +10,7 @@ namespace Voron.Data.Compression
 {
     public unsafe class LeafPageCompressor
     {
-        public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, out CompressionResult result, bool defrag = true, UncompressedEntry aboutToAdd = null)
+        public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, out CompressionResult result, bool defrag = true)
         {
             if (defrag)
             {
@@ -57,20 +57,16 @@ namespace Voron.Data.Compression
 
             tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressedSize + offsetsSize);
             tempPage.Upper = (ushort)tempPage.PageSize;
+            
+            var decompressedPageSize = page.SizeUsed + // header, node offsets, existing entries
+                                       (tx.Environment.Options.PageSize - (Constants.TreePageHeaderSize + compressedSize + Constants.Compression.HeaderSize + offsetsSize)); // space that can be still used to insert next uncompressed entries
 
-            if (aboutToAdd != null)
+
+            if (decompressedPageSize > Constants.Storage.MaxPageSize)
             {
-                var decompressedPageSize = page.SizeUsed + // header, node offsets, existing entries
-                                           page.GetRequiredSpace(aboutToAdd.Key, aboutToAdd.Length) + // uncompressed entry that we are going to insert after compression
-                                           tempPage.SizeLeft; // space that can be still used to insert next uncompressed entries
-
-                if (decompressedPageSize > Constants.Storage.MaxPageSize)
-                {
-                    // if we decompressed such page then it would exceed the maximum page size
-
-                    result = null;
-                    return returnTempPage;
-                }
+                // if we decompressed such page then it would exceed the maximum page size
+                result = null;
+                return returnTempPage;
             }
 
             result = new CompressionResult

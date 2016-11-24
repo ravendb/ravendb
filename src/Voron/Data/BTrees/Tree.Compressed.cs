@@ -12,8 +12,6 @@ namespace Voron.Data.BTrees
 
     public unsafe partial class Tree
     {
-        private UncompressedEntry _uncompressedEntry;
-
         private bool TryCompressPageNodes(Slice key, int len, TreePage page)
         {
             var alreadyCompressed = page.IsCompressed;
@@ -25,11 +23,8 @@ namespace Voron.Data.BTrees
 
             using (alreadyCompressed ? (DecompressedLeafPage)(pageToCompress = DecompressPage(page)) : null)
             {
-                if (_uncompressedEntry == null)
-                    _uncompressedEntry = new UncompressedEntry();
-
                 CompressionResult result;
-                using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out result, defrag: alreadyCompressed == false, aboutToAdd: _uncompressedEntry.Set(key, len)))
+                using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out result, defrag: alreadyCompressed == false))
                 {
                     if (result == null)
                         return false;
@@ -53,11 +48,10 @@ namespace Voron.Data.BTrees
 
         public DecompressedLeafPage DecompressPage(TreePage p)
         {
-            var compressionHeader = p.CompressionHeader;
+            var input = new DecompressionInput(p.CompressionHeader);
 
-            var decompressedPageSize = p.SizeUsed - compressionHeader->CompressedSize +
-                                compressionHeader->UncompressedSize +
-                                Constants.NodeOffsetSize * compressionHeader->NumberOfCompressedEntries;
+            var decompressedPageSize = p.SizeUsed - input.CompressedSize - Constants.Compression.HeaderSize +
+                                input.DecompressedSize;
 
             if (decompressedPageSize > Constants.Storage.MaxPageSize)
                 decompressedPageSize = Constants.Storage.MaxPageSize;
@@ -66,34 +60,23 @@ namespace Voron.Data.BTrees
 
             var decompressedPage = _llt.Environment.DecompressionBuffers.GetPage(_llt, decompressedPageSize, p);
 
+            var decompressedNodesOffset = (ushort)(decompressedPage.PageSize - input.DecompressedSize); // TODO arek - aligntment
+
             byte* decompressedPtr;
-            using (_llt.Environment.DecompressionBuffers.GetTemporaryBuffer(_llt, Bits.NextPowerOf2(compressionHeader->UncompressedSize), out decompressedPtr))
+            using (_llt.Environment.DecompressionBuffers.GetTemporaryBuffer(_llt, Bits.NextPowerOf2(input.DecompressedSize), out decompressedPtr))
             {
                 LZ4.Decode64LongBuffers(
-                    (byte*)compressionHeader - compressionHeader->CompressedSize,
-                    compressionHeader->CompressedSize,
-                    decompressedPtr,
-                    compressionHeader->UncompressedSize, true);
-                
-                var decompressedSize = compressionHeader->UncompressedSize;
+                    input.Data,
+                    input.CompressedSize,
+                    decompressedPage.Base + decompressedNodesOffset,
+                    input.DecompressedSize, true);
 
-                var offsetsSize = compressionHeader->NumberOfCompressedEntries * Constants.NodeOffsetSize;
+                decompressedPage.Lower += input.KeysOffsetsSize;
+                decompressedPage.Upper = decompressedNodesOffset;
 
-                var decompressedOffsets = (short*) ((byte*) compressionHeader - compressionHeader->CompressedSize -
-                                                       offsetsSize);
-
-                var nodeOffset = (ushort)(decompressedPage.PageSize - decompressedSize); // TODO arek - aligntment
-
-                // copy all decompressed nodes at once
-
-                Memory.Copy(decompressedPage.Base + nodeOffset, decompressedPtr, decompressedSize);
-
-                decompressedPage.Lower += (ushort)offsetsSize;
-                decompressedPage.Upper = nodeOffset;
-
-                for (var i = 0; i < compressionHeader->NumberOfCompressedEntries; i++)
+                for (var i = 0; i < input.NumberOfEntries; i++)
                 {
-                    decompressedPage.KeysOffsets[i] = (ushort) (decompressedOffsets[i] + decompressedPage.Upper);
+                    decompressedPage.KeysOffsets[i] = (ushort) (input.KeysOffsets[i] + decompressedPage.Upper);
                 }
 
                 if (p.NumberOfEntries == 0)
@@ -171,5 +154,31 @@ namespace Voron.Data.BTrees
             return decompressedPage;
         }
 
+        public struct DecompressionInput
+        {
+            public DecompressionInput(CompressedNodesHeader* header)
+            {
+                Data = (byte*)header - header->CompressedSize;
+
+                KeysOffsetsSize = (ushort) (header->NumberOfCompressedEntries * Constants.NodeOffsetSize);
+                KeysOffsets = (short*)((byte*)header - header->CompressedSize - KeysOffsetsSize);
+
+                CompressedSize = header->CompressedSize;
+                DecompressedSize = header->UncompressedSize;
+                NumberOfEntries = header->NumberOfCompressedEntries;
+            }
+
+            public readonly byte* Data;
+
+            public readonly short* KeysOffsets;
+
+            public readonly ushort KeysOffsetsSize;
+
+            public readonly ushort CompressedSize;
+
+            public readonly ushort DecompressedSize;
+
+            public readonly ushort NumberOfEntries;
+        }
     }
 }
