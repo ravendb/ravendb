@@ -285,7 +285,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 using (var stream = new GZipStream(tuple.Item1, CompressionMode.Decompress))
                 {
                     var sp = Stopwatch.StartNew();
-                    var result = await DoImport(context, stream);
+                    var importer = new SmugglerImporter(Database);
+                    var result = await importer.Import(context, stream);
                     sp.Stop();
                     WriteImportResult(context, sp, result, ResponseBodyStream());
                 }
@@ -329,22 +330,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     ["OperationId"] = Database.Operations.GetNextOperationId()
                 });
             }
-        }
-
-
-
-        private async Task<ImportResult> DoImport(DocumentsOperationContext context, Stream stream)
-        {
-            var importer = new SmugglerImporter(Database);
-
-            //var operateOnTypes = GetStringQueryString("operateOnTypes", required: false);
-            //DatabaseItemType databaseItemType;
-            //if (Enum.TryParse(operateOnTypes, true, out databaseItemType))
-            //{
-            //    importer.OperateOnTypes = databaseItemType;
-            //}
-
-            return await importer.Import(context, stream);
         }
     }
 
