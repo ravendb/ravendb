@@ -15,6 +15,8 @@ class visualizer extends viewModelBase {
 
     static readonly noIndexSelected = "Select an index";
 
+    static readonly documentColors = ["#7cb82f", "#1a858e", "#ef6c5a"];
+
     indexes = ko.observableArray<string>();
     indexName = ko.observable<string>();
 
@@ -193,7 +195,7 @@ class visualizer extends viewModelBase {
     }
 
     private getNextColor() {
-        const color = visualizerGraphGlobal.documentColors[this.nextColorIndex % visualizerGraphGlobal.documentColors.length];
+        const color = visualizer.documentColors[this.nextColorIndex % visualizer.documentColors.length];
         this.nextColorIndex++;
         return color;
     }
