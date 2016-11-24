@@ -260,23 +260,30 @@ namespace Raven.Server.Documents.Replication
                 _destinationLastKnownIndexOrTransformerChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
 
-            if (DocumentsStorage.ReadLastEtag(_documentsContext.Transaction.InnerTransaction) !=
-                replicationBatchReply.LastEtagAccepted)
+            //using (_documentsContext.OpenReadTransaction())
             {
-                // We have changes that the other side doesn't have, this can be because we have writes
-                // or because we have documents that were replicated to us. Either way, we need to sync
-                // those up with the remove side, so we'll start the replication loop again.
-                // We don't care if they are locally modified or not, because we filter documents that
-                // the other side already have (based on the change vector).
-                if (DateTime.UtcNow - _lastDocumentSentTime > _minimalHeartbeatInterval)
-                    _waitForChanges.Set();
+                if (DocumentsStorage.ReadLastEtag(_documentsContext.Transaction.InnerTransaction) !=
+                    replicationBatchReply.LastEtagAccepted)
+                {
+                    // We have changes that the other side doesn't have, this can be because we have writes
+                    // or because we have documents that were replicated to us. Either way, we need to sync
+                    // those up with the remove side, so we'll start the replication loop again.
+                    // We don't care if they are locally modified or not, because we filter documents that
+                    // the other side already have (based on the change vector).
+                    if (DateTime.UtcNow - _lastDocumentSentTime > _minimalHeartbeatInterval)
+                        _waitForChanges.Set();
+                }
             }
 
-            if (_database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction) !=
-                replicationBatchReply.LastIndexTransformerEtagAccepted)
+            //using (_configurationContext.OpenReadTransaction())
             {
-                if (DateTime.UtcNow - _lastIndexOrTransformerSentTime > _minimalHeartbeatInterval)
-                    _waitForChanges.Set();
+                if (
+                    _database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction) !=
+                    replicationBatchReply.LastIndexTransformerEtagAccepted)
+                {
+                    if (DateTime.UtcNow - _lastIndexOrTransformerSentTime > _minimalHeartbeatInterval)
+                        _waitForChanges.Set();
+                }
             }
         }
 
@@ -325,7 +332,6 @@ namespace Raven.Server.Documents.Replication
                 {
                     hasSucceededParsingResponse = true;
                     var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
-
                     if (replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Ok)
                     {
                         UpdateDestinationChangeVector(replicationBatchReply);

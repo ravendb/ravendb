@@ -71,6 +71,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         if (doc.Etag > maxEtag)
                             break;
+
                         AddReplicationItemToBatch(new ReplicationBatchDocumentItem
                         {
                             Etag = doc.Etag,
@@ -84,6 +85,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         if (tombstone.Etag > maxEtag)
                             break;
+
                         AddReplicationItemToBatch(new ReplicationBatchDocumentItem
                         {
                             Etag = tombstone.Etag,
@@ -110,6 +112,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     var hasModification = _lastEtag != _parent._lastSentDocumentEtag;
                     _parent._lastSentDocumentEtag = _lastEtag;
+
                     // ensure that the other server is aware that we skipped 
                     // on (potentially a lot of) documents to send, and we update
                     // the last etag they have from us on the other side

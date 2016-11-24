@@ -140,8 +140,8 @@ namespace FastTests.Server.Replication
                     ["Foo"] = "Bar"
                 };
 
-                DocumentsOperationContext context;
-                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                TransactionOperationContext context;
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenWriteTransaction())
                 using (var definintion = context.ReadObject(definitionJson, string.Empty))
                 using (var definintion2 = context.ReadObject(definitionJson2, string.Empty))
@@ -163,7 +163,8 @@ namespace FastTests.Server.Replication
                     tx.Commit();
                 }
 
-                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenWriteTransaction())
                 {
                     var changeVectors = databaseStore.IndexMetadataPersistence.DeleteConflictsFor(tx.InnerTransaction,context, userByAge.IndexName);
@@ -172,7 +173,7 @@ namespace FastTests.Server.Replication
                     Assert.Equal(2,changeVectors.Count);
                 }
 
-                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenReadTransaction())
                 {
                     Assert.Empty(databaseStore.IndexMetadataPersistence.GetConflictsFor(tx.InnerTransaction, context, userByAge.IndexName, 0, 1024));
@@ -193,9 +194,9 @@ namespace FastTests.Server.Replication
                 databaseStoreTask.Wait();
                 var databaseStore = databaseStoreTask.Result;
 
-                DocumentsOperationContext context;
                 IndexesEtagsStorage.IndexEntryMetadata metadata;
-                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                TransactionOperationContext context;
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenReadTransaction())
                     metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
 
@@ -206,7 +207,7 @@ namespace FastTests.Server.Replication
                     ["Foo"] = "Bar"
                 };
 
-                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenWriteTransaction())
                 using (var definintion = context.ReadObject(definitionJson, string.Empty))
                 {
@@ -220,7 +221,7 @@ namespace FastTests.Server.Replication
                     tx.Commit();
                 }
 
-                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenReadTransaction())
                     metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
 
@@ -239,16 +240,16 @@ namespace FastTests.Server.Replication
                 var databaseStore =
                     await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
-                DocumentsOperationContext context;
                 IndexesEtagsStorage.IndexEntryMetadata metadata;
-                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                TransactionOperationContext context;
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenReadTransaction())
                     metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
 
                 Assert.NotNull(metadata); //sanity check
                 Assert.False(metadata.IsConflicted);
 
-                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenWriteTransaction())
                 {
                     Assert.True(databaseStore.IndexMetadataPersistence.TrySetConflictedByName(context,
@@ -258,7 +259,7 @@ namespace FastTests.Server.Replication
                     tx.Commit();
                 }
 
-                using (databaseStore.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenReadTransaction())
                     metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
 
@@ -307,12 +308,13 @@ namespace FastTests.Server.Replication
             using (var nodeB = GetDocumentStore())
             {
                 var userByAge = new UserByAgeIndex();
+                var userByName = new UserByNameIndex(userByAge.IndexName);
                 userByAge.Execute(nodeA);
-                userByAge.Execute(nodeB);
 
                 SetupReplication(nodeA, nodeB);
 
-                //TODO : don't forget to finish this
+                userByName.Execute(nodeA);
+
             }
         }
 

@@ -78,6 +78,8 @@ namespace Voron
 
         public event Action OnLogsApplied;
 
+        public Transaction CurrentWriteTransaction { get; internal set; }              
+
         public StorageEnvironment(StorageEnvironmentOptions options)
         {
             try
@@ -339,14 +341,18 @@ namespace Voron
 
         public Transaction WriteTransaction(TransactionPersistentContext transactionPersistentContext, ByteStringContext context = null)
         {
-            return new Transaction(NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null));
+            var writeTransaction = new Transaction(NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null));
+            CurrentWriteTransaction = writeTransaction;
+            return writeTransaction;
         }
 
         public Transaction WriteTransaction(ByteStringContext context = null)
         {
             var transactionPersistentContext = new TransactionPersistentContext();
             var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null);
-            return new Transaction(newLowLevelTransaction);
+            var writeTransaction = new Transaction(newLowLevelTransaction);
+            CurrentWriteTransaction = writeTransaction;
+            return writeTransaction;
         }
 
         internal LowLevelTransaction NewLowLevelTransaction(TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)

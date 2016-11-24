@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
@@ -112,15 +113,44 @@ namespace Raven.Server.Documents
             IsInitialized = true;
         }
 
+        private IDisposable GetWriteTransaction(out Transaction tx, out TransactionOperationContext context, out bool shouldCommit)
+        {
+            tx = null;
+            RavenTransaction ravenTx = null;
+            shouldCommit = false;
+            var disposer = ContextPool.AllocateOperationContext(out context);
+            if (_environment.CurrentWriteTransaction == null)
+            {
+                ravenTx = context.OpenWriteTransaction();
+                tx = ravenTx.InnerTransaction;
+                shouldCommit = true;
+            }
+            else
+            {
+                tx = _environment.CurrentWriteTransaction;
+            }
+
+            var shouldCommitInternal = shouldCommit;
+            return new DisposableAction(() =>
+            {
+                if (shouldCommitInternal)
+                    ravenTx?.Dispose();
+                disposer.Dispose();
+            });
+        }
+
         public long OnIndexCreated(Index index)
         {
-            TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenWriteTransaction())
+            TransactionOperationContext context;            
+            Transaction tx;
+            bool shouldCommit;
+            using (GetWriteTransaction(out tx, out context, out shouldCommit))
             {
-                var newEtag = WriteEntry(tx.InnerTransaction, index.Name, IndexEntryType.Index, index.IndexId, context);
+                var newEtag = WriteEntry(tx, index.Name, IndexEntryType.Index, index.IndexId, context);
                 var etag = newEtag;
-                tx.Commit();
+
+                if (shouldCommit)
+                    tx.Commit();
                 return etag;
             }
         }
@@ -128,12 +158,15 @@ namespace Raven.Server.Documents
         public long OnIndexDeleted(Index index)
         {
             TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenWriteTransaction())
+            Transaction tx;
+            bool shouldCommit;
+            using (GetWriteTransaction(out tx, out context, out shouldCommit))
             {
-                var newEtag = WriteEntry(context.Transaction.InnerTransaction, index.Name, IndexEntryType.Index, -1, context);
+                var newEtag = WriteEntry(tx, index.Name, IndexEntryType.Index, -1, context);
                 var etag = newEtag;
-                tx.Commit();
+
+                if (shouldCommit)
+                    tx.Commit();
                 return etag;
             }
         }
@@ -141,12 +174,15 @@ namespace Raven.Server.Documents
         public long OnTransformerCreated(Transformer transformer)
         {
             TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenWriteTransaction())
+            Transaction tx;
+            bool shouldCommit;
+            using (GetWriteTransaction(out tx, out context, out shouldCommit))
             {
-                var newEtag = WriteEntry(context.Transaction.InnerTransaction, transformer.Name, IndexEntryType.Transformer, transformer.TransformerId, context);
+                var newEtag = WriteEntry(tx, transformer.Name, IndexEntryType.Transformer, transformer.TransformerId, context);
                 var etag = newEtag;
-                tx.Commit();
+
+                if (shouldCommit)
+                    tx.Commit();
                 return etag;
             }
         }
@@ -154,17 +190,20 @@ namespace Raven.Server.Documents
         public long OnTransformerDeleted(Transformer transformer)
         {
             TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenWriteTransaction())
+            Transaction tx;
+            bool shouldCommit;
+            using (GetWriteTransaction(out tx, out context, out shouldCommit))
             {
-                var newEtag = WriteEntry(context.Transaction.InnerTransaction, transformer.Name, IndexEntryType.Transformer, -1, context);
+                var newEtag = WriteEntry(tx, transformer.Name, IndexEntryType.Transformer, -1, context);
                 var etag = newEtag;
-                tx.Commit();
+
+                if (shouldCommit)
+                    tx.Commit();
                 return etag;
             }
         }
 
-        public void AddConflict(DocumentsOperationContext context, 
+        public void AddConflict(TransactionOperationContext context, 
             Transaction tx, 
             string name, 
             IndexEntryType type,
@@ -194,7 +233,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public bool TrySetConflictedByName(DocumentsOperationContext context, Transaction tx, string name)
+        public bool TrySetConflictedByName(TransactionOperationContext context, Transaction tx, string name)
         {
             var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable); 
             Debug.Assert(table != null);
@@ -214,7 +253,7 @@ namespace Raven.Server.Documents
         }
 
         private long WriteEntry(Transaction tx, string indexName, IndexEntryType type, int indexIndexId,
-            TransactionOperationContext context,bool isConflicted = false, bool allowOverwrite = false)
+            TransactionOperationContext context,bool isConflicted = false, bool allowOverwrite = false,ChangeVectorEntry[] changeVector = null)
         {
             var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
             Debug.Assert(table != null);
@@ -227,7 +266,9 @@ namespace Raven.Server.Documents
             using (DocumentKeyWorker.GetSliceFromKey(context, indexName, out nameAsSlice))
             {
                 var tvr = table.ReadByKey(nameAsSlice);
-                changeVectorForWrite = SetIndexTransformerChangeVectorForLocalChange(context, nameAsSlice, tvr, newEtag);
+
+                //SetIndexTransformerChangeVectorForLocalChange also merges vectors if conflicts exist
+                changeVectorForWrite = SetIndexTransformerChangeVectorForLocalChange(tx,context, nameAsSlice, tvr, newEtag, changeVector);
                 if (tvr != null)
                 {
                     existing = TableValueToMetadata(tvr, context, false);
@@ -302,9 +343,7 @@ namespace Raven.Server.Documents
 
         }
 
-        private ChangeVectorEntry[] SetIndexTransformerChangeVectorForLocalChange(
-            DocumentsOperationContext context, Slice loweredName,
-            TableValueReader oldValue, long newEtag)
+        private ChangeVectorEntry[] SetIndexTransformerChangeVectorForLocalChange(Transaction tx, TransactionOperationContext context, Slice loweredName, TableValueReader oldValue, long newEtag, ChangeVectorEntry[] vector)
         {
             if (oldValue != null)
             {
@@ -312,13 +351,15 @@ namespace Raven.Server.Documents
                 return ReplicationUtils.UpdateChangeVectorWithNewEtag(_environment.DbId, newEtag, changeVector);
             }
 
-            return GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredName, newEtag);
+            return GetMergedConflictChangeVectorsAndDeleteConflicts(tx,context, loweredName, newEtag);
         }
 
 
-        private ChangeVectorEntry[] GetMergedConflictChangeVectorsAndDeleteConflicts(DocumentsOperationContext context, Slice name, long newEtag, ChangeVectorEntry[] existing = null)
+        private ChangeVectorEntry[] GetMergedConflictChangeVectorsAndDeleteConflicts(Transaction tx,TransactionOperationContext context, Slice name, long newEtag, ChangeVectorEntry[] existing = null)
         {
-            var conflictChangeVectors = DeleteConflictsFor(context.Transaction.InnerTransaction, name);
+            var conflictChangeVectors = DeleteConflictsFor(tx, name);
+
+            //no conflicts, no need to merge
             if (conflictChangeVectors.Count == 0)
             {
                 if (existing != null)
@@ -363,7 +404,7 @@ namespace Raven.Server.Documents
             return changeVector;
         }
 
-        public IReadOnlyList<ChangeVectorEntry[]> DeleteConflictsFor(Transaction tx, DocumentsOperationContext context, string name)
+        public IReadOnlyList<ChangeVectorEntry[]> DeleteConflictsFor(Transaction tx, TransactionOperationContext context, string name)
         {
             Slice nameSlice;            
             using (DocumentKeyWorker.GetSliceFromKey(context,name, out nameSlice))
@@ -399,7 +440,7 @@ namespace Raven.Server.Documents
         }
 
 
-        public IEnumerable<IndexConflictEntry> GetConflictsFor(Transaction tx, JsonOperationContext context, string name, int start, int take)
+        public IEnumerable<IndexConflictEntry> GetConflictsFor(Transaction tx, TransactionOperationContext context, string name, int start, int take)
         {
             int taken = 0;
             int skipped = 0;
@@ -407,34 +448,25 @@ namespace Raven.Server.Documents
 
             Debug.Assert(table != null);
 
-            foreach (var seekResult in table.SeekForwardFrom(ConflictsTableSchema.Indexes[NameAndEtagIndexName],name, true))
-            foreach (var tvr in seekResult.Results)
+            Slice nameSlice;
+            using (DocumentKeyWorker.GetSliceFromKey(context, name, out nameSlice))
             {
-                if (start > skipped)
-                {
-                    skipped++;
-                    continue;
-                }
+                foreach (var seekResult in table.SeekForwardFrom(ConflictsTableSchema.Indexes[NameAndEtagIndexName], nameSlice, true))
+                    foreach (var tvr in seekResult.Results)
+                    {
+                        if (start > skipped)
+                        {
+                            skipped++;
+                            continue;
+                        }
 
-                if (taken++ >= take)
-                    yield break;
+                        if (taken++ >= take)
+                            yield break;
 
-                yield return TableValueToConflict(tvr, context);
+                        yield return TableValueToConflict(tvr, context);
+                    }
             }
         }
-
-        public void UpdateChangeVectorFor(Transaction tx, JsonOperationContext context, string name, ChangeVectorEntry[] changeVector)
-        {
-            var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
-            Debug.Assert(table != null);
-
-//            Slice nameAsSlice;
-//            using (DocumentKeyWorker.GetSliceFromKey(context, name, out nameAsSlice))
-//            {
-//                var tvr = table.ReadByKey(nameAsSlice);
-//            }
-        }
-
 
         /// <summary>
         /// this method will fetch all metadata entries - tombstones or otherwise

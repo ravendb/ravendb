@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
             using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
             using (var writer = new BlittableJsonTextWriter(documentsOperationContext, tcpConnectionOptions.Stream))
-            using (var tx = documentsOperationContext.OpenReadTransaction())
+            using (var docTx = documentsOperationContext.OpenReadTransaction())
             using (var configTx = configurationContext.OpenReadTransaction())
             {
                 var documentsChangeVector = new DynamicJsonArray();
@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Replication
                     [nameof(ReplicationMessageReply.Type)] = "Ok",
                     [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                     [nameof(ReplicationMessageReply.LastEtagAccepted)] = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId),
-                    [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(tx.InnerTransaction, getLatestEtagMessage.SourceDatabaseId),
+                    [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(configTx.InnerTransaction, getLatestEtagMessage.SourceDatabaseId),
                     [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector,
                     [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVector
                 });
@@ -327,7 +327,7 @@ namespace Raven.Server.Documents.Replication
 
                 using (configurationDocument.Data)
                 {
-                    return JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
+                    return JsonDeserializationServer.ReplicationDocument(configurationDocument.Data) ?? new ReplicationDocument();
                 }
             }
         }

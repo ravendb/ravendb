@@ -86,6 +86,7 @@ namespace Voron.Impl
 
             PrepareForCommit();
             _lowLevelTransaction.Commit();
+            _lowLevelTransaction.Environment.CurrentWriteTransaction = null;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
