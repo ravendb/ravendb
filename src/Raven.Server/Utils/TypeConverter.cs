@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using Lucene.Net.Documents;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Client.Linq;
@@ -64,9 +65,7 @@ namespace Raven.Server.Utils
             if (value is Enum)
                 return value.ToString();
 
-            // TODO iftah
-            throw new NotImplementedException();
-            /*if (value is IEnumerable<IFieldable> || value is IFieldable)
+            if (value is IEnumerable<IFieldable> || value is IFieldable)
                 return Constants.Indexing.Fields.IgnoredDynamicField;
 
             var dictionary = value as IDictionary;
@@ -120,7 +119,7 @@ namespace Raven.Server.Utils
                 inner[property.Key] = ToBlittableSupportedType(propertyValue);
             }
 
-            return inner;*/
+            return inner;
         }
 
         private static IEnumerable<object> Flatten(IEnumerable items)

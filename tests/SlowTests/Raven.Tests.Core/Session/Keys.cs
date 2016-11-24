@@ -7,7 +7,7 @@ using Xunit;
 using Company = SlowTests.Core.Utils.Entities.Company;
 using User = SlowTests.Core.Utils.Entities.User;
 
-namespace SlowTests.NewClient.Raven.Tests.Core.Session
+namespace NewClientTests.NewClient.Raven.Tests.Core.Session
 {
     public class Keys : RavenTestBase
     {
