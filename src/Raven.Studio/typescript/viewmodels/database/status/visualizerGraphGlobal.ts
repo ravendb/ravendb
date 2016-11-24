@@ -225,8 +225,9 @@ class documentItem {
 
     connectedPages = [] as Array<pageItem>;
 
-    constructor(name: string) {
+    constructor(name: string, color: string) {
         this.name = name;
+        this.color = color;
     }
 
     getSourceConnectionPoint(): [number, number] {
@@ -296,7 +297,6 @@ class visualizerGraphGlobal {
     }
 
     static readonly documentColors = ["#7cb82f", "#1a858e", "#ef6c5a"];
-    private nextColorIndex = 0;
     private hitTest = new hitTest();
 
     private savedZoomStatus = {
@@ -322,9 +322,8 @@ class visualizerGraphGlobal {
 
     private goToDetailsCallback: (treeName: string) => void;
 
-    addDocument(documentName: string) {
-        const document = new documentItem(documentName);
-        document.color = this.getNextColor();
+    addDocument(documentName: string, color: string) {
+        const document = new documentItem(documentName, color);
         this.documents.push(document);
     }
 
@@ -339,12 +338,6 @@ class visualizerGraphGlobal {
         }
 
         this.layout();
-    }
-
-    private getNextColor() {
-        const color = visualizerGraphGlobal.documentColors[this.nextColorIndex % visualizerGraphGlobal.documentColors.length];
-        this.nextColorIndex++;
-        return color;
     }
 
     zoomToDocument(documentName: string) {
@@ -368,7 +361,6 @@ class visualizerGraphGlobal {
     reset() {
         this.documents = [];
         this.reduceTrees = [];
-        this.nextColorIndex = 0;
 
         this.draw();
     }
