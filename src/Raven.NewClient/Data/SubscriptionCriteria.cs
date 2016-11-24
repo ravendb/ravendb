@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Abstractions.Data
 {

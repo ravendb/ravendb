@@ -10,17 +10,15 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Connection.Implementation;
 using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Connection
 {
     public class AdminRequestCreator
     {
-        // url, method
+        /*// url, method
         private readonly Func<string, HttpMethod, HttpJsonRequest> createRequestForSystemDatabase;
 
         // currentServerUrl, operationUrl, method
@@ -148,6 +146,6 @@ namespace Raven.NewClient.Client.Connection
                 return json.Select(x => x.Value<string>("Name"))
                     .ToArray();
             }
-        }
+        }*/
     }
 }

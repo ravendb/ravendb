@@ -4,8 +4,7 @@ using System.Globalization;
 using System.Reflection;
 
 using Raven.Abstractions.Extensions;
-using  Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json;
 
 namespace Raven.NewClient.Abstractions.Json
 {
@@ -121,7 +120,7 @@ namespace Raven.NewClient.Abstractions.Json
 
         public override bool CanConvert(Type objectType)
         {
-            if (objectType.IsGenericType() == false)
+            if (objectType.GetTypeInfo().IsGenericType == false)
                 return false;
             if (objectType.GetGenericTypeDefinition() != typeof(Dictionary<,>))
                 return false;

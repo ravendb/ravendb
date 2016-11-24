@@ -1,8 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using  Raven.Imports.Newtonsoft.Json;
-using  Raven.Imports.Newtonsoft.Json.Utilities;
+using System.Reflection;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Utilities;
 
 namespace Raven.NewClient.Abstractions.Json
 {
@@ -59,7 +60,9 @@ namespace Raven.NewClient.Abstractions.Json
         {
             if (objectType.Namespace == null)
                 return false;
-            return ReflectionUtils.ImplementsGenericDefinition(objectType,typeof(IEnumerable<>)) &&
+            var typeInfo = objectType.GetTypeInfo();
+
+            return typeInfo.IsGenericTypeDefinition && typeInfo.GetGenericTypeDefinition() == typeof(IEnumerable<>) && 
                     objectType.Namespace.StartsWith("System.Linq");
         }
     }

@@ -4,8 +4,8 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Connection;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.NewClient.Json.Linq;
+using Newtonsoft.Json;
+
 
 namespace Raven.NewClient.Client.Extensions
 {
@@ -13,7 +13,8 @@ namespace Raven.NewClient.Client.Extensions
     {
         internal async static Task AssertNotFailingResponse(this HttpResponseMessage response)
         {
-            if (response.IsSuccessStatusCode)
+            throw new NotImplementedException();
+            /*if (response.IsSuccessStatusCode)
                 return;
 
             using (var sr = new StreamReader(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false)))
@@ -52,7 +53,7 @@ namespace Raven.NewClient.Client.Extensions
                 }
 
                 throw new ErrorResponseException(response, readToEnd);
-            }
+            }*/
         }
     }
 }

@@ -6,7 +6,7 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Shard;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Document.Batches
 {
@@ -15,12 +15,12 @@ namespace Raven.NewClient.Client.Document.Batches
         private readonly string[] ids;
         private readonly string transformer;
 
-        private readonly Dictionary<string, RavenJToken> transformerParameters;
+        private readonly Dictionary<string, object> transformerParameters;
 
         private readonly LoadTransformerOperation loadTransformerOperation;
         private readonly bool singleResult;
 
-        public LazyTransformerLoadOperation(string[] ids, string transformer, Dictionary<string, RavenJToken> transformerParameters, LoadTransformerOperation loadTransformerOperation, bool singleResult)
+        public LazyTransformerLoadOperation(string[] ids, string transformer, Dictionary<string, object> transformerParameters, LoadTransformerOperation loadTransformerOperation, bool singleResult)
         {
             this.ids = ids;
             this.transformer = transformer;
@@ -61,7 +61,8 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public void HandleResponse(GetResponse response)
         {
-            if (response.RequestHasErrors())
+            throw new NotImplementedException();
+            /*if (response.RequestHasErrors())
             {
                 throw new InvalidOperationException("Got bad status code: " + response.Status);
             }
@@ -70,25 +71,25 @@ namespace Raven.NewClient.Client.Document.Batches
             {
                 Includes = response.Result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
                 Results = response.Result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
-            });
+            });*/
         }
 
         public IDisposable EnterContext()
         {
             return null;
         }
-
+        /*
         private void HandleRespose(LoadResult loadResult)
         {
             throw new NotImplementedException();
-            /*T[] complete = loadTransformerOperation.Complete<T>(loadResult);
+            T[] complete = loadTransformerOperation.Complete<T>(loadResult);
             if (singleResult)
             {
                 Result = complete.Length > 0 ? complete[0] : (object)null;
                 return;
             }
 
-            Result = complete;*/
-        }
+            Result = complete;
+        }*/
     }
 }

@@ -10,7 +10,7 @@ using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using  Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json;
 
 namespace Raven.NewClient.Abstractions.Extensions
 {
@@ -155,7 +155,7 @@ namespace Raven.NewClient.Abstractions.Extensions
 
                 if (node.Member.DeclaringType == null)
                     return false;
-                if (node.Member.DeclaringType.IsGenericType() == false)
+                if (node.Member.DeclaringType.GetTypeInfo().IsGenericType == false)
                     return false;
 
                 var genericTypeDefinition = node.Member.DeclaringType.GetGenericTypeDefinition();

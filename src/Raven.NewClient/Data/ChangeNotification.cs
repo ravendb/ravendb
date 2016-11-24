@@ -6,7 +6,7 @@
 
 using System;
 using Raven.NewClient.Client.Data;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 
 namespace Raven.NewClient.Abstractions.Data
 {

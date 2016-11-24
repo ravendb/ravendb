@@ -2,16 +2,15 @@ using System;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Connection
 {
     public class Operation : IObserver<OperationStatusChangeNotification>
     {
-        private readonly AsyncServerClient _asyncServerClient;
         private readonly long _id;
         private IDisposable _subscription;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>();
@@ -22,13 +21,6 @@ namespace Raven.NewClient.Client.Connection
 
         public Operation(long id)
         {
-            _id = id;
-            throw new NotImplementedException();
-        }
-
-        public Operation(AsyncServerClient asyncServerClient, long id)
-        {
-            _asyncServerClient = asyncServerClient;
             _id = id;
 
             Task.Factory.StartNew(Initialize);

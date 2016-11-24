@@ -4,7 +4,7 @@ using System.Net;
 using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Abstractions.Json;
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Connection.Async;
+
 
 using System;
 using System.Collections.Concurrent;
@@ -18,12 +18,11 @@ using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Changes;
 using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Connection.Implementation;
 using Raven.NewClient.Client.Util;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 
-using Raven.Imports.Newtonsoft.Json.Bson;
-using Raven.NewClient.Json.Linq;
+using Newtonsoft.Json.Bson;
+
 using System.IO.Compression;
 using System.Net.Http;
 using Raven.NewClient.Client.Extensions;

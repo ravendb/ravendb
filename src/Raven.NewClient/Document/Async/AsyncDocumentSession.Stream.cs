@@ -8,7 +8,7 @@ using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Document.Async
 {

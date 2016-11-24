@@ -10,8 +10,8 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Raven.NewClient.Abstractions.Data;
-using  Raven.Imports.Newtonsoft.Json;
-using Raven.NewClient.Json.Linq;
+using Newtonsoft.Json;
+
 using System.Net.Http;
 
 namespace Raven.NewClient.Abstractions.Extensions
@@ -21,7 +21,7 @@ namespace Raven.NewClient.Abstractions.Extensions
     /// </summary>
     public static class MetadataExtensions
     {
-        private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        /*private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             // Raven internal headers
             Constants.Headers.RavenServerBuild,
@@ -343,6 +343,6 @@ namespace Raven.NewClient.Abstractions.Extensions
             {
                 throw new JsonReaderException(string.Concat("Unable to get value: ", val), exc);
             }
-        }
+        }*/
     }
 }

@@ -1,5 +1,5 @@
 ﻿using System.Runtime.Serialization.Formatters;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json;
 using Sparrow.Extensions;
 using Sparrow.Json.Parsing;
 

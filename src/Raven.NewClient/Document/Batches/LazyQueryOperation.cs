@@ -4,7 +4,7 @@ using System.Text;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Shard;
-using Raven.NewClient.Json.Linq;
+
 using System.Linq;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;

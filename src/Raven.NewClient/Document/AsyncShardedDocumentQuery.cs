@@ -13,8 +13,7 @@ using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Connection.Async;
-using Raven.NewClient.Client.Listeners;
+
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Shard;

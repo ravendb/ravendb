@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Indexing;

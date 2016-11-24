@@ -11,11 +11,9 @@ using Raven.Client.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Transformers;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Abstractions.Data;
-using Lucene.Net.Documents;
 
 namespace Raven.Server.Utils
 {
@@ -66,7 +64,9 @@ namespace Raven.Server.Utils
             if (value is Enum)
                 return value.ToString();
 
-            if (value is IEnumerable<IFieldable> || value is IFieldable)
+            // TODO iftah
+            throw new NotImplementedException();
+            /*if (value is IEnumerable<IFieldable> || value is IFieldable)
                 return Constants.Indexing.Fields.IgnoredDynamicField;
 
             var dictionary = value as IDictionary;
@@ -120,7 +120,7 @@ namespace Raven.Server.Utils
                 inner[property.Key] = ToBlittableSupportedType(propertyValue);
             }
 
-            return inner;
+            return inner;*/
         }
 
         private static IEnumerable<object> Flatten(IEnumerable items)

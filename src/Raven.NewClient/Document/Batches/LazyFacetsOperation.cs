@@ -6,7 +6,7 @@ using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Shard;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Document.Batches
 {
@@ -37,18 +37,21 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public void HandleResponse(GetResponse response)
         {
-            if (response.RequestHasErrors())
+            throw new NotImplementedException();
+            /*if (response.RequestHasErrors())
             {
                 throw new InvalidOperationException("Got an unexpected response code for the request: " + response.Status + "\r\n" + response.Result);
             }
 
             var result = (RavenJObject)response.Result;
-            Result = result.JsonDeserialization<FacetedQueryResult>();
+            Result = result.JsonDeserialization<FacetedQueryResult>();*/
         }
 
         public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
         {
-            var result = new FacetedQueryResult();
+            throw new NotImplementedException();
+
+            /*var result = new FacetedQueryResult();
 
             foreach (var response in responses.Select(response => (RavenJObject)response.Result))
             {
@@ -76,7 +79,7 @@ namespace Raven.NewClient.Client.Document.Batches
                 }
             }
 
-            Result = result;
+            Result = result;*/
         }
 
         public IDisposable EnterContext()

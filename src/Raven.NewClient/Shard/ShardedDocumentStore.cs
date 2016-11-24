@@ -12,7 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Changes;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;

@@ -7,7 +7,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-using Raven.NewClient.Json.Linq;
+
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Data.Queries

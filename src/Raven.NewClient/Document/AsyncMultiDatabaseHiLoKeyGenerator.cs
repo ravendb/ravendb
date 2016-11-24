@@ -6,7 +6,7 @@
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Connection.Async;
+
 
 namespace Raven.NewClient.Client.Document
 {

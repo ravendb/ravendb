@@ -4,7 +4,7 @@ using Raven.NewClient.Abstractions.Data;
 
 namespace Raven.NewClient.Abstractions.Replication
 {
-    using Raven.NewClient.Json.Linq;
+    
 
     public class ReplicationStatistics
     {
@@ -21,7 +21,7 @@ namespace Raven.NewClient.Abstractions.Replication
 
     public class DestinationStats
     {
-        public DestinationStats()
+        /*public DestinationStats()
         {
             LastStats = new RavenJArray();
         }
@@ -37,7 +37,7 @@ namespace Raven.NewClient.Abstractions.Replication
         public DateTime? FirstFailureInCycleTimestamp { get; set; }
         public int FailureCount => FailureCountInternal;
 	    public string LastError { get; set; }
-        public RavenJArray LastStats { get; set; }
+        public RavenJArray LastStats { get; set; }*/
     }
 
     public class ReplicationPerformanceStats

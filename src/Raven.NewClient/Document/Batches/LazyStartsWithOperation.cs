@@ -17,7 +17,7 @@ namespace Raven.NewClient.Client.Document.Batches
     using Raven.NewClient.Client.Connection;
     using Raven.NewClient.Client.Extensions;
     using Raven.NewClient.Client.Shard;
-    using Raven.NewClient.Json.Linq;
+    
 
     public class LazyStartsWithOperation<T> : ILazyOperation
     {

@@ -1,10 +1,9 @@
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Changes;
 using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Listeners;
 using Raven.NewClient.Client.Util;
 using System;
 using System.Collections.Generic;
@@ -29,18 +28,9 @@ namespace Raven.NewClient.Client
             InitializeEncryptor();
 
             LastEtagHolder = new GlobalLastEtagHolder();
-            AsyncSubscriptions = new AsyncDocumentSubscriptions(this);
-            Subscriptions = new DocumentSubscriptions(this);
-        }
-
-        public DocumentSessionListeners Listeners
-        {
-            get { return listeners; }
-        }
-
-        public void SetListeners(DocumentSessionListeners newListeners)
-        {
-            listeners = newListeners;
+            //TODO: Iftah
+            //AsyncSubscriptions = new AsyncDocumentSubscriptions(this);
+            //Subscriptions = new DocumentSubscriptions(this);
         }
 
         public abstract void Dispose();
@@ -74,7 +64,6 @@ namespace Raven.NewClient.Client
         public virtual NameValueCollection SharedOperationsHeaders { get; protected set; }
 
         public abstract bool HasJsonRequestFactory { get; }
-        public abstract HttpJsonRequestFactory JsonRequestFactory { get; }
         public abstract string Identifier { get; set; }
         public abstract IDocumentStore Initialize();
         public abstract IAsyncDocumentSession OpenAsyncSession();
@@ -246,89 +235,6 @@ namespace Raven.NewClient.Client
         {
             if (!initialized)
                 throw new InvalidOperationException("You cannot open a session or access the database commands before initializing the document store. Did you forget calling Initialize()?");
-        }
-
-        private DocumentSessionListeners listeners = new DocumentSessionListeners();
-
-        /// <summary>
-        /// Registers the extended conversion listener.
-        /// </summary>
-        public DocumentStoreBase RegisterListener(IDocumentConversionListener conversionListener)
-        {
-            listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
-            return this;
-        }
-
-        /// <summary>
-        /// Registers the query listener.
-        /// </summary>
-        /// <param name="queryListener">The query listener.</param>
-        public DocumentStoreBase RegisterListener(IDocumentQueryListener queryListener)
-        {
-            listeners.QueryListeners = listeners.QueryListeners.Concat(new[] { queryListener }).ToArray();
-            return this;
-        }
-
-        /// <summary>
-        /// Registers the store listener.
-        /// </summary>
-        /// <param name="documentStoreListener">The document store listener.</param>
-        public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
-        {
-            listeners.StoreListeners = listeners.StoreListeners.Concat(new[] { documentStoreListener }).ToArray();
-            return this;
-        }
-
-        /// <summary>
-        /// Registers the delete listener.
-        /// </summary>
-        /// <param name="deleteListener">The delete listener.</param>
-        public DocumentStoreBase RegisterListener(IDocumentDeleteListener deleteListener)
-        {
-            listeners.DeleteListeners = listeners.DeleteListeners.Concat(new[] { deleteListener }).ToArray();
-            return this;
-        }
-
-        /// <summary>
-        /// Registers the conflict listener.
-        /// </summary>
-        /// <param name="conflictListener">The conflict listener.</param>
-        public DocumentStoreBase RegisterListener(IDocumentConflictListener conflictListener)
-        {
-            listeners.ConflictListeners = listeners.ConflictListeners.Concat(new[] { conflictListener }).ToArray();
-            return this;
-        }
-
-        /// <summary>
-        /// Gets a read-only collection of the registered query listeners.
-        /// </summary>
-        public ReadOnlyCollection<IDocumentQueryListener> RegisteredQueryListeners
-        {
-            get { return new ReadOnlyCollection<IDocumentQueryListener>(listeners.QueryListeners); }
-        }
-
-        /// <summary>
-        /// Gets a read-only collection of the registered store listeners.
-        /// </summary>
-        public ReadOnlyCollection<IDocumentStoreListener> RegisteredStoreListeners
-        {
-            get { return new ReadOnlyCollection<IDocumentStoreListener>(listeners.StoreListeners); }
-        }
-
-        /// <summary>
-        /// Gets a read-only collection of the registered delete listeners.
-        /// </summary>
-        public ReadOnlyCollection<IDocumentDeleteListener> RegisteredDeleteListeners
-        {
-            get { return new ReadOnlyCollection<IDocumentDeleteListener>(listeners.DeleteListeners); }
-        }
-
-        /// <summary>
-        /// Gets a read-only collection of the registered conflict listeners.
-        /// </summary>
-        public ReadOnlyCollection<IDocumentConflictListener> RegisteredConflictListeners
-        {
-            get { return new ReadOnlyCollection<IDocumentConflictListener>(listeners.ConflictListeners); }
         }
 
         protected virtual void AfterSessionCreated(InMemoryDocumentSessionOperations session)

@@ -1,10 +1,9 @@
-﻿using Raven.NewClient.Abstractions.FileSystem;
-
+﻿
 namespace Raven.NewClient.Client.Data
 {
     public class Size
     {
-        private static readonly string ZeroHumaneSize = FileHeader.Humane(0);
+        /*private static readonly string ZeroHumaneSize = FileHeader.Humane(0);
 
         public Size()
         {
@@ -32,6 +31,6 @@ namespace Raven.NewClient.Client.Data
             }
         }
 
-        public string HumaneSize { get; private set; }
+        public string HumaneSize { get; private set; }*/
     }
 }

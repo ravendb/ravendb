@@ -21,7 +21,7 @@ using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Util;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
 using Sparrow.Json;
@@ -87,16 +87,6 @@ namespace Raven.NewClient.Client.Document
         private readonly DocumentStoreBase _documentStore;
 
         public string DatabaseName { get; }
-
-        /// <summary>
-        /// all the listeners for this session
-        /// </summary>
-        protected readonly DocumentSessionListeners TheListeners;
-
-        /// <summary>
-        /// all the listeners for this session
-        /// </summary>
-        public DocumentSessionListeners Listeners => TheListeners;
 
         ///<summary>
         /// The document store associated with this session
@@ -426,7 +416,7 @@ more responsive application.
         /// <returns></returns>
         public static object GetDefaultValue(Type type)
         {
-            return type.IsValueType() ? Activator.CreateInstance(type) : null;
+            return type.GetTypeInfo().IsValueType ? Activator.CreateInstance(type) : null;
         }
 
         /// <summary>

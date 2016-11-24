@@ -5,7 +5,7 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Connection
 {
@@ -42,7 +42,7 @@ namespace Raven.NewClient.Client.Connection
 
         }
 
-        public static JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
+        /*public static JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
         {
             try
             {
@@ -76,11 +76,13 @@ namespace Raven.NewClient.Client.Connection
             {
                 Log.ErrorException("Could not persist the replication information", e);
             }
-        }
+        }*/
 
         public static List<OperationMetadata> TryLoadClusterNodesFromLocalCache(string serverHash)
         {
-            try
+            throw new NotImplementedException();
+
+            /*try
             {
                 var path = GetClusterReplicationPath(serverHash);
 
@@ -98,12 +100,14 @@ namespace Raven.NewClient.Client.Connection
             {
                 Log.ErrorException("Could not understand the persisted cluster nodes", e);
                 return null;
-            }
+            }*/
         }
 
         public static void TrySavingClusterNodesToLocalCache(string serverHash, List<OperationMetadata> nodes)
         {
-            try
+            throw new NotImplementedException();
+
+            /*try
             {
                 var path = GetClusterReplicationPath(serverHash);
 
@@ -115,7 +119,7 @@ namespace Raven.NewClient.Client.Connection
             catch (Exception e)
             {
                 Log.ErrorException("Could not persist the cluster nodes", e);
-            }
+            }*/
         }
     }
 }
