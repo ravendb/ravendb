@@ -1,13 +1,9 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Extensions;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.NewClient.Client.Commands
