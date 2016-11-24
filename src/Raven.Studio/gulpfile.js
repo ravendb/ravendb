@@ -255,6 +255,11 @@ gulp.task('build', function (cb) {
         cb);
 });
 
+gulp.task('alpha-release:_copy-version', function () {
+    return gulp.src("./version.json")
+        .pipe(gulp.dest(PATHS.releaseTarget));
+});
+
 gulp.task('alpha-release:_copy-js', function () {
     return gulp.src('wwwroot/**/*.js')
         //.pipe(plugins.uglify().on('error', gutil.log))
@@ -274,7 +279,8 @@ gulp.task('alpha-release:_package', ['alpha-release:_copy'], function () {
 
 gulp.task('alpha-release:_copy', [
         'alpha-release:_copy-content',
-        'alpha-release:_copy-js'
+        'alpha-release:_copy-js',
+        'alpha-release:_copy-version'
 ]);
 
 gulp.task('alpha-release', function (cb) {
