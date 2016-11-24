@@ -35,7 +35,7 @@ namespace Voron.Data.BTrees
                     // return incorrect values and AccessViolationException could be thrown
                     // instead we can explicitly check SizeLeft because the page isn't fragmented
 
-                    if (result.CompressedPage.GetRequiredSpace(key, len) > result.CompressedPage.SizeLeft) // intentionally don't use HasSpaceFor here because the
+                    if (result.CompressedPage.GetRequiredSpace(key, len) > result.CompressedPage.SizeLeft)
                         return false;
 
                     LeafPageCompressor.CopyToPage(result, page);
@@ -132,8 +132,8 @@ namespace Voron.Data.BTrees
                         switch (uncompressedNode->Flags)
                         {
                             case TreeNodeFlags.PageRef:
-                                throw new NotImplementedException("TODO arek");
-
+                                decompressedPage.AddPageRefNode(index, nodeKey, uncompressedNode->PageNumber);
+                                break;
                             case TreeNodeFlags.Data:
                                 var pos = decompressedPage.AddDataNode(index, nodeKey, uncompressedNode->DataSize, (ushort)(uncompressedNode->Version - 1));
                                 var nodeValue = TreeNodeHeader.Reader(_llt, uncompressedNode);

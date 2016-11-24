@@ -18,6 +18,7 @@ namespace FastTests.Voron.LeafsCompression
         [InlineData(16384, 512, false, 1)]
         [InlineData(26, 333, true, 1)]
         [InlineData(1024, 555, false, 1)]
+        [InlineData(777, 2048, false, 1)]
         public void Can_compress_leaf_pages_and_read_directly_from_them_after_decompression(int iterationCount, int size, bool sequentialKeys, int seed)
         {
             using (var tx = Env.WriteTransaction())
