@@ -15,27 +15,26 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Linq
 {
     public interface IDynamicJsonObject
     {
-        /// <summary>
+       /* /// <summary>
         /// Gets the inner json object
         /// </summary>
         /// <value>The inner.</value>
         RavenJObject Inner { get; }
-
+*/
         void WriteTo(JsonWriter writer);
     }
     /// <summary>
     /// A dynamic implementation on top of <see cref="RavenJObject"/>
     /// </summary>
     [JsonObject]
-    public class DynamicJsonObject : DynamicObject, IEnumerable<object>, IDynamicJsonObject
+    public class DynamicJsonObject //: DynamicObject, IEnumerable<object>, IDynamicJsonObject
     {
-        private DynamicJsonObject parent;
+        /*private DynamicJsonObject parent;
 
         public IEnumerator<object> GetEnumerator()
         {
@@ -416,6 +415,6 @@ namespace Raven.NewClient.Client.Linq
         public virtual void WriteTo(JsonWriter writer)
         {
             inner.WriteTo(writer);
-        }
+        }*/
     }
 }

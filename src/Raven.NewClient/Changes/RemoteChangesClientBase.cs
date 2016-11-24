@@ -105,7 +105,8 @@ namespace Raven.NewClient.Client.Changes
 
         private async Task Receive()
         {
-            try
+            throw new NotImplementedException();
+            /*try
             {
                 using (var ms = new MemoryStream())
                 {
@@ -155,10 +156,10 @@ namespace Raven.NewClient.Client.Changes
             catch (WebSocketException ex)
             {
                 logger.DebugException("Failed to receive a message, client was probably disconnected", ex);
-            }
+            }*/
         }
 
-        private void HandleRevicedNotification(RavenJObject ravenJObject)
+        /*private void HandleRevicedNotification(RavenJObject ravenJObject)
         {
             var value = ravenJObject.Value<RavenJObject>("Value");
             var type = ravenJObject.Value<string>("Type");
@@ -205,7 +206,7 @@ namespace Raven.NewClient.Client.Changes
             await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
 
             await tcs.Task.ConfigureAwait(false);
-        }
+        }*/
 
         private readonly CancellationTokenSource disposedToken = new CancellationTokenSource();
 
@@ -263,14 +264,16 @@ namespace Raven.NewClient.Client.Changes
         }
 
         protected abstract Task SubscribeOnServer();
-        protected abstract void NotifySubscribers(string type, RavenJObject value, List<TConnectionState> connections);
+        //protected abstract void NotifySubscribers(string type, RavenJObject value, List<TConnectionState> connections);
 
         public virtual void OnCompleted()
         { }
 
         protected TConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, Action afterConnection, Action beforeDisconnect, string value)
         {
-            var counter = Counters.GetOrAdd(name, s =>
+            throw new NotImplementedException();
+
+            /*var counter = Counters.GetOrAdd(name, s =>
             {
                 Func<Task> onZero = () =>
                 {
@@ -304,7 +307,7 @@ namespace Raven.NewClient.Client.Changes
                 return CreateTConnectionState(onZero, ensureConnection, counterSubscriptionTask);
             });
 
-            return counter;
+            return counter;*/
         }
 
         private static TConnectionState CreateTConnectionState(params object[] args)

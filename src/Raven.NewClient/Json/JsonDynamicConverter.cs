@@ -65,7 +65,8 @@ namespace Raven.NewClient.Abstractions.Json
         /// <returns>The object value.</returns>
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            var token = RavenJToken.ReadFrom(reader);
+            throw new NotImplementedException();
+            /*var token = RavenJToken.ReadFrom(reader);
             var val = token as RavenJValue;
             if(val != null)
                 return val.Value;
@@ -86,7 +87,7 @@ namespace Raven.NewClient.Abstractions.Json
                 }
             }
 
-            return new DynamicJsonObject((RavenJObject)((RavenJObject)token).CloneToken());
+            return new DynamicJsonObject((RavenJObject)((RavenJObject)token).CloneToken());*/
         }
 
         /// <summary>

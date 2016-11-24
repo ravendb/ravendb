@@ -2,7 +2,7 @@
 
 namespace Raven.NewClient.Client.Data.Queries
 {
-    public class MoreLikeThisQueryResult : MoreLikeThisQueryResult<RavenJObject>
+    public class MoreLikeThisQueryResult //TODO iftah: MoreLikeThisQueryResult<RavenJObject>
     {
     }
 

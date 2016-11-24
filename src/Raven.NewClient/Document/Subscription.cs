@@ -36,7 +36,6 @@ namespace Raven.NewClient.Client.Document
     public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class
     {
         private static readonly ILog Logger = LogManager.GetLogger(typeof(Subscription<T>));
-        private readonly AsyncServerClient _commands;
         private readonly DocumentConvention _conventions;
         private readonly CancellationTokenSource _proccessingCts = new CancellationTokenSource();
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
@@ -49,14 +48,14 @@ namespace Raven.NewClient.Client.Document
         private Task _subscriptionTask;
         private NetworkStream _networkStream;
 
-        internal Subscription(SubscriptionConnectionOptions options,
-            AsyncServerClient commands, DocumentConvention conventions)
+        internal Subscription(SubscriptionConnectionOptions options, DocumentConvention conventions)
         {
-            _options = options;
+            throw new NotImplementedException();
+
+            /*_options = options;
             if (_options.SubscriptionId == 0)
                 throw new ArgumentException("SubscriptionConnectionOptions must specify the SubscriptionId, but was set to zero.",
                     nameof(options));
-            _commands = commands;
             _conventions = conventions;
 
             if (typeof(T) != typeof(RavenJObject))
@@ -64,7 +63,7 @@ namespace Raven.NewClient.Client.Document
                 _isStronglyTyped = true;
                 _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions,
                     entity => { throw new InvalidOperationException("Shouldn't be generating new ids here"); });
-            }
+            }*/
         }
 
         ~Subscription()
@@ -259,7 +258,9 @@ namespace Raven.NewClient.Client.Document
 
         private async Task ProccessSubscription(TaskCompletionSource<object> successfullyConnected)
         {
-            try
+            throw new NotImplementedException();
+
+            /*try
             {
                 _proccessingCts.Token.ThrowIfCancellationRequested();
 
@@ -348,10 +349,10 @@ namespace Raven.NewClient.Client.Document
                 if (_proccessingCts.Token.IsCancellationRequested==false)
                     InformSubscribersOnError(ex);
                 throw;
-            }
+            }*/
         }
 
-        private async Task<SubscriptionConnectionServerMessage> ReadNextObject(JsonTextReaderAsync jsonReader)
+        /*private async Task<SubscriptionConnectionServerMessage> ReadNextObject(JsonTextReaderAsync jsonReader)
         {
             do
             {
@@ -363,10 +364,10 @@ namespace Raven.NewClient.Client.Document
             if (_proccessingCts.Token.IsCancellationRequested)
                 return null;
             return (await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false)).JsonDeserialization<SubscriptionConnectionServerMessage>();
-        }
+        }*/
         
 
-        private void NotifySubscribers(RavenJObject curDoc, out long lastReceivedEtag)
+        /*private void NotifySubscribers(RavenJObject curDoc, out long lastReceivedEtag)
         {
             T instance;
             var metadata = curDoc[Constants.Metadata.Key] as RavenJObject;
@@ -427,7 +428,7 @@ namespace Raven.NewClient.Client.Document
                 Etag = lastReceivedEtag,
                 Type = SubscriptionConnectionClientMessage.MessageType.Acknowledge
             }).WriteTo(networkStream);
-        }
+        }*/
 
         private async Task RunSubscriptionAsync(TaskCompletionSource<object> firstConnectionCompleted)
         {

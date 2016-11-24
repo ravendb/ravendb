@@ -27,7 +27,7 @@ namespace Raven.NewClient.Client.Connection
     ///</summary>
     public static class SerializationHelper
     {
-        ///<summary>
+        /*///<summary>
         /// Translate a collection of RavenJObject to JsonDocuments
         ///</summary>
         public static IEnumerable<JsonDocument> RavenJObjectsToJsonDocuments(IEnumerable<RavenJObject> responses)
@@ -133,7 +133,7 @@ namespace Raven.NewClient.Client.Connection
         public static QueryResult ToQueryResult(RavenJObject json, long? etag, string tempRequestTime, long numberOfCharactersRead)
         {
             throw new NotImplementedException();
-            /*//TODO arek
+            /#1#/TODO arek
             var result = new QueryResult
             {
                 IsStale = json.Value<bool>(nameof(QueryResult.IsStale)),
@@ -170,7 +170,7 @@ namespace Raven.NewClient.Client.Connection
             //    result.DurationMilliseconds = totalTime;
             //}
 
-            return result;*/
+            return result;#1#
         }
 
         public static bool TryParseTempRequestTime(string tempRequestTime, out long result)
@@ -315,6 +315,6 @@ namespace Raven.NewClient.Client.Connection
                 LastModified = lastModifiedDate,
                 Metadata = metadata
             };
-        }
+        }*/
     }
 }

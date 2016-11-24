@@ -33,18 +33,20 @@ namespace Raven.NewClient.Client.Smuggler
 
         private async Task<Stream> ExportAsync(DatabaseSmugglerOptions options, CancellationToken token)
         {
+            throw new NotImplementedException();
+
             var httpClient = GetHttpClient();
             ShowProgress("Starting to export file");
 
             var database = options.Database ?? _store.DefaultDatabase;
             var url = $"{_store.Url}/databases/{database}/smuggler/export";
-            var json = RavenJObject.FromObject(options);
+            /*var json = RavenJObject.FromObject(options);
 
             var response = await httpClient.PostAsync(url, new StringContent(json.ToString()), token).ConfigureAwait(false);
             if (response.IsSuccessStatusCode == false)
                 throw new InvalidOperationException(await response.Content.ReadAsStringAsync());
             var stream = await response.Content.ReadAsStreamAsync();
-            return stream;
+            return stream;*/
         }
 
         public async Task ExportAsync(DatabaseSmugglerOptions options, string serverUrl, string databaseName, CancellationToken token = default(CancellationToken))

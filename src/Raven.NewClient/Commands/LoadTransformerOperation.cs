@@ -1,13 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Document.Commands;
-using Raven.NewClient.Client.Json;
-using Newtonsoft.Json;
 using Raven.NewClient.Client.Document;
 
 using Sparrow.Json;

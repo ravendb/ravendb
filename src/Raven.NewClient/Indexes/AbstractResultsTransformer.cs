@@ -33,7 +33,7 @@ namespace Raven.NewClient.Client.Indexes
         /// </summary>
         public virtual string TransformerName { get { return GetType().Name.Replace("_", "/"); } }
 
-        [Obsolete("Use Parameter instead.")]
+        /*[Obsolete("Use Parameter instead.")]
         protected RavenJToken Query(string key)
         {
             throw new NotSupportedException("This can only be run on the server side");
@@ -43,7 +43,7 @@ namespace Raven.NewClient.Client.Indexes
         protected RavenJToken QueryOrDefault(string key, object defaultVal)
         {
             throw new NotSupportedException("This can only be run on the server side");
-        }
+        }*/
 
         /// <summary>
         /// Returns value of a transformer parameter for specified key

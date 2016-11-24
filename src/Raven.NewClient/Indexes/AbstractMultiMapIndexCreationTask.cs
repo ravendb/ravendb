@@ -43,11 +43,11 @@ namespace Raven.NewClient.Client.Indexes
             AddMap(expr);
 
             // Index child classes.
-            var children = typeof(TBase).Assembly().GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
+            var children = typeof(TBase).GetTypeInfo().Assembly.GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
             var addMapGeneric = GetType().GetMethod("AddMap", BindingFlags.Instance | BindingFlags.NonPublic);
             foreach (var child in children)
             {
-                if (child.IsGenericTypeDefinition())
+                if (child.GetTypeInfo().IsGenericTypeDefinition)
                     continue;
                 var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);
                 var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));

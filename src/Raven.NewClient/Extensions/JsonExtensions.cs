@@ -15,7 +15,6 @@ using Raven.NewClient.Abstractions.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Serialization;
-using Raven.NewClient.Json.Linq;
 using System.Collections.Generic;
 using Raven.NewClient.Client.Linq;
 
@@ -26,7 +25,7 @@ namespace Raven.NewClient.Abstractions.Extensions
     /// </summary>
     public static class JsonExtensions
     {
-        public static RavenJObject ToJObject(object result)
+        /*public static RavenJObject ToJObject(object result)
         {
             var dynamicJsonObject = result as IDynamicJsonObject;
             if (dynamicJsonObject != null)
@@ -333,6 +332,6 @@ namespace Raven.NewClient.Abstractions.Extensions
         {
             base.Dispose(disposing);
             inner?.Dispose();
-        }
+        }*/
     }
 }

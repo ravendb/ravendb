@@ -7,7 +7,8 @@ namespace Raven.NewClient.Client.Util
     {
         public static bool IsEntityType(this Type type)
         {
-            return type != typeof (object) && type != typeof (RavenJObject);
+            throw new NotImplementedException();
+            //return type != typeof (object) && type != typeof (RavenJObject);
         }
     }
 }

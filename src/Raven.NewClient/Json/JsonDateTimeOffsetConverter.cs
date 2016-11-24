@@ -1,6 +1,5 @@
 using System;
 using Newtonsoft.Json;
-using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Abstractions.Json
 {
@@ -12,12 +11,14 @@ namespace Raven.NewClient.Abstractions.Json
         /// <param name="writer">The <see cref="T:Newtonsoft.Json.JsonWriter"/> to write to.</param><param name="value">The value.</param><param name="serializer">The calling serializer.</param>
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
-            var dts = (DateTimeOffset) value;
+            throw new NotImplementedException();
+
+            /*var dts = (DateTimeOffset) value;
             new RavenJObject
             {
                 {"DateTime", dts.DateTime},
                 {"Offset", dts.Offset.TotalMilliseconds}
-            }.WriteTo(writer);
+            }.WriteTo(writer);*/
         }
 
         /// <summary>
@@ -29,7 +30,8 @@ namespace Raven.NewClient.Abstractions.Json
         /// </returns>
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            if (reader.TokenType != JsonToken.StartObject)
+            throw new NotImplementedException();
+            /*if (reader.TokenType != JsonToken.StartObject)
                 return DeferReadToNextConverter(reader, objectType, serializer, existingValue);
 
             var jObject = RavenJObject.Load(reader);
@@ -37,7 +39,7 @@ namespace Raven.NewClient.Abstractions.Json
             return new DateTimeOffset(
                 dateTime.Year,dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute, dateTime.Second, dateTime.Millisecond,
                 TimeSpan.FromMilliseconds(jObject.Value<double>("Offset"))
-                );
+                );*/
         }
 
         /// <summary>

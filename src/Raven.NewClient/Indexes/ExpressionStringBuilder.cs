@@ -1034,8 +1034,9 @@ namespace Raven.NewClient.Client.Indexes
             if (type.GetTypeInfo().Assembly == typeof(HashSet<>).GetTypeInfo().Assembly) // System.Core
                 return true;
 
-            if (type.GetTypeInfo().Assembly == typeof(RavenJObject).GetTypeInfo().Assembly)
-                return true;
+            // TODO iftah
+            /*if (type.GetTypeInfo().Assembly == typeof(RavenJObject).GetTypeInfo().Assembly)
+                return true;*/
 
             if (type.GetTypeInfo().Assembly.FullName.StartsWith("Lucene.Net") &&
                 type.GetTypeInfo().Assembly.FullName.Contains("PublicKeyToken=85089178b9ac3181"))
@@ -1123,7 +1124,9 @@ namespace Raven.NewClient.Client.Indexes
         /// </returns>
         protected override Expression VisitExtension(Expression node)
         {
-            const BindingFlags bindingAttr = BindingFlags.Public | BindingFlags.Instance;
+            throw new NotImplementedException();
+            
+            /*const BindingFlags bindingAttr = BindingFlags.Public | BindingFlags.Instance;
 
             if (node.GetType().GetMethod("ToString", bindingAttr, null, ReflectionUtils.EmptyTypes, null).DeclaringType !=
                 typeof(Expression))
@@ -1134,7 +1137,7 @@ namespace Raven.NewClient.Client.Indexes
             Out("[");
             Out(node.NodeType == ExpressionType.Extension ? node.GetType().FullName : node.NodeType.ToString());
             Out("]");
-            return node;
+            return node;*/
         }
 
         /// <summary>

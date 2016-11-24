@@ -9,7 +9,7 @@ namespace Raven.NewClient.Abstractions.Extensions
 
     public static class JsonDocumentExtensions
     {
-        public static bool IsConflictDocument(this JsonDocument document)
+        /*public static bool IsConflictDocument(this JsonDocument document)
         {
             var conflict = document.Metadata.Value<RavenJValue>(Constants.Headers.RavenReplicationConflict);
             if (conflict == null || conflict.Value<bool>() == false)
@@ -30,6 +30,6 @@ namespace Raven.NewClient.Abstractions.Extensions
             }
 
             return true;
-        }
+        }*/
     }
 }

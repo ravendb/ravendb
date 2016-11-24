@@ -8,13 +8,12 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
-using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Abstractions.Spatial
 {
     public class GeoJsonWktConverter
     {
-        public bool TryConvert(RavenJObject json, out string result)
+        /*public bool TryConvert(RavenJObject json, out string result)
         {
             var builder = new StringBuilder();
 
@@ -335,6 +334,6 @@ namespace Raven.NewClient.Abstractions.Spatial
                 return ravenJObject.ToDictionary(x => x.Key, x => SantizeRavenJObjects(x));
 
             return obj;
-        }
+        }*/
     }
 }

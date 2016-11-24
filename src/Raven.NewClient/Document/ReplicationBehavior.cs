@@ -163,7 +163,8 @@ namespace Raven.NewClient.Client.Document
 
         private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string sourceUrl, string sourceDbId)
         {
-            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
+            throw new NotImplementedException();
+            /*var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
                 null,
                 destinationUrl.LastReplicatedEtagFor(sourceUrl, sourceDbId),
                 HttpMethods.Get,
@@ -171,27 +172,27 @@ namespace Raven.NewClient.Client.Document
                 documentStore.Conventions);
             try
             {
-            using (var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams))
-            {
-                    var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-                var etag = long.Parse(json.Value<string>("LastDocumentEtag"));
-                    if (log.IsDebugEnabled)
-                log.Debug("Received last replicated document long? {0} from server {1}", etag, destinationUrl);
-                
-                return new ReplicatedEtagInfo
+                using (var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams))
                 {
-                    DestinationUrl = destinationUrl,
-                    DocumentEtag = etag 
-                };
+                        var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                    var etag = long.Parse(json.Value<string>("LastDocumentEtag"));
+                        if (log.IsDebugEnabled)
+                    log.Debug("Received last replicated document long? {0} from server {1}", etag, destinationUrl);
+                
+                    return new ReplicatedEtagInfo
+                    {
+                        DestinationUrl = destinationUrl,
+                        DocumentEtag = etag 
+                    };
+                }
             }
-        }
             catch (ErrorResponseException e)
             {
                 if (e.StatusCode == HttpStatusCode.ServiceUnavailable)
                     throw new OperationCanceledException("Got 'Service Unavailable' status code on response, aborting operation");
 
                 throw;
-    }
-}
+            }*/
+        }
     }
 }

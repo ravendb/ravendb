@@ -11,7 +11,7 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
 {
     public static class MoreLikeThisExtensions
     {
-        public static T[] MoreLikeThis<T, TIndexCreator>(this ISyncAdvancedSessionOperation advancedSession, string documentId) where TIndexCreator : AbstractIndexCreationTask, new()
+        /*public static T[] MoreLikeThis<T, TIndexCreator>(this ISyncAdvancedSessionOperation advancedSession, string documentId) where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var indexCreator = new TIndexCreator();
             return MoreLikeThis<T>(advancedSession, indexCreator.IndexName, null, new MoreLikeThisQuery
@@ -94,7 +94,7 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
                 }
             } while (loadOperation.SetResult(loadResult));
 
-            return loadOperation.Complete<T>();*/
+            return loadOperation.Complete<T>();#1#
         }
 
         public static Task<T[]> MoreLikeThisAsync<T, TIndexCreator>(this IAsyncAdvancedSessionOperations advancedSession, string documentId) where TIndexCreator : AbstractIndexCreationTask, new()
@@ -180,7 +180,7 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
                 }
             } while (loadOperation.SetResult(loadResult));
 
-            return loadOperation.Complete<T>();*/
-        }
+            return loadOperation.Complete<T>();#1#
+        }*/
     }
 }

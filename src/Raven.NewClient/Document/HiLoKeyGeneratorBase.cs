@@ -37,7 +37,7 @@ namespace Raven.NewClient.Client.Document
                                  nextId);
         }
 
-        protected long GetMaxFromDocument(JsonDocument document, long minMax)
+       /* protected long GetMaxFromDocument(JsonDocument document, long minMax)
         {
             long max;
             if (document.DataAsJson.ContainsKey("ServerHi")) // convert from hi to max
@@ -49,7 +49,7 @@ namespace Raven.NewClient.Client.Document
             }
             max = document.DataAsJson.Value<long>("Max");
             return Math.Max(max, minMax);
-        }
+        }*/
 
         protected string HiLoDocumentKey
         {
@@ -80,7 +80,7 @@ namespace Raven.NewClient.Client.Document
             lastRequestedUtc1 = SystemTime.UtcNow;
         }
 
-        protected JsonDocument HandleGetDocumentResult(LoadResult documents)
+        /*protected JsonDocument HandleGetDocumentResult(LoadResult documents)
         {
             if (documents.Results.Count == 2 && documents.Results[1] != null)
             {
@@ -98,7 +98,7 @@ namespace Raven.NewClient.Client.Document
                 jsonDocument.Metadata.Remove(key);
             }
             return jsonDocument;
-        }
+        }*/
 
         protected RangeValue Range
         {

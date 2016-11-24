@@ -28,7 +28,9 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public GetRequest CreateRequest()
         {
-            var uri = query.GetRequestUri();
+            throw new NotImplementedException();
+
+            /*var uri = query.GetRequestUri();
 
             var separator = uri.IndexOf('?');
 
@@ -36,7 +38,7 @@ namespace Raven.NewClient.Client.Document.Batches
             {
                 Url = uri.Substring(0, separator),
                 Query = uri.Substring(separator + 1, uri.Length - separator - 1)
-            };
+            };*/
         }
 
         public object Result { get; private set; }
@@ -58,13 +60,13 @@ namespace Raven.NewClient.Client.Document.Batches
             HandleResponse(multiLoadResult);*/
         }
 
-        private void HandleResponse(LoadResult loadResult)
+        /*private void HandleResponse(LoadResult loadResult)
         {
             throw new NotImplementedException();
             /* RequiresRetry = _loadOperation.SetResult(loadResult);
              if (RequiresRetry == false)
-                 Result = _loadOperation.Complete<T>();*/
-        }
+                 Result = _loadOperation.Complete<T>();#1#
+        }*/
 
         public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
         {

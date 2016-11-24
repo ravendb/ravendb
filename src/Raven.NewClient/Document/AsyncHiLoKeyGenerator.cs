@@ -180,12 +180,12 @@ namespace Raven.NewClient.Client.Document
              return await GetNextRangeAsync().ConfigureAwait(false);*/
         }
 
-        private Task PutDocumentAsync(JsonDocument document)
+        /*private Task PutDocumentAsync(JsonDocument document)
         {
             throw new NotImplementedException();
             /*return databaseCommands.PutAsync(HiLoDocumentKey, document.Etag,
                                  document.DataAsJson,
-                                 document.Metadata);*/
+                                 document.Metadata);#1#
         }
 
         private async Task<JsonDocument> GetDocumentAsync()
@@ -208,7 +208,7 @@ namespace Raven.NewClient.Client.Document
             {
                 jsonDocument.Metadata.Remove(key);
             }
-            return jsonDocument;*/
-        }
+            return jsonDocument;#1#
+        }*/
     }
 }

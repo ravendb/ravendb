@@ -18,8 +18,9 @@ using Microsoft.CSharp.RuntimeBinder;
 using Raven.NewClient.Abstractions.Cluster;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Abstractions.Replication;
-using Raven.NewClient.Client.Connection.Async;
+
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Utilities;
 using Newtonsoft.Json.Serialization;
 using Raven.NewClient.Abstractions;
@@ -28,7 +29,7 @@ using Raven.NewClient.Abstractions.Json;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Converters;
 using Raven.NewClient.Client.Util;
-using Raven.NewClient.Json.Linq;
+
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
 
@@ -78,8 +79,7 @@ namespace Raven.NewClient.Client.Document
             FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
             ShouldCacheRequest = url => true;
             FindIdentityProperty = q => q.Name == "Id";
-            FindClrType = (id, doc, metadata) => metadata.Value<string>(Constants.Headers.RavenClrType);
-            FindClrTypeNew = (id, doc) =>
+            FindClrType = (id, doc) =>
             {
                 BlittableJsonReaderObject metadata;
                 string clrType;
@@ -102,7 +102,7 @@ namespace Raven.NewClient.Client.Document
             MaxNumberOfRequestsPerSession = 30;
             MaxLengthOfQueryUsingGetUrl = 1024 + 512;
             ApplyReduceFunction = DefaultApplyReduceFunction;
-            ReplicationInformerFactory = (url, jsonRequestFactory) => new ReplicationInformer(this, jsonRequestFactory);
+            //ReplicationInformerFactory = (url, jsonRequestFactory) => new ReplicationInformer(this, jsonRequestFactory);
             CustomizeJsonSerializer = serializer => { }; // todo: remove this or merge with SerializeEntityToJsonStream
             FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
             ShouldAggressiveCacheTrackChanges = true;
@@ -164,13 +164,13 @@ namespace Raven.NewClient.Client.Document
                 };
             }
             return compile(results).Cast<object>()
-                .Select(result =>
+                .Select<object,object>(result =>
                 {
                     // we got an anonymous object and we need to get the reduce results
-                    var ravenJTokenWriter = new RavenJTokenWriter();
+                    var jTokenWriter = new JTokenWriter();
                     var jsonSerializer = CreateSerializer();
-                    jsonSerializer.Serialize(ravenJTokenWriter, result);
-                    return jsonSerializer.Deserialize(new RavenJTokenReader(ravenJTokenWriter.Token), resultType);
+                    jsonSerializer.Serialize(jTokenWriter, result);
+                    return jsonSerializer.Deserialize(new JTokenReader(jTokenWriter.Token), resultType);
                 });
         }
 
@@ -306,7 +306,7 @@ namespace Raven.NewClient.Client.Document
 
             if (t.Name.Contains("<>"))
                 return null;
-            if (t.IsGenericType())
+            if (t.GetTypeInfo().IsGenericType)
             {
                 var name = t.GetGenericTypeDefinition().Name;
                 if (name.Contains('`'))
@@ -411,9 +411,7 @@ namespace Raven.NewClient.Client.Document
         /// <summary>
         /// Gets or sets the function to find the clr type of a document.
         /// </summary>
-        public Func<string, RavenJObject, RavenJObject, string> FindClrType { get; set; }
-
-        public Func<string, BlittableJsonReaderObject, string> FindClrTypeNew { get; set; }
+        public Func<string, BlittableJsonReaderObject, string> FindClrType { get; set; }
 
         /// <summary>
         /// Gets or sets the function to find the clr type name from a clr type
@@ -579,49 +577,6 @@ namespace Raven.NewClient.Client.Document
         }
 
 
-        private static Lazy<JsonConverterCollection> defaultConverters = new Lazy<JsonConverterCollection>(() =>
-        {
-            var converters = new JsonConverterCollection(Default.Converters);
-            converters.Add(new JsonLuceneDateTimeConverter());
-            converters.Add(new JsonNumericConverter<int>(int.TryParse));
-            converters.Add(new JsonNumericConverter<long>(long.TryParse));
-            converters.Add(new JsonNumericConverter<decimal>(decimal.TryParse));
-            converters.Add(new JsonNumericConverter<double>(double.TryParse));
-            converters.Add(new JsonNumericConverter<short>(short.TryParse));
-            converters.Add(new JsonMultiDimensionalArrayConverter());
-            converters.Add(new JsonDynamicConverter());
-            converters.Add(new JsonLinqEnumerableConverter());
-            converters.Freeze();
-
-            return converters;
-        }, true);
-
-        private static Lazy<JsonConverterCollection> defaultConvertersEnumsAsIntegers = new Lazy<JsonConverterCollection>(() =>
-        {
-            var converters = new JsonConverterCollection(DefaultConverters);
-
-            var converter = converters.FirstOrDefault(x => x is JsonEnumConverter);
-            if (converter != null)
-                converters.Remove(converter);
-
-            converters.Freeze();
-
-            return converters;
-
-        }, true);
-
-        private static JsonConverterCollection DefaultConverters
-        {
-            get { return defaultConverters.Value; }
-        }
-        
-        private static JsonConverterCollection DefaultConvertersEnumsAsIntegers
-        {
-            get { return defaultConvertersEnumsAsIntegers.Value; }
-        }
-        
-
-
         /// <summary>
         /// Creates the serializer.
         /// </summary>
@@ -637,13 +592,11 @@ namespace Raven.NewClient.Client.Document
                 TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 FloatParseHandling = FloatParseHandling.Double,
-                Converters = new JsonConverterCollection()
             };
 
             CustomizeJsonSerializer(jsonSerializer);
-            if (jsonSerializer.Converters.IsFrozen)  // if the user froze the collection, we don't need to do anything
-                return jsonSerializer;
-            var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
+            // TODO: Iftah
+            /*var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
             if (jsonSerializer.Converters.Count == 0)
             {
                 jsonSerializer.Converters = convertersToUse;
@@ -654,16 +607,8 @@ namespace Raven.NewClient.Client.Document
                 {
                     jsonSerializer.Converters.Insert(0, convertersToUse[i]);
                 }
-            }
+            }*/
             return jsonSerializer;
-        }
-
-        /// <summary>
-        /// Get the CLR type (if exists) from the document
-        /// </summary>
-        public string GetClrType(string id, RavenJObject document, RavenJObject metadata)
-        {
-            return FindClrType(id, document, metadata);
         }
 
         /// <summary>
@@ -671,7 +616,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         public string GetClrType(string id, BlittableJsonReaderObject document)
         {
-            return FindClrTypeNew(id, document);
+            return FindClrType(id, document);
         }
 
         /// <summary>
@@ -713,7 +658,7 @@ namespace Raven.NewClient.Client.Document
         /// This is called to provide replication behavior for the client. You can customize 
         /// this to inject your own replication / failover logic.
         /// </summary>
-        public Func<string, HttpJsonRequestFactory, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
+        //public Func<string, HttpJsonRequestFactory, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
 
         /// <summary>
         ///  Attempts to prettify the generated linq expressions for indexes and transformers

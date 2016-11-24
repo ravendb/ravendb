@@ -16,7 +16,6 @@ using Raven.NewClient.Abstractions.Json;
 using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Platform;
-using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.OAuth
 {
@@ -57,7 +56,9 @@ namespace Raven.NewClient.Client.OAuth
 
         public async Task<Action<HttpClient>> DoOAuthRequestAsync(string url, string apiKey)
         {
-            ThrowIfBadUrlOrApiKey(url, apiKey);
+            throw new NotImplementedException();
+
+            /*ThrowIfBadUrlOrApiKey(url, apiKey);
             uri = new Uri(url.ToWebSocketPath());
 
             using (var webSocket = new RavenClientWebSocket())
@@ -94,7 +95,7 @@ namespace Raven.NewClient.Client.OAuth
                     Logger.DebugException($"Failed to DoOAuthRequest to {url} with {apiKey}", ex);
                     throw;
                 }
-            }
+            }*/
         }
 
         private void ThrowIfBadUrlOrApiKey(string url, string apiKey)
@@ -108,7 +109,8 @@ namespace Raven.NewClient.Client.OAuth
 
         private async Task Send(RavenClientWebSocket webSocket, string command, string commandParameter)
         {
-            Logger.Info($"Sending WebSocket Authentication Command {command} - {commandParameter} to {uri}");
+            throw new NotImplementedException();
+            /*Logger.Info($"Sending WebSocket Authentication Command {command} - {commandParameter} to {uri}");
 
             var ravenJObject = new RavenJObject
             {
@@ -119,10 +121,10 @@ namespace Raven.NewClient.Client.OAuth
             ravenJObject.WriteTo(stream);
             ArraySegment<byte> bytes;
             stream.TryGetBuffer(out bytes);
-            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
+            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);*/
         }
 
-        private string ComputeChallenge(RavenJObject challengeJObject, string apiKey)
+        /*private string ComputeChallenge(RavenJObject challengeJObject, string apiKey)
 
         {
             if (challengeJObject == null)
@@ -157,7 +159,7 @@ namespace Raven.NewClient.Client.OAuth
                 });
 
             return data;
-        }
+        }*/
 
         private string[] ExtractApiKeyAndSecret(string apiKey)
         {
@@ -174,7 +176,7 @@ namespace Raven.NewClient.Client.OAuth
             return apiKeyParts;
         }
 
-        private async Task<RavenJObject> Recieve(RavenClientWebSocket webSocket)
+        /*private async Task<RavenJObject> Recieve(RavenClientWebSocket webSocket)
         {
             try
             {
@@ -224,9 +226,9 @@ namespace Raven.NewClient.Client.OAuth
                 Logger.DebugException("Failed to receive a message, client was probably disconnected", ex);
                 throw;
             }
-        }
+        }*/
 
-        private void SetCurrentTokenFromReply(RavenJObject recvRavenJObject)
+        /*private void SetCurrentTokenFromReply(RavenJObject recvRavenJObject)
         {
             var errorMsg = recvRavenJObject.Value<string>("Error");
 
@@ -246,6 +248,6 @@ namespace Raven.NewClient.Client.OAuth
                 throw new InvalidOperationException("Missing 'CurrentToken' in response message");
 
             CurrentToken = currentOauthToken;
-        }
+        }*/
     }
 }

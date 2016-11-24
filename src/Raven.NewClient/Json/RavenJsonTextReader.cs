@@ -13,7 +13,7 @@ namespace Raven.NewClient.Abstractions.Json
         {
             DateParseHandling = DateParseHandling.None;
         }
-
+        /*
         public RavenJsonTextReader(char[] externalBuffer) : base(externalBuffer)
         {
             DateParseHandling = DateParseHandling.None;
@@ -37,6 +37,6 @@ namespace Raven.NewClient.Abstractions.Json
 
             DateTime utcDateTime = DateTimeUtils.ConvertJavaScriptTicksToDateTime(javaScriptTicks);
             return utcDateTime;
-        }
+        }*/
     }
 }

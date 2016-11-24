@@ -49,7 +49,7 @@ namespace Raven.NewClient.Abstractions.Data
 
         public MessageType Type { get; set; }
         public ConnectionStatus Status { get; set; }
-        public RavenJObject Data { get; set; }
+        //public RavenJObject Data { get; set; }
         public string Exception { get; set; }
     }
   

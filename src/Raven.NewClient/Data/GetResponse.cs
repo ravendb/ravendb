@@ -14,7 +14,7 @@ namespace Raven.NewClient.Abstractions.Data
         /// <summary>
         /// Response result as JSON.
         /// </summary>
-        public RavenJToken Result { get; set; }
+        //public RavenJToken Result { get; set; }
 
         /// <summary>
         /// Response headers.

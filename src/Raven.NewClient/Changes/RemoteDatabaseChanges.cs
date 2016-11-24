@@ -16,9 +16,9 @@ using Newtonsoft.Json;
 
 namespace Raven.NewClient.Client.Changes
 {
-    public class RemoteDatabaseChanges : RemoteChangesClientBase<IDatabaseChanges, DatabaseConnectionState, DocumentConvention>, IDatabaseChanges
+    public class RemoteDatabaseChanges //TODO Iftah: RemoteChangesClientBase<IDatabaseChanges, DatabaseConnectionState, DocumentConvention>, IDatabaseChanges
     {
-        private readonly static ILog Logger = LogManager.GetLogger(typeof(RemoteDatabaseChanges));
+        /*private readonly static ILog Logger = LogManager.GetLogger(typeof(RemoteDatabaseChanges));
 
         private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
@@ -99,7 +99,7 @@ namespace Raven.NewClient.Client.Changes
             }
         }
 
-        protected override void NotifySubscribers(string type, RavenJObject value, List<DatabaseConnectionState> connections)
+        /*protected override void NotifySubscribers(string type, RavenJObject value, List<DatabaseConnectionState> connections)
         {
             switch (type)
             {
@@ -179,7 +179,7 @@ namespace Raven.NewClient.Client.Changes
                 default:
                     break;
             }
-        }
+        }#1#
 
         public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
         {
@@ -444,6 +444,6 @@ namespace Raven.NewClient.Client.Changes
             counter.OnError += taskedObservable.Error;
 
             return taskedObservable;
-        }
+        }*/
     }
 }

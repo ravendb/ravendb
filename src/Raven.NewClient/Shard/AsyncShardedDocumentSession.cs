@@ -33,7 +33,7 @@ namespace Raven.NewClient.Client.Shard
         private readonly AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
 
         public AsyncShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, Guid id,
-                                           ShardStrategy shardStrategy, IDictionary<string, IAsyncDatabaseCommands> shardDbCommands)
+                                           ShardStrategy shardStrategy)
         {
             
         }

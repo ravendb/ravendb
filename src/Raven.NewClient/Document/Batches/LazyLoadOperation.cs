@@ -117,13 +117,13 @@ namespace Raven.NewClient.Client.Document.Batches
             HandleResponse(multiLoadResult);*/
         }
 
-        private void HandleResponse(LoadResult loadResult)
+        /*private void HandleResponse(LoadResult loadResult)
         {
             throw new NotImplementedException();
             /*  RequiresRetry = loadOperation.SetResult(loadResult);
               if (RequiresRetry == false)
-                  Result = loadOperation.Complete<T>();*/
-        }
+                  Result = loadOperation.Complete<T>();#1#
+        }*/
 
         public IDisposable EnterContext()
         {

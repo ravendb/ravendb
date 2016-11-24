@@ -91,11 +91,6 @@ namespace Raven.NewClient.Client
         NameValueCollection SharedOperationsHeaders { get; }
 
         /// <summary>
-        /// Get the <see cref="HttpJsonRequestFactory"/> for this store
-        /// </summary>
-        HttpJsonRequestFactory JsonRequestFactory { get; }
-
-        /// <summary>
         /// Whatever this instance has json request factory available
         /// </summary>
         bool HasJsonRequestFactory { get; }

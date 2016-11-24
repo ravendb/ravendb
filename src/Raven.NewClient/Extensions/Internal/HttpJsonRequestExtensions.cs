@@ -13,7 +13,8 @@ namespace Raven.NewClient.Client.Extensions
     {
         internal async static Task AssertNotFailingResponse(this HttpResponseMessage response)
         {
-            if (response.IsSuccessStatusCode)
+            throw new NotImplementedException();
+            /*if (response.IsSuccessStatusCode)
                 return;
 
             using (var sr = new StreamReader(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false)))
@@ -52,7 +53,7 @@ namespace Raven.NewClient.Client.Extensions
                 }
 
                 throw new ErrorResponseException(response, readToEnd);
-            }
+            }*/
         }
     }
 }
