@@ -8,17 +8,9 @@ namespace Voron.Data.Compression
 {
     public unsafe class DecompressedLeafPage : TreePage, IDisposable
     {
-        private enum Usage
-        {
-            None,
-            PageSplitter
-        }
-
         public readonly TreePage Original;
         private readonly TemporaryPage _tempPage;
-
-        private Usage _usage;
-        private LowLevelTransaction _tx;
+        
         private bool _disposed;
         
         public DecompressedLeafPage(byte* basePtr, int pageSize, TreePage original, TemporaryPage tempPage) : base(basePtr, pageSize)
@@ -35,32 +27,13 @@ namespace Voron.Data.Compression
         {
             if (_disposed)
                 return;
-
-            switch (_usage)
-            {
-                case Usage.PageSplitter:
-                    CopyToOriginal(defragRequired: false /* TODO arek - temp*/); // after page splitter run the page isn't fragmented for sure, it was either truncated (left) or just created (right)
-                    break;
-                case Usage.None:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(_usage), $"Unknown usage: {_usage}");
-            }
             
             _tempPage.ReturnTemporaryPageToPool.Dispose();
 
             _disposed = true;
         }
 
-        public DecompressedLeafPage ForPageSplitter(LowLevelTransaction tx)
-        {
-            _usage = Usage.PageSplitter;
-            _tx = tx;
-
-            return this;
-        }
-
-        private void CopyToOriginal(bool defragRequired)
+        public void CopyToOriginal(LowLevelTransaction tx, bool defragRequired)
         {
             if (CalcSizeUsed() < Original.PageMaxSpace)
             {
@@ -73,14 +46,14 @@ namespace Voron.Data.Compression
                 {
                     var node = GetNode(i);
                     Slice slice;
-                    using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out slice))
+                    using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out slice))
                         Original.CopyNodeDataToEndOfPage(node, slice);
                 }
             }
             else
             {
                 CompressionResult compressed;
-                using (LeafPageCompressor.TryGetCompressedTempPage(_tx, this, out compressed, defrag: defragRequired))
+                using (LeafPageCompressor.TryGetCompressedTempPage(tx, this, out compressed, defrag: defragRequired))
                 {
                     if (compressed == null)
                         throw new InvalidOperationException("Could not compress a page which was already compressed. Should never happen");

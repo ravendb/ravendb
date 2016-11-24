@@ -20,6 +20,7 @@ namespace Voron.Data.BTrees
         private readonly Tree _tree;
         private TreePage _page;
         private TreePage _parentPage;
+        private DecompressedLeafPage _pageDecompressed;
 
         public TreePageSplitter(LowLevelTransaction tx,
             Tree tree,
@@ -84,13 +85,15 @@ namespace Voron.Data.BTrees
                     _tree.ClearPagesCache();
                 }
 
-                var compressionMode = _page.IsCompressed;
-
-                using (compressionMode ? (DecompressedLeafPage) (_page = _tree.DecompressPage(_page).ForPageSplitter(_tx)) : null)
+                if (_page.IsCompressed)
                 {
-                    if (compressionMode)
-                        _page.Search(_tx, _newKey);
+                    _pageDecompressed = _tree.DecompressPage(_page);
+                    _pageDecompressed.Search(_tx, _newKey);
+                    _page = _pageDecompressed;
+                }
 
+                using (_pageDecompressed)
+                {
                     if (_page.LastSearchPosition >= _page.NumberOfEntries)
                     {
                         // when we get a split at the end of the page, we take that as a hint that the user is doing 
@@ -139,8 +142,7 @@ namespace Voron.Data.BTrees
                         return pos;
                     }
 
-                    
-                    return SplitPageInHalf(rightPage, compressionMode);
+                    return SplitPageInHalf(rightPage);
                 }
             }
         }
@@ -162,7 +164,7 @@ namespace Voron.Data.BTrees
             }
         }
 
-        private byte* SplitPageInHalf(TreePage rightPage, bool compressionMode)
+        private byte* SplitPageInHalf(TreePage rightPage)
         {
             bool toRight;
 
@@ -210,10 +212,16 @@ namespace Voron.Data.BTrees
                 var parentOfPage = _cursor.CurrentPage;
                 TreePage parentOfRight;
 
-                using (compressionMode
-                    ? (DecompressedLeafPage)
-                    (rightPage = _tx.Environment.DecompressionBuffers.GetPage(_tx, _page.PageSize, rightPage).ForPageSplitter(_tx))
-                    : null)
+                DecompressedLeafPage rightDecompressed = null;
+
+                if (_pageDecompressed != null)
+                {
+                    // splitting the decompressed page, let's allocate the page of the same size to ensure enough space
+                    rightDecompressed = _tx.Environment.DecompressionBuffers.GetPage(_tx, _pageDecompressed.PageSize, rightPage);
+                    rightPage = rightDecompressed;
+                }
+
+                using (rightDecompressed)
                 {
                     AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey, out parentOfRight);
                     
@@ -242,17 +250,20 @@ namespace Voron.Data.BTrees
                             }
                         }
                     }
+
+                    if (rightDecompressed != null)
+                    {
+                        rightDecompressed.CopyToOriginal(_tx, defragRequired: false);
+                        rightPage = rightDecompressed.Original;
+                    }
                 }
 
                 _page.Truncate(_tx, splitIndex);
 
-                if (compressionMode)
+                if (_pageDecompressed != null)
                 {
-                    rightPage = ((DecompressedLeafPage)rightPage).Original;
-
-                    var decompressed = (DecompressedLeafPage)_page;
-                    decompressed.Dispose();
-                    _page = decompressed.Original;
+                    _pageDecompressed.CopyToOriginal(_tx, defragRequired: false);
+                    _page = _pageDecompressed.Original;
                 }
 
                 byte* pos;
