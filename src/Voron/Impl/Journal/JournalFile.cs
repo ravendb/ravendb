@@ -24,7 +24,10 @@ namespace Voron.Impl.Journal
         private bool _disposed;
         private int _refs;
         private readonly PageTable _pageTranslationTable = new PageTable();
-        private readonly List<PagePosition> _unusedPages = new List<PagePosition>();
+
+        private readonly HashSet<PagePosition> _unusedPagesHashSetPool = new HashSet<PagePosition>(PagePositionEqualityComparer.Instance);
+
+        private readonly List<PagePosition> _unusedPages;
         private readonly object _locker = new object();
 
         public JournalFile(StorageEnvironment env, IJournalWriter journalWriter, long journalNumber)
@@ -33,6 +36,8 @@ namespace Voron.Impl.Journal
             _env = env;
             _journalWriter = journalWriter;
             _writePage = 0;
+            _unusedPages = new List<PagePosition>();
+
         }
 
         public override string ToString()
@@ -80,6 +85,7 @@ namespace Voron.Impl.Journal
         public void Dispose()
         {
             DisposeWithoutClosingPager();
+
             _journalWriter?.Dispose();
             _journalWriter = null;
         }
@@ -117,19 +123,21 @@ namespace Voron.Impl.Journal
         /// </summary>
         public void Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch, int uncompressedPageCount)
         {
-            var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);
-            var unused = new HashSet<PagePosition>();
+            var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);           
             var pageWritePos = _writePage;
 
-            UpdatePageTranslationTable(tx, unused, ptt);
+
+            _unusedPagesHashSetPool.Clear();
+            UpdatePageTranslationTable(tx, _unusedPagesHashSetPool, ptt);
 
             lock (_locker)
             {
                 _writePage += pages.NumberOfPages;
 
-                Debug.Assert(!_unusedPages.Any(unused.Contains));
-                _unusedPages.AddRange(unused);
+                Debug.Assert(!_unusedPages.Any(_unusedPagesHashSetPool.Contains));
+                _unusedPages.AddRange(_unusedPagesHashSetPool);
             }
+            _unusedPagesHashSetPool.Clear();
 
             var position = pageWritePos * tx.Environment.Options.PageSize;
 

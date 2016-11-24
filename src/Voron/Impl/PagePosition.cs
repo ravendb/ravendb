@@ -3,28 +3,37 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Sparrow;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+
 namespace Voron.Impl
 {
+
+    public class PagePositionEqualityComparer : IEqualityComparer<PagePosition>
+    {
+        public static readonly PagePositionEqualityComparer Instance = new PagePositionEqualityComparer();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(PagePosition x, PagePosition y)
+        {
+            if (x == y) return true;
+            if (x == null || y == null) return false;
+
+            return x.ScratchPos == y.ScratchPos && x.TransactionId == y.TransactionId && x.JournalNumber == y.JournalNumber && x.IsFreedPageMarker == y.IsFreedPageMarker && x.ScratchNumber == y.ScratchNumber; ;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(PagePosition obj)
+        {
+            int v = Hashing.Combine(obj.ScratchPos.GetHashCode(), obj.TransactionId.GetHashCode());
+            int w = Hashing.Combine(obj.JournalNumber.GetHashCode(), obj.ScratchNumber.GetHashCode());
+            return Hashing.Combine(obj.IsFreedPageMarker ? 1 : 0, Hashing.Combine(v, w));
+        }
+    }
+
     public class PagePosition
     {
-        protected bool Equals(PagePosition other)
-        {
-            return ScratchPos == other.ScratchPos && TransactionId == other.TransactionId && JournalNumber == other.JournalNumber && IsFreedPageMarker == other.IsFreedPageMarker && ScratchNumber == other.ScratchNumber;
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = ScratchPos.GetHashCode();
-                hashCode = (hashCode * 397) ^ TransactionId.GetHashCode();
-                hashCode = (hashCode * 397) ^ JournalNumber.GetHashCode();
-                hashCode = (hashCode * 397) ^ IsFreedPageMarker.GetHashCode();
-                hashCode = (hashCode * 397) ^ ScratchNumber.GetHashCode();
-                return hashCode;
-            }
-        }
-
         public long ScratchPos;
         public long TransactionId;
         public long JournalNumber;
@@ -34,14 +43,12 @@ namespace Voron.Impl
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj))
-                return false;
-            if (ReferenceEquals(this, obj))
-                return true;
-            if (obj.GetType() != GetType())
-                return false;
+            return PagePositionEqualityComparer.Instance.Equals(this, obj as PagePosition);
+        }
 
-            return Equals((PagePosition)obj);
+        public override int GetHashCode()
+        {
+            return PagePositionEqualityComparer.Instance.GetHashCode(this);
         }
 
         public override string ToString()

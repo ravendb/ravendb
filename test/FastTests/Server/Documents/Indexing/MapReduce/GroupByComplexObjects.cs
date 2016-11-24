@@ -165,7 +165,10 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
-                        index.DoIndexingWork(scope, CancellationToken.None);
+                        while (index.DoIndexingWork(scope, CancellationToken.None))
+                        {
+                            
+                        }
 
                         var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
@@ -227,7 +230,10 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
 
                         var batchStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(batchStats);
-                        index.DoIndexingWork(scope, CancellationToken.None);
+                        while (index.DoIndexingWork(scope, CancellationToken.None))
+                        {
+                            
+                        }
 
                         var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 

@@ -18,6 +18,11 @@ namespace FastTests.Server.Basic
         {
             using (var store = GetDocumentStore())
             {
+                using (var session = store.OpenSession())
+                {
+                    session.Load<object>("users/1");// just waiting for the db to load
+                }
+
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {

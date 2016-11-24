@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -20,15 +21,13 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly DocumentDatabase _database;
 
-        public DatabaseItemType OperateOnTypes;
+        public DatabaseSmugglerOptions Options;
 
-        public SmugglerImporter(DocumentDatabase database)
+        public SmugglerImporter(DocumentDatabase database, DatabaseSmugglerOptions options = null)
         {
             _database = database;
             _batchPutCommand = new MergedBatchPutCommand(_database, 0);
-            OperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers
-                             | DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments |
-                             DatabaseItemType.Identities;
+            Options = options ?? new DatabaseSmugglerOptions();
         }
 
         private MergedBatchPutCommand _batchPutCommand;
@@ -100,15 +99,40 @@ namespace Raven.Server.Smuggler.Documents
                             }
                             builder.FinalizeDocument();
 
-                            if (operateOnType == "Docs" && OperateOnTypes.HasFlag(DatabaseItemType.Documents))
+                            if (operateOnType == "Docs" && Options.OperateOnTypes.HasFlag(DatabaseItemType.Documents))
                             {
+
+                                PatchDocument patch = null;
+                                PatchRequest patchRequest = null;
+                                if (string.IsNullOrWhiteSpace(Options.TransformScript) == false)
+                                {
+                                    patch = new PatchDocument(context.DocumentDatabase);
+                                    patchRequest = new PatchRequest
+                                    {
+                                        Script = Options.TransformScript
+                                    };
+                                }
+
                                 result.DocumentsCount++;
                                 using (var reader = builder.CreateReader())
-                                    _batchPutCommand.Add(reader);
+                                {
+                                    var document = new Document
+                                    {
+                                        Data = reader,
+                                    };
+
+                                    if (!Options.IncludeExpired && document.Expired())
+                                        continue;
+
+                                    TransformScriptOrDisableVersioningIfNeeded(context, patch, reader, document, patchRequest);
+
+                                    _batchPutCommand.Add(document.Data);
+                                }
+                                
                                 await HandleBatchOfDocuments(context, parser, buildVersion);
                             }
                             else if (operateOnType == "RevisionDocuments" &&
-                                     OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
+                                     Options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
                             {
                                 if (versioningStorage == null)
                                     break;
@@ -128,13 +152,13 @@ namespace Raven.Server.Smuggler.Documents
                                             result.Warnings.Add("Attachments are not supported anymore. Use RavenFS isntead. Skipping.");
                                             break;
                                         case "Indexes":
-                                            if (OperateOnTypes.HasFlag(DatabaseItemType.Indexes) == false)
+                                            if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Indexes) == false)
                                                 continue;
 
                                             result.IndexesCount++;
                                             try
                                             {
-                                                IndexProcessor.Import(builder, _database, buildVersion);
+                                                IndexProcessor.Import(builder, _database, buildVersion, Options.RemoveAnalyzers);
                                             }
                                             catch (Exception e)
                                             {
@@ -143,7 +167,7 @@ namespace Raven.Server.Smuggler.Documents
 
                                             break;
                                         case "Transformers":
-                                            if (OperateOnTypes.HasFlag(DatabaseItemType.Transformers) == false)
+                                            if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Transformers) == false)
                                                 continue;
 
                                             result.TransformersCount++;
@@ -158,7 +182,7 @@ namespace Raven.Server.Smuggler.Documents
                                             }
                                             break;
                                         case "Identities":
-                                            if (OperateOnTypes.HasFlag(DatabaseItemType.Identities))
+                                            if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Identities))
                                             {
                                                 result.IdentitiesCount++;
 
@@ -232,6 +256,38 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result;
+        }
+
+        private void TransformScriptOrDisableVersioningIfNeeded(DocumentsOperationContext context, 
+            PatchDocument patch, BlittableJsonReaderObject reader, Document document, PatchRequest patchRequest)
+        {
+            if (patch == null && Options.DisableVersioningBundle == false)
+                return;
+
+            BlittableJsonReaderObject newMetadata;
+            reader.TryGet(Constants.Metadata.Key, out newMetadata);
+
+            if (patch != null)
+            {
+                LazyStringValue key;
+                if (newMetadata != null)
+                    if (newMetadata.TryGet(Constants.Metadata.Id, out key))
+                        document.Key = key;
+
+                var patchResult = patch.Apply(context, document, patchRequest);
+                if (patchResult != null && patchResult.ModifiedDocument.Equals(document.Data) == false)
+                {
+                    document.Data = patchResult.ModifiedDocument;
+                }
+            }
+
+            if (Options.DisableVersioningBundle == false || newMetadata == null)
+                return;
+
+            newMetadata.Modifications = new DynamicJsonValue(newMetadata)
+            {
+                [Constants.Versioning.RavenDisableVersioning] = false
+            };
         }
 
         private async Task FinishBatchOfDocuments()

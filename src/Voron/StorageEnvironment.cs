@@ -51,6 +51,9 @@ namespace Voron
         public readonly ActiveTransactions ActiveTransactions = new ActiveTransactions();
 
         private readonly AbstractPager _dataPager;
+
+        internal LowLevelTransaction.WriteTransactionPool WriteTransactionPool =
+            new LowLevelTransaction.WriteTransactionPool();
         internal ExceptionDispatchInfo CatastrophicFailure;
         private readonly WriteAheadJournal _journal;
         private readonly object _txWriter = new object();
@@ -368,13 +371,12 @@ namespace Voron
                     if (FlushInProgressLock.IsWriteLockHeld == false)
                         flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
                     if(Monitor.IsEntered(_txWriter))
-                        throw new InvalidOperationException("A write transaction is already opened by this thread");
+                        ThrowOnRecursiseWriteTransaction();
                     Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
                     if (txLockTaken == false || (flushInProgressReadLockTaken == false && FlushInProgressLock.IsWriteLockHeld == false))
                     {
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-                        throw new TimeoutException("Waited for " + wait +
-                                                    " for transaction write lock, but could not get it");
+                        ThrowOnTimeoutWaitingForWriteTxLock(wait);
                     }
                     if (_endOfDiskSpace != null)
                     {
@@ -424,6 +426,17 @@ namespace Voron
                 }
                 throw;
             }
+        }
+
+        private static void ThrowOnRecursiseWriteTransaction()
+        {
+            throw new InvalidOperationException("A write transaction is already opened by this thread");
+        }
+
+        private static void ThrowOnTimeoutWaitingForWriteTxLock(TimeSpan wait)
+        {
+            throw new TimeoutException("Waited for " + wait +
+                                       " for transaction write lock, but could not get it");
         }
 
         public long CurrentReadTransactionId => Volatile.Read(ref _transactionsCounter);

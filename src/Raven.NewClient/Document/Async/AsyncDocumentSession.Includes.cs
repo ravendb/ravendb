@@ -23,7 +23,6 @@ using System.Dynamic;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Document.Commands;
 using Raven.NewClient.Client.Http;
 using Sparrow.Json;
 

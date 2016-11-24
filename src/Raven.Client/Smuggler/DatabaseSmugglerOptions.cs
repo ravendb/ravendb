@@ -20,6 +20,11 @@ namespace Raven.Client.Smuggler
 
         public bool RemoveAnalyzers { get; set; }
 
+        /// <summary>
+        /// If true the import process will remove VersioningBundle from the document metadata
+        /// </summary>
+        public bool DisableVersioningBundle { get; set; }
+
         public string TransformScript { get; set; }
 
         public string FileName { get; set; }

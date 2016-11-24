@@ -17,6 +17,7 @@ using System.Reflection;
 namespace Sparrow
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.Runtime.CompilerServices;
     using System.Threading;
@@ -326,6 +327,33 @@ namespace Sparrow
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset(T value) {}
+    }
+
+    public struct DictionaryResetBehavior<T1, T2> : IResetSupport<Dictionary<T1, T2>>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void IResetSupport<Dictionary<T1, T2>>.Reset(Dictionary<T1, T2> value)
+        {
+            value.Clear();
+        }
+    }
+
+    public struct HashSetResetBehavior<T1> : IResetSupport<HashSet<T1>>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void IResetSupport<HashSet<T1>>.Reset(HashSet<T1> value)
+        {
+            value.Clear();
+        }
+    }
+
+    public struct ListResetBehavior<T1> : IResetSupport<List<T1>>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void IResetSupport<List<T1>>.Reset(List<T1> value)
+        {
+            value.Clear();
+        }
     }
 
     public struct ObjectPoolContext<T, TR> : IDisposable 

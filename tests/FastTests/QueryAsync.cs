@@ -9,7 +9,7 @@ namespace NewClientTests.NewClient
 {
     public class QueryAsync : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "ClearSortHints not implemented")]
         public async void QueryAsync_Simple()
         {
             using (var store = GetDocumentStore())
@@ -29,7 +29,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "ClearSortHints not implemented")]
         public async void QueryAsync_With_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -55,7 +55,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public async void QueryAsync_By_Index()
         {
             using (var store = GetDocumentStore())

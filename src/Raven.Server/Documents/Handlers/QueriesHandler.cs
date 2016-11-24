@@ -251,10 +251,7 @@ namespace Raven.Server.Documents.Handlers
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteStartObject();
-                writer.WritePropertyName("OperationId");
-                writer.WriteInteger(operationId);
-                writer.WriteEndObject();
+                writer.WriteOperationId(context, operationId);
             }
         }
 

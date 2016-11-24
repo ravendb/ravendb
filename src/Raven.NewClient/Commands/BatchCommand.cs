@@ -1,13 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Net.Http;
-using System.Reflection;
-using System.Text;
 using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -45,7 +39,7 @@ namespace Raven.NewClient.Client.Commands
                 }
             });
 
-            url = "bulk_docs";
+            url = $"{node.Url}/databases/{node.Database}/bulk_docs";
             return request;
         }
 

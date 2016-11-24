@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using System.Threading;
 
@@ -37,15 +39,15 @@ namespace Raven.NewClient.Client.Document
         /// <param name="entity">The entity.</param>
         /// <param name="databaseCommands">Low level database commands.</param>
         /// <returns></returns>
-        public string GenerateDocumentKey(IDatabaseCommands databaseCommands, DocumentConvention convention, object entity)
+        public string GenerateDocumentKey(DocumentConvention convention, object entity)
         {
-            return GetDocumentKeyFromId(convention, NextId(databaseCommands));
+            return GetDocumentKeyFromId(convention, NextId());
         }
 
         ///<summary>
         /// Create the next id (numeric)
         ///</summary>
-        public long NextId(IDatabaseCommands commands)
+        public long NextId()
         {
             while (true)
             {
@@ -61,14 +63,15 @@ namespace Raven.NewClient.Client.Document
                         // Lock was contended, and the max has already been changed. Just get a new id as usual.
                         continue;
 
-                    Range = GetNextRange(commands);
+                    Range = GetNextRange();
                 }
             }
         }
 
-        private RangeValue GetNextRange(IDatabaseCommands databaseCommands)
+        private RangeValue GetNextRange()
         {
-            using (databaseCommands.ForceReadFromMaster())
+            throw new NotImplementedException();
+            /*using (databaseCommands.ForceReadFromMaster())
             {
                 ModifyCapacityIfRequired();
                 while (true)
@@ -131,20 +134,22 @@ namespace Raven.NewClient.Client.Document
                         // expected, we need to retry
                     }
                 }
-            }
+            }*/
         }
 
-        private void PutDocument(IDatabaseCommands databaseCommands, JsonDocument document)
+        private void PutDocument( JsonDocument document)
         {
-            databaseCommands.Put(HiLoDocumentKey, document.Etag,
+            throw new NotImplementedException();
+            /*databaseCommands.Put(HiLoDocumentKey, document.Etag,
                                  document.DataAsJson,
-                                 document.Metadata);
+                                 document.Metadata);*/
         }
 
-        private JsonDocument GetDocument(IDatabaseCommands databaseCommands)
+        private JsonDocument GetDocument()
         {
-            var documents = databaseCommands.Get(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0]);
-            return HandleGetDocumentResult(documents);
+            throw new NotImplementedException();
+            /*var documents = databaseCommands.Get(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0]);
+            return HandleGetDocumentResult(documents);*/
         }
     }
 }

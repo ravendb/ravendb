@@ -244,16 +244,16 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact]
+        [Fact(Skip = "DatabaseCommands")]
         public void CanGetDocumentMetadata()
         {
-            const string companyId = "companies/1";
+            /*const string companyId = "companies/1";
             const string attrKey = "SetDocumentMetadataTestKey";
-            const string attrVal = "SetDocumentMetadataTestValue";
+            const string attrVal = "SetDocumentMetadataTestValue";*/
 
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put(
+                /*store.DatabaseCommands.Put(
                     companyId,
                     null,
                     RavenJObject.FromObject(new Company { Id = companyId }),
@@ -266,7 +266,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     var result = session.Advanced.GetMetadataFor<Company>(company);
                     Assert.NotNull(result);
                     //Assert.Equal(attrVal, result.Value<string>(attrKey));
-                }
+                }*/
             }
         }
 
@@ -374,7 +374,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         [Fact (Skip = "TODO:Lazy Not Implemented")]
         public void CanLazilyLoadEntity()
         {
-            const string COMPANY1_ID = "companies/1";
+            /*const string COMPANY1_ID = "companies/1";
             const string COMPANY2_ID = "companies/2";
 
             using (var store = GetDocumentStore())
@@ -406,13 +406,13 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     Assert.Equal(COMPANY1_ID, orders[0].Id);
                     Assert.Equal(COMPANY2_ID, orders[1].Id);
                 }
-            }
+            }*/
         }
 
         [Fact(Skip = "TODO: Lazy Not Implemented")]
         public void CanExecuteAllPendingLazyOperations()
         {
-            const string COMPANY1_ID = "companies/1";
+            /*const string COMPANY1_ID = "companies/1";
             const string COMPANY2_ID = "companies/2";
 
             using (var store = GetDocumentStore())
@@ -446,7 +446,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     Assert.Equal(COMPANY1_ID, company1.Id);
                     Assert.Equal(COMPANY2_ID, company2.Id);
                 }
-            }
+            }*/
         }
 
         [Fact]

@@ -300,7 +300,7 @@ namespace Sparrow.Json
             _objectJsonParser.Reset(builder);
             _writer.Reset(documentId, mode);
             CachedProperties.NewDocument();
-            _writer.ReadObject();
+            _writer.ReadObjectDocument();
             if (_writer.Read() == false)
                 throw new InvalidOperationException("Partial content in object json parser shouldn't happen");
             _writer.FinalizeDocument();
@@ -323,7 +323,7 @@ namespace Sparrow.Json
                     BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, _jsonParserState);
                 try
                 {
-                    writer.ReadObject();
+                    writer.ReadObjectDocument();
                     var result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken);
 
                     if (result.MessageType == WebSocketMessageType.Close)
@@ -364,7 +364,7 @@ namespace Sparrow.Json
                 try
                 {
                     CachedProperties.NewDocument();
-                    builder.ReadObject();
+                    builder.ReadObjectDocument();
                     while (true)
                     {
                         var read = stream.Read(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
@@ -404,7 +404,7 @@ namespace Sparrow.Json
                 try
                 {
                     CachedProperties.NewDocument();
-                    writer.ReadObject();
+                    writer.ReadObjectDocument();
                     while (true)
                     {
                         var read = await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
@@ -442,7 +442,7 @@ namespace Sparrow.Json
                 try
                 {
                     CachedProperties.NewDocument();
-                    writer.ReadArray();
+                    writer.ReadArrayDocument();
                     while (true)
                     {
                         var read = await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
@@ -532,7 +532,7 @@ namespace Sparrow.Json
             {
                 _writer.Reset(debugTag, mode);
                 _parser.NewDocument();
-                _writer.ReadObject();
+                _writer.ReadObjectDocument();
                 _context.CachedProperties.NewDocument();
                 while (true)
                 {
@@ -557,7 +557,7 @@ namespace Sparrow.Json
             public BlittableJsonReaderObject Parse(BlittableJsonDocumentBuilder.UsageMode mode, string debugTag)
             {
                 _writer.Reset(debugTag, mode);
-                _writer.ReadObject();
+                _writer.ReadObjectDocument();
                 _context.CachedProperties.NewDocument();
                 while (true)
                 {

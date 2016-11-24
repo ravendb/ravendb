@@ -100,8 +100,20 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 if (operationId.HasValue)
                 {
-                    await Database.Operations.AddOperation("Export database: " + Database.Name, DatabaseOperations.PendingOperationType.DatabaseExport,
-                        onProgress => Task.Run(() => ExportDatabaseInternal(context, exporter, onProgress, token), token.Token), operationId.Value, token);
+                    try
+                    {
+                        await
+                            Database.Operations.AddOperation("Export database: " + Database.Name,
+                                DatabaseOperations.PendingOperationType.DatabaseExport,
+                                onProgress =>
+                                    Task.Run(() => ExportDatabaseInternal(context, exporter, onProgress, token),
+                                        token.Token), operationId.Value, token);
+                    }
+                    catch (Exception)
+                    {
+                        HttpContext.Abort();
+                    }
+
                 }
                 else
                 {
@@ -205,7 +217,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         using (Stream file = await getFile())
                         using (var stream = new GZipStream(file, CompressionMode.Decompress))
                         {
-                            var result = await DoImport(context, stream);
+                            var importer = new SmugglerImporter(Database);
+                            var result =  await importer.Import(context, stream);
                             results.Enqueue(result);
                         }
                     }
@@ -248,6 +261,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
+
+
         [RavenAction("/databases/*/smuggler/import", "GET")]
         public Task GetImport()
         {
@@ -277,23 +292,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private void WriteImportResult(DocumentsOperationContext context, Stopwatch sp, ImportResult result, Stream stream)
-        {
-            using (var writer = new BlittableJsonTextWriter(context, stream))
-            {
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["ElapsedMilliseconds"] = sp.ElapsedMilliseconds,
-                    ["Elapsed"] = sp.Elapsed.ToString(),
-                    ["DocumentsCount"] = result.DocumentsCount,
-                    ["RevisionDocumentsCount"] = result.RevisionDocumentsCount,
-                    ["IndexesCount"] = result.IndexesCount,
-                    ["IdentitiesCount"] = result.IdentitiesCount,
-                    ["TransformersCount"] = result.TransformersCount,
-                    ["Warnings"] = new DynamicJsonArray(result.Warnings)
-                });
-            }
-        }
 
         private async Task<Tuple<Stream, IDisposable>> GetImportStream()
         {
@@ -313,18 +311,44 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return Tuple.Create<Stream, IDisposable>(HttpContext.Request.Body, null);
         }
 
+
+        private void WriteImportResult(DocumentsOperationContext context, Stopwatch sp, ImportResult result, Stream stream)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, stream))
+            {
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["ElapsedMilliseconds"] = sp.ElapsedMilliseconds,
+                    ["Elapsed"] = sp.Elapsed.ToString(),
+                    ["DocumentsCount"] = result.DocumentsCount,
+                    ["RevisionDocumentsCount"] = result.RevisionDocumentsCount,
+                    ["IndexesCount"] = result.IndexesCount,
+                    ["IdentitiesCount"] = result.IdentitiesCount,
+                    ["TransformersCount"] = result.TransformersCount,
+                    ["Warnings"] = new DynamicJsonArray(result.Warnings),
+                    ["OperationId"] = Database.Operations.GetNextOperationId()
+                });
+            }
+        }
+
+
+
         private async Task<ImportResult> DoImport(DocumentsOperationContext context, Stream stream)
         {
             var importer = new SmugglerImporter(Database);
 
-            var operateOnTypes = GetStringQueryString("operateOnTypes", required: false);
-            DatabaseItemType databaseItemType;
-            if (Enum.TryParse(operateOnTypes, true, out databaseItemType))
-            {
-                importer.OperateOnTypes = databaseItemType;
-            }
+            //var operateOnTypes = GetStringQueryString("operateOnTypes", required: false);
+            //DatabaseItemType databaseItemType;
+            //if (Enum.TryParse(operateOnTypes, true, out databaseItemType))
+            //{
+            //    importer.OperateOnTypes = databaseItemType;
+            //}
 
             return await importer.Import(context, stream);
         }
+    }
+
+    internal class DocumentsOperationContextout
+    {
     }
 }

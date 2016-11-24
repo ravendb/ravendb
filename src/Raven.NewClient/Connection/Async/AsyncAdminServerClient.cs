@@ -26,9 +26,9 @@ using Raven.NewClient.Json.Linq;
 
 namespace Raven.NewClient.Client.Connection.Async
 {
-    public class AsyncAdminServerClient : IAsyncAdminDatabaseCommands, IAsyncGlobalAdminDatabaseCommands
+    public class AsyncAdminServerClient 
     {
-        internal readonly AsyncServerClient innerAsyncServerClient;
+        /*internal readonly AsyncServerClient innerAsyncServerClient;
         private readonly AdminRequestCreator adminRequest;
 
         public AsyncAdminServerClient(AsyncServerClient asyncServerClient)
@@ -257,6 +257,6 @@ namespace Raven.NewClient.Client.Connection.Async
             }
         }
 
-        public IAsyncDatabaseCommands Commands => innerAsyncServerClient;
+        public IAsyncDatabaseCommands Commands => innerAsyncServerClient;*/
     }
 }
