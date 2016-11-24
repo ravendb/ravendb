@@ -307,6 +307,7 @@ namespace Voron.Impl
             PageFromScratchBuffer value;
             if (_scratchPagesTable != null && _scratchPagesTable.TryGetValue(pageNumber, out value)) // Scratch Pages Table will be null in read transactions
             {
+                Debug.Assert(value != null);
                 PagerState state = null;
                 if (_scratchPagerStates != null)
                 {
