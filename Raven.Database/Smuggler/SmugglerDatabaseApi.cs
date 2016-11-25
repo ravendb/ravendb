@@ -118,7 +118,8 @@ namespace Raven.Smuggler
                 {
                     MaxChunkVolumeInBytes = Options.TotalDocumentSizeInChunkLimitInBytes,
                     MaxDocumentsPerChunk = Options.ChunkSize
-                }
+                },
+                WriteTimeoutMilliseconds =  (int)Options.Timeout.TotalMilliseconds
             });
 
             result.Report += text => Operations.ShowProgress(text);

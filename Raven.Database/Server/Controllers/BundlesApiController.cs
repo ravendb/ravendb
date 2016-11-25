@@ -15,6 +15,10 @@ namespace Raven.Database.Server.Controllers
         public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
         {
             InnerInitialization(controllerContext);
+            HttpResponseMessage msg;
+            if (IsClientV4OrHigher(out msg))
+                return msg;
+
             DocumentDatabase db;
             try
             {

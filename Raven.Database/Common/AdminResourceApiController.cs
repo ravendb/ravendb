@@ -43,6 +43,11 @@ namespace Raven.Database.Common
         public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
         {
             InnerInitialization(controllerContext);
+
+            HttpResponseMessage msg;
+            if (IsClientV4OrHigher(out msg))
+                return msg;
+
             var authorizer = (MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
             HttpResponseMessage authMsg;

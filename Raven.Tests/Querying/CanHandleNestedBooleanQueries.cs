@@ -27,7 +27,7 @@ namespace Raven.Tests.Querying
             var parser = new LuceneQueryParser();
             parser.Parse("foo:a AND foo:b foo:c");
             var query = parser.LuceneAST.ToQuery(config);
-            Assert.Equal(query.ToString(), "+foo:a +foo:b foo:c");
+            Assert.Equal("+foo:a +foo:b foo:c", query.ToString());
         }
 
         [Fact]
@@ -36,7 +36,7 @@ namespace Raven.Tests.Querying
             var parser = new LuceneQueryParser();
             parser.Parse("foo:a AND foo:b foo:-c");
             var query = parser.LuceneAST.ToQuery(config);
-            Assert.Equal(query.ToString(), "+foo:a +foo:b foo:c");
+            Assert.Equal("+foo:a +foo:b foo:c", query.ToString());
         }
 
         [Fact]
@@ -45,7 +45,7 @@ namespace Raven.Tests.Querying
             var parser = new LuceneQueryParser();
             parser.Parse("foo:a AND foo:(b -d) foo:-c");
             var query = parser.LuceneAST.ToQuery(config);
-            Assert.Equal(query.ToString(), "+foo:a +(foo:b -foo:d) foo:c");
+            Assert.Equal("+foo:a +(foo:b -foo:d) foo:c", query.ToString());
         }
 
         [Fact]
@@ -54,7 +54,7 @@ namespace Raven.Tests.Querying
             var parser = new LuceneQueryParser();
             parser.Parse("foo:a AND (foo:b -d) foo:-c");
             var query = parser.LuceneAST.ToQuery(config);
-            Assert.Equal(query.ToString(), "+foo:a +(foo:b -foo:d) foo:c");
+            Assert.Equal("+foo:a +(foo:b -foo:d) foo:c", query.ToString());
         }
 
         [Fact]
@@ -63,7 +63,7 @@ namespace Raven.Tests.Querying
             var parser = new LuceneQueryParser();
             parser.Parse("(foo:a foo:b) (foo:b +d) AND (foo:(e -c) OR g)");
             var query = parser.LuceneAST.ToQuery(config);
-            Assert.Equal(query.ToString(), "(foo:a foo:b) (foo:b +foo:d) +((foo:e -foo:c) foo:g)");
+            Assert.Equal("(foo:a foo:b) +(foo:b +foo:d) +((foo:e -foo:c) foo:g)", query.ToString());
         }
     }
 }

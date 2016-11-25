@@ -34,6 +34,9 @@ namespace Raven.Database.Server.Controllers
             }
 
             InnerInitialization(controllerContext);
+            HttpResponseMessage message;
+            if (IsClientV4OrHigher(out message))
+                return message;
 
             if (Database == null || ClusterManager.IsActive() == false)
                 return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);

@@ -23,12 +23,12 @@ namespace Raven.Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 2000; i++)
             {
                 Console.WriteLine(i);
-                using (var x = new RavenDB_3612())
+                using (var x = new RavenDB_5617())
                 {
-                    x.BeforeAcknowledgment_Can_Prevent_Batch_Acknowledgment();
+                    x.CanAutomaticallyWaitForIndexes_ForSpecificIndex();
                 }
             }
         }
