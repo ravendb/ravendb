@@ -268,7 +268,7 @@ namespace Voron.Impl.Scratch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Page ReadPage(LowLevelTransaction tx, int scratchNumber, long p, PagerState pagerState = null)
         {
-            var item = _scratchBuffers[scratchNumber];
+            var item = GetScratchBufferFile(scratchNumber);
 
             ScratchBufferFile bufferFile = item.File;
             return bufferFile.ReadPage(tx, p, pagerState);
@@ -277,15 +277,26 @@ namespace Voron.Impl.Scratch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public byte* AcquirePagePointer(LowLevelTransaction tx, int scratchNumber, long p)
         {
-            var item = _scratchBuffers[scratchNumber];
+            var item = GetScratchBufferFile(scratchNumber);
 
             ScratchBufferFile bufferFile = item.File;
             return bufferFile.AcquirePagePointer(tx, p);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ScratchBufferItem GetScratchBufferFile(int scratchNumber)
+        {
+            var currentScratchFile = _current;
+            if (scratchNumber == currentScratchFile.Number)
+                return currentScratchFile;
+            // if we can avoid the dictionary lookup for the common case of 
+            // looking at the latest scratch, that is great
+            return _scratchBuffers[scratchNumber];
+        }
+
         public void BreakLargeAllocationToSeparatePages(PageFromScratchBuffer value)
         {
-            var item = _scratchBuffers[value.ScratchFileNumber];
+            var item = GetScratchBufferFile(value.ScratchFileNumber);
             item.File.BreakLargeAllocationToSeparatePages(value);
         }
 
