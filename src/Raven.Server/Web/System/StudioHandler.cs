@@ -84,7 +84,6 @@ namespace Raven.Server.Web.System
                 return;
             }
 
-
             HttpContext.Response.StatusCode = 404;
             return;
 

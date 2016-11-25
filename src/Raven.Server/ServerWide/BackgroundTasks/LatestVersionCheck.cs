@@ -47,7 +47,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                     BaseAddress = new Uri(ApiRavenDbNet)
                 };
 
-                // TODO change URL
+                // TODO @gregolsky make channel customizable 
                 var stream =
                     await apiRavenDbClient.GetStreamAsync("/api/versions/latest?channel=dev&min=40000&max=49999");
 
