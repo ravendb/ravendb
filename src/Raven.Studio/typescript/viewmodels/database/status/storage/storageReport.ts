@@ -75,7 +75,7 @@ class storageReport extends viewModelBase {
 
         const mappedData = data.map(x => this.mapReport(x));
         const totalSize = mappedData.reduce((p, c) => p + c.size, 0);
-        const item = new storageReportItem("root", "root", false, totalSize, mappedData);
+        const item = new storageReportItem("/", "Database", false, totalSize, mappedData);
 
         this.root = item;
 
