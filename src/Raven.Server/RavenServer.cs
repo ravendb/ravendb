@@ -45,7 +45,7 @@ namespace Raven.Server
         public readonly ServerStore ServerStore;
 
         private IWebHost _webHost;
-        private Task<List<TcpListener>> _tcpListenerTask;
+        private Task<List<TcpListener>> _tcpListenerTask = null;
         private readonly Logger _tcpLogger;
 
         private readonly LatestVersionCheck _latestVersionCheck;
@@ -118,7 +118,7 @@ namespace Raven.Server
                     .UseKestrel(options =>
                     {
                     })
-                    .UseUrls(Configuration.Core.ServerUrl)
+                     .UseUrls("http://0.0.0.0:8080")
                     .UseStartup<RavenServerStartup>()
                     .ConfigureServices(services =>
                     {
@@ -143,7 +143,7 @@ namespace Raven.Server
             try
             {
                 _webHost.Start();
-                _tcpListenerTask = StartTcpListener();
+                //_tcpListenerTask = StartTcpListener();
             }
             catch (Exception e)
             {
