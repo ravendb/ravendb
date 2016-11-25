@@ -27,6 +27,7 @@ function BuildTypingsGenerator ( $srcDir ) {
     # build typings generator
     & dotnet build --framework "netcoreapp1.1" `
         --configuration "Debug" $srcDir;
+    CheckLastExitCode
 }
 
 function BuildStudio ( $srcDir, $projectDir, $version ) {
