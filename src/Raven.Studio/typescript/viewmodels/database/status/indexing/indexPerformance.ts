@@ -211,6 +211,11 @@ class metrics extends viewModelBase {
     }
 
     private draw() {
+        if (this.data.length === 0) {
+            //TODO: show no data section
+            return;
+        }
+
         this.prepareBrushSection();
         this.prepareMainSection();
 
