@@ -81,8 +81,6 @@ namespace Voron
 
         public event Action OnLogsApplied;
 
-        public Transaction CurrentWriteTransaction { get; internal set; }              
-
         public StorageEnvironment(StorageEnvironmentOptions options)
         {
             try
@@ -345,7 +343,6 @@ namespace Voron
         public Transaction WriteTransaction(TransactionPersistentContext transactionPersistentContext, ByteStringContext context = null)
         {
             var writeTransaction = new Transaction(NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null));
-            CurrentWriteTransaction = writeTransaction;
             return writeTransaction;
         }
 
@@ -354,7 +351,6 @@ namespace Voron
             var transactionPersistentContext = new TransactionPersistentContext();
             var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null);
             var writeTransaction = new Transaction(newLowLevelTransaction);
-            CurrentWriteTransaction = writeTransaction;
             return writeTransaction;
         }
 
@@ -371,7 +367,7 @@ namespace Voron
                     if (FlushInProgressLock.IsWriteLockHeld == false)
                         flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
                     if(Monitor.IsEntered(_txWriter))
-                        ThrowOnRecursiseWriteTransaction();
+                        ThrowOnRecursiveWriteTransaction();
                     Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
                     if (txLockTaken == false || (flushInProgressReadLockTaken == false && FlushInProgressLock.IsWriteLockHeld == false))
                     {
@@ -428,7 +424,7 @@ namespace Voron
             }
         }
 
-        private static void ThrowOnRecursiseWriteTransaction()
+        private static void ThrowOnRecursiveWriteTransaction()
         {
             throw new InvalidOperationException("A write transaction is already opened by this thread");
         }
