@@ -74,6 +74,10 @@ class documentItem extends layoutableItem {
         this.drawOffset = drawOffset;
     }
 
+    get visible() {
+        return this.connectedEntries.length;
+    }
+
     getSourceConnectionPoint(): [number, number] {
         return [this.x + this.width / 2, this.y];
     }
@@ -117,27 +121,64 @@ abstract class pageItem extends layoutableItem {
 
     static margins = {
         horizonalPadding: 5,
-        pageNumberSectionHeight: 50,// (with top and bottom paddings)
-        pageNumberTopMargin: 14,
+        pageNumberTopMargin: 12,
         entryHeight: 22, 
         betweenEntryPadding: 1,
         bottomPadding: 5,
         entryTextPadding: 5,
-        aggregationItemHeight: 22,
-        aggragationTextHorizontalPadding: 18,
-        betweenPagesMinWidth: 40
+        aggregationItemHeight: 16,
+        aggragationTextHorizontalPadding: 10,
+        betweenPagesMinWidth: 40,
+        entriesAndAggregationTextHeight: 20,
+
+        nestedSection: {
+            width: 58, 
+            height: 31,
+            rightMargin: 7,
+            topMargin: 42
+        }
     }
 
     parentPage?: branchPageItem;
     pageNumber: number;
-    
-    constructor(parentPage: branchPageItem, pageNumber: number) {
+
+    aggregationResult: any;
+    aggregationResultAsMap: Map<string, string>;
+
+    constructor(parentPage: branchPageItem, pageNumber: number, aggregationResult: any) {
         super();
         this.pageNumber = pageNumber;
         this.parentPage = parentPage;
+        this.aggregationResult = aggregationResult;
+        this.aggregationResultAsMap = reduceValuesFormatter.extractValues(aggregationResult);
     }
 
-    abstract layout(): void;
+    layout() {
+        this.height = pageItem.margins.pageNumberTopMargin + pageItem.margins.entriesAndAggregationTextHeight
+            + pageItem.margins.aggregationItemHeight * this.aggregationResultAsMap.size
+            + pageItem.margins.bottomPadding;
+
+        const longestTextWidth = pageItem.estimateAggregationTextWidth(this.findLongestAggregationTextLength());
+
+        this.width = pageItem.margins.aggragationTextHorizontalPadding + longestTextWidth + pageItem.margins.aggragationTextHorizontalPadding;
+    }
+
+    private findLongestAggregationTextLength(): number {
+        let max = 0;
+
+        this.aggregationResultAsMap.forEach((v, k) => {
+            const len = k.length + 2 + v.length;
+            if (len > max) {
+                max = len;
+            }
+        });
+
+        return max;
+    }
+
+    private static estimateAggregationTextWidth(textLength: number) {
+        return textLength * 6;
+    }
 
     getSourceConnectionPoint(): [number, number] {
         return [this.x + this.width / 2, this.y];
@@ -151,14 +192,21 @@ abstract class pageItem extends layoutableItem {
 
 class leafPageItem extends pageItem {
 
+    entriesTextY: number;
+
+    nestedSection: boolean;
+
     entries = [] as Array<entryItem | entryPaddingItem>;
 
-    constructor(parentPage: branchPageItem, pageNumber: number, entries: Array<entryItem | entryPaddingItem>) {
-        super(parentPage, pageNumber);
+    constructor(parentPage: branchPageItem, pageNumber: number, aggregationResult: any, nestedSection: boolean, entries: Array<entryItem | entryPaddingItem>) {
+        super(parentPage, pageNumber, aggregationResult);
+        this.nestedSection = nestedSection;
         this.entries = entries;
     }
 
     layout() {
+        super.layout();
+
         const entriesData = this.entries
             .filter(x => x instanceof entryItem)
             .map(x => (x as entryItem).dataAsString)
@@ -167,9 +215,14 @@ class leafPageItem extends pageItem {
         const longestText = entriesData[0];
         const longestTextWidth = longestText ? entryItem.estimateTextWidth(longestText) : entryPaddingItem.margins.minWidth;
 
-        this.width = pageItem.margins.horizonalPadding + pageItem.margins.entryTextPadding + longestTextWidth + pageItem.margins.entryTextPadding + pageItem.margins.horizonalPadding;
+        const entriesWidth = pageItem.margins.horizonalPadding + pageItem.margins.entryTextPadding + longestTextWidth + pageItem.margins.entryTextPadding + pageItem.margins.horizonalPadding;
+        this.width = Math.max(entriesWidth, this.width);
 
-        let yStart = pageItem.margins.pageNumberSectionHeight;
+        this.height -= pageItem.margins.bottomPadding;
+
+        this.entriesTextY = this.height;
+
+        let yStart = this.height + pageItem.margins.entriesAndAggregationTextHeight;
         let yOffset = pageItem.margins.betweenEntryPadding + pageItem.margins.entryHeight;
 
         for (let i = 0; i < this.entries.length; i++) {
@@ -236,42 +289,10 @@ class leafPageItem extends pageItem {
 
 class branchPageItem extends pageItem {
 
-    aggregationResult: any;
-
-    aggregationResultAsMap: Map<string, string>;
-
     constructor(parentPage: branchPageItem, pageNumber: number, aggregationResult: any) {
-        super(parentPage, pageNumber);
-        this.aggregationResult = aggregationResult;
-        this.aggregationResultAsMap = reduceValuesFormatter.extractValues(aggregationResult);
+        super(parentPage, pageNumber, aggregationResult);
     }
-
-    layout() {
-        this.height = pageItem.margins.pageNumberSectionHeight
-            + pageItem.margins.aggregationItemHeight * this.aggregationResultAsMap.size
-            + pageItem.margins.bottomPadding;
-
-        const longestTextWidth = branchPageItem.estimateTextWidth(this.findLongestTextLength());
-
-        this.width = pageItem.margins.aggragationTextHorizontalPadding + longestTextWidth + pageItem.margins.aggragationTextHorizontalPadding;
-    }
-
-    private findLongestTextLength(): number {
-        let max = 0;
-
-        this.aggregationResultAsMap.forEach((v, k) => {
-            const len = k.length + 2 + v.length;
-            if (len > max) {
-                max = len;
-            }
-        });
-
-        return max;
-    }
-
-    private static estimateTextWidth(textLength: number) {
-        return textLength * 6;
-    }
+    
 }
 
 class reduceTreeItem {
@@ -340,7 +361,8 @@ class reduceTreeItem {
 
             if (node.Entries && node.Entries.length) {
                 const entries = leafPageItem.findEntries(documents, node.Entries);
-                const item = new leafPageItem(parentPage, node.PageNumber, entries);
+                const isNestedSection = depth === 0; // if depth is zero and node has entries
+                const item = new leafPageItem(parentPage, node.PageNumber, node.AggregationResult, isNestedSection, entries);
                 entries.filter(x => x instanceof entryItem).forEach((entry: entryItem) => entry.parent = item);
                 items.push(item);
             }
@@ -483,10 +505,13 @@ class visualizerGraphDetails {
     }
 
     reset() {
-        this.zoom.translate([0, 0]).scale(1).event(this.canvas);
+        this.restoreView();
+        this.documents = [];
+    }
 
+    private restoreView() {
+        this.zoom.translate([0, 0]).scale(1).event(this.canvas);
         this.documents.forEach(doc => doc.reset());
-        //TODO: reset documents and details index
     }
 
     private onZoom() {
@@ -506,7 +531,8 @@ class visualizerGraphDetails {
     }
 
     openFor(treeName: string) {
-        this.reset();
+        this.restoreView();
+
         this.viewActive(true); //TODO: consider setting this after initial animation if any
         this.toggleUiElements(true);
 
@@ -525,21 +551,28 @@ class visualizerGraphDetails {
     private layout() {
         let yStart = this.currentTree.filterAndLayoutVisibleItems(this.documents);
 
+        const visibleDocuments = this.getVisibleDocuments();
+
         this.connectionsBaseY = yStart
             + visualizerGraphDetails.margins.betweenTreesAndDocumentsPadding / 2
-            - (visualizerGraphDetails.margins.betweenLinesOffset * this.documents.length) / 2;
+            - (visualizerGraphDetails.margins.betweenLinesOffset * visibleDocuments.length) / 2;
 
         yStart += visualizerGraphDetails.margins.betweenTreesAndDocumentsPadding;
 
         this.layoutDocuments(yStart);
     }
 
-    private layoutDocuments(yStart: number) {
+    getVisibleDocuments(): documentItem[] {
+        return this.documents.filter(x => x.visible);
+    }
 
+    private layoutDocuments(yStart: number) {
         let totalWidth = 0;
 
-        for (let i = 0; i < this.documents.length; i++) {
-            const doc = this.documents[i];
+        const visibleDocuments = this.getVisibleDocuments();
+        for (let i = 0; i < visibleDocuments.length; i++) {
+            const doc = visibleDocuments[i];
+
             const documentNameWidthEstimation = (text: string) => text.length * 9;
 
             doc.width = visualizerGraphDetails.margins.badgePadding * 2 + documentNameWidthEstimation(doc.name);
@@ -549,20 +582,20 @@ class visualizerGraphDetails {
             totalWidth += doc.width;
         }
 
-        totalWidth += this.documents.length * (visualizerGraphDetails.margins.minMarginBetweenDocumentNames + 1);
+        totalWidth += visibleDocuments.length * (visualizerGraphDetails.margins.minMarginBetweenDocumentNames + 1);
 
         let extraItemPadding = 0;
 
         if (totalWidth > this.currentTree.totalWidth) {
             //TODO: handle me!
         } else {
-            extraItemPadding = (this.currentTree.totalWidth - totalWidth) / (this.documents.length + 1);
+            extraItemPadding = (this.currentTree.totalWidth - totalWidth) / (visibleDocuments.length + 1);
         }
 
         let currentX = visualizerGraphDetails.margins.minMarginBetweenDocumentNames + extraItemPadding;
 
-        for (let i = 0; i < this.documents.length; i++) {
-            const doc = this.documents[i];
+        for (let i = 0; i < visibleDocuments.length; i++) {
+            const doc = visibleDocuments[i];
             doc.x = currentX;
 
             currentX += doc.width + visualizerGraphDetails.margins.minMarginBetweenDocumentNames + extraItemPadding;
@@ -586,8 +619,10 @@ class visualizerGraphDetails {
                 this.drawTree(ctx, this.currentTree);
             }
 
-            for (let i = 0; i < this.documents.length; i++) {
-                const doc = this.documents[i];
+            const visibleDocuments = this.getVisibleDocuments();
+
+            for (let i = 0; i < visibleDocuments.length; i++) {
+                const doc = visibleDocuments[i];
                 this.drawDocument(ctx, doc);
             }
 
@@ -637,18 +672,30 @@ class visualizerGraphDetails {
         ctx.save();
         ctx.translate(page.x, page.y);
         try {
-            ctx.fillStyle = "#008cc9";
-            ctx.font = "bold 22px Lato";
-            ctx.textAlign = "left";
-            ctx.textBaseline = "top";
 
-            const pageNumberLeftPadding = page instanceof leafPageItem ? pageItem.margins.horizonalPadding : pageItem.margins.aggragationTextHorizontalPadding;
-            ctx.fillText("#" + page.pageNumber, pageNumberLeftPadding, pageItem.margins.pageNumberTopMargin);
+            // page number
+            ctx.fillStyle = "#008cc9";
+            ctx.font = "bold 24px Lato";
+            ctx.textAlign = "right";
+            ctx.textBaseline = "top";
+            ctx.fillText("#" + page.pageNumber, page.width - pageItem.margins.aggragationTextHorizontalPadding, pageItem.margins.pageNumberTopMargin);
+
+            if (page instanceof leafPageItem && page.nestedSection) {
+                const nestedSectionMargins = pageItem.margins.nestedSection;
+                ctx.fillStyle = "#008cc9";
+                ctx.fillRect(page.width - nestedSectionMargins.rightMargin - nestedSectionMargins.width, nestedSectionMargins.topMargin, nestedSectionMargins.width, nestedSectionMargins.height);
+
+                ctx.textAlign = "center";
+                ctx.fillStyle = "white";
+                ctx.font = "11px Lato";
+                ctx.fillText("NESTED", page.width - nestedSectionMargins.rightMargin - nestedSectionMargins.width / 2, nestedSectionMargins.topMargin + 3);
+                ctx.fillText("SECTION", page.width - nestedSectionMargins.rightMargin - nestedSectionMargins.width / 2, nestedSectionMargins.topMargin + 15);
+            }
+           
+            this.drawAggregation(ctx, page);
 
             if (page instanceof leafPageItem) {
-                this.drawEntries(ctx, page.entries);
-            } else if (page instanceof branchPageItem) {
-                this.drawBranch(ctx, page);
+                this.drawEntries(ctx, page);
             }
             
         } finally {
@@ -656,7 +703,14 @@ class visualizerGraphDetails {
         }
     }
 
-    private drawEntries(ctx: CanvasRenderingContext2D, entries: Array<entryItem | entryPaddingItem>) {
+    private drawEntries(ctx: CanvasRenderingContext2D, leaf: leafPageItem) {
+        const entries = leaf.entries;
+        ctx.font = "11px Lato";
+        ctx.fillStyle = "#626969";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.fillText("Entries:", pageItem.margins.aggragationTextHorizontalPadding, leaf.entriesTextY);
+
         for (let i = 0; i < entries.length; i++) {
             const entry = entries[i];
             ctx.fillStyle = "#2c3333";
@@ -675,12 +729,18 @@ class visualizerGraphDetails {
         }
     }
 
-    private drawBranch(ctx: CanvasRenderingContext2D, branch: branchPageItem) {
+    private drawAggregation(ctx: CanvasRenderingContext2D, branch: branchPageItem) {
+        ctx.font = "11px Lato";
+        ctx.fillStyle = "#626969";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.fillText("Aggregation:", pageItem.margins.aggragationTextHorizontalPadding, pageItem.margins.pageNumberTopMargin);
+
         ctx.fillStyle = "#a9adad";
         ctx.font = "12px Lato";
         ctx.textAlign = "left";
 
-        let currentY = pageItem.margins.pageNumberSectionHeight;
+        let currentY = pageItem.margins.pageNumberTopMargin + pageItem.margins.entriesAndAggregationTextHeight - 5;
         const yOffset = pageItem.margins.aggregationItemHeight;
 
         branch.aggregationResultAsMap.forEach((value, key) => {
@@ -690,20 +750,24 @@ class visualizerGraphDetails {
     }
 
     private drawDocument(ctx: CanvasRenderingContext2D, docItem: documentItem) {
-        //TODO: it is the same as in global - consider merging?
-        ctx.fillStyle = docItem.color;
-        ctx.fillRect(docItem.x, docItem.y, docItem.width, docItem.height);
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.font = "18px Lato";
-        ctx.fillStyle = "black";
-        ctx.fillText(docItem.name, docItem.x + docItem.width / 2, docItem.y + docItem.height / 2);
+        if (docItem.visible) {
+            //TODO: it is the same as in global - consider merging?
+            ctx.fillStyle = docItem.color;
+            ctx.fillRect(docItem.x, docItem.y, docItem.width, docItem.height);
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = "18px Lato";
+            ctx.fillStyle = "black";
+            ctx.fillText(docItem.name, docItem.x + docItem.width / 2, docItem.y + docItem.height / 2);
+        }
     }
 
     private drawDocumentConnections(ctx: CanvasRenderingContext2D) {
         ctx.lineWidth = 2;
-        for (let i = 0; i < this.documents.length; i++) {
-            const doc = this.documents[i];
+        const visibleDocuments = this.getVisibleDocuments();
+
+        for (let i = 0; i < visibleDocuments.length; i++) {
+            const doc = visibleDocuments[i];
 
             ctx.strokeStyle = doc.color;
 
