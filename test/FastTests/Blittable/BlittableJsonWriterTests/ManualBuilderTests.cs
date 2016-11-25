@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -115,9 +116,9 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
                     Assert.Equal(2, reader.Count);
                     var volumeValue = reader["Volume"].ToString();
-                    Assert.Equal(44, int.Parse(volumeValue));
+                    Assert.Equal(44, int.Parse(volumeValue, CultureInfo.InvariantCulture));
                     var heightValue = reader["Height"].ToString();
-                    Assert.Equal(55, int.Parse(heightValue));
+                    Assert.Equal(55, int.Parse(heightValue, CultureInfo.InvariantCulture));
                 }
             }
         }
@@ -175,12 +176,12 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     Assert.Equal(2, reader.Count);
 
                     var data = reader["Data"] as BlittableJsonReaderObject;
-                    Assert.Equal(44, int.Parse(data["Volume"].ToString()));
-                    Assert.Equal(55, int.Parse(data["Height"].ToString()));
+                    Assert.Equal(44, int.Parse(data["Volume"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(55, int.Parse(data["Height"].ToString(), CultureInfo.InvariantCulture));
 
                     var metadata = reader["@MetaData"] as BlittableJsonReaderObject;
-                    Assert.Equal(22, int.Parse(metadata["Ticks"].ToString()));
-                    Assert.Equal(11, int.Parse(metadata["Tacks"].ToString()));
+                    Assert.Equal(22, int.Parse(metadata["Ticks"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(11, int.Parse(metadata["Tacks"].ToString(), CultureInfo.InvariantCulture));
                 }
             }
         }
@@ -282,26 +283,26 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
                     var data = megaData["Data"] as BlittableJsonReaderObject;
                     Assert.Equal(2, data.Count);
-                    Assert.Equal(44, int.Parse(data["Volume"].ToString()));
-                    Assert.Equal(55, int.Parse(data["Height"].ToString()));
+                    Assert.Equal(44, int.Parse(data["Volume"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(55, int.Parse(data["Height"].ToString(), CultureInfo.InvariantCulture));
 
                     var metadata = megaData["@MetaData"] as BlittableJsonReaderObject;
                     Assert.Equal(2, metadata.Count);
-                    Assert.Equal(22, int.Parse(metadata["Ticks"].ToString()));
-                    Assert.Equal(11, int.Parse(metadata["Tacks"].ToString()));
+                    Assert.Equal(22, int.Parse(metadata["Ticks"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(11, int.Parse(metadata["Tacks"].ToString(), CultureInfo.InvariantCulture));
 
                     var megaMetaData = reader["MegaMetaData"] as BlittableJsonReaderObject;
                     Assert.Equal(2, megaMetaData.Count);
 
                     var metaObject = megaMetaData["MetaObject"] as BlittableJsonReaderObject;
                     Assert.Equal(2, metaObject.Count);
-                    Assert.Equal(78, int.Parse(metaObject["Age"].ToString()));
-                    Assert.Equal(100, int.Parse(metaObject["Code"].ToString()));
+                    Assert.Equal(78, int.Parse(metaObject["Age"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(100, int.Parse(metaObject["Code"].ToString(), CultureInfo.InvariantCulture));
 
                     var metaMetaData = megaMetaData["@MetaMetaData"] as BlittableJsonReaderObject;
                     Assert.Equal(2, metaMetaData.Count);
-                    Assert.Equal(2, int.Parse(metaMetaData["Tricks"].ToString()));
-                    Assert.Equal(111, int.Parse(metaMetaData["Tracks"].ToString()));
+                    Assert.Equal(2, int.Parse(metaMetaData["Tricks"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(111, int.Parse(metaMetaData["Tracks"].ToString(), CultureInfo.InvariantCulture));
                 }
             }
         }
@@ -340,7 +341,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     var array = reader["MyEmptyArray"] as BlittableJsonReaderArray;
                     Assert.Equal(0, array.Length);
 
-                    Assert.Equal(55, Int32.Parse(reader["Height"].ToString()));
+                    Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
 
                 }
             }
@@ -391,7 +392,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                         Assert.Equal(0, nested.Count);
                     }
 
-                    Assert.Equal(55, int.Parse(reader["Height"].ToString()));
+                    Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
 
                 }
             }
@@ -434,9 +435,9 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     var array = reader["MyNumbers"] as BlittableJsonReaderArray;
                     Assert.Equal(8, array.Length);
                     for (var i = 0; i < 8; i++)
-                        Assert.Equal(i, int.Parse(array[i].ToString()));
+                        Assert.Equal(i, int.Parse(array[i].ToString(), CultureInfo.InvariantCulture));
 
-                    Assert.Equal(55, int.Parse(reader["Height"].ToString()));
+                    Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
 
                 }
             }
@@ -493,10 +494,10 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                         var innerArray = array[i] as BlittableJsonReaderArray;
 
                         for (var j = 0; j < 8; j++)
-                            Assert.Equal(i, Int32.Parse(innerArray[i].ToString()));
+                            Assert.Equal(i, int.Parse(innerArray[i].ToString(), CultureInfo.InvariantCulture));
 
                     }
-                    Assert.Equal(55, Int32.Parse(reader["Height"].ToString()));
+                    Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
                 }
             }
         }
@@ -549,11 +550,11 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     for (var i = 0; i < 8; i++)
                     {
                         var nested = array[i] as BlittableJsonReaderObject;
-                        Assert.Equal(i, int.Parse(nested["NestedNode"].ToString()));
+                        Assert.Equal(i, int.Parse(nested["NestedNode"].ToString(), CultureInfo.InvariantCulture));
                     }
 
 
-                    Assert.Equal(55, int.Parse(reader["Height"].ToString()));
+                    Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
 
                 }
             }
@@ -618,11 +619,11 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                         var nestedArray = nested["NestedNode"] as BlittableJsonReaderArray;
                         for (int j = 0; j < 8; j++)
                         {
-                            Assert.Equal(j, int.Parse(nestedArray[j].ToString()));
+                            Assert.Equal(j, int.Parse(nestedArray[j].ToString(), CultureInfo.InvariantCulture));
                         }
                     }
 
-                    Assert.Equal(55, int.Parse(reader["Height"].ToString()));
+                    Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
                 }
             }
         }
@@ -650,7 +651,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     Assert.Equal(8, reader.Length);
 
                     for (var i = 0; i < 8; i++)
-                        Assert.Equal(i, int.Parse(reader[i].ToString()));
+                        Assert.Equal(i, int.Parse(reader[i].ToString(), CultureInfo.InvariantCulture));
 
                 }
             }
@@ -685,7 +686,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     for (var i = 0; i < propertiesAmount; i++)
                     {
                         var val = reader["Age" + i];
-                        Assert.Equal(i, int.Parse(val.ToString()));
+                        Assert.Equal(i, int.Parse(val.ToString(), CultureInfo.InvariantCulture));
                     }
                     
                 }
@@ -730,7 +731,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     {
                         reader = reader["Data" + i] as BlittableJsonReaderObject;
                         var val = reader["Age" + i];
-                        Assert.Equal(i, int.Parse(val.ToString()));
+                        Assert.Equal(i, int.Parse(val.ToString(), CultureInfo.InvariantCulture));
                     }
 
                 }
@@ -820,19 +821,19 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
                     var reader = builder.CreateReader();
                     Assert.Equal(13, reader.Count);
-                    Assert.Equal(float.MinValue, float.Parse(reader["FloatMin"].ToString()));
-                    Assert.Equal(float.MaxValue, float.Parse(reader["FloatMax"].ToString()));
-                    Assert.Equal(double.MinValue, double.Parse(reader["DoubleMin"].ToString()));
-                    Assert.Equal(double.MaxValue, double.Parse(reader["DoubleMax"].ToString()));
-                    Assert.Equal(long.MinValue, long.Parse(reader["LongMin"].ToString()));
-                    Assert.Equal(long.MaxValue, long.Parse(reader["LongMax"].ToString()));
+                    Assert.Equal(float.MinValue, float.Parse(reader["FloatMin"].ToString(),CultureInfo.InvariantCulture));
+                    Assert.Equal(float.MaxValue, float.Parse(reader["FloatMax"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(double.MinValue, double.Parse(reader["DoubleMin"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(double.MaxValue, double.Parse(reader["DoubleMax"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(long.MinValue, long.Parse(reader["LongMin"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(long.MaxValue, long.Parse(reader["LongMax"].ToString(), CultureInfo.InvariantCulture));
                     Assert.Equal(string.Empty, reader["StringEmpty"].ToString());
                     Assert.Equal("StringSimple", reader["StringSimple"].ToString());
                     Assert.Equal("\"Cool\"", reader["StringEscapedChars"].ToString());
                     Assert.Equal(lonEscapedCharsString, reader["StringLongEscapedChars"].ToString());
                     Assert.Equal(longEscapedCharsAndNonAsciiString, reader["StringEscapedCharsAndNonAscii"].ToString());
                     Assert.Equal(lsvString, reader["LSVString"].ToString());
-                    Assert.Equal(1000, int.Parse((reader["Embedded"] as BlittableJsonReaderObject)["Value"].ToString()));
+                    Assert.Equal(1000, int.Parse((reader["Embedded"] as BlittableJsonReaderObject)["Value"].ToString(), CultureInfo.InvariantCulture));
                 }
             }
         }
