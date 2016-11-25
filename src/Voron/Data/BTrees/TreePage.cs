@@ -498,10 +498,10 @@ namespace Voron.Data.BTrees
 
         internal void Defrag(LowLevelTransaction tx)
         {
-            Debug.Assert(PageSize == tx.Environment.Options.PageSize);
-
             TemporaryPage tmp;
-            using (tx.Environment.GetTemporaryPage(tx, out tmp))
+            using (PageSize == tx.Environment.Options.PageSize ?
+               tx.Environment.GetTemporaryPage(tx, out tmp) :
+               tx.Environment.DecompressionBuffers.GetTemporaryPage(tx, PageSize, out tmp))
             {
                 var tempPage = tmp.GetTempPage();
                 Memory.Copy(tempPage.Base, Base, PageSize);
