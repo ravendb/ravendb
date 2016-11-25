@@ -35,20 +35,25 @@ namespace Raven.Abstractions.Extensions
 
                     if (type.IsArray)
                     {
-                        type = type.GetElementType().GetProperty(normalizedProperty).PropertyType;
+                        type = GetMemberType<T>(type.GetElementType(), normalizedProperty);
                     }
                     else if (type.IsGenericType())
                     {
-                        type = type.GetGenericArguments()[0].GetProperty(normalizedProperty).PropertyType;
+                        type = GetMemberType<T>(type.GetGenericArguments()[0],normalizedProperty);
                     }
                 }
                 else
                 {
-                    type = type.GetProperty(property).PropertyType;
+                    type = GetMemberType<T>(type, property);
                 }
             }
 
             return type;
+        }
+
+        private static Type GetMemberType<T>(Type type, string property)
+        {
+            return type.GetProperty(property).PropertyType;
         }
 
         public static MemberInfo ToProperty(this LambdaExpression expr)
