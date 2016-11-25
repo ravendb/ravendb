@@ -39,22 +39,31 @@ $SERVER_SRC_DIR = "$PROJECT_DIR\src\Raven.Server"
 $CLIENT_SRC_DIR = "$PROJECT_DIR\src\Raven.Client"
 $STUDIO_SRC_DIR = "$PROJECT_DIR\src\Raven.Studio"
 $TYPINGS_GENERATOR_SRC_DIR = "$PROJECT_DIR\tools\TypingsGenerator"
+$STUDIO_BUILD_DIR = "$PROJECT_DIR\src\Raven.Studio\build";
 $TEMP_DIR = "$PROJECT_DIR\temp"
-$RELEASE_ZIP_FILE = "RavenDB-$version.zip"
+$RUNTIMES = @(
+    "win10-x64",
+    "ubuntu.14.04-x64"
+    #"ubuntu.16.04-x64"
+);
 
 CleanBuildDirectories $RELEASE_DIR $OUT_DIR $BUILD_DIR
 
-#DownloadDependencies
-BuildServer $SERVER_SRC_DIR $OUT_DIR $BUILD_DIR
-BuildClient $CLIENT_SRC_DIR $OUT_DIR $BUILD_DIR
+DownloadDependencies
+
 BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
 BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
 
-CopyLicenseFile $OUT_DIR
-CopyAckFile $OUT_DIR
+Foreach ($runtime in $RUNTIMES) {
+    $runtimeOutDir = "$OUT_DIR\$runtime"
+    BuildServer $SERVER_SRC_DIR $runtimeOutDir $BUILD_DIR $runtime
+    BuildClient $CLIENT_SRC_DIR $runtimeOutDir $BUILD_DIR $runtime
+    CopyStudioPackage $STUDIO_BUILD_DIR $runtimeOutDir
+    CopyLicenseFile $runtimeOutDir
+    CopyAckFile $runtimeOutDir
 
-$STUDIO_BUILD_DIR = "src\Raven.Studio\build";
-CopyStudioPackage $STUDIO_BUILD_DIR $OUT_DIR
-
-$RELEASE_ZIP_PATH = "$RELEASE_DIR\$RELEASE_ZIP_FILE"
-ZipFilesFromDir $RELEASE_ZIP_PATH "$OUT_DIR"
+    $releaseZipFile = "RavenDB-$version-$runtime.zip"
+    $runtimeOutDir = "$OUT_DIR\$runtime"
+    $releaseZipPath = "$RELEASE_DIR\$releaseZipFile"
+    ZipFilesFromDir $releaseZipPath $runtimeOutDir
+}

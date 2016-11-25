@@ -1,20 +1,24 @@
-function BuildServer ( $srcDir, $outDir, $buildDir ) {
-    write-host "Building Server..."
+function BuildServer ( $srcDir, $outDir, $buildDir, $platform ) {
+    write-host "Building Server for $platform..."
     #build server
     & dotnet build --output "$outDir\Server" `
-                 --build-base-path "$buildDir\Server" `
+                 --no-incremental `
+                 --build-base-path "$buildDir\$platform" `
                  --framework "netcoreapp1.1" `
+                 --runtime $platform `
                  --configuration "Release" $srcDir;
 
     CheckLastExitCode
 }
 
-function BuildClient ( $srcDir, $outDir, $buildDir ) {
-    write-host "Building Client..."
+function BuildClient ( $srcDir, $outDir, $buildDir, $platform ) {
+    write-host "Building Client for $platform..."
     # build client
     & dotnet build --output "$outDir\Client" `
-                --build-base-path "$buildDir\Client" `
+                --no-incremental `
+                --build-base-path "$buildDir\$platform" `
                 --framework "netstandard1.6" `
+                --runtime $platform `
                 --configuration "Release" $srcDir;
     CheckLastExitCode
 }
