@@ -486,37 +486,34 @@ namespace Voron.Impl.Journal
                         if (oldestActiveTransaction != 0)
                             maxTransactionId = Math.Min(oldestActiveTransaction - 1, maxTransactionId);
 
-                        foreach (
-                            var pagePosition in
-                            journalFile.PageTranslationTable.Iterate(_lastFlushedTransactionId, maxTransactionId))
+                        foreach (var modifedPagesInTx in journalFile.PageTranslationTable.GetModifiedPagesForTransactionRange(
+                            _lastFlushedTransactionId, maxTransactionId))
                         {
-                            if (pagePosition.Value.IsFreedPageMarker)
+                            foreach (var pagePosition in modifedPagesInTx)
                             {
-                                // Avoid the case where an older journal file had written a page that was freed in a different journal
-                                pagesToWrite.Remove(pagePosition.Key);
-                                continue;
+                                if (pagePosition.Value.IsFreedPageMarker)
+                                {
+                                    // Avoid the case where an older journal file had written a page that was freed in a different journal
+                                    pagesToWrite.Remove(pagePosition.Key);
+                                    continue;
+                                }
+
+                                if (journalFile.Number == _lastFlushedJournalId &&
+                                    pagePosition.Value.TransactionId <= _lastFlushedTransactionId)
+                                    continue;
+
+                                currentJournalMaxTransactionId = Math.Max(currentJournalMaxTransactionId,
+                                    pagePosition.Value.TransactionId);
+
+                                if (currentJournalMaxTransactionId < previousJournalMaxTransactionId)
+                                    ThrowReadByeondOldestActiveTransaction(currentJournalMaxTransactionId, previousJournalMaxTransactionId, oldestActiveTransaction);
+
+
+                                lastProcessedJournal = journalFile.Number;
+                                pagesToWrite[pagePosition.Key] = pagePosition.Value;
+
+                                lastFlushedTransactionId = currentJournalMaxTransactionId;
                             }
-
-                            if (journalFile.Number == _lastFlushedJournalId &&
-                                pagePosition.Value.TransactionId <= _lastFlushedTransactionId)
-                                continue;
-
-                            currentJournalMaxTransactionId = Math.Max(currentJournalMaxTransactionId,
-                                pagePosition.Value.TransactionId);
-
-                            if (currentJournalMaxTransactionId < previousJournalMaxTransactionId)
-                                throw new InvalidOperationException(
-                                    "Journal applicator read beyond the oldest active transaction in the next journal file. " +
-                                    "This should never happen. Current journal max tx id: " +
-                                    currentJournalMaxTransactionId +
-                                    ", previous journal max ix id: " + previousJournalMaxTransactionId +
-                                    ", oldest active transaction: " + oldestActiveTransaction);
-
-
-                            lastProcessedJournal = journalFile.Number;
-                            pagesToWrite[pagePosition.Key] = pagePosition.Value;
-
-                            lastFlushedTransactionId = currentJournalMaxTransactionId;
                         }
 
                         if (currentJournalMaxTransactionId == -1L)
@@ -598,6 +595,17 @@ namespace Voron.Impl.Journal
                 }
 
                 _waj._env.LogsApplied();
+            }
+
+            private static void ThrowReadByeondOldestActiveTransaction(long currentJournalMaxTransactionId,
+                long previousJournalMaxTransactionId, long oldestActiveTransaction)
+            {
+                throw new InvalidOperationException(
+                    "Journal applicator read beyond the oldest active transaction in the next journal file. " +
+                    "This should never happen. Current journal max tx id: " +
+                    currentJournalMaxTransactionId +
+                    ", previous journal max ix id: " + previousJournalMaxTransactionId +
+                    ", oldest active transaction: " + oldestActiveTransaction);
             }
 
             private List<JournalSnapshot> GetJournalSnapshots()

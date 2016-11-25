@@ -260,10 +260,7 @@ namespace Voron.Impl.Journal
                 unusedAndFree = _unusedPages.FindAll(position => position.TransactionId <= lastSyncedTransactionId);
                 _unusedPages.RemoveAll(position => position.TransactionId <= lastSyncedTransactionId);
 
-                var keysToRemove = 
-                    _pageTranslationTable.KeysWhereAllPagesOlderThan(lastSyncedTransactionId);
-
-                _pageTranslationTable.Remove(keysToRemove, lastSyncedTransactionId, unusedPages);
+              _pageTranslationTable.RemoveKeysWhereAllPagesOlderThan(lastSyncedTransactionId, unusedPages);
             }
 
             foreach (var unusedScratchPage in unusedAndFree)
