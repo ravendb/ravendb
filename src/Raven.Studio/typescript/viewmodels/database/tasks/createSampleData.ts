@@ -4,10 +4,14 @@ import createSampleDataCommand = require("commands/database/studio/createSampleD
 import createSampleDataClassCommand = require("commands/database/studio/createSampleDataClassCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import eventsCollector = require("common/eventsCollector");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
+import collectionsStats = require("models/database/documents/collectionsStats");
 
 class createSampleData extends viewModelBase {
 
     classData = ko.observable<string>();
+    canCreateSampleData = ko.observable<boolean>(false);
+    classesVisible = ko.observable<boolean>(false);
 
     constructor() {
         super();
@@ -20,6 +24,7 @@ class createSampleData extends viewModelBase {
         
         new createSampleDataCommand(this.activeDatabase())
             .execute()
+            .done(() => this.canCreateSampleData(false))
             .always(() => this.isBusy(false));
     }
 
@@ -27,12 +32,34 @@ class createSampleData extends viewModelBase {
         super.activate(args);
         this.updateHelpLink('OGRN53');
 
-        return this.fetchSampleDataClasses();
+        return $.when<any>(this.fetchSampleDataClasses(), this.fetchCollectionsStats());
+    }
+
+    showCode() {
+        this.classesVisible(true);
+
+        const $pageHostRoot = $("#page-host-root");
+        const $sampleDataMain = $(".sample-data-main");
+
+        $pageHostRoot.animate({
+            scrollTop: $sampleDataMain.height()
+        }, 'fast');
     }
 
     copyClasses() {
         eventsCollector.default.reportEvent("sample-data", "copy-classes");
         copyToClipboard.copy(this.classData(), "Copied C# classes to clipboard.");
+    }
+
+    private fetchCollectionsStats() {
+        new getCollectionsStatsCommand(this.activeDatabase())
+            .execute()
+            .done(stats => this.onCollectionsFetched(stats));
+    }
+
+    private onCollectionsFetched(stats: collectionsStats) {
+        const nonSystemCollectionsCount = stats.collections.filter(x => !x.isSystemDocuments).length;
+        this.canCreateSampleData(nonSystemCollectionsCount === 0);
     }
 
     private fetchSampleDataClasses(): JQueryPromise<string> {
