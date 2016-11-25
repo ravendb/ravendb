@@ -1,7 +1,9 @@
 function CopyLicenseFile ( $serverOutDir ) {
-    cp "docs\license.txt" $serverOutDir
+    $licensePath = [io.path]::combine("docs", "license.txt")
+    cp $licensePath $serverOutDir
 }
 
 function CopyAckFile ( $serverOutDir ) {
-    cp "docs\acknowledgments.txt" $serverOutDir
+    $licensePath = [io.path]::combine("docs", "acknowledgments.txt")
+    cp $licensePath $serverOutDir
 }

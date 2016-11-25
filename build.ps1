@@ -31,16 +31,16 @@ $version = "4.0.0-$buildType-$buildNumber"
 . '.\scripts\copyLicense.ps1'
 
 $PROJECT_DIR = Get-ScriptDirectory
-$RELEASE_DIR = "$PROJECT_DIR\artifacts";
-$OUT_DIR = "$PROJECT_DIR\out"
-$BUILD_DIR = "$PROJECT_DIR\build"
-$BUILD_TOOLS_DIR = "$PROJECT_DIR\build\tools";
-$SERVER_SRC_DIR = "$PROJECT_DIR\src\Raven.Server"
-$CLIENT_SRC_DIR = "$PROJECT_DIR\src\Raven.Client"
-$STUDIO_SRC_DIR = "$PROJECT_DIR\src\Raven.Studio"
-$TYPINGS_GENERATOR_SRC_DIR = "$PROJECT_DIR\tools\TypingsGenerator"
-$STUDIO_BUILD_DIR = "$PROJECT_DIR\src\Raven.Studio\build";
-$TEMP_DIR = "$PROJECT_DIR\temp"
+$RELEASE_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
+$OUT_DIR = [io.path]::combine($PROJECT_DIR, "out")
+$BUILD_DIR = [io.path]::combine($PROJECT_DIR, "build")
+$BUILD_TOOLS_DIR = [io.path]::combine($PROJECT_DIR, "build", "tools");
+$SERVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Server")
+$CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client")
+$STUDIO_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio")
+$TYPINGS_GENERATOR_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "TypingsGenerator")
+$STUDIO_BUILD_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "build");
+$TEMP_DIR = [io.path]::combine($PROJECT_DIR, "temp")
 $RUNTIMES = @(
     "win10-x64",
     "ubuntu.14.04-x64"
@@ -55,7 +55,7 @@ BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
 BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
 
 Foreach ($runtime in $RUNTIMES) {
-    $runtimeOutDir = "$OUT_DIR\$runtime"
+    $runtimeOutDir = [io.path]::combine($OUT_DIR, $runtime)
     BuildServer $SERVER_SRC_DIR $runtimeOutDir $BUILD_DIR $runtime
     BuildClient $CLIENT_SRC_DIR $runtimeOutDir $BUILD_DIR $runtime
     CopyStudioPackage $STUDIO_BUILD_DIR $runtimeOutDir
@@ -63,7 +63,7 @@ Foreach ($runtime in $RUNTIMES) {
     CopyAckFile $runtimeOutDir
 
     $releaseZipFile = "RavenDB-$version-$runtime.zip"
-    $runtimeOutDir = "$OUT_DIR\$runtime"
-    $releaseZipPath = "$RELEASE_DIR\$releaseZipFile"
+    $runtimeOutDir = [io.path]::combine($OUT_DIR, $runtime)
+    $releaseZipPath = [io.path]::combine($RELEASE_DIR, $releaseZipFile)
     ZipFilesFromDir $releaseZipPath $runtimeOutDir
 }
