@@ -43,6 +43,7 @@ $STUDIO_BUILD_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "bui
 $TEMP_DIR = [io.path]::combine($PROJECT_DIR, "temp")
 $RUNTIMES = @(
     "win10-x64",
+    "ubuntu.14.04-x64",
     "ubuntu.16.04-x64"
 );
 
@@ -56,7 +57,7 @@ BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
 Foreach ($runtime in $RUNTIMES) {
     $runtimeOutDir = [io.path]::combine($OUT_DIR, $runtime)
     BuildServer $SERVER_SRC_DIR $runtimeOutDir $runtime
-    BuildClient $CLIENT_SRC_DIR $runtimeOutDir $runtime
+    BuildClient $CLIENT_SRC_DIR $runtimeOutDir $BUILD_DIR $runtime
     CopyStudioPackage $STUDIO_BUILD_DIR $runtimeOutDir
     CopyLicenseFile $runtimeOutDir
     CopyAckFile $runtimeOutDir
