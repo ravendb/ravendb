@@ -793,24 +793,26 @@ namespace Sparrow.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WildCopy(byte* destPtr, byte* srcPtr, byte* destEndPtr)
+        private static void WildCopy(byte* dest, byte* src, byte* destEnd)
         {
-            // JIT: We make local copies of the parameters because the JIT will not be able to figure out yet that it can safely inline
-            //      the method cloning the parameters. As the arguments are modified the JIT will not be able to inline it.
-            //      This wont be needed anymore when https://github.com/dotnet/coreclr/issues/6014 is resolved.
-
-            byte* dest = destPtr;
-            byte* src = srcPtr;
-            byte* destEnd = destEndPtr;
-
-            // This copy will use the same data that has already being copied as source
-            // It is more of a repeater than a copy per-se. 
-
             do
             {
-                *((ulong*)dest) = *((ulong*)src);
-                dest += sizeof(ulong);
-                src += sizeof(ulong);
+                ((ulong*)dest)[0] = ((ulong*)src)[0];
+                if (dest + sizeof(ulong) >= destEnd)
+                    return;
+
+                ((ulong*)dest)[1] = ((ulong*)src)[1];
+                if (dest + 2 * sizeof(ulong) >= destEnd)
+                    return;
+
+                ((ulong*)dest)[2] = ((ulong*)src)[2];
+                if (dest + 3 * sizeof(ulong) >= destEnd)
+                    return;
+
+                ((ulong*)dest)[3] = ((ulong*)src)[3];
+
+                dest += 4 * sizeof(ulong);
+                src +=  4 * sizeof(ulong);
             }
             while (dest < destEnd);
         }
