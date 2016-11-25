@@ -67,8 +67,8 @@ class notificationCenterOperations {
                 operationIds.forEach(operationId => {
                     var matchedOp = operations.first(x => x.Id === operationId);
                     if (matchedOp) {
-                        this.subscribeForOperation(operationId, n => this.onStatus(rs, n.OperationId, n.State));
-                        this.onOperationInfo(matchedOp, operationId);
+                        this.subscribeForOperation(operationId, n => this.onStatus(rs, n.OperationId, n.State)); //TODO: shold we pass task and onProgres here?
+                        this.onOperationInfo(rs, matchedOp, operationId, null, null); //TODO: pass task, and on progress here
                     }
                 });
             })
@@ -84,7 +84,7 @@ class notificationCenterOperations {
         this.storage.saveOperations(rs, this.getOperationIds());
 
         this.fetchOperationWithRetries(rs, operationId, 3)
-            .done(operation => this.onOperationInfo(operation, operationId))
+            .done(operation => this.onOperationInfo(rs, operation, operationId, onProgress, task))
             .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to get operation", response.responseText, response.statusText));
 
         return task.promise();
@@ -120,18 +120,26 @@ class notificationCenterOperations {
         }
     }
 
-    private onOperationInfo(operation: Raven.Server.Documents.PendingOperation, operationId: number) {
+    private onOperationInfo<TProgress extends Raven.Client.Data.IOperationProgress, TResult extends Raven.Client.Data.IOperationResult>(
+        rs: resource, operation: Raven.Server.Documents.PendingOperation,
+        operationId: number, onProgress: (ProgressEvent: TProgress) => void = null, task: JQueryDeferred<TResult>) {
+
         const watchedOperation = this.getWatchedOperationById(operationId);
         if (watchedOperation) {
             watchedOperation.onInfoFetched(operation);
         }
+
+        this.onStatus(rs, operationId, operation.State, onProgress, task);
     }
 
     private getWatchedOperationById(operationId: number) {
         return this.watchedOperations.first(x => x.operationId === operationId);
     }
 
-    private onStatus(rs: resource, operationId: number, state: Raven.Client.Data.OperationState, onProgress: (ProgressEvent: Raven.Client.Data.IOperationProgress) => void = null, task: JQueryDeferred<Raven.Client.Data.IOperationResult> = null) {
+    private onStatus<TProgress extends Raven.Client.Data.IOperationProgress, TResult extends Raven.Client.Data.IOperationResult>(
+        rs: resource, operationId: number, state: Raven.Client.Data.OperationState,
+        onProgress: (ProgressEvent: TProgress) => void = null,
+        task: JQueryDeferred<TResult> = null) {
         const watchedOperation = this.getWatchedOperationById(operationId);
         if (watchedOperation) {
             watchedOperation.onStatus(state);
@@ -140,12 +148,12 @@ class notificationCenterOperations {
         // now handle optional parameters
         if (state.Status === "InProgress") {
             if (onProgress) {
-                onProgress((state.Progress));
+                onProgress(state.Progress as TProgress);
             }
         } else { // operation is completed
             if (task) {
                 if (state.Status === "Completed") {
-                    task.resolve(state.Result);
+                    task.resolve(state.Result as TResult);
                 } else {
                     task.reject(state.Result);
                 }
