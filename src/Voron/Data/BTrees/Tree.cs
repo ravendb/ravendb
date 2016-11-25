@@ -349,6 +349,9 @@ namespace Voron.Data.BTrees
             var newPage = GetWriteableTreePage(pageNumber);
             newPage.Dirty = true;
             _recentlyFoundPages.Reset(pageNumber);
+           
+            if (IsLeafCompressionSupported)
+                InvalidateDecompressionReadCache(pageNumber);
 
             PageModified?.Invoke(pageNumber);
 
@@ -939,7 +942,7 @@ namespace Voron.Data.BTrees
                     if (p.IsCompressed == false)
                         throw new InvalidOperationException("Could not find the exact match on a page that we retrieved a key from");
 #if DEBUG
-                    using (var decompressed = DecompressPage(p))
+                    using (var decompressed = DecompressPage(p, skipCache: true))
                     {
                         decompressed.Search(_llt, key);
                         Debug.Assert(decompressed.LastMatch == 0);

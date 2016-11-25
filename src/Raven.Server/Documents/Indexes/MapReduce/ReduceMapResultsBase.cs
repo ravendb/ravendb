@@ -239,7 +239,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 if (compressed)
                     stats.RecordCompressedLeafPage();
 
-                using (compressed ? (DecompressedLeafPage)(leafPage = tree.DecompressPage(leafPage)) : null)
+                using (compressed ? (DecompressedLeafPage)(leafPage = tree.DecompressPage(leafPage, skipCache: true)) : null)
                 {
                     if (leafPage.NumberOfEntries == 0)
                     {

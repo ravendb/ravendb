@@ -87,7 +87,7 @@ namespace Voron.Data.BTrees
 
                 if (_page.IsCompressed)
                 {
-                    _pageDecompressed = _tree.DecompressPage(_page);
+                    _pageDecompressed = _tree.DecompressPage(_page, usage: DecompresionUsage.Read);
                     _pageDecompressed.Search(_tx, _newKey);
                     _page = _pageDecompressed;
                 }
@@ -262,6 +262,7 @@ namespace Voron.Data.BTrees
 
                 if (_pageDecompressed != null)
                 {
+                    _tree.InvalidateDecompressionCaches(_pageDecompressed.PageNumber);
                     _pageDecompressed.CopyToOriginal(_tx, defragRequired: false);
                     _page = _pageDecompressed.Original;
                 }

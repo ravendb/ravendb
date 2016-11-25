@@ -11,11 +11,12 @@ namespace FastTests.Voron.LeafsCompression
 {
     public class RavenDB_5384 : StorageTest
     {
+        // TODO arek - slow test cases move to SlowTests
         [Theory]
         [InlineData(26, 256, true, 1)]
         [InlineData(1024, 256, false, 1)]
         [InlineData(8192, 512, true, 1)]
-        [InlineData(16384, 512, false, 1)]
+        [InlineData(16384, 512, false, 1)] 
         [InlineData(26, 333, true, 1)]
         [InlineData(1024, 555, false, 1)]
         [InlineData(777, 2048, false, 1)]
