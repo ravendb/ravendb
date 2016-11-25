@@ -129,15 +129,12 @@ namespace Voron.Util
                 value = null;
                 return false;
             }
-            return TryGetPageForTransaction(tx, bufferHolder, out value);
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private static bool TryGetPageForTransaction(LowLevelTransaction tx, PagesBuffer buffer, out PagePosition value)
-        {
-            for (int i = buffer.End - 1; i >= buffer.Start; i--)
+            var bufferStart = bufferHolder.Start;
+            var bufferPagePositions = bufferHolder.PagePositions;
+            
+            for (int i = bufferHolder.End - 1; i >= bufferStart; i--)
             {
-                var position = buffer.PagePositions[i];
+                var position = bufferPagePositions[i];
                 if (position == null || position.TransactionId > tx.Id)
                     continue;
 
