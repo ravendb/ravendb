@@ -14,10 +14,9 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Document;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Utilities;
-using Raven.NewClient.Json.Linq;
-using Raven.NewClient.Abstractions.Extensions;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Utilities;
+
 
 namespace Raven.NewClient.Client.Indexes
 {
@@ -675,7 +674,7 @@ namespace Raven.NewClient.Client.Indexes
                 case ExpressionType.Convert:
                     var expression = ((UnaryExpression)left).Operand;
                     var enumType = Nullable.GetUnderlyingType(expression.Type) ?? expression.Type;
-                    if (enumType.IsEnum() == false)
+                    if (enumType.GetTypeInfo().IsEnum == false)
                         return;
 
                     var constantExpression = SkipConvertExpressions(right) as ConstantExpression;
@@ -907,7 +906,7 @@ namespace Raven.NewClient.Client.Indexes
 
         private string ConvertTypeToCSharpKeyword(Type type)
         {
-            if (type.IsGenericType())
+            if (type.GetTypeInfo().IsGenericType)
             {
                 if (TypeExistsOnServer(type) == false)
                     throw new InvalidOperationException("Cannot make use of type " + type + " because it is a generic type that doesn't exists on the server");
@@ -1009,7 +1008,7 @@ namespace Raven.NewClient.Client.Indexes
             {
                 return "byte?";
             }
-            if (type.IsEnum())
+            if (type.GetTypeInfo().IsEnum)
             {
                 return "string";
             }
@@ -1026,20 +1025,21 @@ namespace Raven.NewClient.Client.Indexes
 
         private bool TypeExistsOnServer(Type type)
         {
-            if (type.Assembly() == typeof(object).Assembly()) // mscorlib
+            if (type.GetTypeInfo().Assembly == typeof(object).GetTypeInfo().Assembly) // mscorlib
                 return true;
 
-            if (type.Assembly() == typeof(Uri).Assembly()) // System assembly
+            if (type.GetTypeInfo().Assembly == typeof(Uri).GetTypeInfo().Assembly) // System assembly
                 return true;
 
-            if (type.Assembly() == typeof(HashSet<>).Assembly()) // System.Core
+            if (type.GetTypeInfo().Assembly == typeof(HashSet<>).GetTypeInfo().Assembly) // System.Core
                 return true;
 
-            if (type.Assembly() == typeof(RavenJObject).Assembly())
-                return true;
+            // TODO iftah
+            /*if (type.GetTypeInfo().Assembly == typeof(RavenJObject).GetTypeInfo().Assembly)
+                return true;*/
 
-            if (type.Assembly().FullName.StartsWith("Lucene.Net") &&
-                type.Assembly().FullName.Contains("PublicKeyToken=85089178b9ac3181"))
+            if (type.GetTypeInfo().Assembly.FullName.StartsWith("Lucene.Net") &&
+                type.GetTypeInfo().Assembly.FullName.Contains("PublicKeyToken=85089178b9ac3181"))
                 return true;
 
             return false;
@@ -1124,7 +1124,9 @@ namespace Raven.NewClient.Client.Indexes
         /// </returns>
         protected override Expression VisitExtension(Expression node)
         {
-            const BindingFlags bindingAttr = BindingFlags.Public | BindingFlags.Instance;
+            throw new NotImplementedException();
+            
+            /*const BindingFlags bindingAttr = BindingFlags.Public | BindingFlags.Instance;
 
             if (node.GetType().GetMethod("ToString", bindingAttr, null, ReflectionUtils.EmptyTypes, null).DeclaringType !=
                 typeof(Expression))
@@ -1135,7 +1137,7 @@ namespace Raven.NewClient.Client.Indexes
             Out("[");
             Out(node.NodeType == ExpressionType.Extension ? node.GetType().FullName : node.NodeType.ToString());
             Out("]");
-            return node;
+            return node;*/
         }
 
         /// <summary>
@@ -1630,7 +1632,7 @@ namespace Raven.NewClient.Client.Indexes
 
             Out(IsIndexerCall(node) ? "]" : ")");
 
-            if (node.Type.IsValueType() && TypeExistsOnServer(node.Type))
+            if (node.Type.GetTypeInfo().IsValueType && TypeExistsOnServer(node.Type))
             {
                 switch (node.Method.Name)
                 {
@@ -1795,7 +1797,7 @@ namespace Raven.NewClient.Client.Indexes
 
         private void VisitType(Type type)
         {
-            if (type.IsGenericType() == false || CheckIfAnonymousType(type))
+            if (type.GetTypeInfo().IsGenericType == false || CheckIfAnonymousType(type))
             {
                 if (type.IsArray)
                 {
@@ -1890,8 +1892,8 @@ namespace Raven.NewClient.Client.Indexes
         private static bool CheckIfAnonymousType(Type type)
         {
             // hack: the only way to detect anonymous types right now
-            return type.IsDefined(typeof(CompilerGeneratedAttribute), false)
-                && type.IsGenericType() && type.Name.Contains("AnonymousType")
+            return type.GetTypeInfo().IsDefined(typeof(CompilerGeneratedAttribute), false)
+                && type.GetTypeInfo().IsGenericType && type.Name.Contains("AnonymousType")
                 && (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
                 && type.GetTypeInfo().Attributes.HasFlag(TypeAttributes.NotPublic);
         }
@@ -2249,10 +2251,10 @@ namespace Raven.NewClient.Client.Indexes
 
         private static bool ShouldConvert(Type nonNullableType)
         {
-            if (nonNullableType.IsEnum())
+            if (nonNullableType.GetTypeInfo().IsEnum)
                 return true;
 
-            return nonNullableType.Assembly() == typeof(string).Assembly() && (nonNullableType.IsGenericType() == false);
+            return nonNullableType.GetTypeInfo().Assembly == typeof(string).GetTypeInfo().Assembly && (nonNullableType.GetTypeInfo().IsGenericType == false);
         }
     }
 }

@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Json.Linq;
+
 using Raven.NewClient.Client.Document.Batches;
 
 namespace Raven.NewClient.Client.Document

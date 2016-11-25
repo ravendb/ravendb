@@ -1,13 +1,11 @@
 using System;
-using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Abstractions.Util;
-using  Raven.Imports.Newtonsoft.Json;
-using  Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.NewClient.Abstractions.Extensions
 {

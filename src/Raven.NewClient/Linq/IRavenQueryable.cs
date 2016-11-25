@@ -9,7 +9,7 @@ using System.Linq.Expressions;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Spatial;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Linq
 {

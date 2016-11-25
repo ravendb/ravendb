@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Document.Async
 {

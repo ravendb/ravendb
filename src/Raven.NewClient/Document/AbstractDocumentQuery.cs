@@ -12,13 +12,15 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Raven.NewClient.Abstractions.Spatial;
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Connection.Async;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Linq;
@@ -27,11 +29,7 @@ using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Spatial;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.NewClient.Json.Linq;
 using Raven.NewClient.Client.Indexing;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data.Queries;
 
@@ -456,18 +454,19 @@ namespace Raven.NewClient.Client.Document
 
         protected TSelf GenerateSpatialQueryData(string fieldName, SpatialCriteria criteria)
         {
+            throw new NotImplementedException();
             var wkt = criteria.Shape as string;
             if (wkt == null && criteria.Shape != null)
             {
                 var jsonSerializer = DocumentConvention.CreateSerializer();
 
-                using (var jsonWriter = new RavenJTokenWriter())
+                /*using (var jsonWriter = new RavenJTokenWriter())
                 {
                     var converter = new ShapeConverter();
                     jsonSerializer.Serialize(jsonWriter, criteria.Shape);
                     if (!converter.TryConvert(jsonWriter.Token, out wkt))
                         throw new ArgumentException("Shape");
-                }
+                }*/
             }
 
             if (wkt == null)
@@ -1992,7 +1991,8 @@ If you really want to do in memory filtering on the data returned from the query
                 return RavenQuery.Escape(result(whereParams.Value), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
             }
 
-            var jsonSerializer = conventions.CreateSerializer();
+            throw new NotImplementedException();
+            /*var jsonSerializer = conventions.CreateSerializer();
             var ravenJTokenWriter = new RavenJTokenWriter();
             jsonSerializer.Serialize(ravenJTokenWriter, whereParams.Value);
             var term = ravenJTokenWriter.Token.ToString(Formatting.None);
@@ -2008,7 +2008,7 @@ If you really want to do in memory filtering on the data returned from the query
 
                 default:
                     return RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
-            }
+            }*/
         }
 
         private Func<object, string> GetImplicitStringConvertion(Type type)
@@ -2021,7 +2021,7 @@ If you really want to do in memory filtering on the data returned from the query
             if (localStringsCache.TryGetValue(type, out value))
                 return value;
 
-            var methodInfo = type.GetMethod("op_Implicit", new[] { type });
+            var methodInfo = type.GetTypeInfo().GetMethod("op_Implicit", new[] { type });
 
             if (methodInfo == null || methodInfo.ReturnType != typeof(string))
             {

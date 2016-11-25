@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Document.Batches;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Document
 {

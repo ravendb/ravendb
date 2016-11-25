@@ -6,11 +6,11 @@
 using System;
 using System.Dynamic;
 using System.Linq.Expressions;
-using  Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using System.Linq;
 using Raven.NewClient.Abstractions.Linq;
 using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Abstractions.Json
 {
@@ -22,7 +22,7 @@ namespace Raven.NewClient.Abstractions.Json
         /// <summary>
         /// Writes the JSON representation of the object.
         /// </summary>
-        /// <param name="writer">The <see cref="T:Raven.Imports.Newtonsoft.Json.JsonWriter"/> to write to.</param>
+        /// <param name="writer">The <see cref="T:Newtonsoft.Json.JsonWriter"/> to write to.</param>
         /// <param name="value">The value.</param>
         /// <param name="serializer">The calling serializer.</param>
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
@@ -58,14 +58,15 @@ namespace Raven.NewClient.Abstractions.Json
         /// <summary>
         /// Reads the JSON representation of the object.
         /// </summary>
-        /// <param name="reader">The <see cref="T:Raven.Imports.Newtonsoft.Json.JsonReader"/> to read from.</param>
+        /// <param name="reader">The <see cref="T:Newtonsoft.Json.JsonReader"/> to read from.</param>
         /// <param name="objectType">Type of the object.</param>
         /// <param name="existingValue">The existing value of object being read.</param>
         /// <param name="serializer">The calling serializer.</param>
         /// <returns>The object value.</returns>
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            var token = RavenJToken.ReadFrom(reader);
+            throw new NotImplementedException();
+            /*var token = RavenJToken.ReadFrom(reader);
             var val = token as RavenJValue;
             if(val != null)
                 return val.Value;
@@ -86,7 +87,7 @@ namespace Raven.NewClient.Abstractions.Json
                 }
             }
 
-            return new DynamicJsonObject((RavenJObject)((RavenJObject)token).CloneToken());
+            return new DynamicJsonObject((RavenJObject)((RavenJObject)token).CloneToken());*/
         }
 
         /// <summary>

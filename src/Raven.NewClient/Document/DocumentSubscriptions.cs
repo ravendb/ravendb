@@ -6,11 +6,11 @@
 using System.Collections.Generic;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Document
 {
-    public class DocumentSubscriptions : IReliableSubscriptions
+    public class DocumentSubscriptions //TODO iftah: IReliableSubscriptions
     {
         private readonly AsyncDocumentSubscriptions innerAsync;
 
@@ -29,10 +29,10 @@ namespace Raven.NewClient.Client.Document
             return AsyncHelpers.RunSync(() => innerAsync.CreateAsync(criteria, startEtag, database));
         }
 
-        public Subscription<RavenJObject> Open(SubscriptionConnectionOptions options, string database = null)
+        /*public Subscription<RavenJObject> Open(SubscriptionConnectionOptions options, string database = null)
         {
             return innerAsync.Open(options, database);
-        }
+        }*/
 
         public Subscription<T> Open<T>(SubscriptionConnectionOptions options, string database = null) where T : class
         {

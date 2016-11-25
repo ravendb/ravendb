@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Document
 {
@@ -26,7 +26,7 @@ namespace Raven.NewClient.Client.Document
         /// There can be only a single client that is connected to a subscription.
         /// </summary>
         /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
-        Subscription<RavenJObject> Open(SubscriptionConnectionOptions options, string database = null);
+        //TODO iftah Subscription<RavenJObject> Open(SubscriptionConnectionOptions options, string database = null);
 
         /// <summary>
         /// It opens a subscription and starts pulling documents since a last processed document for that subscription (in document's long? order).

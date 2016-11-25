@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Text;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Utilities;
 
 namespace Raven.NewClient.Abstractions.Json
 {
@@ -15,7 +13,7 @@ namespace Raven.NewClient.Abstractions.Json
         {
             DateParseHandling = DateParseHandling.None;
         }
-
+        /*
         public RavenJsonTextReader(char[] externalBuffer) : base(externalBuffer)
         {
             DateParseHandling = DateParseHandling.None;
@@ -39,6 +37,6 @@ namespace Raven.NewClient.Abstractions.Json
 
             DateTime utcDateTime = DateTimeUtils.ConvertJavaScriptTicksToDateTime(javaScriptTicks);
             return utcDateTime;
-        }
+        }*/
     }
 }

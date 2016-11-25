@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
 using Raven.NewClient.Abstractions.Extensions;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json;
 
 namespace Raven.NewClient.Client.Linq
 {
@@ -20,7 +20,7 @@ namespace Raven.NewClient.Client.Linq
                 return null;
             if (seqType.IsArray)
                 return typeof(IEnumerable<>).MakeGenericType(seqType.GetElementType());
-            if (seqType.IsGenericType())
+            if (seqType.GetTypeInfo().IsGenericType)
             {
                 foreach (Type arg in seqType.GetGenericArguments())
                 {
@@ -39,8 +39,8 @@ namespace Raven.NewClient.Client.Linq
                         return ienum;
                 }
             }
-            if (seqType.BaseType() != null && seqType.BaseType() != typeof(object))
-                return FindIEnumerable(seqType.BaseType());
+            if (seqType.GetTypeInfo().BaseType != null && seqType.GetTypeInfo().BaseType != typeof(object))
+                return FindIEnumerable(seqType.GetTypeInfo().BaseType);
             return null;
         }
 
@@ -59,12 +59,12 @@ namespace Raven.NewClient.Client.Linq
 
         internal static bool IsNullableType(Type type)
         {
-            return type != null && type.IsGenericType() && type.GetGenericTypeDefinition() == typeof(Nullable<>);
+            return type != null && type.GetTypeInfo().IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
         }
 
         internal static bool IsNullAssignable(Type type)
         {
-            return !type.IsValueType() || IsNullableType(type);
+            return !type.GetTypeInfo().IsValueType || IsNullableType(type);
         }
 
         internal static Type GetNonNullableType(Type type)

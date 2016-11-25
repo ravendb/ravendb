@@ -3,16 +3,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using  Raven.Imports.Newtonsoft.Json;
-using  Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.NewClient.Abstractions.Json.Linq;
-using Raven.NewClient.Json.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.NewClient.Abstractions.Json
 {
     public class ConflictsResolver
     {
-        private readonly RavenJObject[] docs;
+        // TODO Iftah, implement with Blittable
+        /*private readonly RavenJObject[] docs;
         private readonly bool isMetadataResolver;
 
         public ConflictsResolver(IEnumerable<RavenJObject> docs, bool isMetadataResolver = false)
@@ -308,6 +307,6 @@ namespace Raven.NewClient.Abstractions.Json
         {
             public string Document { get; set; }
             public string Metadata { get; set; }
-        }
+        }*/
     }
 }

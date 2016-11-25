@@ -70,7 +70,9 @@ namespace Raven.NewClient.Client.Util
                 var remoteDatabaseChanges = changes as RemoteDatabaseChanges;
                 if (remoteDatabaseChanges != null)
                 {
-                    remoteDatabaseChanges.DisposeAsync().Wait(TimeSpan.FromSeconds(3));
+                    throw new NotImplementedException();
+
+                    //remoteDatabaseChanges.DisposeAsync().Wait(TimeSpan.FromSeconds(3));
                 }
             }
         }

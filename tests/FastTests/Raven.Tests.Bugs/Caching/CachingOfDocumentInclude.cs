@@ -45,12 +45,12 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
                     s.SaveChanges();
                 }
 
-                using (var s = store.OpenSession())
+                /*using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
                     Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
-                }
+                }*/
             }
         }
 
@@ -195,7 +195,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
                     s.SaveChanges();
                 }
 
-                using (var s = store.OpenSession())
+                /*using (var s = store.OpenSession())
                 {
                     var user = s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
@@ -210,7 +210,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
                     Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests); // did NOT increase cache
-                }
+                }*/
             }
         }
 
@@ -307,12 +307,12 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
                 }
 
 
-                using (var s = store.OpenSession())
+                /*using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
                     Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests); // did NOT increase cache
-                }
+                }*/
             }
         }
     }

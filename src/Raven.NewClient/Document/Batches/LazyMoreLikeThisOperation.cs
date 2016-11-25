@@ -11,7 +11,7 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Shard;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Document.Batches
 {
@@ -28,7 +28,9 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public GetRequest CreateRequest()
         {
-            var uri = query.GetRequestUri();
+            throw new NotImplementedException();
+
+            /*var uri = query.GetRequestUri();
 
             var separator = uri.IndexOf('?');
 
@@ -36,7 +38,7 @@ namespace Raven.NewClient.Client.Document.Batches
             {
                 Url = uri.Substring(0, separator),
                 Query = uri.Substring(separator + 1, uri.Length - separator - 1)
-            };
+            };*/
         }
 
         public object Result { get; private set; }
@@ -45,7 +47,9 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public void HandleResponse(GetResponse response)
         {
-            var result = response.Result;
+            throw new NotImplementedException();
+
+            /*var result = response.Result;
 
             var multiLoadResult = new LoadResult
             {
@@ -53,16 +57,16 @@ namespace Raven.NewClient.Client.Document.Batches
                 Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
             };
 
-            HandleResponse(multiLoadResult);
+            HandleResponse(multiLoadResult);*/
         }
 
-        private void HandleResponse(LoadResult loadResult)
+        /*private void HandleResponse(LoadResult loadResult)
         {
             throw new NotImplementedException();
             /* RequiresRetry = _loadOperation.SetResult(loadResult);
              if (RequiresRetry == false)
-                 Result = _loadOperation.Complete<T>();*/
-        }
+                 Result = _loadOperation.Complete<T>();#1#
+        }*/
 
         public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
         {

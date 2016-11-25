@@ -6,7 +6,7 @@ using System.Net.Http;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Metrics;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Connection
 {

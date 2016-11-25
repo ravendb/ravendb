@@ -11,10 +11,10 @@ using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Logging;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Platform;
-using Raven.NewClient.Json.Linq;
+
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -58,7 +58,7 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        public TcpBulkInsertOperation(AsyncServerClient asyncServerClient, CancellationTokenSource cts)
+        /*public TcpBulkInsertOperation(AsyncServerClient asyncServerClient, CancellationTokenSource cts)
         {
             _throttlingEvent.Set();
             _jsonOperationContext = new JsonOperationContext(1024 * 1024, 16 * 1024);
@@ -97,7 +97,7 @@ namespace Raven.NewClient.Client.Document
              _tcpClient.ReceiveBufferSize = 4096;
              var networkStream = _tcpClient.GetStream();
 
-             return networkStream;*/
+             return networkStream;#1#
         }
 
         private void WriteToServer(Stream serverStream)
@@ -164,7 +164,7 @@ namespace Raven.NewClient.Client.Document
                 streamNetworkBuffer.WriteByte(0); //done
                 streamNetworkBuffer.Flush();
             }
-        }
+        }*/
 
         private static unsafe void WriteToStream(BufferedStream networkBufferedStream, BlittableJsonDocumentBuilder builder,
             byte[] buffer)
@@ -323,7 +323,7 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        public async Task WriteAsync(string id, RavenJObject metadata, RavenJObject data)
+        /*public async Task WriteAsync(string id, RavenJObject metadata, RavenJObject data)
         {
             _cts.Token.ThrowIfCancellationRequested();
 
@@ -344,7 +344,7 @@ namespace Raven.NewClient.Client.Document
             data.WriteTo(jsonBuffer);
             jsonBuffer.Position = 0;
             _documents.Add(jsonBuffer);
-        }
+        }*/
 
         private async Task AssertValidServerConnection()
         {

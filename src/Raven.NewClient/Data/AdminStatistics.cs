@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.FileSystem;
 
 namespace Raven.NewClient.Abstractions.Data
 {
@@ -34,10 +33,6 @@ namespace Raven.NewClient.Abstractions.Data
         /// </summary>
         public IEnumerable<LoadedDatabaseStatistics> LoadedDatabases { get; set; }
 
-        /// <summary>
-        /// List of loaded filesystems with their statistics.
-        /// </summary>
-        public IEnumerable<FileSystemStats> LoadedFileSystems { get; set; }
     }
 
     public class AdminMemoryStatistics

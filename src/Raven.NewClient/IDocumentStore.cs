@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Changes;
 using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
@@ -89,11 +89,6 @@ namespace Raven.NewClient.Client
         /// </summary>
         /// <value>The shared operations headers.</value>
         NameValueCollection SharedOperationsHeaders { get; }
-
-        /// <summary>
-        /// Get the <see cref="HttpJsonRequestFactory"/> for this store
-        /// </summary>
-        HttpJsonRequestFactory JsonRequestFactory { get; }
 
         /// <summary>
         /// Whatever this instance has json request factory available
@@ -210,9 +205,6 @@ namespace Raven.NewClient.Client
         /// </summary>
         IReliableSubscriptions Subscriptions { get; }
 
-        DocumentSessionListeners Listeners { get; }
-
-        void SetListeners(DocumentSessionListeners listeners);
         void InitializeProfiling();
 
         ProfilingInformation GetProfilingInformationFor(Guid id);

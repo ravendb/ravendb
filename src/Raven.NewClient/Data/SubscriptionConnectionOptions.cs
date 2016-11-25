@@ -9,8 +9,8 @@ using System.Threading;
 using Raven.NewClient.Abstractions.Exceptions.Subscriptions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Extensions;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.NewClient.Json.Linq;
+using Newtonsoft.Json;
+
 
 namespace Raven.NewClient.Abstractions.Data
 {
@@ -49,7 +49,7 @@ namespace Raven.NewClient.Abstractions.Data
 
         public MessageType Type { get; set; }
         public ConnectionStatus Status { get; set; }
-        public RavenJObject Data { get; set; }
+        //public RavenJObject Data { get; set; }
         public string Exception { get; set; }
     }
   

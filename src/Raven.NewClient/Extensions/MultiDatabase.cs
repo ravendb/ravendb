@@ -1,10 +1,7 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
-using Raven.NewClient.Abstractions.Counters;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.FileSystem;
-using Raven.NewClient.Abstractions.TimeSeries;
 
 namespace Raven.NewClient.Client.Extensions
 {
@@ -28,47 +25,7 @@ namespace Raven.NewClient.Client.Extensions
                 }
             };
         }
-        public static FileSystemDocument CreateFileSystemDocument(string name)
-        {
-            AssertValidName(name);
 
-            return new FileSystemDocument
-            {
-                Id = name,
-                Settings =
-                {
-                    {"Raven/FileSystem/DataDir", Path.Combine("~", "FileSystems", name) },
-                }
-            };
-        }
-
-        public static TimeSeriesDocument CreateTimeSeriesDocument(string name)
-        {
-            AssertValidName(name);
-
-            return new TimeSeriesDocument
-            {
-                Id = name,
-                Settings =
-                {
-                    {"Raven/TimeSeries/DataDir", Path.Combine("~", "TimeSeries", name)},
-                }
-            };
-        }
-
-        public static CounterStorageDocument CreateCounterStorageDocument(string name)
-        {
-            AssertValidName(name);
-
-            return new CounterStorageDocument
-            {
-                Id = name,
-                Settings =
-                {
-                    {"Raven/Counter/DataDir", Path.Combine("~", "Counters", name)},
-                }
-            };
-        }
 
         private const string ValidDbNameChars = @"([A-Za-z0-9_\-\.]+)";
 

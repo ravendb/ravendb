@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Abstractions.Linq
 {
@@ -72,7 +72,9 @@ namespace Raven.NewClient.Abstractions.Linq
 
         private IEnumerable<dynamic> Enumerate()
         {
-            foreach (var item in inner)
+            throw new NotImplementedException();
+
+            /*foreach (var item in inner)
             {
                 var ravenJObject = item as RavenJObject;
                 if (ravenJObject != null)
@@ -87,7 +89,7 @@ namespace Raven.NewClient.Abstractions.Linq
                     continue;
                 }
                 yield return item;
-            }
+            }*/
         }
 
         public dynamic First()

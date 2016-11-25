@@ -11,9 +11,9 @@ using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Json.Linq;
+
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Connection.Async;
+
 using Raven.NewClient.Client.Data;
 
 namespace Raven.NewClient.Client.Document
@@ -180,12 +180,12 @@ namespace Raven.NewClient.Client.Document
              return await GetNextRangeAsync().ConfigureAwait(false);*/
         }
 
-        private Task PutDocumentAsync(JsonDocument document)
+        /*private Task PutDocumentAsync(JsonDocument document)
         {
             throw new NotImplementedException();
             /*return databaseCommands.PutAsync(HiLoDocumentKey, document.Etag,
                                  document.DataAsJson,
-                                 document.Metadata);*/
+                                 document.Metadata);#1#
         }
 
         private async Task<JsonDocument> GetDocumentAsync()
@@ -208,7 +208,7 @@ namespace Raven.NewClient.Client.Document
             {
                 jsonDocument.Metadata.Remove(key);
             }
-            return jsonDocument;*/
-        }
+            return jsonDocument;#1#
+        }*/
     }
 }

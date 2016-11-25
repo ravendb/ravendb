@@ -13,7 +13,7 @@ using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Document
 {
@@ -137,19 +137,19 @@ namespace Raven.NewClient.Client.Document
             }*/
         }
 
-        private void PutDocument( JsonDocument document)
+        /*private void PutDocument( JsonDocument document)
         {
             throw new NotImplementedException();
             /*databaseCommands.Put(HiLoDocumentKey, document.Etag,
                                  document.DataAsJson,
-                                 document.Metadata);*/
+                                 document.Metadata);#1#
         }
 
         private JsonDocument GetDocument()
         {
             throw new NotImplementedException();
             /*var documents = databaseCommands.Get(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0]);
-            return HandleGetDocumentResult(documents);*/
-        }
+            return HandleGetDocumentResult(documents);#1#
+        }*/
     }
 }

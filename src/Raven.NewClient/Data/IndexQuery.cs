@@ -12,7 +12,7 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Json.Linq;
+
 
 namespace Raven.NewClient.Client.Data
 {

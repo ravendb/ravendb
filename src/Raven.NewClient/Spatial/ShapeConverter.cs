@@ -6,8 +6,8 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.NewClient.Abstractions.Linq;
 using Raven.NewClient.Client.Linq;
-using  Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.NewClient.Json.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Raven.NewClient.Abstractions.Spatial
 {
@@ -22,7 +22,9 @@ namespace Raven.NewClient.Abstractions.Spatial
 
         public virtual bool TryConvert(object value, out string result)
         {
-            var s = value as string;
+            throw new NotImplementedException();
+
+            /*var s = value as string;
             if (s != null)
             {
                 result = s;
@@ -77,31 +79,35 @@ namespace Raven.NewClient.Abstractions.Spatial
                 return true;
 
             result = default(string);
-            return false;
+            return false;*/
         }
 
         private bool IsNumber(object obj)
         {
-            var rValue = obj as RavenJValue;
+            throw new NotImplementedException();
+
+            /*var rValue = obj as RavenJValue;
             return obj is double
                    || obj is float
                    || obj is int
                    || obj is decimal
                    || obj is long
                    || obj is short
-                   || rValue != null && (rValue.Type == JTokenType.Float || rValue.Type == JTokenType.Integer);
+                   || rValue != null && (rValue.Type == JTokenType.Float || rValue.Type == JTokenType.Integer);*/
         }
 
         private double GetDouble(object obj)
         {
-            if (obj is double || obj is float || obj is int || obj is long || obj is short || obj is decimal)
+            throw new NotImplementedException();
+
+            /*if (obj is double || obj is float || obj is int || obj is long || obj is short || obj is decimal)
                 return Convert.ToDouble(obj);
 
             var rValue = obj as RavenJValue;
             if (rValue != null && (rValue.Type == JTokenType.Float || rValue.Type == JTokenType.Integer))
                 return Convert.ToDouble(rValue.Value);
 
-            return 0d;
+            return 0d;*/
         }
 
         protected string MakePoint(double x, double y)

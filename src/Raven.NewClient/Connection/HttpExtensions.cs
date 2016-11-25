@@ -8,7 +8,6 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Net.Http;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Connection.Implementation;
 
 namespace Raven.NewClient.Client.Connection
 {
@@ -29,10 +28,10 @@ namespace Raven.NewClient.Client.Connection
             return EtagHeaderToEtag(response.Headers[Constants.MetadataEtagField]);
         }
 
-        public static long? GetEtagHeader(this HttpJsonRequest request)
+        /*public static long? GetEtagHeader(this HttpJsonRequest request)
         {
             return EtagHeaderToEtag(request.ResponseHeaders[Constants.MetadataEtagField]);
-        }
+        }*/
 
         internal static long EtagHeaderToEtag(string responseHeader)
         {
