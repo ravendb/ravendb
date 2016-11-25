@@ -36,7 +36,7 @@ namespace Voron.Data.Compression
         public DecompressedLeafPage GetPage(LowLevelTransaction tx, int pageSize, TreePage original)
         {
             TemporaryPage tempPage;
-            GetTemporaryPage(tx, pageSize, out tempPage);
+            GetTemporaryPage(tx, pageSize, out tempPage); // TODO arek - get rid of temp pages usage which are pinned, now we are caching decompressed pages
 
             var treePage = tempPage.GetTempPage();
 
