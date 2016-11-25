@@ -4,23 +4,23 @@
         <div class="center">
             <h1>Sample Data</h1>
             <div class="button-wrapper">
-                <button class="btn btn-primary btn-lg btn-spinner sampleData-createBtn" data-bind="click: generateSampleData, css: { 'btn-spinner': isBusy() }">
+                <button class="btn btn-primary btn-lg btn-spinner sampleData-createBtn" data-bind="click: generateSampleData, css: { 'btn-spinner': isBusy() }, disable: !canCreateSampleData()">
                     <span>
                         Create
                     </span>
                 </button>
-                <div class="padding padding-xs bg-danger">
+                <div class="padding padding-xs bg-danger" data-bind="visible: !canCreateSampleData()">
                     <small>
                         requires an empty database
                     </small>
                 </div>
             </div>
             <br />
-            <a href="#" class="csharplink">View <strong class="text-success">C#</strong> classes</a>
+            <a href="#" data-bind="click: showCode" class="csharplink">View <strong class="text-success">C#</strong> classes</a>
         </div>
     </div>
 
-    <div class="panel panel-default">
+    <div class="panel panel-default" data-bind="visible: classesVisible">
         <div class="panel-body">
 
             <div class="clearfix">
