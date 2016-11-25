@@ -74,12 +74,14 @@ namespace Raven.Server.Documents.Replication
             if (_incomingThread != null)
                 return;
 
-            //while not strictly necessary, it's a good precaution
-            Interlocked.CompareExchange(ref _incomingThread, new Thread(ReceiveReplationBatches)
+            var result = Interlocked.CompareExchange(ref _incomingThread, new Thread(ReceiveReplationBatches)
             {
                 IsBackground = true,
                 Name = $"Incoming replication {FromToString}"
             }, null);
+
+            if (result != null)
+                return; // already set by someone else, they can start it
 
             if (_incomingThread.ThreadState != ThreadState.Running)
             {
@@ -112,6 +114,7 @@ namespace Raven.Server.Documents.Replication
                         {
                             using (var message = _multiDocumentParser.ParseToMemory("IncomingReplication/read-message"))
                             {
+                                message.BlittableValidation();
                                 //note: at this point, the valid messages are heartbeat and replication batch.
                                 _cts.Token.ThrowIfCancellationRequested();
                                 string messageType = null;
@@ -282,7 +285,6 @@ namespace Raven.Server.Documents.Replication
                     ReadChangeVector(item, maxReceivedChangeVectorByDatabase);
 
                     using (var definition = new BlittableJsonReaderObject(buffer + item.Position, item.DefinitionSize,_configurationContext))
-                    using (var txw = _configurationContext.OpenWriteTransaction())
                     {
                         switch (conflictStatus)
                         {
@@ -293,8 +295,15 @@ namespace Raven.Server.Documents.Replication
                                 PutIndexOrTransformer(item, definition);
                                 break;
                             case ConflictStatus.Conflict:
-                                HandleConflictForIndexOrTransformer(item, definition, conflictingVector, txw, _configurationContext);
-                                break;
+                                using (var txw = _configurationContext.OpenWriteTransaction())
+                                {
+                                    HandleConflictForIndexOrTransformer(item, definition, conflictingVector, txw, _configurationContext);
+
+                                    UpdateIndexesChangeVector(txw, lastEtag, maxReceivedChangeVectorByDatabase);
+
+                                    txw.Commit();
+                                    return; // skip the UpdateIndexesChangeVector below to avoid duplicate calls
+                                }
                             case ConflictStatus.AlreadyMerged:
                                 if (_log.IsInfoEnabled)
                                     _log.Info(
@@ -306,12 +315,12 @@ namespace Raven.Server.Documents.Replication
                                     "Invalid ConflictStatus: " + conflictStatus);
                         }
 
-                        _database.IndexMetadataPersistence.SetGlobalChangeVector(txw.InnerTransaction,
-                            _documentsContext.Allocator, maxReceivedChangeVectorByDatabase);
-                        _database.IndexMetadataPersistence.SetLastReplicateEtagFrom(txw.InnerTransaction,
-                            _documentsContext.Allocator, ConnectionInfo.SourceDatabaseId, lastEtag);
+                        using (var txw = _configurationContext.OpenWriteTransaction())
+                        {
+                            UpdateIndexesChangeVector(txw, lastEtag, maxReceivedChangeVectorByDatabase);
 
-                        txw.Commit();
+                            txw.Commit();
+                        }
                     }
                 }
             }
@@ -326,6 +335,14 @@ namespace Raven.Server.Documents.Replication
                 _replicatedIndexesAndTransformers.Clear();
                 writeBuffer.Dispose();
             }
+        }
+
+        private void UpdateIndexesChangeVector(RavenTransaction txw, long lastEtag, Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)
+        {
+            _database.IndexMetadataPersistence.SetGlobalChangeVector(txw.InnerTransaction,
+                _documentsContext.Allocator, maxReceivedChangeVectorByDatabase);
+            _database.IndexMetadataPersistence.SetLastReplicateEtagFrom(txw.InnerTransaction,
+                _documentsContext.Allocator, ConnectionInfo.SourceDatabaseId, lastEtag);
         }
 
         private void HandleConflictForIndexOrTransformer(ReplicationIndexOrTransformerPositions item, BlittableJsonReaderObject definition, ChangeVectorEntry[] conflictingVector, RavenTransaction tx, TransactionOperationContext context)
@@ -428,7 +445,7 @@ namespace Raven.Server.Documents.Replication
             _database.IndexStore.TryDeleteIndexIfExists(item.Name);
             try
             {
-                IndexProcessor.Import(definition, _database, ServerVersion.Build);               
+                IndexProcessor.Import(definition, _database, ServerVersion.Build, false);               
             }
             catch (ArgumentException e)
             {

@@ -113,93 +113,56 @@ namespace Raven.Server.Documents
             IsInitialized = true;
         }
 
-        private IDisposable GetWriteTransaction(out Transaction tx, out TransactionOperationContext context, out bool shouldCommit)
-        {
-            tx = null;
-            RavenTransaction ravenTx = null;
-            shouldCommit = false;
-            var disposer = ContextPool.AllocateOperationContext(out context);
-            if (_environment.CurrentWriteTransaction == null)
-            {
-                ravenTx = context.OpenWriteTransaction();
-                tx = ravenTx.InnerTransaction;
-                shouldCommit = true;
-            }
-            else
-            {
-                tx = _environment.CurrentWriteTransaction;
-            }
-
-            var shouldCommitInternal = shouldCommit;
-            return new DisposableAction(() =>
-            {
-                if (shouldCommitInternal)
-                    ravenTx?.Dispose();
-                disposer.Dispose();
-            });
-        }
-
         public long OnIndexCreated(Index index)
         {
-            TransactionOperationContext context;            
-            Transaction tx;
-            bool shouldCommit;
-            using (GetWriteTransaction(out tx, out context, out shouldCommit))
+            TransactionOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
             {
-                var newEtag = WriteEntry(tx, index.Name, IndexEntryType.Index, index.IndexId, context);
-                var etag = newEtag;
+                var newEtag = WriteEntry(tx.InnerTransaction, index.Name, IndexEntryType.Index, index.IndexId, context);
 
-                if (shouldCommit)
-                    tx.Commit();
-                return etag;
+                tx.Commit();
+
+                return newEtag;
             }
         }
 
         public long OnIndexDeleted(Index index)
         {
             TransactionOperationContext context;
-            Transaction tx;
-            bool shouldCommit;
-            using (GetWriteTransaction(out tx, out context, out shouldCommit))
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
             {
-                var newEtag = WriteEntry(tx, index.Name, IndexEntryType.Index, -1, context);
-                var etag = newEtag;
+                var newEtag = WriteEntry(tx.InnerTransaction, index.Name, IndexEntryType.Index, -1, context);
 
-                if (shouldCommit)
-                    tx.Commit();
-                return etag;
+                tx.Commit();
+                return newEtag;
             }
         }
 
         public long OnTransformerCreated(Transformer transformer)
         {
             TransactionOperationContext context;
-            Transaction tx;
-            bool shouldCommit;
-            using (GetWriteTransaction(out tx, out context, out shouldCommit))
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
             {
-                var newEtag = WriteEntry(tx, transformer.Name, IndexEntryType.Transformer, transformer.TransformerId, context);
-                var etag = newEtag;
+                var newEtag = WriteEntry(tx.InnerTransaction, transformer.Name, IndexEntryType.Transformer, transformer.TransformerId, context);
 
-                if (shouldCommit)
-                    tx.Commit();
-                return etag;
+                tx.Commit();
+                return newEtag;
             }
         }
 
         public long OnTransformerDeleted(Transformer transformer)
         {
             TransactionOperationContext context;
-            Transaction tx;
-            bool shouldCommit;
-            using (GetWriteTransaction(out tx, out context, out shouldCommit))
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
             {
-                var newEtag = WriteEntry(tx, transformer.Name, IndexEntryType.Transformer, -1, context);
-                var etag = newEtag;
+                var newEtag = WriteEntry(tx.InnerTransaction, transformer.Name, IndexEntryType.Transformer, -1, context);
 
-                if (shouldCommit)
-                    tx.Commit();
-                return etag;
+                tx.Commit();
+                return newEtag;
             }
         }
 
@@ -211,7 +174,7 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject definition)
         {
             if(!TrySetConflictedByName(context,tx,name))
-                throw new InvalidOperationException($"Cannot add index/transformer conflict where the original is not in the metadata. Name = {name}, Type = {type}");
+                throw new InvalidOperationException($"When trying to add a conflict on {type} {name}, we couldn't find {name} in the index metadata. Shouldn't happen and likely a bug.");
 
             var conflictsTable = tx.OpenTable(ConflictsTableSchema, SchemaNameConstants.ConflictMetadataTable);
             var metadataTable = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
@@ -219,17 +182,19 @@ namespace Raven.Server.Documents
             var newEtag = GetNewEtag(metadataTable);
             var bitSwappedEtag = Bits.SwapBytes(newEtag);
             using (DocumentKeyWorker.GetSliceFromKey(context, name, out indexNameAsSlice))
-            fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
-               byte byteAsType = (byte) type;
-               conflictsTable.Set(new TableValueBuilder
-               {
-                    indexNameAsSlice,
-                    {&bitSwappedEtag, sizeof(long)},
-                    {&byteAsType, sizeof(byte)},
-                    {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
-                    { definition.BasePointer, definition.Size }
-               });
+                fixed (ChangeVectorEntry* pChangeVector = changeVector)
+                {
+                    byte byteAsType = (byte) type;
+                    conflictsTable.Set(new TableValueBuilder
+                    {
+                        indexNameAsSlice,
+                        {&bitSwappedEtag, sizeof(long)},
+                        {&byteAsType, sizeof(byte)},
+                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
+                        {definition.BasePointer, definition.Size}
+                    });
+                }
             }
         }
 
@@ -247,7 +212,7 @@ namespace Raven.Server.Documents
                 return false;
 
             var metadata = TableValueToMetadata(tvr,context,false);
-            WriteEntry(tx, name, metadata.Type, metadata.Id, context, true, true);
+            WriteEntry(tx, name, metadata.Type, metadata.Id, context, isConflicted: true, allowOverwrite: true);
 
             return true;
         }

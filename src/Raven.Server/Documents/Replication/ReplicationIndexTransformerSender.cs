@@ -144,7 +144,8 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        SendIndexTransformerBatch();
+                        using (_parent._documentsContext.OpenReadTransaction())
+                            SendIndexTransformerBatch();
                     }
                     catch (Exception e)
                     {
@@ -215,9 +216,7 @@ namespace Raven.Server.Documents.Replication
 
             _parent._lastIndexOrTransformerSentTime = DateTime.UtcNow;
 
-            using (_parent._documentsContext.OpenReadTransaction())
-            using (_parent._configurationContext.OpenReadTransaction())
-                _parent.HandleServerResponse();
+            _parent.HandleServerResponse();
         }
 
         private unsafe void WriteMetadataToServer(ReplicationBatchIndexItem item)
