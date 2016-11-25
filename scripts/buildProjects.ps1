@@ -35,9 +35,10 @@ function BuildStudio ( $srcDir, $projectDir, $version ) {
     & npm install
     CheckLastExitCode
 
-    $versionJsonPath = [io.path]::combine($srcDir, "wwwroot", "version.json")
-    echo "{ ""Version"": ""$version"" }" > $versionJsonPath
     echo "Update version.json..."
+    $versionJsonPath = [io.path]::combine($srcDir, "wwwroot", "version.json")
+    "{ ""Version"": ""$version"" }" | Out-File $versionJsonPath -Encoding UTF8
+
 
     & gulp alpha-release
     CheckLastExitCode
