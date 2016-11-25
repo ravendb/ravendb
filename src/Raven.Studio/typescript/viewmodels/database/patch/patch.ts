@@ -18,6 +18,7 @@ import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import executePatchCommand = require("commands/database/patch/executePatchCommand");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import evalByQueryCommand = require("commands/database/patch/evalByQueryCommand");
+import evalByCollectionCommand = require("commands/database/patch/evalByCollectionCommand");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import pagedResultSet = require("common/pagedResultSet");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
@@ -26,6 +27,7 @@ import recentPatchesStorage = require("common/recentPatchesStorage");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 import killOperationComamnd = require('commands/operations/killOperationCommand');
 import eventsCollector = require("common/eventsCollector");
+import notificationCenter = require("common/notifications/notificationCenter");
 
 type indexInfo = {
     name: string;
@@ -563,58 +565,57 @@ class patch extends viewModelBase {
     executePatchOnAll() {
         eventsCollector.default.reportEvent("patch", "run", "all");
         var confirmExec = new executePatchConfirm();
-        confirmExec.viewTask.done(() => this.executePatchByIndex());
+        confirmExec.viewTask.done(() => {
+            this.executePatchAllCommand()
+                .done((result: operationIdDto) => this.onPatchAllScheduled(result));
+
+            this.recordPatchRun();
+        });
         app.showBootstrapDialog(confirmExec);
     }
 
-    private executePatchByIndex() {
-        var index: string = null;
-        var query: string = null;
-        switch (this.patchDocument().patchOnOption()) {
-            case "Collection": //TODO: use new endpoint RavenDB-5371
-                index = "Raven/DocumentsByEntityName";
-                query = "Tag:" + queryUtil.escapeTerm(this.patchDocument().selectedItem());
-                break;
-            case "Index":
-                index = this.patchDocument().selectedItem();
-                query = this.patchDocument().query();
-                break;
-        }
-
-        var values: dictionary<string> = {};
+    private executePatchAllCommand(): JQueryPromise<operationIdDto> {
 
         this.patchSuccess(false);
         this.patchFailure(false);
+        const values: dictionary<string> = {};
 
         this.patchDocument().parameters().map(param => {
             var dto = param.toDto();
             values[dto.Key] = dto.Value;
         });
 
-        var patch = {
+        const patch = {
             Script: this.patchDocument().script(),
             Values: values
-        };
+        } as Raven.Server.Documents.Patch.PatchRequest;
 
-        var patchByQueryCommand = new evalByQueryCommand(index, query, JSON.stringify(patch), this.activeDatabase(), status => this.updateProgress(status));
+        const patchOption = this.patchDocument().patchOnOption();
 
-        patchByQueryCommand.execute()
+        if (patchOption === "Collection") {
+            const collectionToPatch = this.patchDocument().selectedItem();
+            return new evalByCollectionCommand(collectionToPatch, patch, this.activeDatabase()).execute();
+        } else if (patchOption === "Index") {
+            const index = this.patchDocument().selectedItem();
+            const query = this.patchDocument().query();
+            return new evalByQueryCommand(index, query, patch, this.activeDatabase()).execute();
+        } else {
+            throw new Error("Unhandled patch option: " + patchOption);
+        }
+    }
+
+    private onPatchAllScheduled(result: operationIdDto) {
+        this.resetProgressBar();
+        this.isPatchingInProgress(true);
+        this.showPatchingProgress(true);
+        // TODO: this.fetchRunningPatches();
+
+        notificationCenter.instance.monitorOperation(this.activeDatabase(), result.OperationId)
             .done(() => {
-                this.resetProgressBar();
-                this.isPatchingInProgress(true);
-                this.showPatchingProgress(true);
-                this.fetchRunningPatches();
+                this.patchSuccess(true);
+                this.patchKillInProgress(false);
+                this.isPatchingInProgress(false);
             });
-
-        patchByQueryCommand.getPatchOperationId()
-            .done(operationId => this.patchOperationId(operationId));
-
-        patchByQueryCommand.getPatchCompletedTask()
-            .always(() => {
-                this.patchOperationId(null);
-            });
-
-        this.recordPatchRun();
     }
 
     private resetProgressBar() {
