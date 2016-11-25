@@ -119,7 +119,7 @@ class shell extends viewModelBase {
         virtualGrid.install();
 
         this.clientBuildVersion.subscribe(v =>
-            viewModelBase.clientVersion("4.0." + v.BuildVersion));
+            viewModelBase.clientVersion(v.Version));
 
         this.serverBuildVersion.subscribe(buildVersionDto => {
             this.initAnalytics({ SendUsageStats: true }, [ buildVersionDto ]);

@@ -224,7 +224,7 @@ interface latestServerBuildVersionDto {
 }
 
 interface clientBuildVersionDto {
-    BuildVersion: string;
+    Version: string;
 }
 
 interface licenseStatusDto {
