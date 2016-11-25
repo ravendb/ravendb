@@ -330,6 +330,7 @@ namespace Raven.Server.Documents.Replication
             {
                 using (var replicationBatchReplyMessage = _parser.ParseToMemory("replication acknowledge message"))
                 {
+                    replicationBatchReplyMessage.BlittableValidation();
                     hasSucceededParsingResponse = true;
                     var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
                     if (replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Ok)

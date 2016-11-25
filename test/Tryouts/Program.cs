@@ -16,9 +16,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var store = new SlowTests.Voron.Bugs.DataInconsistencyRepro())
+                using (var store = new FastTests.Server.Replication.ReplicationIndexesAndTransformers())
                 {
-                    store.FaultyOverflowPagesHandling_CannotModifyReadOnlyPages(initialNumberOfDocs: 1000, numberOfModifications: 5000, seed: 662314505);
+                    store.Can_replicate_multiple_transformers();
                 }
             }
             //);
