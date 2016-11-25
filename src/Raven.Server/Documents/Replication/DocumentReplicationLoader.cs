@@ -327,7 +327,7 @@ namespace Raven.Server.Documents.Replication
 
                 using (configurationDocument.Data)
                 {
-                    return JsonDeserializationServer.ReplicationDocument(configurationDocument.Data) ?? new ReplicationDocument();
+                    return JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
                 }
             }
         }
