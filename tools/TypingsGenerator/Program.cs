@@ -22,6 +22,7 @@ using TypeScripter;
 using TypeScripter.TypeScript;
 using Voron.Data.BTrees;
 using Voron.Debugging;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace TypingsGenerator
 {
@@ -98,6 +99,9 @@ namespace TypingsGenerator
             // transformers
             scripter.AddType(typeof(TransformerDefinition));
 
+
+            // patch
+            scripter.AddType(typeof(PatchRequest));
 
             scripter.AddType(typeof(ResourcesInfo));
 
