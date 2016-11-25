@@ -773,9 +773,6 @@ namespace Voron.Data.Tables
             Slice key;
             bool exists;
 
-            if(_schema.Key == null)
-                throw new InvalidOperationException("Cannot write to a table without a defined PK.");
-
             using (builder.SliceFromLocation(_tx.Allocator, _schema.Key.StartIndex, out key))
             {
                 exists = TryFindIdFromPrimaryKey(key, out id);
