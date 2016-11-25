@@ -1,27 +1,20 @@
-function BuildServer ( $srcDir, $outDir, $buildDir, $platform ) {
+function BuildServer ( $srcDir, $outDir, $platform ) {
     write-host "Building Server for $platform..."
     #build server
     $output = [io.path]::combine($outDir, "Server");
     $build = [io.path]::combine($buildDir, $platform)
-    & dotnet build --output $output `
-                 --no-incremental `
-                 --build-base-path $build `
-                 --framework "netcoreapp1.1" `
+    & dotnet publish --output $output `
                  --runtime $platform `
                  --configuration "Release" $srcDir;
-
     CheckLastExitCode
 }
 
-function BuildClient ( $srcDir, $outDir, $buildDir, $platform ) {
+function BuildClient ( $srcDir, $outDir, $platform ) {
     write-host "Building Client for $platform..."
     # build client
     $output = [io.path]::combine($outDir, "Client");
     $build = [io.path]::combine($buildDir, $platform)
-    & dotnet build --output $output `
-                --no-incremental `
-                --build-base-path $build `
-                --framework "netstandard1.6" `
+    & dotnet publish --output $output `
                 --runtime $platform `
                 --configuration "Release" $srcDir;
     CheckLastExitCode
@@ -29,8 +22,7 @@ function BuildClient ( $srcDir, $outDir, $buildDir, $platform ) {
 
 function BuildTypingsGenerator ( $srcDir ) {
     # build typings generator
-    & dotnet build --framework "netcoreapp1.1" `
-        --configuration "Debug" $srcDir;
+    & dotnet build --configuration "Debug" $srcDir;
     CheckLastExitCode
 }
 

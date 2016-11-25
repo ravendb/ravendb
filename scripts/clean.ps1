@@ -1,7 +1,5 @@
-function CleanBuildDirectories($releaseDir, $outDir, $buildDir, $temp) {
+function CleanBuildDirectories($releaseDir) {
     CleanDir $releaseDir
-    CleanDir $outDir
-    CleanDir $buildDir
 }
 
 function CleanDir ( $dir ) {
