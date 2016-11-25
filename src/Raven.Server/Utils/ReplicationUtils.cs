@@ -220,12 +220,14 @@ namespace Raven.Server.Utils
         private static bool TryFindEtagByDbId(this ChangeVectorEntry[] changeVector, Guid dbId, out long etag)
         {
             etag = 0;
-            for(int i = 0; i < changeVector.Length; i++)
+            for (int i = 0; i < changeVector.Length; i++)
+            {
                 if (changeVector[i].DbId == dbId)
                 {
                     etag = changeVector[i].Etag;
                     return true;
                 }
+            }
 
             return false;
         }
